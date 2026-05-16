@@ -1953,7 +1953,7 @@ function LegalModal({type,onClose}){
     body:<>
       <h3 style={lmH3}>Angaben zum Betreiber</h3>
       <div style={{background:"var(--ci)",border:"1px solid var(--cb)",borderRadius:10,padding:"16px 20px",margin:"12px 0",fontSize:13,lineHeight:1.8}}>
-        <strong>Privatperson (kein Unternehmen)</strong><br/>
+        <strong>Engin Celenk (kein Unternehmen)</strong><br/>
         Diese Website wird von einer Privatperson betrieben und ist kein kommerzielles Angebot.<br/><br/>
         Kontakt per E-Mail: <a href="mailto:info@immofuchs.info" style={lmA}>info@immofuchs.info</a>
       </div>
@@ -1974,13 +1974,13 @@ function LegalModal({type,onClose}){
     </>
   }:{
     title:"Datenschutzerklärung",
-    sub:"Stand: April 2026",
+    sub:null,
     body:<>
       <div style={{background:"var(--ca-bg)",border:"1px solid var(--ca-bd)",borderRadius:8,padding:"12px 16px",fontSize:12,color:"#7a3800",margin:"16px 0"}}>
         <strong>Kurz &amp; klar:</strong> immofuchs.info verzichtet vollständig auf Tracking, Analytics, Werbung und Affiliate-Links. Alle Berechnungen laufen ausschließlich lokal in Ihrem Browser. Es werden keine personenbezogenen Daten an Server übertragen.
       </div>
       <h3 style={lmH3}>1. Verantwortliche Stelle</h3>
-      <p style={lmP}>Privatperson (kein Unternehmen, keine kommerzielle Tätigkeit).<br/>Kontakt: <a href="mailto:info@immofuchs.info" style={lmA}>info@immofuchs.info</a></p>
+      <p style={lmP}>Engin Celenk (kein Unternehmen, keine kommerzielle Tätigkeit).<br/>Kontakt: <a href="mailto:info@immofuchs.info" style={lmA}>info@immofuchs.info</a></p>
       <h3 style={lmH3}>2. Datenverarbeitung auf einen Blick</h3>
       <p style={lmP}>Immofuchs ist eine rein clientseitige Webanwendung. Alle Berechnungen finden ausschließlich in Ihrem Browser statt. Es werden <strong>keine personenbezogenen Daten an Server übertragen</strong>.</p>
       <h3 style={lmH3}>3. Lokale Datenspeicherung (localStorage)</h3>
@@ -2023,7 +2023,7 @@ function LegalModal({type,onClose}){
         {content.body}
       </div>
       <div style={{padding:"14px 24px",borderTop:"1px solid var(--cb)",background:"var(--ci)",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:11,color:"var(--ch)",flexShrink:0,flexWrap:"wrap",gap:8}}>
-        <span>© 2026 immofuchs.info · Privatperson, kein Unternehmen</span>
+        <span>© 2026 immofuchs.info · Engin Celenk</span>
         <button onClick={onClose} style={{background:"var(--ca)",color:"#fff",border:"none",borderRadius:6,padding:"8px 16px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Schließen</button>
       </div>
     </div>
