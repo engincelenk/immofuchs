@@ -1,0 +1,37 @@
+{
+  "stand": "2026-05",
+  "hinweis": "Alle Werte monatlich manuell aktualisiert. Bundesbank-API deaktiviert (CORS). Stand: Mai 2026.",
+  "bundesanleihe_10j": 3.08,
+  "quellen": [
+    {
+      "name": "Deutsche Bundesbank (Wohnungsbaukredite Ø)",
+      "wert": 3.9,
+      "auto": false,
+      "url": "https://www.bundesbank.de"
+    },
+    {
+      "name": "Interhyp Durchschnitt (10J)",
+      "wert": 3.9,
+      "auto": false,
+      "url": "https://www.interhyp.de/zinsen/"
+    },
+    {
+      "name": "Dr. Klein Topzins (10J)",
+      "wert": 3.52,
+      "auto": false,
+      "url": "https://www.drklein.de/aktuelle-bauzinsen.html"
+    },
+    {
+      "name": "Finanztip",
+      "wert": 3.9,
+      "auto": false,
+      "url": "https://www.finanztip.de/baufinanzierung/hypothekenzinsen/"
+    },
+    {
+      "name": "Vergleich.de",
+      "wert": 3.75,
+      "auto": false,
+      "url": "https://www.vergleich.de/baufinanzierung.html"
+    }
+  ]
+}

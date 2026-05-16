@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Crawl-delay für bessere Server-Performance
+Crawl-delay: 1
+
+Sitemap: https://immofuchs.info/sitemap.xml

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- ═══ SECURITY (OWASP Top 10) ═══ -->
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://api.bundesbank.de; base-uri 'self'; form-action 'self';" />
+
+  <!-- ═══ SEO — Grundlagen ═══ -->
+  <title>Immofuchs – Kostenloser Immobilienrechner für Rendite, Kredit, Miete &amp; Sanierung</title>
+  <meta name="description" content="Immofuchs: Kostenloser Immobilienrechner ohne Anmeldung. Rendite berechnen, Kredit simulieren, Mieterhöhung planen und Sanierungskosten kalkulieren. Mit Förderungscheck, GEG-Prüfung und PDF-Export." />
+  <meta name="keywords" content="Immobilienrechner, Renditerechner, Kreditrechner, Mieterhöhung, Sanierungsrechner, Immobilien Rendite, Kapitalanlage, Bruttomietrendite, Nettomietrendite, Tilgungsrechner, KfW Förderung, BAFA, GEG, immofuchs" />
+  <meta name="author" content="Immofuchs" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+  <link rel="canonical" href="https://immofuchs.info/" />
+  <link rel="alternate" hreflang="de" href="https://immofuchs.info/" />
+  <link rel="alternate" hreflang="en" href="https://immofuchs.info/" />
+  <link rel="alternate" hreflang="tr" href="https://immofuchs.info/" />
+  <link rel="alternate" hreflang="zh" href="https://immofuchs.info/" />
+  <link rel="alternate" hreflang="hi" href="https://immofuchs.info/" />
+  <link rel="alternate" hreflang="x-default" href="https://immofuchs.info/" />
+
+  <!-- ═══ SEO — Open Graph (Facebook, LinkedIn, WhatsApp) ═══ -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Immofuchs – Kostenloser Immobilienrechner" />
+  <meta property="og:description" content="Rendite, Kredit, Miete und Sanierung berechnen. Kostenlos, ohne Anmeldung, mit PDF-Export." />
+  <meta property="og:url" content="https://immofuchs.info/" />
+  <meta property="og:image" content="https://immofuchs.info/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="de_DE" />
+  <meta property="og:site_name" content="Immofuchs" />
+
+  <!-- ═══ SEO — Twitter Card ═══ -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Immofuchs – Kostenloser Immobilienrechner" />
+  <meta name="twitter:description" content="Rendite, Kredit, Miete und Sanierung berechnen. Kostenlos, ohne Anmeldung." />
+  <meta name="twitter:image" content="https://immofuchs.info/og-image.png" />
+
+  <!-- ═══ SEO — Structured Data (Google Rich Results) ═══ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Immofuchs",
+    "url": "https://immofuchs.info",
+    "description": "Kostenloser Immobilienrechner: Rendite, Kredit, Mieterhöhung und Sanierung berechnen. Mit Förderungscheck und GEG-Prüfung.",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript. Requires HTML5.",
+    "inLanguage": ["de", "en", "tr", "zh", "hi"],
+    "isAccessibleForFree": true,
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    },
+    "featureList": [
+      "Renditerechner mit Verkaufsszenario",
+      "Kreditrechner mit Sondertilgung",
+      "Mieterhöhungsrechner nach § 558 BGB",
+      "Sanierungsrechner mit KfW/BAFA-Förderung",
+      "PDF-Export",
+      "5 Sprachen"
+    ],
+    "screenshot": "https://immofuchs.info/og-image.png",
+    "softwareVersion": "1.6",
+    "datePublished": "2026-01-01",
+    "dateModified": "2026-04-29",
+    "author": { "@type": "Person", "name": "Immofuchs (Privatperson)" },
+    "publisher": { "@type": "Person", "name": "Immofuchs (Privatperson)" }
+  }
+  </script>
+
+  <!-- ═══ PWA ═══ -->
+  <meta name="theme-color" content="#1E3A5F" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Immofuchs" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+  <!-- ═══ Cookie Consent Styles ═══ -->
+  <style>
+    /* Global mobile-first resets */
+    html,body{margin:0;padding:0;background:#f5f5f0;overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+    *{box-sizing:border-box}
+    /* iOS safe-area padding for bottom tab bar */
+    .has-safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
+    .cc-banner{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#fff;border-top:1px solid #e5e5dc;transform:translateY(100%);transition:transform .4s ease;font-family:'DM Sans',system-ui,sans-serif;box-shadow:0 -4px 20px rgba(0,0,0,.1)}
+    .cc-banner.show{transform:translateY(0)}
+    .cc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9998;opacity:0;pointer-events:none;transition:opacity .3s}
+    .cc-overlay.show{opacity:1;pointer-events:auto}
+    .cc-inner{max-width:820px;margin:0 auto;padding:20px 16px}
+    .cc-title{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:8px}
+    .cc-text{font-size:12px;color:#6b6b60;line-height:1.6;margin-bottom:14px}
+    .cc-text a{color:#e8600a;text-decoration:none}
+    .cc-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+    .cc-opt{display:flex;align-items:center;gap:8px;font-size:12px;color:#3d3d3a}
+    .cc-opt input{width:15px;height:15px;accent-color:#e8600a}
+    .cc-req{font-size:10px;color:#8a8a80}
+    .cc-btns{display:flex;gap:8px;flex-wrap:wrap}
+    .cc-btn{padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;flex:1;min-width:100px}
+    .cc-all{background:#e8600a;color:#fff}.cc-all:hover{background:#c44d00}
+    .cc-sel{background:#f5f5f0;color:#1a1a1a;border:1px solid #e5e5dc}.cc-sel:hover{background:#e5e5dc}
+    .cc-rej{background:transparent;color:#8a8a80;font-weight:400}.cc-rej:hover{color:#1a1a1a}
+    .cc-gear{position:fixed;bottom:90px;left:12px;z-index:9000;width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #e5e5dc;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.06);font-size:14px}
+    @media print{.cc-banner,.cc-overlay,.cc-gear{display:none!important}}
+  </style>
+
+  <!-- ═══ SEO — FAQ Structured Data ═══ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Wie berechne ich die Mietrendite einer Immobilie?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Die Bruttomietrendite ergibt sich aus: (Jahreskaltmiete ÷ Kaufpreis inkl. Nebenkosten) × 100. Immofuchs berechnet zusätzlich die Nettorendite nach Abzug aller laufenden Kosten wie Verwaltung, Instandhaltung und Leerstand."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wann darf ich die Miete erhöhen und um wie viel?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Nach § 558 BGB ist eine Mieterhöhung frühestens 15 Monate nach der letzten Erhöhung möglich. Die Kappungsgrenze beträgt 20 % in 3 Jahren, in angespannten Wohnungsmärkten nur 15 %. Die neue Miete darf die ortsübliche Vergleichsmiete nicht überschreiten."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wie hoch ist die Grunderwerbsteuer beim Immobilienkauf?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Die Grunderwerbsteuer variiert je nach Bundesland zwischen 3,5 % (Bayern, Sachsen) und 6,5 % (Brandenburg, NRW, Saarland, Schleswig-Holstein, Thüringen). Immofuchs erkennt das Bundesland automatisch anhand der PLZ und rechnet den korrekten Satz ein."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Welche Förderungen gibt es für energetische Sanierungen?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Über das Bundesförderungsprogramm für effiziente Gebäude (BEG) fördert die BAFA Einzelmaßnahmen wie Fenster, Fassade und Heizungstausch mit bis zu 70 % der Investitionskosten. KfW 261 bietet zinsgünstige Kredite für Komplettsanierungen. Immofuchs berechnet die anwendbaren Förderquoten automatisch."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Was ist der Unterschied zwischen Brutto- und Nettorendite?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Die Bruttorendite setzt die Jahreskaltmiete ins Verhältnis zum Kaufpreis. Die Nettorendite zieht zusätzlich alle nicht umlagefähigen Betriebskosten, Verwaltungskosten, Instandhaltungsrücklagen und den Leerstand ab. Eine solide Nettorendite liegt bei mindestens 3,5–4 %."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- ═══ Cookie Consent Banner ═══ -->
+  <div id="cc-ov" class="cc-overlay"></div>
+  <div id="cc-ban" class="cc-banner" role="dialog" aria-label="Cookie-Einstellungen">
+    <div class="cc-inner">
+      <div class="cc-title">🍪 Cookie-Einstellungen</div>
+      <div class="cc-text">
+        Immofuchs verwendet <strong>nur technisch notwendige Speicherung</strong> (localStorage) für Ihre Eingaben.
+        Wir setzen <strong>keine</strong> Tracking-, Werbe- oder Drittanbieter-Cookies ein.
+        Ihre Daten verlassen Ihren Browser nicht.
+        <br/><a href="/datenschutz" id="cc-dse">Datenschutzerklärung</a>
+      </div>
+      <div class="cc-opts">
+        <label class="cc-opt"><input type="checkbox" checked disabled /><span><strong>Notwendig</strong> — Speicherung Ihrer Eingaben im Browser <span class="cc-req">(erforderlich)</span></span></label>
+        <label class="cc-opt"><input type="checkbox" id="cc-stat" /><span><strong>Statistik</strong> — Anonyme Nutzungsdaten zur Verbesserung</span></label>
+      </div>
+      <div class="cc-btns">
+        <button class="cc-btn cc-all" id="cc-yes">Alle akzeptieren</button>
+        <button class="cc-btn cc-sel" id="cc-ok">Auswahl bestätigen</button>
+        <button class="cc-btn cc-rej" id="cc-no">Nur notwendige</button>
+      </div>
+      <details style="margin-top:12px;border-top:1px solid #e5e5dc;padding-top:10px">
+        <summary style="font-size:11px;color:#8a8a80;cursor:pointer">Weitere Informationen</summary>
+        <div style="font-size:11px;color:#6b6b60;line-height:1.7;margin-top:8px">
+          <p><strong>Notwendig:</strong> localStorage speichert Ihre Rechner-Eingaben lokal. Ohne diese Funktion gehen Daten beim Schließen verloren.</p>
+          <p><strong>Statistik:</strong> Falls aktiviert, anonymisierte Nutzungsdaten (keine IP-Adressen, keine persönlichen Daten).</p>
+          <p><strong>Datenverarbeitung:</strong> Alle Berechnungen finden ausschließlich in Ihrem Browser statt. Kein Server empfängt Ihre Daten.</p>
+          <p><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) · Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse).</p>
+          <p><strong>Widerruf:</strong> Jederzeit über das ⚙-Symbol unten links oder durch Löschen der Browser-Daten.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+  <button id="cc-gear" class="cc-gear no-print" title="Cookie-Einstellungen ändern">⚙</button>
+
+  <script>
+  (function(){
+    var b=document.getElementById('cc-ban'),o=document.getElementById('cc-ov'),g=document.getElementById('cc-gear');
+    function show(){b.classList.add('show');o.classList.add('show');g.style.display='none'}
+    function hide(){b.classList.remove('show');o.classList.remove('show');g.style.display='flex'}
+    function save(s){localStorage.setItem('cc_consent',JSON.stringify({necessary:true,analytics:s,v:1,ts:Date.now()}));hide()}
+    document.getElementById('cc-yes').onclick=function(){save(true)};
+    document.getElementById('cc-ok').onclick=function(){save(document.getElementById('cc-stat').checked)};
+    document.getElementById('cc-no').onclick=function(){save(false)};
+    g.onclick=show;
+    document.getElementById('cc-dse').onclick=function(e){
+      e.preventDefault();
+      window.open('/datenschutz','_blank');
+    };
+    if(!localStorage.getItem('cc_consent'))setTimeout(show,600);else{g.style.display='flex'}
+  })();
+  </script>
+
+  <script type="module" src="/src/main.jsx"></script>
+
+  <!-- Service Worker -->
+  <script>
+  if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});}
+  </script>
+
+  <!-- ═══ SEO: Noscript Fallback ═══ -->
+  <noscript>
+    <div style="padding:40px;text-align:center;font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h1>Immofuchs – Immobilienrechner</h1>
+      <p>Kostenloser Immobilienrechner für Kapitalanleger in Deutschland.</p>
+      <ul style="text-align:left"><li>Renditerechner mit Verkaufsszenario</li><li>Kreditrechner mit Sondertilgung</li><li>Mieterhöhungsrechner nach § 558 BGB</li><li>Sanierungsrechner mit KfW/BAFA-Förderung und GEG-Prüfung</li></ul>
+      <p>Bitte aktivieren Sie JavaScript um den Rechner zu nutzen.</p>
+    </div>
+  </noscript>
+</body>
+</html>
