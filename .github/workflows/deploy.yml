@@ -1,0 +1,24 @@
+name: 🚀 Deploy Website to IONOS
+
+on:
+  push:
+    branches:
+      - main  # Ersetze dies durch 'master', falls dein Haupt-Branch noch so heißt
+
+jobs:
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🚚 Code aus GitHub auschecken
+      uses: actions/checkout@v4
+    
+    - name: 📂 Dateien auf IONOS-Server spiegeln
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ secrets.IONOS_FTP_SERVER }}
+        username: ${{ secrets.IONOS_FTP_USERNAME }}
+        password: ${{ secrets.IONOS_FTP_PASSWORD }}
+        # WICHTIG: Passe den Zielordner unten an dein IONOS-Verzeichnis an!
+        server-dir: ./immofuchs/
