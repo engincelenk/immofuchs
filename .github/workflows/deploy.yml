@@ -1,24 +1,40 @@
 name: 🚀 Deploy Website to IONOS
-
 on:
   push:
     branches:
-      - main  # Ersetze dies durch 'master', falls dein Haupt-Branch noch so heißt
+      - main
 
 jobs:
   web-deploy:
-    name: 🎉 Deploy
+    name: 🎉 Build & Deploy
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: 🚚 Code aus GitHub auschecken
       uses: actions/checkout@v4
-    
-    - name: 📂 Dateien auf IONOS-Server spiegeln
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+
+    - name: 🛠️ Node.js einrichten
+      uses: actions/setup-node@v4
       with:
-        server: ${{ secrets.IONOS_FTP_SERVER }}
-        username: ${{ secrets.IONOS_FTP_USERNAME }}
-        password: ${{ secrets.IONOS_FTP_PASSWORD }}
-        # WICHTIG: Passe den Zielordner unten an dein IONOS-Verzeichnis an!
-        server-dir: ./immofuchs/
+        node-version: '20'
+        cache: 'npm'
+
+    - name: 📦 Abhängigkeiten installieren & Projekt bauen
+      run: |
+        npm ci
+        npm run build
+
+    - name: 📂 dist-Ordner auf IONOS-Server spiegeln via lftp (SFTP)
+      env:
+        SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
+        SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
+        SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
+      run: |
+        sudo apt-get update && sudo apt-get install -y lftp
+
+        lftp -c "
+        set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
+        open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
+        mirror -R ./dist /immofuchs --reverse --verbose --continue --delete;
+        quit;
+        "
