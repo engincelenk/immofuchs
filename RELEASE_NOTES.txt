@@ -1,0 +1,61 @@
+IMMOFUCHS.INFO — RELEASE NOTES
+================================
+
+v1.3 — 2026-05-18
+------------------
+FIX: Merkliste & Speichern vollständig i18n-isiert
+- SaveModal (Titel, Placeholder, Button), SaveBtn, Merkliste waren komplett
+  auf Deutsch hardcodiert — jetzt vollständig übersetzt in DE, EN, TR, ZH, HI
+- 14 neue T-Keys pro Sprache: saveBtnLabel, saveModalTitle, savePlaceholder,
+  saveConfirm, emptyTitle, emptyHint, countSingular, countPlural, loadBtn,
+  deleteTitle, deleteHint, cancelBtn, deleteBtn, defaultObjName
+- Tab-Labels (Rendite, Kredit, Miete, Sanierung) in Merkliste-Karten übersetzt
+- Zahlenformat dynamisch: de-DE / en-GB / tr-TR / zh-CN / hi-IN je nach Sprache
+- JSX Parse-Fehler in cancelBtn-Zeile behoben (Doppel-Ersetzung)
+
+FIX: App-Ladeabsturz (React.useState → useState)
+- ZinsAlarm-Komponente verwendete React.useState/React.useEffect statt
+  destructured imports — ReferenceError beim Start behoben
+
+
+v1.2 — 2026-05-18
+------------------
+NEU: Zinsalarm (Sprint 3)
+- Nutzer setzt Schwellenwert (z.B. 3,5 %) für den Bauzins-Durchschnitt
+- Push Notification wenn zinsen.json den Schwellenwert unterschreitet
+- Alarm-Config persistent via localStorage (if_alarm_enabled, if_alarm_threshold)
+- Service Worker v47: empfängt Alarm-Config via postMessage, prüft beim
+  Live-Fetch von /zinsen.json und zeigt native Browser-Notification
+- Notification-Click bringt die App in den Vordergrund (notificationclick handler)
+- Hinweistext: Datenherkunft (Bundesbank, Interhyp, Dr. Klein u.a.), kein Gewähr,
+  keine Anlageberatung — in allen 5 Sprachen
+- Vollständige i18n: DE, EN, TR, ZH, HI (14 neue TL-Keys pro Sprache)
+- Eingebaut im #zinsen-Abschnitt der Landing Page (unter Quellen-Zeile)
+
+
+v1.1 — 2026-05-18
+------------------
+NEU: Merkliste (5. Tab)
+- Berechnungen aus allen 4 Rechnern speichern
+- Portfolio-Ansicht mit Karten (Name, Datum, Kaufpreis, Miete, EK)
+- Berechnung per Tap wiederherstellen
+- Löschen mit Bestätigungsdialog
+- Speicherung lokal via localStorage (offline, max. 50 Objekte)
+
+NEU: Nativer Share Sheet
+- "Als PDF exportieren" nutzt jetzt navigator.share() auf iOS/Android
+- iOS: Share Sheet öffnet sich (AirDrop, WhatsApp, Dateien, etc.)
+- Desktop: Druckdialog wie bisher
+
+
+v1.0 — Launch
+--------------
+- Renditerechner (Bruttorendite, Nettorendite, Cashflow, Steuer)
+- Finanzierungsrechner (Annuität, §500 BGB Sondertilgung)
+- Mieterhöhungsrechner (§558 BGB)
+- Sanierungsrechner (Energie / KfW-Förderung)
+- PWA: installierbar, offline-fähig, Service Worker
+- PLZ-Lookup lokal (19.676 Einträge, keine externe API)
+- Persistenz via localStorage
+- Zweisprachig: Deutsch / Englisch
+- Mobile-First, iOS-Zoom-Schutz

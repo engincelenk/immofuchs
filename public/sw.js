@@ -1,11 +1,15 @@
 /**
- * ImmoFuchs Service Worker v46
+ * ImmoFuchs Service Worker v47
  * Strategie: Network-First mit vollständigem Same-Origin-Caching
  * → Alle Vite-Assets (auch gehashte Bundles) werden beim ersten Aufruf gecacht
  * → Danach: volle Offline-Funktionalität
+ * Sprint 3: Zinsalarm via Push Notification
  */
 
-const CACHE_NAME = 'immofuchs-v46';
+const CACHE_NAME = 'immofuchs-v47';
+
+// ── Zinsalarm State (im SW-Kontext gespeichert) ───────────
+let alarmConfig = null; // {enabled, threshold, notifTitle, notifBody, avg, lang}
 
 // App Shell: Kritische Dateien sofort beim Install cachen
 const APP_SHELL = [
@@ -68,6 +72,10 @@ self.addEventListener('fetch', event => {
     fetch(request)
       .then(response => {
         if (response.ok) {
+          // Zinsalarm: bei /zinsen.json Fetch im Hintergrund prüfen
+          if (url.pathname === '/zinsen.json' && alarmConfig?.enabled) {
+            response.clone().json().then(checkAlarmFromZinsen).catch(() => {});
+          }
           cacheResponse(CACHE_NAME, request, response.clone());
         }
         return response;
@@ -80,3 +88,61 @@ self.addEventListener('fetch', event => {
 function cacheResponse(cacheName, request, response) {
   caches.open(cacheName).then(cache => cache.put(request, response));
 }
+
+// ── Alarm: Zinsen prüfen und ggf. Notification anzeigen ──
+function checkAlarmFromZinsen(jsonData) {
+  if (!alarmConfig?.enabled || typeof alarmConfig.threshold !== 'number') return;
+  try {
+    const werte = (jsonData.quellen || []).map(q => q.wert).filter(v => v > 0);
+    if (!werte.length) return;
+    const sum = werte.reduce((a, b) => a + b, 0);
+    const avg = Math.round(sum / werte.length * 20) / 20;
+    if (avg <= alarmConfig.threshold) {
+      const title = alarmConfig.notifTitle || 'ImmoFuchs Zinsalarm';
+      const body = (alarmConfig.notifBody || 'Zinsen bei {avg}% – unter {threshold}%')
+        .replace('{avg}', avg)
+        .replace('{threshold}', alarmConfig.threshold);
+      self.registration.showNotification(title, {
+        body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: 'zinsalarm',
+        renotify: true,
+        data: { avg, threshold: alarmConfig.threshold },
+      });
+    }
+  } catch(e) { /* silent */ }
+}
+
+// ── Message Handler: Alarm-Config vom App empfangen ───────
+self.addEventListener('message', event => {
+  if (!event.data) return;
+  if (event.data.type === 'SET_ALARM') {
+    alarmConfig = event.data;
+    // Sofort prüfen wenn avg mitgeliefert
+    if (alarmConfig.enabled && typeof alarmConfig.avg === 'number') {
+      if (alarmConfig.avg <= alarmConfig.threshold) {
+        const title = alarmConfig.notifTitle || 'ImmoFuchs Zinsalarm';
+        const body = (alarmConfig.notifBody || 'Zinsen bei {avg}% – unter {threshold}%')
+          .replace('{avg}', alarmConfig.avg)
+          .replace('{threshold}', alarmConfig.threshold);
+        self.registration.showNotification(title, {
+          body, icon: '/icon-192.png', badge: '/icon-192.png',
+          tag: 'zinsalarm', renotify: true,
+        });
+      }
+    }
+  }
+});
+
+// ── Notification Click: App in den Vordergrund ────────────
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(list => {
+        if (list.length) return list[0].focus();
+        return clients.openWindow('/');
+      })
+  );
+});

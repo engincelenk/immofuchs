@@ -4,3 +4,4 @@ dist/
 *.local
 CLAUDE.md
 .claude/
+.tmp.driveupload/
