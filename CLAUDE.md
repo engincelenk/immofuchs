@@ -72,6 +72,10 @@ PWA-Boilerplate: nur auf explizite Anfrage.
 ── PROAKTIVITÄT ────────────────────────────────────────
 Verbesserungsvorschläge: maximal 1 pro Antwort,
 am Ende, klar als Vorschlag markiert — nie als Blocker.
+
+── Release notes
+────────────────────────────────────────
+Nach jede erfolgreiche Umsetzung release-notes.txt updaten. Woher fragen.
 ═══════════════════════════════════════════════════════
 
 bevor du anfängt zu implementieren immer fragen.

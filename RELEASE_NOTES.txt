@@ -1,6 +1,47 @@
 IMMOFUCHS.INFO — RELEASE NOTES
 ================================
 
+v1.6 — 2026-05-19
+------------------
+UX: Grenzsteuersatz Dropdown → Freitextfeld
+- select-Element durch input[type=number] ersetzt (0–60 %, Schritt 0,01)
+- Kein semantischer Lock-in auf Spitzensteuersätze — alle Grenzsteuersätze nutzbar
+- Default: 42 % (statt 47,475 %)
+- gstHint in allen 5 Sprachen: zeigt Wertebereich + Faustformel für Einkommensgrenzen
+- grenzOpts-Arrays aus STEUER_T vollständig entfernt
+
+IMMOFUCHS.INFO — RELEASE NOTES
+================================
+
+v1.5 — 2026-05-18
+------------------
+LANDING PAGE: Zahlenwörter entfernt + 5. Kachel ergänzt
+- "Vier/Four/dört/四/चार" aus cardsSub, sub, heroSubShort, subShort in allen 5 Sprachen entfernt
+- Neue TL-Keys st6Title, st6Badge, st6Desc, st6F1–st6F6, st6Cta in DE, EN, TR, ZH, HI
+- 5. Kachel "§6-Trick" im Rechner-Grid der Landing Page (§6-SVG-Illustration, blau/orange)
+- Grid bleibt responsive (auto-fit minmax 240px) — kein Layout-Umbau nötig
+
+IMMOFUCHS.INFO — RELEASE NOTES
+================================
+
+v1.4 — 2026-05-18
+------------------
+NEU: Steueroptimierungs-Rechner (§ 6 Abs. 1 Nr. 1a EStG)
+- 5. Tab "§6-Trick" (DE) / "§6 Trick" (EN) / "§6 Hile" (TR) / "§6技巧" (ZH) / "§6 टिप" (HI)
+- Rückwärtsrechnung: Welche Immobilie brauche ich, um meine Lohnsteuer auf null zu drücken?
+- Eingaben: Jährliche Lohnsteuer, Grenzsteuersatz (42% / 44,31% / 45% / 47,48%), Grundstückswert
+- Berechnung: Benötigte Sanierungskosten, Mindest-Gebäudewert, Gesamtinvestition
+- Empfehlung: Variante mit 3% Sicherheitspuffer zur Vermeidung der 15%-Falle
+- 6 Fallstricke-Hinweise: 15%-Falle, Liquiditätsverschiebung, 3-Jahres-Frist,
+  Vermietungspflicht, Mieteinnahmen-Gegenrechnung, Steuerberater-Hinweis
+- Prozentzahl-Icon (%) im Tab-Bar für sofortige Erkennbarkeit
+- Vollständig i18n: 5 Sprach-Keys (steuer6) in DE, EN, TR, ZH, HI
+- Standalone: eigener lokaler State, kein Shared-Context benötigt
+- Rechtshinweis: "Keine Steuerberatung" am Seitenende
+
+IMMOFUCHS.INFO — RELEASE NOTES
+================================
+
 v1.3 — 2026-05-18
 ------------------
 FIX: Merkliste & Speichern vollständig i18n-isiert
