@@ -47,6 +47,8 @@ NEU: iSFP-Toggle
 - Gilt für Fenster, Fassade, Heizung, Dach, Tür, Keller, OG-Decke, Lüftung
 - FO_CAP dynamisch (zieht iSFP-Bonus automatisch durch)
 - Toggle mit grünem Slider; Bestätigungs-Badge im Ergebnis; sanTip2 kontextuell
+- InfoTooltip (ℹ️) mit Vollübersetzung in 5 Sprachen (DE/EN/TR/ZH/HI)
+- Alle hardcodierten Strings im Sanier-Block i18n-isiert (Landesbank-Hint, Disclaimer, Badge, Tipp)
 
 REFACTOR: data.js als Single Source of Truth
 - LAND_F, LAND_BONUS_FQ, LAND_BONUS_CAP aus App.jsx → data.js exportiert

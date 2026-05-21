@@ -1,0 +1,9 @@
+
+git restore --staged CLAUDE.md
+git commit -m "feat: Grenzsteuersatz Dropdown → Freitextfeld"
+git push origin main
+
+
+git add -A
+git commit -m "v1.8"
+git push origin main
