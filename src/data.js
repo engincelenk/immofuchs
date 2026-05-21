@@ -120,7 +120,7 @@ export const CO2 = {
   preis2027: 65,              // €/Tonne CO₂ (geplant)
 };
 
-// ── ENERGIEPREISE ────────────────────────────────────────────────────────
+// ── ENERGIEPREISE (allgemein) ────────────────────────────────────────────
 // Intervall: quartalsweise
 // Quelle: BDEW, Verbraucherzentrale
 export const ENERGIE = {
@@ -128,3 +128,108 @@ export const ENERGIE = {
   gasCtKwh: 9.8,              // Cent/kWh Erdgas Ø Deutschland
   heizölCtL: 95,              // Cent/Liter Heizöl Ø Deutschland
 };
+
+// ── SANIERUNGSRECHNER: ENERGIEDATEN ─────────────────────────────────────
+// Intervall: quartalsweise
+// Quellen: BDEW, Umweltbundesamt (UBA), Destatis
+export const SAN_ENERGIE = {
+  stand: "Q1 2026",
+  // Default-Eingabewerte (Vorbesetzung der Input-Felder)
+  defaultStrompreis: 0.35,    // €/kWh — Haushaltsstrom inkl. Netzentgelt, Steuern
+  defaultHeizpreis:  0.12,    // €/kWh — Heizöl/Gas/Pellets Mischrichtwert
+
+  // Energiepreis je Heizungstyp (€/kWh Wärme, Ø-Werte)
+  // Quelle: BDEW Energiemarktdaten, UBA 2026
+  ep: {
+    wp:          0.04,   // Wärmepumpe (COP ~3, Strom 0.35/3 ≈ 0.12, aber Marktwert Wärme)
+    pellets:     0.07,   // Pellets €/kWh
+    "fernw-std": 0.12,   // Fernwärme Standard
+    kohle:       0.09,   // Kohle
+    heizoel:     0.12,   // Heizöl
+    strom:       0.31,   // Direktstrom (Nachtspeicher etc.)
+    gas:         0.13,   // Erdgas
+  },
+
+  // CO₂-Emissionsfaktoren je Heizungstyp (kg CO₂/kWh Endenergie)
+  // Quelle: UBA 2026, GEMIS-Datenbank
+  co2F: {
+    wp:          0.070,  // Wärmepumpe (Strommix 2026)
+    pellets:     0.020,  // Holzpellets (biogen, Vorkette)
+    "fernw-std": 0.180,  // Fernwärme Bundesdurchschnitt
+    kohle:       0.340,  // Steinkohle
+    heizoel:     0.266,  // Heizöl
+    strom:       0.434,  // Strom (Bundesdurchschnitt 2026)
+    gas:         0.202,  // Erdgas
+  },
+};
+
+// ── SANIERUNGSRECHNER: GEBÄUDE-NORMWERTE ─────────────────────────────────
+// Intervall: bei Normänderung (GEG, DIN 18599)
+// Quellen: GEG 2024, DIN 18599, BDEW, Fraunhofer ISE
+export const SAN_NORMEN = {
+  // Heizenergiebedarf je Baujahrsklasse (kWh/m²a, Referenzgebäude EFH)
+  // Quelle: IWU Darmstadt, TABULA-Projekt
+  hkBaujahr: [
+    { bis: 1945, hk: 220 },
+    { bis: 1970, hk: 180 },
+    { bis: 1985, hk: 150 },
+    { bis: 2000, hk: 120 },
+    { bis: 2010, hk:  80 },
+    { bis: Infinity, hk: 50 },
+  ],
+  warmwasserKWhPerson: 800,    // kWh/Person/Jahr (DIN 18599-10)
+  hilfsStromKWhM2:       8,    // kWh/m²/Jahr Pumpenstrom etc.
+  hausStromKWhM2:      150,    // kWh/m²/Jahr Haushaltsstrom Norm (BDEW)
+  pvErtragKWhKwp:      950,    // kWh/kWp/Jahr Ø Deutschland (Fraunhofer ISE)
+  pvEigenverbrauchQuote: 0.70, // 70% Eigenverbrauchsquote (Ø ohne Speicher ~30%, mit Speicher ~70%)
+};
+
+// ── SANIERUNGSRECHNER: MAßNAHMENKOSTEN (TIERS) ──────────────────────────
+// Intervall: halbjährlich (Baupreisindex)
+// Quelle: BKI Baukosten 2025/26, Handwerksinnungen, Verbraucherzentrale
+export const SAN_TIERS = {
+  fenster:    { s:{p: 800,l:"sTierFenS"}, g:{p:1200,l:"sTierFenG"}, m:{p:1600,l:"sTierFenM"} },
+  fensterXL:  { s:{p:2500},              g:{p:4500},                m:{p:7000}               },
+  fensterHST: { s:{p:5000},              g:{p:7000},                m:{p:9000}               },
+  fassade:    { s:{p:12200,l:"sTierFasS",d:10}, g:{p:15900,l:"sTierFasG",d:16}, m:{p:21400,l:"sTierFasM",d:20} },
+  heizung:    { s:{p:25000,l:"sTierHzS"}, g:{p:33000,l:"sTierHzG"}, m:{p:45000,l:"sTierHzM"} },
+  dach:       { s:{p:11200,l:"sTierDaS"}, g:{p:14600,l:"sTierDaG"}, m:{p:16800,l:"sTierDaM"} },
+  tuer:       { s:{p: 3500,l:"sTierTuS"}, g:{p: 7000,l:"sTierTuG"}, m:{p:11000,l:"sTierTuM"} },
+  pv:         { s:{p:10100,l:"sTierPvS"}, g:{p:16100,l:"sTierPvG"}, m:{p:24200,l:"sTierPvM"} },
+  lueftung:   { s:{p: 6000,l:"sTierLuS"}, g:{p: 9500,l:"sTierLuG"}, m:{p:14000,l:"sTierLuM"} },
+};
+
+// ── SANIERUNGSRECHNER: FÖRDERQUELLEN-KEYS ───────────────────────────────
+export const SAN_SRC_KEYS = {
+  fenster:  "sSrcBafa", fassade:  "sSrcBafa",
+  heizung:  "sSrcHz",   dach:     "sSrcBafa",
+  tuer:     "sSrcBafa", pv:       "sSrcPv",
+  keller:   "sSrcBafa", ogdecke:  "sSrcBafa",
+  batterie: "sSrcBat",  lueftung: "sSrcBafa",
+};
+
+// ── LANDESBANKEN & BUNDESLAND-BONUS ──────────────────────────────────────
+export const LAND_F = {
+  BW:"L-Bank BW", BY:"BayernLabo", BE:"IBB Berlin", BB:"ILB Brandenburg",
+  HB:"Bremer Aufbau-Bank", HH:"IFB Hamburg", HE:"WIBank Hessen", MV:"LFI M-V",
+  NI:"NBank Niedersachsen", NW:"NRW.BANK", RP:"ISB Rheinland-Pfalz",
+  SL:"SIKB Saarland", SN:"SAB Sachsen", ST:"IB Sachsen-Anhalt",
+  SH:"IB.SH", TH:"TAB Thüringen",
+};
+
+export const LAND_BONUS_FQ = {
+  BW: { heizung:.05, fassade:.03, dach:.03 },
+  BY: { heizung:.05, fassade:.05, dach:.03 },
+  BE: { heizung:.10, fassade:.10, fenster:.05, dach:.05 },
+  BB: { fassade:.05, dach:.05, keller:.05, ogdecke:.05 },
+  HH: { heizung:.10, fenster:.05, fassade:.05 },
+  HE: { heizung:.05, fassade:.03 },
+  NW: { heizung:.10, fassade:.05, dach:.05, fenster:.05 },
+  MV: { heizung:.05 },
+  SN: { heizung:.05, fassade:.05, dach:.03 },
+  ST: { heizung:.05, fassade:.03 },
+  TH: { heizung:.05, fassade:.03 },
+  SH: { heizung:.05, fassade:.03 },
+};
+
+export const LAND_BONUS_CAP = 5000;

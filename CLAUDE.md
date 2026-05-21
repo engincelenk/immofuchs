@@ -47,7 +47,11 @@ Jede Antwort folgt exakt diesem Schema:
   WAS    — Was wird gebaut (1–2 Sätze)
   WARUM  — Begründung des Ansatzes (1–2 Sätze)
   BESSER — Gibt es state-of-the-art Alternative?
-           Lohnt sie sich hier? Ja/Nein + Begründung
+           Lohnt sie sich hier? Ja/Nein + 
+  APPROVE- Implementierung starten?
+
+
+Begründung
   
   CODE-CHECK vor dem Schreiben:
   → Geschätzter Zuwachs (Zeilen / KB)
@@ -76,6 +80,5 @@ am Ende, klar als Vorschlag markiert — nie als Blocker.
 ── Release notes
 ────────────────────────────────────────
 Nach jede erfolgreiche Umsetzung release-notes.txt updaten. Woher fragen.
-═══════════════════════════════════════════════════════
 
-bevor du anfängt zu implementieren immer fragen.
+═══════════════════════════════════════════════════════

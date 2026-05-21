@@ -1,6 +1,98 @@
 IMMOFUCHS.INFO — RELEASE NOTES
 ================================
 
+v1.8 — 2026-05-21
+------------------
+AUDIT: App auf tote/unverbundene Felder geprüft
+- PLZSearch-Block aus Sanierungsrechner entfernt (PLZ/Ort hatten keinerlei Effekt)
+- Alle anderen Felder in Haupt-, Kredit-, Mieterhöhungs-Rechner: korrekt verbunden
+
+FIX: Bundesland-Kontext im Sanierungsrechner
+- Zeigt jetzt direkt die zuständige Landesbank (z.B. "L-Bank BW")
+- Erklärt: BAFA-Fördersätze gelten bundesweit einheitlich
+
+NEU: Bundesland-spezifische Landesförderung im Sanierungsrechner
+- LAND_BONUS_FQ mit 12 Bundesländern (BW, BY, BE, BB, HH, HE, NW, MV, SN, ST, TH, SH)
+- Quellen: L-Bank, BayernLabo, IBB, IFB, NRW.BANK, SAB, TAB u.a.
+- Landesbonus separat ausgewiesen (blau), Cap 5.000€/Maßnahme
+- Nettokost = Brutto − BAFA − Landesbonus
+
+NEU: iSFP-Toggle
+- Individueller Sanierungsfahrplan: +5% BAFA-Bonus auf alle BEG-Maßnahmen
+- Gilt für Fenster, Fassade, Heizung, Dach, Tür, Keller, OG-Decke, Lüftung
+- FO_CAP dynamisch; Toggle mit grünem Slider; sanTip2 kontextuell
+
+REFACTOR: data.js als Single Source of Truth
+- LAND_F, LAND_BONUS_FQ, LAND_BONUS_CAP aus App.jsx → data.js
+
+v1.8 — 2026-05-21
+------------------
+AUDIT: App auf tote/unverbundene Felder geprüft
+- PLZSearch-Block aus Sanierungsrechner entfernt (PLZ/Ort hatten keinerlei Effekt)
+- Alle anderen Felder in Haupt-, Kredit-, Mieterhöhungs-Rechner: korrekt verbunden
+
+FIX: Bundesland-Kontext im Sanierungsrechner
+- Zeigt jetzt direkt die zuständige Landesbank (z.B. "L-Bank BW")
+- Erklärt: BAFA-Fördersätze gelten bundesweit einheitlich
+
+NEU: Bundesland-spezifische Landesförderung im Sanierungsrechner
+- LAND_BONUS_FQ mit 12 Bundesländern (BW, BY, BE, BB, HH, HE, NW, MV, SN, ST, TH, SH)
+- Quellen: L-Bank, BayernLabo, IBB, IFB, NRW.BANK, SAB, TAB u.a.
+- Landesbonus separat ausgewiesen (blau), Cap 5.000€/Maßnahme
+- Disclaimer "Schätzwert, bitte bei Landesbank prüfen" in der UI
+- Nettokost = Brutto − BAFA − Landesbonus
+
+NEU: iSFP-Toggle
+- Individueller Sanierungsfahrplan: +5% BAFA-Bonus auf alle BEG-Maßnahmen
+- Gilt für Fenster, Fassade, Heizung, Dach, Tür, Keller, OG-Decke, Lüftung
+- FO_CAP dynamisch (zieht iSFP-Bonus automatisch durch)
+- Toggle mit grünem Slider; Bestätigungs-Badge im Ergebnis; sanTip2 kontextuell
+
+REFACTOR: data.js als Single Source of Truth
+- LAND_F, LAND_BONUS_FQ, LAND_BONUS_CAP aus App.jsx → data.js exportiert
+- Duplikate entfernt, alle landF[]-Referenzen → LAND_F[]
+
+v1.7 — 2026-05-21
+------------------
+ARCHITEKTUR: Sanierungsdaten nach data.js zentralisiert
+- SAN_TIERS (Maßnahmenkosten), SAN_SRC_KEYS (Förderquellen) aus App.jsx → data.js
+- NEU in data.js: SAN_ENERGIE (ep-Map, co2F-Map, Default-Preise, Stand-Datum)
+- NEU in data.js: SAN_NORMEN (Baujahr-Heizkennwerte, Warmwasser, Haushaltsstrom-Norm,
+  PV-Ertrag, Eigenverbrauchsquote)
+- Einzige Datei für monatliche Datenpflege: src/data.js
+
+NEU: PV-Stromersparnis in Amortisationsrechnung
+- Wenn PV gewählt: Eigenverbrauch (min(kWp×950×70%, Jahresstromverbrauch)) × Strompreis
+  fließt in Gesamtersparnis/Jahr ein
+- Amortisation berechnet sich aus Heizersparnis + PV-Stromersparnis
+- Kennzahl "Jährl. Ersparnis" zeigt Aufschlüsselung: "Heizung X€ + PV-Strom Y€"
+- Amortisationsformel-Zeile zeigt Aufschlüsselung wenn PV aktiv
+
+BEREINIGUNG: Datumsangaben aus Tooltips entfernt
+- "(2025)" aus epStrom-Tooltip in allen 5 Sprachen (DE, EN, TR, ZH, HI) entfernt
+- "Stand ${MARKET_RATES.stand}" aus zinssatz-Tooltip entfernt
+- Rechtsbezüge wie "ab 2023", "seit 12/2020" bleiben erhalten (Inhalt, kein Datumsstempel)
+
+WARTUNG: Scheduled Task "immofuchs-data-monthly-update" erweitert
+- 3 neue Pflegebereiche ergänzt: SAN_ENERGIE, SAN_NORMEN, SAN_TIERS
+- SAN_ENERGIE (quartalsweise): ep-Map, co2F-Map, Default-Preise, Stand-Datum
+  Quellen: BDEW, UBA, Destatis
+- SAN_NORMEN (bei Normänderung): PV-Ertrag, Haushaltsstrom-Norm, Warmwasserbedarf
+  Quellen: Fraunhofer ISE, DIN 18599
+- SAN_TIERS (halbjährlich): Maßnahmenkosten nach Baupreisindex prüfen (Destatis, BKI)
+  Trigger: > 3% Indexanstieg seit letzter Aktualisierung
+
+v1.6.1 — 2026-05-21
+--------------------
+BUGFIX: Sanierungsrechner – Personen-Feld
+- Feld ließ sich nicht leeren / ändern (Wert "3" wurde durch ||"3" sofort zurückgesetzt)
+- Fix: ?? statt || als Fallback → leere Eingabe erlaubt, Rechenwert bleibt 3
+
+BUGFIX: Sanierungsrechner – Energiepreise Layout
+- Felder neu gruppiert nach Energieträger statt nach Feldtyp
+- Zeile 1: Strompreis | Stromkosten/Jahr
+- Zeile 2: Heizkosten | Heizkosten/Jahr
+
 v1.6 — 2026-05-19
 ------------------
 UX: Grenzsteuersatz Dropdown → Freitextfeld
