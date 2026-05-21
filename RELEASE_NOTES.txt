@@ -1,6 +1,18 @@
 IMMOFUCHS.INFO — RELEASE NOTES
 ================================
 
+v1.9 — 2026-05-21
+------------------
+FIX: Sanierungsrechner — Jahreskosten-Felder (Strom & Heizung)
+- Placeholder "Auto" durch berechnete Zahlwerte ersetzt
+- Stromkosten: BDEW-Personenhaushalt-Lookup (1–5+ Personen, kWh/J. × Strompreis)
+  → 1P: ~455€ / 2P: ~945€ / 3P: ~1.225€ / 4P: ~1.400€ / 5+P: ~1.750€
+- Heizkosten: flächen- + warmwasserbasiert (pe × 800 kWh), ändert sich mit Personenzahl
+- Beide Werte reaktiv: Placeholder passt sich sofort an wenn Personenzahl geändert wird
+- User-Eingabe überschreibt Placeholder weiterhin (Logik unverändert)
+- Neue Konstante: SAN_NORMEN.stromBDEW in data.js (Quelle: BDEW 2024)
+
+
 v1.8 — 2026-05-21
 ------------------
 AUDIT: App auf tote/unverbundene Felder geprüft

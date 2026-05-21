@@ -180,6 +180,8 @@ export const SAN_NORMEN = {
   warmwasserKWhPerson: 800,    // kWh/Person/Jahr (DIN 18599-10)
   hilfsStromKWhM2:       8,    // kWh/m²/Jahr Pumpenstrom etc.
   hausStromKWhM2:      150,    // kWh/m²/Jahr Haushaltsstrom Norm (BDEW)
+  // Haushaltsstrom nach Personenzahl (kWh/Jahr) — Quelle: BDEW 2024
+  stromBDEW: { 1: 1300, 2: 2700, 3: 3500, 4: 4000, 5: 5000 },
   pvErtragKWhKwp:      950,    // kWh/kWp/Jahr Ø Deutschland (Fraunhofer ISE)
   pvEigenverbrauchQuote: 0.70, // 70% Eigenverbrauchsquote (Ø ohne Speicher ~30%, mit Speicher ~70%)
 };

@@ -1353,7 +1353,8 @@ function Sanier(){
     const preisstieg=(+s.preisstieg||2)/100; // %/Jahr Energiepreis-Steigerung
     const kH_auto=Math.round(eH*ep/50)*50;
     const kH=hkJahrUser>0?hkJahrUser:kH_auto; // User-Eingabe hat Vorrang
-    const sk_auto=Math.round(fl*epStrom*SAN_NORMEN.hausStromKWhM2/50)*50; // ~150 kWh/m²/Jahr (BDEW-Norm)
+    const stromKWhBDEW=SAN_NORMEN.stromBDEW[Math.min(pe,5)]||SAN_NORMEN.stromBDEW[3];
+    const sk_auto=Math.round(stromKWhBDEW*epStrom/50)*50; // BDEW-Norm nach Personenhaushalt
     const skJ=skJahrUser>0?skJahrUser:sk_auto;
 
     const anbauF=s.anbau==="doppel"?0.75:s.anbau==="mittel"?0.5:1;
@@ -1459,7 +1460,7 @@ function Sanier(){
     if(bj<1978)gegReq.push({law:"§ 71 GEG",text:t.sanMassN3+": 65% "+t.str,sev:"info"});
     if(hk>200)gegReq.push({law:"EU-EPBD",text:`${t.eKl} ${EC_O[kw2ec(hk)]} (${hk} kWh/m²a)`,sev:"warn"});
 
-    return{tK,tFo,tFoLand,ne,ekG,co2G,amJ,ecV:kw2ec(hk),ecN:kw2ec(Math.max(hk*eM,10)),hk,eM,cM,kH,skJ,co2H,ALL,rows,epKwh,htIsStrom,espEuro,pvStromEsp,totalEsp,gegReq,preisstieg};
+    return{tK,tFo,tFoLand,ne,ekG,co2G,amJ,ecV:kw2ec(hk),ecN:kw2ec(Math.max(hk*eM,10)),hk,eM,cM,kH,skJ,co2H,ALL,rows,epKwh,htIsStrom,espEuro,pvStromEsp,totalEsp,gegReq,preisstieg,sk_auto,kH_auto};
   },[d,s,act,tier,t]);
 
   const htO=[{v:"gas",l:t.gas},{v:"heizoel",l:t.oel},{v:"wp",l:t.wp},{v:"pellets",l:t.pel},{v:"fernw-std",l:t.fw},{v:"kohle",l:t.koh},{v:"strom",l:t.str}];
@@ -1487,8 +1488,8 @@ function Sanier(){
       <Row><Sel label={t.sHTyp} value={d.sanHt||"heizoel"} onChange={v=>set("sanHt",v)} options={htO}/><Sel label={t.sHAlt} value={d.sanHa||"alt"} onChange={v=>set("sanHa",v)} options={haO}/></Row>
       <F label={t.sPers} value={d.sanPe??""} placeholder="3" onChange={v=>set("sanPe",v)} tip={tip("pers")}/>
       <Sec title={t.sEnergie} icon="⚡"/>
-      <Row><F label={t.sStrPr} unit="€/kWh" value={s.epStrom} onChange={v=>sF("epStrom",v)} step="0.01" tip={tip("epStrom")}/><F label={t.sSkJahr} unit="€/J." value={s.skJahr} onChange={v=>sF("skJahr",v)} tip={tip("skJahr")} placeholder={t.sAutoCalc}/></Row>
-      <Row><F label={t.sHkos} unit="€/kWh" value={s.epHeiz} onChange={v=>sF("epHeiz",v)} step="0.01" tip={tip("epHeiz")}/><F label={t.sHkJahr} unit="€/J." value={s.hkJahr} onChange={v=>sF("hkJahr",v)} tip={tip("hkJahr")} placeholder={t.sAutoCalc}/></Row>
+      <Row><F label={t.sStrPr} unit="€/kWh" value={s.epStrom} onChange={v=>sF("epStrom",v)} step="0.01" tip={tip("epStrom")}/><F label={t.sSkJahr} unit="€/J." value={s.skJahr} onChange={v=>sF("skJahr",v)} tip={tip("skJahr")} placeholder={String(R.sk_auto)}/></Row>
+      <Row><F label={t.sHkos} unit="€/kWh" value={s.epHeiz} onChange={v=>sF("epHeiz",v)} step="0.01" tip={tip("epHeiz")}/><F label={t.sHkJahr} unit="€/J." value={s.hkJahr} onChange={v=>sF("hkJahr",v)} tip={tip("hkJahr")} placeholder={String(R.kH_auto)}/></Row>
       <Sel label={t.sPreisstieg} value={s.preisstieg||"2"} onChange={v=>sF("preisstieg",v)} options={[{v:"0",l:t.sPS0},{v:"1",l:t.sPS1},{v:"2",l:t.sPS2},{v:"3",l:t.sPS3},{v:"5",l:t.sPS5}]}/>
 
       <Sec title={t.sStruktur} icon="📐"/>
