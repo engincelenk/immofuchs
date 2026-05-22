@@ -231,3 +231,16 @@ LANDING PAGE: Kappungsgrenze-Kachel aktualisiert
 WARTUNG ab jetzt:
 - Kappungsgrenze-Updates: nur public/staedte-mit-kappungsgrenze.csv editieren
 - Kein Code-Deployment nötig bei Datenänderungen
+
+v2.1 — 2026-05-22
+------------------
+FIX: iOS "Eingeben widerrufen"-Dialog eliminiert
+- Ursache: F-Komponente nutzte controlled input (value={Context-State})
+  → iOS registrierte jeden programmatischen Re-render als Undo-Step
+- Fix: F-Komponente bekommt lokalen useState (localVal)
+  → Während des Tippens: nur lokaler State, kein Context-Update
+  → onChange: live-Update zum Context (Berechnungen laufen sofort)
+  → Anzeige bleibt localVal solange fokussiert → iOS sieht keine Rück-Überschreibung
+  → onBlur: finaler Sync (Edge Cases)
+- readOnly-Felder: unverändert, direkt aus Context (kein lokaler State nötig)
+- Betrifft alle 4 Rechner (gleiche F-Komponente)

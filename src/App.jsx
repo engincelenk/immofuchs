@@ -61,8 +61,21 @@ const addY=(d,y)=>{const r=new Date(d);r.setFullYear(r.getFullYear()+y);return r
 
 function F({label,unit,value,onChange,type="number",step,readOnly,hint,tip,placeholder,children}){
   const isNum=type==="number";
-  const dv=isNum&&!readOnly&&value!=null?String(value).replace(".",","):value;
-  const hc=e=>{const v=e.target.value;onChange?.(isNum&&!readOnly?v.replace(",","."):v)};
+  const toDisp=v=>isNum&&!readOnly&&v!=null?String(v).replace(".",","):(v??'');
+  const [localVal,setLocalVal]=useState(()=>toDisp(value));
+  const focused=useRef(false);
+  useEffect(()=>{if(!focused.current)setLocalVal(toDisp(value));},[value]);
+  const hFocus=()=>{focused.current=true;};
+  const hChange=e=>{
+    const v=e.target.value;
+    setLocalVal(v);
+    onChange?.(isNum&&!readOnly?v.replace(",","."):v);
+  };
+  const hBlur=()=>{
+    focused.current=false;
+    onChange?.(isNum&&!readOnly?localVal.replace(",","."):localVal);
+  };
+  const dispVal=readOnly?toDisp(value):localVal;
   return <div className="if-field" style={{marginBottom:14}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
       <label style={{fontSize:15,color:"var(--cl)",fontWeight:500,marginBottom:5,display:"inline-flex",alignItems:"center"}}>{label}{tip&&<Tip text={tip} label={label}/>}</label>
@@ -72,8 +85,10 @@ function F({label,unit,value,onChange,type="number",step,readOnly,hint,tip,place
       <input
         type={isNum?"text":type}
         inputMode={isNum?"decimal":undefined}
-        value={dv}
-        onChange={hc}
+        value={dispVal}
+        onChange={readOnly?undefined:hChange}
+        onFocus={readOnly?undefined:hFocus}
+        onBlur={readOnly?undefined:hBlur}
         readOnly={readOnly}
         placeholder={placeholder||""}
         style={{flex:1,minWidth:0,border:"none",outline:"none",padding:"12px 14px",fontSize:18,background:"transparent",color:readOnly?"var(--ch)":"var(--ct)",fontFamily:"inherit",fontVariantNumeric:"tabular-nums"}}/>
@@ -2871,6 +2886,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
           <button onClick={()=>setLegalModal("datenschutz")} style={{background:"none",border:"none",color:"var(--ca)",cursor:"pointer",fontSize:10,fontFamily:"inherit",padding:0}}>Datenschutz</button>
         </div>
       </div>
+      <div className="tbar">{tabs.map(tb=><button key={tb.id} className="tbtn" onClick={()=>{setTab(tb.id);window.scrollTo({top:0,behavior:"smooth"});}}>{tb.ic(tab===tb.id)}<span style={{color:tab===tb.id?"var(--ca)":"var(--ch)"}}>{tb.l}</span></button>)}</div>
       <div className="tbar">{tabs.map(tb=><button key={tb.id} className="tbtn" onClick={()=>{setTab(tb.id);window.scrollTo({top:0,behavior:"smooth"});}}>{tb.ic(tab===tb.id)}<span style={{color:tab===tb.id?"var(--ca)":"var(--ch)"}}>{tb.l}</span></button>)}</div>
     </div>
     <LegalModal type={legalModal} onClose={()=>setLegalModal(null)}/>
