@@ -206,3 +206,28 @@ v1.0 — Launch
 - Persistenz via localStorage
 - Zweisprachig: Deutsch / Englisch
 - Mobile-First, iOS-Zoom-Schutz
+
+v2.0 — 2026-05-22
+------------------
+ARCHITEKTUR: Kappungsgrenze-Daten aus Hardcode → externe CSV
+- KAPP15-Set (225 hardcodierte Städte) aus data.js entfernt
+- Neue Datei: public/staedte-mit-kappungsgrenze.csv (wartbar ohne Code-Änderung)
+- CSV wird beim App-Start dynamisch geladen und geparst (fetch + async IIFE)
+- Format: Bundesland;Stadt — ein Eintrag pro Zeile, Semikolon-Trenner
+- Bundesländer ohne Kappungsgrenze (Saarland, Sachsen-Anhalt, Schleswig-Holstein)
+  als "Keine Kappungsgrenze"-Einträge → automatisch auf 20% Fallback
+
+DATEN: Kappungsgrenze-Datenbank auf 504 Städte erweitert
+- Vorher: 225 Einträge (manuell, unvollständig, ohne Stand-Datum)
+- Jetzt: 504 verifizierte Städte (Quelle: Landesverordnungen der 16 Bundesländer)
+- Stadtnamen normalisiert: kompatibel mit germanpostcodes.csv (100% Match-Rate)
+- 63 Schreibweisen korrigiert (Suffixe wie "b. München", "am Neckar", "i. Br." etc.)
+- 7 nicht auflösbare Einträge entfernt (Amtsgemeinden ohne PLZ-Entsprechung)
+- Hardcoded Sonderfall BE/HH entfernt — Berlin und Hamburg jetzt in CSV
+
+LANDING PAGE: Kappungsgrenze-Kachel aktualisiert
+- "200+ Städte" → "500+ Städte" in allen 5 Sprachen (DE, EN, TR, ZH, HI)
+
+WARTUNG ab jetzt:
+- Kappungsgrenze-Updates: nur public/staedte-mit-kappungsgrenze.csv editieren
+- Kein Code-Deployment nötig bei Datenänderungen

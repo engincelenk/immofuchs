@@ -41,48 +41,6 @@ export const BL_N = {
 
 export const BL_O = [{v:"",l:"–"}, ...Object.entries(BL_N).map(([v,l])=>({v,l}))];
 
-// ── KAPPUNGSGRENZEN 15% — angespannte Wohnungsmärkte ────────────────────
-// Intervall: jährlich prüfen
-// Quelle: Bundesanzeiger, Landesverordnungen
-export const KAPP15 = new Set([
-  "berlin","hamburg","backnang","bad bellingen","bad krozingen","badenweiler",
-  "balgheim","bietigheim-bissingen","bodelshausen","breisach am rhein","bretten",
-  "bubsheim","büsingen am hochrhein","denkendorf","denzlingen","dettingen an der erms",
-  "ditzingen","eichstetten am kaiserstuhl","eigeltingen","eislingen","emmendingen",
-  "eningen unter achalm","esslingen am neckar","ettlingen","fellbach","filderstadt",
-  "fischingen","freiburg im breisgau","freiburg","friedrichshafen","grenzach-wyhlen",
-  "güglingen","gundelfingen","hartheim am rhein","heidelberg","heilbronn","heimsheim",
-  "kandern","karlsruhe","kehl","kernen im remstal","kirchheim unter teck","kirchzarten",
-  "konstanz","kornwestheim","lahr","lauchringen","leinfelden-echterdingen","leonberg",
-  "lörrach","ludwigsburg","mannheim","march","meißenheim","merzhausen","möglingen",
-  "mülheim","neckarsulm","neuenburg am rhein","neuried","nürtingen","offenburg",
-  "pliezhausen","radolfzell am bodensee","reichenau","remseck am neckar","reutlingen",
-  "rheinfelden","riegel am kaiserstuhl","rümmingen","schallbach","schallstadt",
-  "sindelfingen","singen","st. blasien","staufen im breisgau","stuttgart","tübingen",
-  "überlingen","ulm","umkirch","waiblingen","waldkirch","wannweil","weil am rhein",
-  "weingarten","weinheim","weinstadt","wendlingen am neckar","wernau","winnenden",
-  "augsburg","aschaffenburg","bad aibling","bad reichenhall","bad tölz","bamberg",
-  "bayreuth","dachau","ebersberg","erding","erlangen","freising","fürstenfeldbruck",
-  "fürth","garching","gauting","germering","geretsried","gräfelfing","grafing b. münchen",
-  "gröbenzell","grünwald","haar","hallbergmoos","holzkirchen","ingolstadt","ismaning",
-  "karlsfeld","kempten","kempten (allgäu)","kirchheim b. münchen","landsberg am lech",
-  "landshut","münchen","neubiberg","neufahrn b. freising","nürnberg","oberschleißheim",
-  "ottobrunn","planegg","poing","pullach im isartal","regensburg","rosenheim",
-  "unterschleißheim","vaterstetten","wolfratshausen","würzburg","zorneding",
-  "bad homburg","bad vilbel","darmstadt","dreieich","eschborn","frankfurt",
-  "frankfurt am main","hanau","kassel","königstein im taunus","langen","marburg",
-  "mühlheim am main","neu-isenburg","oberursel","offenbach","offenbach am main",
-  "rüsselsheim","wiesbaden","aachen","bergisch gladbach","bielefeld","bochum","bonn",
-  "dortmund","duisburg","düsseldorf","essen","hamm","hürth","köln","krefeld",
-  "leverkusen","mönchengladbach","mülheim an der ruhr","münster","neuss","oberhausen",
-  "siegen","solingen","troisdorf","wuppertal","braunschweig","göttingen","hannover",
-  "lüneburg","oldenburg","osnabrück","wolfsburg","potsdam","falkensee",
-  "königs wusterhausen","oranienburg","strausberg","bremen","bremerhaven","rostock",
-  "schwerin","greifswald","stralsund","landau","ludwigshafen","ludwigshafen am rhein",
-  "mainz","neustadt an der weinstraße","speyer","trier","worms","kaiserslautern",
-  "dresden","leipzig","chemnitz","erfurt","jena","weimar","gera","kiel","lübeck",
-  "flensburg","norderstedt","pinneberg","quickborn","neumünster","halle","halle (saale)"
-]);
 
 // ── MIETPREISPROGNOSE ────────────────────────────────────────────────────
 // Intervall: quartalsweise
