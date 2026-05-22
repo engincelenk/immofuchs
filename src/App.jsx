@@ -222,8 +222,10 @@ const TIPS={
     sonder:"Einmalige Sonderumlagen der WEG, z.B. neue Heizung, neues Dach, Fassadensanierung, Aufzug. Vor Kauf Protokolle der Eigentümerversammlungen prüfen.",
     renovierung:"Geschätzte Renovierungskosten beim Kauf (Küche, Bad, Böden etc.). Wichtig: Übersteigen diese Kosten in den ersten 3 Jahren nach Kauf 15% des Gebäude-Kaufpreises (Kaufpreis × Gebäudeanteil), müssen sie als 'anschaffungsnahe Herstellungskosten' aktiviert und über die AfA abgeschrieben werden (§ 6 Abs. 1 Nr. 1a EStG) — kein Sofortabzug. Kein Steuerrechtsrat — Steuerberater hinzuziehen.",
     vgl:"Ortsübliche Vergleichsmiete pro m² (Mietspiegel, Mietdatenbank oder Gutachter).",
-    lDat:"Datum der letzten vertragswirksamen Mieterhöhung. 15-Monatsfrist nach § 558 BGB.",
-    lMiet:"Miete VOR der letzten Erhöhung (für Kappungsgrenze-Berechnung).",
+    vglRendite:"Ortsübliche Vergleichsmiete lt. Mietspiegel (€/m²). Wirkt auf zwei Arten: (1) Steuert den Mieterhöhungsplan — § 558 BGB erlaubt keine Erhöhung über diesen Wert, egal wie viel Kappungsgrenze noch frei ist. (2) Liegt deine Ist-Miete mehr als 15 % darunter, erscheint ein Hinweis zur schrittweisen Angleichung. Quelle: lokaler Mietspiegel, Mietdatenbank oder Sachverständigengutachten.",
+    vglMiete:"Gesetzliche Obergrenze nach § 558 Abs. 1 BGB — die Miete darf niemals über die ortsübliche Vergleichsmiete erhöht werden, egal wie viel Kappungsspielraum noch verfügbar ist. Der Wert projiziert sich im Zeitverlauf mit der hinterlegten Mietpreisprognose. Quelle: lokaler Mietspiegel, Mietdatenbank oder Sachverständigengutachten.",
+    lDat:"Datum der letzten vertragswirksamen Mieterhöhung. Bestimmt zwei Fristen: (1) 15-Monats-Frist — die nächste Erhöhung darf frühestens 15 Monate danach erfolgen (§ 558 Abs. 1 BGB). (2) 3-Jahres-Fenster — nur Erhöhungen der letzten 36 Monate zählen für die Kappungsgrenze. Je länger zurück, desto mehr Spielraum ist wieder frei.",
+    lMiet:"Kaltmiete VOR der letzten Erhöhung — nicht die aktuelle Miete. Wird benötigt, um den bereits verbrauchten Teil der Kappungsgrenze der letzten 3 Jahre zu berechnen. Beispiel: War die Miete 800 € und ist jetzt 900 €, wurden 12,5 % der Kappung genutzt — bei 20 %-Grenze bleiben noch 7,5 % verfügbar.",
     bj:"Baujahr der Immobilie (Bezugsfertigkeit). Bestimmt Energiestandard.",
     pers:"Personen im Haushalt - bestimmt Warmwasserbedarf (~800 kWh/Person/J.).",
     garage:"Kaufpreis für Garage oder Stellplatz, separat vom Wohnungsbereich. Nebenkosten werden auf Gesamtpreis berechnet.",
@@ -259,8 +261,10 @@ const TIPS={
     sonder:"One-time HOA special levies, e.g. new heating, roof, facade renovation, elevator. Review HOA meeting minutes before buying.",
     renovierung:"Estimated renovation costs at purchase (kitchen, bathroom, flooring etc.). Important: if costs exceed 15% of building purchase price within 3 years (§ 6 para. 1 no. 1a EStG), they must be capitalised and depreciated — no immediate deduction. Not tax advice — consult a tax advisor.",
     vgl:"Local comparable rent per m² (rent index, rent database, or appraiser).",
-    lDat:"Date of last contractually effective rent increase. 15-month wait per § 558 BGB.",
-    lMiet:"Rent BEFORE the last increase (for cap calculation).",
+    vglRendite:"Local comparable rent per m² (Mietspiegel). Works two ways: (1) Caps the rent increase plan — § 558 BGB prohibits any increase above this value, regardless of remaining headroom. (2) If your current rent is more than 15% below it, an advisory is shown for gradual alignment. Source: local rent index, database, or expert appraisal.",
+    vglMiete:"Legal ceiling per § 558 para. 1 BGB — rent may never be raised above the local comparable rent, no matter how much cap headroom is still available. The value is projected forward using the built-in rent growth forecast. Source: local rent index, database, or expert appraisal.",
+    lDat:"Date of last contractually effective rent increase. Sets two deadlines: (1) 15-month wait — the next increase may not occur until 15 months after this date (§ 558 para. 1 BGB). (2) 3-year rolling window — only increases within the last 36 months count toward the cap. The further back, the more headroom is restored.",
+    lMiet:"Cold rent BEFORE the last increase — not the current rent. Required to calculate how much of the 3-year cap has already been used. Example: if rent was €800 and is now €900, 12.5% of the cap is consumed — with a 20% limit, 7.5% remains available.",
     bj:"Year of construction (occupancy ready). Determines energy standard.",
     pers:"Persons in household — determines hot water demand (~800 kWh/person/yr).",
     garage:"Price for garage or parking space, separate from living area. Closing costs are calculated on total price.",
@@ -296,8 +300,10 @@ const TIPS={
     sonder:"Tek seferlik kat malikleri özel ödemeleri, örn. yeni ısıtma, çatı, cephe yenileme, asansör. Satın almadan önce kat malikleri toplantı tutanaklarını inceleyin.",
     renovierung:"Satın alımda tahmini tadilat maliyetleri. %15 eşiği aşılırsa aktifleştirme zorunludur.",
     vgl:"m² başına yerel karşılaştırmalı kira (kira endeksi, veritabanı veya bilirkişi).",
-    lDat:"Son sözleşme bazında geçerli kira artışı tarihi. § 558 BGB'ye göre 15 ay bekleme.",
-    lMiet:"Son artıştan ÖNCEKİ kira (kap hesaplaması için).",
+    vglRendite:"m² başına yerel karşılaştırmalı kira (Mietspiegel). İki şekilde etki eder: (1) Kira artış planını sınırlar — § 558 BGB, kalan kap marjından bağımsız olarak bu değerin üzerinde artışa izin vermez. (2) Mevcut kiranız %15'ten fazla altındaysa bir uyarı gösterilir. Kaynak: yerel kira endeksi, veritabanı veya bilirkişi.",
+    vglMiete:"§ 558 Abs. 1 BGB uyarınca yasal tavan — kalan kap marjı ne olursa olsun kira hiçbir zaman yerel karşılaştırmalı kiranın üzerine çıkarılamaz. Değer, yerleşik kira büyüme tahmini kullanılarak ileriye yansıtılır. Kaynak: yerel kira endeksi, veritabanı veya bilirkişi.",
+    lDat:"Son sözleşme bazında geçerli kira artışı tarihi. İki süreyi belirler: (1) 15 aylık bekleme — bir sonraki artış bu tarihten en erken 15 ay sonra yapılabilir (§ 558 Abs. 1 BGB). (2) 3 yıllık kayan pencere — yalnızca son 36 aydaki artışlar kap hesabına dahil edilir. Ne kadar eskiyse, o kadar çok marj geri kazanılır.",
+    lMiet:"Son artıştan ÖNCEKİ soğuk kira — mevcut kira değil. Son 3 yılda kappın ne kadarının kullanıldığını hesaplamak için gereklidir. Örnek: Kira 800 € iken şimdi 900 € ise, kapın %12,5'i kullanılmış — %20 limitiyle %7,5 hâlâ mevcut.",
     bj:"İnşaat yılı (oturuma hazır). Enerji standardını belirler.",
     pers:"Hanedeki kişi sayısı - sıcak su talebini belirler (kişi başı yıllık ~800 kWh).",
     garage:"Garaj veya park yeri için fiyat, yaşam alanından ayrı. Kapanış maliyetleri toplam fiyat üzerinden hesaplanır.",
@@ -333,8 +339,10 @@ const TIPS={
     sonder:"一次性物业特别征收，例如新供暖、屋顶、外墙翻新、电梯。购买前查阅业主大会会议记录。",
     renovierung:"购房时的预估装修费用。如超过建筑购价的15%则必须资本化。",
     vgl:"每平方米当地参考租金（租金指数、租金数据库或评估师）。",
-    lDat:"最后一次合同生效租金上调日期。德国民法典第558条要求等待15个月。",
-    lMiet:"最后一次上调前的租金（用于上限计算）。",
+    vglRendite:"每平方米当地参考租金（房租指数）。两种作用：(1) 限制租金上涨计划——§ 558 BGB 禁止超过此值的任何上涨，无论剩余上涨空间多少。(2) 如果当前租金低于此值超过15%，会显示逐步调整的提示。来源：当地房租指数、数据库或专家评估。",
+    vglMiete:"§ 558 第1款 BGB 规定的法定上限——无论剩余上涨空间多少，租金永远不得超过当地参考租金。该值使用内置租金增长预测进行未来预测。来源：当地房租指数、数据库或专家评估。",
+    lDat:"最后一次合同生效租金上调日期。确定两个期限：(1) 15个月等待期——下次上调最早可在此日期15个月后进行（§ 558第1款BGB）。(2) 3年滚动窗口——只有过去36个月内的上调计入上限计算。时间越久远，可用空间恢复越多。",
+    lMiet:"最后一次上调前的净冷租金——不是当前租金。用于计算过去3年中已使用的上限比例。示例：租金从800欧元涨到900欧元，已使用12.5%的上限——在20%限额下，还剩7.5%可用。",
     bj:"建造年份（可入住）。决定能源标准。",
     pers:"家庭人数 - 决定热水需求（每人每年约800 kWh）。",
     garage:"车库或停车位价格，与居住区分开。交易费用按总价计算。",
@@ -370,8 +378,10 @@ const TIPS={
     sonder:"एकमुश्त HOA विशेष लेवी, जैसे नई हीटिंग, छत, मुखौटा नवीनीकरण, लिफ्ट। खरीदने से पहले HOA बैठक की कार्यवाही की समीक्षा करें।",
     renovierung:"खरीद पर अनुमानित नवीनीकरण लागत। 15% सीमा पार होने पर पूंजीकरण आवश्यक।",
     vgl:"प्रति m² स्थानीय तुलनात्मक किराया (किराया सूचकांक, डेटाबेस या मूल्यांकनकर्ता)।",
-    lDat:"अंतिम अनुबंध-प्रभावी किराया वृद्धि की तारीख। § 558 BGB के अनुसार 15 महीने प्रतीक्षा।",
-    lMiet:"अंतिम वृद्धि से पहले किराया (कैप गणना के लिए)।",
+    vglRendite:"प्रति m² स्थानीय तुलनात्मक किराया (Mietspiegel)। दो तरह से काम करता है: (1) किराया वृद्धि योजना को सीमित करता है — § 558 BGB बचे हुए कैप स्थान की परवाह किए बिना इस मूल्य से ऊपर वृद्धि की अनुमति नहीं देता। (2) यदि वर्तमान किराया 15% से अधिक कम है, तो क्रमिक समायोजन की सलाह दिखाई जाती है। स्रोत: स्थानीय किराया सूचकांक, डेटाबेस या विशेषज्ञ मूल्यांकन।",
+    vglMiete:"§ 558 अनु. 1 BGB के अनुसार कानूनी ऊपरी सीमा — बचे हुए कैप स्थान की परवाह किए बिना किराया कभी भी स्थानीय तुलनात्मक किराए से ऊपर नहीं बढ़ाया जा सकता। मूल्य को अंतर्निहित किराया वृद्धि पूर्वानुमान का उपयोग करके आगे प्रक्षेपित किया जाता है। स्रोत: स्थानीय किराया सूचकांक, डेटाबेस या विशेषज्ञ मूल्यांकन।",
+    lDat:"अंतिम अनुबंध-प्रभावी किराया वृद्धि की तारीख। दो समयसीमाएँ निर्धारित करती है: (1) 15 महीने की प्रतीक्षा — अगली वृद्धि इस तारीख से कम से कम 15 महीने बाद ही हो सकती है (§ 558 अनु. 1 BGB)। (2) 3 साल की रोलिंग विंडो — केवल पिछले 36 महीनों की वृद्धि कैप में गिनी जाती है। जितना पुराना, उतना अधिक मार्जिन वापस आता है।",
+    lMiet:"अंतिम वृद्धि से पहले का शुद्ध ठंडा किराया — वर्तमान किराया नहीं। पिछले 3 वर्षों में उपयोग किए गए कैप की गणना के लिए आवश्यक। उदाहरण: किराया ₹800 से ₹900 हुआ तो 12.5% कैप उपयोग हो गई — 20% सीमा में 7.5% अभी भी उपलब्ध है।",
     bj:"निर्माण का वर्ष (कब्जे के लिए तैयार)। ऊर्जा मानक निर्धारित करता है।",
     pers:"घर में व्यक्ति - गर्म पानी की मांग निर्धारित करता है (~800 kWh/व्यक्ति/वर्ष)।",
     garage:"गैरेज या पार्किंग स्थान का मूल्य, रहने के क्षेत्र से अलग। क्लोजिंग लागत कुल मूल्य पर गणना की जाती है।",
@@ -956,7 +966,7 @@ function Haupt(){const{d,set,t,zinsen,tip}=useApp();const[view,setView]=useState
       <Sec title={t.mR} icon="⚖️"/>
       <Sel label={t.vermietQ} value={d.vermietet||"ja"} onChange={v=>set("vermietet",v)} options={[{v:"ja",l:t.vermietJa},{v:"nein",l:t.vermietNein}]}/>
       {vermietet&&<>
-        <F label={t.vgl} unit="€/m²" value={d.vergleichsmiete} onChange={v=>set("vergleichsmiete",v)} step="0.5" tip={tip("vgl")}/>
+        <F label={t.vgl} unit="€/m²" value={d.vergleichsmiete} onChange={v=>set("vergleichsmiete",v)} step="0.5" tip={tip("vglRendite")}/>
         <Sel label={t.immLeerQ} value={d.immLeer||"nein"} onChange={v=>set("immLeer",v)} options={[{v:"nein",l:t.immLeerJa},{v:"ja",l:t.immLeerNein}]}/>
         {immLeer&&<div style={{padding:"8px 10px",background:"#FFF8E6",borderRadius:8,fontSize:11,color:"#8a6d10",marginBottom:10,border:"1px solid #F5E4A8"}}>
           ℹ️ {t.immLeerNein}: {t.lDat} + 3 {t.jPl}
@@ -1270,7 +1280,7 @@ function Miete(){
       <PLZSearch/>
       <Sec title={t.kaltmiete} icon="💰"/>
       <F label={t.kaltmiete} unit="€/Mon." value={d.kaltmiete} onChange={v=>set("kaltmiete",v)} tip={tip("kaltmiete")}/>
-      <Row><F label={t.flaeche} unit="m²" value={d.flaeche} onChange={v=>set("flaeche",v)} tip={tip("flaeche")}/><F label={t.vgl} unit="€/m²" value={d.vergleichsmiete} onChange={v=>set("vergleichsmiete",v)} step="0.5" tip={tip("vgl")}/></Row>
+      <Row><F label={t.flaeche} unit="m²" value={d.flaeche} onChange={v=>set("flaeche",v)} tip={tip("flaeche")}/><F label={t.vgl} unit="€/m²" value={d.vergleichsmiete} onChange={v=>set("vergleichsmiete",v)} step="0.5" tip={tip("vglMiete")}/></Row>
       <Sec title={t.lDat} icon="📅"/>
       <Row><F label={t.lDat} value={d.letzteErhDatum} onChange={v=>set("letzteErhDatum",v)} type="date" tip={tip("lDat")}/><F label={t.lMiet} unit="€" value={d.letzteErhMiete} onChange={v=>set("letzteErhMiete",v)} tip={tip("lMiet")}/></Row>
       <Sel label={t.jahre} value={d.mietJahre||"10"} onChange={v=>set("mietJahre",v)} options={[5,10,15,20].map(y=>({v:y,l:`${y} J.`}))}/>
