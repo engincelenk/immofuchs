@@ -1,0 +1,20 @@
+## 2026-05-22
+
+### Bugfix: Sonderumlage jetzt in Rendite-Berechnung eingebunden
+
+**Problem:** Das Feld „Sonderumlage" im Renditerechner war nur mit dem Gesamtsaldo
+(Verkaufsszenario) verbunden, hatte aber keinen Einfluss auf Brutto- und Nettorendite.
+Nutzer, die eine Sonderumlage eingaben, sahen keine Änderung bei den Haupt-KPIs.
+
+**Fix:** Die Sonderumlage fließt nun korrekt in die Investitionsbasis ein:
+  - `gesamtInv = gKP + sonder`
+  - Bruttorendite = Jahreskaltmiete / gesamtInv × 100
+  - Nettorendite = (effektive Jahreskaltmiete − nicht umlagefähige Kosten) / gesamtInv × 100
+
+**Fachliche Begründung:** Die Sonderumlage ist ein einmaliger Investitionsaufwand beim Kauf
+(vergleichbar mit Kaufnebenkosten), der die Gesamtinvestition erhöht und damit die Rendite
+korrekt senkt.
+
+**Betroffene Dateien:** src/App.jsx (Zeile ~883)
+**Geänderte Logik:** ~3 Zeilen
+**FROZEN-Logik berührt:** Nein (§558-BGB und Annuität unverändert)

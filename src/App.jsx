@@ -880,8 +880,9 @@ function Haupt(){const{d,set,t,zinsen,tip}=useApp();const[view,setView]=useState
     const mz=zP/100/12,ann=da*(zP+tP)/100/12;
     let lz=0;if(mz>0&&ann>da*mz)lz=Math.log(ann/(ann-da*mz))/Math.log(1+mz)/12;
     const tM=j*12,lF=tM>0?Math.max(0,(tM-lM)/tM):1;
-    const effJ=mi*lF,bR=gKP>0?jM/gKP*100:0;
-    const nuJ=nu*12,nR=gKP>0?(effJ*12-nuJ)/gKP*100:0;
+    const gesamtInv=gKP+so; // Investitionsbasis inkl. Sonderumlage
+    const effJ=mi*lF,bR=gesamtInv>0?jM/gesamtInv*100:0;
+    const nuJ=nu*12,nR=gesamtInv>0?(effJ*12-nuJ)/gesamtInv*100:0;
     const afJ=kp*(gA/100)*(aP/100)+renAfaJ;
     const k15=isK15(d.ort)||d.bundesland==="BE"||d.bundesland==="HH",kP=k15?15:20;
     const mt=vermietet?buildMP(mi,qm,vQ,kP,d.letzteErhDatum,+d.letzteErhMiete||0,j,k15,t):{rows:[],q:"",vmPA:0};
