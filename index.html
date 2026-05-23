@@ -8,7 +8,7 @@
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://api.bundesbank.de; base-uri 'self'; form-action 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.google-analytics.com; connect-src 'self' https://api.bundesbank.de https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net; base-uri 'self'; form-action 'self';" />
 
   <!-- ═══ SEO — Grundlagen ═══ -->
   <title>Immofuchs – Kostenloser Immobilienrechner für Rendite, Kredit, Miete &amp; Sanierung</title>
@@ -206,12 +206,38 @@
   </div>
   <button id="cc-gear" class="cc-gear no-print" title="Cookie-Einstellungen ändern">⚙</button>
 
+  <!-- ═══ Google Consent Mode v2 (DSGVO-konform) ═══ -->
+  <script>
+    window.dataLayer=window.dataLayer||[];
+    function gtag(){dataLayer.push(arguments);}
+    // Standard: alles verweigert bis Consent erteilt
+    gtag('consent','default',{
+      analytics_storage:'denied',
+      ad_storage:'denied',
+      ad_user_data:'denied',
+      ad_personalization:'denied',
+      wait_for_update:500
+    });
+    gtag('js',new Date());
+    gtag('config','G-MQTYK65G3H',{anonymize_ip:true,send_page_view:false});
+  </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-MQTYK65G3H"></script>
+
   <script>
   (function(){
+    function updateConsent(granted){
+      gtag('consent','update',{
+        analytics_storage: granted ? 'granted' : 'denied'
+      });
+    }
     var b=document.getElementById('cc-ban'),o=document.getElementById('cc-ov'),g=document.getElementById('cc-gear');
     function show(){b.classList.add('show');o.classList.add('show');g.style.display='none'}
     function hide(){b.classList.remove('show');o.classList.remove('show');g.style.display='flex'}
-    function save(s){localStorage.setItem('cc_consent',JSON.stringify({necessary:true,analytics:s,v:1,ts:Date.now()}));hide()}
+    function save(s){
+      localStorage.setItem('cc_consent',JSON.stringify({necessary:true,analytics:s,v:1,ts:Date.now()}));
+      updateConsent(s);
+      hide();
+    }
     document.getElementById('cc-yes').onclick=function(){save(true)};
     document.getElementById('cc-ok').onclick=function(){save(document.getElementById('cc-stat').checked)};
     document.getElementById('cc-no').onclick=function(){save(false)};
@@ -220,7 +246,11 @@
       e.preventDefault();
       window.open('/datenschutz','_blank');
     };
-    if(!localStorage.getItem('cc_consent'))setTimeout(show,600);else{g.style.display='flex'}
+    var existing=localStorage.getItem('cc_consent');
+    if(!existing){setTimeout(show,600);}else{
+      g.style.display='flex';
+      try{var c=JSON.parse(existing);updateConsent(!!c.analytics);}catch(e){}
+    }
   })();
   </script>
 

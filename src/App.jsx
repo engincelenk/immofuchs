@@ -2753,9 +2753,11 @@ function ZinsAlarm({ zinsen, lang }) {
 }
 
 
+const TAB_LABELS={haupt:"Renditerechner",kredit:"Finanzierungsrechner",miete:"Mieterhöhungsrechner",sanier:"Sanierungsrechner",steuer6:"Steuerrechner",saved:"Merkliste"};
 export default function App(){const[tab,setTab]=useState("haupt");const[lang,setLang]=useState("de");
   const[landed,setLanded]=useState(()=>sessionStorage.getItem("if_landed")==="1");
   const[zinsen,setZinsen]=useState(null); // holds the raw zinsen.json config (with live BBK)
+  useEffect(()=>{if(typeof window.gtag==='function'){window.gtag('event','tab_view',{tab_id:tab,tab_name:TAB_LABELS[tab]||tab});}},[tab]);
   const[legalModal,setLegalModal]=useState(null);
   const zinssatzTouchedRef=useRef(false); // true once user manually edits the field
 
