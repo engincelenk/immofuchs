@@ -1,3 +1,24 @@
+## 2026-05-23 (2)
+
+### Feature: Google Analytics 4 + Consent Mode v2
+
+**Was:** GA4-Tracking eingebaut — zeigt welcher Rechner wie oft aufgerufen wird.
+
+**Umsetzung:**
+- `index.html` (src + dist): GA4-Script fest im `<head>` verankert (Consent Mode v2)
+- Standard-Consent: `analytics_storage: denied` — kein Tracking ohne Zustimmung
+- Nach Nutzer-Zustimmung im Cookie-Banner: `gtag('consent','update',...)` schaltet Tracking ein
+- `App.jsx`: `useEffect` feuert `tab_view`-Event bei jedem Rechner-Wechsel
+  → Sichtbar in GA4 unter Ereignisse → `tab_view` mit `tab_name` (z.B. „Renditerechner")
+- CSP in beiden `index.html` um Google-Domains erweitert
+
+**Measurement ID:** G-MQTYK65G3H
+**DSGVO:** Consent Mode v2 (Googles offizieller Standard) — kein Cookie-Banner nötig für das Script selbst
+**FROZEN-Logik berührt:** Nein
+**Betroffene Dateien:** index.html, dist/index.html, src/App.jsx
+
+---
+
 ## 2026-05-23
 
 ### UX: Leere Zahlenfelder setzen bei Verlassen automatisch auf 0
