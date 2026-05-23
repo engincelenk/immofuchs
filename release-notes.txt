@@ -1,3 +1,25 @@
+## 2026-05-23
+
+### UX: Leere Zahlenfelder setzen bei Verlassen automatisch auf 0
+
+**Problem:** Löschte ein Nutzer den Wert in einem numerischen Eingabefeld vollständig,
+blieb das Feld leer. Das wirkte unfertig und konnte in Edge-Cases zu NaN-Berechnungen führen.
+
+**Fix:** `onBlur`-Handler in der zentralen `F`-Komponente erweitert:
+  - Ist das Feld beim Verlassen leer → wird automatisch `0` gesetzt
+  - Vorhandene Werte (Defaults oder Nutzereingaben) werden nicht angetastet
+  - Nur numerische Felder (`type="number"`) betroffen
+  - `readOnly`-, `date`- und `text`-Felder bleiben unverändert
+
+**Reichweite:** Alle 4 Rechner (Rendite, Finanzierung, Mieterhöhung, Sanierung),
+da alle numerischen Inputs die gemeinsame `F`-Komponente nutzen.
+
+**Betroffene Dateien:** src/App.jsx (Zeile ~74)
+**Geänderte Logik:** 5 Zeilen (nur hBlur)
+**FROZEN-Logik berührt:** Nein (§558-BGB und Annuität unverändert)
+
+---
+
 ## 2026-05-22
 
 ### Bugfix: Sonderumlage jetzt in Rendite-Berechnung eingebunden

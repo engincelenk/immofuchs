@@ -73,7 +73,12 @@ function F({label,unit,value,onChange,type="number",step,readOnly,hint,tip,place
   };
   const hBlur=()=>{
     focused.current=false;
-    onChange?.(isNum&&!readOnly?localVal.replace(",","."):localVal);
+    if(isNum&&!readOnly&&localVal.trim()===''){
+      setLocalVal('0');
+      onChange?.('0');
+    } else {
+      onChange?.(isNum&&!readOnly?localVal.replace(",","."):localVal);
+    }
   };
   const dispVal=readOnly?toDisp(value):localVal;
   return <div className="if-field" style={{marginBottom:14}}>
