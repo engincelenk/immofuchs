@@ -1,0 +1,74 @@
+name: 📊 Monthly Data Update
+
+on:
+  schedule:
+    # 1. jeden Monats um 07:00 UTC = 08:00 MEZ / 09:00 MESZ
+    - cron: '0 7 1 * *'
+  workflow_dispatch:
+    # Manuell auslösbar: GitHub → Actions → Monthly Data Update → Run workflow
+
+jobs:
+  update-and-deploy:
+    name: Update Market Data & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────
+      - name: 🚚 Code auschecken
+        uses: actions/checkout@v4
+
+      # ── 2. Python einrichten ─────────────────────────────────────────────
+      - name: 🐍 Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Python-Abhängigkeiten installieren
+        run: pip install anthropic requests
+
+      # ── 3. Marktdaten aktualisieren ──────────────────────────────────────
+      - name: 🔄 Marktdaten aktualisieren
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/monthly_update.py
+
+      # ── 4. Änderungen committen (nur wenn vorhanden) ─────────────────────
+      - name: 📝 Änderungen committen
+        run: |
+          git config --global user.name "ImmoFuchs Bot"
+          git config --global user.email "bot@immofuchs.info"
+          git add src/data.js src/App.jsx
+          if git diff --staged --quiet; then
+            echo "Keine Änderungen — kein Commit nötig"
+          else
+            MONTH=$(date +'%B %Y')
+            git commit -m "data: Monatliches Update $MONTH"
+            echo "✓ Commit erstellt"
+          fi
+
+      # ── 5. Build ─────────────────────────────────────────────────────────
+      - name: 🛠️ Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Build
+        run: |
+          npm ci
+          npm run build
+
+      # ── 6. Deploy zu IONOS ───────────────────────────────────────────────
+      - name: 📂 Deploy zu IONOS via SFTP
+        env:
+          SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
+          SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
+          SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+          lftp -c "
+          set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
+          open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
+          mirror -R ./dist /immofuchs --reverse --verbose --continue --delete;
+          quit;
+          "
