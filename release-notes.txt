@@ -1,3 +1,23 @@
+## 2026-05-25
+
+### UX: Klarere Labels für Nutzungsart & Belegung im Renditerechner
+
+**Problem:** Die zwei Dropdowns „Immobilie vermieten?" und „Aktuell vermietet?" wirkten
+redundant, da beide ähnlich klangen — obwohl sie konzeptionell verschiedene Dinge abfragen.
+
+**Fix:** Labels und Optionswerte umbenannt (nur UI, keine Logikänderung):
+- „Immobilie vermieten?" → **„Nutzungsart"**
+  - „Ja, vermietet" → „Kapitalanlage (vermietet)"
+  - „Nein / Eigennutzung" → „Eigennutzung"
+- „Aktuell vermietet?" → **„Belegung"**
+  - „Ja, aktuell vermietet" → „Aktuell vermietet"
+  - „Nein, steht leer" → „Aktuell leer"
+
+**Betroffene Dateien:** src/App.jsx (String-Map)
+**FROZEN-Logik berührt:** Nein
+
+---
+
 ## 2026-05-23 (2)
 
 ### Feature: Google Analytics 4 + Consent Mode v2
