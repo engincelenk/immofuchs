@@ -2070,7 +2070,7 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
     </header>
 
     {/* ═══════════ HERO ═══════════ */}
-    <section style={{maxWidth:1280,margin:0,padding:"clamp(32px,6vw,80px) 16px clamp(32px,5vw,60px)",width:"100%",boxSizing:"border-box",alignSelf:"stretch"}}>
+    <section style={{maxWidth:1280,margin:"0 auto",padding:"clamp(32px,6vw,80px) 16px clamp(32px,5vw,60px)",width:"100%",boxSizing:"border-box"}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,360px),1fr))",gap:"clamp(28px,5vw,48px)",alignItems:"center",justifyItems:"center"}}>
 
         {/* LEFT: Headline + CTAs */}
