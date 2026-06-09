@@ -81,4 +81,8 @@ am Ende, klar als Vorschlag markiert — nie als Blocker.
 ────────────────────────────────────────
 Nach jede erfolgreiche Umsetzung release-notes.txt updaten. Woher fragen.
 
+── Git Befehl zum Push
+────────────────────────────────────────
+Nach jede erfolgreiche Umsetzung den Befehl für git push formulieren.
+
 ═══════════════════════════════════════════════════════

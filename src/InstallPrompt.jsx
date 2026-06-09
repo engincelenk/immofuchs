@@ -7,7 +7,7 @@
 import { useState, useEffect } from "react";
 
 const STORAGE_KEY = "immofuchs_install_dismissed";
-const DISMISS_DAYS = 7;
+const DISMISS_DAYS = 3;
 
 function wasDismissedRecently() {
   try {

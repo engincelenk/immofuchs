@@ -2210,8 +2210,10 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
              bg:"linear-gradient(135deg,#e8eef5 0%,#c2d3e8 100%)",
              illus:<svg viewBox="0 0 280 130" style={{width:"100%",height:"100%"}} preserveAspectRatio="xMidYMid slice"><text x="5" y="112" fontSize="90" fontWeight="800" fill="#1e3a5f" opacity=".09" fontFamily="DM Sans" letterSpacing="-4">§6</text><line x1="75" y1="28" x2="195" y2="100" stroke="#1e3a5f" strokeWidth="2" opacity=".35"/><circle cx="75" cy="36" r="18" fill="none" stroke="#e8600a" strokeWidth="2.5"/><circle cx="80" cy="36" r="6" fill="#e8600a" opacity=".6"/><circle cx="195" cy="92" r="18" fill="none" stroke="#e8600a" strokeWidth="2.5"/><circle cx="200" cy="92" r="6" fill="#e8600a" opacity=".6"/><rect x="138" y="20" width="130" height="28" rx="14" fill="#e8600a"/><text x="152" y="38" fontSize="12" fontWeight="700" fill="#fff" fontFamily="DM Sans">− Steuerlast</text><path d="M228 65 L228 88 L252 76 Z" fill="#1e3a5f" opacity=".45"/></svg>}
           ].map((c,i)=><button key={i} onClick={()=>onStart(c.tab)} style={{display:"flex",flexDirection:"column",background:"var(--cc)",border:"1.5px solid var(--cb)",borderRadius:14,overflow:"hidden",textAlign:"left",cursor:"pointer",transition:"all .2s",padding:0,fontFamily:"inherit",position:"relative"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor="var(--ca)";e.currentTarget.style.boxShadow="0 8px 24px rgba(232,96,10,.12)"}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.borderColor="var(--cb)";e.currentTarget.style.boxShadow=""}}>
-            <div style={{height:130,background:c.bg,position:"relative",overflow:"hidden",borderBottom:"1px solid rgba(0,0,0,.05)"}}>
-              {c.illus}
+            <div style={{height:130,background:c.bg,position:"relative",overflow:"hidden",borderBottom:"1px solid rgba(0,0,0,.05)",lineHeight:0}}>
+              <div style={{position:"absolute",top:0,left:0,right:0,bottom:0}}>
+                {c.illus}
+              </div>
             </div>
             <div style={{padding:"22px 22px 22px",flex:1}}>
               <div style={{display:"inline-block",fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:c.featured?"#fff":"var(--ca)",background:c.featured?"var(--ca)":"var(--ca-bg)",padding:"3px 8px",borderRadius:4,marginBottom:10}}>{c.badge}</div>
@@ -2796,7 +2798,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
   const startApp=(startTab)=>{if(startTab&&tabs.find(x=>x.id===startTab))setTab(startTab);sessionStorage.setItem("if_landed","1");setLanded(true);window.scrollTo({top:0,behavior:"instant"});};
   if(!landed)return <><style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');:root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9}html,body{margin:0;padding:0;overflow-x:hidden}*{box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased}`}</style><Landing onStart={startApp} zinsen={zinsen} lang={lang} setLang={setLang} openDatenschutz={()=>setLegalModal("datenschutz")} openImpressum={()=>setLegalModal("impressum")}/><LegalModal type={legalModal} onClose={()=>setLegalModal(null)}/></>;
 
-  return <Ctx.Provider value={{d:data,set,t,lang,zinsen,tip:k=>(TIPS[lang]||TIPS.de)[k],savedList,saveObj,delObj,loadObj,setTabExt:setTab}}>
+  return <Ctx.Provider value={{d:data,set,t,lang,zinsen,tip:k=>(TIPS[lang]||TIPS.de)[k],savedList,saveObj,delObj,loadObj,setTabExt:(id)=>{setTab(id);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),50);}}}>
     <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
       :root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9}
       html,body{margin:0;padding:0;overflow-x:hidden;-webkit-text-size-adjust:100%}
