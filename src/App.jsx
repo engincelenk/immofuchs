@@ -2192,7 +2192,7 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
           <h2 style={{fontSize:"clamp(26px,3vw,38px)",fontWeight:800,color:"var(--ct)",margin:0,letterSpacing:-.5,lineHeight:1.15}}>{l.cardsSub}</h2>
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:18}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:18}}>
           {[
             {tab:"haupt",featured:true,title:l.fullTitle,badge:l.fullBadge,desc:l.fullDesc,feats:[l.fullF1,l.fullF2,l.fullF3,l.fullF4,l.fullF5,l.fullF6],cta:l.fullCta,
              bg:"linear-gradient(135deg,#fff1e8 0%,#ffd9b8 100%)",
