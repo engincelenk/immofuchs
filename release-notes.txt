@@ -1,3 +1,34 @@
+## 2026-06-10 (2)
+
+### Bugfix: Karten-Grid — Illustrationen nicht mehr abgeschnitten
+
+**Problem**: Mit der 5. Karte (Steueroptimierung §6) passten alle 5 Karten in eine Reihe bei 1280px max-width → jede Karte nur ~242px breit, aber SVG-viewBox ist 280px → Illustrationen wurden links und rechts gecroppt.
+
+**Fix**: `repeat(auto-fit,minmax(240px,1fr))` → `repeat(auto-fill,minmax(min(100%,280px),1fr))`
+- `auto-fill` statt `auto-fit`: 5. Karte behält normale Breite in Reihe 2 (auto-fit hätte sie auf volle Grid-Breite gestretcht)
+- `280px` statt `240px`: 5 Spalten passen nicht mehr in 1280px (5×280+4×18=1472>1280) → 4 Spalten, jede ~307px → SVG-Illustrationen vollständig sichtbar
+
+**Betroffene Dateien**: `src/App.jsx`, `dist/`
+
+---
+
+## 2026-06-10
+
+### Bugfix: iOS Rand-rechts — Tiefenfix (touch-action + overscroll + #root)
+
+**Problem**: Horizontal-Scroll auf iOS Safari/PWA persistierte trotz `overflow-x:hidden` auf Landing-Wrapper und `.shell`. Root Cause: iOS Safari respektiert `overflow-x:hidden` auf `body`/`html` bei Touch-Events nicht.
+
+**Fix (3 Ebenen)**:
+1. `touch-action:pan-y` + `overscroll-behavior-x:none` auf `html,body` → Browser-seitig kein horizontales Swipen erlaubt
+2. `#root { overflow-x:hidden; max-width:100vw; position:relative }` in `index.html` → Root-Container geclipt
+3. `section,footer,header { min-width:0; max-width:100% }` in Landing-CSS → Flex-Items können nicht über min-content-Breite wachsen
+4. Hero-Section: `margin:"0 auto"` → `margin:0` (war ungewöhnlich auf Flex-Item mit width:100%)
+5. **Nebenbefund behoben**: App.jsx war durch früheren Schreibfehler am Dateiende abgeschnitten (fehlende `</Ctx.Provider>}-Zeilen`) → repariert, Neu-Build erfolgreich (index-Chl7BP1D.js)
+
+**Betroffene Dateien**: `index.html`, `src/App.jsx`, `dist/index.html`, `dist/assets/`
+
+---
+
 ## 2026-06-09 (2)
 
 ### Bugfix: iOS Safari Rand-rechts behoben
