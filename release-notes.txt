@@ -1,3 +1,17 @@
+## 2026-06-09 (2)
+
+### Bugfix: iOS Safari Rand-rechts behoben
+
+**Problem**: iOS Safari ignoriert `overflow-x:hidden` auf `html/body` — führte zu horizontalem Überlauf und sichtbarem weißem Rand rechts (besonders als PWA/standalone).
+
+**Fix**:
+- Landing-Wrapper-`<div>`: `overflowX:"hidden"`, `position:"relative"`, `width:"100%"` hinzugefügt
+- `.shell` (Haupt-App): `overflow-x:hidden`, `position:relative`, `width:100%` hinzugefügt
+- Globale CSS (Landing + App): `width:100%`, `max-width:100%` auf `html,body`; `position:relative` auf `body`
+- Betroffene Datei: src/App.jsx
+
+---
+
 ## 2026-06-09
 
 ### Bugfix + UX: Preis/m², Mobile-Overflow, Eigennutzung-Removal, CSP-Fix
