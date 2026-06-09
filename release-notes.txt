@@ -1,3 +1,38 @@
+## 2026-06-09
+
+### Bugfix + UX: Preis/m², Mobile-Overflow, Eigennutzung-Removal, CSP-Fix
+
+**Bugfix: Preis/m² Berechnung korrigiert**
+- Preis/m² wurde fälschlicherweise mit `Kaufpreis + Garage/Stellplatz` berechnet
+- Fix: Nur `Kaufpreis` als Basis (NBK-Berechnung nutzt weiterhin korrekt den Gesamtpreis)
+- Betroffene Datei: src/App.jsx
+
+**Bugfix: Mobiler Rand-Gap auf Landing-Page behoben**
+- Rechts offener Rand auf Smartphones durch fehlendes `overflow-x:hidden` im Landing-Page-Style-Block
+- Fix: `html,body{overflow-x:hidden}` in den Early-Return-Style-Block ergänzt
+- Betroffene Datei: src/App.jsx (Landing-Page `<style>`-Block)
+
+**Feature-Entfernung: Eigennutzung-Option aus Renditerechner entfernt**
+- Eigennutzung-Toggle vollständig entfernt; Renditerechner ist für Kapitalanleger
+- Ersetzt durch orangen Hinweis-Banner „Eigennutzung geplant?" mit Link zum Finanzierungsrechner
+- `vermietet`-State, `immLeer`-Toggle, bedingter `useEffect` und alle bedingten Renderings entfernt
+- `buildMP` wird jetzt immer aufgerufen
+- FROZEN-Logik berührt: Nein
+
+**UX: Banner-Platzierung & GESAMTSALDO-Karten korrigiert**
+- „Eigennutzung geplant?"-Banner unter dem Mietrecht-Section-Header platziert (nicht davor)
+- `detInfo` (Steuervorteil-Erklärung) aus GESAMTSALDO-OHNE-Karte entfernt → nur in MIT-Karte
+- Doppelte ℹ️-Info-Box unterhalb der Karten entfernt
+- Betroffene Datei: src/App.jsx (Detail-Komponente)
+
+**Bugfix: CSP um region1.google-analytics.com erweitert**
+- GA4 routet EU-Requests über `region1.google-analytics.com` — fehlte in `connect-src`
+- Browser hat alle GA4-Requests geblockt; Tracking-Daten gingen verloren
+- Fix: Domain in Content-Security-Policy ergänzt
+- Betroffene Datei: index.html
+
+---
+
 ## 2026-05-25
 
 ### UX: Klarere Labels für Nutzungsart & Belegung im Renditerechner
