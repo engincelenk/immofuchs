@@ -2192,7 +2192,7 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
           <h2 style={{fontSize:"clamp(26px,3vw,38px)",fontWeight:800,color:"var(--ct)",margin:0,letterSpacing:-.5,lineHeight:1.15}}>{l.cardsSub}</h2>
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:18}}>
+        <div className="calc-cards">
           {[
             {tab:"haupt",featured:true,title:l.fullTitle,badge:l.fullBadge,desc:l.fullDesc,feats:[l.fullF1,l.fullF2,l.fullF3,l.fullF4,l.fullF5,l.fullF6],cta:l.fullCta,
              bg:"linear-gradient(135deg,#fff1e8 0%,#ffd9b8 100%)",
@@ -2210,7 +2210,7 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
              bg:"linear-gradient(135deg,#e8eef5 0%,#c2d3e8 100%)",
              illus:<svg viewBox="0 0 280 130" style={{width:"100%",height:"100%"}} preserveAspectRatio="xMidYMid slice"><text x="5" y="112" fontSize="90" fontWeight="800" fill="#1e3a5f" opacity=".09" fontFamily="DM Sans" letterSpacing="-4">§6</text><line x1="75" y1="28" x2="195" y2="100" stroke="#1e3a5f" strokeWidth="2" opacity=".35"/><circle cx="75" cy="36" r="18" fill="none" stroke="#e8600a" strokeWidth="2.5"/><circle cx="80" cy="36" r="6" fill="#e8600a" opacity=".6"/><circle cx="195" cy="92" r="18" fill="none" stroke="#e8600a" strokeWidth="2.5"/><circle cx="200" cy="92" r="6" fill="#e8600a" opacity=".6"/><rect x="138" y="20" width="130" height="28" rx="14" fill="#e8600a"/><text x="152" y="38" fontSize="12" fontWeight="700" fill="#fff" fontFamily="DM Sans">− Steuerlast</text><path d="M228 65 L228 88 L252 76 Z" fill="#1e3a5f" opacity=".45"/></svg>}
           ].map((c,i)=><button key={i} onClick={()=>onStart(c.tab)} style={{display:"flex",flexDirection:"column",background:"var(--cc)",border:"1.5px solid var(--cb)",borderRadius:14,overflow:"hidden",textAlign:"left",cursor:"pointer",transition:"all .2s",padding:0,fontFamily:"inherit",position:"relative",width:"100%"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor="var(--ca)";e.currentTarget.style.boxShadow="0 8px 24px rgba(232,96,10,.12)"}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.borderColor="var(--cb)";e.currentTarget.style.boxShadow=""}}>
-            <div style={{height:130,background:c.bg,overflow:"hidden",borderBottom:"1px solid rgba(0,0,0,.05)",display:"flex",alignItems:"stretch",flexShrink:0}}>
+            <div style={{height:130,background:c.bg,overflow:"hidden",borderBottom:"1px solid rgba(0,0,0,.05)",display:"flex",alignItems:"stretch",flexShrink:0,width:"100%"}}>
               {c.illus}
             </div>
             <div style={{padding:"22px 22px 22px",flex:1}}>
@@ -2322,6 +2322,12 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
 
     {/* Responsive nav styles */}
     <style>{`
+      .calc-cards{display:grid;grid-template-columns:1fr;gap:18px}
+      .calc-cards>*{width:100%;min-width:0;box-sizing:border-box}
+      @media(min-width:580px){.calc-cards{grid-template-columns:repeat(2,1fr)}}
+      @media(min-width:900px){.calc-cards{grid-template-columns:repeat(3,1fr)}}
+      @media(min-width:1200px){.calc-cards{grid-template-columns:repeat(4,1fr)}}
+      @media(min-width:1500px){.calc-cards{grid-template-columns:repeat(5,1fr)}}
       @media(max-width:880px){
         .lp-nav{display:none!important}
         .lp-burger{display:inline-flex!important}
