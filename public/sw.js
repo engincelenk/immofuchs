@@ -1,12 +1,12 @@
 /**
- * ImmoFuchs Service Worker v47
- * Strategie: Network-First mit vollständigem Same-Origin-Caching
- * → Alle Vite-Assets (auch gehashte Bundles) werden beim ersten Aufruf gecacht
- * → Danach: volle Offline-Funktionalität
+ * ImmoFuchs Service Worker v49
+ * Strategie: Network-First mit Timeout + vollständigem Same-Origin-Caching
+ * → Online: frisch vom Netz, gecacht für Offline
+ * → Offline: sofort aus Cache (max. 800ms Timeout statt Browser-Default ~30s)
  * Sprint 3: Zinsalarm via Push Notification
  */
 
-const CACHE_NAME = 'immofuchs-v48';
+const CACHE_NAME = 'immofuchs-v49';
 
 // ── Zinsalarm State (im SW-Kontext gespeichert) ───────────
 let alarmConfig = null; // {enabled, threshold, notifTitle, notifBody, avg, lang}
@@ -53,10 +53,10 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
-  // Navigations-Anfragen (HTML) → Network first, Fallback /index.html
+  // Navigations-Anfragen (HTML) → Network-First mit Timeout, Fallback /index.html
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetchWithTimeout(request, 800)
         .then(response => {
           cacheResponse(CACHE_NAME, request, response.clone());
           return response;
@@ -67,9 +67,9 @@ self.addEventListener('fetch', event => {
   }
 
   // Alle anderen Same-Origin Assets (JS/CSS Bundles, PNG, JSON, CSV)
-  // → Network first: frisch holen + cachen; bei Offline aus Cache
+  // → Network-First mit Timeout: offline sofort aus Cache statt 4-5s warten
   event.respondWith(
-    fetch(request)
+    fetchWithTimeout(request, 800)
       .then(response => {
         if (response.ok) {
           // Zinsalarm: bei /zinsen.json Fetch im Hintergrund prüfen
@@ -87,6 +87,18 @@ self.addEventListener('fetch', event => {
 // ── Helper ────────────────────────────────────────────────
 function cacheResponse(cacheName, request, response) {
   caches.open(cacheName).then(cache => cache.put(request, response));
+}
+
+// Fetch mit Timeout — nach ms ms wird auf Cache gefallen.
+// Verhindert den 4-5s Browser-Timeout bei offline Nutzung.
+function fetchWithTimeout(request, ms = 800) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('sw-timeout')), ms);
+    fetch(request).then(
+      res => { clearTimeout(timer); resolve(res); },
+      err => { clearTimeout(timer); reject(err); }
+    );
+  });
 }
 
 // ── Alarm: Zinsen prüfen und ggf. Notification anzeigen ──

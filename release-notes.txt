@@ -1,3 +1,15 @@
+## 2026-06-10 (4)
+
+### PWA: SW v49 — Offline-Ladezeit von 4-5s auf <1s reduziert
+
+**Problem**: Service Worker nutzte Network-First ohne Timeout. Der Browser wartete bis zu 4-5 Sekunden auf eine Netzwerkantwort bevor er auf den Cache zurückfiel — offline sah der User eine leere Seite mit Zahnrad-Icon.
+
+**Fix**: `fetchWithTimeout(request, 800ms)` ersetzt alle `fetch(request)` Aufrufe im SW. Nach 800ms wird die Promise rejected und der SW fällt sofort auf den gecachten Inhalt zurück. Online-Verhalten unverändert.
+
+**Betroffene Dateien**: `public/sw.js`
+
+---
+
 ## 2026-06-10 (3)
 
 ### PWA: Offline-Indikator + Theme-Color Fix
