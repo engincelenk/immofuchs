@@ -2053,9 +2053,9 @@ function Vorfaelligkeit(){
   useEffect(()=>{
     if(!d.vfeAuszahlung)set("vfeAuszahlung","2019-03-01");
     if(!d.vfeSollzinsbindungsEnde)set("vfeSollzinsbindungsEnde","2029-03-01");
-    if(!d.vfeRestschuld)set("vfeRestschuld","285000");
+    if(!d.vfeRestschuld){const da=Math.max(0,(+d.kaufpreis||300000)-(+d.eigenkapital||60000));set("vfeRestschuld",String(da||240000));}
     if(!d.vfeSollzinssatz&&!d.zinssatz)set("vfeSollzinssatz","1.85");
-    if(!d.vfeMonatsRate)set("vfeMonatsRate","1150");
+    if(!d.vfeMonatsRate){const da=Math.max(0,(+d.kaufpreis||300000)-(+d.eigenkapital||60000));const zP=+(d.zinssatz||MARKET_RATES.avg),tP=+(d.tilgung||1);const r=Math.round(da*(zP+tP)/100/12);if(r>0)set("vfeMonatsRate",String(r));}
     if(!d.vfeAbloeseTermin)set("vfeAbloeseTermin","2026-09-01");
     if(!d.vfeRestschuldDatum)set("vfeRestschuldDatum",new Date().toISOString().split("T")[0]);
   },[]);
@@ -3044,7 +3044,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
     }
   },[zinsen]);
 
-  const[data,setData]=useState({bundesland:"BW",plz:"70173",ort:"Stuttgart",kaufpreis:"300000",flaeche:"60",kaltmiete:"900",eigenkapital:"60000",zinssatz:String(MARKET_RATES.avg),tilgung:"1",zinsbindung:"10",notar:"2.0",makler:"3.57",steuersatz:"30",afaSatz:"2",grundAnteil:"20",gebAnteil:"80",wertP:"2",jahre:"10",sonder:"3000",renovierung:"15000",nichtUml:"100",leerstand:"2",vergleichsmiete:"14",letzteErhDatum:new Date(new Date().getFullYear()-2,new Date().getMonth(),1).toISOString().split("T")[0],letzteErhMiete:"800",mietJahre:"10",sanFl:"140",sanBj:"1981",sanHt:"heizoel",sanHa:"alt",sanPe:"3",sanIsfp:false,garage:"20000",mieteQm:"15",vermietet:"ja",immLeer:"nein"});
+  const[data,setData]=useState({bundesland:"BW",plz:"70173",ort:"Stuttgart",kaufpreis:"300000",flaeche:"60",kaltmiete:"900",eigenkapital:"60000",zinssatz:String(MARKET_RATES.avg),tilgung:"1",zinsbindung:"10",notar:"2.0",makler:"3.57",steuersatz:"30",afaSatz:"2",grundAnteil:"20",gebAnteil:"80",wertP:"2",jahre:"10",sonder:"3000",renovierung:"15000",nichtUml:"100",leerstand:"2",vergleichsmiete:"14",letzteErhDatum:new Date(new Date().getFullYear()-2,new Date().getMonth(),1).toISOString().split("T")[0],letzteErhMiete:"900",mietJahre:"10",sanFl:"60",sanBj:"1981",sanHt:"heizoel",sanHa:"alt",sanPe:"3",sanIsfp:false,garage:"20000",mieteQm:"15",vermietet:"ja",immLeer:"nein"});
   const set=useCallback((k,v)=>{
     if(k==="zinssatz") zinssatzTouchedRef.current=true;
     setData(p=>({...p,[k]:v}));
