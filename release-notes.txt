@@ -1,3 +1,15 @@
+## 2026-06-10 (3)
+
+### PWA: Offline-Indikator + Theme-Color Fix
+
+**Offline-Indikator**: Wenn keine Internetverbindung, erscheint ein kleines blaues Banner am unteren Bildschirmrand: „📴 Offline · Alle Rechner funktionieren · Daten vom [Datum]". Verschwindet automatisch sobald wieder online. Datum stammt aus dem letzten erfolgreichen `zinsen.json`-Fetch (localStorage `if_zinsen_v3`). Funktioniert auf Landing Page und im App-Bereich (Banner über Tab-Leiste positioniert).
+
+**Theme-Color Fix**: `theme-color` von `#1E3A5F` auf `#f5f5f0` geändert. In iOS Safari wurde die Statusleiste navy-blau gefärbt, während der Header transluzent-weiß ist — sichtbarer Bruch. Jetzt matcht die Statusleiste-Farbe den Header-Hintergrund, nahtloser Übergang.
+
+**Betroffene Dateien**: `src/App.jsx`, `index.html`, `dist/`
+
+---
+
 ## 2026-06-10 (2)
 
 ### Bugfix: Karten-Grid — Illustrationen nicht mehr abgeschnitten
