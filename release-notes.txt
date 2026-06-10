@@ -1,3 +1,27 @@
+## 2026-06-11 (18)
+
+### Bugfix: PDF-Export lädt HTML-Datei statt Druckdialog
+
+**Problem**: `navigator.share` ist auf modernen Browsern (auch Desktop) verfügbar → Code fiel in den Share-Branch und lud eine HTML-Datei herunter statt den PDF-Druckdialog zu öffnen.
+
+**Fix**: `navigator.share`-Branch komplett entfernt. Alle Rechner öffnen jetzt immer einen neuen Tab mit `window.print()` → Browser-nativer „Als PDF speichern"-Dialog. Fallback (Popup geblockt): HTML-Download.
+
+**Betroffene Dateien**: `src/App.jsx`
+
+---
+
+## 2026-06-11 (17)
+
+### Bugfix: SteuerOptimierungsrechner — Weißer Bildschirm nach PDF-Export-Einbau
+
+**Problem**: `<ExportPDF title={t.steuer6}/>` in `SteuerTrick` hat `t` nicht im Scope (`SteuerTrick` destructuriert nur `lang` aus Context, nicht `t`).
+
+**Fix**: Titel-Prop auf `(T[lang]||T.de).steuer6` umgestellt — nutzt das Modul-level `T`-Objekt + vorhandenes `lang`.
+
+**Betroffene Dateien**: `src/App.jsx`
+
+---
+
 ## 2026-06-11 (16)
 
 ### UX: Erklärtext im Vorfälligkeitsrechner

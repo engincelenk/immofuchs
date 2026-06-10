@@ -812,24 +812,17 @@ table{border-collapse:collapse;width:100%}svg{max-width:100%}
 ${h}
 <div style="margin-top:30px;padding-top:12px;border-top:1px solid #e5e5dc;font-size:9px;color:#8a8a80;text-align:center">Erstellt mit Immofuchs · ${now} · Keine Rechts- oder Steuerberatung</div>
 </body></html>`;
-    const fileName="ImmoFuchs_"+title.replace(/\s+/g,"_")+".html";
-    if(navigator.share){
-      // Nativer Share Sheet (iOS/Android) — kein Druckdialog
-      const shareBlob=new Blob([doc],{type:"text/html;charset=utf-8"});
-      const file=new File([shareBlob],fileName,{type:"text/html"});
-      const shareData=navigator.canShare&&navigator.canShare({files:[file]})
-        ?{files:[file],title:"ImmoFuchs – "+title}
-        :{title:"ImmoFuchs – "+title,url:window.location.href,text:"Meine Immobilienberechnung mit ImmoFuchs"};
-      navigator.share(shareData).catch(()=>{});
-    } else {
-      // Desktop-Fallback: neues Tab + Druckdialog
-      const printDoc=doc.replace("</body>","<script>setTimeout(()=>window.print(),600)<\/script></body>");
-      const blob=new Blob([printDoc],{type:"text/html;charset=utf-8"});
-      const url=URL.createObjectURL(blob);
-      const w=window.open(url,"_blank");
-      if(!w){const a=document.createElement("a");a.href=url;a.download=fileName;a.click();}
-      setTimeout(()=>URL.revokeObjectURL(url),5000);
+    // Druckdialog → "Als PDF speichern" (nativ, alle Browser/Plattformen)
+    const printDoc=doc.replace("</body>","<script>setTimeout(()=>window.print(),600)<\/script></body>");
+    const blob=new Blob([printDoc],{type:"text/html;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const w=window.open(url,"_blank");
+    if(!w){
+      // Popup geblockt → direkter Download als Fallback
+      const fileName="ImmoFuchs_"+title.replace(/\s+/g,"_")+".html";
+      const a=document.createElement("a");a.href=url;a.download=fileName;a.click();
     }
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
   };
   return <button className="no-print" onClick={doExport} style={{width:"100%",padding:"12px",border:"1px solid var(--cb)",borderRadius:10,background:"var(--ci)",color:"var(--ct)",fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:12,marginBottom:4,fontFamily:"inherit"}}>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1999,6 +1992,7 @@ function SteuerTrick(){
             </div>)}
           </div>
           <div style={{fontSize:11,color:"var(--ch)",textAlign:"center",padding:"4px 16px 8px",lineHeight:1.5}}>{st.disclaimer}</div>
+          <ExportPDF title={(T[lang]||T.de).steuer6}/>
         </>:<div style={{...card,textAlign:"center",padding:32}}>
           <div style={{fontSize:32,marginBottom:8}}>🦊</div>
           <div style={{fontSize:15,fontWeight:600,color:"var(--ct)",marginBottom:4}}>{st.emptyTitle}</div>
@@ -2263,6 +2257,7 @@ function Vorfaelligkeit(){
           <div style={{fontSize:11,color:"var(--ch)",lineHeight:1.6,padding:"10px 12px",background:"var(--cro)",borderRadius:10}}>
             {vt.disclaimer}
           </div>
+          <ExportPDF title={t.vfe}/>
         </>
       }
     </div>
