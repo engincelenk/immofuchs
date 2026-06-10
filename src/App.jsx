@@ -2196,21 +2196,21 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
           {[
             {tab:"haupt",featured:true,title:l.fullTitle,badge:l.fullBadge,desc:l.fullDesc,feats:[l.fullF1,l.fullF2,l.fullF3,l.fullF4,l.fullF5,l.fullF6],cta:l.fullCta,
              bg:"linear-gradient(135deg,#fff1e8 0%,#ffd9b8 100%)",
-             illus:<img src="/card-rendite.webp" style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
+             illus:<img src="/card-rendite.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
             {tab:"kredit",title:l.finTitle,badge:l.finBadge,desc:l.finDesc,feats:[l.finF1,l.finF2,l.finF3,l.finF4,l.finF5,l.finF6],cta:l.finCta,
              bg:"linear-gradient(135deg,#e8f5ed 0%,#bce4ce 100%)",
-             illus:<img src="/card-kredit.webp" style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
+             illus:<img src="/card-kredit.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
             {tab:"miete",title:l.rentTitle,badge:l.rentBadge,desc:l.rentDesc,feats:[l.rentF1,l.rentF2,l.rentF3,l.rentF4,l.rentF5,l.rentF6],cta:l.rentCta,
              bg:"linear-gradient(135deg,#fff5e8 0%,#ffd5b8 100%)",
-             illus:<img src="/card-miete.webp" style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
+             illus:<img src="/card-miete.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
             {tab:"sanier",title:l.sanTitle,badge:l.sanBadge,desc:l.sanDesc,feats:[l.sanF1,l.sanF2,l.sanF3,l.sanF4,l.sanF5,l.sanF6],cta:l.sanCta,
              bg:"linear-gradient(135deg,#e8f0f5 0%,#bcd4e6 100%)",
-             illus:<img src="/card-sanierung.webp" style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
+             illus:<img src="/card-sanierung.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
             {tab:"steuer6",title:l.st6Title,badge:l.st6Badge,desc:l.st6Desc,feats:[l.st6F1,l.st6F2,l.st6F3,l.st6F4,l.st6F5,l.st6F6],cta:l.st6Cta,
              bg:"linear-gradient(135deg,#e8eef5 0%,#c2d3e8 100%)",
-             illus:<img src="/card-steuer.webp" style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>}
+             illus:<img src="/card-steuer.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>}
           ].map((c,i)=><button key={i} onClick={()=>onStart(c.tab)} style={{display:"flex",flexDirection:"column",background:"var(--cc)",border:"1.5px solid var(--cb)",borderRadius:14,overflow:"hidden",textAlign:"left",cursor:"pointer",transition:"all .2s",padding:0,fontFamily:"inherit",position:"relative",width:"100%"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor="var(--ca)";e.currentTarget.style.boxShadow="0 8px 24px rgba(232,96,10,.12)"}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.borderColor="var(--cb)";e.currentTarget.style.boxShadow=""}}>
-            <div style={{position:"relative",height:130,overflow:"hidden",borderRadius:"13px 13px 0 0",borderBottom:"1px solid rgba(0,0,0,.05)",flexShrink:0,background:c.bg}}>
+            <div style={{aspectRatio:"1200/520",width:"100%",overflow:"hidden",borderRadius:"13px 13px 0 0",borderBottom:"1px solid rgba(0,0,0,.05)",flexShrink:0,background:c.bg}}>
               {c.illus}
             </div>
             <div style={{padding:"22px 22px 22px",flex:1}}>
