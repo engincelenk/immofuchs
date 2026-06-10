@@ -1,3 +1,15 @@
+## 2026-06-11 (16)
+
+### UX: Erklärtext im Vorfälligkeitsrechner
+
+**src/App.jsx**:
+- Ergebnisübersicht zeigt jetzt eine "Was bedeutet das für dich?"-Karte in Umgangssprache
+- Positiv-Fall (orange): erklärt, dass der Betrag an die Bank zu zahlen ist + warum
+- Negativ-Fall (grün): erklärt, dass kein Geld zurückkommt trotz negativem Ergebnis + warum
+- Alle 5 Sprachen (DE/EN/TR/ZH/HI) enthalten die neuen Erklartexte
+
+---
+
 ## 2026-06-10 (15)
 
 ### Data: Wiederanlagezins (Pfandbrief) via Bundesbank API + Monthly Workflow
