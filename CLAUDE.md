@@ -83,6 +83,6 @@ Nach jede erfolgreiche Umsetzung release-notes.txt updaten. Woher fragen.
 
 ── Git Befehl zum Push
 ────────────────────────────────────────
-Nach jede erfolgreiche Umsetzung den Befehl für git push formulieren.
+Nach jede erfolgreiche Umsetzung den Befehl für git push formulieren. Achte auf PowerShell nutzt ; statt &&. Liefere korrekte Befehle.
 
 ═══════════════════════════════════════════════════════

@@ -204,3 +204,22 @@ korrekt senkt.
 - SW-Cache: v47 → v48 (iOS-Cache-Bust)
 
 **Betroffene Dateien**: `src/App.jsx`, `dist/`, `public/sw.js`, `dist/sw.js`
+
+---
+
+## 2026-06-10 (4)
+
+### Feature: Echte Foto-Illustrationen in Landing-Cards
+
+**Was**: 5 inline SVG-Platzhalter in den Landing-Page-Karten durch echte 3D-Render-Fotos ersetzt.
+
+**Änderungen**:
+- `public/card-rendite.png`, `card-kredit.png`, `card-miete.png`, `card-sanierung.png`, `card-steuer.png` hinzugefügt (613×427px)
+- `src/App.jsx`: `illus`-Props von inline `<svg>` auf `<img objectFit:cover>` umgestellt
+
+### Bugfix: RENDITE-Badge-Styling
+
+**Problem**: „RENDITE"-Badge war orange gefüllt (featured-State), alle anderen Badges ghost-style.
+**Fix**: Conditional `c.featured?"#fff":"var(--ca)"` entfernt — alle Badges einheitlich ghost-style.
+
+**Betroffene Dateien**: `src/App.jsx`, `public/`
