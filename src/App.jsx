@@ -2324,11 +2324,6 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
 
         {/* LEFT: Headline + CTAs */}
         <div style={{width:"100%"}}>
-          {/* Above-headline tag */}
-          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",background:"var(--ca-bg)",border:"1px solid var(--ca-bd)",borderRadius:30,fontSize:12,color:"var(--ca-dk)",fontWeight:600,marginBottom:20,letterSpacing:.3}}>
-            {l.tagFull}
-          </div>
-
           <h1 style={{fontSize:"clamp(34px,5vw,56px)",fontWeight:800,color:"var(--ct)",letterSpacing:-1,lineHeight:1.05,margin:"0 0 18px"}}>
             {l.h1a}<span style={{color:"var(--ca)"}}>{l.h1b}</span>{l.h1c}
           </h1>
@@ -2346,7 +2341,6 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
             {[
               {ic:"✓",t:l.trust1},
               {ic:"✓",t:l.trust2},
-              {ic:"✓",t:l.trust3},
               {ic:"✓",t:l.trust4}
             ].map((tr,i)=><div key={i} style={{display:"inline-flex",alignItems:"center",gap:6}}>
               <span style={{width:18,height:18,borderRadius:"50%",background:"#22c55e",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{tr.ic}</span>
