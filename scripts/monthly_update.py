@@ -85,6 +85,30 @@ def replace_row_rate(data_js: str, source_name: str, new_rate: str, changes: lis
 
 # ── Main ───────────────────────────────────────────────────────────────────
 
+def fetch_pfandbrief_zins() -> float | None:
+    """Fetch current Hypothekenpfandbrief yield (10Y) from Bundesbank API.
+    Series: BBK01.WU8148 — Umlaufrendite Hypothekenpfandbriefe 10J"""
+    try:
+        from datetime import date
+        start = date.today().replace(day=1).isoformat()[:7]  # YYYY-MM
+        url = (
+            "https://api.bundesbank.de/service/data/BBK/BBK01.WU8148"
+            f"?detail=dataonly&startPeriod={start}&format=json"
+        )
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        r.raise_for_status()
+        data = r.json()
+        # Navigate SDMX-JSON structure
+        obs = data["dataSets"][0]["series"]["0:0:0:0:0"]["observations"]
+        # Get latest observation value
+        latest_key = max(obs.keys(), key=int)
+        value = obs[latest_key][0]
+        return round(float(value), 2) if value is not None else None
+    except Exception as e:
+        print(f"  ⚠ Bundesbank API Fehler: {e}")
+        return None
+
+
 def main():
     now   = datetime.now()
     m_idx = now.month - 1   # 0-based
@@ -242,6 +266,28 @@ Regeln:
     data_js = replace_simple(data_js, r'stromCtKwh:\s*([\d.]+)',   en.get("stromCtKwh"),  "ENERGIE.stromCtKwh", changes)
     data_js = replace_simple(data_js, r'gasCtKwh:\s*([\d.]+)',     en.get("gasCtKwh"),    "ENERGIE.gasCtKwh",   changes)
     data_js = replace_simple(data_js, r'heiz.lCtL:\s*([\d.]+)',    en.get("heizölCtL"),   "ENERGIE.heizölCtL",  changes)
+
+    # PFANDBRIEF (direkt via Bundesbank API — kein Claude nötig)
+    print("\nFetching Pfandbrief yield from Bundesbank API...")
+    pfandbrief_zins = fetch_pfandbrief_zins()
+    if pfandbrief_zins:
+        print(f"  ✓ Pfandbrief 10J: {pfandbrief_zins} %")
+        data_js = replace_simple(
+            data_js,
+            r'(?s)export const PFANDBRIEF[^{]*\{[^}]*zins:\s*([\d.]+)',
+            pfandbrief_zins, "PFANDBRIEF.zins", changes
+        )
+        # Update stand within PFANDBRIEF block
+        pf_stand = f"{MONTH_DE[m_idx]} {year}"
+        # Replace only the PFANDBRIEF stand (second occurrence of stand:)
+        pf_match = re.search(r'export const PFANDBRIEF\s*=\s*\{[^}]*stand:\s*"([^"]+)"', data_js, re.DOTALL)
+        if pf_match:
+            old_pf_stand = pf_match.group(1)
+            if old_pf_stand != pf_stand:
+                changes.append(f"  PFANDBRIEF.stand: {old_pf_stand} → {pf_stand}")
+                data_js = data_js[:pf_match.start(1)] + pf_stand + data_js[pf_match.end(1):]
+    else:
+        print("  ⚠ Pfandbrief yield nicht verfügbar — Wert unverändert")
 
     if data_js != current_data_js:
         open(DATA_JS, "w", encoding="utf-8").write(data_js)

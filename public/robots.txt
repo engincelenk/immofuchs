@@ -1,8 +1,73 @@
+# ── STANDARD CRAWLER ────────────────────────────────────────────────────────
+# Rechner: Rendite | Kredit | Miete | Sanierung | §6b-Trick | Vorfälligkeit
 User-agent: *
 Allow: /
 Disallow: /api/
-
-# Crawl-delay für bessere Server-Performance
+Disallow: /assets/
 Crawl-delay: 1
 
 Sitemap: https://immofuchs.info/sitemap.xml
+
+# Letztes Update: 2026-06-10
+
+# ── AI TRAINING CRAWLER BLOCKIEREN ──────────────────────────────────────────
+
+# OpenAI
+User-agent: GPTBot
+Disallow: /
+
+# OpenAI (SearchGPT / Browsing)
+User-agent: OAI-SearchBot
+Disallow: /
+
+# Anthropic
+User-agent: anthropic-ai
+Disallow: /
+
+# Anthropic Claude
+User-agent: ClaudeBot
+Disallow: /
+
+# Google AI / Gemini Training
+User-agent: Google-Extended
+Disallow: /
+
+# Meta AI
+User-agent: FacebookBot
+Disallow: /
+
+# Common Crawl (Basis vieler LLM-Trainingsdaten)
+User-agent: CCBot
+Disallow: /
+
+# Cohere
+User-agent: cohere-ai
+Disallow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Disallow: /
+
+# Amazon Alexa / AI
+User-agent: Amazonbot
+Disallow: /
+
+# ByteDance / TikTok AI
+User-agent: Bytespider
+Disallow: /
+
+# Diffbot (AI-Datenextraktion)
+User-agent: Diffbot
+Disallow: /
+
+# ImagesiftBot
+User-agent: ImagesiftBot
+Disallow: /
+
+# Omgili / Webz.io
+User-agent: omgili
+Disallow: /
+
+# Scrapy (generischer Scraper)
+User-agent: Scrapy
+Disallow: /

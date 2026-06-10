@@ -42,6 +42,14 @@ export const BL_N = {
 export const BL_O = [{v:"",l:"–"}, ...Object.entries(BL_N).map(([v,l])=>({v,l}))];
 
 
+// ── WIEDERANLAGEZINS (PFANDBRIEF) ───────────────────────────────────────
+// Intervall: monatlich (automatisch via Bundesbank API)
+// Quelle: Deutsche Bundesbank, Zeitreihe BBK01.WU8148 (Hypothekenpfandbrief 10J)
+export const PFANDBRIEF = {
+  stand: "Mai 2026",
+  zins: 3.40,                  // % p.a. — 10-jähriger Hypothekenpfandbrief Ø
+};
+
 // ── MIETPREISPROGNOSE ────────────────────────────────────────────────────
 // Intervall: quartalsweise
 // Quelle: Stat. Bundesamt, IW-Institut

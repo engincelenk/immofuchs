@@ -1,3 +1,206 @@
+## 2026-06-10 (15)
+
+### Data: Wiederanlagezins (Pfandbrief) via Bundesbank API + Monthly Workflow
+
+**data.js**:
+- `export const PFANDBRIEF = { stand: "Mai 2026", zins: 3.40 }` — Zeitreihe BBK01.WU8148
+- Quelle: Deutsche Bundesbank, 10-jähriger Hypothekenpfandbrief
+
+**scripts/monthly_update.py**:
+- `fetch_pfandbrief_zins()` ruft `api.bundesbank.de/service/data/BBK/BBK01.WU8148` ab
+- Patcht `PFANDBRIEF.zins` + `PFANDBRIEF.stand` automatisch
+
+**.github/workflows/monthly-update.yml**:
+- Cron: 1. jeden Monats, 07:00 UTC → update → commit → build → deploy IONOS SFTP
+
+**Betroffene Dateien**: `src/data.js`, `scripts/monthly_update.py`, `.github/workflows/monthly-update.yml`
+
+---
+
+## 2026-06-10 (14)
+
+### Bugfix + Feature: Tilgungsplan aufklappbar + Landing-Page-Card VFE überarbeitet
+
+**Tilgungsplan** (`src/App.jsx`):
+- `overflow:"hidden"` vom Plan-Container entfernt — verhinderte Expansion in sticky-Kontext
+- `useRef(planRef)` + `scrollIntoView` beim Aufklappen → scrollt automatisch zum Plan
+- `type="button"` implizit durch onClick-Handler sichergestellt
+
+**Landing-Page VFE-Card** (DE-Block):
+- `vfeDesc`: Erklärt VFE verständlich, erwähnt tagesaktuellen Pfandbrief-Wiederanlagezins explizit
+- `vfeF1`: "Exakte VFE-Berechnung nach BGH-Methode (Aktiv-Passiv)"
+- `vfeF2`: §489 mit "automatisch geprüft" präzisiert
+- `vfeF3`: "Aufklappbarer Tilgungsplan" (Feature-Sprache statt technische Beschreibung)
+- `vfeF5`: "Wiederanlagezins (Pfandbrief) immer tagesaktuell" — neues USP-Feature
+- `vfeF6`: "Daten direkt aus Finanzierungsrechner übernehmen"
+- `vfeCta`: "Vorfälligkeit jetzt berechnen"
+
+---
+
+## 2026-06-10 (13)
+
+### Feature: VFE Beispiel-Defaults + ausführlichere Erklärungstexte
+
+**Was**: Vorfälligkeitsrechner zeigt beim ersten Öffnen sofort eine Beispielberechnung. Erklärungstexte in Umgangssprache überarbeitet.
+
+**Defaults** (`useEffect` beim Mount):
+- Auszahlungsdatum: 01.03.2019
+- Sollzinsbindungsende: 01.03.2029
+- Restschuld: 285.000 €
+- Nominalzins: 1,85 %
+- Monatliche Rate: 1.150 €
+- Geplanter Kündigungstermin: 01.09.2026
+- Restschuld-Datum: heute
+
+**Texte** (DE-Block, nicht Tooltips):
+- `emptyTitle`, `emptyMin`: Erklärung in Alltagssprache was VFE ist und wie man vorgeht
+- `hintPfand`: Erklärt warum Pfandbriefrendite relevant ist
+- `freeBodyA/B`: Freundlicher, erklärt §489 verständlich
+- `negNote`: Erklärt negative VFE ohne Fachjargon
+- `cap489`: Erklärt §489-Kappung und deren Wirkung
+- `disclaimer`: Erklärt Berechnungsmethode und Einschränkungen verständlich
+
+---
+
+## 2026-06-10 (12)
+
+### Bugfix: VFE rechnet nicht (Wiederanlagezins Default fehlt in Berechnung)
+
+**Problem**: Das Feld "Wiederanlagezins" zeigte `PFANDBRIEF.zins` als Anzeige-Fallback, aber `d.vfeWiederanlagezins` blieb leer im State → `wa=0` → `!wa=true` → Berechnung gab `null` zurück.
+
+**Fix** (`src/App.jsx`, Zeile ~2061):
+- `const wa=+d.vfeWiederanlagezins||0` → `const wa=+(d.vfeWiederanlagezins||String(PFANDBRIEF.zins))||0`
+- Gleicher Fallback wie Anzeige-Logik des Eingabefelds.
+
+---
+
+## 2026-06-10 (11)
+
+### Bugfix: VFE Tab-Label fehlte in EN/TR/ZH/HI
+
+**Problem**: `vfe`-Schlüssel im Haupt-T-Objekt war in allen Non-DE-Blöcken nicht vorhanden → Tab zeigte kein Label in Englisch, Türkisch, Chinesisch und Hindi.
+
+**Fix** (`src/App.jsx`):
+- `en`: `vfe:"Prepaymt."` ergänzt
+- `tr`: `vfe:"Erken Öd."` ergänzt
+- `zh`: `vfe:"提前还款"` ergänzt
+- `hi`: `vfe:"अग्रिम भुग."` ergänzt
+
+---
+
+## 2026-06-10 (10)
+
+### Bugfix: VFE-Tab Label fehlte (DE) + Vorfälligkeitsrechner lud nicht
+
+**Problem 1**: `vfe`-Schlüssel fehlte im `de`-Block des T-Objekts → Tab zeigte nur Icon, kein Label.
+
+**Problem 2**: `{tab==="vfe"&&<Vorfaelligkeit/>}` fehlte in der Render-Chain → leere Seite beim Öffnen des Tabs.
+
+**Fix** (`src/App.jsx`):
+- `vfe:"Vorfällig."` in de-Block nach `steuer6:"§6-Trick"` eingefügt
+- `{tab==="vfe"&&<Vorfaelligkeit/>}` in Render-Chain ergänzt
+
+---
+
+## 2026-06-10 (9)
+
+### Bugfix: VFE-Tab fehlte in Navigation + Landing-Page-Link defekt
+
+**Problem 1**: `{id:"vfe",...}` fehlte im `tabs`-Array → VFE-Tab war in der unteren Navigationsleiste nicht sichtbar.
+
+**Problem 2**: `startApp()` prüft `tabs.find(x=>x.id===startTab)` — da `vfe` nicht im Array war, fiel der Landing-Page-Link auf `haupt` zurück statt zum Vorfälligkeitsrechner zu navigieren.
+
+**Fix** (`src/App.jsx`):
+- `{id:"vfe",l:t.vfe,ic:IC.vfe}` in `tabs`-Array eingefügt (zwischen steuer6 und saved)
+- Datei-Truncation am Ende behoben (`</Ctx.Provider>` + `}` fehlten)
+
+---
+
+## 2026-06-10 (8)
+
+### Bugfix: Fehlende Tab-Übersetzungen (TR/ZH/HI)
+
+**Problem**: Der `merkliste`-Schlüssel fehlte in den Sprachblöcken TR, ZH und HI im `T`-Objekt. Dadurch zeigte die unterste Navigationsleiste für den „Gespeichert"-Tab in diesen Sprachen keinen Text unter dem Icon.
+
+**Fix** (`src/App.jsx`):
+- `tr`-Block: `merkliste:"Kaydedilenler"` ergänzt
+- `zh`-Block: `merkliste:"收藏夹"` ergänzt
+- `hi`-Block: `merkliste:"सहेजे गए"` ergänzt
+
+**Fix** (`src/data.js`):
+- Duplikat-Fehler in `LAND_BONUS_FQ` (BE-Eintrag) behoben, der durch Restore-Prozess entstanden war und den Build blockiert hatte.
+
+---
+
+## 2026-06-10 (7)
+
+### Bugfix: §489-BGB-Kappung des Schadenszeitraums (VFE-Korrektheit)
+
+**Problem**: Der Zinsschaden wurde bis zum Sollzinsbindungsende berechnet. Liegt der §489-Stichtag (Auszahlung + 10 J. + 6 Mon.) davor, überschätzte der Rechner die VFE deutlich, da die Bank Schaden nur bis zum frühestmöglichen kostenlosen Kündigungstermin verlangen kann.
+
+**Fix** (`src/App.jsx`, `Vorfaelligkeit`):
+- Schadenshorizont = `min(Zinsbindungsende, freeCancelDate)`. Tilgungsplan-Schleife und Zeilen-Flush nutzen `horizon` statt `zbEnde`.
+- Neues Flag `capped` im Ergebnis + lokalisierter Hinweis (`cap489`, DE/EN/TR/ZH/HI), der erklärt, bis wann gerechnet wurde.
+
+**Verifikation (fmh.de-Referenzfall, Auszahlung 02/2020, ZB-Ende 01/2035, Kündigung 09/2026)**:
+- Plan endet jetzt **01.08.2030** (= §489-Datum), vorher fälschlich 2035. 47 statt ~100 Monate.
+- Netto-VFE −16.073 € vs. fmh −15.741 € (Restdifferenz: flacher Wiederanlagezins statt interpolierter Pfandbrief-Zinskurve — bekannte Vereinfachung).
+
+**Noch offen (optional)**: interpolierte Pfandbrief-Zinskurve statt flachem Wiederanlagezins; Abzinsung der Verwaltungskosten.
+
+---
+
+## 2026-06-10 (6)
+
+### Feature: Vorfälligkeitsrechner – i18n (5 Sprachen), Tooltips & Sondertilgung-Fix
+
+**Was**: Lokalisierung, Hilfe-Tooltips und ein wirksamer Sondertilgung-Toggle für den Vorfälligkeitsrechner.
+
+**Änderungen** (`src/App.jsx`):
+- Neuer `VFE_T`-Übersetzungsblock (DE/EN/TR/ZH/HI) mit allen Feld-Labels, Sektionstiteln, Ergebnis-Zeilen, Tabellen-Headern, Empty-State, §489-Meldung und Disclaimer. Die Komponente nutzte zuvor durchgehend hartkodiertes Deutsch.
+- `Vorfaelligkeit`-Komponente vollständig auf `vt.xxx` umgestellt; `lang`/`loc` aus dem Context gezogen (Datums-Lokalisierung der §489-Meldung).
+- Tooltips an allen 11 Eingabefeldern ergänzt (`tip={vt.tipX}`) — identisches Hover-/Bottom-Sheet-Muster wie die übrigen Rechner.
+
+**Bugfix: Sondertilgung-Toggle „dies. Jahr geleistet?"**
+- Vorher faktisch ohne Funktion: griff nur bei Restschuld-Datum im Januar und wurde durch `sondDone=false` in jedem Nicht-Januar-Monat zurückgesetzt.
+- Beide Amortisationsschleifen auf Jahres-Tracking (`lastSondYear`) umgestellt. „Ja" = laufendes Jahr bereits verbraucht → nächste Sondertilgung erst im Folgejahr; „Nein" = Sondertilgung wird sofort fürs aktuelle Jahr verrechnet. Wirkt sich nur bei jährl. Sondertilgung > 0 € aus.
+- Hinweis: ändert Ergebnisse für Fälle mit Sondertilgung > 0 € (gewollt).
+
+**Offen → nachgezogen in (7)**: §489-Kappung des Schadenszeitraums.
+
+**Stand**: VFE_T (2026–2032) und gesamte `Vorfaelligkeit`-Funktion via esbuild fehlerfrei validiert.
+
+---
+
+## 2026-06-10 (5)
+
+### Feature: Vorfälligkeitsrechner (5. Rechner)
+
+**Was**: Neuer Rechner zur BGH-konformen Berechnung der Vorfälligkeitsentschädigung bei vorzeitiger Darlehensablösung.
+
+**Umsetzung (Aktiv-Passiv-Methode, BGH AZ: XI ZR 285/03)**:
+- Zinsverschlechterungsschaden: Barwert (Nominalzins − Wiederanlagezins) pro Periode, diskontiert mit Wiederanlagezins
+- Risikoersparnis: 0,1% p.a. auf Restschuld, diskontiert
+- Verwaltungskostenersparnis: 4 € × verbleibende Buchungen
+- Bearbeitungsentgelt: konfigurierbar (Default 150 €)
+- § 489 BGB: Automatische Prüfung — nach 10 Jahren + 6 Monaten Karenzzeit kostenlose Kündigung möglich
+- Tilgungsplan: Ab Kündigungstermin bis Zinsbindungsende, jährlich aggregiert, aufklappbar
+- Sondertilgung: Vor/nach dem Kündigungstermin berücksichtigt (Ja/Nein-Toggle)
+- Auto-Fill: Nominalzins und Monatsrate aus dem Finanzierungsrechner-Context
+- Negative VFE: Wenn Wiederanlagezins > Nominalzins → Bank schuldet dem Kreditnehmer (korrekte Anzeige mit Hinweis)
+
+**Landing Page**:
+- Neue Karte mit `card-vorfaelligkeit.webp` (bereits vorhanden in `public/`)
+- Badge: „VORFÄLLIGKEITSRECHNER" (orange, ghost-style, matching existing cards)
+- 6 Feature-Punkte in allen 5 Sprachen (DE, EN, TR, ZH, HI)
+
+**Betroffene Dateien**: `src/App.jsx` (8 Änderungen: Translations, Icon, TAB_LABELS, Landing-Card, Data-State, Tabs-Array, Tab-Render, Vorfaelligkeit-Komponente)
+**Neue Zeilen**: ~290 Zeilen (Komponente + Translations + State)
+**FROZEN-Logik berührt**: Nein (§558-BGB und Annuität unverändert)
+**Build**: 30 Module (vorher 16) — alle 10 Code-Checks ✓
+
+---
+
 ## 2026-06-10 (4)
 
 ### PWA: SW v49 — Offline-Ladezeit von 4-5s auf <1s reduziert
