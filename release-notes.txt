@@ -422,78 +422,77 @@
 - Betroffene Datei: src/App.jsx
 
 **Bugfix: Mobiler Rand-Gap auf Landing-Page behoben**
-- Rechts offener Rand auf Smartphones durch fehlendes `overflow-x:hidden` im Landing-Page-Style-Block
-- Fix: `html,body{overflow-x:hidden}` in den Early-Return-Style-Block ergänzt
-- Betroffene Datei: src/App.jsx (Landing-Page `<style>`-Block)
+- Re
+---
 
-**Feature-Entfernung: Eigennutzung-Option aus Renditerechner entfernt**
-- Eigennutzung-Toggle vollständig entfernt; Renditerechner ist für Kapitalanleger
-- Ersetzt durch orangen Hinweis-Banner „Eigennutzung geplant?" mit Link zum Finanzierungsrechner
-- `vermietet`-State, `immLeer`-Toggle, bedingter `useEffect` und alle bedingten Renderings entfernt
-- `buildMP` wird jetzt immer aufgerufen
-- FROZEN-Logik berührt: Nein
+## 2026-06-16
 
-**UX: Banner-Platzierung & GESAMTSALDO-Karten korrigiert**
-- „Eigennutzung geplant?"-Banner unter dem Mietrecht-Section-Header platziert (nicht davor)
-- `detInfo` (Steuervorteil-Erklärung) aus GESAMTSALDO-OHNE-Karte entfernt → nur in MIT-Karte
-- Doppelte ℹ️-Info-Box unterhalb der Karten entfernt
-- Betroffene Datei: src/App.jsx (Detail-Komponente)
+### Feature: Ampel-KPIs + Erklär-Texte im Renditerechner
 
-**Bugfix: CSP um region1.google-analytics.com erweitert**
-- GA4 routet EU-Requests über `region1.google-analytics.com` — fehlte in `connect-src`
-- Browser hat alle GA4-Requests geblockt; Tracking-Daten gingen verloren
-- Fix: Domain in Content-Security-Policy ergänzt
-- Betroffene Datei: index.html
+**Neue Komponente: `SectionExplain`**
+- Einheitlicher Erklärungs-Block (Bullets + Fließtext) unterhalb der KPIs
+- Zeigt dynamisch angepassten Text je nach Ergebnis (Grün/Gelb/Rot)
+- Nur für DE-Sprache aktiv
+
+**Section 1 — Rendite**
+- Bullet-Punkte: Berechnungsformel, Vergleichswerte (Tagesgeld/Anleihe/ETF), Kaufpreisfaktor, Warnungen bei Netto<Zins oder großer Spread
+- Erklärtext: Brutto vs. Netto-Rendite, Berechnungsherkunft, Stellschrauben
+
+**Section 2 — Cashflow**
+- Bullet-Punkte: CF ohne/mit Steuer, monatliche Zuzahlung, Steuerbonus-Delta
+- Erklärtext: Was Cashflow bedeutet, Ohne-/Mit-Steuer-Unterschied, warum negativer CF okay sein kann, Stellschrauben
+
+**Section 3 — Finanzierung**
+- Bullet-Punkte: Beleihungsauslauf-Bedeutung, Rate-Aufteilung, Laufzeit, EK-Quote, Warnungen
+- Erklärtext: Risikoaufschlag-Logik der Banken, Tilgungseffekt, Stellschrauben (EK, Tilgung, Sondertilgung)
+
+**Section 4 — Steuer**
+- NEU: AmpelKPI für Steuerersparnis/Jahr (grün >150€/Mon, gelb >75€, rot ≤75€)
+- NEU: AmpelKPI für Break-Even Nebenkosten (grün ≤10J, gelb ≤15J, rot >15J)
+- Section-Farbe jetzt dynamisch basierend auf Steuer-Ampel
+- Erklärtext: AfA-Erklärung, absetzbare Positionen, Gebäudeanteil, Baujahr-Tipp (vor 1925 → 2,5%)
+
+**Section 5 — Zeitverlauf**
+- Bullet-Punkte: Restschuld-Entwicklung, kum. Cashflow, Jahresmiete, Zinsbindungsende, CF-Gesamtsaldo
+- Erklärtext: Was die drei Kurven bedeuten, Tilgungseffekt, Cash-Breakeven
+
+**Section 6 — Gesamtergebnis**
+- NEU: AmpelKPI für EK-Rendite p.a. mit Steuer (grün ≥5%, gelb ≥3%, rot <3%)
+- NEU: AmpelKPI für EK-Rendite p.a. ohne Steuer (selbe Schwellen)
+- Gesamtformel in Klartext als Bullet-Punkt
+- Erklärtext: Berechnungsformel, Vergleich mit ETF, Wertung je nach Ergebnis, Stellschrauben
+
+**Section 7 — Verkaufsszenario**
+- Bullet-Punkte: Verkaufswert, Restschuld, Nettoerlös, Maklerkosten-Hinweis, Spekulationsfrist
+- Erklärtext: Wie der Verkaufserlös entsteht, Restschuld-Risiko, Steuerfreiheit nach 10 Jahren
+
+**Betroffene Dateien:** src/App.jsx (+19.272 Zeichen)
 
 ---
 
-## 2026-05-25
+## 2026-06-16 (Patch 2)
 
-### UX: Klarere Labels für Nutzungsart & Belegung im Renditerechner
+### Fix: Mobile KPI-Overflow + SectionExplain UX
 
-**Problem:** Die zwei Dropdowns „Immobilie vermieten?" und „Aktuell vermietet?" wirkten
-redundant, da beide ähnlich klangen — obwohl sie konzeptionell verschiedene Dinge abfragen.
+**AmpelKPI — Mobile-Fix**
+- `minWidth:0` + `overflow:hidden` auf Kachel-Container → kein Overflow mehr
+- `fontSize: "clamp(18px,5.5vw,24px)"` auf Value → skaliert mit Viewport
+- Badge: `fontSize:9`, `flexShrink:0` ohne `marginLeft:6` → platzsparender
+- Label: `textOverflow:ellipsis` + `whiteSpace:nowrap` → kein Layout-Break
+- Status + Tip: kleinere Fonts (10px / 9px) für mehr Platz
 
-**Fix:** Labels und Optionswerte umbenannt (nur UI, keine Logikänderung):
-- „Immobilie vermieten?" → **„Nutzungsart"**
-  - „Ja, vermietet" → „Kapitalanlage (vermietet)"
-  - „Nein / Eigennutzung" → „Eigennutzung"
-- „Aktuell vermietet?" → **„Belegung"**
-  - „Ja, aktuell vermietet" → „Aktuell vermietet"
-  - „Nein, steht leer" → „Aktuell leer"
+**Grid-Layout — alle KPI-Grids**
+- `gridTemplateColumns:"1fr 1fr"` → `"repeat(2,minmax(0,1fr))"` (8 Stellen)
+- Kacheln können jetzt kleiner als ihr Inhalt werden → kein Viewport-Overflow
 
-**Betroffene Dateien:** src/App.jsx (String-Map)
-**FROZEN-Logik berührt:** Nein
+**SectionExplain — Erklärtext in Toggle**
+- Bullets bleiben immer sichtbar (kompakte Kerninfos)
+- Erklärtext hinter Button „Wie kommt das Ergebnis zustande? ▼" versteckt
+- Bei Klick aufklappbar, zweiter Klick schließt wieder
+- State: `useState(false)` pro Sektion
 
----
-
-## 2026-05-23 (2)
-
-### Feature: Google Analytics 4 + Consent Mode v2
-
-**Was:** GA4-Tracking eingebaut — zeigt welcher Rechner wie oft aufgerufen wird.
-
-**Umsetzung:**
-- `index.html` (src + dist): GA4-Script fest im `<head>` verankert (Consent Mode v2)
-- Standard-Consent: `analytics_storage: denied` — kein Tracking ohne Zustimmung
-- Nach Nutzer-Zustimmung im Cookie-Banner: `gtag('consent','update',...)` schaltet Tracking ein
-- `App.jsx`: `useEffect` feuert `tab_view`-Event bei jedem Rechner-Wechsel
-  → Sichtbar in GA4 unter Ereignisse → `tab_view` mit `tab_name` (z.B. „Renditerechner")
-- CSP in beiden `index.html` um Google-Domains erweitert
-
-**Measurement ID:** G-MQTYK65G3H
-**DSGVO:** Consent Mode v2 (Googles offizieller Standard) — kein Cookie-Banner nötig für das Script selbst
-**FROZEN-Logik berührt:** Nein
-**Betroffene Dateien:** index.html, dist/index.html, src/App.jsx
-
----
-
-## 2026-05-23
-
-### UX: Leere Zahlenfelder setzen bei Verlassen automatisch auf 0
-
-**Problem:** Löschte ein Nutzer den Wert in einem numerischen Eingabefeld vollständig,
-blieb das Feld leer. Das wirkte unfertig und konnte in Edge-Cases zu NaN-Berechnungen führen.
+**Betroffene Dateien:** src/App.jsx (+873 Zeichen netto)
+er. Das wirkte unfertig und konnte in Edge-Cases zu NaN-Berechnungen führen.
 
 **Fix:** `onBlur`-Handler in der zentralen `F`-Komponente erweitert:
   - Ist das Feld beim Verlassen leer → wird automatisch `0` gesetzt

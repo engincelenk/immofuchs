@@ -204,7 +204,7 @@ function SelbsttraegerCheck({R}){
       <div style={{fontSize:14,fontWeight:600,color:heroColor,lineHeight:1.55,marginBottom:14}}>
         {heroText}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
         <div style={{background:"rgba(255,255,255,0.7)",borderRadius:10,padding:"12px 14px",border:`1px solid ${heroBorder}`}}>
           <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--ch)",marginBottom:4}}>
             {t.stZielKP}
@@ -399,14 +399,14 @@ function AmpelKPI({label,value,status,statusLabel,tip,color}){
   const borderTop=color==="green"?"#22c55e":color==="yellow"?"#f59e0b":"#ef4444";
   const badgeBg=color==="green"?"rgba(34,197,94,.15)":color==="yellow"?"rgba(245,158,11,.15)":"rgba(239,68,68,.15)";
   const textCol=color==="green"?"#15803d":color==="yellow"?"#b45309":"#b91c1c";
-  return <div style={{background:bg,borderRadius:12,border:`0.5px solid ${borderTop}33`,borderTop:`5px solid ${borderTop}`,padding:"12px 14px"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
-      <span style={{fontSize:10,fontWeight:600,color:"var(--ch)",textTransform:"uppercase",letterSpacing:.7,lineHeight:1.3}}>{label}</span>
-      <span style={{background:badgeBg,color:textCol,fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0,marginLeft:6}}>{statusLabel}</span>
+  return <div style={{background:bg,borderRadius:12,border:`0.5px solid ${borderTop}33`,borderTop:`5px solid ${borderTop}`,padding:"10px 10px",minWidth:0,overflow:"hidden"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4,gap:4}}>
+      <span style={{fontSize:10,fontWeight:600,color:"var(--ch)",textTransform:"uppercase",letterSpacing:.5,lineHeight:1.3,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{label}</span>
+      <span style={{background:badgeBg,color:textCol,fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>{statusLabel}</span>
     </div>
-    <div style={{fontSize:24,fontWeight:700,color:textCol,fontVariantNumeric:"tabular-nums",lineHeight:1.1,margin:"4px 0"}}>{value}</div>
-    {status&&<div style={{fontSize:11,color:textCol,fontWeight:600,marginBottom:3}}>{status}</div>}
-    {tip&&<div style={{fontSize:10,color:"var(--ch)",lineHeight:1.5}}>{tip}</div>}
+    <div style={{fontSize:"clamp(18px,5.5vw,24px)",fontWeight:700,color:textCol,fontVariantNumeric:"tabular-nums",lineHeight:1.1,margin:"4px 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</div>
+    {status&&<div style={{fontSize:10,color:textCol,fontWeight:600,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{status}</div>}
+    {tip&&<div style={{fontSize:9,color:"var(--ch)",lineHeight:1.5}}>{tip}</div>}
   </div>;
 }
 
@@ -419,6 +419,24 @@ function NeutralKPI({label,value,sub}){
   </div>;
 }
 
+// ═══ SECTION EXPLAINER — Bullets sichtbar, Erklärtext im Toggle ═══
+function SectionExplain({bullets,text}){
+  const[open,setOpen]=useState(false);
+  return <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--cb)"}}>
+    {bullets&&bullets.length>0&&<ul style={{margin:"0 0 8px",padding:0,listStyle:"none"}}>
+      {bullets.map((b,i)=><li key={i} style={{fontSize:11,color:"var(--ch)",lineHeight:1.65,marginBottom:4,display:"flex",gap:6}}>
+        <span style={{color:"var(--ca)",flexShrink:0,fontWeight:700}}>→</span><span>{b}</span>
+      </li>)}
+    </ul>}
+    {text&&<>
+      <button onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",padding:"4px 0",cursor:"pointer",fontFamily:"inherit",fontSize:11,color:"var(--ca)",fontWeight:600}}>
+        <span style={{fontSize:13}}>{open?"▲":"▼"}</span>
+        <span>{open?"Weniger anzeigen":"Wie kommt das Ergebnis zustande?"}</span>
+      </button>
+      {open&&<div style={{fontSize:11,color:"var(--ch)",lineHeight:1.75,whiteSpace:"pre-line",marginTop:8,paddingTop:8,borderTop:"1px dashed var(--cb)"}}>{text}</div>}
+    </>}
+  </div>;
+}
 function PLZSearch({showKapp=true}={}){const{d,set,t,tip}=useApp();const[ac,setAC]=useState([]);const[show,setShow]=useState(false);const ref=useRef();
   const onP=v=>{set("plz",v);if(/^\d{5}$/.test(v)){const f=PLZ_DB.byPlz[v];if(f){set("ort",f.ort);set("bundesland",f.bl)}}};
   const onO=v=>{set("ort",v);if(v.length>=2){const l=v.toLowerCase();const m=PLZ_DB.allOrts.filter(o=>o.startsWith(l)).slice(0,6);setAC(m.map(o=>PLZ_DB.byOrt[o][0]));setShow(m.length>0)}else setShow(false)};
@@ -977,7 +995,7 @@ function Detail({R,d,hideSaldo=false}){
       </div>
     </div>
 
-    {!hideSaldo&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}}>
+    {!hideSaldo&&<div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginBottom:8}}>
       {/* Ohne Steuervorteil */}
       <div style={{padding:"14px",background:isPosOhne?"rgba(34,197,94,.08)":"rgba(239,68,68,.08)",borderRadius:10,border:`1px solid ${isPosOhne?"#22c55e44":"#ef444444"}`,borderTop:`4px solid ${isPosOhne?"#22c55e":"#ef4444"}`}}>
         <div style={{fontSize:9,fontWeight:700,letterSpacing:.8,color:"var(--ch)",marginBottom:6,textTransform:"uppercase"}}>{t.gSaldoOhne}</div>
@@ -1045,7 +1063,7 @@ ${h}
 }
 
 // ═══ HAUPTRECHNER (Rendite) ═══
-function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView]=useState("input");
+function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,setView]=useState("input");
   const lastEditedRef=useRef(null);
   // mieteQm: use typed value; if empty string, don't fall back (allow clearing)
   const mieteQm=d.mieteQm!==""?+d.mieteQm||0:0;
@@ -1217,7 +1235,7 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
           const intro=R.bR>=5?t.sec1GreenBR:R.bR>=4?t.sec1YellowBR:t.sec1RedBR;
           return <AccordionSection question={t.sec1Q} hint={t.sec1Hint} color={ampelHex}>
             <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 10px"}}>{intro}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
               <AmpelKPI label={t.bruttoR} value={fmtP(R.bR)}
                 color={brCol}
                 statusLabel={brCol==="green"?t.badgeGut:brCol==="yellow"?t.badgeOkay:t.badgeKrit}
@@ -1232,6 +1250,19 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
             {R.bR>0&&R.nR>0&&(R.bR-R.nR)>2&&<div style={{marginTop:8}}><Ins emoji="📊" text={t.adv1} type="warn"/></div>}
             {R.bR>0&&(+d.kaltmiete)>0&&(R.gKP/((+d.kaltmiete)*12))>30&&<div style={{marginTop:4}}><Ins emoji="🏷️" text={t.adv2} type="warn"/></div>}
             {R.nR>0&&R.nR<(+d.zinssatz)&&<div style={{marginTop:4}}><Ins emoji="📉" text={t.adv3} type="bad"/></div>}
+            {lang==='de'&&<SectionExplain
+              bullets={[
+                `Bruttorendite: Jahresmiete (${fmtE((+d.kaltmiete||0)*12)}) ÷ Gesamtkaufpreis (${fmtE(R.gKP)}) = ${fmtP(R.bR)}`,
+                `Nettorendite: nach Abzug nicht-umlegbarer Kosten${(+d.leerstand)>0?" und Leerstandsverlusten":""}`,
+                `Vergleich: Tagesgeld ~3 %, sichere Staatsanleihe ~3,5 %, Aktien-ETF historisch ~7 % p.a.`,
+                `Kaufpreisfaktor: das ${fmt(R.gKP/Math.max((+d.kaltmiete||1)*12,1),1)}-fache der Jahresmiete (20–25x gilt als solide, >30x ist teuer)`,
+                ...(R.bR>0&&R.nR>0&&(R.bR-R.nR)>2?[`Große Kostenschere — Brutto-Netto-Spread von ${fmtP(R.bR-R.nR)}: nicht-umlegbare Kosten prüfen!`]:[]),
+                ...(R.nR>0&&R.nR<(+d.zinssatz)?[`⚠ Nettorendite (${fmtP(R.nR)}) liegt unter deinem Zinssatz (${fmtP(+d.zinssatz)}) — Fremdkapital kostet mehr als die Immo einbringt`]:[])
+              ]}
+              text={
+                `Die Bruttorendite ist der erste Schnell-Check für jedes Immobilien-Investment: du nimmst die Jahresmiete und teilst sie durch den Gesamtkaufpreis. Bei dir sind das ${fmtE((+d.kaltmiete||0)*12)} Jahresmiete auf ${fmtE(R.gKP)} Kaufpreis — macht ${fmtP(R.bR)} brutto. Diese Zahl klingt erstmal klar, ist aber noch geschönt: Sie ignoriert die Kosten, die du nicht auf den Mieter weitergeben kannst.\n\nDie Nettorendite ist die ehrlichere Zahl. Sie zieht alle nicht-umlegbaren Kosten ab — also Hausverwaltung, Instandhaltungsrücklage, Leerstand, eigene Reparaturkosten — und zeigt dir, was wirklich bei dir ankommt. ${R.nR>=3.5?"Bei "+fmtP(R.nR)+" liegst du solide über dem, was ein Tagesgeldkonto oder eine sichere Staatsanleihe bringt.":R.nR>=2.5?"Bei "+fmtP(R.nR)+" ist die Rendite noch akzeptabel — schau aber, ob die laufenden Kosten noch steigen können (Stichwort: Instandhaltung und Rücklagen).":"Bei "+fmtP(R.nR)+" ist die Rendite schwach — das schlägt kaum mehr als ein gutes Tagesgeldkonto, und das ohne das Risiko und die Arbeit einer Immobilie."}\n\nStellschrauben — was kannst du drehen? Erstens der Kaufpreis: 10.000 € weniger bedeuten direkt eine höhere Rendite, ohne dass sich sonst etwas ändern muss. Zweitens die Kaltmiete: Ist sie marktgerecht oder liegt sie noch unter dem Ortsüblichen? Drittens die nicht-umlegbaren Kosten: Weniger Leerstand, günstigerer Verwalter, günstigeres Hausgeld verbessern die Nettorendite direkt. Und wer einen Stellplatz oder eine Garage separat vermietet, verbessert die Einnahmen ohne großen Mehraufwand.`
+              }
+            />}
           </AccordionSection>;
         })()}
 
@@ -1244,7 +1275,7 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
           const intro=R.cf2OhneSt>0?t.sec2GreenCF:R.cf2OhneSt>=-100?t.sec2YellowCF:t.sec2RedCF;
           return <AccordionSection question={t.sec2Q} hint={t.sec2Hint} color={ampelHex}>
             <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 10px"}}>{intro}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginBottom:10}}>
               <AmpelKPI label={t.cfOhneSt} value={fmtE(R.cf2OhneSt)}
                 color={cfOCol}
                 statusLabel={cfOCol==="green"?t.badgeGut:cfOCol==="yellow"?t.badgeOkay:t.badgeKrit}
@@ -1258,6 +1289,18 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
             </div>
 
             {(+d.leerstand)>0&&R.bR>0&&((+d.leerstand)/((+d.jahre||10)*12)*100)>5&&R.cf2OhneSt<0&&<div style={{marginTop:4}}><Ins emoji="🏠" text={t.adv6} type="bad"/></div>}
+            {lang==='de'&&<SectionExplain
+              bullets={[
+                `Cashflow ohne Steuer: Kaltmiete − nicht-umlegbare Kosten − Kreditrate = ${fmtE(R.cf2OhneSt)}/Monat`,
+                `Cashflow mit Steuerbonus: ${fmtE(R.cf2MitSt)}/Monat (Steuerersparnis: ${fmtE(R.cf2MitSt-R.cf2OhneSt)}/Monat extra)`,
+                ...(R.cf2OhneSt<0?[`Du zahlst jeden Monat ${fmtE(Math.abs(R.cf2OhneSt))} drauf — das sind ${fmtE(Math.abs(R.cf2OhneSt)*12)} pro Jahr aus eigener Tasche`]:[`Die Immobilie trägt sich selbst — sogar ohne Steuerhilfe`]),
+                ...(R.cf2OhneSt<0&&R.cf2MitSt>0?[`Mit Steuerbonus dreht der Cashflow ins Positive — aber Vorsicht: dieser Bonus kommt erst mit der Steuererklärung`]:[]),
+                `Annuität gesamt: ${fmtE(R.ann)}/Monat (davon Zinsen: ${fmtE(R.z1)}, Tilgung: ${fmtE(R.t1)})`
+              ]}
+              text={
+                `Der Cashflow ist die Antwort auf die Frage: "Muss ich monatlich eigenes Geld reinbuttern — oder wirft die Immobilie sogar etwas ab?" Die Rechnung ist simpel: Kaltmiete minus nicht-umlegbare Kosten minus deine Kreditrate. Wenn das positiv ist, trägt sich die Immobilie selbst. Negativ bedeutet: du zahlst jeden Monat drauf.\n\nJetzt der wichtige Unterschied zwischen "ohne Steuer" und "mit Steuer": Als Vermieter kannst du die Darlehenszinsen und die Gebäudeabschreibung (AfA) steuerlich geltend machen. Das senkt deine Steuerlast und verbessert den Cashflow — aber Vorsicht: dieser Steuerbonus landet nicht direkt auf deinem Konto. Du siehst ihn erst bei der Steuererklärung, meist Monate später. Er ist real, aber kein Geld zum Ausgeben am 1. des Monats.\n\n${R.cf2OhneSt<0?"Negativer Cashflow ist nicht per se schlimm — viele Profi-Investoren nehmen monatliche Zuzahlungen bewusst in Kauf, wenn Wertsteigerung und Steuereffekte das langfristig ausgleichen. Aber du musst diese Reserve wirklich haben. Ein Leerstandsmonat kommt obendrauf.":"Positiver Cashflow ohne Steuerbonus ist das Goldstandard-Ziel: die Immobilie zahlt sich selbst und bringt dir sogar Geld — unabhängig von deiner Steuererklärung."}\n\nStellschrauben: Den größten Hebel hat der Tilgungssatz — weniger tilgen bedeutet niedrigere Rate und besseren Cashflow (aber längere Laufzeit!). Mehr Eigenkapital senkt die Kreditrate direkt. Eine höhere Miete oder weniger Leerstand verbessert die Einnahmeseite. Im Finanzierungsrechner kannst du Sondertilgungen simulieren.`
+              }
+            />}
           </AccordionSection>;
         })()}
 
@@ -1270,7 +1313,7 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
           const intro=R.bel<70?t.sec3GreenBel:R.bel<85?t.sec3YellowBel:t.sec3RedBel;
           return <AccordionSection question={t.sec3Q} hint={t.sec3Hint} color={ampelHex}>
             <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 10px"}}>{intro}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginBottom:10}}>
               <AmpelKPI label={t.bel} value={fmtP(R.bel)}
                 color={belCol}
                 statusLabel={belCol==="green"?t.badgeGut:belCol==="yellow"?t.badgeOkay:t.badgeKrit}
@@ -1285,6 +1328,19 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
               <NeutralKPI label={t.rate} value={fmtE(R.ann)} sub={`${t.zins} ${fmtE(R.z1)} + ${t.tilgK} ${fmtE(R.t1)}`}/>
             </div>
             {(+d.grundAnteil)>40&&<div style={{marginTop:4}}><Ins emoji="📋" text={t.adv5} type="info"/></div>}
+            {lang==='de'&&<SectionExplain
+              bullets={[
+                `Beleihungsauslauf: ${fmtP(R.bel)} — die Bank finanziert ${fmtP(R.bel)} des Kaufpreises${R.bel<70?" → Topkonditionen möglich":R.bel<85?" → kleiner Zinsaufschlag üblich":" → deutlicher Risikoaufschlag der Bank"}`,
+                `Monatliche Rate: ${fmtE(R.ann)} (Zinsen: ${fmtE(R.z1)} + Tilgung: ${fmtE(R.t1)})`,
+                `${isFinite(R.lz)?`Laufzeit: ca. ${fmt(R.lz,1)} Jahre bei ${fmtP(+d.tilgung||0)} Tilgung p.a.`:"Laufzeit: ∞ — bei dieser Tilgung wird das Darlehen nie vollständig abbezahlt!"}`,
+                `Darlehenssumme: ${fmtE(R.da)} (Eigenkapital ${fmtE(+d.eigenkapital||0)} = ${fmtP(R.ekQ)} EK-Quote)`,
+                ...(R.bel>80?[`Ab 80% Beleihung verlangen Banken Zinsaufschläge — das verteuert dein Darlehen spürbar`]:[]),
+                ...(!isFinite(R.lz)?[`⚠ Mit dieser Tilgung zahlst du ewig Zinsen — erhöhe die Tilgung auf mindestens 2% p.a.`]:[])
+              ]}
+              text={
+                `Der Beleihungsauslauf zeigt, wieviel Prozent des Kaufpreises die Bank dir leiht. Je niedriger, desto besser — denn Banken sehen weniger beleihte Objekte als sicherer an und belohnen das mit günstigeren Zinsen. Bis 60% gibt es oft Topkonditionen. Zwischen 60% und 80% ist normal. Ab 80% wird es teurer — Banken rechnen jetzt Risikoaufschläge auf, die dir direkt in der Monatszahlung begegnen. Ab 90% wird es richtig eng.\n\nSchau dir die Aufteilung deiner Rate an: Am Anfang eines Darlehens geht der Großteil der Rate an die Bank als Zins — und nur ein kleiner Teil baut die Schuld wirklich ab. Das ändert sich erst im Laufe der Jahre. ${isFinite(R.lz)?"Bei deiner aktuellen Tilgung von "+fmtP(+d.tilgung||0)+" p.a. dauert das Abbezahlen ca. "+fmt(R.lz,1)+" Jahre.":"Achtung: Bei dieser Tilgung wird das Darlehen rechnerisch nie vollständig abbezahlt — das Geld fließt dauerhaft als Zinsen zur Bank."}\n\nStellschrauben: Mehr Eigenkapital ist der direkteste Weg — jeder Euro mehr senkt Beleihungsauslauf und Zinssatz gleichzeitig. Eine höhere Tilgung (z. B. von 2% auf 3%) verkürzt die Laufzeit enorm und spart massive Zinssummen. Sondertilgungen nutzen: Viele Darlehen erlauben 5% des Darlehens pro Jahr kostenlos extra zurückzuzahlen — das kannst du im Finanzierungsrechner simulieren. Zinsbindung bewusst wählen: Lange Zinsbindung gibt Sicherheit, kurze kann günstiger sein wenn die Zinsen fallen.`
+              }
+            />}
           </AccordionSection>;
         })()}
 
@@ -1292,14 +1348,40 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
         {(+d.steuersatz)>0&&(()=>{
           const st=+d.steuersatz;
           const intro=st<30?t.sec4LowTax:st<42?t.sec4MidTax:t.sec4HighTax;
-          return <AccordionSection question={t.sec4Q} hint={t.sec4Hint} color="#1E3A5F">
+          const stErsM=R.sSt/R.j/12;
+          const stErsCol=stErsM>150?"green":stErsM>75?"yellow":"red";
+          const beJCol=R.beJ?(R.beJ<=10?"green":R.beJ<=15?"yellow":"red"):"red";
+          const sec4Color=stErsCol==="green"?"#22c55e":stErsCol==="yellow"?"#f59e0b":"#1E3A5F";
+          return <AccordionSection question={t.sec4Q} hint={t.sec4Hint} color={sec4Color}>
             <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 10px"}}>{intro}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
               <NeutralKPI label={t.nbk} value={fmtE(R.nbk)} sub={t.nbkSub}/>
-              <NeutralKPI label={t.steuerErs} value={fmtE(R.sSt/R.j)} sub={`AfA: ${fmtE(R.afJ)}/J.`}/>
-              {R.beJ&&<NeutralKPI label={t.steuerNeutral} value={`Jahr ${R.beJ}`} sub={t.steuerNeutralSub}/>}
+              <AmpelKPI label={t.steuerErs} value={fmtE(Math.round(R.sSt/R.j))}
+                color={stErsCol}
+                statusLabel={stErsCol==="green"?"Stark":stErsCol==="yellow"?"Moderat":"Gering"}
+                status={`≈ ${fmtE(Math.round(stErsM))}/Mon.`}
+                tip={`AfA: ${fmtE(R.afJ)}/J. | Zinsen abzugsfähig: ${fmtE(Math.round(R.z1*12))}/J.`}/>
+              {R.beJ&&<AmpelKPI label={t.steuerNeutral} value={`Jahr ${R.beJ}`}
+                color={beJCol}
+                statusLabel={beJCol==="green"?"Schnell":beJCol==="yellow"?"Okay":"Langsam"}
+                status={beJCol==="green"?"✓ NK amortisiert":beJCol==="yellow"?"~ NK amortisiert":"⚠ NK amortisiert"}
+                tip={`Kaufnebenkosten (${fmtE(R.nbk)}) durch Steuerersparnis in ${R.beJ} Jahren zurückgeholt`}/>
+              }
             </div>
             {(+d.steuersatz)>42&&R.bel>60&&<div style={{marginTop:8}}><Ins emoji="💼" text={t.adv4} type="info"/></div>}
+            {lang==='de'&&<SectionExplain
+              bullets={[
+                `Steuerersparnis: ${fmtE(Math.round(R.sSt/R.j))} pro Jahr ≈ ${fmtE(Math.round(stErsM))} pro Monat (bei ${fmtP(st,0)} Steuersatz)`,
+                `Zwei absetzbare Positionen: Darlehenszinsen (${fmtE(Math.round(R.z1*12))}/J.) + AfA (${fmtE(R.afJ)}/J.)`,
+                `AfA-Basis: ${fmtP(+d.gebAnteil||80,0)} % Gebäudeanteil × ${fmtP(+d.afaSatz||2)} p.a. = ${fmtE(R.afJ)}/Jahr`,
+                `Kaufnebenkosten: ${fmtE(R.nbk)}${R.beJ?" — durch Steuerersparnis in Jahr "+R.beJ+" amortisiert":" — Break-Even noch nicht erreicht"}`,
+                ...(+d.afaSatz<=2?["Tipp: Baujahr prüfen! Vor 1925 → 2,5% AfA statt 2%. Das macht bei deiner Basis "+fmtE(Math.round(R.gKP*(+d.gebAnteil||80)/100*0.005))+" extra pro Jahr"]:[]),
+                `Faustregel: Je höher dein Steuersatz, desto mehr profitierst du — der Steuervorteil ist ein Instrument für Gutverdiener`
+              ]}
+              text={
+                `Der Staat subventioniert Vermieter indirekt über zwei Mechanismen: Erstens kannst du deine Darlehenszinsen als Werbungskosten absetzen — sie mindern direkt dein zu versteuerndes Einkommen aus der Vermietung. Zweitens gibt es die AfA, die "Absetzung für Abnutzung" — eine pauschale Gebäudeabschreibung, mit der du jedes Jahr einen Teil des Gebäudewerts steuerlich als Verlust ansetzen kannst.\n\nWichtig: Nur der Gebäudeanteil am Kaufpreis darf abgeschrieben werden, nicht der Grundstücksanteil. Du hast ${fmtP(+d.gebAnteil||80,0)} Gebäudeanteil angegeben — das ergibt eine AfA-Basis von ${fmtE(Math.round(R.gKP*(+d.gebAnteil||80)/100))}. Der AfA-Satz beträgt bei Gebäuden, die nach 1924 gebaut wurden, 2% pro Jahr. Vor 1925 gilt 2,5%. Bei Neubauten ab 2023 sogar 3%.\n\nStellschrauben: Den Gebäudeanteil realistisch aber optimiert ansetzen — Achtung: das Finanzamt prüft das, ein Wertgutachten schafft Sicherheit. Den AfA-Satz anhand des Baujahrs prüfen. Hohe Darlehenszinsen im ersten Jahr nutzen (sie sinken mit der Zeit durch Tilgung). Wer wenig verdient, profitiert weniger vom Steuervorteil — wer viel verdient, holt durch die Steuer deutlich mehr aus der gleichen Immobilie raus.`
+              }
+            />}
           </AccordionSection>;
         })()}
 
@@ -1308,6 +1390,17 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
           <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 8px"}}>{t.sec5Sub}</div>
           <LineChart rows={R.yearRows} zbJ={+d.zinsbindung||10}/>
           <YearTable rows={R.yearRows} zbJ={+d.zinsbindung||10}/>
+          {lang==='de'&&<SectionExplain
+            bullets={[
+              `Restschuld: startet bei ${fmtE(R.da)}, fällt durch Tilgung${isFinite(R.lz)?" und erreicht 0 in Jahr "+Math.ceil(R.lz):" — wird in ${R.j} Jahren nicht vollständig abbezahlt"}`,
+              `Kum. Cashflow: zeigt wie viel Geld du bis zum jeweiligen Jahr insgesamt raus- oder reingesteckt hast`,
+              `Jahresmiete: steigt mit der Zeit durch mögliche Mieterhöhungen (§558 BGB)`,
+              `Zinsbindungsende: in Jahr ${+d.zinsbindung||10} läuft deine Zinsbindung aus — danach gilt der Marktpreis`,
+              `${R.sCF>=0?"Über den Analysezeitraum ist der kumulierte Cashflow positiv — die Immo hat mehr eingespielt als sie gekostet hat":"Über den Analysezeitraum ist der kumulierte Cashflow negativ — du hast netto mehr bezahlt als eingenommen"}`
+            ]}
+            text={`Die drei Kurven im Chart erzählen die Geschichte deiner Investition:\n\nRestschuld (fallende Kurve): Zu Beginn geht fast die gesamte Rate als Zinsen an die Bank, die Schuld sinkt nur langsam. Das ändert sich mit der Zeit — je weniger Restschuld, desto mehr von deiner Rate tilgt wirklich. Das Tempo nimmt also zu. Beim Zinsbindungsende (Jahr ${+d.zinsbindung||10}) wird der Zinssatz neu verhandelt — das Marktumfeld entscheidet dann, ob deine Rate steigt, fällt oder gleich bleibt.\n\nKumulierter Cashflow (steigende oder fallende Kurve): Diese Linie zeigt dir, wie viel du aus der Immobilie insgesamt über die Zeit rausgeholt hast — oder reingesteckt hast. Wann dreht sie ins Positive? Das ist dein persönlicher Cash-Breakeven.\n\nJahresmiete: Durch Mieterhöhungen nach §558 BGB steigt die Miete schrittweise — abhängig von Vergleichsmiete, Kappungsgrenze und deiner Ausgangslage. Diese Steigerungen verbessern den Cashflow langfristig und steigern auch den Wert deiner Immobilie.`
+          }
+          />}
         </AccordionSection>
 
         {/* ═══ SECTION 6: Was bleibt am Ende? ═══ */}
@@ -1317,7 +1410,7 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
           const intro=R.g>=0?t.sec6GreenG:t.sec6RedG;
           return <AccordionSection question={t.sec6Q} hint={t.sec6Hint} color={ampelHex}>
             <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 10px"}}>{intro}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginBottom:10}}>
               <div style={{background:(R.gOhne||0)>=0?"rgba(34,197,94,.08)":"rgba(239,68,68,.08)",borderRadius:12,border:`0.5px solid ${(R.gOhne||0)>=0?"#22c55e44":"#ef444444"}`,borderTop:`5px solid ${(R.gOhne||0)>=0?"#22c55e":"#ef4444"}`,padding:"12px 14px"}}>
                 <div style={{fontSize:10,fontWeight:600,color:"var(--ch)",textTransform:"uppercase",letterSpacing:.7,marginBottom:4}}>{t.saldoOhne}</div>
                 <div style={{fontSize:22,fontWeight:700,color:(R.gOhne||0)>=0?"#15803d":"#b91c1c",fontVariantNumeric:"tabular-nums"}}>{(R.gOhne||0)>=0?"+":""}{fmtE(R.gOhne||0)}</div>
@@ -1333,6 +1426,41 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
             </div>
             {R.g>=0&&<div style={{marginTop:4}}><Ins emoji="🎯" text={`${t.positivSaldo}: ${fmtE(R.g)} — ${R.j} ${t.jPl}`} type="good"/></div>}
             {R.g<0&&<div style={{marginTop:4}}><Ins emoji="🚫" text={`${t.saldoMit}: ${fmtE(Math.abs(R.g))} — ${t.kaufpreis}, ${t.kaltmiete}, ${t.eigenkapital}`} type="bad"/></div>}
+            {(()=>{
+              const ekRpa=(+d.eigenkapital)>0?R.g/(+d.eigenkapital)/R.j*100:0;
+              const ekRpaOhne=(+d.eigenkapital)>0?(R.gOhne||0)/(+d.eigenkapital)/R.j*100:0;
+              const ekRCol=ekRpa>=5?"green":ekRpa>=3?"yellow":"red";
+              return <>
+                <div style={{marginTop:10}}>
+                  <div style={{fontSize:10,fontWeight:600,color:"var(--ch)",textTransform:"uppercase",letterSpacing:.7,marginBottom:6}}>EK-Rendite p.a.</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+                    <AmpelKPI label="EK-Rendite mit Steuer" value={fmtP(ekRpa,2)}
+                      color={ekRCol}
+                      statusLabel={ekRCol==="green"?"Stark":ekRCol==="yellow"?"Moderat":"Schwach"}
+                      status={`${R.j} Jahre Anlagehorizont`}
+                      tip={`Dein Eigenkapital (${fmtE(+d.eigenkapital||0)}) wächst mit ${fmtP(ekRpa,2)} p.a. — zum Vergleich: ETF historisch ~7%`}/>
+                    <AmpelKPI label="EK-Rendite ohne Steuer" value={fmtP(ekRpaOhne,2)}
+                      color={ekRpaOhne>=5?"green":ekRpaOhne>=3?"yellow":"red"}
+                      statusLabel={(ekRpaOhne>=5?"Stark":ekRpaOhne>=3?"Moderat":"Schwach")}
+                      status="Konservative Betrachtung"
+                      tip="Ohne Steuerbonus — für Geringverdiener oder Basis-Szenario"/>
+                  </div>
+                </div>
+                {lang==='de'&&<SectionExplain
+                  bullets={[
+                    `Gesamtsaldo mit Steuer: ${R.g>=0?"+":""}${fmtE(R.g)} über ${R.j} Jahre`,
+                    `Formel: (${fmtE(R.vw)} Verkaufserlös − ${fmtE(R.rsEnd)} Restschuld) + ${fmtE(R.sCF)} kum. CF − ${fmtE((+d.eigenkapital||0)+R.nbk+(+d.sonder||0)+(+d.renovierung||0))} Investition`,
+                    `Wertsteigerung: ${fmtE(R.w)} in ${R.j} Jahren (${fmtP(+d.wertP||0)} p.a.)`,
+                    `EK-Rendite p.a. (mit Steuer): ${fmtP(ekRpa,2)} — zum Vergleich: Tagesgeld ~3%, ETF historisch ~7%`,
+                    ...(R.rsEnd>0?[`Restschuld bei Verkauf: ${fmtE(R.rsEnd)} — muss aus dem Verkaufserlös getilgt werden`]:["Darlehen vollständig abbezahlt!"]),
+                    `Kumulierter Cashflow: ${R.sCF>=0?"+":""}${fmtE(R.sCF)} — ${R.sCF>=0?"du hast über den Zeitraum netto Geld verdient":"du hast netto Geld reingesteckt"}`
+                  ]}
+                  text={
+                    `Das Gesamtergebnis ist die ehrlichste Zahl in diesem Rechner — hier wird alles zusammengezählt. Die Formel in Klartext: Du nimmst den geschätzten Verkaufserlös (${fmtE(R.vw)}), ziehst die Restschuld ab (${fmtE(R.rsEnd)}), addierst alle kumulierten Cashflows der ${R.j} Jahre (${R.sCF>=0?"+":""}${fmtE(R.sCF)}), und ziehst dann alles ab, was du anfangs reingesteckt hast: Eigenkapital, Kaufnebenkosten, Sonderumlage, Renovierung.\n\n${R.g>=0?"Das Ergebnis ist positiv — die Immobilie hat sich gelohnt. Du hast mehr rausgeholt als reingesteckt.":"Das Ergebnis ist negativ — nach aktuellem Stand hast du mehr investiert als du am Ende zurückbekommst. Das kann sich ändern, wenn die Wertsteigerung höher ausfällt oder du die Mieteinnahmen steigern kannst."}\n\nDie EK-Rendite p.a. macht das Ergebnis vergleichbar: Dein eingesetztes Eigenkapital von ${fmtE(+d.eigenkapital||0)} wächst mit ${fmtP(ekRpa,2)} pro Jahr — ${ekRpa>=7?"Das ist exzellent und schlägt historisch sogar einen ETF.":ekRpa>=5?"Das ist solide. Ein ETF bringt historisch ~7%, aber ohne Hebeleffekt und ohne die Stabilität einer Sachwertanlage.":ekRpa>=3?"Das ist okay, aber schwach für eine Immobilie mit Finanzierungsrisiko. Prüfe ob die Annahmen realistisch sind.":"Das ist schwach. Überleg ob Kaufpreis, Miete oder Finanzierung besser gestellt werden kann."}\n\nStellschrauben: Den Anlagehorizont verlängern (mehr Jahre = mehr Tilgung + mehr Wertsteigerung). Die Wertsteigerungsannahme realistisch halten (2–3% p.a. sind historisch solide für gute Lagen). Cashflow optimieren (weniger Leerstand, regelmäßige Mietanpassungen). Sondertilgungen nutzen, um die Restschuld zu drücken.`
+                }
+                />}
+              </>;
+            })()}
           </AccordionSection>;
         })()}
 
@@ -1340,6 +1468,17 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt}=useApp();const[view,setView
         <AccordionSection question={t.sec7Q.replace('{j}',String(R.j))} hint={t.sec7Hint}>
           <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 8px"}}>{t.sec7Sub.replace(/\{j\}/g,String(R.j))}</div>
           <Detail R={R} d={d} hideSaldo={true}/>
+          {lang==='de'&&<SectionExplain
+            bullets={[
+              `Geschätzter Verkaufswert in Jahr ${R.j}: ${fmtE(R.vw)} (Wertsteigerung: ${fmtP(+d.wertP||0,1)} p.a.)`,
+              `Restschuld beim Verkauf: ${fmtE(R.rsEnd)}${R.rsEnd>0?" — wird aus dem Verkaufserlös getilgt":""}`,
+              `Nettoerlös nach Tilgung: ${fmtE(R.vw-R.rsEnd)}`,
+              `Maklerkosten beim Verkauf nicht eingerechnet — in der Praxis nochmals 3–7% des Verkaufspreises`,
+              `${(R.j>10?"Spekulationsfrist von 10 Jahren überschritten: kein Verkaufgewinn versteuern!":"Spekulationsfrist läuft noch — Verkaufsgewinne werden mit dem Steuersatz versteuert")}`
+            ]}
+            text={`Die Tabelle zeigt alle Bestandteile deines Verkaufserlöses im Detail — aufgeschlüsselt für jeden Bestandteil des Ergebnisses. Der Kaufwert nach ${R.j} Jahren ist eine Schätzung auf Basis der eingegebenen Wertsteigerungsrate von ${fmtP(+d.wertP||0,1)} p.a. — das ist keine Garantie, sondern ein Planungsszenario.\n\nBesonders wichtig: Vergleiche den geschätzten Marktwert (${fmtE(R.vw)}) mit der Restschuld (${fmtE(R.rsEnd)}). Wenn die Restschuld höher ist als der Marktpreis, hast du ein Problem — du kannst die Immobilie nicht ohne Verlust verkaufen. Das kommt bei sehr hohem Beleihungsauslauf und geringen Tilgungsraten vor, vor allem wenn die Immobilienpreise fallen.\n\n${R.j>10?"Steuerlich interessant: Nach 10 Jahren Haltedauer ist der Verkaufsgewinn bei Privatpersonen steuerfrei (§23 EStG Spekulationsfrist). Das kann bei guter Wertsteigerung Tausende von Euro Steuerersparnis bedeuten.":"Achtung: Du bist noch innerhalb der 10-Jahres-Spekulationsfrist. Wenn du die Immobilie jetzt verkaufst, wird der Gewinn mit deinem Steuersatz besteuert — das kann ein erheblicher Abzug sein."}\n\nDenk auch an die Verkaufskosten: Makler (3–7% des Verkaufspreises), Notar, Grundbuch. Die sind in diesem Rechner nicht eingerechnet, schmälern aber den Nettoerlös deutlich.`
+          }
+          />}
         </AccordionSection>
 
         <SaveBtn tab="haupt"/>
