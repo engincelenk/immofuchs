@@ -1,13 +1,13 @@
-name: 🚀 Deploy Website to IONOS
+name: 🛠️ Deploy DEV to dev.immofuchs.info
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - Immofuchs-dev
 
 jobs:
   web-deploy:
-    name: 🎉 Build & Deploy
+    name: 🔧 Build & Deploy DEV
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +25,7 @@ jobs:
         npm ci
         npm run build
 
-    - name: 📂 dist-Ordner auf IONOS-Server spiegeln via lftp (SFTP)
+    - name: 📂 dist-Ordner auf IONOS → dev.immofuchs.info spiegeln via lftp (SFTP)
       env:
         SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
         SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
@@ -36,6 +36,6 @@ jobs:
         lftp -c "
         set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
         open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
-        mirror -R ./dist /immofuchs --reverse --verbose --continue --delete;
+        mirror -R ./dist /dev.immofuchs.info --reverse --verbose --continue --delete;
         quit;
         "

@@ -58,17 +58,45 @@ jobs:
           npm ci
           npm run build
 
-      # ── 6. Deploy zu IONOS ───────────────────────────────────────────────
-      - name: 📂 Deploy zu IONOS via SFTP
+      # ── 6. Deploy zu IONOS (PROD + DEV + QA) ────────────────────────────
+      - name: 📦 lftp installieren
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: 🚀 Deploy PROD → immofuchs.info
         env:
           SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
           SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
           SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
           lftp -c "
           set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
           open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
           mirror -R ./dist /immofuchs --reverse --verbose --continue --delete;
+          quit;
+          "
+
+      - name: 🛠️ Deploy DEV → dev.immofuchs.info
+        env:
+          SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
+          SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
+          SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
+        run: |
+          lftp -c "
+          set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
+          open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
+          mirror -R ./dist /dev.immofuchs.info --reverse --verbose --continue --delete;
+          quit;
+          "
+
+      - name: 🧪 Deploy QA → qa.immofuchs.info
+        env:
+          SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
+          SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
+          SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
+        run: |
+          lftp -c "
+          set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
+          open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
+          mirror -R ./dist /qa.immofuchs.info --reverse --verbose --continue --delete;
           quit;
           "

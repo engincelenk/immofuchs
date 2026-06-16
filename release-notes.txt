@@ -1,3 +1,109 @@
+## 2026-06-16 (24)
+
+### UX: Selbstträger-Check, Rendite-Frage, Rate neben Darlehen, sec1Q-Update
+
+**Änderungen**:
+- Darlehen-KPI: `AmpelKPI` → `NeutralKPI` revertiert (grüne Farbe war verwirrend)
+- RBar SVG: `viewBox` von `"0 0 280 155"` → `"0 0 280 185"` — "Mittel"-Label war geclippt und überlagerte Faktoren-Button
+- sec1Q (alle 5 Sprachen): "Lohnt sich das überhaupt?" → "Welche Rendite erziele ich?" (DE/TR/HI ✓, EN/ZH Texte korrigiert)
+- Rate/Mon. KPI: aus sec2 entfernt, neben Darlehen in sec3 (2×2-Grid mit Beleihung, Laufzeit, Darlehen, Rate)
+- **Selbstträger-Check**: neue `AccordionSection` nach RBar, vor sec1 — Frage "Trägt sich die Immobilie von selbst?" — zeigt `AmpelKPI` für Cashflow ohne Steuer und Cashflow mit Steuer; Ampelfarbe = worst-case beider KPIs
+- Fix: DE-Sprachblock im T-Objekt fehlte schließendes `}` vor `en:{` — Brace-Unbalance behoben (alle 5 Sprachblöcke korrekt geschlossen)
+- Build: JS-Kompilierung ✓ (30 Module), dist-Schreibrechte fehlen in Sandbox → Build auf Windows-Seite durchführen
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-16 (23)
+
+### UX: 7 Korrekturen — Gauge, Einflussfaktoren, Cashflow-Frage, NBK, Darlehen-Ampel, sec7
+
+**Änderungen**:
+- RBar: "6 Was das bedeutet" aus SVG-Gauge entfernt (war fehl am Platz)
+- RBar: `marginTop:4` auf Faktoren-Button-Container (Abstand zum Gauge)
+- Rename: "Risikofaktoren" → "Einflussfaktoren" (neutral, trifft auch positive Faktoren) — alle 5 Sprachen
+- sec2Q: "Trage ich das Monat für Monat?" → "Wie ist mein monatlicher Cashflow?" — alle 5 Sprachen
+- nbkSub: "→ geht an den Staat" entfernt (Notar/Makler gehen nicht an den Staat)
+- Darlehen-KPI: `NeutralKPI` → `AmpelKPI` mit EK-Quote-Bewertung (≥20% grün, 10–20% gelb, <10% rot) + belCond-Label
+- sec7 Verkaufsszenario: `hideSaldo={true}` — Gesamtsaldo-Karten aus Detail-Komponente entfernt
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-16 (22)
+
+### Fix: Translation-Syntax-Fehler (sec7Q/Hint/Sub in EN/TR/ZH/HI außerhalb Language-Block)
+
+**Problem**: Beim Einfügen der sec7Q/sec7Hint/sec7Sub-Keys in Session 21 wurden die Schlüssel für EN, TR, ZH, HI NACH dem schließenden `}` des jeweiligen Language-Blocks eingefügt (statt davor). Ursache: der Replace-Anker enthielt bereits das schließende `"}` des Language-Objekts, sodass sec7-Keys außerhalb des Blocks landeten. Bei EN, TR, ZH (nicht letzte Sprache) schloss das stray `}` das T-Objekt vorzeitig → ParseError. HI (letzte Sprache) hatte valides JS, aber sec7Q/Sub lagen auf T-Ebene (undefined für HI-User).
+
+**Fix**:
+- EN, TR, ZH: Das vorzeitige `}` zwischen `sec6SaldoMitHint:"..."` und `sec7Q:` entfernt → sec7-Keys liegen jetzt korrekt NACH dem letzten Wert-String, das `}` am Ende von sec7Sub schließt den Language-Block.
+- HI: Gleiches Remove-Fix + fehlerhaft hinzugefügtes Extra-`}` am sec7Sub-Ende wieder entfernt (HI-Block schließt strukturell bereits früher, sec7-Keys bleiben auf T-Ebene — pre-existing-Verhalten).
+- Build verifiziert: `npx vite build --outDir dist6` ✓ (699 kB, 3.3s)
+
+**Betroffene Dateien**: `src/App.jsx`
+
+---
+
+## 2026-06-16 (21)
+
+### UX: Gesamtsaldo-Karten entbläut + Erklärtext + NBK → Staat-Section
+
+**Änderungen**:
+- Gesamtsaldo-Karten in `Detail`: Farbe von Blau (#1a5fa0) auf Grün/Rot umgestellt (konsistent mit AmpelKPI-System)
+- EK-Rendite-Text in Gesamtsaldo-Karten: mit plaintext Kontext (Saldo ohne Steuer / mit Steuer Erklärung)
+- Steuervorteil-Erklärung (`detInfo`) bleibt nur auf "mit Steuervorteil"-Karte
+- Section 4 umbenannt: "Was holt der Staat zurück?" → "Wie fördert dich der Staat steuerlich?" (alle 5 Sprachen)
+- Kaufnebenkosten (NBK) aus Section 3 (Bank) in Section 4 (Staat & Steuern) verschoben — semantisch korrekt: NBK geht an Staat, nicht an Bank
+- Erklärtext aller Sections deutlich ausgebaut: persönlicher Ton, "Was bedeutet das für Dich?"
+- `nbkSub`-Übersetzungskey ergänzt (alle 5 Sprachen): erklärt dass NBK an Staat/Notar geht
+
+**Betroffene Dateien**: `src/App.jsx`
+
+---
+
+## 2026-06-16 (20)
+
+### UX: Accordion-Sections + AmpelKPI-Card-Styling (alle 5 Sprachen)
+
+**Problem**: Alle KPI-Ergebnisse waren unkomprimiert auf der Seite aufgelistet — überwältigend für Einsteiger, keine logische Struktur. Ampel-Bewertungen (Gut/Okay/Kritisch) waren zu klein und unauffällig.
+
+**Änderungen**:
+- Ergebnispane in 6 semantisch geordnete `AccordionSection`-Blöcke aufgeteilt (alle zugeklappt, User öffnet selbst):
+  1. „Lohnt sich das überhaupt?" → Brutto-/Nettorendite
+  2. „Trage ich das Monat für Monat?" → Cashflow ohne/mit Steuer + BreakEven
+  3. „Was zahle ich der Bank?" → Beleihungsauslauf + Laufzeit + Darlehen + NBK
+  4. „Was holt der Staat zurück?" → Steuerersparnis + AfA (nur wenn Steuersatz > 0)
+  5. „Wie entwickelt sich die Immobilie?" → LineChart + YearTable
+  6. „Was bleibt am Ende?" → Gesamtsaldo ohne/mit Steuer + Detail
+- Neue `AmpelKPI`-Karte: 5px farbiger Top-Border + getönte Hintergrundfläche + Pill-Badge (Gut/Okay/Kritisch) + Wert in Ampelfarbe
+- Neue `NeutralKPI`-Karte: schlichte weiße Karte für Werte ohne Ampelbewertung
+- Personalisierte Einleitungstexte je Section (abhängig vom berechneten Wert: grün/gelb/rot)
+- Übersetzungen: 90+ neue Keys in allen 5 Sprachen (de, en, tr, zh, hi)
+
+**Betroffene Dateien**: `src/App.jsx`
+
+---
+
+## 2026-06-16 (19)
+
+### UX: Risikolevel-Anzeige — animierter Gauge + Klartextfaktoren (alle 5 Sprachen)
+
+**Problem**: Risikolevel war als kleiner Balken am Ende der Ergebnisseite versteckt. Risikofaktoren wurden als kryptische Codes angezeigt (`bel>80`, `nR<3`, `cf<0` etc.) — für Einsteiger nicht verständlich.
+
+**Änderungen**:
+- `RBar`-Komponente ersetzt durch `RBar` (Halbkreis-SVG-Gauge mit animiertem Zeiger, farbkodiertem Header-Streifen, Score groß in der Mitte)
+- Gauge nach oben verschoben: jetzt direkt nach `BreakEvenCards`, vor Charts — sofort sichtbar
+- Risikofaktoren: alle 9 Faktor-Typen mit Icon, deutschem Titel und Erklärungstext aufgeklappt
+- Deduplication: gleiche Faktortypen (z.B. `bel>80` + `bel>90`) erscheinen nur einmal
+- Übersetzungen: 21 neue Keys (rfBelT/D, rfNrT/D, rfCfT/D, rfZT/D, rfTT/D, rfLzT/D, rfPT/D, rfEkT/D, rfLsT/D, rfTitle) in allen 5 Sprachen (de, en, tr, zh, hi)
+
+**Betroffene Dateien**: `src/App.jsx`
+
+---
+
 ## 2026-06-11 (18)
 
 ### Bugfix: PDF-Export lädt HTML-Datei statt Druckdialog
