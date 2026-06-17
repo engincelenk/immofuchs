@@ -1,3 +1,133 @@
+## 2026-06-16 (28)
+
+---
+
+## 2026-06-17 (30)
+
+### Fix: Renditerechner — SectionExplain vollständig i18n (alle 7 Sections, 5 Sprachen)
+
+**Problem**: Mehrere strukturelle Bugs verhinderten korrekte Übersetzung der SectionExplain-Blöcke:
+1. **T.hi vorzeitig geschlossen**: Der `hi:`-Block in `const T` wurde nach `close:"बंद करें"` fälschlicherweise geschlossen. Alle nachfolgenden Hindi-Keys (`saveBtnLabel` → `selfHint`) lagen als flache T-Root-Keys außerhalb von `T.hi` und waren per `t = T['hi']` nicht erreichbar.
+2. **Hindi s-Keys (s1b1–s7t4) in falschem Objekt**: Die Renditerechner-Explain-Keys wurden in `TL.de` (Landing-Page-Objekt) statt in `T.hi` eingefügt.
+3. **SectionExplain-Toggle hardcoded Deutsch**: `"Weniger anzeigen"` / `"Wie kommt das Ergebnis zustande?"` war fest verdrahtet.
+4. **Section 6 AmpelKPI-Labels hardcoded Deutsch**: `"EK-Rendite p.a."`, `"EK-Rendite mit Steuer"`, `"EK-Rendite ohne Steuer"`, Statuslabels und Tips.
+
+**Fix**:
+- T.hi: Prematuren `}` nach `close:"बंद करें"` entfernt; schließende `}};` (T.hi + T) am Ende korrekt gesetzt
+- Hindi s-Keys (s1b1–s7t4) aus `TL.de` entfernt und in `T.hi` verschoben (hinter `selfHint`)
+- Neue Translation-Keys in alle 5 T-Blöcke (de/en/tr/zh/hi) eingefügt: `secOpen`, `secClose`, `ekRTitle`, `ekRMit`, `ekROhne`, `ekRHorizon`, `ekRConserv`, `ekRTip1`, `ekRTip2`
+- `SectionExplain`: `const{t}=useApp()` hinzugefügt; Toggle-Text auf `t.secOpen`/`t.secClose` umgestellt
+- Section 6 AmpelKPI: Labels, statusLabel, status, tip auf `t.ekR*`-Keys umgestellt; `badgeGut`/`badgeOkay`/`badgeKrit` wiederverwendet
+
+**Resultat**: Alle 7 SectionExplain-Abschnitte zeigen Bullets, Erklärtexte und Toggle-Button in der gewählten Sprache (de/en/tr/zh/hi). EK-Rendite-KPIs in Section 6 vollständig übersetzt.
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-17 (29)
+
+### Fix: Rendite-Tab — Vollständige i18n (Chart-Labels, Footer, Legal Basis)
+
+**Problem**: Nach dem Sprachumschalter zeigten mehrere Elemente im Rendite-Tab weiterhin deutsche Texte:
+- Chart-Zeitachse: „J1, J2, J3 ..." (statt „Y1, Y2, Y3 ...")
+- Chart-Annotation: „ZB" (Zinsbindung, statt „FR" = Fixed Rate End)
+- Jahrestabelle-Zeilen: „◀ ZB" (statt „◀ FR")
+- Chart-Hover-Tooltip: „J10" (statt „Y10")
+- App-Footer: „← Startseite", „Impressum", „Datenschutz"
+- Legal Basis: alle ~20 Einträge (rendite, kredit, miete, sanier) ausschließlich auf Deutsch
+
+**Fix**:
+- `LineChart` + `YearTable`: X-Achse `J{i+1}` → `{lang==="de"?"J":"Y"}{i+1}`
+- `LineChart` SVG-Annotation: `>ZB<` → `>{lang==="de"?"ZB":"FR"}<` (2×)
+- `LineChart` Hover-Tooltip: `J{rows[hover].j}` → `{lang==="de"?"J":"Y"}{rows[hover].j}`, Marker `" ◀ ZB"` → `lang==="de"?" ◀ ZB":" ◀ FR"`
+- `YearTable` Zeilen-Marker: `◀ ZB` → `{lang==="de"?"◀ ZB":"◀ FR"}`
+- App-Footer: `← Startseite` → Inline-Lookup alle 5 Sprachen; `Impressum`/`Datenschutz` → `(TL[lang]||TL.de).imp/.dse`
+- Header title-Attribut: `"Zur Startseite"` → `{lang==="de"?"Zur Startseite":"Home"}`
+- `Legal`-Komponente: `const{t}=useApp()` → `const{t,lang}=useApp()`, Render `it.desc` → `typeof it.desc==="object"?it.desc[lang]||it.desc.de:it.desc`
+- `LEG`-Objekt: Alle 20 Einträge (rendite 6, kredit 5, miete 6, sanier 7) von `desc:string` auf `desc:{de,en,tr,zh,hi}` umgestellt
+
+**Verifiziert** (EN-Modus):
+- Chart: FR-Marker, Y1–Y10-Achse ✓
+- Jahrestabelle: FR-Marker ✓
+- Footer: ← Home · Legal Notice · Privacy ✓
+- Legal Basis: alle Einträge auf Englisch ✓
+- Sections 7 & 8: vollständig übersetzt ✓
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+### Fix: T.hi-Korruption — Hindi-Keys außerhalb des T.hi-Blocks wiederhergestellt
+
+**Problem**: Ein vorheriger Patch (`fix_hi_block.py`) hatte englische Fallback-Werte in T.hi eingefügt (Brace-Counter wurde durch `{...}` in Template-Strings getäuscht). Dadurch:
+- 101 Hindi-Keys wurden AUSSERHALB von T.hi auf das T-Root-Objekt verschoben
+- Innerhalb T.hi lagen für diese Keys englische Werte (letzter Write gewinnt bei Duplikaten)
+- `t.selfVerdictYes` war `"Yes — self-sustaining"` statt Hindi → `.split("—")` scheiterte
+- Hindi-Seite zeigte leere/kaputte Seite
+
+**Fix**: Node.js-Parser mit String-Aware Boundary Detection:
+- T.hi korrekt von T-Root-Keys getrennt
+- 101 misplatzierte Hindi-Keys mit `Object.assign()` in T.hi gemergt
+- Englische Duplikate durch Hindi-Originale überschrieben
+- T-Root bereinigt (nur noch de/en/tr/zh/hi)
+
+**Verifiziert**: `T.hi.selfVerdictYes = "हाँ — स्वयं वहन करती है"` ✓
+
+**Build**: ✓ 30 Module, keine Fehler
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-16 (27)
+
+### Fix: SectionExplain „Weniger anzeigen" — Button immer auf Deutsch
+
+**Problem**: Der Toggle-Button in `SectionExplain` war hardcodiert: `"Weniger anzeigen"` / `"Wie kommt das Ergebnis zustande?"` — unabhängig von der gewählten Sprache.
+
+**Fix**: `sectionMore`/`sectionLess` zu allen 5 Sprach-Blöcken (DE/EN/TR/ZH/HI) hinzugefügt. `SectionExplain` erhält `const{t}=useApp()` und nutzt `t.sectionMore` / `t.sectionLess`.
+
+**Build**: ✓ 30 Module, keine Fehler
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-16 (26)
+
+### Fix: 9 hardcodierte deutsche Strings im Rendite-Tab übersetzt
+
+**Problem**: Folgende Strings im Rendite-Tab waren nicht in `lang===`-Switch eingebettet und zeigten deshalb immer Deutsch:
+- `EK-Rendite p.a.` (div-Label)
+- `EK-Rendite mit Steuer` / `EK-Rendite ohne Steuer` (AmpelKPI labels)
+- `${R.j} Jahre Anlagehorizont` (AmpelKPI status)
+- `Dein Eigenkapital... zum Vergleich: ETF historisch ~7%` (AmpelKPI tip)
+- `Konservative Betrachtung` (AmpelKPI status)
+- `Ohne Steuerbonus — für Geringverdiener oder Basis-Szenario` (AmpelKPI tip)
+- AfA/Zinsen tip (sec4)
+- Kaufnebenkosten tip (sec4)
+
+**Fix**: Alle 9 Strings auf `lang==='de'?DE:EN` Pattern umgestellt.
+
+**Build**: ✓ 30 Module, keine Fehler
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-16 (25)
+
+### Fix: Kritischer ReferenceError — T.de `darlehenFrei` Zirkularreferenz
+
+**Problem**: `App.jsx:35 Uncaught ReferenceError: t is not defined` — der Badge-Keys-Patch hatte `darlehenFrei:t.darlehenFrei}` in das T-Objekt selbst geschrieben (statt in JSX), wo `t` noch nicht existiert.
+
+**Fix**: `darlehenFrei:t.darlehenFrei},` → `darlehenFrei:"Darlehen vollständig abbezahlt!"},` in T.de
+
+**Build**: ✓ 30 Module, keine Fehler
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
 ## 2026-06-16 (24)
 
 ### UX: Selbstträger-Check, Rendite-Frage, Rate neben Darlehen, sec1Q-Update
@@ -489,81 +619,25 @@
 - Bullets bleiben immer sichtbar (kompakte Kerninfos)
 - Erklärtext hinter Button „Wie kommt das Ergebnis zustande? ▼" versteckt
 - Bei Klick aufklappbar, zweiter Klick schließt wieder
-- State: `useState(false)` pro Sektion
-
-**Betroffene Dateien:** src/App.jsx (+873 Zeichen netto)
-er. Das wirkte unfertig und konnte in Edge-Cases zu NaN-Berechnungen führen.
-
-**Fix:** `onBlur`-Handler in der zentralen `F`-Komponente erweitert:
-  - Ist das Feld beim Verlassen leer → wird automatisch `0` gesetzt
-  - Vorhandene Werte (Defaults oder Nutzereingaben) werden nicht angetastet
-  - Nur numerische Felder (`type="number"`) betroffen
-  - `readOnly`-, `date`- und `text`-Felder bleiben unverändert
-
-**Reichweite:** Alle 4 Rechner (Rendite, Finanzierung, Mieterhöhung, Sanierung),
-da alle numerischen Inputs die gemeinsame `F`-Komponente nutzen.
-
-**Betroffene Dateien:** src/App.jsx (Zeile ~74)
-**Geänderte Logik:** 5 Zeilen (nur hBlur)
-**FROZEN-Logik berührt:** Nein (§558-BGB und Annuität unverändert)
-
+- State: `useS
 ---
 
-## 2026-05-22
+## 2026-06-17 (Patch 3)
 
-### Bugfix: Sonderumlage jetzt in Rendite-Berechnung eingebunden
+### Fix: SectionExplain i18n — alle 5 Sprachen, alle 7 Sections
 
-**Problem:** Das Feld „Sonderumlage" im Renditerechner war nur mit dem Gesamtsaldo
-(Verkaufsszenario) verbunden, hatte aber keinen Einfluss auf Brutto- und Nettorendite.
-Nutzer, die eine Sonderumlage eingaben, sahen keine Änderung bei den Haupt-KPIs.
+**Problem**
+- SectionExplain-Blöcke im Renditerechner nur für `lang==='de'` gerendert
+- T.en enthielt fälschlicherweise Hindi-Text (s1b1–s7t4)
+- T.zh, T.tr, T.hi hatten keine s1b*/s1t* Keys
 
-**Fix:** Die Sonderumlage fließt nun korrekt in die Investitionsbasis ein:
-  - `gesamtInv = gKP + sonder`
-  - Bruttorendite = Jahreskaltmiete / gesamtInv × 100
-  - Nettorendite = (effektive Jahreskaltmiete − nicht umlagefähige Kosten) / gesamtInv × 100
+**Lösung**
+- `tpl(s,v)` Helper-Funktion hinzugefügt (Template-String mit Platzhaltern wie `{a}`, `{b}`)
+- T.en: 82 Keys durch korrekte englische Übersetzungen ersetzt
+- T.hi: 82 Hindi Keys (aus T.en verschoben) korrekt eingesetzt
+- T.zh: 82 chinesische Keys neu übersetzt und eingefügt
+- T.tr: 82 türkische Keys neu übersetzt und eingefügt
+- 7 non-de SectionExplain JSX-Blöcke eingefügt (`{lang!=='de'&&t.sXb1&&<SectionExplain.../>}`)
+- Alle Platzhalter (Rendite, Preise, Laufzeiten etc.) korrekt verkabelt
 
-**Fachliche Begründung:** Die Sonderumlage ist ein einmaliger Investitionsaufwand beim Kauf
-(vergleichbar mit Kaufnebenkosten), der die Gesamtinvestition erhöht und damit die Rendite
-korrekt senkt.
-
-**Betroffene Dateien:** src/App.jsx (Zeile ~883)
-**Geänderte Logik:** ~3 Zeilen
-**FROZEN-Logik berührt:** Nein (§558-BGB und Annuität unverändert)
-
----
-
-## 2026-06-10 (3)
-
-### Bugfix: iOS Karten-Rand-rechts — Grid neu aufgebaut
-
-**Problem**: Weißer Rand rechts auf iOS Safari/PWA — Karten-`<button>` füllen Grid-Spalte nicht vollständig (trotz `width:100%`). Root-Cause: iOS Safari interpretiert `auto-fill`+`minmax` bei Button-Grid-Items anders als Desktop-Browser.
-
-**Fix**: `auto-fill/minmax` durch explizite CSS-Klasse `calc-cards` mit Breakpoint-basiertem Grid ersetzt:
-- Mobile (default): `grid-template-columns:1fr` → immer 1 volle Spalte
-- ≥580px: 2 Spalten
-- ≥900px: 3 Spalten  
-- ≥1200px: 4 Spalten
-- ≥1500px: 5 Spalten
-- `.calc-cards>*{width:100%;min-width:0;box-sizing:border-box}` → kein UA-Stylesheet-Spielraum
-- SW-Cache: v47 → v48 (iOS-Cache-Bust)
-
-**Betroffene Dateien**: `src/App.jsx`, `dist/`, `public/sw.js`, `dist/sw.js`
-
----
-
-## 2026-06-10 (4)
-
-### Feature: Echte Foto-Illustrationen in Landing-Cards
-
-**Was**: 5 inline SVG-Platzhalter in den Landing-Page-Karten durch echte 3D-Render-Fotos ersetzt.
-
-**Änderungen**:
-- `public/card-rendite.png`, `card-kredit.png`, `card-miete.png`, `card-sanierung.png`, `card-steuer.png` hinzugefügt (613×427px)
-- `src/App.jsx`: `illus`-Props von inline `<svg>` auf `<img objectFit:cover>` umgestellt
-
-### Bugfix: RENDITE-Badge-Styling
-
-**Problem**: „RENDITE"-Badge war orange gefüllt (featured-State), alle anderen Badges ghost-style.
-**Fix**: Conditional `c.featured?"#fff":"var(--ca)"` entfernt — alle Badges einheitlich ghost-style.
-
-**Betroffene Dateien**: `src/App.jsx`, `public/`
+**Betroffene Dateien:** src/App.jsx (3517 → 3591 Zeilen)
