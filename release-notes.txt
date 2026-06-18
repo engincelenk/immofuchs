@@ -1,4 +1,16 @@
-## 2026-06-18 (1.49)
+## 2026-06-18 (1.50)
+
+### Release: Version 1.5 — Versionierung vereinheitlicht
+
+**Ziel**: package.json und release-notes.txt auf gleichen Stand bringen.
+
+**Änderung**: package.json von `45.0.0` → `1.5.0` (war nie synchronisiert). Ab jetzt gilt `release-notes.txt` als Single Source of Truth.
+
+**Betroffene Dateien**: `package.json`, `release-notes.txt`
+
+---
+
+## 2026-06-18 (1.49 — in 1.50 enthalten)
 
 ### Feature: Baujahr-Feld — AfA-Automatik (Rendite) + KfW-Badge + Energieklasse (Sanierung)
 
