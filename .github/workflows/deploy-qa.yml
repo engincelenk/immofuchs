@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - Immofuchs-QA
+      - Immofuchs-qa
 
 jobs:
   web-deploy:
