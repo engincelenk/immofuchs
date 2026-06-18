@@ -67,7 +67,22 @@ export const KFW = {
   klimageschwindigkeitsbonus: 20, // % beim Heizungstausch (bis 2028)
   maxFoerderung: 70,          // % maximale Gesamtförderung
   maxInvestition: 30000,      // € max. förderfähige Kosten je Wohneinheit
+  klimaBonus_baujahrGrenze: 2002, // Klimageschwindigkeitsbonus nur für Gebäude erstmals errichtet vor 01.01.2002
 };
+
+// ── ENERGIEKLASSEN (kWh/m²a → Buchstabe) ────────────────────────────────────
+// Quelle: GEG 2024, EnEV-Systematik (Primärenergiebedarf)
+export const ENERGIE_KLASSEN = [
+  { bis:  30, kl: "A+" },
+  { bis:  50, kl: "A"  },
+  { bis:  75, kl: "B"  },
+  { bis: 100, kl: "C"  },
+  { bis: 130, kl: "D"  },
+  { bis: 160, kl: "E"  },
+  { bis: 200, kl: "F"  },
+  { bis: 250, kl: "G"  },
+  { bis: Infinity, kl: "H" },
+];
 
 // ── BAFA FÖRDERUNG ───────────────────────────────────────────────────────
 // Intervall: quartalsweise

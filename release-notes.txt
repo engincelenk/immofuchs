@@ -1,3 +1,91 @@
+## 2026-06-18 (1.49)
+
+### Feature: Baujahr-Feld — AfA-Automatik (Rendite) + KfW-Badge + Energieklasse (Sanierung)
+
+**Ziel**: Zentrales Baujahr-Feld (Context-Key `baujahr`) für Rendite- und Sanierungsrechner.
+
+**Änderungen**:
+- `data.js`: `KFW.klimaBonus_baujahrGrenze: 2002` + neues `ENERGIE_KLASSEN`-Array (GEG 2024, A+…H)
+- `App.jsx`: Context-Key `sanBj` → `baujahr` (einheitlich für alle Rechner)
+- Renditerechner: Baujahr-Feld setzt AfA-Satz automatisch (§7 Abs. 4 EStG: <1925→2,5%, 1925–2022→2,0%, ≥2023→3,0%)
+- Sanierungsrechner: Energieklasse-Badge (kWh/m²a via `SAN_NORMEN.hkBaujahr`) + KfW-Klimabonus-Indikator (Gebäude vor 01.01.2002)
+- TIPS.bj in allen 5 Sprachen (de/en/tr/zh/hi) aktualisiert
+
+**Stabilität**: §558-BGB-Logik und Annuität-Berechnung unverändert.
+
+**Betroffene Dateien**: `src/data.js`, `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-18 (1.48)
+
+### Fix: Renditerechner Sec1 — Benchmark-Bullet als echter Befund
+
+**Ziel**: Vergleichs-Bullet zeigt nicht mehr statische Zahlen, sondern ordnet die Nettorendite dynamisch gegen Tagesgeld / Staatsanleihe / ETF ein.
+
+**Änderung**: Bullet „Vergleich: Tagesgeld ~3 %…" → dynamischer Befund mit Symbol + Einordnung + Verdikt (kritisch / grenzwertig / gut / stark)
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-18 (1.47)
+
+### Feature: BANDS-Bewertungssystem — zentrale Bewertungs-Config + Befund-Bullets
+
+**Ziel**: Single Source of Truth für alle Ampelbewertungen. Bullets zeigen nicht mehr nur was eine Kennzahl ist, sondern wo der Nutzer steht — mit Symbol, Wert, Band und Verdikt.
+
+**Änderung**:
+- Neue `BANDS`-Config (13 Kennzahlen) + `rate(kpi, wert)` Helfer + `vrd(r)` Verdikt-Helper nach `tpl()`
+- Alle verstreuten Farbternaries (`brCol`, `nrCol`, `cfOCol`, `cfMCol`, `belCol`, `lzCol`, `stErsCol`, `beJCol`, `gCol`, `ekRCol`) zeigen jetzt auf `rate()`
+- Inkonsistenz-Fixes: CF-Schwelle −100→−150; EK-Rendite 5/3→6/3; Nettorendite vereinheitlicht auf 3,5/2,5
+- DE-Bullets in Sec1, Sec2, Sec4, Sec6 auf Befund-Format: `[Symbol] [Kennzahl] [Wert] — [Band] → [Verdikt]`
+- Erklärtexte (`text={...}`) **unverändert**; `§558-BGB-Logik` und Annuität-Berechnung **unverändert**
+
+**Stabilität**: Reine Bewertungs-/Darstellungslogik. Keine Berechnung berührt.
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-18 (1.46)
+
+### Feature: Renditerechner — „Alle aufklappen/zuklappen"-Schalter auf der Ergebnisseite
+
+**Ziel**: Ein Master-Schalter, der alle 8 Ergebnis-Sektionen gleichzeitig auf- und zuklappt — unabhängig von den einzelnen „Wie kommt das Ergebnis zustande?"-Toggles (die bleiben unverändert).
+
+**Änderung**:
+- Button oben rechts neben der „Kennzahlen"-Überschrift, Label wechselt „⊕ Alle aufklappen" / „⊖ Alle zuklappen"
+- `AccordionSection`: additiver optionaler Prop `sync={{key,open}}` + `useEffect`, der bei Key-Änderung `open` setzt — einzelne Section-Klicks funktionieren danach normal weiter
+- `Haupt`: State `secAllOpen` + `secAllKey`; Button bumpt Key und toggelt open-Wert
+- `sync`-Prop an alle 8 `AccordionSection`-Instanzen (Selbstträger + Sektion 1–7)
+- Neue i18n-Keys in alle 5 Sprachen (de/en/tr/zh/hi): `expandAll`, `collapseAll`
+
+**Stabilität**: Rein additiv. Bestehende lokale `open`-Logik der `AccordionSection` und `SectionExplain` unverändert; keine Berechnung berührt.
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
+## 2026-06-18 (1.45)
+
+### Redesign: Selbstträger-Check — Ja/Nein-Verdikt zuerst, Steuervorteil als Hinweis
+
+**Ziel**: Nutzer sieht sofort die Antwort auf „Trägt sich die Immobilie von selbst?" — Ja oder Nein, berechnet rein aus Cashflow OHNE Steuervorteil. Der Steuervorteil wird klar als nachgeordneter Hinweis dargestellt, nicht als Bestätigung der Selbsttragung.
+
+**Änderung**:
+- Neue Hierarchie in `SelbsttraegerCheck`: (1) Verdikt Ja/Nein mit farbcodiertem Icon (grün/rot), (2) Begründung in einem Satz, (3) untergeordneter Steuer-Hinweis-Block, (4) beide KPI-Karten (Ziel-KP, Selbstträger ab) ans Ja/Nein-Farbschema angeglichen
+- Verdikt rein aus `cf2OhneSt >= 0` → Ja, sonst Nein
+- Steuer-Hinweis: bei Nein + `cf2MitSt>=0` explizit „macht die Immobilie NICHT selbsttragend"; bei `cf2MitSt<0` Rest-Unterdeckung; bei Ja Bonus-Hinweis
+- Neue Translation-Keys in alle 5 Sprachen (de/en/tr/zh/hi): `stVerdictJa`, `stVerdictNein`, `stWhyJa`, `stWhyNein`, `stTaxPos`, `stTaxNeg`, `stTaxBonus`
+- Alte Hero-Logik (`heroColor`/`heroBg`/`heroBorder`/`heroText`, `stHero1`–`stHero4b`) durch Verdikt-Logik ersetzt
+
+**Stabilität**: Berechnungen unverändert (`cf2OhneSt`, `cf2MitSt`, `beqKP`, `beqKPMit`, `beqJ`) — reine UI-/Darstellungsänderung. §558-BGB- und Annuität-Logik nicht berührt.
+
+**Betroffene Dateien**: `src/App.jsx`, `release-notes.txt`
+
+---
+
 ## 2026-06-16 (28)
 
 ---

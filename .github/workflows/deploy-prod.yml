@@ -1,4 +1,4 @@
-name: 🚀 Deploy Website to IONOS
+name: 🚀 Deploy Website to PROD www.immofuchs.info
 on:
   workflow_dispatch:
   push:
