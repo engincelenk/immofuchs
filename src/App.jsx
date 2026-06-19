@@ -1732,7 +1732,7 @@ function Kredit(){
           <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>{t.tPl}</div>
           <table style={{width:"100%",fontSize:11,borderCollapse:"collapse"}}>
             <thead><tr style={{borderBottom:"1px solid var(--cb)"}}>{[t.jahre.slice(0,2),t.rate,t.gZin,t.tilgung,t.rest].map(h=><th key={h} style={{padding:"3px 4px",textAlign:"right",fontWeight:500,color:"var(--ch)"}}>{h}</th>)}</tr></thead>
-            <tbody>{R.rows.slice(0,30).map(r=><tr key={r.j} style={{borderBottom:"1px solid var(--cb)",background:r.isZB?"var(--ci)":"transparent"}}>
+            <tbody>{R.rows.map(r=><tr key={r.j} style={{borderBottom:"1px solid var(--cb)",background:r.isZB?"var(--ci)":"transparent"}}>
               <td style={{padding:"3px 4px"}}>{r.j}{r.isZB?" ◀":""}</td>
               <td style={{padding:"3px 4px",textAlign:"right"}}>{fmtE(R.ann*12)}</td>
               <td style={{padding:"3px 4px",textAlign:"right",color:"#ef4444"}}>{fmtE(r.z)}</td>
