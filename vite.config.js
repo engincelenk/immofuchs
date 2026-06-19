@@ -12,7 +12,8 @@ function swVersionPlugin() {
     closeBundle() {
       const swPath = path.resolve(__dirname, 'dist/sw.js')
       if (fs.existsSync(swPath)) {
-        const version = Date.now()
+        const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'))
+        const version = `${pkg.version}-${Date.now()}`
         const content = fs.readFileSync(swPath, 'utf-8')
         fs.writeFileSync(swPath, content.replace('__BUILD_VERSION__', version))
       }
