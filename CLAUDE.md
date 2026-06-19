@@ -85,11 +85,9 @@ Nach jede erfolgreiche Umsetzung release-notes.txt updaten. Woher fragen.
 ────────────────────────────────────────
 Nach jede erfolgreiche Umsetzung den Befehl für git push formulieren. Achte auf PowerShell nutzt ; statt &&. Liefere korrekte Befehle.
 
-═══════════════════════════════════════════════════════
-── Push auf git
-────────────────────────────────────────
-es gibt folgende branches auf git
-main
-Immofuchs-QA
+Liefere separate befehle für die branches
 Immofuchs-dev
+Immofuchs-qa
+Main
+
 ═══════════════════════════════════════════════════════

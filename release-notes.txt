@@ -1,3 +1,25 @@
+## 2026-06-19 (1.51)
+
+### Landing Page: Hero-Layout Renditerechner
+
+**Renditerechner als Featured Hero-Card**
+- Volle Breite, Split-Layout: Bild links (height 100% der Kartenhöhe), Text + Features rechts
+- Badge "★ Hauptrechner", alle 6 Feature-Checkmarks sichtbar
+- Hover-Effekt: orange Border + Shadow
+
+**5 Support-Rechner als kompaktes Grid**
+- Neue CSS-Klasse `.calc-cards-support`: 2 Spalten mobil → 3 ab 640px → 5 ab 900px
+- Bildformat: `aspectRatio: 1200/520` (Original) statt 1:1 — kein aggressiver Crop
+- Nur erste 3 Features pro Karte (kompakter)
+
+**Fixes**
+- Hero-Bild füllt volle Kartenhöhe (`height: 100%`) — kein weißer Leerraum mehr
+- Alle 6 bestehenden `.webp`-Bilder wiederverwendet, keine neuen Assets nötig
+
+**Betroffene Dateien:** src/App.jsx (3654 → 3659 Zeilen)
+
+---
+
 ## 2026-06-18 (1.50)
 
 ### Release: Version 1.5 — Versionierung vereinheitlicht
@@ -741,3 +763,24 @@
 - Alle Platzhalter (Rendite, Preise, Laufzeiten etc.) korrekt verkabelt
 
 **Betroffene Dateien:** src/App.jsx (3517 → 3591 Zeilen)
+
+## 2026-06-19 (Patch 4)
+
+### Fix: Kaufnebenkosten & Steuervorteile — KPI-Karten i18n (alle 5 Sprachen)
+
+**Problem**
+- 6 hartcodierte deutsche Strings in den AmpelKPI-Karten der Section 4 (Steuervorteile)
+- "Stark/Moderat/Gering", "Schnell/Okay/Langsam", "✓/~/⚠ NK amortisiert"
+- "AfA: .../J. | Zinsen abzugsfähig: .../J.", "Jahr {n}", "Kaufnebenkosten ... zurückgeholt"
+- Alle Strings ungeschützt — wurden für alle Sprachen (EN, TR, ZH, HI) auf Deutsch angezeigt
+
+**Lösung**
+- steuerErs statusLabel → `t.badgeGut/badgeOkay/badgeKrit` (bereits in allen 5 Sprachen vorhanden)
+- beJ statusLabel → `t.badgeGut/badgeOkay/badgeKrit`
+- 6 neue Translation-Keys in alle 5 Sprachen (DE/EN/TR/ZH/HI) eingefügt:
+  - `jahrN` — "Jahr {n}" / "Year {n}" / "Yıl {n}" / "第{n}年" / "वर्ष {n}"
+  - `steuerErsTip` — AfA/Zinsen Tooltip
+  - `nkAmortOk/Mid/No` — Status-Labels für NK-Amortisation
+  - `nkAmortTip` — Template-Satz mit {nbk} und {beJ} Platzhaltern
+
+**Betroffene Dateien:** src/App.jsx
