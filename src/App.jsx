@@ -1079,6 +1079,9 @@ function ExportPDF({title}){const{t}=useApp();
   const doExport=async()=>{
     const rp=document.querySelector(".res-pane");
     if(!rp)return;
+    // iOS Safari: window.open() muss synchron im User-Gesture-Kontext aufgerufen werden
+    // → sofort öffnen, bevor irgendein await den Kontext bricht
+    const w=window.open("","_blank");
     // Expand all accordion sections so their content is in the DOM before cloning
     const expandBtn=Array.from(rp.querySelectorAll("button")).find(b=>b.textContent.includes("⊕")||b.textContent.includes("aufklapp")||b.textContent.includes("expand"));
     if(expandBtn){expandBtn.click();await new Promise(r=>setTimeout(r,250));}
@@ -1111,17 +1114,19 @@ table{border-collapse:collapse;width:100%}svg{max-width:100%}
 ${h}
 <div style="margin-top:30px;padding-top:12px;border-top:1px solid #e5e5dc;font-size:9px;color:#8a8a80;text-align:center">Erstellt mit Immofuchs · ${now} · Keine Rechts- oder Steuerberatung</div>
 </body></html>`;
-    // Druckdialog → "Als PDF speichern" (nativ, alle Browser/Plattformen)
+    // Druckdialog → "Als PDF speichern"
     const printDoc=doc.replace("</body>","<script>setTimeout(()=>window.print(),600)<\/script></body>");
-    const blob=new Blob([printDoc],{type:"text/html;charset=utf-8"});
-    const url=URL.createObjectURL(blob);
-    const w=window.open(url,"_blank");
-    if(!w){
-      // Popup geblockt → direkter Download als Fallback
-      const fileName="ImmoFuchs_"+title.replace(/\s+/g,"_")+".html";
-      const a=document.createElement("a");a.href=url;a.download=fileName;a.click();
+    if(w){
+      w.document.open();
+      w.document.write(printDoc);
+      w.document.close();
+    }else{
+      // Fallback falls Popup doch geblockt (sehr selten nach synchronem open)
+      const blob=new Blob([printDoc],{type:"text/html;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download="ImmoFuchs_"+title.replace(/\s+/g,"_")+".html";a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
     }
-    setTimeout(()=>URL.revokeObjectURL(url),5000);
   };
   return <button className="no-print" onClick={doExport} style={{width:"100%",padding:"12px",border:"1px solid var(--cb)",borderRadius:10,background:"var(--ci)",color:"var(--ct)",fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:12,marginBottom:4,fontFamily:"inherit"}}>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
