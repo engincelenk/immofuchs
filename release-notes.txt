@@ -1,3 +1,20 @@
+## 2026-06-19 (1.52)
+
+### PDF-Export: Logo + Wordmark im Header
+
+**ExportPDF Header überarbeitet**
+- Fuchs-Logo (75px) + „immofuchs<span style>fuchs</span>.info"-Wordmark (30px, immo dunkel / fuchs orange) links
+- Fallback ohne Bild: nur Wordmark-Text (kein weißer Chip)
+- Kein Hintergrund/Chip hinter der Logo-Gruppe
+- Alle Rechner zeigen vollen Namen: Renditerechner, Finanzierungsrechner, Mieterhöhungsrechner (§ 558 BGB), Sanierungsrechner, § 6-Trick-Rechner, Vorfälligkeitsentschädigung
+
+**Betroffene Dateien:** src/App.jsx, public/logo.png
+
+- Logo ersetzt: weißer Hintergrund, 330×338px RGBA — sauber auf PDF-Weiß
+- PDF-Export: Accordion-Sektionen werden vor dem Clone automatisch aufgeklappt
+
+---
+
 ## 2026-06-19 (1.51)
 
 ### Landing Page: Hero-Layout Renditerechner
@@ -798,5 +815,22 @@
   DE: "Mon." | EN: "mo." | TR: "ay" | ZH: "月" | HI: "माह"
 - `unit="€/Mon."` → `unit={\`€/${t.monLabel||"Mon."}\`}`
 - `unit="Mon."` → `unit={t.monLabel||"Mon."}`
+
+**Betroffene Dateien:** src/App.jsx
+
+## 2026-06-19 (Patch 6)
+
+### Feature: PDF-Header — Logo + voller Rechnername
+
+**Änderung**
+- PDF-Header zeigt jetzt das echte immofuchs.info-Logo (PNG, Base64-eingebettet)
+  statt des Text-Labels "IMMOFUCHS"
+- Layout: Logo links, Rechnername + Datum rechts (zweispaltig)
+- Volle Rechnernamen statt Kurzform:
+  DE: Renditerechner | Finanzierungsrechner | Mieterhöhungsrechner (§ 558 BGB) | Sanierungsrechner
+  EN: Yield Calculator | Financing Calculator | Rent Increase Calculator | Renovation Calculator
+- `doExport` ist jetzt async (fetch logo → Base64 → Blob)
+- Fallback: "immofuchs.info"-Text falls Logo nicht geladen werden kann
+- Neue Translation-Keys: `hauptFull`, `kreditFull`, `mieteFull`, `sanierFull`, `steuer6Full`, `vfeFull`
 
 **Betroffene Dateien:** src/App.jsx
