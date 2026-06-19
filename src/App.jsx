@@ -2936,36 +2936,39 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
           <h2 style={{fontSize:"clamp(26px,3vw,38px)",fontWeight:800,color:"var(--ct)",margin:0,letterSpacing:-.5,lineHeight:1.15}}>{l.cardsSub}</h2>
         </div>
 
-        <div className="calc-cards">
+        {/* ── HERO: Renditerechner ── */}
+        <button className="calc-hero-card" onClick={()=>onStart("haupt")} style={{display:"grid",gridTemplateColumns:"1fr 1fr",background:"var(--cc)",border:"1.5px solid var(--cb)",borderRadius:14,overflow:"hidden",textAlign:"left",cursor:"pointer",transition:"all .2s",padding:0,fontFamily:"inherit",width:"100%",marginBottom:16}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--ca)";e.currentTarget.style.boxShadow="0 8px 28px rgba(232,96,10,.14)"}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--cb)";e.currentTarget.style.boxShadow=""}}>
+          <div style={{overflow:"hidden",background:"linear-gradient(135deg,#fff1e8 0%,#ffd9b8 100%)",minHeight:200}}>
+            <img src="/card-rendite.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>
+          </div>
+          <div style={{padding:"28px 28px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+            <div style={{display:"inline-block",fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--ca)",background:"var(--ca-bg)",padding:"3px 8px",borderRadius:4,marginBottom:12,width:"fit-content"}}>★ {l.fullBadge}</div>
+            <h3 style={{fontSize:22,fontWeight:700,color:"var(--ct)",margin:"0 0 10px",letterSpacing:-.3}}>{l.fullTitle}</h3>
+            <p style={{fontSize:13,color:"var(--ch)",lineHeight:1.6,margin:"0 0 16px"}}>{l.fullDesc}</p>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {[l.fullF1,l.fullF2,l.fullF3,l.fullF4,l.fullF5,l.fullF6].map((f,j)=><div key={j} style={{fontSize:12,color:"var(--cl)",display:"flex",gap:6,alignItems:"flex-start"}}><span style={{color:"var(--ca)",flexShrink:0}}>✓</span><span>{f}</span></div>)}
+            </div>
+          </div>
+        </button>
+
+        {/* ── SUPPORT: 5 Ergänzungs-Rechner ── */}
+        <div className="calc-cards-support">
           {[
-            {tab:"haupt",featured:true,title:l.fullTitle,badge:l.fullBadge,desc:l.fullDesc,feats:[l.fullF1,l.fullF2,l.fullF3,l.fullF4,l.fullF5,l.fullF6],cta:l.fullCta,
-             bg:"linear-gradient(135deg,#fff1e8 0%,#ffd9b8 100%)",
-             illus:<img src="/card-rendite.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
-            {tab:"kredit",title:l.finTitle,badge:l.finBadge,desc:l.finDesc,feats:[l.finF1,l.finF2,l.finF3,l.finF4,l.finF5,l.finF6],cta:l.finCta,
-             bg:"linear-gradient(135deg,#e8f5ed 0%,#bce4ce 100%)",
-             illus:<img src="/card-kredit.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
-            {tab:"miete",title:l.rentTitle,badge:l.rentBadge,desc:l.rentDesc,feats:[l.rentF1,l.rentF2,l.rentF3,l.rentF4,l.rentF5,l.rentF6],cta:l.rentCta,
-             bg:"linear-gradient(135deg,#fff5e8 0%,#ffd5b8 100%)",
-             illus:<img src="/card-miete.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
-            {tab:"sanier",title:l.sanTitle,badge:l.sanBadge,desc:l.sanDesc,feats:[l.sanF1,l.sanF2,l.sanF3,l.sanF4,l.sanF5,l.sanF6],cta:l.sanCta,
-             bg:"linear-gradient(135deg,#e8f0f5 0%,#bcd4e6 100%)",
-             illus:<img src="/card-sanierung.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
-            {tab:"steuer6",title:l.st6Title,badge:l.st6Badge,desc:l.st6Desc,feats:[l.st6F1,l.st6F2,l.st6F3,l.st6F4,l.st6F5,l.st6F6],cta:l.st6Cta,
-             bg:"linear-gradient(135deg,#e8eef5 0%,#c2d3e8 100%)",
-             illus:<img src="/card-steuer.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
-            {tab:"vfe",title:l.vfeTitle,badge:l.vfeBadge,desc:l.vfeDesc,feats:[l.vfeF1,l.vfeF2,l.vfeF3,l.vfeF4,l.vfeF5,l.vfeF6],cta:l.vfeCta,
-             bg:"linear-gradient(135deg,#f0eafa 0%,#d4c5f0 100%)",
-             illus:<img src="/card-vorfaelligkeit.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>}
-          ].map((c,i)=><button key={i} onClick={()=>onStart(c.tab)} style={{display:"flex",flexDirection:"column",background:"var(--cc)",border:"1.5px solid var(--cb)",borderRadius:14,overflow:"hidden",textAlign:"left",cursor:"pointer",transition:"all .2s",padding:0,fontFamily:"inherit",position:"relative",width:"100%"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor="var(--ca)";e.currentTarget.style.boxShadow="0 8px 24px rgba(232,96,10,.12)"}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.borderColor="var(--cb)";e.currentTarget.style.boxShadow=""}}>
+            {tab:"kredit",title:l.finTitle,badge:l.finBadge,desc:l.finDesc,feats:[l.finF1,l.finF2,l.finF3],bg:"linear-gradient(135deg,#e8f5ed 0%,#bce4ce 100%)",illus:<img src="/card-kredit.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
+            {tab:"miete",title:l.rentTitle,badge:l.rentBadge,desc:l.rentDesc,feats:[l.rentF1,l.rentF2,l.rentF3],bg:"linear-gradient(135deg,#fff5e8 0%,#ffd5b8 100%)",illus:<img src="/card-miete.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
+            {tab:"sanier",title:l.sanTitle,badge:l.sanBadge,desc:l.sanDesc,feats:[l.sanF1,l.sanF2,l.sanF3],bg:"linear-gradient(135deg,#e8f0f5 0%,#bcd4e6 100%)",illus:<img src="/card-sanierung.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
+            {tab:"steuer6",title:l.st6Title,badge:l.st6Badge,desc:l.st6Desc,feats:[l.st6F1,l.st6F2,l.st6F3],bg:"linear-gradient(135deg,#e8eef5 0%,#c2d3e8 100%)",illus:<img src="/card-steuer.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>},
+            {tab:"vfe",title:l.vfeTitle,badge:l.vfeBadge,desc:l.vfeDesc,feats:[l.vfeF1,l.vfeF2,l.vfeF3],bg:"linear-gradient(135deg,#f0eafa 0%,#d4c5f0 100%)",illus:<img src="/card-vorfaelligkeit.webp" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>}
+          ].map((c,i)=><button key={i} onClick={()=>onStart(c.tab)} style={{display:"flex",flexDirection:"column",background:"var(--cc)",border:"1.5px solid var(--cb)",borderRadius:14,overflow:"hidden",textAlign:"left",cursor:"pointer",transition:"all .2s",padding:0,fontFamily:"inherit",width:"100%"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor="var(--ca)";e.currentTarget.style.boxShadow="0 8px 24px rgba(232,96,10,.12)"}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.borderColor="var(--cb)";e.currentTarget.style.boxShadow=""}}>
             <div style={{aspectRatio:"1200/520",width:"100%",overflow:"hidden",borderRadius:"13px 13px 0 0",borderBottom:"1px solid rgba(0,0,0,.05)",flexShrink:0,background:c.bg}}>
               {c.illus}
             </div>
-            <div style={{padding:"22px 22px 22px",flex:1}}>
-              <div style={{display:"inline-block",fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--ca)",background:"var(--ca-bg)",padding:"3px 8px",borderRadius:4,marginBottom:10}}>{c.badge}</div>
-              <h3 style={{fontSize:18,fontWeight:700,color:"var(--ct)",margin:"0 0 8px",letterSpacing:-.2}}>{c.title}</h3>
-              <p style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,margin:"0 0 14px"}}>{c.desc}</p>
-              <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                {c.feats.map((f,j)=><div key={j} style={{fontSize:11,color:"var(--cl)",display:"flex",gap:6,alignItems:"flex-start"}}><span style={{color:"var(--ca)",flexShrink:0}}>✓</span><span>{f}</span></div>)}
+            <div style={{padding:"16px 16px",flex:1}}>
+              <div style={{display:"inline-block",fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--ca)",background:"var(--ca-bg)",padding:"3px 8px",borderRadius:4,marginBottom:8}}>{c.badge}</div>
+              <h3 style={{fontSize:15,fontWeight:700,color:"var(--ct)",margin:"0 0 6px",letterSpacing:-.2}}>{c.title}</h3>
+              <p style={{fontSize:11,color:"var(--ch)",lineHeight:1.5,margin:"0 0 10px"}}>{c.desc}</p>
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {c.feats.map((f,j)=><div key={j} style={{fontSize:10,color:"var(--cl)",display:"flex",gap:5,alignItems:"flex-start"}}><span style={{color:"var(--ca)",flexShrink:0}}>✓</span><span>{f}</span></div>)}
               </div>
             </div>
           </button>)}
@@ -3069,12 +3072,14 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
 
     {/* Responsive nav styles */}
     <style>{`
-      .calc-cards{display:grid;grid-template-columns:1fr;gap:18px}
-      .calc-cards>*{width:100%;min-width:0;box-sizing:border-box}
-      @media(min-width:580px){.calc-cards{grid-template-columns:repeat(2,1fr)}}
-      @media(min-width:900px){.calc-cards{grid-template-columns:repeat(3,1fr)}}
-      @media(min-width:1200px){.calc-cards{grid-template-columns:repeat(4,1fr)}}
-      @media(min-width:1500px){.calc-cards{grid-template-columns:repeat(5,1fr)}}
+      .calc-hero-card{grid-template-columns:1fr!important}
+      @media(min-width:640px){.calc-hero-card{grid-template-columns:1fr 1fr!important}}
+      .calc-hero-card>div:first-child{min-height:200px}
+      @media(min-width:640px){.calc-hero-card>div:first-child{min-height:0;height:100%}}
+      .calc-cards-support{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+      .calc-cards-support>*{width:100%;min-width:0;box-sizing:border-box}
+      @media(min-width:640px){.calc-cards-support{grid-template-columns:repeat(3,1fr)}}
+      @media(min-width:900px){.calc-cards-support{grid-template-columns:repeat(5,1fr)}}
       @media(max-width:880px){
         .lp-nav{display:none!important}
         .lp-burger{display:inline-flex!important}
