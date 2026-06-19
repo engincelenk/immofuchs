@@ -784,3 +784,19 @@
   - `nkAmortTip` — Template-Satz mit {nbk} und {beJ} Platzhaltern
 
 **Betroffene Dateien:** src/App.jsx
+
+## 2026-06-19 (Patch 5)
+
+### Fix: Input-Felder Unit-Labels übersetzt — alle 5 Sprachen
+
+**Problem**
+- Unit-Labels `€/Mon.` und `Mon.` in Input-Feldern (Kaltmiete, Nicht umlagef., Leerstand)
+  hardcodiert Deutsch für alle Sprachen
+
+**Lösung**
+- Neuer Translation-Key `monLabel` in alle 5 Sprachen eingefügt:
+  DE: "Mon." | EN: "mo." | TR: "ay" | ZH: "月" | HI: "माह"
+- `unit="€/Mon."` → `unit={\`€/${t.monLabel||"Mon."}\`}`
+- `unit="Mon."` → `unit={t.monLabel||"Mon."}`
+
+**Betroffene Dateien:** src/App.jsx
