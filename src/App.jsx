@@ -2944,10 +2944,7 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
           <div style={{padding:"28px 28px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
             <div style={{display:"inline-block",fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--ca)",background:"var(--ca-bg)",padding:"3px 8px",borderRadius:4,marginBottom:12,width:"fit-content"}}>★ {l.fullBadge}</div>
             <h3 style={{fontSize:22,fontWeight:700,color:"var(--ct)",margin:"0 0 10px",letterSpacing:-.3}}>{l.fullTitle}</h3>
-            <p style={{fontSize:13,color:"var(--ch)",lineHeight:1.6,margin:"0 0 16px"}}>{l.fullDesc}</p>
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {[l.fullF1,l.fullF2,l.fullF3,l.fullF4,l.fullF5,l.fullF6].map((f,j)=><div key={j} style={{fontSize:12,color:"var(--cl)",display:"flex",gap:6,alignItems:"flex-start"}}><span style={{color:"var(--ca)",flexShrink:0}}>✓</span><span>{f}</span></div>)}
-            </div>
+            <p style={{fontSize:13,color:"var(--ch)",lineHeight:1.6,margin:0}}>{l.fullDesc}</p>
           </div>
         </button>
 
@@ -2966,10 +2963,7 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
             <div style={{padding:"16px 16px",flex:1}}>
               <div style={{display:"inline-block",fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--ca)",background:"var(--ca-bg)",padding:"3px 8px",borderRadius:4,marginBottom:8}}>{c.badge}</div>
               <h3 style={{fontSize:15,fontWeight:700,color:"var(--ct)",margin:"0 0 6px",letterSpacing:-.2}}>{c.title}</h3>
-              <p style={{fontSize:11,color:"var(--ch)",lineHeight:1.5,margin:"0 0 10px"}}>{c.desc}</p>
-              <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                {c.feats.map((f,j)=><div key={j} style={{fontSize:10,color:"var(--cl)",display:"flex",gap:5,alignItems:"flex-start"}}><span style={{color:"var(--ca)",flexShrink:0}}>✓</span><span>{f}</span></div>)}
-              </div>
+              <p style={{fontSize:11,color:"var(--ch)",lineHeight:1.5,margin:0}}>{c.desc}</p>
             </div>
           </button>)}
         </div>
@@ -3076,7 +3070,7 @@ function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
       @media(min-width:640px){.calc-hero-card{grid-template-columns:1fr 1fr!important}}
       .calc-hero-card>div:first-child{min-height:200px}
       @media(min-width:640px){.calc-hero-card>div:first-child{min-height:0;height:100%}}
-      .calc-cards-support{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+      .calc-cards-support{display:grid;grid-template-columns:1fr;gap:12px}
       .calc-cards-support>*{width:100%;min-width:0;box-sizing:border-box}
       @media(min-width:640px){.calc-cards-support{grid-template-columns:repeat(3,1fr)}}
       @media(min-width:900px){.calc-cards-support{grid-template-columns:repeat(5,1fr)}}
