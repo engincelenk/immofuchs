@@ -318,7 +318,7 @@ function RBar({score,factors}){
     seen.add(m.t);return true;
   });
 
-  return <div style={{background:"var(--cc)",borderRadius:16,border:`2px solid ${col}`,marginBottom:16,overflow:"hidden"}}>
+  return <div style={{background:"var(--cc)",borderRadius:16,border:`2px solid ${col}`,marginBottom:16,overflow:"hidden",maxWidth:"100%",boxSizing:"border-box"}}>
     {/* Header strip */}
     <div style={{background:col,padding:"8px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{fontSize:12,fontWeight:700,color:"#fff",letterSpacing:.5,textTransform:"uppercase"}}>{t.risk}</span>
@@ -3622,7 +3622,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
         .if-row > *{margin-bottom:14px}
         .split{display:grid;grid-template-columns:1fr 1.15fr;gap:24px;align-items:start}
         .inp-pane,.res-pane{display:block!important}
-        .res-pane{position:sticky;top:94px}
+        .res-pane{position:sticky;top:94px;max-width:100%;overflow-x:hidden}
         .content{padding:24px 28px}
         .tbar{max-width:640px;margin:0 auto;left:0;right:0;border-radius:16px 16px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.05)}
       }

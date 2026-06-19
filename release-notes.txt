@@ -1,3 +1,18 @@
+## 2026-06-19 (1.53)
+
+### Landscape-Mode Bugfixes (iOS Safari)
+
+**Bug 1 — iOS Zoom on Rotate**
+- Viewport-Meta um `maximum-scale=1, user-scalable=no` ergänzt → verhindert iOS-Safari-Zoom beim Drehen
+
+**Bug 2 — Risikolevel-Panel Overflow in Landscape**
+- `.res-pane` CSS: `max-width:100%;overflow-x:hidden` hinzugefügt
+- `RBar` Outer-Div: `maxWidth:"100%";boxSizing:"border-box"` gesetzt
+
+**Betroffene Dateien:** index.html, src/App.jsx, package.json (→ 1.5.2)
+
+---
+
 ## 2026-06-19 (1.52)
 
 ### PDF-Export: Logo + Wordmark im Header
