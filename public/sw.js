@@ -6,7 +6,7 @@
  * Sprint 3: Zinsalarm via Push Notification
  */
 
-const CACHE_NAME = 'immofuchs-v49';
+const CACHE_NAME = 'immofuchs-__BUILD_VERSION__';
 
 // ── Zinsalarm State (im SW-Kontext gespeichert) ───────────
 let alarmConfig = null; // {enabled, threshold, notifTitle, notifBody, avg, lang}
