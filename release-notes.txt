@@ -1,3 +1,48 @@
+## 2026-06-20 (Patch 10)
+
+### Feature: Mieterhöhungsrechner — Vermietungsstatus-Toggle
+
+**Was neu ist**
+- Neuer Toggle "Noch zu vermieten / Bereits vermietet" im Mieterhöhungsrechner
+- **Noch zu vermieten** (Default): Kaltmiete aus dem Renditerechner-State übernommen, Datumsfeld zeigt "Mietbeginn" mit Default = 1. des Monats +4 Monate (= nächster Mietbeginn), `letzteErhMiete` = 0
+- **Bereits vermietet**: Datumsfeld zeigt "Letzte Mieterhöhung", User trägt eigene Werte ein, Default = 2 Jahre zurück
+- Toggle setzt Datum und `letzteErhMiete` automatisch beim Wechsel
+- `buildMP()`-Logik (FROZEN) bleibt unverändert — +15 Monate gilt für beide Szenarien
+
+**Betroffene Dateien:** src/App.jsx
+
+## 2026-06-20 (Patch 11)
+
+### Feature: Vermietungsstatus-Toggle auch im Renditerechner (Mietrecht-Section)
+
+**Was neu ist**
+- Identischer Toggle "Noch zu vermieten / Bereits vermietet" jetzt auch in Renditerechner → Mietrecht-Section
+- Da State shared: Änderung in einem Rechner gilt sofort im anderen
+- KPI-Fluss bestätigt: `letzteErhDatum` + `letzteErhMiete` → `buildMP()` → `gRJ()` → Jahresschleife → alle Cashflow-KPIs und Tabelle
+- Leer-Fall: nur Mietbeginn-Datum sichtbar (kein letzteErhMiete), Vermietet-Fall: beide Felder
+- OneDrive-Truncation-Bug aufgetreten und behoben (fehlende Datei-Endung wiederhergestellt)
+
+**Betroffene Dateien:** src/App.jsx
+
+---
+
+## 2026-06-20 (Patch 9)
+
+### Bugfix: Jahresmiete-Linie im Chart auf falscher Y-Achse
+
+**Problem**
+- Im Chart "Restschuld, Cashflow & Jahresmiete" wurde die Jahresmiete-Linie (orange gestrichelt) auf der rechten Y-Achse (Cashflow-Skala) gezeichnet statt auf der linken Achse (Restschuld-Skala)
+- Die `mxR`-Variable bezieht beide Werte korrekt ein, aber `pR` statt `pL` wurde verwendet
+- Visuelles Ergebnis: Jahresmiete erschien an falscher Stelle – bei negativen Cashflows z.B. weit oberhalb oder außerhalb des sichtbaren Bereichs
+
+**Fix**
+- Zeile 844: `pR(mA)` → `pL(mA)` (eine Zeichen-Änderung)
+- Jahresmiete liegt jetzt korrekt auf der linken Achse, vergleichbar mit der Restschuld
+
+**Betroffene Dateien:** src/App.jsx
+
+---
+
 ## 2026-06-19 (1.53)
 
 ### Landscape-Mode Bugfixes (iOS Safari)
@@ -856,34 +901,4 @@
 
 **Problem**
 - PDF-Export öffnete ein neues Tab mit der HTML-Seite
-- Popup-Blocker verhinderten den Druckdialog
-- User sah die HTML-Seite statt ein PDF zu erhalten
-
-**Lösung**
-- `window.print()`-Ansatz vollständig ersetzt durch `jsPDF` + `html2canvas`
-- PDF wird direkt als `.pdf`-Datei heruntergeladen — kein Popup, kein Dialog
-- Lazy-Import: Bibliotheken (~600 KB) werden erst beim Klick geladen (kein Impact auf Ladezeit)
-- Ladezustand: Button zeigt Spinner + "PDF wird erstellt…" während Generierung
-- Mehrseitige PDFs: Inhalte werden korrekt auf mehrere A4-Seiten verteilt
-- Header (Marineblau-Balken mit Wordmark + Titel + Datum) auf jeder Seite
-- Footer mit Disclaimer + Seitennummer auf jeder Seite
-- Dateiname: `ImmoFuchs_[Rechnername]_[Datum].pdf`
-
-**Neue Dependencies:** jspdf, html2canvas
-
-**Betroffene Dateien:** src/App.jsx, package.json
-
-## 2026-06-19 (Patch 8)
-
-### Fix: PDF Export auf iOS Safari
-
-**Problem**
-- Auf iOS Safari wurde beim PDF-Export eine .html-Datei heruntergeladen statt der Druckdialog zu öffnen
-- Ursache: `window.open()` wurde nach einem `await` aufgerufen — iOS Safari blockiert `window.open()` außerhalb des synchronen User-Gesture-Kontexts
-
-**Fix**
-- `window.open("","_blank")` wird jetzt sofort beim Klick aufgerufen (vor jedem `await`)
-- HTML wird danach per `w.document.write()` in das bereits offene Fenster geschrieben
-- Funktioniert jetzt korrekt auf iOS Safari, Android Chrome und Desktop
-
-**Betroffene Dateien:** src/App.jsx
+- Popup-Blocker verhinderten den Dru

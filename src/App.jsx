@@ -841,7 +841,7 @@ function LineChart({rows,zbJ}){
         {zbIdx!==null&&<text x={xS(zbIdx)} y={pt-6} textAnchor="middle" fill="#f59e0b" fontSize="8" fontWeight="600">ZB</text>}
         <path d={pL(rA)} stroke="#c0392b" strokeWidth="1.8" fill="none"/>
         <path d={pR(cA)} stroke="#22c55e" strokeWidth="1.8" fill="none"/>
-        <path d={pR(mA)} stroke="#e8600a" strokeWidth="1.8" strokeDasharray="4 3" fill="none"/>
+        <path d={pL(mA)} stroke="#e8600a" strokeWidth="1.8" strokeDasharray="4 3" fill="none"/>
         {rA.map((v,i)=><circle key={"r"+i} cx={xS(i)} cy={yL(v)} r={hover===i?4:2} fill="#c0392b" style={{transition:"r .15s"}}/>)}
         {cA.map((v,i)=><circle key={"c"+i} cx={xS(i)} cy={yR(v)} r={hover===i?4:2} fill="#22c55e" style={{transition:"r .15s"}}/>)}
         {rows.map((r,i)=>((i%step===0)||i===n-1)&&<text key={"x"+i} x={xS(i)} y={H-pb+14} textAnchor="middle" fill="var(--ch)">J{i+1}</text>)}
@@ -855,7 +855,7 @@ function LineChart({rows,zbJ}){
         <div style={{color:"#ef8888"}}>{t.chartRestschuld}: {fmtE(rows[hover].rest)}</div>
         <div style={{color:"#ef8888"}}>{t.gZin}: {fmtE(rows[hover].zinsen)}</div>
         <div style={{color:"#6ddb8a"}}>{t.steuerErs}: {fmtE(rows[hover].steuer)}</div>
-        <div style={{color:"#6dabf5"}}>{t.chartHoverJahresmiete}: {fmtE(rows[hover].miete)}</div>
+        <div style={{color:"#ffa64d"}}>{t.chartHoverJahresmiete}: {fmtE(rows[hover].miete)}</div>
         <div style={{color:(rows[hover].cfOhneSt??0)>=0?"#ffa64d":"#ef8888",marginTop:2}}>{t.chartHoverCFOhne}: {fmtE(rows[hover].cfOhneSt??0)}</div>
         <div style={{color:rows[hover].cf>=0?"#6ddb8a":"#ef8888"}}>{t.chartHoverCFMit}: {fmtE(rows[hover].cf)}</div>
         <div style={{color:rows[hover].cfKum>=0?"#6ddb8a":"#ef8888",borderTop:"1px solid #444",paddingTop:3,marginTop:3}}>{t.chartHoverKumCF}: {fmtE(rows[hover].cfKum)}</div>
@@ -938,7 +938,7 @@ function YearTable({rows,zbJ}){
             <th style={{...td,textAlign:"right",fontWeight:500,color:"var(--ch)"}}>{t.chartRestschuld}</th>
             <th style={{...td,textAlign:"right",fontWeight:500,color:"var(--ch)"}}>{t.gZin}</th>
             <th style={{...td,textAlign:"right",fontWeight:500,color:"var(--ch)"}}>{t.tilgung}</th>
-            <th style={{...td,textAlign:"right",fontWeight:500,color:"#22c55e"}}>{t.steuerErs}</th>
+            <th style={{...td,textAlign:"right",fontWeight:500,color:"var(--ch)"}}>{t.steuerErs}</th>
             <th style={{...td,textAlign:"right",fontWeight:500,color:"var(--ch)"}}>{t.tblJahresmiete}</th>
             <th style={{...td,textAlign:"right",fontWeight:700,color:"var(--ca)"}}>{t.tblCFOhne}</th>
             <th style={{...td,textAlign:"right",fontWeight:700,color:"#22c55e"}}>{t.tblCFMit}</th>
@@ -1269,14 +1269,10 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,se
           </div>
         );
       })()}
-      <Sec title={t.mR} icon="⚖️"/>
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--ca-bg)",borderRadius:10,border:"1px solid var(--ca-bd)",marginBottom:14}}>
-        <span style={{fontSize:16,flexShrink:0}}>🏠</span>
-        <span style={{fontSize:11,color:"var(--ca-dk)",lineHeight:1.4,flex:1}}>{t.eigennutzHinweis}</span>
-        <button onClick={()=>setTabExt("kredit")} style={{fontSize:11,fontWeight:700,color:"var(--ca)",background:"none",border:"1px solid var(--ca-bd)",borderRadius:7,padding:"5px 10px",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"inherit"}}>→ {t.kredit}</button>
-      </div>
+      <Sec title="Vermietungsstatus" icon="🏠"/>
+      <div style={{display:"flex",gap:8,marginBottom:12}}>{[["nein","Noch zu vermieten"],["ja","Bereits vermietet"]].map(([val,lbl])=><button key={val} onClick={()=>{set("immLeer",val);if(val==="nein"){set("letzteErhDatum",new Date(new Date().getFullYear(),new Date().getMonth()+4,1).toISOString().split("T")[0]);set("letzteErhMiete","0");}else{set("letzteErhDatum",new Date(new Date().getFullYear()-2,new Date().getMonth(),1).toISOString().split("T")[0]);}}} style={{flex:1,padding:"10px 8px",borderRadius:8,border:`2px solid ${d.immLeer===val?"var(--ca)":"var(--cb)"}`,background:d.immLeer===val?"var(--ca)":"var(--cc)",color:d.immLeer===val?"#fff":"var(--ct)",fontSize:13,fontWeight:d.immLeer===val?600:400,cursor:"pointer",transition:"all .15s"}}>{lbl}</button>)}</div>
       <F label={t.vgl} unit="€/m²" value={d.vergleichsmiete} onChange={v=>set("vergleichsmiete",v)} step="0.5" tip={tip("vglRendite")}/>
-      <Row><F label={t.lDat} value={d.letzteErhDatum} onChange={v=>set("letzteErhDatum",v)} type="date" tip={tip("lDat")}/><F label={t.lMiet} unit="€" value={d.letzteErhMiete} onChange={v=>set("letzteErhMiete",v)} tip={tip("lMiet")}/></Row>
+      {d.immLeer==="nein"?<F label="Mietbeginn" value={d.letzteErhDatum} onChange={v=>set("letzteErhDatum",v)} type="date" tip={tip("lDat")}/>:<Row><F label={t.lDat} value={d.letzteErhDatum} onChange={v=>set("letzteErhDatum",v)} type="date" tip={tip("lDat")}/><F label={t.lMiet} unit="€" value={d.letzteErhMiete} onChange={v=>set("letzteErhMiete",v)} tip={tip("lMiet")}/></Row>}
       <button className="mob-next-btn" onClick={()=>{setView("result");setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),50)}}>{t.ergebnis} →</button>
     </div>
     <div className={`res-pane ${view==="result"?"act":""}`}>
@@ -1796,8 +1792,10 @@ function Miete(){
       <Sec title={t.kaltmiete} icon="💰"/>
       <F label={t.kaltmiete} unit={`€/${t.monLabel||"Mon."}`} value={d.kaltmiete} onChange={v=>set("kaltmiete",v)} tip={tip("kaltmiete")}/>
       <Row><F label={t.flaeche} unit="m²" value={d.flaeche} onChange={v=>set("flaeche",v)} tip={tip("flaeche")}/><F label={t.vgl} unit="€/m²" value={d.vergleichsmiete} onChange={v=>set("vergleichsmiete",v)} step="0.5" tip={tip("vglMiete")}/></Row>
-      <Sec title={t.lDat} icon="📅"/>
-      <Row><F label={t.lDat} value={d.letzteErhDatum} onChange={v=>set("letzteErhDatum",v)} type="date" tip={tip("lDat")}/><F label={t.lMiet} unit="€" value={d.letzteErhMiete} onChange={v=>set("letzteErhMiete",v)} tip={tip("lMiet")}/></Row>
+      <Sec title="Vermietungsstatus" icon="🏠"/>
+      <div style={{display:"flex",gap:8,marginBottom:12}}>{[["nein","Noch zu vermieten"],["ja","Bereits vermietet"]].map(([val,lbl])=><button key={val} onClick={()=>{set("immLeer",val);if(val==="nein"){set("letzteErhDatum",new Date(new Date().getFullYear(),new Date().getMonth()+4,1).toISOString().split("T")[0]);set("letzteErhMiete","0");}else{set("letzteErhDatum",new Date(new Date().getFullYear()-2,new Date().getMonth(),1).toISOString().split("T")[0]);}}} style={{flex:1,padding:"10px 8px",borderRadius:8,border:`2px solid ${d.immLeer===val?"var(--ca)":"var(--cb)"}`,background:d.immLeer===val?"var(--ca)":"var(--cc)",color:d.immLeer===val?"#fff":"var(--ct)",fontSize:13,fontWeight:d.immLeer===val?600:400,cursor:"pointer",transition:"all .15s"}}>{lbl}</button>)}</div>
+      <Sec title={d.immLeer==="nein"?"Mietbeginn":t.lDat} icon="📅"/>
+      {d.immLeer==="nein"?<F label="Mietbeginn" value={d.letzteErhDatum} onChange={v=>set("letzteErhDatum",v)} type="date" tip={tip("lDat")}/>:<Row><F label={t.lDat} value={d.letzteErhDatum} onChange={v=>set("letzteErhDatum",v)} type="date" tip={tip("lDat")}/><F label={t.lMiet} unit="€" value={d.letzteErhMiete} onChange={v=>set("letzteErhMiete",v)} tip={tip("lMiet")}/></Row>}
       <Sel label={t.jahre} value={d.mietJahre||"10"} onChange={v=>set("mietJahre",v)} options={[5,10,15,20].map(y=>({v:y,l:`${y} J.`}))}/>
       <button className="mob-next-btn" onClick={()=>{setView("result");setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),50)}}>{t.ergebnis} →</button>
     </div>
@@ -3573,7 +3571,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
     }
   },[zinsen]);
 
-  const[data,setData]=useState({bundesland:"BW",plz:"70173",ort:"Stuttgart",kaufpreis:"300000",flaeche:"60",kaltmiete:"900",eigenkapital:"60000",zinssatz:String(MARKET_RATES.avg),tilgung:"1",zinsbindung:"10",notar:"2.0",makler:"3.57",steuersatz:"30",afaSatz:"2",grundAnteil:"20",gebAnteil:"80",wertP:"2",jahre:"10",sonder:"3000",renovierung:"15000",nichtUml:"100",leerstand:"2",vergleichsmiete:"14",letzteErhDatum:new Date(new Date().getFullYear()-2,new Date().getMonth(),1).toISOString().split("T")[0],letzteErhMiete:"900",mietJahre:"10",sanFl:"60",baujahr:"1981",sanHt:"heizoel",sanHa:"alt",sanPe:"3",sanIsfp:false,garage:"20000",mieteQm:"15",vermietet:"ja",immLeer:"nein"});
+  const[data,setData]=useState({bundesland:"BW",plz:"70173",ort:"Stuttgart",kaufpreis:"300000",flaeche:"60",kaltmiete:"900",eigenkapital:"60000",zinssatz:String(MARKET_RATES.avg),tilgung:"1",zinsbindung:"10",notar:"2.0",makler:"3.57",steuersatz:"30",afaSatz:"2",grundAnteil:"20",gebAnteil:"80",wertP:"2",jahre:"10",sonder:"3000",renovierung:"15000",nichtUml:"100",leerstand:"2",vergleichsmiete:"14",letzteErhDatum:new Date(new Date().getFullYear(),new Date().getMonth()+4,1).toISOString().split("T")[0],letzteErhMiete:"0",mietJahre:"10",sanFl:"60",baujahr:"1981",sanHt:"heizoel",sanHa:"alt",sanPe:"3",sanIsfp:false,garage:"20000",mieteQm:"15",vermietet:"ja",immLeer:"nein"});
   const set=useCallback((k,v)=>{
     if(k==="zinssatz") zinssatzTouchedRef.current=true;
     setData(p=>({...p,[k]:v}));
@@ -3672,3 +3670,4 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
     {!isOnline&&<OfflineBanner bottom={"calc(72px + env(safe-area-inset-bottom))"}/>}
   </Ctx.Provider>;
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
