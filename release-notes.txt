@@ -1,43 +1,14 @@
-## 2026-06-20 (Patch 10)
+## 2026-06-21 (1.54)
 
-### Feature: Mieterhöhungsrechner — Vermietungsstatus-Toggle
+### Renditerechner: Quernavigation zu anderen Rechnern
 
-**Was neu ist**
-- Neuer Toggle "Noch zu vermieten / Bereits vermietet" im Mieterhöhungsrechner
-- **Noch zu vermieten** (Default): Kaltmiete aus dem Renditerechner-State übernommen, Datumsfeld zeigt "Mietbeginn" mit Default = 1. des Monats +4 Monate (= nächster Mietbeginn), `letzteErhMiete` = 0
-- **Bereits vermietet**: Datumsfeld zeigt "Letzte Mieterhöhung", User trägt eigene Werte ein, Default = 2 Jahre zurück
-- Toggle setzt Datum und `letzteErhMiete` automatisch beim Wechsel
-- `buildMP()`-Logik (FROZEN) bleibt unverändert — +15 Monate gilt für beide Szenarien
+Zwei kontextuelle Navigations-Elemente am Ende relevanter Sektionen im Renditerechner-Ergebnis — mit dynamischer Analyse statt generischem Label:
 
-**Betroffene Dateien:** src/App.jsx
+- **Section 3 „Was zahle ich der Bank?"** → Zeigt berechnete Restlaufzeit: *„Bei X% Tilgung läuft dein Darlehen noch ca. N Jahre — Sondertilgungen können das deutlich verkürzen."* + 🏦 Finanzierungsrechner
+- **Section 5 „Zeitverlauf"** → Zeigt Mietlücke zur Vergleichsmiete: *„Deine Miete liegt X% unter der Vergleichsmiete (Y€/Mon.) — §558 erlaubt eine schrittweise Angleichung."* oder Hinweis auf Vergleichsniveau + 📈 Mieterhöhungsrechner
+- **Section 6**: kein Button (entfernt)
 
-## 2026-06-20 (Patch 11)
-
-### Feature: Vermietungsstatus-Toggle auch im Renditerechner (Mietrecht-Section)
-
-**Was neu ist**
-- Identischer Toggle "Noch zu vermieten / Bereits vermietet" jetzt auch in Renditerechner → Mietrecht-Section
-- Da State shared: Änderung in einem Rechner gilt sofort im anderen
-- KPI-Fluss bestätigt: `letzteErhDatum` + `letzteErhMiete` → `buildMP()` → `gRJ()` → Jahresschleife → alle Cashflow-KPIs und Tabelle
-- Leer-Fall: nur Mietbeginn-Datum sichtbar (kein letzteErhMiete), Vermietet-Fall: beide Felder
-- OneDrive-Truncation-Bug aufgetreten und behoben (fehlende Datei-Endung wiederhergestellt)
-
-**Betroffene Dateien:** src/App.jsx
-
----
-
-## 2026-06-20 (Patch 9)
-
-### Bugfix: Jahresmiete-Linie im Chart auf falscher Y-Achse
-
-**Problem**
-- Im Chart "Restschuld, Cashflow & Jahresmiete" wurde die Jahresmiete-Linie (orange gestrichelt) auf der rechten Y-Achse (Cashflow-Skala) gezeichnet statt auf der linken Achse (Restschuld-Skala)
-- Die `mxR`-Variable bezieht beide Werte korrekt ein, aber `pR` statt `pL` wurde verwendet
-- Visuelles Ergebnis: Jahresmiete erschien an falscher Stelle – bei negativen Cashflows z.B. weit oberhalb oder außerhalb des sichtbaren Bereichs
-
-**Fix**
-- Zeile 844: `pR(mA)` → `pL(mA)` (eine Zeichen-Änderung)
-- Jahresmiete liegt jetzt korrekt auf der linken Achse, vergleichbar mit der Restschuld
+Übersetzung: de/en inline; TR/ZH/HI Fallback auf Englisch + `t.kreditFull||t.kredit` / `t.mieteFull||t.miete`.
 
 **Betroffene Dateien:** src/App.jsx
 

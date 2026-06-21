@@ -1448,6 +1448,7 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,se
               ]}
               text={t.s3t1+'\n\n'+(isFinite(R.lz)?tpl(t.s3t2a,{p:fmtP(+d.tilgung||0),lz:fmt(R.lz,1)}):t.s3t2b)+'\n\n'+t.s3t3}
             />}
+          <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid var(--cb)"}}><p style={{fontSize:11,color:"var(--ch)",lineHeight:1.6,margin:"0 0 8px"}}>{lang==='de'?`Bei ${fmt(+d.tilgung||0,1)} % Tilgung läuft dein Darlehen noch ca. ${isFinite(R.lz)?fmt(R.lz,0):"∞"} Jahre — Sondertilgungen können das deutlich verkürzen.`:`At ${fmt(+d.tilgung||0,1)} % repayment your loan runs approx. ${isFinite(R.lz)?fmt(R.lz,0):"∞"} years — extra repayments can cut that short.`}</p><button onClick={()=>setTabExt("kredit")} style={{fontSize:11,fontWeight:600,color:"var(--ca)",background:"var(--ca-bg)",border:"1px solid var(--ca-bd)",borderRadius:20,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>🏦 {t.kreditFull||t.kredit} →</button></div>
           </AccordionSection>;
         })()}
 
@@ -1528,6 +1529,7 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,se
             ]}
             text={tpl(t.s5t1,{zb:+d.zinsbindung||10})}
           />}
+          {(()=>{const aktQm=(+d.kaltmiete)/(+d.flaeche||1);const vglQm=+d.vergleichsmiete||0;const gapPct=vglQm>0&&aktQm<vglQm?(vglQm-aktQm)/vglQm*100:0;return <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid var(--cb)"}}><p style={{fontSize:11,color:"var(--ch)",lineHeight:1.6,margin:"0 0 8px"}}>{lang==='de'?(gapPct>0.5?`Deine Miete liegt ${fmt(gapPct,0)} % unter der Vergleichsmiete (${fmtE(Math.round(vglQm*(+d.flaeche||0)))}/Mon.) — § 558 erlaubt eine schrittweise Angleichung.`:`Deine Miete liegt auf Vergleichsniveau — prüfe wann die nächste Anpassung möglich ist.`):(gapPct>0.5?`Your rent is ${fmt(gapPct,0)} % below the reference rent (${fmtE(Math.round(vglQm*(+d.flaeche||0)))}/mo.) — § 558 allows a step-by-step adjustment.`:`Your rent is at reference level — check when the next increase is due.`)}</p><button onClick={()=>setTabExt("miete")} style={{fontSize:11,fontWeight:600,color:"var(--ca)",background:"var(--ca-bg)",border:"1px solid var(--ca-bd)",borderRadius:20,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>📈 {t.mieteFull||t.miete} →</button></div>;})()}
         </AccordionSection>
 
         {/* ═══ SECTION 6: Was bleibt am Ende? ═══ */}
@@ -1599,7 +1601,7 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,se
                 />}
               </>;
             })()}
-          </AccordionSection>;
+                    </AccordionSection>;
         })()}
 
         {/* ═══ SECTION 7: Verkaufsszenario ═══ */}
