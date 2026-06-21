@@ -54,7 +54,9 @@ git status --short
 Write-Host ""
 Write-Host "Commit: $Message" -ForegroundColor Gray
 git commit -m $Message
-if ($LASTEXITCODE -ne 0) {
+if ($LASTEXITCODE -eq 1) {
+    Write-Host "Nichts zu committen - fahre mit Push fort." -ForegroundColor Yellow
+} elseif ($LASTEXITCODE -ne 0) {
     Write-Host "FEHLER: git commit fehlgeschlagen" -ForegroundColor Red
     exit 1
 }
