@@ -1,11 +1,13 @@
 # ImmoFuchs - One-Click Push Script
-# Aufruf: .\push.ps1 "Dein Commit-Message"
-# Mit Main:  .\push.ps1 "Dein Commit-Message" -PushMain
+# Aufruf: .\push.ps1 "Message"          -> QA
+#         .\push.ps1 "Message" -PushMain -> QA + Prod
+#         .\push.ps1 "Message" -OnlyMain -> nur Prod (kein neuer Commit)
 # Ohne Message: fragt interaktiv
 
 param(
     [string]$Message = "",
-    [switch]$PushMain
+    [switch]$PushMain,
+    [switch]$OnlyMain
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,7 +31,22 @@ Get-ChildItem ".git\refs\heads\" -ErrorAction SilentlyContinue | Where-Object { 
     Write-Host "Broken ref entfernt: $($_.Name)" -ForegroundColor Yellow
 }
 
-# 3. Commit-Message abfragen falls nicht angegeben
+# 3. Nur Prod pushen (kein Commit, kein QA-Push)
+if ($OnlyMain) {
+    Write-Host ""
+    Write-Host "Push nach main (prod)..." -ForegroundColor Gray
+    git push origin Immofuchs-qa:main
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "FEHLER: Push zu main fehlgeschlagen" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "OK: main aktualisiert" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "=== Fertig ===" -ForegroundColor Cyan
+    exit 0
+}
+
+# 4. Commit-Message abfragen falls nicht angegeben
 if (-not $Message) {
     $Message = Read-Host "Commit-Message"
     if (-not $Message) {
@@ -38,7 +55,7 @@ if (-not $Message) {
     }
 }
 
-# 4. Alles stagen
+# 5. Alles stagen
 Write-Host ""
 Write-Host "Stage alle Aenderungen..." -ForegroundColor Gray
 git add -A
