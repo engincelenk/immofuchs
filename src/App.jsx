@@ -1076,15 +1076,25 @@ function Detail({R,d,hideSaldo=false}){
 
 
 function ExportPDF({title}){const{t}=useApp();
+  // Phasen-Status für Button-Feedback (verhindert Doppelklick + macht Ablauf transparent)
+  const [phase,setPhase]=useState(null); // null | "prep" | "build" | "open"
+  const phaseText={prep:"Vorbereiten…",build:"Bericht wird erstellt…",open:"PDF wird geöffnet…"};
   const doExport=async()=>{
+    if(phase)return; // läuft bereits → weitere Klicks ignorieren
     const rp=document.querySelector(".res-pane");
     if(!rp)return;
-    // iOS Safari: window.open() muss synchron im User-Gesture-Kontext aufgerufen werden
-    // → sofort öffnen, bevor irgendein await den Kontext bricht
-    const w=window.open("","_blank");
-    // Expand all accordion sections so their content is in the DOM before cloning
+    let w=null;
+    // sichtbare Pause pro Phase: setTimeout gibt dem Browser Zeit, den neuen Button-Text zu zeichnen
+    const hold=(ms)=>new Promise(r=>setTimeout(r,ms));
+   try{
+    // Phase 1: Vorbereiten — Akkordeons aufklappen, dann klonen
+    setPhase("prep");
     const expandBtn=Array.from(rp.querySelectorAll("button")).find(b=>b.textContent.includes("⊕")||b.textContent.includes("aufklapp")||b.textContent.includes("expand"));
-    if(expandBtn){expandBtn.click();await new Promise(r=>setTimeout(r,250));}
+    if(expandBtn){expandBtn.click();}
+    await hold(450);
+    // Phase 2: Bericht wird erstellt
+    setPhase("build");
+    await hold(50); // Paint von "build" abwarten
     const clone=rp.cloneNode(true);
     clone.querySelectorAll("button,.no-print").forEach(e=>e.remove());
     const vars={"var(--cc)":"#fff","var(--ct)":"#1a1a1a","var(--cl)":"#3d3d3a","var(--ch)":"#8a8a80","var(--cb)":"#e5e5dc","var(--ci)":"#fafaf7","var(--cro)":"#f0f0ea","var(--ca)":"#e8600a","var(--ca-dk)":"#c44d00","var(--ca-bg)":"#fff1e8","var(--ca-bd)":"#f5cba9","var(--bg)":"#f5f5f0"};
@@ -1114,8 +1124,13 @@ table{border-collapse:collapse;width:100%}svg{max-width:100%}
 ${h}
 <div style="margin-top:30px;padding-top:12px;border-top:1px solid #e5e5dc;font-size:9px;color:#8a8a80;text-align:center">Erstellt mit Immofuchs · ${now} · Keine Rechts- oder Steuerberatung</div>
 </body></html>`;
+    await hold(350); // "Bericht wird erstellt…" noch kurz sichtbar lassen
     // Druckdialog → "Als PDF speichern"
     const printDoc=doc.replace("</body>","<script>setTimeout(()=>window.print(),600)<\/script></body>");
+    // Phase 3: PDF-Fenster erst JETZT öffnen → die Phasen waren vorher im Button sichtbar
+    setPhase("open");
+    await hold(50);
+    w=window.open("","_blank");
     if(w){
       w.document.open();
       w.document.write(printDoc);
@@ -1127,10 +1142,22 @@ ${h}
       const a=document.createElement("a");a.href=url;a.download="ImmoFuchs_"+title.replace(/\s+/g,"_")+".html";a.click();
       setTimeout(()=>URL.revokeObjectURL(url),5000);
     }
+   }catch(e){
+      // Fehler → Fenster schließen, Nutzer bleibt in der App
+      try{w&&w.close();}catch(_){}
+   }finally{
+      // kurz "fertig" stehen lassen, dann Button zurücksetzen
+      setTimeout(()=>setPhase(null),800);
+   }
   };
-  return <button className="no-print" onClick={doExport} style={{width:"100%",padding:"12px",border:"1px solid var(--cb)",borderRadius:10,background:"var(--ci)",color:"var(--ct)",fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:12,marginBottom:4,fontFamily:"inherit"}}>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    {t.pdfExport}
+  const busy=!!phase;
+  return <button className="no-print" onClick={doExport} disabled={busy} style={{width:"100%",padding:"12px",border:"1px solid "+(busy?"var(--ca-bd)":"var(--cb)"),borderRadius:10,background:busy?"var(--ca-bg)":"var(--ci)",color:busy?"var(--ca-dk)":"var(--ct)",fontSize:12,fontWeight:600,cursor:busy?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:12,marginBottom:4,fontFamily:"inherit",transition:"background .2s,border-color .2s,color .2s"}}>
+    {busy?(
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{animation:"if-spin 0.8s linear infinite"}}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+    ):(
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    )}
+    {busy?phaseText[phase]:t.pdfExport}
   </button>;
 }
 

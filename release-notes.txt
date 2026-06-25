@@ -1,3 +1,19 @@
+## 2026-06-25 (1.55)
+
+### PDF-Export: Phasen-Status im Button
+
+Der PDF-Export-Button gibt während der Generierung sichtbares Feedback statt „tot" zu wirken. Beim Klick wird er deaktiviert (verhindert Doppelklick) und durchläuft drei Phasen mit Spinner-Icon:
+
+- **Vorbereiten…** — Akkordeon-Sektionen aufklappen + Ergebnis-Pane klonen
+- **Bericht wird erstellt…** — Logo laden, HTML/CSS-Variablen ersetzen
+- **PDF wird geöffnet…** — Druck-Dokument schreiben
+
+Damit die Phasen im Button sichtbar sind, wird das PDF-Fenster (`window.open`) erst in Phase 3 geöffnet — vorher würde der neue Tab den Fokus stehlen. Pro Phase eine kurze `hold()`-Pause (450/400/50 ms), damit React den neuen Text zeichnet. Ablauf in `try/catch/finally`: bei Fehler oder geblocktem Popup greift der Blob-Download-Fallback; Button-Reset nach 800 ms. Spinner-Keyframe `if-spin` global in index.html. Berechnungs- und Druck-Logik unverändert — nur State-Wrapper.
+
+**Betroffene Dateien:** src/App.jsx, index.html
+
+---
+
 ## 2026-06-21 (1.54)
 
 ### Renditerechner: Quernavigation zu anderen Rechnern
