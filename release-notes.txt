@@ -1,11 +1,11 @@
 ## 2026-06-26 (1.55.1)
 
-### PDF-Export: Accordion-Fix — CSS-Ansatz statt DOM-Klick
+### PDF-Export: Accordion-Fix — data-Attribut statt Text-Matching
 
-Fragile Text-Suche nach „⊕/aufklapp/expand"-Button durch stabilen CSS-Ansatz ersetzt:
-- `details`-Elemente werden im Clone per `open=true` aufgeklappt
-- `data-collapsed` / `aria-expanded` Attribute werden direkt gesetzt
-- 250ms Delay entfällt komplett — Export ist jetzt schneller und sprachunabhängig (TR/ZH/HI)
+Text-basierte Suche nach „⊕/aufklapp/expand" durch sprachunabhängiges `data-pdf-expand`-Attribut ersetzt:
+- Button erhält `data-pdf-expand="true"` — kein Sprachabhängigkeit mehr
+- ExportPDF nutzt `querySelector('[data-pdf-expand]')` — funktioniert in DE/EN/TR/ZH/HI
+- Klick+300ms Delay bleibt, da Content bei geschlossenen Sektionen nicht im DOM ist
 
 **Betroffene Dateien:** src/App.jsx
 

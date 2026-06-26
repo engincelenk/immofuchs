@@ -1082,12 +1082,10 @@ function ExportPDF({title}){const{t}=useApp();
     // iOS Safari: window.open() muss synchron im User-Gesture-Kontext aufgerufen werden
     // → sofort öffnen, bevor irgendein await den Kontext bricht
     const w=window.open("","_blank");
+    // Alle Sektionen aufklappen bevor wir den DOM klonen (Content ist sonst nicht im DOM)
+    const expandBtn=rp.querySelector('[data-pdf-expand]');
+    if(expandBtn&&expandBtn.textContent.includes("⊕")){expandBtn.click();await new Promise(r=>setTimeout(r,300));}
     const clone=rp.cloneNode(true);
-    // Alle Akkordeon-Sektionen per CSS aufklappen — kein DOM-Klick, kein Delay nötig
-    clone.querySelectorAll("details").forEach(d=>{d.open=true;});
-    clone.querySelectorAll("[data-collapsed='true'],[aria-expanded='false']").forEach(el=>{
-      el.setAttribute("data-collapsed","false");el.setAttribute("aria-expanded","true");
-    });
     clone.querySelectorAll("button,.no-print").forEach(e=>e.remove());
     const vars={"var(--cc)":"#fff","var(--ct)":"#1a1a1a","var(--cl)":"#3d3d3a","var(--ch)":"#8a8a80","var(--cb)":"#e5e5dc","var(--ci)":"#fafaf7","var(--cro)":"#f0f0ea","var(--ca)":"#e8600a","var(--ca-dk)":"#c44d00","var(--ca-bg)":"#fff1e8","var(--ca-bd)":"#f5cba9","var(--bg)":"#f5f5f0"};
     let h=clone.innerHTML;
@@ -1281,7 +1279,7 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,se
       {!R?<div style={{textAlign:"center",padding:"60px 20px",color:"var(--ch)"}}><div style={{fontSize:40,opacity:.12}}>🏠</div></div>:<>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,margin:"0 0 12px",paddingBottom:10,borderBottom:"2px solid var(--ca)"}}>
           <span style={{fontSize:16,fontWeight:700,color:"var(--ct)",letterSpacing:-.3}}>{t.kennzahlen}</span>
-          <button onClick={()=>{setSecAllOpen(v=>!v);setSecAllKey(k=>k+1);}} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"1px solid var(--cb)",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600,color:"var(--ca)",whiteSpace:"nowrap",flexShrink:0}}>
+          <button data-pdf-expand="true" onClick={()=>{setSecAllOpen(v=>!v);setSecAllKey(k=>k+1);}} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"1px solid var(--cb)",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600,color:"var(--ca)",whiteSpace:"nowrap",flexShrink:0}}>
             <span style={{fontSize:13,lineHeight:1}}>{secAllOpen?"⊖":"⊕"}</span>
             <span>{secAllOpen?(t.collapseAll||"Alle zuklappen"):(t.expandAll||"Alle aufklappen")}</span>
           </button>
