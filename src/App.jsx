@@ -3672,4 +3672,5 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
     </div>
     <LegalModal type={legalModal} onClose={()=>setLegalModal(null)}/>
     {!isOnline&&<OfflineBanner bottom={"calc(72px + env(safe-area-inset-bottom))"}/>}
-  </Ctx.Pr
+  </Ctx.Provider>;
+}
