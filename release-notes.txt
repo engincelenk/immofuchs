@@ -1,3 +1,28 @@
+## 2026-06-26 (1.55.1)
+
+### PDF-Export: Accordion-Fix — CSS-Ansatz statt DOM-Klick
+
+Fragile Text-Suche nach „⊕/aufklapp/expand"-Button durch stabilen CSS-Ansatz ersetzt:
+- `details`-Elemente werden im Clone per `open=true` aufgeklappt
+- `data-collapsed` / `aria-expanded` Attribute werden direkt gesetzt
+- 250ms Delay entfällt komplett — Export ist jetzt schneller und sprachunabhängig (TR/ZH/HI)
+
+**Betroffene Dateien:** src/App.jsx
+
+---
+
+## 2026-06-25 (1.55)
+
+### PDF-Export: Phasen-Status verworfen — mobil-sicherer Direkt-Öffnen-Pfad
+
+Ein Phasen-Status im Export-Button („Vorbereiten… → Bericht wird erstellt… → PDF wird geöffnet…") wurde getestet, aber wieder entfernt: Um die Phasen sichtbar zu machen, musste `window.open` ans Ende verschoben werden — außerhalb der Tap-Geste blockt Mobile (iOS/PWA) das Popup, wodurch statt der Druckansicht eine `.html`-Datei heruntergeladen wurde.
+
+Entscheidung: `window.open` bleibt **synchron in der User-Geste** (mobil-sicher, Druckansicht öffnet zuverlässig). Kein Phasen-Feedback. `ExportPDF` entspricht damit wieder dem Stand vor diesem Versuch.
+
+**Betroffene Dateien:** src/App.jsx, index.html
+
+---
+
 ## 2026-06-21 (1.54)
 
 ### Renditerechner: Quernavigation zu anderen Rechnern

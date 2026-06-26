@@ -1082,10 +1082,12 @@ function ExportPDF({title}){const{t}=useApp();
     // iOS Safari: window.open() muss synchron im User-Gesture-Kontext aufgerufen werden
     // → sofort öffnen, bevor irgendein await den Kontext bricht
     const w=window.open("","_blank");
-    // Expand all accordion sections so their content is in the DOM before cloning
-    const expandBtn=Array.from(rp.querySelectorAll("button")).find(b=>b.textContent.includes("⊕")||b.textContent.includes("aufklapp")||b.textContent.includes("expand"));
-    if(expandBtn){expandBtn.click();await new Promise(r=>setTimeout(r,250));}
     const clone=rp.cloneNode(true);
+    // Alle Akkordeon-Sektionen per CSS aufklappen — kein DOM-Klick, kein Delay nötig
+    clone.querySelectorAll("details").forEach(d=>{d.open=true;});
+    clone.querySelectorAll("[data-collapsed='true'],[aria-expanded='false']").forEach(el=>{
+      el.setAttribute("data-collapsed","false");el.setAttribute("aria-expanded","true");
+    });
     clone.querySelectorAll("button,.no-print").forEach(e=>e.remove());
     const vars={"var(--cc)":"#fff","var(--ct)":"#1a1a1a","var(--cl)":"#3d3d3a","var(--ch)":"#8a8a80","var(--cb)":"#e5e5dc","var(--ci)":"#fafaf7","var(--cro)":"#f0f0ea","var(--ca)":"#e8600a","var(--ca-dk)":"#c44d00","var(--ca-bg)":"#fff1e8","var(--ca-bd)":"#f5cba9","var(--bg)":"#f5f5f0"};
     let h=clone.innerHTML;
