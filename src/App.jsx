@@ -477,7 +477,7 @@ function SectionExplain({bullets,text}){
       </li>)}
     </ul>}
     {text&&<>
-      <button onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",padding:"4px 0",cursor:"pointer",fontFamily:"inherit",fontSize:11,color:"var(--ca)",fontWeight:600}}>
+      <button data-pdf-detail="true" onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",padding:"4px 0",cursor:"pointer",fontFamily:"inherit",fontSize:11,color:"var(--ca)",fontWeight:600}}>
         <span style={{fontSize:13}}>{open?"▲":"▼"}</span>
         <span>{open?(t&&t.secClose?t.secClose:"Weniger anzeigen"):(t&&t.secOpen?t.secOpen:"Wie kommt das Ergebnis zustande?")}</span>
       </button>
@@ -1085,6 +1085,10 @@ function ExportPDF({title}){const{t}=useApp();
     // Alle Sektionen aufklappen bevor wir den DOM klonen (Content ist sonst nicht im DOM)
     const expandBtn=rp.querySelector('[data-pdf-expand]');
     if(expandBtn&&expandBtn.textContent.includes("⊕")){expandBtn.click();await new Promise(r=>setTimeout(r,300));}
+    // Alle "Wie kommt das Ergebnis zustande?" Toggles aufklappen (eigener lokaler State)
+    const detailBtns=rp.querySelectorAll('[data-pdf-detail]');
+    detailBtns.forEach(b=>{if(!b.textContent.includes("▲"))b.click();});
+    if(detailBtns.length>0)await new Promise(r=>setTimeout(r,200));
     const clone=rp.cloneNode(true);
     clone.querySelectorAll("button,.no-print").forEach(e=>e.remove());
     const vars={"var(--cc)":"#fff","var(--ct)":"#1a1a1a","var(--cl)":"#3d3d3a","var(--ch)":"#8a8a80","var(--cb)":"#e5e5dc","var(--ci)":"#fafaf7","var(--cro)":"#f0f0ea","var(--ca)":"#e8600a","var(--ca-dk)":"#c44d00","var(--ca-bg)":"#fff1e8","var(--ca-bd)":"#f5cba9","var(--bg)":"#f5f5f0"};
@@ -1108,7 +1112,7 @@ function ExportPDF({title}){const{t}=useApp();
 table{border-collapse:collapse;width:100%}svg{max-width:100%}
 .hdr-print{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #e8600a}
 .hdr-print-meta{text-align:right}
-@media print{body{padding:15px}}</style>
+@media print{body{padding:15px}*{overflow:visible!important}div,table,tr,svg{break-inside:avoid;page-break-inside:avoid}h2,h3{break-after:avoid;page-break-after:avoid}}</style>
 </head><body>
 <div class="hdr-print"><div>${logoHtml}</div><div class="hdr-print-meta"><div style="font-size:15px;font-weight:600;color:#1a1a2e">${title}</div><div style="font-size:12px;color:#8a8a80;margin-top:3px">${now}</div></div></div>
 ${h}
@@ -3665,10 +3669,4 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
           <button onClick={()=>setLegalModal("datenschutz")} style={{background:"none",border:"none",color:"var(--ca)",cursor:"pointer",fontSize:10,fontFamily:"inherit",padding:0}}>Datenschutz</button>
         </div>
       </div>
-      <div className="tbar">{tabs.map(tb=><button key={tb.id} className="tbtn" onClick={()=>{setTab(tb.id);window.scrollTo({top:0,behavior:"smooth"});}}>{tb.ic(tab===tb.id)}<span style={{color:tab===tb.id?"var(--ca)":"var(--ch)"}}>{tb.l}</span></button>)}</div>
-      <div className="tbar">{tabs.map(tb=><button key={tb.id} className="tbtn" onClick={()=>{setTab(tb.id);window.scrollTo({top:0,behavior:"smooth"});}}>{tb.ic(tab===tb.id)}<span style={{color:tab===tb.id?"var(--ca)":"var(--ch)"}}>{tb.l}</span></button>)}</div>
-    </div>
-    <LegalModal type={legalModal} onClose={()=>setLegalModal(null)}/>
-    {!isOnline&&<OfflineBanner bottom={"calc(72px + env(safe-area-inset-bottom))"}/>}
-  </Ctx.Provider>;
-}
+      <div className="tbar">{tabs.map(tb=><button key={tb.id} className="tbtn" onClick={()=>{setTab(tb.id);window.scrollTo({top:0,behavior:"smooth"});}}>{tb.ic(tab===tb.id)}<span style={{color:tab===tb.id?"var(--ca)":"var(--ch)"}}>{tb.l}</span></button>)}</div

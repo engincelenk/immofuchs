@@ -1,3 +1,12 @@
+## 2026-06-26 (1.55.2)
+
+### PDF-Export: Seitenabschneidung behoben
+
+- `overflow:hidden` auf Accordion-Divs klippt beim Drucken nicht mehr (`overflow:visible!important` im Print-CSS)
+- `break-inside:avoid` auf div/table/tr/svg verhindert Zerschneidung von Karten an Seitengrenzen
+- SectionExplain ("Wie kommt das Ergebnis zustande?") wird vor dem Clone automatisch aufgeklappt via `data-pdf-detail` Marker
+- Reihenfolge: erst AccordionSections (300ms), dann SectionExplains (200ms), dann Clone
+
 ## 2026-06-26 (1.55.1)
 
 ### PDF-Export: Accordion-Fix — data-Attribut statt Text-Matching
@@ -919,12 +928,4 @@ Zwei kontextuelle Navigations-Elemente am Ende relevanter Sektionen im Renditere
 ### Fix: PDF Export auf iOS Safari
 
 **Problem**
-- Auf iOS Safari wurde beim PDF-Export eine .html-Datei heruntergeladen statt der Druckdialog zu öffnen
-- Ursache: `window.open()` wurde nach einem `await` aufgerufen — iOS Safari blockiert `window.open()` außerhalb des synchronen User-Gesture-Kontexts
-
-**Fix**
-- `window.open("","_blank")` wird jetzt sofort beim Klick aufgerufen (vor jedem `await`)
-- HTML wird danach per `w.document.write()` in das bereits offene Fenster geschrieben
-- Funktioniert jetzt korrekt auf iOS Safari, Android Chrome und Desktop
-
-**Betroffene Dateien:** src/App.jsx
+- Auf iOS Safari wurde beim PDF-Export eine .html-Datei 
