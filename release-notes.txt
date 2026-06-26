@@ -1,3 +1,16 @@
+## 2026-06-26 (1.55.1)
+
+### PDF-Export: Accordion-Fix — CSS-Ansatz statt DOM-Klick
+
+Fragile Text-Suche nach „⊕/aufklapp/expand"-Button durch stabilen CSS-Ansatz ersetzt:
+- `details`-Elemente werden im Clone per `open=true` aufgeklappt
+- `data-collapsed` / `aria-expanded` Attribute werden direkt gesetzt
+- 250ms Delay entfällt komplett — Export ist jetzt schneller und sprachunabhängig (TR/ZH/HI)
+
+**Betroffene Dateien:** src/App.jsx
+
+---
+
 ## 2026-06-25 (1.55)
 
 ### PDF-Export: Phasen-Status verworfen — mobil-sicherer Direkt-Öffnen-Pfad
@@ -906,12 +919,4 @@ Zwei kontextuelle Navigations-Elemente am Ende relevanter Sektionen im Renditere
 ### Fix: PDF Export auf iOS Safari
 
 **Problem**
-- Auf iOS Safari wurde beim PDF-Export eine .html-Datei heruntergeladen statt der Druckdialog zu öffnen
-- Ursache: `window.open()` wurde nach einem `await` aufgerufen — iOS Safari blockiert `window.open()` außerhalb des synchronen User-Gesture-Kontexts
-
-**Fix**
-- `window.open("","_blank")` wird jetzt sofort beim Klick aufgerufen (vor jedem `await`)
-- HTML wird danach per `w.document.write()` in das bereits offene Fenster geschrieben
-- Funktioniert jetzt korrekt auf iOS Safari, Android Chrome und Desktop
-
-**Betroffene Dateien:** src/App.jsx
+- Auf iOS Safari wurde beim PDF-Export eine .html-Datei heruntergeladen statt der Druckdialog zu
