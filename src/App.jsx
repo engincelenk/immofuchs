@@ -10,11 +10,7 @@ import { T, TL, LANGS } from "./i18n/translations.js";
 
 
 import { Ctx, useApp } from "./context/AppContext.jsx";
-const fmt=(v,d=0)=>(v==null||isNaN(v)||!isFinite(v))?"—":v.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
-const fmtE=v=>fmt(v)+" €";const fmtP=(v,d=1)=>fmt(v,d)+" %";
-const tf=(tpl,vals)=>Object.entries(vals).reduce((s,[k,v])=>s.replaceAll('{'+k+'}',String(v)),tpl);
-const LANG_LOCALE={de:"de-DE",en:"en-GB",tr:"tr-TR",zh:"zh-CN",hi:"hi-IN"};
-const fmtDat=(d,lang="de")=>d instanceof Date?d.toLocaleDateString(LANG_LOCALE[lang]||"de-DE",{year:"numeric",month:"2-digit"}):"—";
+import { fmt, fmtE, fmtP, tf, LANG_LOCALE, fmtDat, addM, addY, tpl } from "./utils/helpers.js";
 
 // ── Ampelbewertung ───────────────────────────────────────────────────────────
 // Gibt {color, dot} zurück. dot = farbiger Punkt-Indikator.
@@ -27,8 +23,6 @@ const AMPEL={
   lz:        v=>!isFinite(v)||v>35?"#ef4444":v>25?"#f59e0b":"#22c55e",
 };
 function Dot({color}){return <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:color,marginLeft:5,flexShrink:0,verticalAlign:"middle"}} title={color==="#22c55e"?"Gut":color==="#f59e0b"?"Mittelmäßig":"Kritisch"}/>}
-const addM=(d,m)=>{const r=new Date(d);r.setMonth(r.getMonth()+m);return r};
-const addY=(d,y)=>{const r=new Date(d);r.setFullYear(r.getFullYear()+y);return r};
 
 function F({label,unit,value,onChange,type="number",step,readOnly,hint,tip,placeholder,children}){
   const isNum=type==="number";
@@ -349,7 +343,6 @@ function NeutralKPI({label,value,sub}){
   </div>;
 }
 
-function tpl(s,v){return s?s.replace(/\{(\w+)\}/g,(_,k)=>v&&v[k]!=null?v[k]:'{'+k+'}'):''}
 // ═══ BANDS — zentrale Bewertungs-Config (Single Source of Truth) ═══
 const BANDS={
   bruttoR:    {dir:'up',  green:5.0, yellow:4.0, unit:'%'},
