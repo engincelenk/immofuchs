@@ -4,6 +4,10 @@ import { KFW, SAN_ENERGIE, SAN_NORMEN, SAN_TIERS, SAN_SRC_KEYS, LAND_F, LAND_BON
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
 import { F, Sel, Row, Sec, KPI, Ins, VT } from "../ui/atoms.jsx";
+import { Tip } from "../ui/Tip.jsx";
+import { Legal } from "../ui/LangSel.jsx";
+import { ExportPDF } from "../export/ExportPDF.jsx";
+import { SaveBtn } from "../shell/Merkliste.jsx";
 
 const EC_O=["A+","A","B","C","D","E","F","G","H"];
 const EC_C=["#0D6E3A","#2E9E52","#6DBE45","#A7CE3F","#F7CE1F","#F6A623","#E97020","#DD3A1E","#B01414"];

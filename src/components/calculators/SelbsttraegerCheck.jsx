@@ -1,5 +1,5 @@
 import { useApp } from "../../context/AppContext.jsx";
-import { fmtE, fmtP } from "../../utils/helpers.js";
+import { fmtE, fmtP, tpl } from "../../utils/helpers.js";
 
 export function SelbsttraegerCheck({R}){
   const{t}=useApp();

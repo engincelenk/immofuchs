@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
+import { GREST } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
 import { F, Sel, Row, Sec, KPI, Ins, VT } from "../ui/atoms.jsx";
 import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
+import { ExportPDF } from "../export/ExportPDF.jsx";
+import { SaveBtn } from "../shell/Merkliste.jsx";
 
 export default function Kredit(){
   const{d,set,t,tip}=useApp();

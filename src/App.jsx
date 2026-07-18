@@ -1,70 +1,20 @@
-import { useState, useCallback, useMemo, useContext, useRef, useEffect, useLayoutEffect } from "react";
-import { createPortal } from "react-dom";
-import { MARKET_RATES, PFANDBRIEF, GREST, BL_N, BL_O, MIET_P, KFW, SAN_ENERGIE, SAN_NORMEN, SAN_TIERS, SAN_SRC_KEYS, LAND_F, LAND_BONUS_FQ, LAND_BONUS_CAP, ENERGIE_KLASSEN } from "./data.js";
-
-// ═══ DATA (Marktdaten → src/data.js) ═══
-import { PLZ_DB, isK15 } from "./data/plzData.js";
-import { T, TL, LANGS } from "./i18n/translations.js";
-
-// Marktdaten → src/data.js
-
-
-import { Ctx, useApp } from "./context/AppContext.jsx";
-import { fmt, fmtE, fmtP, tf, LANG_LOCALE, fmtDat, addM, addY, tpl } from "./utils/helpers.js";
-
-// ── Ampelbewertung ───────────────────────────────────────────────────────────
-// Gibt {color, dot} zurück. dot = farbiger Punkt-Indikator.
-import { SelbsttraegerCheck, BreakEvenCards } from "./components/calculators/SelbsttraegerCheck.jsx";
-import { RBar } from "./components/charts/RBar.jsx";
-import { AccordionSection, SectionExplain } from "./components/ui/AccordionSection.jsx";
-import { Dot, F, Sel, Row, Sec, KPI, Ins, AmpelKPI, NeutralKPI, VT } from "./components/ui/atoms.jsx";
-import { AMPEL, BANDS, rate, vrd } from "./utils/bands.js";
-import { PLZSearch } from "./components/ui/PLZSearch.jsx";
-
-
-
-
-// ═══ TOOLTIPS, LEGAL BASIS & SHARED COMPONENTS ═══
+import { useState, useCallback, useRef, useEffect } from "react";
+import { MARKET_RATES } from "./data.js";
+import { Ctx } from "./context/AppContext.jsx";
+import { T } from "./i18n/translations.js";
 import { TIPS } from "./i18n/tips.js";
-
-
-import { LEG } from "./i18n/legal.js";
-
-import { Tip } from "./components/ui/Tip.jsx";
-
-// Custom language selector — shows emoji flags reliably across all browsers
-import { LangSel, Legal } from "./components/ui/LangSel.jsx";
-
-import { LineChart } from "./components/charts/LineChart.jsx";
-
-import { YearTable } from "./components/tables/YearTable.jsx";
-
-import { Detail } from "./components/tables/Detail.jsx";
-
-
-import { ExportPDF } from "./components/export/ExportPDF.jsx";
-
-// ═══ HAUPTRECHNER (Rendite) ═══
+import { LangSel } from "./components/ui/LangSel.jsx";
 import Haupt from "./components/calculators/Renditerechner.jsx";
-
-
-// ═══ KREDIT (mit Sondertilgung + Beratung) ═══
 import Kredit from "./components/calculators/Finanzierung.jsx";
-
-// ═══ MIETERHÖHUNG (mit Beratung) ═══
 import Miete from "./components/calculators/Miete.jsx";
-
-
-// ═══ SANIERUNG (3-Stufen, erweiterte Maßnahmen, GEG, Amortisation) ═══
 import Sanier from "./components/calculators/Sanier.jsx";
-
-// ═══ APP ═══
-// ═══════════ STEUER §6 TRICK ═══════════
-import { STEUER_T } from "./i18n/steuerTrick.js";
-
 import { SteuerTrick } from "./components/extras/SteuerTrick.jsx";
-
-
+import { Vorfaelligkeit } from "./components/extras/Vorfaelligkeit.jsx";
+import { Landing } from "./pages/Landing.jsx";
+import { LegalModal } from "./components/shell/LegalModal.jsx";
+import { Statusleiste } from "./components/shell/Statusleiste.jsx";
+import { useSavedObjects, Merkliste } from "./components/shell/Merkliste.jsx";
+import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
 
 const IC={
   haupt:a=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={a?"var(--ca)":"var(--ch)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
@@ -75,41 +25,6 @@ steuer6:a=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={a
     vfe:a=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={a?"var(--ca)":"var(--ch)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>,
   saved:a=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={a?"var(--ca)":"var(--ch)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
 };
-
-
-// ═══════════ VORFÄLLIGKEITSRECHNER — i18n ═══════════
-import { VFE_T } from "./i18n/vorfaelligkeit.js";
-
-// ═══════════ VORFÄLLIGKEITSRECHNER ═══════════
-import { Vorfaelligkeit } from "./components/extras/Vorfaelligkeit.jsx";
-
-// ═══════════ LANDING PAGE ═══════════
-import { Landing } from "./pages/Landing.jsx";
-
-// Helper styles for nav links (used in Landing component)
-
-
-// ═══════════ LEGAL MODAL (Datenschutz / Impressum) ═══════════
-import { LegalModal } from "./components/shell/LegalModal.jsx";
-
-
-
-// ── Statusleiste ─────────────────────────────────────────────────────────────
-import { Statusleiste } from "./components/shell/Statusleiste.jsx";
-
-// ═══════════ GESPEICHERTE OBJEKTE ═══════════
-
-import { useSavedObjects, SaveModal, SaveBtn, Merkliste } from "./components/shell/Merkliste.jsx";
-
-// ════════════════════════════════════════════════════════
-
-
-// ═══════════ ZINSALARM HELPERS ═══════════
-import { ZinsAlarm } from "./components/shell/ZinsAlarm.jsx";
-
-
-// ── Offline-Banner ────────────────────────────────────────────────────────
-import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
 
 const TAB_LABELS={haupt:"Renditerechner",kredit:"Finanzierungsrechner",miete:"Mieterhöhungsrechner",sanier:"Sanierungsrechner",steuer6:"Steuerrechner",saved:"Merkliste"};
 export default function App(){const[tab,setTab]=useState("haupt");const[lang,setLang]=useState("de");

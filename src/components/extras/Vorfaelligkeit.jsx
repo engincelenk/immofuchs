@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { VFE_T } from "../../i18n/vorfaelligkeit.js";
-import { PFANDBRIEF } from "../../data.js";
+import { PFANDBRIEF, MARKET_RATES } from "../../data.js";
 import { fmtE } from "../../utils/helpers.js";
-import { F, Row, Sec } from "../ui/atoms.jsx";
+import { F, Row, Sec, VT } from "../ui/atoms.jsx";
+import { ExportPDF } from "../export/ExportPDF.jsx";
 
 export function Vorfaelligkeit(){
   const{d,set,t,lang}=useApp();

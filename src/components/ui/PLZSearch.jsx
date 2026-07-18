@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { PLZ_DB, isK15 } from "../../data/plzData.js";
+import { BL_N } from "../../data.js";
+import { F, Row } from "./atoms.jsx";
 
 export function PLZSearch({showKapp=true}={}){const{d,set,t,tip}=useApp();const[ac,setAC]=useState([]);const[show,setShow]=useState(false);const ref=useRef();
   const onP=v=>{set("plz",v);if(/^\d{5}$/.test(v)){const f=PLZ_DB.byPlz[v];if(f){set("ort",f.ort);set("bundesland",f.bl)}}};

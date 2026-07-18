@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useApp } from "../../context/AppContext.jsx";
+import { Tip } from "./Tip.jsx";
 
 export function Dot({color}){return <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:color,marginLeft:5,flexShrink:0,verticalAlign:"middle"}} title={color==="#22c55e"?"Gut":color==="#f59e0b"?"Mittelmäßig":"Kritisch"}/>}
 
