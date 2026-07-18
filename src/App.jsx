@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, createContext, useContext, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useCallback, useMemo, useContext, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { MARKET_RATES, PFANDBRIEF, GREST, BL_N, BL_O, MIET_P, KFW, SAN_ENERGIE, SAN_NORMEN, SAN_TIERS, SAN_SRC_KEYS, LAND_F, LAND_BONUS_FQ, LAND_BONUS_CAP, ENERGIE_KLASSEN } from "./data.js";
 
@@ -82,8 +82,7 @@ const TL={
 // Marktdaten → src/data.js
 
 
-const Ctx=createContext();
-const useApp=()=>useContext(Ctx);
+import { Ctx, useApp } from "./context/AppContext.jsx";
 const fmt=(v,d=0)=>(v==null||isNaN(v)||!isFinite(v))?"—":v.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
 const fmtE=v=>fmt(v)+" €";const fmtP=(v,d=1)=>fmt(v,d)+" %";
 const tf=(tpl,vals)=>Object.entries(vals).reduce((s,[k,v])=>s.replaceAll('{'+k+'}',String(v)),tpl);
