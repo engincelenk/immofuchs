@@ -35,13 +35,27 @@ Verboten: Logik ändern · Variablennamen ändern · Formatierung ändern · Etw
 
 | Phase | Sprint | Status | Abgeschlossen am |
 |---|---|---|---|
-| Phase 1 — Foundation | Sprint 1 | ⬜ Ausstehend | — |
-| Phase 2 — Shared UI | Sprint 2 | ⬜ Ausstehend | — |
-| Phase 3 — Calculators | Sprint 3 | ⬜ Ausstehend | — |
-| Phase 4 — Extras & Shell | Sprint 4 | ⬜ Ausstehend | — |
-| Phase 5 — Finalisierung | Sprint 5 | ⬜ Ausstehend | — |
+| Phase 1 — Foundation | Sprint 1 | ✅ Abgeschlossen | 2026-07-18 |
+| Phase 2 — Shared UI | Sprint 2 | ✅ Abgeschlossen | 2026-07-18 |
+| Phase 3 — Calculators | Sprint 3 | ✅ Abgeschlossen | 2026-07-18 |
+| Phase 4 — Extras & Shell | Sprint 4 | ✅ Abgeschlossen | 2026-07-18 |
+| Phase 5 — Finalisierung | Sprint 5 | ✅ Abgeschlossen (ohne manuelle Browser-Kontrolle — siehe Hinweis unten) | 2026-07-18 |
 
 Status-Legende: ⬜ Ausstehend · 🔄 In Arbeit · ✅ Abgeschlossen · ❌ Blockiert
+
+> **Hinweis zur Ausführung (2026-07-18):** Alle 33 Tasks wurden mit Build-Verifikation
+> nach jedem Schritt durchgeführt. Zusätzlich zur reinen Zeilen-für-Zeilen-Extraktion
+> wurde ein Cross-Modul-Audit ergänzt (nicht im Original-Plan vorgesehen), das jede
+> JSX-Komponentenreferenz und jedes Modul-Symbol gegen die tatsächlichen Imports jeder
+> Datei prüft — `npm run build` allein hätte fehlende Imports bei JSX-Komponenten nicht
+> erkannt (Vite/esbuild validiert keine JSX-Referenzen zur Build-Zeit, nur zur Laufzeit).
+> Dabei wurden 15 fehlende Imports in 9 Dateien gefunden und ergänzt (reine
+> Import-Ergänzungen, keine Logikänderungen — Details in release-notes.txt v1.55.5).
+>
+> Die manuelle Funktionskontrolle im Browser (Schritt 4 von Task 32) konnte in dieser
+> Session **nicht** durchgeführt werden — die Browser-Vorschau ließ sich nicht auf den
+> lokalen Vite-Dev-Server navigieren. Vor dem Mergen in einen Ziel-Branch sollte die
+> Checkliste aus Task 32 manuell durchgegangen werden.
 
 ---
 

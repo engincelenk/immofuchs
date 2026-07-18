@@ -1,3 +1,25 @@
+## 2026-07-18 (1.55.5)
+
+### Refactor: App.jsx Architektur-Modularisierung (Branch: refactor/modular-architecture)
+
+Reine Extraktion nach Plan `docs/plans/2026-06-21-architecture-refactor.md` — keine
+Logik, Variablennamen oder Formatierung geändert, nur Code in Module verschoben.
+
+- App.jsx: 656KB / 3.686 Zeilen → 16KB / 178 Zeilen
+- 33 neue Dateien in modularer Struktur: context/ · i18n/ · data/ · utils/ ·
+  components/{ui,charts,tables,export,calculators,extras,shell}/ · pages/
+- 5 Sprints, 33 Commits, Build nach jedem Schritt verifiziert
+- Beim abschliessenden Cross-Modul-Audit (jede JSX-Komponentenreferenz und jedes
+  Modul-Symbol gegen die tatsächlichen Imports geprüft) 15 fehlende Imports in
+  9 Dateien gefunden und behoben — Fehler, die durch `npm run build` allein nicht
+  auffallen, da Vite/esbuild keine JSX-Referenzen zur Build-Zeit prüft
+- Bundle bleibt vorerst ein Chunk (775KB) — Code-Splitting erfordert zusätzlich
+  React.lazy()/dynamic import, was über "reine Extraktion" hinausgeht und nicht
+  Teil dieses Plans war
+- Manuelle Funktionskontrolle im Browser konnte in dieser Umgebung nicht
+  durchgeführt werden (Preview-Navigation zu localhost schlug fehl) — bitte vor
+  dem Mergen manuell testen (siehe Checkliste in den Plan-Notizen)
+
 ## 2026-07-18 (1.55.4)
 
 ### Bugfix: Rechner-Qualitätsaudit — 9 Berechnungsfehler behoben
