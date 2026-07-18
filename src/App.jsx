@@ -95,14 +95,7 @@ import { LegalModal } from "./components/shell/LegalModal.jsx";
 
 
 // ── Statusleiste ─────────────────────────────────────────────────────────────
-const Statusleiste=()=>{const {t}=useApp();
-  const now=new Date();
-  const monat=now.toLocaleDateString("de-DE",{month:"long",year:"numeric"});
-  return <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:"var(--ci)",border:"1px solid var(--cb)",borderRadius:8,fontSize:12,color:"var(--ch)",marginBottom:14}}>
-    <span style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0}}/>
-    <span>{t.datastand}: {monat}</span>
-  </div>;
-};
+import { Statusleiste } from "./components/shell/Statusleiste.jsx";
 
 // ═══════════ GESPEICHERTE OBJEKTE ═══════════
 
@@ -397,18 +390,7 @@ function ZinsAlarm({ zinsen, lang }) {
 
 
 // ── Offline-Banner ────────────────────────────────────────────────────────
-function OfflineBanner({bottom}){
-  const date=useMemo(()=>{
-    try{const c=localStorage.getItem("if_zinsen_v3");if(c){const{ts}=JSON.parse(c);return new Date(ts).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});}}catch(e){}
-    return null;
-  },[]);
-  return(
-    <div style={{position:"fixed",left:0,right:0,bottom,zIndex:150,background:"#1E3A5F",color:"rgba(255,255,255,0.88)",padding:"7px 16px",textAlign:"center",fontSize:12,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,letterSpacing:.2}}>
-      <span>📴</span>
-      <span>Offline · Alle Rechner funktionieren{date?` · Daten vom ${date}`:""}</span>
-    </div>
-  );
-}
+import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
 
 const TAB_LABELS={haupt:"Renditerechner",kredit:"Finanzierungsrechner",miete:"Mieterhöhungsrechner",sanier:"Sanierungsrechner",steuer6:"Steuerrechner",saved:"Merkliste"};
 export default function App(){const[tab,setTab]=useState("haupt");const[lang,setLang]=useState("de");
