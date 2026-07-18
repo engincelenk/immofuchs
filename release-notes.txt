@@ -1,3 +1,28 @@
+## 2026-07-18 (1.55.4)
+
+### Bugfix: Rechner-Qualitätsaudit — 9 Berechnungsfehler behoben
+
+**Sanierungsrechner (KRITISCH)**
+- S1: Amortisationsrechnung Einheitenfehler behoben — `espEuro = ekG * epKwh` → `espEuro = ekG` (ekG bereits in €/Jahr; Multiplikation mit €/kWh war Dimensionsfehler → bis zu 8× falsch)
+- S2: Wärmepumpe-Energiepreis korrigiert — `wp: 0.04` → `0.09 €/kWh` (COP 3–4 mit WP-Sondertarif)
+- S3: KfW-Einkommensbonus-Konstante korrigiert — `5 %` → `30 %` (BEG 2024/2025, zvE ≤ 40.000 €)
+
+**Finanzierungsrechner (HOCH)**
+- F1: Tilgungsplan auf monatliche Zinsiteration umgestellt — war jährliche Näherung (~4 % zu hohe Gesamtzinsen bei 10J/3,5%/2%)
+- F2: Sondertilgungs-Ersparnis korrekt — `sZ` nutzt jetzt dieselbe monatliche Methode wie `sZ2` → methodischer Fehler von ~6.000 € entfernt
+- F3: Beleihungsauslauf im Kredit-Tab korrigiert — Nenner war `kp` (ohne Garage), jetzt `gKP` (mit Garage)
+- F4: Laufzeit bei Zinssatz 0 % — Sonderfall `mz=0` abgefangen: `lz = da / ann / 12` statt „0,0 J."
+
+**Mieterhöhungsrechner (MITTEL)**
+- M1: Kappungsgrenze §558 BGB — Referenz war `akt` (aktuelle Miete), jetzt korrekt `rentAtF3` (Miete zu Beginn des 3-Jahres-Fensters)
+
+**Renditerechner (MITTEL)**
+- R1: Nettomietrendite-Nenner um Kaufnebenkosten `nbk` ergänzt → Rendite nicht mehr systematisch um 0,3–0,5 PP überschätzt
+
+**Betroffene Dateien:** src/App.jsx, src/data.js
+
+---
+
 ## 2026-07-18 (1.55.3)
 
 ### Vermietungsstatus: fehlende Übersetzungen behoben

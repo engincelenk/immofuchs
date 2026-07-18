@@ -63,7 +63,7 @@ export const MIET_P = {
 // Quelle: kfw.de
 export const KFW = {
   basisfoerderung: 15,        // % der Investitionskosten
-  einkommensbonus: 5,         // % zusätzlich bei niedrigem Einkommen
+  einkommensbonus: 30,        // % zusätzlich bei niedrigem Einkommen (BEG 2024/2025: zvE ≤ 40.000 €)
   klimageschwindigkeitsbonus: 20, // % beim Heizungstausch (bis 2028)
   maxFoerderung: 70,          // % maximale Gesamtförderung
   maxInvestition: 30000,      // € max. förderfähige Kosten je Wohneinheit
@@ -122,7 +122,7 @@ export const SAN_ENERGIE = {
   // Energiepreis je Heizungstyp (€/kWh Wärme, Ø-Werte)
   // Quelle: BDEW Energiemarktdaten, UBA 2026
   ep: {
-    wp:          0.04,   // Wärmepumpe (COP ~3, Strom 0.35/3 ≈ 0.12, aber Marktwert Wärme)
+    wp:          0.09,   // Wärmepumpe (Strom ~0.35 €/kWh ÷ COP 3–4 + WP-Sondertarif → ~0.09 €/kWh Wärme)
     pellets:     0.07,   // Pellets €/kWh
     "fernw-std": 0.12,   // Fernwärme Standard
     kohle:       0.09,   // Kohle

@@ -494,7 +494,7 @@ function PLZSearch({showKapp=true}={}){const{d,set,t,tip}=useApp();const[ac,setA
   return <><Row><F label={t.plz} value={d.plz} onChange={onP} type="text" hint={PLZ_DB.byPlz[d.plz]?.ort||""}/><div ref={ref} style={{position:"relative"}}><F label={t.ort} value={d.ort} onChange={onO} type="text"/>{show&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:"var(--cc)",border:"1px solid var(--cb)",borderRadius:8,zIndex:50,boxShadow:"0 4px 12px rgba(0,0,0,.1)",maxHeight:180,overflow:"auto"}}>{ac.map((it,i)=><div key={i} onClick={()=>sel(it)} style={{padding:"8px 12px",fontSize:13,cursor:"pointer",borderBottom:"1px solid var(--cb)"}}>{it.ort} <span style={{color:"var(--ch)",fontSize:11}}>{it.plz}·{BL_N[it.bl]}</span></div>)}</div>}</div></Row>
   {showKapp&&d.ort&&<div style={{fontSize:11,padding:"6px 10px",background:kp===15?"#FFF0F0":"#E8F8EE",borderRadius:6,marginBottom:10,color:kp===15?"#9a2020":"#1a7a3a"}}>{t.kapp}: {kp}% — {kp===15?t.ang:t.std} ({d.ort})</div>}</>}
 
-function buildMP(miete,qm,vmQm,kappP,lD,lM,jahre,k15,tObj){const vm=vmQm>0?vmQm*qm:null,prog=k15?MIET_P.kapp15:MIET_P.normal,vmPA=prog.pA/100,heute=new Date(),ende=addY(heute,jahre);let akt=miete,lInc=lD?new Date(lD):new Date(heute.getFullYear()-2,heute.getMonth(),1);const hist=[];if(lD&&lM>0&&lM<miete)hist.push({date:new Date(lD),fromM:lM,toM:miete});const rows=[];let sg=0;while(sg++<20){const n=addM(lInc,15);if(n>ende)break;const f3=addM(n,-36),used=hist.filter(h=>h.date>=f3&&h.date<n).reduce((s,h)=>s+(h.fromM>0?(h.toM-h.fromM)/h.fromM*100:0),0),vK=Math.max(0,kappP-used),mxK=akt*(1+vK/100),j2D=(n-heute)/(1e3*60*60*24*365.25),vP=vm?vm*Math.pow(1+vmPA,j2D):null,mxM=vP?Math.min(mxK,vP):mxK,mE=Math.max(0,mxM-akt),mP=akt>0?mE/akt*100:0,neu=akt+mE;let st,sC;if(vP&&akt>=vP-.5){st=(tObj||{vgl:"Vgl."}).vgl;sC="neg"}else if(vK<=.1){st=(tObj||{kapp:"Kap."}).kapp;sC="neg"}else{st=`+${fmt(mP,1)}%`;sC="pos"}rows.push({datum:n,aktMiete:akt,vm,vmProg:vP,mE,mP,neueMiete:neu,verfK:vK,status:st,sC});if(mE>0){hist.push({date:new Date(n),fromM:akt,toM:neu});akt=neu}lInc=new Date(n)}return{rows,q:prog.q,vmPA:prog.pA}}
+function buildMP(miete,qm,vmQm,kappP,lD,lM,jahre,k15,tObj){const vm=vmQm>0?vmQm*qm:null,prog=k15?MIET_P.kapp15:MIET_P.normal,vmPA=prog.pA/100,heute=new Date(),ende=addY(heute,jahre);let akt=miete,lInc=lD?new Date(lD):new Date(heute.getFullYear()-2,heute.getMonth(),1);const hist=[];if(lD&&lM>0&&lM<miete)hist.push({date:new Date(lD),fromM:lM,toM:miete});const rows=[];let sg=0;while(sg++<20){const n=addM(lInc,15);if(n>ende)break;const f3=addM(n,-36),used=hist.filter(h=>h.date>=f3&&h.date<n).reduce((s,h)=>s+(h.fromM>0?(h.toM-h.fromM)/h.fromM*100:0),0),vK=Math.max(0,kappP-used),rentAtF3=(hist.filter(h=>h.date<f3).slice(-1)[0]?.toM??miete),mxK=rentAtF3*(1+kappP/100),j2D=(n-heute)/(1e3*60*60*24*365.25),vP=vm?vm*Math.pow(1+vmPA,j2D):null,mxM=vP?Math.min(mxK,vP):mxK,mE=Math.max(0,mxM-akt),mP=akt>0?mE/akt*100:0,neu=akt+mE;let st,sC;if(vP&&akt>=vP-.5){st=(tObj||{vgl:"Vgl."}).vgl;sC="neg"}else if(vK<=.1){st=(tObj||{kapp:"Kap."}).kapp;sC="neg"}else{st=`+${fmt(mP,1)}%`;sC="pos"}rows.push({datum:n,aktMiete:akt,vm,vmProg:vP,mE,mP,neueMiete:neu,verfK:vK,status:st,sC});if(mE>0){hist.push({date:new Date(n),fromM:akt,toM:neu});akt=neu}lInc=new Date(n)}return{rows,q:prog.q,vmPA:prog.pA}}
 function VT({view,setView}){const{t}=useApp();return <div className="mob-toggle">{["input","result"].map(v=><button key={v} className={view===v?"act":""} onClick={()=>{setView(v);setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),50)}}>{v==="input"?t.eingabe:t.ergebnis}</button>)}</div>}
 
 
@@ -1174,11 +1174,11 @@ function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,se
     const pQm=qm>0?kp/qm:0,jM=mi*12,nbk=gKP*(gP+nP+mP)/100;
     const da=Math.max(0,gKP-ek),bel=gKP>0?da/gKP*100:0;
     const mz=zP/100/12,ann=da*(zP+tP)/100/12;
-    let lz=0;if(mz>0&&ann>da*mz)lz=Math.log(ann/(ann-da*mz))/Math.log(1+mz)/12;
+    let lz=0;if(mz>0&&ann>da*mz)lz=Math.log(ann/(ann-da*mz))/Math.log(1+mz)/12;else if(mz===0&&ann>0)lz=da/ann/12;
     const tM=j*12,lF=tM>0?Math.max(0,(tM-lM)/tM):1;
     const gesamtInv=gKP+so; // Investitionsbasis inkl. Sonderumlage
     const effJ=mi*lF,bR=gesamtInv>0?jM/gesamtInv*100:0;
-    const nuJ=nu*12,nR=gesamtInv>0?(effJ*12-nuJ)/gesamtInv*100:0;
+    const nuJ=nu*12,nR=(gesamtInv+nbk)>0?(effJ*12-nuJ)/(gesamtInv+nbk)*100:0;
     const afJ=kp*(gA/100)*(aP/100)+renAfaJ;
     const k15=isK15(d.ort)||d.bundesland==="BE"||d.bundesland==="HH",kP=k15?15:20;
     const mt=buildMP(mi,qm,vQ,kP,d.letzteErhDatum,+d.letzteErhMiete||0,j,k15,t);
@@ -1656,18 +1656,26 @@ function Kredit(){
     const gP=GREST[d.bundesland]||0,nP=+d.notar||0,mP=+d.makler||0;
     if(kp<=0)return null;
     const da=Math.max(0,gKP-ek),nbk=gKP*(gP+nP+mP)/100;
-    const bel=kp>0?da/kp*100:0,mz=zP/100/12;
+    const bel=gKP>0?da/gKP*100:0,mz=zP/100/12;
     const ann=da*(zP+tP)/100/12;
     let lz=0;
     if(mz>0&&ann>da*mz)lz=Math.log(ann/(ann-da*mz))/Math.log(1+mz)/12;
+    else if(mz===0&&ann>0)lz=da/ann/12;
     let rs=da,sZ=0,rows=[],rZB=da;
     const mJ=Math.min(isFinite(lz)?Math.ceil(lz)+1:60,60);
     for(let j=1;j<=mJ;j++){
-      const z=rs*(zP/100),t2=Math.min(ann*12-z,rs);
+      // Monatliche Iteration: Restschuld sinkt monatlich → korrekte Jahreszinsen
+      let z=0,t2=0;
+      for(let m=0;m<12&&rs>0;m++){
+        const zm=rs*mz;
+        const tm=Math.min(ann-zm,rs);
+        if(tm<=0)break;
+        z+=zm;t2+=tm;
+        rs=Math.max(0,rs-tm);
+      }
       sZ+=z;
-      rs=Math.max(0,rs-Math.max(0,t2));
       if(j===zbJ)rZB=rs;
-      rows.push({j,z,t:Math.max(0,t2),rest:rs,isZB:j===zbJ});
+      rows.push({j,z,t:t2,rest:rs,isZB:j===zbJ});
       if(rs<=0)break;
     }
     const z1=da*mz,t1=ann-z1;
@@ -1976,7 +1984,7 @@ function Sanier(){
     const ne=tK-tFo-tFoLand;
     const ekG=Math.round(kH*(1-eM)/50)*50;
     const co2G=Math.round(co2H*(1-cM));
-    const espEuro=Math.round(ekG*epKwh);
+    const espEuro=ekG; // ekG bereits in €/Jahr — keine weitere Multiplikation mit epKwh
     // PV: Stromersparnis durch Eigenverbrauch (zusätzlich zur Heizersparnis)
     // min(PV-Eigenverbrauch kWh, tatsächlicher Jahresstromverbrauch kWh) × Strompreis
     const pvK2tmp=+s.pvK||7;
