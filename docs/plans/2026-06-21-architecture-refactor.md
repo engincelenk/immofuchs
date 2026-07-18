@@ -9,8 +9,8 @@
 | | Ist-Zustand | Ziel-Zustand |
 |---|---|---|
 | Dateien im `src/` | 5 Dateien | ~40 Dateien |
-| App.jsx Größe | 652KB / 3.660 Zeilen | <10KB / ~150 Zeilen |
-| JS-Bundle (dist) | **774KB** (ein Chunk) | ~150KB initial + lazy chunks |
+| App.jsx Größe | 656KB / 3.686 Zeilen | <10KB / ~150 Zeilen |
+| JS-Bundle (dist) | **756KB** (ein Chunk) | ~150KB initial + lazy chunks |
 | Babel-Warning | ja | nein |
 | Code Splitting | nein | automatisch via Vite |
 | Lazy Loading | nicht möglich | möglich |
@@ -55,13 +55,13 @@ src/
     translations.js            ← T, TL, LANGS                       (App.jsx Z.23–100, 757)
     tips.js                    ← TIPS                                (App.jsx Z.503–706)
     legal.js                   ← LEG                                 (App.jsx Z.707–741)
-    steuerTrick.js             ← STEUER_T                            (App.jsx Z.2219–2371)
-    vorfaelligkeit.js          ← VFE_T                               (App.jsx Z.2547–2553)
+    steuerTrick.js             ← STEUER_T                            (App.jsx Z.2230–2382)
+    vorfaelligkeit.js          ← VFE_T                               (App.jsx Z.2558–2566)
   data/
     plzData.js                 ← PLZ_RAW, PLZ_DB, kapp15Set, isK15  (App.jsx Z.6–22)
   utils/
-    helpers.js                 ← fmt, fmtE, fmtP, tf, fmtDat,
-                                  addM, addY, tpl                    (App.jsx Z.103–121, 442)
+    helpers.js                 ← fmt, fmtE, fmtP, tf, LANG_LOCALE,
+                                  fmtDat, addM, addY, tpl           (App.jsx Z.103–121, 442)
     bands.js                   ← AMPEL, BANDS, rate, vrd             (App.jsx Z.111–118, 444–469)
   components/
     ui/
@@ -82,23 +82,23 @@ src/
       ExportPDF.jsx            ← ExportPDF                           (App.jsx Z.1078–1137)
     calculators/
       SelbsttraegerCheck.jsx   ← SelbsttraegerCheck, BreakEvenCards  (App.jsx Z.169–269)
-      Renditerechner.jsx       ← function Haupt()                    (App.jsx Z.1138–1644)
-      Finanzierung.jsx         ← function Kredit()                   (App.jsx Z.1645–1779)
-      Miete.jsx                ← buildMP + function Miete()          (App.jsx Z.497, 1780–1851)
+      Renditerechner.jsx       ← function Haupt()                    (App.jsx Z.1142–1647)
+      Finanzierung.jsx         ← function Kredit()                   (App.jsx Z.1648–1790)
+      Miete.jsx                ← buildMP + function Miete()          (App.jsx Z.497, 1791–1862)
       Sanier.jsx               ← EC_O, EC_C, kw2ec, TierSel,
-                                  function Sanier()                  (App.jsx Z.1852–2218)
+                                  function Sanier()                  (App.jsx Z.1863–2229)
     extras/
-      SteuerTrick.jsx          ← InfoTooltip, SteuerTrick            (App.jsx Z.2372–2534)
-      Vorfaelligkeit.jsx       ← Vorfaelligkeit                      (App.jsx Z.2556–2792)
+      SteuerTrick.jsx          ← InfoTooltip, SteuerTrick            (App.jsx Z.2383–2545)
+      Vorfaelligkeit.jsx       ← Vorfaelligkeit                      (App.jsx Z.2567–2805)
     shell/
-      LegalModal.jsx           ← LegalModal + Style-Konstanten       (App.jsx Z.3120–3210)
-      Statusleiste.jsx         ← Statusleiste                        (App.jsx Z.3211–3218)
-      OfflineBanner.jsx        ← OfflineBanner                       (App.jsx Z.3513–3524)
+      LegalModal.jsx           ← LegalModal + Style-Konstanten       (App.jsx Z.3131–3221)
+      Statusleiste.jsx         ← Statusleiste                        (App.jsx Z.3222–3232)
+      OfflineBanner.jsx        ← OfflineBanner                       (App.jsx Z.3524–3536)
       Merkliste.jsx            ← useSavedObjects, SaveModal,
-                                  SaveBtn, Merkliste                 (App.jsx Z.3222–3340)
-      ZinsAlarm.jsx            ← showAlarmNotification, ZinsAlarm    (App.jsx Z.3341–3511)
+                                  SaveBtn, Merkliste                 (App.jsx Z.3233–3351)
+      ZinsAlarm.jsx            ← showAlarmNotification, ZinsAlarm    (App.jsx Z.3352–3523)
   pages/
-    Landing.jsx                ← function Landing()                  (App.jsx Z.2795–3114)
+    Landing.jsx                ← function Landing()                  (App.jsx Z.2806–3125)
   App.jsx                      ← ~150 Zeilen: Root + Provider + Routing
   data.js                      ← UNVERÄNDERT
   main.jsx                     ← UNVERÄNDERT
@@ -119,6 +119,8 @@ src/
 | `Miete.jsx` | Enthält `buildMP` (App.jsx Z.497) — außerhalb von Miete definiert, kommt aber nach Miete.jsx |
 | `IC` (icon map, Z.2534–2543) | Bleibt in `App.jsx` — wird nur dort für Tab-Definitionen genutzt |
 | `LEG` (Z.707–741) | Geht nach `i18n/legal.js` — alle 4 Rechner nutzen `LEG.xxx` |
+| `LANG_LOCALE` (Z.106) | Neu gefunden — fehlt im ursprünglichen Plan. Geht nach `utils/helpers.js` zusammen mit `fmtDat` (wird von `fmtDat` intern genutzt) |
+| `ExportPDF` (Z.1078) | Lädt jsPDF/html2canvas per dynamischem Import zur Laufzeit — extrahiert sauber ohne Änderung |
 | Shell-Komponenten (SaveModal, SaveBtn, Merkliste) | Importieren `T` direkt: `const t = T[lang] \|\| T.de` — brauchen direkten Import aus `translations.js` |
 
 ---
@@ -309,7 +311,7 @@ Build + Commit: `"refactor: extract LEG to src/i18n/legal.js"`
 
 ### Task 6 — `src/i18n/steuerTrick.js`
 
-**Quelle:** App.jsx Z.2219–2371
+**Quelle:** App.jsx Z.2230–2382
 
 Exporte: `STEUER_T`
 Imports: keine
@@ -325,7 +327,7 @@ Build + Commit: `"refactor: extract STEUER_T to src/i18n/steuerTrick.js"`
 
 ### Task 7 — `src/i18n/vorfaelligkeit.js`
 
-**Quelle:** App.jsx Z.2547–2553
+**Quelle:** App.jsx Z.2558–2566
 
 Exporte: `VFE_T`
 Imports: keine
@@ -343,12 +345,14 @@ Build + Commit: `"refactor: extract VFE_T to src/i18n/vorfaelligkeit.js"`
 
 **Quelle:** App.jsx Z.103–121 + Z.442 (tpl)
 
-Exporte: `fmt`, `fmtE`, `fmtP`, `tf`, `fmtDat`, `addM`, `addY`, `tpl`
+Exporte: `fmt`, `fmtE`, `fmtP`, `tf`, `LANG_LOCALE`, `fmtDat`, `addM`, `addY`, `tpl`
 Imports: keine
+
+`LANG_LOCALE` (Z.106) war im ursprünglichen Plan nicht erfasst — muss mit extrahiert werden, da `fmtDat` es intern nutzt und `Merkliste` es direkt referenziert.
 
 In App.jsx ersetzen durch:
 ```js
-import { fmt, fmtE, fmtP, tf, fmtDat, addM, addY, tpl } from "./utils/helpers.js";
+import { fmt, fmtE, fmtP, tf, LANG_LOCALE, fmtDat, addM, addY, tpl } from "./utils/helpers.js";
 ```
 
 Build + Commit: `"refactor: extract helpers to src/utils/helpers.js"`
@@ -662,7 +666,7 @@ Build + Commit: `"refactor: extract SelbsttraegerCheck to src/components/calcula
 
 ### Task 21 — `src/components/calculators/Renditerechner.jsx`
 
-**Quelle:** App.jsx Z.1138–1644 · **Größte Komponente (507 Zeilen)**
+**Quelle:** App.jsx Z.1142–1647 · **Größte Komponente (506 Zeilen)**
 
 Export: `export default function Haupt()`
 
@@ -702,7 +706,7 @@ Build + Commit: `"refactor: extract Renditerechner to src/components/calculators
 
 ### Task 22 — `src/components/calculators/Finanzierung.jsx`
 
-**Quelle:** App.jsx Z.1645–1779
+**Quelle:** App.jsx Z.1648–1790
 
 Export: `export default function Kredit()`
 
@@ -729,7 +733,7 @@ Build + Commit: `"refactor: extract Finanzierung to src/components/calculators/"
 
 ### Task 23 — `src/components/calculators/Miete.jsx`
 
-**Quelle:** App.jsx Z.497 (buildMP) + Z.1780–1851
+**Quelle:** App.jsx Z.497 (buildMP) + Z.1791–1862
 
 Export: `export default function Miete()`
 
@@ -759,7 +763,7 @@ Build + Commit: `"refactor: extract Miete to src/components/calculators/"`
 
 ### Task 24 — `src/components/calculators/Sanier.jsx`
 
-**Quelle:** App.jsx Z.1852–2218
+**Quelle:** App.jsx Z.1863–2229 (inkl. EC_O Z.1863, EC_C Z.1864, kw2ec Z.1865, TierSel Z.1870–1879, Sanier Z.1881–2229)
 
 Export: `export default function Sanier()`
 
@@ -816,7 +820,7 @@ Messung nach Sprint 3:
 
 ### Task 25 — `src/components/extras/SteuerTrick.jsx`
 
-**Quelle:** App.jsx Z.2372–2534 (InfoTooltip + SteuerTrick)
+**Quelle:** App.jsx Z.2383–2545 (InfoTooltip Z.2383–2425 + SteuerTrick Z.2426–2545)
 
 Exporte: `SteuerTrick` (InfoTooltip bleibt intern)
 
@@ -842,11 +846,11 @@ Build + Commit: `"refactor: extract SteuerTrick to src/components/extras/"`
 
 ### Task 26 — `src/components/extras/Vorfaelligkeit.jsx`
 
-**Quelle:** App.jsx Z.2556–2792
+**Quelle:** App.jsx Z.2567–2805
 
 Exporte: `Vorfaelligkeit`
 
-Achtung: `IC` (Z.2534–2543) **bleibt in App.jsx** — nicht kopieren.
+Achtung: `IC` (Z.2546–2557) **bleibt in App.jsx** — nicht kopieren.
 
 Imports:
 ```js
@@ -870,7 +874,7 @@ Build + Commit: `"refactor: extract Vorfaelligkeit to src/components/extras/"`
 
 ### Task 27 — `src/pages/Landing.jsx`
 
-**Quelle:** App.jsx Z.2795–3114
+**Quelle:** App.jsx Z.2806–3125
 
 Exporte: `Landing`
 
@@ -887,7 +891,7 @@ Build + Commit: `"refactor: extract Landing page to src/pages/Landing.jsx"`
 
 ### Task 28 — `src/components/shell/LegalModal.jsx`
 
-**Quelle:** App.jsx Z.3120–3210
+**Quelle:** App.jsx Z.3131–3221 (inkl. navLink/navLinkMobile Z.3126–3130 bleiben in App.jsx; lmH3/lmP/lmUl/lmA Z.3214–3217 kommen mit nach LegalModal.jsx)
 
 Exporte: `LegalModal`
 
@@ -906,8 +910,8 @@ Build + Commit: `"refactor: extract LegalModal to src/components/shell/"`
 
 ### Task 29 — `src/components/shell/Statusleiste.jsx` + `src/components/shell/OfflineBanner.jsx`
 
-**Quelle Statusleiste:** App.jsx Z.3211–3218
-**Quelle OfflineBanner:** App.jsx Z.3513–3524
+**Quelle Statusleiste:** App.jsx Z.3222–3232
+**Quelle OfflineBanner:** App.jsx Z.3524–3536
 
 Beide < 15 Zeilen → ein Task.
 
@@ -923,7 +927,7 @@ Build + Commit: `"refactor: extract Statusleiste + OfflineBanner to src/componen
 
 ### Task 30 — `src/components/shell/Merkliste.jsx`
 
-**Quelle:** App.jsx Z.3222–3340
+**Quelle:** App.jsx Z.3233–3351 (useSavedObjects Z.3233, SaveModal Z.3246, SaveBtn Z.3268, Merkliste Z.3285)
 
 Exporte: `useSavedObjects`, `SaveModal`, `SaveBtn`, `Merkliste`
 
@@ -943,7 +947,7 @@ Build + Commit: `"refactor: extract Merkliste to src/components/shell/"`
 
 ### Task 31 — `src/components/shell/ZinsAlarm.jsx`
 
-**Quelle:** App.jsx Z.3341–3511
+**Quelle:** App.jsx Z.3352–3523 (showAlarmNotification Z.3352, ZinsAlarm Z.3369)
 
 Exporte: `ZinsAlarm` (showAlarmNotification bleibt intern)
 
