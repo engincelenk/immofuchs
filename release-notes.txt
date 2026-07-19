@@ -16,9 +16,12 @@ Logik, Variablennamen oder Formatierung geändert, nur Code in Module verschoben
 - Bundle bleibt vorerst ein Chunk (775KB) — Code-Splitting erfordert zusätzlich
   React.lazy()/dynamic import, was über "reine Extraktion" hinausgeht und nicht
   Teil dieses Plans war
-- Manuelle Funktionskontrolle im Browser konnte in dieser Umgebung nicht
-  durchgeführt werden (Preview-Navigation zu localhost schlug fehl) — bitte vor
-  dem Mergen manuell testen (siehe Checkliste in den Plan-Notizen)
+- Manuelle Funktionskontrolle im Browser (npm run dev, localhost:5173) danach
+  durchgeführt: dabei 3 weitere Laufzeitfehler gefunden, die das Cross-Modul-
+  Audit nicht erfasst hatte (MARKET_RATES in tips.js, buildMP zwischen Miete.jsx
+  und Renditerechner.jsx geteilt, useEffect in atoms.jsx) — alle behoben. Danach
+  alle 7 Tabs, Speichern/Laden/Löschen in der Merkliste, Sprachwechsel und das
+  Impressum-Modal getestet: keine Konsolenfehler mehr.
 
 ## 2026-07-18 (1.55.4)
 
