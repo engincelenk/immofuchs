@@ -1,3 +1,23 @@
+## 2026-07-19 (1.55.17)
+
+### Fix: CSP blockierte KI-Assistent-Anfragen im echten Browser
+
+Beim End-to-End-Test im echten Browser (nicht nur per curl) schlug jede
+Anfrage an den Worker mit "Refused to connect because it violates the
+document's Content Security Policy" fehl.
+
+- **Ursache:** `index.html` enthält eine strikte CSP (OWASP-Härtung, siehe
+  Zeile 11) mit einer `connect-src`-Allowlist. Beim Bauen des KI-Assistenten
+  wurde die neue Worker-Domain nicht in diese Liste aufgenommen — der Browser
+  hat die Verbindung deshalb konsequent blockiert, unabhängig davon, dass
+  Worker und Frontend beide korrekt konfiguriert waren.
+- **Fix:** `https://immofuchs-assistant.engincelenk.workers.dev` zur
+  `connect-src`-Direktive in `index.html` ergänzt.
+- `npm run build` erfolgreich nach dem Fix.
+- **Hinweis für später:** Falls der Worker auf eine eigene Domain umzieht,
+  muss diese CSP-Zeile erneut angepasst werden (in `worker/README.md`
+  dokumentiert).
+
 ## 2026-07-19 (1.55.16)
 
 ### Fix: KI-Assistent-Worker live deployed, Rate-Limiter-Bug gefunden und behoben

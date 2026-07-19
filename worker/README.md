@@ -94,6 +94,14 @@ Produktions-Traffic den auskommentierten `[env.production.vars]`-Block in
 erneut deployen. Frontend-`.env` mit `VITE_ASSISTANT_URL` auf die obige URL
 zeigen lassen (siehe `.env.example` im Hauptverzeichnis).
 
+**Wichtig bei Domain-Wechsel:** Falls der Worker spaeter auf eine eigene Domain
+umzieht (z. B. `api.immofuchs.info` statt `*.workers.dev`), muss die neue
+Domain zusaetzlich in `index.html` in der `connect-src`-Direktive der
+Content-Security-Policy ergaenzt werden - sonst blockt der Browser die
+Verbindung selbst dann, wenn Worker und Frontend beide korrekt konfiguriert
+sind (genau dieser Fehler ist beim ersten Live-Test aufgetreten, siehe
+release-notes.txt 1.55.17).
+
 **Vor Live-Schaltung mit echten Nutzerdaten:** Go-Live-Gate aus dem Sprint-Plan
 abarbeiten (AVV Cloudflare/Google, Datenschutzerklaerung, VVT-Eintrag) - dieser
 Worker-Code selbst braucht dafuer keine Aenderung, das ist ein separater,
