@@ -3,6 +3,13 @@ import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
 import { fmt, LANG_LOCALE } from "../../utils/helpers.js";
+import { PrivacyIntro } from "../assistant/PrivacyIntro.jsx";
+import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
+import { PRIVACY_SEEN_KEY } from "../assistant/AssistantWidget.jsx";
+import { ASSISTANT_T } from "../../i18n/assistant.js";
+import { ASSISTANT_FIELDS } from "../../utils/assistantContext.js";
+
+const MAX_COMPARE = 5;
 
 export function useSavedObjects(setData){
   const[savedList,setSavedList]=useState(()=>{try{return JSON.parse(localStorage.getItem('if_saved_v1')||'[]');}catch{return[];}});
@@ -58,10 +65,39 @@ export function SaveBtn({tab}){
 
 export function Merkliste(){
   const{savedList,delObj,loadObj,setTabExt,lang}=useApp();const t=T[lang]||T.de;const locale=LANG_LOCALE[lang]||'de-DE';
+  const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
   const[confirmDel,setConfirmDel]=useState(null);
+  const[compareIds,setCompareIds]=useState([]);
+  const[comparePrivacyOpen,setComparePrivacyOpen]=useState(false);
+  const[compareSheetOpen,setCompareSheetOpen]=useState(false);
   const tabLabel={haupt:t.haupt||'Rendite',kredit:t.kredit||'Kredit',miete:t.miete||'Miete',sanier:t.sanier||'Sanierung'};
   const tabColor={haupt:'#1E3A5F',kredit:'#0a7ea4',miete:'#2d8a4e',sanier:'#8a5a0a'};
   const fmt=v=>v?Number(v).toLocaleString(locale):null;
+
+  const toggleCompare=(id)=>{
+    setCompareIds(prev=>{
+      if(prev.includes(id))return prev.filter(x=>x!==id);
+      if(prev.length>=MAX_COMPARE)return prev;
+      return[...prev,id];
+    });
+  };
+  const openCompare=()=>{
+    let seen=false;
+    try{seen=localStorage.getItem(PRIVACY_SEEN_KEY)==="1";}catch{}
+    if(seen)setCompareSheetOpen(true);else setComparePrivacyOpen(true);
+  };
+  const confirmComparePrivacy=()=>{
+    try{localStorage.setItem(PRIVACY_SEEN_KEY,"1");}catch{}
+    setComparePrivacyOpen(false);
+    setCompareSheetOpen(true);
+  };
+  const compareObjs=savedList.filter(o=>compareIds.includes(o.id));
+  const vergleichsObjekte=compareObjs.map(o=>{
+    const fields=ASSISTANT_FIELDS[o.tab]??[];
+    const felder=Object.fromEntries(fields.map(f=>[f,o.data[f]]));
+    return{name:o.name,tab:o.tab,felder};
+  });
+  const compareRechner=compareObjs[0]?.tab||"renditerechner";
   if(!savedList.length)return(
     <div style={{padding:'60px 20px',textAlign:'center'}}>
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ch)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:16,display:'block',margin:'0 auto 16px'}}><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
@@ -100,6 +136,12 @@ export function Merkliste(){
                 ✕
               </button>
             </div>
+            <label style={{display:'flex',alignItems:'center',gap:8,marginTop:10,paddingTop:10,borderTop:'1px solid var(--cb)',fontSize:12,color:'var(--ch)',cursor:'pointer'}}>
+              <input type="checkbox" checked={compareIds.includes(obj.id)} onChange={()=>toggleCompare(obj.id)}
+                disabled={!compareIds.includes(obj.id)&&compareIds.length>=MAX_COMPARE}
+                style={{width:16,height:16,accentColor:'var(--ca)',cursor:'pointer'}}/>
+              {at.compareCheckbox}
+            </label>
           </div>
         );
       })}
@@ -115,6 +157,25 @@ export function Merkliste(){
           </div>
         </div>,document.body
       )}
+
+      {/* ═══ KI-ASSISTENT OBJEKTVERGLEICH (Phase 3, Sprint 6 — Konzept 3.3a) ═══ */}
+      {compareIds.length>=2&&createPortal(
+        <button className="no-print" onClick={openCompare} style={{position:'fixed',left:16,right:16,bottom:'calc(76px + env(safe-area-inset-bottom))',zIndex:120,height:48,borderRadius:24,border:'none',background:'var(--ca)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',boxShadow:'0 4px 16px rgba(0,0,0,.2)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+          <span aria-hidden="true">🦊</span>{at.compareButton} ({compareIds.length})
+        </button>,document.body
+      )}
+      {comparePrivacyOpen&&<PrivacyIntro t={at} onConfirm={confirmComparePrivacy} onCancel={()=>setComparePrivacyOpen(false)}/>}
+      <AssistantSheet
+        open={compareSheetOpen}
+        onClose={()=>setCompareSheetOpen(false)}
+        rechner={compareRechner}
+        kontext={{}}
+        vergleichsObjekte={vergleichsObjekte}
+        contextLabel={at.contextVergleich}
+        suggested={[at.vglSuggested1,at.vglSuggested2]}
+        lang={lang}
+        t={at}
+      />
     </div>
   );
 }

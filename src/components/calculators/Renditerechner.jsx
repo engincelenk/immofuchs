@@ -17,6 +17,9 @@ import { PLZSearch } from "../ui/PLZSearch.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { buildMP } from "./Miete.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
+import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
+import { ASSISTANT_T } from "../../i18n/assistant.js";
+import { buildAssistantContext } from "../../utils/assistantContext.js";
 
 export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,setView]=useState("input");const[secAllOpen,setSecAllOpen]=useState(false);const[secAllKey,setSecAllKey]=useState(0);
   const lastEditedRef=useRef(null);
@@ -479,6 +482,22 @@ export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp(
         <SaveBtn tab="haupt"/>
         <ExportPDF title={t.hauptFull||t.haupt}/>
         <Legal items={LEG.rendite}/>
+
+        {/* ═══ KI-ASSISTENT (Pilot, nur Renditerechner — Konzept Abschnitt 5, Phase 1) ═══ */}
+        {(()=>{
+          const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
+          const nrTier=rate('nettoR',R.nR).tier;
+          const kpF=R.gKP/Math.max((+d.kaltmiete||1)*12,1);
+          const kontext=buildAssistantContext("renditerechner",d,{
+            nettoRendite:R.nR,bruttoRendite:R.bR,kaufpreisfaktor:kpF,bewertung:{tier:nrTier}
+          });
+          const suggested=[
+            tpl(at.suggested1,{ampel:at["tier_"+nrTier]||nrTier}),
+            at.suggested2,
+            at.suggested3
+          ];
+          return <AssistantWidget rechner="renditerechner" kontext={kontext} contextLabel={at.contextRendite} suggested={suggested} lang={lang}/>;
+        })()}
       </>}
     </div>
   </div></div>;

@@ -8,9 +8,13 @@ import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
+import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
+import { ASSISTANT_T } from "../../i18n/assistant.js";
+import { buildAssistantContext } from "../../utils/assistantContext.js";
+import { rate } from "../../utils/bands.js";
 
 export default function Kredit(){
-  const{d,set,t,tip}=useApp();
+  const{d,set,t,tip,lang}=useApp();
   const[view,setView]=useState("input");
   const[sondTP,setSondTP]=useState("5");
 
@@ -146,6 +150,17 @@ export default function Kredit(){
         <SaveBtn tab="kredit"/>
         <ExportPDF title={t.kreditFull||t.kredit}/>
         <Legal items={LEG.kredit}/>
+
+        {/* ═══ KI-ASSISTENT (Phase 2, Sprint 4 — Konzept Abschnitt 5) ═══ */}
+        {(()=>{
+          const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
+          const belTier=rate('bel',R.bel).tier;
+          const kontext=buildAssistantContext("finanzierung",d,{
+            beleihungsauslauf:R.bel,sondertilgungSatzProzent:+sondTP,bewertung:{tier:belTier}
+          });
+          const suggested=[at.finSuggested1,at.finSuggested2,at.finSuggested3];
+          return <AssistantWidget rechner="finanzierung" kontext={kontext} contextLabel={at.contextFinanzierung} suggested={suggested} lang={lang}/>;
+        })()}
       </>}
     </div>
   </div></div>;

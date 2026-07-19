@@ -4,6 +4,8 @@ import { STEUER_T } from "../../i18n/steuerTrick.js";
 import { T } from "../../i18n/translations.js";
 import { fmt } from "../../utils/helpers.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
+import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
+import { ASSISTANT_T } from "../../i18n/assistant.js";
 
 function InfoTooltip({text}){
   const[open,setOpen]=useState(false);
@@ -156,6 +158,19 @@ export function SteuerTrick(){
           </div>
           <div style={{fontSize:11,color:"var(--ch)",textAlign:"center",padding:"4px 16px 8px",lineHeight:1.5}}>{st.disclaimer}</div>
           <ExportPDF title={(T[lang]||T.de).steuer6Full||(T[lang]||T.de).steuer6}/>
+
+          {/* ═══ KI-ASSISTENT (Phase 3, Sprint 5 — Konzept Abschnitt 5) ═══ */}
+          {/* SteuerTrick fuehrt echten lokalen useState (ls/gst/grd), nicht Teil von `d` -
+              Kontext wird deshalb direkt gebaut statt ueber buildAssistantContext(). */}
+          {(()=>{
+            const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
+            const kontext={
+              lohnsteuer,grenzsteuersatzProzent:grenzSatz,grundstueckswert:grundstueck,
+              sanierungskosten:sanK,gebaeudewert:gebW,gesamtkaufpreis:gesKP,bewertung:null
+            };
+            const suggested=[at.steuerSuggested1,at.steuerSuggested2,at.steuerSuggested3];
+            return <AssistantWidget rechner="steuertrick" kontext={kontext} contextLabel={at.contextSteuertrick} suggested={suggested} lang={lang}/>;
+          })()}
         </>:<div style={{...card,textAlign:"center",padding:32}}>
           <div style={{fontSize:32,marginBottom:8}}>🦊</div>
           <div style={{fontSize:15,fontWeight:600,color:"var(--ct)",marginBottom:4}}>{st.emptyTitle}</div>

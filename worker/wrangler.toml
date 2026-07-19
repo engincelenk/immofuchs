@@ -1,0 +1,35 @@
+name = "immofuchs-assistant"
+main = "src/index.ts"
+compatibility_date = "2026-07-19"
+compatibility_flags = ["nodejs_compat"]
+
+# Nicht-geheime Konfiguration. ASSISTANT_ENABLED ist der Kill-Switch aus
+# Konzept 2.8 - fuer "Umschalten ohne Redeploy" ueber das Cloudflare-Dashboard
+# (Workers & Pages -> immofuchs-assistant -> Settings -> Variables) aendern,
+# nicht ueber diese Datei (Aenderung hier braucht einen Redeploy). Siehe README.
+[vars]
+ASSISTANT_ENABLED = "true"
+ALLOWED_ORIGIN = "http://localhost:5173"
+DAILY_REQUEST_LIMIT = "20"
+
+# Workers AI Binding (Llama 3.3, primaerer Pfad fuer DE/EN) - kein API-Key noetig,
+# nur ueber das Cloudflare-Konto freigeschaltet.
+[ai]
+binding = "AI"
+
+# KV-Namespace fuer den Session-Rate-Limit-Zaehler.
+# Vor dem ersten Deploy erzeugen: `npx wrangler kv namespace create RATE_LIMIT_KV`
+# und die zurueckgegebene id hier eintragen.
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Secrets NIE hier eintragen (siehe Konzept 2.10). Stattdessen:
+#   npx wrangler secret put GEMINI_API_KEY
+# Fuer lokale Entwicklung: worker/.dev.vars (siehe .dev.vars.example), nicht eingecheckt.
+
+# Beispiel fuer die Produktions-Domain als eigene Umgebung (Origin fuer CORS):
+# [env.production.vars]
+# ASSISTANT_ENABLED = "true"
+# ALLOWED_ORIGIN = "https://immofuchs.info"
+# DAILY_REQUEST_LIMIT = "20"

@@ -8,6 +8,9 @@ import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
+import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
+import { ASSISTANT_T } from "../../i18n/assistant.js";
+import { buildAssistantContext } from "../../utils/assistantContext.js";
 
 const EC_O=["A+","A","B","C","D","E","F","G","H"];
 const EC_C=["#0D6E3A","#2E9E52","#6DBE45","#A7CE3F","#F7CE1F","#F6A623","#E97020","#DD3A1E","#B01414"];
@@ -28,7 +31,7 @@ function TierSel({value,onChange,tiers}){
 }
 
 export default function Sanier(){
-  const{d,set,t,tip}=useApp();
+  const{d,set,t,tip,lang}=useApp();
   const[view,setView]=useState("input");
   const[act,setAct]=useState({fenster:false,fassade:false,heizung:false,dach:false,tuer:false,pv:false,keller:false,ogdecke:false,batterie:false,lueftung:false});
   const[tier,setTier]=useState({fenster:"s",fassade:"s",heizung:"s",dach:"s",tuer:"s",pv:"s",lueftung:"s"});
@@ -369,6 +372,18 @@ export default function Sanier(){
       <SaveBtn tab="sanier"/>
       <ExportPDF title={t.sanierFull||t.sanier}/>
         <Legal items={LEG.sanier}/>
+
+        {/* ═══ KI-ASSISTENT (Phase 2, Sprint 4 — Konzept Abschnitt 5) ═══ */}
+        {(()=>{
+          const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
+          const kontext=buildAssistantContext("sanierung",d,{
+            gesamtkosten:R.tK,foerderung:R.tFo+R.tFoLand,nettokosten:R.ne,
+            amortisationJahre:R.amJ,energieeinsparungProzent:Math.round((1-R.eM)*100),
+            bewertung:null
+          });
+          const suggested=[at.sanSuggested1,at.sanSuggested2,at.sanSuggested3];
+          return <AssistantWidget rechner="sanierung" kontext={kontext} contextLabel={at.contextSanierung} suggested={suggested} lang={lang}/>;
+        })()}
       </>}
     </div>
   </div></div>;

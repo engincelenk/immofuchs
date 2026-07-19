@@ -13,7 +13,9 @@
       "Bash(awk '{print NR\": \"substr\\($0,1,60\\)}' src/data/plzData.js)",
       "Bash(npm run *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)"
     ]
   }
 }

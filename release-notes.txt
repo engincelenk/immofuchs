@@ -1,3 +1,113 @@
+## 2026-07-19 (1.55.15)
+
+### Neu: KI-Assistent — vollständiger Rollout auf alle sechs Rechner + Merkliste-Vergleich (Sprint 4-6)
+
+Dritter und letzter Umsetzungsschritt aus `docs/plans/2026-07-19-ki-assistent-sprint-plan.md`
+— Phase 2 (Sprint 4) und Phase 3 (Sprint 5+6) auf Nutzerwunsch in einem Zug
+gebaut. Der Ziel-Scope aus Konzept 1.1 ist damit UI-seitig vollständig.
+
+- `AssistantWidget` additiv in `Finanzierung.jsx`, `Miete.jsx`, `Sanier.jsx`,
+  `SteuerTrick.jsx` und `Vorfaelligkeit.jsx` eingehängt — jeweils am Ende der
+  bestehenden Ergebnis-Sektion, keine bestehende Berechnungslogik geändert.
+- Beim Umsetzen festgestellt: `Vorfaelligkeit.jsx` nutzt entgegen der
+  ursprünglichen Konzept-Annahme keinen echten separaten React-State, sondern
+  denselben globalen `d`-Context wie alle anderen Rechner (nur mit
+  `vfe*`-Präfix) — braucht deshalb keinen Sonderpfad, reines Feld-Mapping wie
+  in Phase 2 reicht. Nur `SteuerTrick.jsx` führt echten lokalen State
+  (`ls`/`gst`/`grd`) und baut seinen Kontext direkt inline.
+- `src/utils/assistantContext.js`: `ASSISTANT_FIELDS` um finanzierung, miete,
+  sanierung, vorfaelligkeit ergänzt.
+- `src/i18n/assistant.js`: Kontext-Labels und je 3 Vorschlag-Fragen pro
+  Rechner in allen 5 Sprachen ergänzt (tr/zh/hi weiterhin Best-Effort).
+- **Merkliste-Vergleich** (`Merkliste.jsx`): Checkbox „Zum Vergleich
+  hinzufügen" je Objekt-Karte (max. 5), Button „🦊 Objekte vergleichen (n)"
+  ab 2 Auswahlen, eigener Datenschutz-/Sheet-Flow mit `vergleichsObjekte`-
+  Payload statt `kontext`. Datenschutz-Zustimmung wird geräteweit geteilt
+  (`PRIVACY_SEEN_KEY` aus `AssistantWidget.jsx` exportiert) — einmal
+  bestätigt gilt für alle Einstiegspunkte.
+- `useAssistant.js`/`AssistantSheet.jsx`/`AssistantWidget.jsx` um optionalen
+  `vergleichsObjekte`-Parameter erweitert. Worker brauchte keine Änderung,
+  der API-Contract war dafür bereits in Sprint 1 vorbereitet.
+- Manuell im Dev-Server verifiziert (Mobile-Viewport 390px): alle sechs
+  Rechner zeigen den Chip mit korrektem Kontext-Tag und rechnerspezifischen
+  Vorschlag-Chips; Merkliste-Vergleich mit 2 gespeicherten Objekten
+  (Rendite + Finanzierung) durchgeklickt — Compare-Sheet öffnet korrekt mit
+  „Bezieht sich auf: Objektvergleich" und den beiden Vergleichs-Chips.
+- `npm run build` erfolgreich (weiterhin 71 Module, nur bestehende Dateien
+  erweitert, keine neuen Komponenten-Dateien in diesem Schritt).
+
+**Bekannte, nicht blockierende Lücken:** kein Pro-Rechner-Kill-Switch (nur
+global), Assistent in `Vorfaelligkeit.jsx` nicht im „§489 kostenlos
+kündbar"-Sonderfall eingebaut, tr/zh/hi weiterhin ungegengelesen.
+
+**Weiterhin offen, außerhalb dieser Session lösbar:** echter Worker-Deploy
+(Cloudflare-Login durch den Nutzer) und das Go-Live-Gate (DSGVO/AVV) vor
+Nutzung mit echten Nutzerdaten — siehe `worker/README.md` und Sprint-Plan.
+
+## 2026-07-19 (1.55.14)
+
+### Neu: KI-Assistent — Frontend Pilot im Renditerechner (Sprint 2+3)
+
+Zweiter Umsetzungsschritt aus `docs/plans/2026-07-19-ki-assistent-sprint-plan.md`,
+Phase 1 (Pilot Renditerechner). Rein additiv — keine bestehende Rechner-Logik
+geändert, nur neue Dateien + ein zusätzlicher Block am Ende der
+Renditerechner-Ergebnis-Sektion.
+
+- Neue Komponenten unter `src/components/assistant/`: `AssistantChip.jsx`
+  (Trigger mit einmaligem Puls-Effekt), `PrivacyIntro.jsx`
+  (Datenschutz-Erstkontakt), `AssistantSheet.jsx` (Chat — Bottom-Sheet mobil,
+  Side-Panel ab 1024px), `ChatBubble.jsx`, `SuggestedQuestionChip.jsx` und
+  `AssistantWidget.jsx` als generischer Orchestrator (für Phase 2/3
+  wiederverwendbar ohne Strukturumbau).
+- Neuer Hook `src/hooks/useAssistant.js`: Fetch-Logik gegen
+  `VITE_ASSISTANT_URL`, Session-ID, Statusmaschine
+  (idle/loading/error/limit/offline/disabled), Retry ohne Doppel-Frage.
+- Neue Dateien `src/utils/assistantContext.js` (Datensparsamkeit —
+  nur relevante Rechnerfelder + BANDS-Bewertung gehen raus) und
+  `src/i18n/assistant.js` (alle 5 Sprachen: de/en/tr/zh/hi — tr/zh/hi sind
+  Best-Effort, vor Go-Live von Muttersprachlern gegenlesen lassen).
+- Accessibility: `role="dialog"`, Fokus-Trap, `Escape` schließt, `aria-live`
+  für neue Chat-Antworten, `inert` auf geschlossenem Sheet,
+  `prefers-reduced-motion` respektiert (erster sauberer Präzedenzfall dafür
+  im Projekt, siehe Konzept 3.8).
+- Manuell im Dev-Server getestet (Mobile 375px + Desktop 1280px): Chip-Puls
+  nur beim ersten Erscheinen, Datenschutz-Hinweis nur einmalig, Sheet öffnet/
+  schließt korrekt, Vorschlag-Chip sendet Frage, Fehlerzustand mit
+  Retry-Button greift sauber (da noch kein Worker deployed ist), Desktop
+  wechselt korrekt auf Side-Panel.
+- `npm run build` erfolgreich (71 statt 62 Module, keine neuen Warnungen).
+- **Noch nicht live testbar:** echte Modell-Antworten, Limit-/Offline-/
+  Disabled-Zustand — dafür muss der Worker aus 1.55.13 erst deployed werden
+  (`worker/README.md`, Cloudflare-Login durch den Nutzer nötig).
+
+## 2026-07-19 (1.55.13)
+
+### Neu: KI-Assistent — Worker-Grundgerüst (Backend, kein Frontend-Code geändert)
+
+Erster Umsetzungsschritt aus `docs/plans/2026-07-19-ki-assistent-sprint-plan.md`,
+Phase 0 / Sprint 1 (Stories S1.1–S1.3). Reine Backend-Infrastruktur in einem
+neuen, getrennten `/worker`-Ordner — die eigentliche App (`src/`) ist davon
+nicht berührt, keine bestehende Datei geändert.
+
+- Neuer Cloudflare-Worker-Ordner `worker/` mit eigenem `package.json` und
+  `wrangler.toml`, unabhängig vom Frontend-Stack (React+Vite+Tailwind bleibt
+  unangetastet, siehe CLAUDE.md-Grundregel).
+- `POST /api/assistant`-Handler (`worker/src/index.ts`) inkl. Input-Validator,
+  KV-basiertem Rate-Limiter (20 Anfragen/Tag/Session), Kill-Switch
+  (`ASSISTANT_ENABLED`, ohne Redeploy über Cloudflare-Dashboard schaltbar)
+  und CORS-Absicherung auf eine erlaubte Origin.
+- Model-Router (`modelRouter.ts`): DE/EN → Workers AI (Llama 3.3), TR/ZH/HI →
+  Gemini Flash-Lite — austauschbar ohne Code-Umbau.
+- System-Prompt 1:1 aus dem Konzept übernommen (`systemPrompt.ts`) plus
+  Output-Filter (`outputFilter.ts`) als zusätzliches Sicherheitsnetz gegen
+  Kaufempfehlungen/Rechtsaussagen in der Modell-Antwort.
+- IMP-01 (BANDS-System) beim Prüfen als bereits gelöst festgestellt
+  (`src/utils/bands.js` existiert vollständig) — Sprint-Plan entsprechend
+  korrigiert, kein separater Sprint 0a nötig.
+- Verifiziert: `npm run typecheck` (Worker) fehlerfrei, `wrangler deploy
+  --dry-run` bündelt ohne Fehler. **Noch offen:** echter Deploy/Live-Test
+  braucht Cloudflare-Login durch den Nutzer (Details in `worker/README.md`).
+
 ## 2026-07-19 (1.55.12)
 
 ### Fix: LineChart komplett entfernt, doppeltes Investment-Check-Heading, abgeschnittene Radar-Labels
