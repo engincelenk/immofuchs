@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { Tip } from "./Tip.jsx";
 

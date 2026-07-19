@@ -15,6 +15,7 @@ import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SelbsttraegerCheck, BreakEvenCards } from "./SelbsttraegerCheck.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
 import { Legal } from "../ui/LangSel.jsx";
+import { buildMP } from "./Miete.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 
 export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,setView]=useState("input");const[secAllOpen,setSecAllOpen]=useState(false);const[secAllKey,setSecAllKey]=useState(0);
