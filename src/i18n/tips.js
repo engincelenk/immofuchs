@@ -1,3 +1,5 @@
+import { MARKET_RATES } from "../data.js";
+
 export const TIPS={
   de:{
     kaufpreis:"Vereinbarter Kaufpreis ohne Kaufnebenkosten.",
