@@ -105,7 +105,7 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
         .if-asst-close:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
         .if-asst-handle{width:36px;height:4px;border-radius:2px;background:var(--cb);margin:10px auto 4px;flex:none}
         .if-asst-context{font-size:11px;color:var(--ch);text-align:center;padding:2px 16px 8px;flex:none}
-        .if-asst-log{flex:1;overflow-y:auto;padding:4px 14px;display:flex;flex-direction:column;gap:10px}
+        .if-asst-log{flex:1;min-height:0;overflow-y:auto;padding:4px 14px;display:flex;flex-direction:column;gap:10px}
         .if-asst-suggested{flex:none;display:flex;gap:8px;padding:2px 14px 10px;overflow-x:auto}
         .if-asst-sugg-chip:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
         .if-asst-input-row{flex:none;display:flex;gap:8px;padding:10px 14px calc(16px + env(safe-area-inset-bottom))}

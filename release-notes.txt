@@ -1,3 +1,28 @@
+## 2026-07-19 (1.55.18)
+
+### Fix: Chat-Fenster im KI-Assistenten nicht scrollbar (oben abgeschnitten)
+
+Nutzer-Feedback: Nach der ersten echten KI-Antwort im Browser war das
+Chat-Fenster nicht scrollbar, oberer Inhalt (Drag-Handle, Kontext-Tag,
+Schließen-Button) wirkte abgeschnitten.
+
+- **Ursache:** Klassischer Flexbox-Bug — `.if-asst-log` (der eigentliche
+  Chat-Verlauf-Container) hatte `flex:1; overflow-y:auto`, aber kein
+  `min-height:0`. Ohne das behält ein Flex-Kind in einer Column-Flexbox seine
+  intrinsische Inhaltshöhe (`min-height:auto`), wächst also über den fest
+  begrenzten Sheet-Container (`height:82vh`) hinaus, statt intern zu scrollen
+  — der überschüssige Inhalt wurde nach oben aus dem sichtbaren Bereich
+  gedrückt, ohne Möglichkeit hinzuscrollen.
+- **Fix:** `min-height:0` zu `.if-asst-log` in `AssistantSheet.jsx` ergänzt —
+  eine Zeile, Standard-Fix für dieses Flexbox-Verhalten.
+- `npm run build` erfolgreich.
+
+**Ab dieser Version:** Arbeit am KI-Assistenten geht auf `Immofuchs-dev`
+statt `Immofuchs-qa`, bis die Implementierung abgeschlossen ist (Nutzer-
+Entscheidung 2026-07-19). `Immofuchs-dev` wurde dafür per Fast-Forward auf
+den aktuellen `Immofuchs-qa`-Stand gebracht (verlustfrei, keine Commits
+zurückgesetzt).
+
 ## 2026-07-19 (1.55.17)
 
 ### Fix: CSP blockierte KI-Assistent-Anfragen im echten Browser
