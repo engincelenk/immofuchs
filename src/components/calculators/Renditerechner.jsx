@@ -8,7 +8,7 @@ import { rate, vrd } from "../../utils/bands.js";
 import { F, Sel, Row, Sec, Ins, VT, AmpelKPI, NeutralKPI } from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
 import { RBar } from "../charts/RBar.jsx";
-import { LineChart } from "../charts/LineChart.jsx";
+import { InvestmentCheckRadar } from "../charts/InvestmentCheckRadar.jsx";
 import { YearTable } from "../tables/YearTable.jsx";
 import { Detail } from "../tables/Detail.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -389,7 +389,6 @@ export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp(
         {/* ═══ SECTION 5: Zeitverlauf ═══ */}
         <AccordionSection question={t.sec5Q} hint={t.sec5Hint} sync={{key:secAllKey,open:secAllOpen}}>
           <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 8px"}}>{t.sec5Sub}</div>
-          <LineChart rows={R.yearRows} zbJ={+d.zinsbindung||10}/>
           <YearTable rows={R.yearRows} zbJ={+d.zinsbindung||10}/>
           {lang==='de'&&<SectionExplain
             bullets={[
@@ -415,104 +414,67 @@ export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp(
           {(()=>{const aktQm=(+d.kaltmiete)/(+d.flaeche||1);const vglQm=+d.vergleichsmiete||0;const gapPct=vglQm>0&&aktQm<vglQm?(vglQm-aktQm)/vglQm*100:0;return <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid var(--cb)"}}><p style={{fontSize:11,color:"var(--ch)",lineHeight:1.6,margin:"0 0 8px"}}>{lang==='de'?(gapPct>0.5?`Deine Miete liegt ${fmt(gapPct,0)} % unter der Vergleichsmiete (${fmtE(Math.round(vglQm*(+d.flaeche||0)))}/Mon.) — § 558 erlaubt eine schrittweise Angleichung.`:`Deine Miete liegt auf Vergleichsniveau — prüfe wann die nächste Anpassung möglich ist.`):(gapPct>0.5?`Your rent is ${fmt(gapPct,0)} % below the reference rent (${fmtE(Math.round(vglQm*(+d.flaeche||0)))}/mo.) — § 558 allows a step-by-step adjustment.`:`Your rent is at reference level — check when the next increase is due.`)}</p><button onClick={()=>setTabExt("miete")} style={{fontSize:11,fontWeight:600,color:"var(--ca)",background:"var(--ca-bg)",border:"1px solid var(--ca-bd)",borderRadius:20,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>📈 {t.mieteFull||t.miete} →</button></div>;})()}
         </AccordionSection>
 
-        {/* ═══ SECTION 6: Was bleibt am Ende? ═══ */}
+        {/* ═══ SECTION 6: Investment-Check (Radar) ═══ */}
+        <AccordionSection question={t.radarTitle||"Investment-Check"} hint={t.radarSub} sync={{key:secAllKey,open:secAllOpen}}>
+          <InvestmentCheckRadar R={R} d={d}/>
+        </AccordionSection>
+
+        {/* ═══ SECTION 7: Verkaufsszenario & Ergebnis ═══ */}
         {(()=>{
-          const gCol=rate('gesamtSaldo',R.g).color;
           const ampelHex=R.g>=0?"#22c55e":"#ef4444";
-          const intro=R.g>=0?t.sec6GreenG:t.sec6RedG;
-          return <AccordionSection question={t.sec6Q} hint={t.sec6Hint} color={ampelHex} sync={{key:secAllKey,open:secAllOpen}}>
-            <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 10px"}}>{intro}</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginBottom:10}}>
-              <div style={{background:(R.gOhne||0)>=0?"rgba(34,197,94,.08)":"rgba(239,68,68,.08)",borderRadius:12,border:`0.5px solid ${(R.gOhne||0)>=0?"#22c55e44":"#ef444444"}`,borderTop:`5px solid ${(R.gOhne||0)>=0?"#22c55e":"#ef4444"}`,padding:"12px 14px"}}>
-                <div style={{fontSize:10,fontWeight:600,color:"var(--ch)",textTransform:"uppercase",letterSpacing:.7,marginBottom:4}}>{t.saldoOhne}</div>
-                <div style={{fontSize:22,fontWeight:700,color:(R.gOhne||0)>=0?"#15803d":"#b91c1c",fontVariantNumeric:"tabular-nums"}}>{(R.gOhne||0)>=0?"+":""}{fmtE(R.gOhne||0)}</div>
-                <div style={{fontSize:10,color:"var(--ch)",marginTop:3,lineHeight:1.5}}>{t.sec6SaldoOhneHint}</div>
-                <div style={{fontSize:10,color:"var(--ch)",marginTop:2}}>EK-R: {fmtP(+d.eigenkapital>0?(R.gOhne||0)/(+d.eigenkapital)*100:0,1)} p.a.</div>
-              </div>
-              <div style={{background:R.g>=0?"rgba(34,197,94,.08)":"rgba(239,68,68,.08)",borderRadius:12,border:`0.5px solid ${R.g>=0?"#22c55e44":"#ef444444"}`,borderTop:`5px solid ${R.g>=0?"#22c55e":"#ef4444"}`,padding:"12px 14px"}}>
-                <div style={{fontSize:10,fontWeight:600,color:"var(--ch)",textTransform:"uppercase",letterSpacing:.7,marginBottom:4}}>{t.saldoMit}</div>
-                <div style={{fontSize:22,fontWeight:700,color:R.g>=0?"#15803d":"#b91c1c",fontVariantNumeric:"tabular-nums"}}>{R.g>=0?"+":""}{fmtE(R.g)}</div>
-                <div style={{fontSize:10,color:"var(--ch)",marginTop:3,lineHeight:1.5}}>{t.sec6SaldoMitHint}</div>
-                <div style={{fontSize:10,color:"var(--ch)",marginTop:2}}>EK-R: {fmtP(+d.eigenkapital>0?R.g/(+d.eigenkapital)*100:0,1)} p.a.</div>
-              </div>
-            </div>
+          const ekRpa=(+d.eigenkapital)>0?R.g/(+d.eigenkapital)/R.j*100:0;
+          const ekRpaOhne=(+d.eigenkapital)>0?(R.gOhne||0)/(+d.eigenkapital)/R.j*100:0;
+          const ekRCol=rate('ekRendite',ekRpa).color;
+          return <AccordionSection question={t.sec7Q.replace('{j}',String(R.j))} hint={t.sec7Hint} color={ampelHex} sync={{key:secAllKey,open:secAllOpen}}>
+            <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 8px"}}>{t.sec7Sub.replace(/\{j\}/g,String(R.j))}</div>
+            <Detail R={R} d={d}/>
             {R.g>=0&&<div style={{marginTop:4}}><Ins emoji="🎯" text={`${t.positivSaldo}: ${fmtE(R.g)} — ${R.j} ${t.jPl}`} type="good"/></div>}
             {R.g<0&&<div style={{marginTop:4}}><Ins emoji="🚫" text={`${t.saldoMit}: ${fmtE(Math.abs(R.g))} — ${t.kaufpreis}, ${t.kaltmiete}, ${t.eigenkapital}`} type="bad"/></div>}
-            {(()=>{
-              const ekRpa=(+d.eigenkapital)>0?R.g/(+d.eigenkapital)/R.j*100:0;
-              const ekRpaOhne=(+d.eigenkapital)>0?(R.gOhne||0)/(+d.eigenkapital)/R.j*100:0;
-              const ekRCol=rate('ekRendite',ekRpa).color;
-              return <>
-                <div style={{marginTop:10}}>
-                  <div style={{fontSize:10,fontWeight:600,color:"var(--ch)",textTransform:"uppercase",letterSpacing:.7,marginBottom:6}}>{t.ekRTitle||"EK-Rendite p.a."}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
-                    <AmpelKPI label={t.ekRMit||"EK-Rendite mit Steuer"} value={fmtP(ekRpa,2)}
-                      color={ekRCol}
-                      statusLabel={ekRCol==="green"?(t.badgeGut||"Stark"):ekRCol==="yellow"?(t.badgeOkay||"Moderat"):(t.badgeKrit||"Schwach")}
-                      status={tpl(t.ekRHorizon||"{j} Jahre Anlagehorizont",{j:R.j})}
-                      tip={tpl(t.ekRTip1||"Dein Eigenkapital ({ek}) wächst mit {p} p.a. — zum Vergleich: ETF historisch ~7%",{ek:fmtE(+d.eigenkapital||0),p:fmtP(ekRpa,2)})}/>
-                    <AmpelKPI label={t.ekROhne||"EK-Rendite ohne Steuer"} value={fmtP(ekRpaOhne,2)}
-                      color={rate('ekRendite',ekRpaOhne).color}
-                      statusLabel={rate('ekRendite',ekRpaOhne).tier==="green"?(t.badgeGut||"Stark"):rate('ekRendite',ekRpaOhne).tier==="yellow"?(t.badgeOkay||"Moderat"):(t.badgeKrit||"Schwach")}
-                      status={t.ekRConserv||"Konservative Betrachtung"}
-                      tip={t.ekRTip2||"Ohne Steuerbonus — für Geringverdiener oder Basis-Szenario"}/>
-                  </div>
-                </div>
-                {lang==='de'&&<SectionExplain
-                  bullets={(()=>{const gR=rate('gesamtSaldo',R.g);const ekR=rate('ekRendite',ekRpa);const waR=rate('wertAnnahme',+d.wertP||0);return[
-                    `${gR.symbol} Gesamtsaldo mit Steuer: ${R.g>=0?"+":""}${fmtE(R.g)} — ${R.g>=0?'positiv → gut':'negativ → kritisch'} über ${R.j} Jahre`,
-                    `${ekR.symbol} EK-Rendite p.a. (mit Steuer): ${fmtP(ekRpa,2)} — ${ekRpa>=6?'≥ 6 % stark':ekRpa>=3?'3–6 % grenzwertig':'unter 3 %'} → ${vrd(ekR)} (ETF ~7 %)`,
-                    `${waR.symbol} Wertsteigerungsannahme ${fmtP(+d.wertP||0,1)} p.a. — ${(+d.wertP||0)<=2.5?'konservativ ≤ 2,5 %':(+d.wertP||0)<=4?'ambitioniert 2,5–4 %':'>4 % optimistisch'} → ${vrd(waR)}`,
-                    `Formel: (${fmtE(R.vw)} Verkaufserlös − ${fmtE(R.rsEnd)} Restschuld) + ${fmtE(R.sCF)} kum. CF − ${fmtE((+d.eigenkapital||0)+R.nbk+(+d.sonder||0)+(+d.renovierung||0))} Investition`,
-                    ...(R.rsEnd>0?[`Restschuld bei Verkauf: ${fmtE(R.rsEnd)} — muss aus dem Verkaufserlös getilgt werden`]:["Darlehen vollständig abbezahlt!"]),
-                    `Kum. Cashflow: ${R.sCF>=0?"+":""}${fmtE(R.sCF)} — ${R.sCF>=0?"netto Geld verdient":"netto Geld reingesteckt"}`
-                  ]})()}
-                  text={
-                    `Das Gesamtergebnis ist die ehrlichste Zahl in diesem Rechner — hier wird alles zusammengezählt. Die Formel in Klartext: Du nimmst den geschätzten Verkaufserlös (${fmtE(R.vw)}), ziehst die Restschuld ab (${fmtE(R.rsEnd)}), addierst alle kumulierten Cashflows der ${R.j} Jahre (${R.sCF>=0?"+":""}${fmtE(R.sCF)}), und ziehst dann alles ab, was du anfangs reingesteckt hast: Eigenkapital, Kaufnebenkosten, Sonderumlage, Renovierung.\n\n${R.g>=0?"Das Ergebnis ist positiv — die Immobilie hat sich gelohnt. Du hast mehr rausgeholt als reingesteckt.":"Das Ergebnis ist negativ — nach aktuellem Stand hast du mehr investiert als du am Ende zurückbekommst. Das kann sich ändern, wenn die Wertsteigerung höher ausfällt oder du die Mieteinnahmen steigern kannst."}\n\nDie EK-Rendite p.a. macht das Ergebnis vergleichbar: Dein eingesetztes Eigenkapital von ${fmtE(+d.eigenkapital||0)} wächst mit ${fmtP(ekRpa,2)} pro Jahr — ${ekRpa>=7?"Das ist exzellent und schlägt historisch sogar einen ETF.":ekRpa>=5?"Das ist solide. Ein ETF bringt historisch ~7%, aber ohne Hebeleffekt und ohne die Stabilität einer Sachwertanlage.":ekRpa>=3?"Das ist okay, aber schwach für eine Immobilie mit Finanzierungsrisiko. Prüfe ob die Annahmen realistisch sind.":"Das ist schwach. Überleg ob Kaufpreis, Miete oder Finanzierung besser gestellt werden kann."}\n\nStellschrauben: Den Anlagehorizont verlängern (mehr Jahre = mehr Tilgung + mehr Wertsteigerung). Die Wertsteigerungsannahme realistisch halten (2–3% p.a. sind historisch solide für gute Lagen). Cashflow optimieren (weniger Leerstand, regelmäßige Mietanpassungen). Sondertilgungen nutzen, um die Restschuld zu drücken.`
-                }
-                />}
-                {lang!=='de'&&t.s6b1&&<SectionExplain
-                  bullets={[
-                    tpl(t.s6b1,{a:(R.g>=0?'+':'')+fmtE(R.g),j:R.j}),
-                    tpl(t.s6b2,{vw:fmtE(R.vw),rs:fmtE(R.rsEnd),cf:fmtE(R.sCF),inv:fmtE((+d.eigenkapital||0)+R.nbk+(+d.sonder||0)+(+d.renovierung||0))}),
-                    tpl(t.s6b3,{a:fmtE(R.w),j:R.j,p:fmtP(+d.wertP||0)}),
-                    tpl(t.s6b4,{a:fmtP(ekRpa,2)}),
-                    ...(R.rsEnd>0?[tpl(t.s6b5n,{a:fmtE(R.rsEnd)})]:[t.s6b5p]),
-                    R.sCF>=0?tpl(t.s6b6p,{a:fmtE(R.sCF)}):tpl(t.s6b6n,{a:fmtE(R.sCF)}),
-                  ]}
-                  text={tpl(t.s6t1,{vw:fmtE(R.vw),rs:fmtE(R.rsEnd),cf:fmtE(R.sCF)})+'\n\n'+(R.g>=0?t.s6t2p:t.s6t2n)+'\n\n'+(()=>{const r=ekRpa;return r>7?tpl(t.s6t3a,{a:fmtP(r,2)}):r>4?tpl(t.s6t3b,{a:fmtP(r,2)}):r>2?tpl(t.s6t3c,{a:fmtP(r,2)}):tpl(t.s6t3d,{a:fmtP(r,2)})})()}
-                />}
-              </>;
-            })()}
-                    </AccordionSection>;
+            <div style={{marginTop:10}}>
+              <div style={{fontSize:10,fontWeight:600,color:"var(--ch)",textTransform:"uppercase",letterSpacing:.7,marginBottom:6}}>{t.ekRTitle||"EK-Rendite p.a."}</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+                <AmpelKPI label={t.ekRMit||"EK-Rendite mit Steuer"} value={fmtP(ekRpa,2)}
+                  color={ekRCol}
+                  statusLabel={ekRCol==="green"?(t.badgeGut||"Stark"):ekRCol==="yellow"?(t.badgeOkay||"Moderat"):(t.badgeKrit||"Schwach")}
+                  status={tpl(t.ekRHorizon||"{j} Jahre Anlagehorizont",{j:R.j})}
+                  tip={tpl(t.ekRTip1||"Dein Eigenkapital ({ek}) wächst mit {p} p.a. — zum Vergleich: ETF historisch ~7%",{ek:fmtE(+d.eigenkapital||0),p:fmtP(ekRpa,2)})}/>
+                <AmpelKPI label={t.ekROhne||"EK-Rendite ohne Steuer"} value={fmtP(ekRpaOhne,2)}
+                  color={rate('ekRendite',ekRpaOhne).color}
+                  statusLabel={rate('ekRendite',ekRpaOhne).tier==="green"?(t.badgeGut||"Stark"):rate('ekRendite',ekRpaOhne).tier==="yellow"?(t.badgeOkay||"Moderat"):(t.badgeKrit||"Schwach")}
+                  status={t.ekRConserv||"Konservative Betrachtung"}
+                  tip={t.ekRTip2||"Ohne Steuerbonus — für Geringverdiener oder Basis-Szenario"}/>
+              </div>
+            </div>
+            {lang==='de'&&<SectionExplain
+              bullets={(()=>{const gR=rate('gesamtSaldo',R.g);const ekR=rate('ekRendite',ekRpa);const waR=rate('wertAnnahme',+d.wertP||0);return[
+                `Verkaufswert in Jahr ${R.j}: ${fmtE(R.vw)} (Wertsteigerung: ${fmtP(+d.wertP||0,1)} p.a.)`,
+                R.rsEnd>0?`Restschuld beim Verkauf: ${fmtE(R.rsEnd)} — wird aus dem Verkaufserlös getilgt`:"Darlehen vollständig abbezahlt — keine Restschuld beim Verkauf",
+                `Nettoerlös nach Tilgung: ${fmtE(R.vw-R.rsEnd)}`,
+                `${gR.symbol} Gesamtergebnis mit Steuer: ${R.g>=0?"+":""}${fmtE(R.g)} — ${R.g>=0?'positiv → gut':'negativ → kritisch'} über ${R.j} Jahre`,
+                `${ekR.symbol} EK-Rendite p.a. (mit Steuer): ${fmtP(ekRpa,2)} — ${vrd(ekR)} (ETF ~7 %)`,
+                `${waR.symbol} Wertsteigerungsannahme ${fmtP(+d.wertP||0,1)} p.a. — ${(+d.wertP||0)<=2.5?'konservativ ≤ 2,5 %':(+d.wertP||0)<=4?'ambitioniert 2,5–4 %':'>4 % optimistisch'} → ${vrd(waR)}`,
+                `Kum. Cashflow: ${R.sCF>=0?"+":""}${fmtE(R.sCF)} — ${R.sCF>=0?"netto Geld verdient":"netto Geld reingesteckt"}`,
+                `Maklerkosten beim Verkauf nicht eingerechnet — in der Praxis nochmals 3–7% des Verkaufspreises`,
+                R.j>10?"Spekulationsfrist von 10 Jahren überschritten: kein Verkaufsgewinn versteuern!":"Spekulationsfrist läuft noch — Verkaufsgewinne werden mit dem Steuersatz versteuert"
+              ]})()}
+              text={
+                `Die Tabelle rechnet transparent vor, was am Ende bleibt: Verkaufserlös minus Restschuld ergibt den Nettoerlös. Davon ziehst du ab, was du ursprünglich investiert hast — Eigenkapital, Kaufnebenkosten, Sonderumlage, Renovierung. Was übrig bleibt, plus der kumulierte Cashflow der ${R.j} Jahre, ist dein Gesamtergebnis — einmal ohne und einmal mit Steuervorteil.\n\nBesonders wichtig: Vergleiche den geschätzten Marktwert (${fmtE(R.vw)}) mit der Restschuld (${fmtE(R.rsEnd)}). Wenn die Restschuld höher ist als der Marktpreis, hast du ein Problem — du kannst die Immobilie nicht ohne Verlust verkaufen. Das kommt bei sehr hohem Beleihungsauslauf und geringen Tilgungsraten vor, vor allem wenn die Immobilienpreise fallen.\n\n${R.g>=0?"Das Ergebnis ist positiv — die Immobilie hat sich gelohnt. Du hast mehr rausgeholt als reingesteckt.":"Das Ergebnis ist negativ — nach aktuellem Stand hast du mehr investiert als du am Ende zurückbekommst. Das kann sich ändern, wenn die Wertsteigerung höher ausfällt oder du die Mieteinnahmen steigern kannst."} Die EK-Rendite p.a. macht das vergleichbar: Dein eingesetztes Eigenkapital von ${fmtE(+d.eigenkapital||0)} wächst mit ${fmtP(ekRpa,2)} pro Jahr — ${ekRpa>=7?"Das ist exzellent und schlägt historisch sogar einen ETF.":ekRpa>=5?"Das ist solide. Ein ETF bringt historisch ~7%, aber ohne Hebeleffekt und ohne die Stabilität einer Sachwertanlage.":ekRpa>=3?"Das ist okay, aber schwach für eine Immobilie mit Finanzierungsrisiko. Prüfe ob die Annahmen realistisch sind.":"Das ist schwach. Überleg ob Kaufpreis, Miete oder Finanzierung besser gestellt werden kann."}\n\n${R.j>10?"Steuerlich interessant: Nach 10 Jahren Haltedauer ist der Verkaufsgewinn bei Privatpersonen steuerfrei (§23 EStG Spekulationsfrist). Das kann bei guter Wertsteigerung Tausende von Euro Steuerersparnis bedeuten.":"Achtung: Du bist noch innerhalb der 10-Jahres-Spekulationsfrist. Wenn du die Immobilie jetzt verkaufst, wird der Gewinn mit deinem Steuersatz besteuert — das kann ein erheblicher Abzug sein."} Denk auch an die Verkaufskosten: Makler (3–7% des Verkaufspreises), Notar, Grundbuch — die sind hier nicht eingerechnet, schmälern aber den Nettoerlös deutlich.\n\nStellschrauben: Den Anlagehorizont verlängern (mehr Jahre = mehr Tilgung + mehr Wertsteigerung). Die Wertsteigerungsannahme realistisch halten (2–3% p.a. sind historisch solide für gute Lagen). Cashflow optimieren (weniger Leerstand, regelmäßige Mietanpassungen). Sondertilgungen nutzen, um die Restschuld zu drücken.`
+              }
+            />}
+            {lang!=='de'&&t.s7b1&&<SectionExplain
+              bullets={[
+                tpl(t.s7b1,{j:R.j,vw:fmtE(R.vw),p:fmtP(+d.wertP||0,1)}),
+                R.rsEnd>0?tpl(t.s7b2a,{a:fmtE(R.rsEnd)}):tpl(t.s7b2b,{a:fmtE(R.rsEnd)}),
+                tpl(t.s7b3,{a:fmtE(R.vw-R.rsEnd)}),
+                tpl(t.s6b1,{a:(R.g>=0?'+':'')+fmtE(R.g),j:R.j}),
+                tpl(t.s6b4,{a:fmtP(ekRpa,2)}),
+                t.s7b4,
+                R.j>10?t.s7b5p:t.s7b5n,
+              ]}
+              text={tpl(t.s7t1,{vw:fmtE(R.vw),p:fmtP(+d.wertP||0,1)})+'\n\n'+tpl(t.s7t2,{vw:fmtE(R.vw),rs:fmtE(R.rsEnd)})+'\n\n'+(R.g>=0?t.s6t2p:t.s6t2n)+'\n\n'+(R.j>10?t.s7t3p:t.s7t3n)+'\n\n'+t.s7t4}
+            />}
+          </AccordionSection>;
         })()}
-
-        {/* ═══ SECTION 7: Verkaufsszenario ═══ */}
-        <AccordionSection question={t.sec7Q.replace('{j}',String(R.j))} hint={t.sec7Hint} sync={{key:secAllKey,open:secAllOpen}}>
-          <div style={{fontSize:12,color:"var(--ch)",lineHeight:1.6,padding:"12px 4px 8px"}}>{t.sec7Sub.replace(/\{j\}/g,String(R.j))}</div>
-          <Detail R={R} d={d} hideSaldo={true}/>
-          {lang==='de'&&<SectionExplain
-            bullets={[
-              `Geschätzter Verkaufswert in Jahr ${R.j}: ${fmtE(R.vw)} (Wertsteigerung: ${fmtP(+d.wertP||0,1)} p.a.)`,
-              `Restschuld beim Verkauf: ${fmtE(R.rsEnd)}${R.rsEnd>0?" — wird aus dem Verkaufserlös getilgt":""}`,
-              `Nettoerlös nach Tilgung: ${fmtE(R.vw-R.rsEnd)}`,
-              `Maklerkosten beim Verkauf nicht eingerechnet — in der Praxis nochmals 3–7% des Verkaufspreises`,
-              `${(R.j>10?"Spekulationsfrist von 10 Jahren überschritten: kein Verkaufgewinn versteuern!":"Spekulationsfrist läuft noch — Verkaufsgewinne werden mit dem Steuersatz versteuert")}`
-            ]}
-            text={`Die Tabelle zeigt alle Bestandteile deines Verkaufserlöses im Detail — aufgeschlüsselt für jeden Bestandteil des Ergebnisses. Der Kaufwert nach ${R.j} Jahren ist eine Schätzung auf Basis der eingegebenen Wertsteigerungsrate von ${fmtP(+d.wertP||0,1)} p.a. — das ist keine Garantie, sondern ein Planungsszenario.\n\nBesonders wichtig: Vergleiche den geschätzten Marktwert (${fmtE(R.vw)}) mit der Restschuld (${fmtE(R.rsEnd)}). Wenn die Restschuld höher ist als der Marktpreis, hast du ein Problem — du kannst die Immobilie nicht ohne Verlust verkaufen. Das kommt bei sehr hohem Beleihungsauslauf und geringen Tilgungsraten vor, vor allem wenn die Immobilienpreise fallen.\n\n${R.j>10?"Steuerlich interessant: Nach 10 Jahren Haltedauer ist der Verkaufsgewinn bei Privatpersonen steuerfrei (§23 EStG Spekulationsfrist). Das kann bei guter Wertsteigerung Tausende von Euro Steuerersparnis bedeuten.":"Achtung: Du bist noch innerhalb der 10-Jahres-Spekulationsfrist. Wenn du die Immobilie jetzt verkaufst, wird der Gewinn mit deinem Steuersatz besteuert — das kann ein erheblicher Abzug sein."}\n\nDenk auch an die Verkaufskosten: Makler (3–7% des Verkaufspreises), Notar, Grundbuch. Die sind in diesem Rechner nicht eingerechnet, schmälern aber den Nettoerlös deutlich.`
-          }
-          />}
-          {lang!=='de'&&t.s7b1&&<SectionExplain
-            bullets={[
-              tpl(t.s7b1,{j:R.j,vw:fmtE(R.vw),p:fmtP(+d.wertP||0,1)}),
-              R.rsEnd>0?tpl(t.s7b2a,{a:fmtE(R.rsEnd)}):tpl(t.s7b2b,{a:fmtE(R.rsEnd)}),
-              tpl(t.s7b3,{a:fmtE(R.vw-R.rsEnd)}),
-              t.s7b4,
-              R.j>10?t.s7b5p:t.s7b5n,
-            ]}
-            text={tpl(t.s7t1,{vw:fmtE(R.vw),p:fmtP(+d.wertP||0,1)})+'\n\n'+tpl(t.s7t2,{vw:fmtE(R.vw),rs:fmtE(R.rsEnd)})+'\n\n'+(R.j>10?t.s7t3p:t.s7t3n)+'\n\n'+t.s7t4}
-          />}
-        </AccordionSection>
 
         <SaveBtn tab="haupt"/>
         <ExportPDF title={t.hauptFull||t.haupt}/>

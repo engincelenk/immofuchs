@@ -32,3 +32,25 @@ export function rate(kpi,wert){
   return{tier,symbol,color};
 }
 export const vrd=r=>r.tier==='green'?'gut':r.tier==='yellow'?'grenzwertig':'kritisch';
+
+// ═══ 0–100 Score für Radar-/Gauge-Darstellungen, abgeleitet aus denselben BANDS-Schwellen ═══
+// Rein additiv — ändert nichts an AMPEL/BANDS/rate/vrd.
+export function scoreKpi(kpi,value){
+  const b=BANDS[kpi];
+  if(!b||value==null||!isFinite(value))return 50;
+  const{dir,green,yellow}=b;
+  if(yellow==null){
+    const spread=Math.abs(green)||1;
+    const s=dir==='up'?(value-green+spread)/spread*100:(green+spread-value)/spread*100;
+    return Math.max(0,Math.min(100,s));
+  }
+  let s;
+  if(dir==='up'){
+    const redAnchor=yellow-(green-yellow);
+    s=(value-redAnchor)/(green-redAnchor)*100;
+  }else{
+    const redAnchor=yellow+(yellow-green);
+    s=(redAnchor-value)/(redAnchor-green)*100;
+  }
+  return Math.max(0,Math.min(100,s));
+}

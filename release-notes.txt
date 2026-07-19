@@ -1,3 +1,189 @@
+## 2026-07-19 (1.55.12)
+
+### Fix: LineChart komplett entfernt, doppeltes Investment-Check-Heading, abgeschnittene Radar-Labels
+
+Nutzer-Feedback per Screenshot: der alte `LineChart` (Restschuld/Cashflow/
+Jahresmiete + Cashflow-Verlauf/Monat) war in 1.55.11 noch da — Absicht war
+aber, in der gesamten Section 5/6 nur noch den Investment-Check zu zeigen.
+Außerdem war "Investment-Check" doppelt zu sehen, und die Radar-
+Achsenbeschriftungen liefen am Rand ab.
+
+- `LineChart` komplett aus Section 5 entfernt (Import + Nutzung) — Section 5
+  zeigt jetzt nur noch Tabelle + Erklärtext, keinen Chart mehr.
+  `LineChart.jsx` bleibt als Datei unangetastet, aber unbenutzt.
+- `InvestmentCheckRadar.jsx`: internes Chart-Heading "Investment-Check"
+  entfernt (Section-Überschrift der AccordionSection bleibt einzige
+  Quelle) — Subtitle blieb erhalten.
+- Radar-Geometrie vergrößert (viewBox 320×290 → 380×310, Label-Radius
+  angepasst) und `overflow:visible` gesetzt, damit auch längere
+  Achsenbeschriftungen ("Beleihungsauslauf", "Nettorendite") nicht mehr am
+  SVG-Rand abgeschnitten werden. Cashflow-Achse zeigt jetzt den kürzeren
+  Begriff "Cashflow" statt der langen KPI-Karten-Bezeichnung.
+- `npm run build` erfolgreich verifiziert (62 Module transformiert).
+
+## 2026-07-19 (1.55.11)
+
+### Rückbau: Nur Investment-Check behalten, restliche neue Charts entfernt
+
+Auf Nutzerwunsch — von den vier in 1.55.10 gebauten Charts nur die neue
+Section 6 "Investment-Check" (Radar) behalten, den Rest zurückgebaut.
+
+- Section 5 wieder auf den ursprünglichen `LineChart` (Restschuld/Miete/
+  kum. CF + monatl. CF ohne/mit Steuer) zurückgesetzt — `CashflowDarlehenChart`
+  nicht mehr eingebunden.
+- "Mehr Analyse anzeigen"-Toggle mit `RenditequellenChart` +
+  `ExitSzenarioChart` aus Section 5 entfernt.
+- Deutsche/englische Erklärtexte zu Section 5 auf den ursprünglichen Stand
+  (3-Kurven-Beschreibung) zurückgesetzt.
+- Eingabefeld "Vergleichszins Alternativanlage" (`d.altAnlage`) wieder
+  entfernt (Formular + zentraler State in App.jsx) — wurde nur vom jetzt
+  entfernten Exit-Szenario-Chart gebraucht.
+- Section 6 "Investment-Check" (Radar, `InvestmentCheckRadar`) unverändert
+  bestehen geblieben.
+- Dateien `CashflowDarlehenChart.jsx`, `RenditequellenChart.jsx`,
+  `ExitSzenarioChart.jsx` bleiben unverändert im Repo, aber unbenutzt —
+  Löschung nur auf Nachfrage.
+- Neue i18n-Keys/Tipp-Text aus 1.55.10 bleiben in `translations.js`/
+  `tips.js` bestehen (unbenutzt, aber harmlos) — Bereinigung nur auf
+  Nachfrage.
+- `npm run build` erfolgreich verifiziert (63 Module transformiert).
+
+## 2026-07-19 (1.55.10)
+
+### Feature: Neue Diagramme im Renditerechner (Cashflow/Darlehen, Renditequellen, Exit-Szenario, Investment-Check)
+
+Nach mehreren Mockup-Iterationen (Ziel: entscheidungsrelevante statt rein
+dekorative Charts, mobile-tauglich statt hover-abhängig) in Section 5 und
+als neue Section 6 umgesetzt.
+
+- Section 5 ("Zeitverlauf"): bisherige zwei LineChart-Charts (Restschuld/
+  Miete/kum. CF + monatl. CF ohne/mit Steuer) ersetzt durch einen
+  kombinierten Dual-Achsen-Chart `CashflowDarlehenChart` — Restschuld links,
+  monatlicher Cashflow ohne/mit Steuer rechts, inkl. grüner Break-even-Marke
+  (erstes Jahr mit positivem Cashflow inkl. Steuervorteil).
+- Neuer Toggle "Mehr Analyse anzeigen" (verschachtelte AccordionSection) in
+  Section 5 mit zwei zusätzlichen Charts:
+  `RenditequellenChart` (Aufschlüsselung des kumulierten Ergebnisses in
+  Tilgung/Wertsteigerung/Steuerersparnis/Cashflow je Meilenstein-Jahr) und
+  `ExitSzenarioChart` (Netto-Ergebnis Immobilie vs. Alternativanlage je
+  Ausstiegsjahr, inkl. eigener Break-even-Marke für die Gesamtposition —
+  bewusst anders benannt als der Cashflow-Break-even in Section 5, um beide
+  Konzepte nicht zu vermischen).
+- Neue Section 6 "Investment-Check": `InvestmentCheckRadar` — sechs
+  Kern-KPIs (Kaufpreisfaktor, Nettorendite, Cashflow mit Steuer,
+  Beleihungsauslauf, EK-Quote, Cashflow-Break-even) als Radar/Sechseck,
+  0–100-Score abgeleitet aus denselben BANDS-Schwellen wie die bestehenden
+  Ampel-Karten (`bands.js`, neue reine Zusatzfunktion `scoreKpi`, bestehende
+  `AMPEL`/`BANDS`/`rate`/`vrd` unverändert). Aufklappbare Skalen-Tabelle
+  darunter ersetzt Hover-Abhängigkeit auf Mobile (PWA mobile-first — Hover
+  funktioniert auf Touch nicht zuverlässig).
+- Neues Eingabefeld "Vergleichszins Alternativanlage" (`d.altAnlage`,
+  Default 6,5 % p.a.) im Bereich "Wertsteigerung & Zeitraum" — wandert in
+  den gemeinsamen State (App.jsx), macht den Exit-Szenario-Vergleich
+  einstellbar statt fest codiert.
+- i18n: 19 neue Übersetzungsschlüssel in allen 5 Sprachen (DE/EN/TR/ZH/HI)
+  ergänzt (`translations.js`), neuer Tipp-Text für `altAnlage` in allen 5
+  Sprachen (`tips.js`). Bestehende deutsche Erklärtexte zu Section 5 (die
+  noch die alten Kurven "Jahresmiete"/"kum. Cashflow" beschrieben) auf den
+  neuen Chart-Inhalt aktualisiert.
+- `LineChart.jsx` wird nicht mehr verwendet (Datei bewusst nicht gelöscht,
+  nur entkoppelt) — Löschung nur auf Nachfrage.
+- `npm run build` erfolgreich verifiziert (65 Module transformiert, kein
+  Fehler in Transform/Bundling). Hinweis: `dist/`-Ordner im lokalen
+  OneDrive-Mount ließ sich in dieser Session nicht überschreiben (EPERM,
+  bekanntes OneDrive-Sync-Problem) — Build bitte zusätzlich lokal
+  gegenprüfen.
+
+## 2026-07-19 (1.55.9)
+
+### Fix: Selbstträger-Check wieder als eigene Section getrennt
+
+Ein nicht committeter Zwischenstand hatte die Section "Trägt sich die
+Immobilie von selbst?" (BreakEvenCards) in die Section "Wie ist mein
+monatlicher Cashflow?" hineingezogen — dadurch verschwand die eigenständige
+Selbstträger-Frage als Menüpunkt. Nicht gewollt, jetzt zurückgesetzt.
+
+- Section "Trägt sich die Immobilie von selbst?" wieder als eigene
+  AccordionSection direkt nach dem Risikogauge (vor Section 1), exakt wie im
+  letzten Commit.
+- `<SelbsttraegerCheck R={R}/>` wieder aus Section 2 entfernt.
+- Section-Reihenfolge (2 vor 3) wieder hergestellt.
+- Merge von Section 6 in Section 7 ("Verkaufsszenario & Ergebnis", siehe
+  1.55.8) sowie die neuen Detail.jsx-Zeilen `detNettoerloes`/`detZwischen`
+  bleiben unverändert bestehen — betrafen ein anderes Problem.
+- `npm run build` erfolgreich verifiziert (62 Module transformiert, Diff
+  gegen letzten Commit geprüft: nur noch der 1.55.8-Merge sichtbar).
+
+## 2026-07-19 (1.55.8)
+
+### UX: Section 6 in Section 7 verschmolzen — "Verkaufsszenario & Ergebnis"
+
+Section 7 (Verkaufsszenario) zeigte nur Bestandteile, Section 6 ("Was bleibt
+am Ende") das Ergebnis direkt danach — auf Nutzerwunsch zu einer Section
+zusammengeführt: transparente Wasserfall-Rechnung mit Ergebnis direkt am
+Ende der Tabelle. Section 6 entfällt als eigener Menüpunkt, ihr Inhalt
+(Ergebnis-Boxen, EK-Rendite-KPIs, Interpretation/Stellschrauben) lebt jetzt
+in Section 7. Reine Darstellungsänderung, Berechnungslogik unverändert
+(gleiche Werte wie zuvor: R.gOhne, R.g, EK-Rendite p.a.).
+
+- Detail.jsx komplett neu als Wasserfall-Tabelle: Verkaufserlös → −
+  Restschuld → Nettoerlös nach Tilgung (Zwischensumme) → − Eigenkapital/
+  Kaufnebenkosten/Sonderumlage/Renovierung → Nettoerlös nach Investition
+  (Zwischensumme) → + Kum. Cashflow ohne Steuer → ERGEBNIS OHNE
+  STEUERVORTEIL (inkl. EK-Rendite p.a.) → + Kum. Steuerersparnis → ERGEBNIS
+  MIT STEUERVORTEIL (inkl. EK-Rendite p.a.)
+- `hideSaldo`-Prop entfernt (nicht mehr benötigt, Detail zeigt immer das
+  vollständige Ergebnis)
+- EK-Rendite-KPI-Karten und die zusammengeführten Interpretations-Texte
+  (SectionExplain) aus altem Section 6 direkt in Section 7 verschoben
+- Neuer i18n-Key `detZwischen` in allen 5 Sprachen ergänzt (de/en/tr/zh/hi)
+- Alte `sec6*`-Übersetzungsschlüssel bleiben ungenutzt in translations.js
+  stehen (keine funktionale Auswirkung, Aufräumen bei Bedarf möglich)
+- `npm run build` erfolgreich verifiziert (62 Module transformiert)
+
+## 2026-07-19 (1.55.7)
+
+### UX: Verkaufsszenario — Restschuld-Bucketing an "Was bleibt am Ende" angeglichen
+
+Detail.jsx (Section 7 "Verkaufsszenario") zeigte die Restschuld bislang in der
+Aufwendungen-Box zusammen mit der Investition. Section 6 ("Was bleibt am
+Ende") rechnet dagegen textlich "Verkaufserlös − Restschuld" als einen
+Ausdruck. Gleiches Ergebnis, aber unterschiedliches Bucketing — jetzt
+vereinheitlicht. Reine Darstellungsänderung, Berechnungslogik unverändert
+(sumPOhne/sumPMit/sumN/totalOhne/totalMit ergeben algebraisch exakt dieselben
+Werte wie zuvor).
+
+- Erträge-Box zeigt jetzt: Verkaufserlös → − Restschuld → Nettoerlös nach
+  Tilgung (hervorgehoben) → kum. Cashflow → kum. Steuerersparnis → Summe
+  ohne/mit Steuer
+- Aufwendungen-Box zeigt nur noch die reine Investition: Eigenkapital,
+  Kaufnebenkosten, Sonderumlage, Renovierung (Restschuld entfernt)
+- Neuer i18n-Key `detNettoerloes` in allen 5 Sprachen ergänzt (de/en/tr/zh/hi)
+- `npm run build` erfolgreich verifiziert (62 Module transformiert)
+
+## 2026-07-19 (1.55.6)
+
+### UX: Renditerechner — Section-Reihenfolge nach Kausallogik sortiert
+
+Ergebnis-Sections im Renditerechner folgten teils der Logik "Ergebnis vor
+Rechenweg" (z.B. Gesamtsaldo vor Verkaufsszenario-Aufschlüsselung, obwohl der
+Saldo genau daraus berechnet wird). Reine Reihenfolgeänderung, keine
+Berechnungslogik angefasst.
+
+- Eigenständige "Selbstträger-Check"-Section entfernt, Verdikt wandert als
+  Kopfzeile in Section "Trage ich das monatlich?" (vermeidet Dopplung des
+  Cashflow-Ergebnisses)
+- "Was zahle ich der Bank?" (Finanzierung/Rate) steht jetzt vor "Trage ich
+  das monatlich?" (Cashflow), da Cashflow die Kreditrate voraussetzt
+- "Verkaufsszenario" (Erlös-Aufschlüsselung) steht jetzt vor "Was bleibt am
+  Ende?" (Gesamtsaldo), da der Saldo genau aus diesen Bestandteilen berechnet
+  wird
+- Neue Reihenfolge: Risikogauge → Lohnt sich das? → Was zahle ich der Bank?
+  → Trage ich das monatlich? → Steuervorteil → Zeitverlauf →
+  Verkaufsszenario → Was bleibt am Ende?
+- `npm run build` erfolgreich verifiziert (62 Module transformiert, kein
+  Syntaxfehler)
+
 ## 2026-07-18 (1.55.5)
 
 ### Refactor: App.jsx Architektur-Modularisierung (Branch: refactor/modular-architecture)
