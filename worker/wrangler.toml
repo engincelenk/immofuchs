@@ -17,12 +17,18 @@ DAILY_REQUEST_LIMIT = "20"
 [ai]
 binding = "AI"
 
-# KV-Namespace fuer den Session-Rate-Limit-Zaehler.
-# Vor dem ersten Deploy erzeugen: `npx wrangler kv namespace create RATE_LIMIT_KV`
-# und die zurueckgegebene id hier eintragen.
-[[kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+# Durable Object fuer den Session-Rate-Limit-Zaehler (ersetzt die urspruengliche
+# KV-Loesung - KV war "eventually consistent" und hat das Tageslimit beim
+# Live-Test nicht zuverlaessig durchgesetzt, siehe Sprint-Plan / release-notes.txt).
+# Ein DO pro sessionId verarbeitet Anfragen strikt nacheinander, dadurch garantiert
+# korrekter Zaehler ohne Konsistenzproblem.
+[[durable_objects.bindings]]
+name = "RATE_LIMITER_DO"
+class_name = "SessionRateLimiter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionRateLimiter"]
 
 # Secrets NIE hier eintragen (siehe Konzept 2.10). Stattdessen:
 #   npx wrangler secret put GEMINI_API_KEY

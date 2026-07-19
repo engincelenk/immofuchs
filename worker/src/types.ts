@@ -38,7 +38,7 @@ export interface AssistantResponse {
 
 export interface Env {
   AI: Ai;
-  RATE_LIMIT_KV: KVNamespace;
+  RATE_LIMITER_DO: DurableObjectNamespace<import("./sessionRateLimiter").SessionRateLimiter>;
   ASSISTANT_ENABLED: string;
   ALLOWED_ORIGIN: string;
   DAILY_REQUEST_LIMIT: string;

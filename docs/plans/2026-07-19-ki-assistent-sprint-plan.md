@@ -86,14 +86,14 @@ IMP-01, IMP-03, IMP-04 werden nicht "gelöst", indem man sie ignoriert — sie s
 > **S1.4 entfällt für Sprint 1.** DSGVO/AVV-Klärung ist laut Entscheidung 2026-07-19 kein Sprint-1-Task mehr, sondern ein separater Track, der parallel zur Entwicklung angestoßen werden kann, aber nicht muss — siehe Go-Live-Gate.
 
 ### Definition of Done — Phase 0
-- [ ] Worker deployed (Staging), reagiert auf Testanfrage mit korrektem JSON-Contract (Konzept 2.6) — **offen, braucht Cloudflare-Login durch den Nutzer**
-- [ ] Kill-Switch getestet (an/aus, kein Redeploy nötig) — **offen, Live-Test**
-- [ ] Rate-Limit getestet (429 bei Überschreitung) — **offen, Live-Test**
-- [ ] System-Prompt gegen Missbrauchsversuche manuell getestet, Output-Filter greift nachweislich — **offen, Live-Test**
+- [x] Worker deployed, reagiert auf Testanfrage mit korrektem JSON-Contract (Konzept 2.6) — **live bestätigt** unter `https://immofuchs-assistant.engincelenk.workers.dev`, echte Modell-Antwort inkl. `tier` erhalten
+- [ ] Kill-Switch getestet (an/aus, kein Redeploy nötig) — Code fertig, **Dashboard-Klicktest durch den Nutzer noch ausstehend** (kann nicht automatisiert werden)
+- [x] Rate-Limit getestet (429 bei Überschreitung) — **live bestätigt, aber mit Bugfix unterwegs:** ursprüngliche KV-Lösung hat beim ersten Live-Test das Limit NICHT durchgesetzt (21/21 Anfragen kamen durch, Ursache: KV Eventual-Consistency/Negative-Cache). Behoben durch Umstieg auf Durable Object (`worker/src/sessionRateLimiter.ts`) — zweiter Live-Test danach korrekt: 1-20× `200`, 21. Anfrage `429`
+- [x] System-Prompt gegen Missbrauchsversuche manuell getestet, Output-Filter greift nachweislich — **live bestätigt**, Jailbreak-Versuch wich korrekt aus, keine Kaufempfehlung
 - [x] IMP-01 (BANDS) auf „Resolved" — **IMP-02 (DSGVO/AVV) ist kein Bestandteil dieser DoD**, siehe Go-Live-Gate
 - [x] Kein UI-Code im Frontend — Phase 0 ist rein Backend/Infra (bestätigt: nur `/worker` neu, `git status` zeigt keine Änderung an `src/`)
 
-**Zusammenfassung:** Der komplette Worker-Code für S1.1–S1.3 ist geschrieben, typsicher (`npm run typecheck` grün) und bündelt fehlerfrei (`wrangler deploy --dry-run`). Was noch aussteht, ist ausschließlich die **Live-Verifikation nach echtem Deploy** — das braucht deinen Cloudflare-Account (Login, KV-Namespace anlegen, optional Gemini-Key), siehe `worker/README.md` für die exakten Schritte und Testfälle.
+**Zusammenfassung:** Worker ist deployed und live durchgetestet (Happy Path, Validierung, Output-Filter, CORS, Rate-Limit — alle bestätigt). Ein echter Bug wurde dabei gefunden und behoben: Cloudflare KV ist für einen exakten Tages-Zähler ungeeignet (Eventual Consistency), die Architektur wurde auf ein Durable Object pro Session umgestellt (siehe `worker/README.md` für Details). Sprach-Routing DE/EN läuft vollständig; TR/ZH/HI ist technisch verifiziert (schaltet korrekt zu Gemini), scheitert aber noch am fehlenden `GEMINI_API_KEY` — kein Bug, nur ausstehende Konfiguration. Einziger noch offener Punkt: der Kill-Switch-Dashboard-Klicktest, den nur der Nutzer selbst durchführen kann.
 
 ### Sprint Review — Demo-Skript
 Technische Demo (kein Endnutzer-UI): Terminal/Postman-Request an den Worker mit Beispiel-Kontext (Renditerechner-Werte) → Antwort erscheint, Ampel-Tier korrekt, Kill-Switch live umgeschaltet → 503, zurückgeschaltet → wieder normal.

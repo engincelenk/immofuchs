@@ -1,10 +1,11 @@
 import type { AssistantResponse, Env, Tier } from "./types";
 import { validateRequest } from "./validator";
-import { checkRateLimit } from "./rateLimiter";
 import { buildSystemPrompt } from "./systemPrompt";
 import { buildUserPayload } from "./promptBuilder";
 import { callModel } from "./modelRouter";
 import { filterOutput } from "./outputFilter";
+
+export { SessionRateLimiter } from "./sessionRateLimiter";
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -42,7 +43,8 @@ export default {
     const req = validation.data;
 
     const dailyLimit = parseInt(env.DAILY_REQUEST_LIMIT, 10) || 20;
-    const rateLimit = await checkRateLimit(env.RATE_LIMIT_KV, req.sessionId, dailyLimit);
+    const limiterStub = env.RATE_LIMITER_DO.getByName(req.sessionId);
+    const rateLimit = await limiterStub.checkAndIncrement(dailyLimit);
     if (!rateLimit.allowed) {
       return jsonResponse({ error: "rate_limit_exceeded" }, 429, corsHeaders);
     }
