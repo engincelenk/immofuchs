@@ -1,3 +1,13 @@
+## 2026-07-20 (1.55.23)
+
+### Neu: Zwei weitere Vorschlag-Fragen im Renditerechner
+
+Auf Nutzerwunsch ergänzt: „Trägt sich das Objekt selbst?" und „Was passiert
+nach Verkauf in {jahre} Jahren?" (Jahre = der eingestellte Analysezeitraum,
+dynamisch eingesetzt) als 4. und 5. Vorschlag-Chip im Renditerechner-
+Assistenten, in allen 5 Sprachen (`src/i18n/assistant.js`,
+`suggested4`/`suggested5`).
+
 ## 2026-07-20 (1.55.22)
 
 ### Fix: KI-Assistent auf dev.immofuchs.info kaputt (VITE_ASSISTANT_URL fehlte im CI-Build, CORS fehlte im Worker)

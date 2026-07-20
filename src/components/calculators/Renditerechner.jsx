@@ -494,7 +494,9 @@ export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp(
           const suggested=[
             tpl(at.suggested1,{ampel:at["tier_"+nrTier]||nrTier}),
             at.suggested2,
-            at.suggested3
+            at.suggested3,
+            at.suggested4,
+            tpl(at.suggested5,{jahre:R.j})
           ];
           return <AssistantWidget rechner="renditerechner" kontext={kontext} contextLabel={at.contextRendite} suggested={suggested} lang={lang}/>;
         })()}
