@@ -83,6 +83,11 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
         </button>
         <div className="if-asst-handle" />
         <div className="if-asst-context">{contextLabel}</div>
+        <div className="if-asst-suggested">
+          {suggested.map((label, i) => (
+            <SuggestedQuestionChip key={i} label={label} onClick={() => submit(label)} />
+          ))}
+        </div>
         <div className="if-asst-log" aria-live="polite">
           {messages.map((m, i) => (
             <ChatBubble key={i} role={m.role} text={m.text} tier={m.tier} />
@@ -92,11 +97,6 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
           {status === "limit" && <ChatBubble role="limit" text={t.limit} />}
           {status === "offline" && <ChatBubble role="offline" text={t.offline} />}
           {status === "disabled" && <ChatBubble role="system" text={t.disabled} />}
-        </div>
-        <div className="if-asst-suggested">
-          {suggested.map((label, i) => (
-            <SuggestedQuestionChip key={i} label={label} onClick={() => submit(label)} />
-          ))}
         </div>
         <div className="if-asst-input-row">
           <input
