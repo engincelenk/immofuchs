@@ -1,3 +1,27 @@
+## 2026-07-20 (1.55.21)
+
+### Fix: Timeout-Schutz für Modell-Aufrufe (Cloudflare-Workers-AI-Störung entdeckt)
+
+Nutzer-Feedback aus dem echten Browser (Finanzierungsrechner, "Kurzer
+Aussetzer") führte zu einem Fund: Cloudflare Workers AI lieferte für
+Llama 3.3 zeitweise nach 84 Sekunden nur noch Kauderwelsch statt einer
+echten Antwort ("388qualities Arnsoap388ometr..."). Laut Cloudflare-
+Statusseite war zum Zeitpunkt nur eine "degradierte Verfügbarkeit" für
+andere Modelle (Kimi-K2) offiziell gelistet, das Symptom passte aber exakt
+ins Bild — eine temporäre Infrastruktur-Störung, kein Bug im Worker-Code.
+
+- **Ursache erkannt:** Der Worker hatte keinerlei Timeout für Modell-Aufrufe
+  — bei einer Störung hätte ein Nutzer fast eine Minute lang auf eine
+  Ladeanimation starren können, bevor überhaupt ein Fehler kommt.
+- **Fix:** 20-Sekunden-Timeout für beide Modell-Pfade ergänzt
+  (`worker/src/modelRouter.ts`) — bei Workers AI per generischem
+  Promise-Race (`withTimeout`), bei Gemini zusätzlich per `AbortController`
+  (bricht den eigentlichen Fetch sauber ab, nicht nur das Warten darauf).
+  Bei Überschreitung kommt jetzt zügig die normale Fehler-Bubble mit
+  "Nochmal versuchen" statt einer sehr langen Wartezeit.
+- Verifiziert: normale Anfrage weiterhin erfolgreich, 4,7s, korrekte Antwort
+  — die Cloudflare-Störung hatte sich zum Testzeitpunkt bereits erholt.
+
 ## 2026-07-20 (1.55.20)
 
 ### Abschluss: Kill-Switch bestätigt, CORS für Produktions-Domain vorbereitet

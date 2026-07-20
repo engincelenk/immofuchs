@@ -2,6 +2,7 @@ import type { Env, Lang } from "./types";
 
 const MAX_TOKENS = 220; // haelt Kosten und Bubble-Groesse vorhersehbar, siehe Konzept 2.8
 const TEMPERATURE = 0.3; // niedrig fuer konsistentere Antworten, siehe Konzept 2.9
+const MODEL_TIMEOUT_MS = 20000; // Schutz gegen haengende/degradierte Model-Calls (siehe release-notes.txt)
 
 const WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 // Verifiziert per /v1beta/models-Abfrage gegen den echten Key (2026-07-19) -
@@ -19,10 +20,26 @@ export async function callModel(
   systemPrompt: string,
   userPayload: string
 ): Promise<string> {
-  if (WORKERS_AI_LANGS.has(lang)) {
-    return callWorkersAI(env, systemPrompt, userPayload);
-  }
-  return callGemini(env, systemPrompt, userPayload);
+  const call = WORKERS_AI_LANGS.has(lang)
+    ? callWorkersAI(env, systemPrompt, userPayload)
+    : callGemini(env, systemPrompt, userPayload);
+  return withTimeout(call, MODEL_TIMEOUT_MS);
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`model_timeout_${ms}ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
 }
 
 async function callWorkersAI(env: Env, systemPrompt: string, userPayload: string): Promise<string> {
@@ -48,9 +65,12 @@ async function callGemini(env: Env, systemPrompt: string, userPayload: string): 
     throw new Error("gemini_api_key_missing");
   }
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-    {
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -63,8 +83,11 @@ async function callGemini(env: Env, systemPrompt: string, userPayload: string): 
         contents: [{ role: "user", parts: [{ text: userPayload }] }],
         generationConfig: { maxOutputTokens: MAX_TOKENS, temperature: TEMPERATURE },
       }),
-    }
-  );
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(abortTimer);
+  }
 
   if (!res.ok) {
     throw new Error(`gemini_request_failed_${res.status}`);
