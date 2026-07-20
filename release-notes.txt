@@ -1,3 +1,28 @@
+## 2026-07-20 (1.55.25)
+
+### Fix: KI-Assistent lehnt Finanzierungs-Fragen fälschlich pauschal ab
+
+Nutzer-Feedback (Screenshot): Auf die vom Finanzierungsrechner selbst
+vorgeschlagenen Chips „Was passiert nach der Zinsbindung?" und „Lohnt sich
+eine Sondertilgung?" antwortete der Assistent nur mit der Ablehnungsfloskel
+„Das kann ich nicht verbindlich beurteilen. Bitte konsultiere einen
+Finanzberater." — obwohl beide Fragen laut Konzept (Abschnitt 1.4, „Kann")
+ausdrücklich im Scope sind.
+
+- **Ursache:** `worker/src/systemPrompt.ts` Regel 2 verbietet korrekt
+  Rechts-/Steuerberatung, Kaufempfehlung und Marktprognose — die dort
+  wörtlich vorgegebene Ablehnungsformel wurde vom (kleinen, kostenlosen)
+  Modell aber auf jede finanzielle Abwägungsfrage übergeneralisiert.
+- **Fix:** Regel 2 präzisiert — generische Erklärungen zu
+  Anschlussfinanzierung nach Zinsbindungsende und zum Sondertilgungs-
+  Trade-off (Zinsersparnis vs. Opportunitätskosten) anhand der
+  Kontext-Zahlen sind jetzt explizit erlaubt und nicht mehr von der
+  Ablehnungsregel erfasst. Zwei Beispiel-Antworten (Few-Shot) im
+  System-Prompt ergänzt, damit das Modell ein Vorbild für „gute Antwort"
+  statt nur für „Ablehnung" hat. Die harten Grenzen (keine Rechts-/
+  Steuerberatung, keine Kaufempfehlung, keine Marktprognose) bleiben
+  unverändert.
+
 ## 2026-07-20 (1.55.24)
 
 ### UX: Vorschlag-Chips im Assistent-Chat nach oben verschoben
