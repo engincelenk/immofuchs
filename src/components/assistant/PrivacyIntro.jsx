@@ -1,5 +1,7 @@
+import { createPortal } from "react-dom";
+
 export function PrivacyIntro({ t, onConfirm, onCancel }) {
-  return (
+  return createPortal(
     <div
       onClick={onCancel}
       role="presentation"
@@ -76,6 +78,7 @@ export function PrivacyIntro({ t, onConfirm, onCancel }) {
         @keyframes ifAsstSheetUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
         @media (prefers-reduced-motion: reduce){.if-asst-privacy-card{animation:none}}
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,3 +1,48 @@
+## 2026-07-20 (1.55.19)
+
+### Fix: Desktop-Sheet abgeschnitten, Scroll ging an die Seite statt ans Chat-Fenster, Gemini-Sprachpfad (TR/ZH/HI) reparlert
+
+Drei weitere Live-Test-Funde nach 1.55.18, alle bestätigt behoben.
+
+**1. Desktop-Sheet (≥1024px) oben abgeschnitten**
+- Ursache: `.res-pane` hat `position:sticky` — das macht sticky-Vorfahren zum
+  Containing-Block für `position:fixed`-Kinder, das Sheet hing dadurch an
+  `.res-pane` statt am echten Browser-Viewport.
+- Fix: `AssistantSheet.jsx` und `PrivacyIntro.jsx` rendern jetzt per
+  `createPortal(..., document.body)` — gleiches Muster wie `LegalModal`,
+  `SaveModal` und die Lösch-Bestätigung in `Merkliste.jsx`.
+- Zusätzlich `82vh`/`100vh` auf `82dvh`/`100dvh` umgestellt (Mobile-Adressleisten-
+  Problem, gleiches Muster wie `.shell` in `App.jsx`).
+
+**2. Scroll ging an die Hintergrundseite statt ans Chat-Fenster**
+- Fix: Body-Scroll-Lock ergänzt — solange das Sheet offen ist, wird
+  `document.body.style.overflow` auf `hidden` gesetzt (und beim Schließen
+  zurückgesetzt).
+- Von Nutzer im echten Browser bestätigt: „Scrollen im ki Fenster funktioniert".
+
+**3. Gemini-Sprachpfad (TR/ZH/HI) — mehrstufige Fehlersuche**
+- Symptom: `model_call_failed` trotz korrekt gesetztem `GEMINI_API_KEY`.
+- Fund 1: Google hat einen neueren, an ein Service-Konto gebundenen Key-Typ
+  eingeführt ("Authorization Keys") — erkennbar am `AQ.`-Präfix statt des
+  klassischen `AIzaSy...`. Diese werden per `x-goog-api-key`-Header
+  authentifiziert statt per `?key=`-URL-Parameter.
+- Fund 2 (Sackgasse, zurückgesetzt): eine automatisierte Web-Recherche
+  suggerierte eine neue Google-"Interactions API"
+  (`/v1beta/interactions`) — das war vermutlich erfundene Information
+  (u. a. wurde "gemini-3.5-flash" als Modell genannt, ein Modell, das es
+  nicht gibt). Zwei Deploys mit dieser Annahme scheiterten identisch.
+- Fund 3 (eigentliche Ursache): `gemini-2.5-flash-lite` existiert für den
+  konkreten Key nicht — verifiziert per temporärer Diagnose-Route, die die
+  echte Modell-Liste des Kontos abgefragt hat (danach wieder entfernt).
+  Korrigiert auf `gemini-2.0-flash-lite` (verifiziert vorhanden).
+- Endergebnis: klassischer `/v1beta/models/{model}:generateContent`-Endpunkt
+  mit `x-goog-api-key`-Header und korrektem Modellnamen — funktioniert
+  (Fehler wechselte von `404 model not found` zu `429`, also Googles eigenem
+  Rate-/Tageslimit, ausgelöst durch die vielen Testanfragen während der
+  Fehlersuche). DE/EN (Workers AI) war davon nie betroffen.
+- `worker/src/modelRouter.ts` bereinigt, temporärer Diagnose-Code aus
+  `worker/src/index.ts` wieder entfernt.
+
 ## 2026-07-19 (1.55.18)
 
 ### Fix: Chat-Fenster im KI-Assistenten nicht scrollbar (oben abgeschnitten)

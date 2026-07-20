@@ -4,7 +4,10 @@ const MAX_TOKENS = 220; // haelt Kosten und Bubble-Groesse vorhersehbar, siehe K
 const TEMPERATURE = 0.3; // niedrig fuer konsistentere Antworten, siehe Konzept 2.9
 
 const WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-const GEMINI_MODEL = "gemini-2.5-flash-lite";
+// Verifiziert per /v1beta/models-Abfrage gegen den echten Key (2026-07-19) -
+// "gemini-2.5-flash-lite" existierte fuer dieses Konto nicht (404), dieser
+// Name ist bestaetigt vorhanden. Siehe release-notes.txt fuer die Diagnose.
+const GEMINI_MODEL = "gemini-2.0-flash-lite";
 
 // Sprach-Routing: DE/EN -> Workers AI (kostenlos, gut geprueft),
 // TR/ZH/HI -> Gemini Flash-Lite (bessere Mehrsprachigkeit). Siehe Konzept 2.8.
@@ -46,10 +49,15 @@ async function callGemini(env: Env, systemPrompt: string, userPayload: string): 
   }
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Neuere ("Authorization")-Keys, an ein Service-Konto gebunden,
+        // werden per Header authentifiziert, nicht per ?key=-Query-Parameter.
+        "x-goog-api-key": env.GEMINI_API_KEY,
+      },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: "user", parts: [{ text: userPayload }] }],
