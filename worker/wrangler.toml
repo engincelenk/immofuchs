@@ -9,7 +9,12 @@ compatibility_flags = ["nodejs_compat"]
 # nicht ueber diese Datei (Aenderung hier braucht einen Redeploy). Siehe README.
 [vars]
 ASSISTANT_ENABLED = "true"
-ALLOWED_ORIGIN = "http://localhost:5173"
+# Kommagetrennt: lokaler Dev-Server + echte Domain, damit CORS schon vorbereitet
+# ist, sobald das Frontend live auf immofuchs.info zeigt (kein Redeploy noetig
+# an diesem Punkt). Das allein schaltet noch nichts "live" - dafuer muss auch
+# das Frontend (VITE_ASSISTANT_URL) tatsaechlich hierher zeigen, siehe
+# Go-Live-Gate im Sprint-Plan (DSGVO/AVV) fuer echte Nutzerdaten.
+ALLOWED_ORIGIN = "http://localhost:5173,https://immofuchs.info"
 DAILY_REQUEST_LIMIT = "20"
 
 # Workers AI Binding (Llama 3.3, primaerer Pfad fuer DE/EN) - kein API-Key noetig,
@@ -33,9 +38,3 @@ new_sqlite_classes = ["SessionRateLimiter"]
 # Secrets NIE hier eintragen (siehe Konzept 2.10). Stattdessen:
 #   npx wrangler secret put GEMINI_API_KEY
 # Fuer lokale Entwicklung: worker/.dev.vars (siehe .dev.vars.example), nicht eingecheckt.
-
-# Beispiel fuer die Produktions-Domain als eigene Umgebung (Origin fuer CORS):
-# [env.production.vars]
-# ASSISTANT_ENABLED = "true"
-# ALLOWED_ORIGIN = "https://immofuchs.info"
-# DAILY_REQUEST_LIMIT = "20"

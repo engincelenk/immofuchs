@@ -84,7 +84,11 @@ function buildCorsHeaders(origin: string | null, allowedOrigin: string): Headers
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
-  if (origin && origin === allowedOrigin) {
+  // Kommagetrennte Liste erlaubt mehrere Origins gleichzeitig (z. B. lokaler
+  // Dev-Server + echte Produktions-Domain), ohne dass ein Redeploy noetig
+  // wird, sobald die andere Seite auch live geht.
+  const allowed = allowedOrigin.split(",").map((o) => o.trim());
+  if (origin && allowed.includes(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
   return headers;
