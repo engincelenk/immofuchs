@@ -9,12 +9,14 @@ compatibility_flags = ["nodejs_compat"]
 # nicht ueber diese Datei (Aenderung hier braucht einen Redeploy). Siehe README.
 [vars]
 ASSISTANT_ENABLED = "true"
-# Kommagetrennt: lokaler Dev-Server + echte Domain, damit CORS schon vorbereitet
-# ist, sobald das Frontend live auf immofuchs.info zeigt (kein Redeploy noetig
-# an diesem Punkt). Das allein schaltet noch nichts "live" - dafuer muss auch
-# das Frontend (VITE_ASSISTANT_URL) tatsaechlich hierher zeigen, siehe
-# Go-Live-Gate im Sprint-Plan (DSGVO/AVV) fuer echte Nutzerdaten.
-ALLOWED_ORIGIN = "http://localhost:5173,https://immofuchs.info"
+# Kommagetrennt: lokaler Dev-Server + dev.immofuchs.info (automatisches
+# CI-Deployment aus Immofuchs-dev, siehe .github/workflows/deploy-dev.yml) +
+# die echte Produktions-Domain, damit CORS schon vorbereitet ist, sobald das
+# Frontend live auf immofuchs.info zeigt (kein Redeploy noetig an diesem
+# Punkt). Das allein schaltet noch nichts "live" - dafuer muss das Frontend
+# tatsaechlich dorthin deployt werden, siehe Go-Live-Gate im Sprint-Plan
+# (DSGVO/AVV) fuer echte Nutzerdaten.
+ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info,https://immofuchs.info"
 DAILY_REQUEST_LIMIT = "20"
 
 # Workers AI Binding (Llama 3.3, primaerer Pfad fuer DE/EN) - kein API-Key noetig,

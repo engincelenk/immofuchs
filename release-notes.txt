@@ -1,3 +1,27 @@
+## 2026-07-20 (1.55.22)
+
+### Fix: KI-Assistent auf dev.immofuchs.info kaputt (VITE_ASSISTANT_URL fehlte im CI-Build, CORS fehlte im Worker)
+
+Nutzer-Feedback zeigte `POST https://dev.immofuchs.info/undefined 404` in
+der Browser-Konsole — der Assistent lief nicht auf der automatisch
+deployten Dev-Umgebung (`dev.immofuchs.info`, per GitHub Actions bei jedem
+Push auf `Immofuchs-dev`), obwohl er lokal funktionierte.
+
+- **Ursache 1:** `.github/workflows/deploy-dev.yml` baut das Frontend
+  (`npm run build`) ohne `VITE_ASSISTANT_URL` zu setzen — die lokale
+  `.env`-Datei wird beim CI-Build naturgemäß nicht mitgenommen (sie ist
+  absichtlich nicht im Git). Vite hat dadurch `undefined` fest ins Bundle
+  gebacken.
+- **Fix 1:** `VITE_ASSISTANT_URL` direkt als Build-Umgebungsvariable im
+  Workflow ergänzt (kein GitHub-Secret nötig — die Worker-URL ist ohnehin
+  öffentlich im Client-Bundle sichtbar).
+- **Ursache 2 (wäre als Nächstes aufgefallen):** Der Worker erlaubte per
+  CORS bisher nur `localhost` und die künftige Produktions-Domain, nicht
+  `dev.immofuchs.info`.
+- **Fix 2:** `dev.immofuchs.info` zur `ALLOWED_ORIGIN`-Liste in
+  `worker/wrangler.toml` ergänzt, live verifiziert (`Access-Control-Allow-
+  Origin`-Header korrekt gesetzt).
+
 ## 2026-07-20 (1.55.21)
 
 ### Fix: Timeout-Schutz für Modell-Aufrufe (Cloudflare-Workers-AI-Störung entdeckt)
