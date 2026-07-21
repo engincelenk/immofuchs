@@ -3,10 +3,14 @@ import type { Lang } from "./types";
 // Zusaetzliches Sicherheitsnetz neben dem System-Prompt (Konzept 2.9) - LLMs
 // halten sich nicht zuverlaessig zu 100% an Anweisungen. Grobe Heuristik,
 // kein Ersatz fuer manuelle Prompt-Iteration.
+//
+// Kaufempfehlung/Marktprognose als Tendenz-Aussage sind seit 2026-07-21
+// bewusst erlaubt (siehe release-notes.txt) - die frueheren Muster dafuer
+// ("ich empfehle den kauf", "du solltest kaufen/verkaufen", "kaufen sie
+// dies") wurden deshalb entfernt. Absolute Garantien/Zusagen bleiben
+// verboten (siehe /garantiert/ unten). Rechtsberatung/Steuerberatung bleiben
+// unveraendert hart blockiert - dafuer keine Lockerung, siehe systemPrompt.ts.
 const FORBIDDEN_PATTERNS: RegExp[] = [
-  /ich empfehle( dir)?( den)? kauf/i,
-  /du solltest( das)? (kaufen|verkaufen)/i,
-  /kaufen sie (das|dies)/i,
   /sie d(ü|u)rfen (das|die erh(ö|o)hung)/i,
   /rechtlich (ist das|ist dies|zul(ä|a)ssig|erlaubt)/i,
   /garantiert/i,

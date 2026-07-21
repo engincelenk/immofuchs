@@ -1,6 +1,7 @@
 import type { Env, Lang } from "./types";
 
-const MAX_TOKENS = 220; // haelt Kosten und Bubble-Groesse vorhersehbar, siehe Konzept 2.8
+const MAX_TOKENS = 350; // erhoeht von 220 fuer laengere Antworten (~160 statt 80 Woerter)
+// mit aktiven Stellschrauben-Vorschlaegen, bewusste Produktentscheidung (siehe release-notes.txt)
 const TEMPERATURE = 0.3; // niedrig fuer konsistentere Antworten, siehe Konzept 2.9
 const MODEL_TIMEOUT_MS = 20000; // Schutz gegen haengende/degradierte Model-Calls (siehe release-notes.txt)
 
@@ -10,20 +11,26 @@ const WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 // Name ist bestaetigt vorhanden. Siehe release-notes.txt fuer die Diagnose.
 const GEMINI_MODEL = "gemini-2.0-flash-lite";
 
-// Sprach-Routing: DE/EN -> Workers AI (kostenlos, gut geprueft),
-// TR/ZH/HI -> Gemini Flash-Lite (bessere Mehrsprachigkeit). Siehe Konzept 2.8.
-const WORKERS_AI_LANGS: ReadonlySet<Lang> = new Set(["de", "en"]);
+// Alle Sprachen primaer ueber Gemini (bessere Antwortqualitaet als das kostenlose
+// Llama 3.3 auch fuer DE/EN, siehe release-notes.txt) - Workers AI nur noch als
+// Fallback, falls Gemini scheitert (z.B. Kontingent/429), nicht mehr sprachbasiert
+// geroutet. `lang` bleibt Parameter, weil callGemini/callWorkersAI ihn nicht
+// brauchen, aber die Funktionssignatur von index.ts unveraendert bleiben soll.
 
 export async function callModel(
   env: Env,
-  lang: Lang,
+  _lang: Lang,
   systemPrompt: string,
   userPayload: string
 ): Promise<string> {
-  const call = WORKERS_AI_LANGS.has(lang)
-    ? callWorkersAI(env, systemPrompt, userPayload)
-    : callGemini(env, systemPrompt, userPayload);
-  return withTimeout(call, MODEL_TIMEOUT_MS);
+  try {
+    return await withTimeout(callGemini(env, systemPrompt, userPayload), MODEL_TIMEOUT_MS);
+  } catch (err) {
+    // Fallback auf Workers AI (Llama), z.B. wenn Gemini-Kontingent erschoepft ist
+    // (429) - schwaechere Antwortqualitaet, aber besser als ein harter Fehler.
+    console.error("gemini_call_failed_fallback_workers_ai", err instanceof Error ? err.message : "unknown_error");
+    return withTimeout(callWorkersAI(env, systemPrompt, userPayload), MODEL_TIMEOUT_MS);
+  }
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {

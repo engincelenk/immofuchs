@@ -1,3 +1,125 @@
+## 2026-07-21 (1.55.29)
+
+### Infra: Separater Dev-Worker fuer den KI-Assistenten (dev.immofuchs.info von Prod entkoppelt)
+
+Auf Nutzerwunsch, nachdem der Worker bisher eine einzige geteilte Instanz
+fuer lokal/dev/prod war (jeder Deploy wirkte sofort auf alle drei
+Umgebungen gleichzeitig) - jetzt echte Trennung, damit Policy-/Prompt-
+Aenderungen (z. B. 1.55.28) erst auf dev.immofuchs.info getestet werden
+koennen, bevor sie bewusst auf immofuchs.info deployt werden.
+
+- **`worker/wrangler.toml`:** neuer `[env.dev]`-Block - eigener Worker-Name
+  `immofuchs-assistant-dev`, eigenes `ALLOWED_ORIGIN` (nur localhost +
+  dev.immofuchs.info, kein Prod-Origin mehr noetig), eigene Durable-Object-
+  Migration. `main`/`compatibility_date`/`compatibility_flags` werden vom
+  Top-Level geerbt.
+- **Deployed** unter `https://immofuchs-assistant-dev.engincelenk.workers.dev`
+  (`npx wrangler deploy --env dev`, Version `e7d68d5c-91a8-414a-b607-0376898ee018`).
+  Der bestehende Prod-Worker (`immofuchs-assistant`) ist unveraendert und
+  wird weiterhin ganz normal per `npx wrangler deploy` (ohne `--env`)
+  deployt.
+- **`.github/workflows/deploy-dev.yml`:** `VITE_ASSISTANT_URL` von der
+  Prod-Worker-URL auf die neue Dev-Worker-URL umgestellt - ab dem naechsten
+  Push auf `Immofuchs-dev` baut die CI gegen den Dev-Worker.
+- **`index.html`:** CSP `connect-src` um die neue Dev-Worker-Domain ergaenzt
+  (sonst blockt der Browser die Verbindung, siehe bekannter Fehlerfall aus
+  1.55.17/`worker/README.md`).
+- **Noch zu erledigen (nur durch den Nutzer, kein Code):**
+  `npx wrangler secret put GEMINI_API_KEY --env dev` - der neue Dev-Worker
+  hat noch keinen eigenen Gemini-Key, der Prod-Key kann nicht automatisch
+  kopiert werden (Secrets sind nie auslesbar). Bis dahin laeuft der
+  Dev-Worker automatisch komplett ueber den Llama-Fallback (funktioniert,
+  aber ohne Gemini-Qualitaet).
+
+## 2026-07-21 (1.55.28)
+
+### Produktentscheidung: KI-Assistent darf jetzt Kauftendenz/Markteinordnung geben, laengere Antworten, aktive Stellschrauben
+
+Bewusste Positionierungs-Aenderung auf Nutzerwunsch, nach ausdruecklicher
+Ruecksprache ueber das damit verbundene Markenrisiko (Konzept 1.5 nennt
+"ohne mir was verkaufen zu wollen" explizit als Erfolgskriterium - das
+gilt ab jetzt nicht mehr uneingeschraenkt).
+
+- **`worker/src/systemPrompt.ts`:** Regel 2 aufgeteilt - Rechtsberatung/
+  Steuerberatung bleiben unveraendert hart verboten (rechtlich reguliert
+  ueber RDG/StBerG, dafuer bewusst KEINE Lockerung vorgenommen, auch nicht
+  auf explizite Nutzeranfrage - das braucht echten anwaltlichen Rat, keine
+  Code-Aenderung). Kaufempfehlung/Marktprognose sind jetzt als
+  Tendenz-Aussage erlaubt, solange sie an die mitgelieferten BANDS-/
+  Kennzahlen gebunden bleibt und keine Garantie/absolute Zusage ausspricht
+  ("auf jeden Fall", "garantiert", "sicher" bleiben tabu). Neue Regel:
+  Antwortlaenge von ~80 auf ~160 Woerter angehoben; neue Pflicht, pro
+  Antwort 1-2 konkrete Stellschrauben aus den Kontext-Zahlen zu nennen
+  (z. B. "bei 1% mehr Tilgung sinkt die Restschuld nach 10 Jahren um X€").
+  Drittes Few-Shot-Beispiel ergaenzt, das die neue Kauftendenz-Antwort
+  vorbildhaft zeigt.
+- **`worker/src/modelRouter.ts`:** `MAX_TOKENS` von 220 auf 350 erhoeht,
+  damit die laengeren Antworten nicht abgeschnitten werden. Kostenimpact:
+  grob +50-70% Output-Tokens pro Anfrage (weiterhin Cent-Bereich bei
+  aktuellem Traffic, siehe Konzept 2.11).
+- **`worker/src/outputFilter.ts`:** Die drei Kaufempfehlung-spezifischen
+  Verbotsmuster ("ich empfehle den kauf", "du solltest kaufen/verkaufen",
+  "kaufen sie dies") entfernt, da jetzt erlaubtes Verhalten. Rechtsberatungs-
+  und Garantie-Muster unveraendert aktiv.
+- **Lokal verifiziert** (`wrangler dev` mit bewusst ungueltigem Gemini-Key,
+  Antwort also vom Llama-Fallback erzeugt): "Lohnt sich der Kauf?" liefert
+  jetzt eine Tendenz-Einschaetzung mit Ampel-Bezug und einer konkreten
+  Stellschraube statt einer Ablehnung; "Darf ich rechtssicher erhoehen?"
+  wird weiterhin korrekt an einen Anwalt verwiesen - beide Faelle bestaetigt
+  vor dem Deploy.
+
+## 2026-07-21 (1.55.27)
+
+### Aenderung: KI-Assistent nutzt jetzt fuer alle Sprachen primaer Gemini statt Llama
+
+Auf Nutzerwunsch, nachdem der Gemini-Fallback (1.55.26) bestaetigt funktionierte:
+bessere Antwortqualitaet auch fuer DE/EN, da das bisher genutzte kostenlose
+Llama 3.3 (Workers AI) spuerbar schwaecher ist als Gemini.
+
+- **Aenderung:** `worker/src/modelRouter.ts` - Sprach-basiertes Routing
+  (DE/EN -> Workers AI, TR/ZH/HI -> Gemini) entfernt. Jetzt laufen alle
+  Sprachen primaer ueber Gemini 2.0 Flash-Lite; Workers AI (Llama) bleibt
+  nur noch als automatischer Fallback, falls Gemini scheitert (z. B.
+  Kontingent/429, siehe 1.55.26).
+- **Deployed und live verifiziert** (`npx wrangler deploy`, Version
+  `1b2632b1-c2b9-4441-993f-4e54ac22d3a8`): DE- und EN-Testanfragen liefern
+  `200` mit erkennbar praegnanteren Antworten (Gemini-Stil statt Llama-Stil).
+- **Kein separater Dev-Worker:** Der Worker ist eine einzige geteilte
+  Instanz fuer lokal/dev/prod (siehe `ALLOWED_ORIGIN` in
+  `worker/wrangler.toml`) - dieser Change wirkt sich auf alle drei
+  gleichzeitig aus, bewusste Entscheidung des Nutzers (2026-07-20).
+- **Kostenimplikation:** Laut Konzept-Kostenrechnung (Abschnitt 2.11) bleibt
+  das bei realistischem Traffic im Cent-Bereich/Monat, ist aber nicht mehr
+  0 € wie zuvor bei Llama fuer DE/EN (Grossteil des Traffics). Sollte
+  beobachtet werden, sobald echter Nutzer-Traffic laeuft.
+
+## 2026-07-20 (1.55.26)
+
+### Fix: KI-Assistent lieferte 502 fuer Tuerkisch/Chinesisch/Hindi (Gemini-Kontingent)
+
+Nutzer-Feedback (Browser-Konsole): Bei Sprache TR/ZH/HI schlugen alle
+Assistent-Anfragen mit `502 Bad Gateway` fehl, teils gefolgt von `429` vom
+Worker selbst.
+
+- **Ursache:** `worker/src/modelRouter.ts` routet TR/ZH/HI ausschliesslich zu
+  Gemini (`gemini-2.0-flash-lite`). Live-Logs (`wrangler tail`) waehrend
+  gezielter Reproduktion zeigten den echten Fehler dahinter:
+  `gemini_request_failed_429` - die Gemini-API selbst lehnte jeden Aufruf mit
+  429 (Kontingent/Rate-Limit) ab, kein Bug im Worker. Der Worker wandelte das
+  in `502` fuer den Client um; wiederholte Retries des Frontends verbrauchten
+  danach zusaetzlich das eigene Session-Tageslimit (die beobachteten 429er
+  direkt vom Worker).
+- **Fix:** `callModel` faengt Gemini-Fehler (429 oder sonstige) jetzt ab und
+  faellt fuer TR/ZH/HI automatisch auf Workers AI (Llama) zurueck, statt
+  einen harten Fehler zurueckzugeben - schwaechere Mehrsprachigkeit als
+  Gemini, aber eine echte Antwort statt `502`. Lokal verifiziert
+  (`wrangler dev` mit bewusst ungueltigem Gemini-Key): Fallback greift,
+  liefert `200` mit korrekter tuerkischer Antwort.
+- **Offen (kein Code-Fix):** Google-Kontingent/Billing fuer den
+  `GEMINI_API_KEY` bei Google AI Studio pruefen, damit TR/ZH/HI wieder die
+  bessere Gemini-Qualitaet bekommen statt dauerhaft auf den Fallback
+  angewiesen zu sein.
+
 ## 2026-07-20 (1.55.25)
 
 ### Fix: KI-Assistent lehnt Finanzierungs-Fragen fälschlich pauschal ab
