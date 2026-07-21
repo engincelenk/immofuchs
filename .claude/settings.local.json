@@ -1,7 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\engin\\\\OneDrive\\\\Dokumente\\\\Claude\\\\Projects\\\\Immofuchs.info\" -Recurse | Where-Object { $_.FullName -notmatch 'node_modules' })"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\engin\\\\OneDrive\\\\Dokumente\\\\Claude\\\\Projects\\\\Immofuchs.info\" -Recurse | Where-Object { $_.FullName -notmatch 'node_modules' })",
+      "Bash(git checkout *)",
+      "Bash(mkdir -p src/context src/i18n src/data src/utils src/components/ui src/components/charts src/components/tables src/components/export src/components/calculators src/components/extras src/components/shell src/pages)",
+      "Bash(awk 'NR>=6 && NR<=22 {print NR\": \"length\\($0\\)\" chars\"}' src/App.jsx)",
+      "Bash(awk 'NR==6' src/App.jsx)",
+      "Bash(awk 'NR==6{print length\\($0\\); print substr\\($0, length\\($0\\)-80\\)}' src/App.jsx)",
+      "Bash(sed -i '1s/^const PLZ_RAW/export const PLZ_RAW/' src/data/plzData.js)",
+      "Bash(sed -i 's/^const PLZ_DB=/export const PLZ_DB=/' src/data/plzData.js)",
+      "Bash(sed -i 's/^const isK15=/export const isK15=/' src/data/plzData.js)",
+      "Bash(awk '{print NR\": \"substr\\($0,1,60\\)}' src/data/plzData.js)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
