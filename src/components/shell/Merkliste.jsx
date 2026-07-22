@@ -69,10 +69,9 @@ export function Merkliste(){
   const[confirmDel,setConfirmDel]=useState(null);
   const[compareIds,setCompareIds]=useState([]);
   const[compareSheetOpen,setCompareSheetOpen]=useState(false);
-  // Sprechblase ueber dem Vergleichs-Button: eigener Hinweis-Text, 1x pro
-  // Sitzung, klickbar (Nutzerwunsch 2026-07-22).
-  const compareHint={id:"merkliste:vergleich",text:at.hintVergleich,delay:3000};
-  const[compareBubbleVisible,dismissCompareBubble]=useFinnBubble(compareHint,compareIds.length>=2&&!compareSheetOpen);
+  // Sprechblase ueber dem Vergleichs-Button: die Merkliste ist kein Rechner,
+  // hier reicht ein Text (Nutzerentscheidung 2026-07-22).
+  const[compareBubbleText,dismissCompareBubble]=useFinnBubble([at.hintVergleich],compareIds.length>=2&&!compareSheetOpen);
   const tabLabel={haupt:t.haupt||'Rendite',kredit:t.kredit||'Kredit',miete:t.miete||'Miete',sanier:t.sanier||'Sanierung'};
   const tabColor={haupt:'#1E3A5F',kredit:'#0a7ea4',miete:'#2d8a4e',sanier:'#8a5a0a'};
   const fmt=v=>v?Number(v).toLocaleString(locale):null;
@@ -157,7 +156,7 @@ export function Merkliste(){
       {/* ═══ KI-ASSISTENT OBJEKTVERGLEICH (Phase 3, Sprint 6 — Konzept 3.3a) ═══ */}
       {compareIds.length>=2&&createPortal(
         <div style={{position:'fixed',left:16,right:16,bottom:'calc(76px + env(safe-area-inset-bottom))',zIndex:120}}>
-          <FinnBubble text={compareHint.text} visible={compareBubbleVisible} onOpen={()=>{dismissCompareBubble();openCompare();}} onDismiss={dismissCompareBubble} openLabel={at.compareButton} dismissLabel={at.close}/>
+          <FinnBubble text={compareBubbleText||at.hintVergleich} visible={!!compareBubbleText} onOpen={()=>{dismissCompareBubble();openCompare();}} onDismiss={dismissCompareBubble} openLabel={at.compareButton} dismissLabel={at.close}/>
           <button className="no-print" onClick={()=>{dismissCompareBubble();openCompare();}} style={{width:'100%',height:48,borderRadius:24,border:'none',background:'var(--ca)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',boxShadow:'0 4px 16px rgba(0,0,0,.2)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
             {at.compareButton} ({compareIds.length})
           </button>

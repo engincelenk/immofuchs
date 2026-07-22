@@ -1,64 +1,69 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const HIDE_AFTER_MS = 12000; // Standzeit (Nutzerwunsch 2026-07-22: laenger als die frueheren 7s)
-const SEEN_KEY = "if_finn_hints_seen";
+// Zeitliche Staffelung der Sprechblasen-Sequenz (Nutzerentscheidung
+// 2026-07-22). Alle drei Texte sind innerhalb der ersten Minute durch, aber
+// nie zwei Blasen unmittelbar hintereinander:
+//   Text 1: 3s  - 15s
+//   Text 2: 30s - 42s
+//   Text 3: 57s - 69s
+const ERSTE_NACH_MS = 3000;
+const STANDZEIT_MS = 12000;
+const PAUSE_MS = 15000;
 
-// Jeder Hinweis erscheint hoechstens EINMAL pro Sitzung (Nutzerentscheidung
-// 2026-07-22). Ohne dieses Gedaechtnis kam dieselbe Blase bei jedem
-// Tab-Wechsel und jedem Chat-Schliessen erneut - sechs verschiedene, jeweils
-// passende Ansprachen wirken staerker als eine, die zwanzigmal dasselbe sagt.
-// sessionStorage statt localStorage: beim naechsten Besuch darf Finn wieder.
-function readSeen() {
-  try {
-    return new Set(JSON.parse(sessionStorage.getItem(SEEN_KEY) || "[]"));
-  } catch {
-    return new Set();
+export function startZeitpunkte(anzahl) {
+  const out = [];
+  let t = ERSTE_NACH_MS;
+  for (let i = 0; i < anzahl; i++) {
+    out.push(t);
+    t += STANDZEIT_MS + PAUSE_MS;
   }
-}
-
-function markSeen(id) {
-  try {
-    const seen = readSeen();
-    seen.add(id);
-    sessionStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
-  } catch {}
+  return out;
 }
 
 /**
- * Proaktive Sprechblase neben dem Assistenten-FAB.
+ * Spielt eine Textsequenz als Sprechblase ab (siehe finnHints.js).
  *
- * @param hint   {id, text, delay} aus finnHints.js - oder null/undefined
- * @param active false unterdrueckt die Blase komplett (Kill-Switch, oder
- *               waehrend der Chat ohnehin offen ist)
+ * Der Hook gehoert bewusst in die Komponente, die NICHT verschwindet, wenn
+ * der Chat aufgeht (AssistantWidget/LandingMascot) - nicht in den MascotFab,
+ * der beim Oeffnen ausgehaengt wird. Sonst startet die Sequenz nach jedem
+ * Schliessen des Chats von vorn und springt dem Nutzer sofort wieder ins
+ * Gesicht (Nutzerwunsch 2026-07-22).
  *
- * Bewusst KEIN globaler Klick-Listener mehr: frueher liess jeder beliebige
- * Klick irgendwo auf der Seite die Blase verschwinden, oft bevor sie gelesen
- * war. Geschlossen wird jetzt nur noch aktiv (eigenes ✕) oder per Timeout.
+ * @param texte  string[] aus buildFinnHints()
+ * @param active false blendet die Blase aus (Chat offen, Kill-Switch) -
+ *               die Sequenz laeuft im Hintergrund weiter
+ * @returns [sichtbarerText|null, dismiss]
  */
-export function useFinnBubble(hint, active = true) {
-  const [visible, setVisible] = useState(false);
-  const id = hint?.id;
-  const delay = hint?.delay ?? 3000;
+export function useFinnBubble(texte, active = true) {
+  const [index, setIndex] = useState(-1);
+  const abgebrochen = useRef(new Set());
+
+  // Nur die Laenge steuert die Timer - wechselt der Nutzer die Sprache oder
+  // aendert sich ein Kennzahl-Text, soll die Sequenz nicht neu anlaufen.
+  const anzahl = texte.length;
 
   useEffect(() => {
-    if (!active || !id || readSeen().has(id)) {
-      setVisible(false);
-      return;
-    }
-    const showTimer = setTimeout(() => {
-      markSeen(id);
-      setVisible(true);
-    }, delay);
-    return () => clearTimeout(showTimer);
-  }, [active, id, delay]);
+    if (anzahl === 0) return;
+    const timers = [];
+    startZeitpunkte(anzahl).forEach((start, i) => {
+      timers.push(setTimeout(() => setIndex(i), start));
+      timers.push(setTimeout(() => setIndex((cur) => (cur === i ? -1 : cur)), start + STANDZEIT_MS));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [anzahl]);
 
-  useEffect(() => {
-    if (!visible) return;
-    const hideTimer = setTimeout(() => setVisible(false), HIDE_AFTER_MS);
-    return () => clearTimeout(hideTimer);
-  }, [visible]);
+  const dismiss = useCallback(() => {
+    setIndex((cur) => {
+      if (cur >= 0) abgebrochen.current.add(cur);
+      return -1;
+    });
+  }, []);
 
-  const dismiss = useCallback(() => setVisible(false), []);
+  const text = useMemo(() => {
+    if (!active || index < 0 || abgebrochen.current.has(index)) return null;
+    return texte[index] ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, index, texte]);
 
-  return [visible, dismiss];
+  return [text, dismiss];
 }

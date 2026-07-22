@@ -1,32 +1,38 @@
+import { useEffect, useRef } from "react";
 import { FinnBubble } from "./FinnBubble.jsx";
-import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 
-export function MascotFab({ onOpen, hidden, label, hint, t, bottom = "calc(76px + env(safe-area-inset-bottom))" }) {
-  const [bubbleVisible, dismissBubble] = useFinnBubble(hint, !hidden);
+// Rein darstellend: die Blasen-Sequenz wird eine Ebene hoeher gehalten
+// (AssistantWidget/LandingMascot), weil dieser Baustein beim Oeffnen des
+// Chats ausgehaengt wird und der Ablauf sonst jedes Mal neu anlaufen wuerde.
+export function MascotFab({ onOpen, hidden, label, bubbleText, onDismissBubble, t, bottom = "calc(76px + env(safe-area-inset-bottom))" }) {
+  // Letzten Text behalten, damit die Blase beim Ausblenden nicht schlagartig
+  // leer wird - die Ausblend-Animation braucht ihren Inhalt noch.
+  const letzterText = useRef("");
+  useEffect(() => {
+    if (bubbleText) letzterText.current = bubbleText;
+  }, [bubbleText]);
 
   if (hidden) return null;
 
   const openFromBubble = () => {
-    dismissBubble();
+    onDismissBubble?.();
     onOpen();
   };
 
   return (
     <div style={{ position: "fixed", right: 18, bottom, zIndex: 120 }}>
-      {hint?.text && (
-        <FinnBubble
-          text={hint.text}
-          visible={bubbleVisible}
-          align="right"
-          onOpen={openFromBubble}
-          onDismiss={dismissBubble}
-          openLabel={label}
-          dismissLabel={t?.close}
-        />
-      )}
+      <FinnBubble
+        text={bubbleText || letzterText.current}
+        visible={!!bubbleText}
+        align="right"
+        onOpen={openFromBubble}
+        onDismiss={onDismissBubble}
+        openLabel={label}
+        dismissLabel={t?.close}
+      />
       <button
         onClick={() => {
-          dismissBubble();
+          onDismissBubble?.();
           onOpen();
         }}
         aria-label={label}

@@ -4,6 +4,8 @@ import { MascotFab } from "./MascotFab.jsx";
 import { ChatBubble } from "./ChatBubble.jsx";
 import { SuggestedQuestionChip } from "./SuggestedQuestionChip.jsx";
 import { AssistantHeaderBar } from "./AssistantHeaderBar.jsx";
+import { buildFinnHints } from "./finnHints.js";
+import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { useAssistant } from "../../hooks/useAssistant.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { useSpeechInput } from "../../hooks/useSpeechInput.js";
@@ -40,6 +42,7 @@ export function LandingMascot({ onStart, lang }) {
   const { messages, status, ask, retry, reset } = useAssistant();
   const inputRef = useRef(null);
   const isDesktop = useIsDesktop();
+  const [bubbleText, dismissBubble] = useFinnBubble(buildFinnHints("landing", null, t), !open);
 
   const speech = useSpeechInput((text) => {
     if (inputRef.current) {
@@ -146,7 +149,8 @@ export function LandingMascot({ onStart, lang }) {
           (Nutzer-Screenshot-Vergleich 2026-07-22). */}
       <MascotFab
         label={t.dialogAria}
-        hint={{ id: "landing", text: t.landingBubble, delay: 3000 }}
+        bubbleText={bubbleText}
+        onDismissBubble={dismissBubble}
         t={t}
         hidden={open}
         onOpen={() => setOpen(true)}

@@ -1,38 +1,39 @@
 import { tpl } from "../../utils/helpers.js";
 
-// Waehlt aus, WAS Finn in der Sprechblase sagt (Nutzerwunsch 2026-07-22:
-// "die Sprechblase soll intelligent sein und den Nutzer animieren").
+// Was Finn in der Sprechblase sagt - drei Texte je Flaeche, die nacheinander
+// durchlaufen (Nutzerwunsch 2026-07-22: "seiten- und rechnerspezifisch und
+// oefter"). Das Timing steckt in useFinnBubble.js.
 //
-// Vorher gab es nur zwei feste Texte und einen 5s-Timer, unabhaengig davon,
-// was auf dem Bildschirm stand. Jetzt meldet Finn sich, wenn er tatsaechlich
-// etwas zu sagen hat - und sagt dann etwas Konkretes zum Ergebnis.
-//
-// Rueckgabe: { id, text, delay } oder null.
-//   id    - Dedup-Schluessel, jeder Hinweis erscheint 1x pro Sitzung
-//           (siehe useFinnBubble.js)
-//   delay - Wartezeit bis zum Einblenden in ms
-const SOFORT = 3000; // ergebnisbezogene Hinweise: kurz nach dem Rendern
-const IDLE = 30000; // generischer Anstupser: erst wenn wirklich nichts passiert
+// Vorher gab es genau zwei feste Saetze fuer die ganze App und einen Timer,
+// der nicht wusste, was auf dem Bildschirm steht.
+const FLAECHEN_TEXTE = {
+  landing: ["hintLanding1", "hintLanding2", "hintLanding3"],
+  renditerechner: ["hintRendite1", "hintRendite2", "hintRendite3"],
+  finanzierung: ["hintKredit1", "hintKredit2", "hintKredit3"],
+  miete: ["hintMiete1", "hintMiete2", "hintMiete3"],
+  sanierung: ["hintSanier1", "hintSanier2", "hintSanier3"],
+  steuertrick: ["hintSteuer1", "hintSteuer2", "hintSteuer3"],
+  vorfaelligkeit: ["hintVfe1", "hintVfe2", "hintVfe3"],
+};
 
-export function pickFinnHint(rechner, signale, t) {
+// Ergebnisbezogene Warnung - schlaegt eine an, ersetzt sie den ERSTEN Text
+// der Sequenz. Reihenfolge = Dringlichkeit, es gewinnt immer nur eine.
+function pickDringend(signale, t) {
   const s = signale || {};
+  if (s.tier === "red") return t.hintTierRot;
+  if (typeof s.cashflow === "number" && s.cashflow < 0) return t.hintCashflowNegativ;
+  if (typeof s.risiko === "number" && s.risiko > 60) return tpl(t.hintRisikoHoch, { wert: Math.round(s.risiko) });
+  return null;
+}
 
-  // Reihenfolge = Prioritaet. Das dringlichste Problem gewinnt, es wird nie
-  // mehr als ein Hinweis gleichzeitig gezeigt.
-  if (s.tier === "red") {
-    return { id: rechner + ":tier-rot", text: t.hintTierRot, delay: SOFORT };
-  }
-  if (typeof s.cashflow === "number" && s.cashflow < 0) {
-    return { id: rechner + ":cashflow-negativ", text: t.hintCashflowNegativ, delay: SOFORT };
-  }
-  if (typeof s.risiko === "number" && s.risiko > 60) {
-    return { id: rechner + ":risiko-hoch", text: tpl(t.hintRisikoHoch, { wert: Math.round(s.risiko) }), delay: SOFORT };
-  }
-  // Praxisfehler, der bares Geld kostet - steht seit dem Erstkonzept als
-  // proaktiver Hinweis drin (docs/plans/2026-07-19-ki-assistent-konzept.md),
-  // war aber nie umgesetzt.
-  if (rechner === "sanierung") {
-    return { id: "sanierung:foerderantrag", text: t.hintFoerderantrag, delay: SOFORT };
-  }
-  return { id: rechner + ":idle", text: t.hintIdle, delay: IDLE };
+/**
+ * Liefert die Textsequenz fuer eine Flaeche.
+ * @returns string[] - leer, wenn die Flaeche keine Texte hat
+ */
+export function buildFinnHints(rechner, signale, t) {
+  const texte = (FLAECHEN_TEXTE[rechner] || []).map((k) => t[k]).filter(Boolean);
+  if (texte.length === 0) return [];
+  const dringend = pickDringend(signale, t);
+  if (dringend) texte[0] = dringend;
+  return texte;
 }

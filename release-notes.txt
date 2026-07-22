@@ -1,3 +1,62 @@
+## 2026-07-22 (1.55.47)
+
+### Sprechblase: 3 Texte je Flaeche, nacheinander in der ersten Minute
+
+Korrektur zur Version davor: die war seiten-/rechnerspezifisch nur halb (fuenf
+von sechs Rechnern fielen auf denselben generischen Satz zurueck) und durch
+"1x pro Sitzung" + 30s-Verzoegerung deutlich SELTENER statt oefter. Beides
+umgedreht (Nutzerwunsch 2026-07-22).
+
+- **21 neue Texte:** drei je Flaeche fuer Startseite, Rendite, Kredit, Miete,
+  Sanierung, §6-Trick und Vorfaelligkeit - inhaltlich am jeweiligen Rechner
+  ausgerichtet ("Kappungsgrenze verstanden?", "Was passiert nach der
+  Zinsbindung?"). In 5 Sprachen, also 105 Eintraege. tr/zh/hi wie gehabt
+  Best-Effort, vor Live-Schaltung gegenlesen lassen.
+- **Sequenz statt Einzeltext:** `finnHints.js` liefert jetzt eine Liste,
+  `useFinnBubble.js` spielt sie ab. Staffelung: Text 1 nach 3s, Text 2 nach
+  30s, Text 3 nach 57s, Standzeit je 12s, dazwischen 15s Pause. Alle drei
+  sind in der ersten Minute durch, aber nie zwei Blasen direkt hintereinander.
+- **Ergebnis-Trigger behalten Vorrang** und ersetzen Text 1: rot schlaegt
+  Cashflow<0 schlaegt Risiko>60. Text 2 und 3 laufen danach normal weiter.
+- **Sequenz laeuft je Rechner-Aufruf**, nicht mehr 1x pro Sitzung - der
+  Tab-Wechsel startet die passende neue Sequenz. Das Sitzungs-Gedaechtnis
+  (`sessionStorage`) entfaellt komplett.
+- **Hook liegt jetzt eine Ebene hoeher** (`AssistantWidget`/`LandingMascot`
+  statt `MascotFab`): der FAB wird beim Oeffnen des Chats ausgehaengt, die
+  Sequenz waere sonst nach jedem Schliessen von vorn losgelaufen und dem
+  Nutzer sofort wieder ins Gesicht gesprungen. `MascotFab` ist damit rein
+  darstellend.
+- **Entfallen:** `hintIdle` und `hintFoerderantrag` (letzterer ist jetzt
+  `hintSanier1`), `landingBubble` (jetzt `hintLanding1`).
+
+**Live gemessen** (Dev-Server, Zustandsaufzeichnung im DOM):
+
+| | Soll | Startseite | Renditerechner |
+|---|---|---|---|
+| Text 1 aus | 15s | 15,9s | 16,2s |
+| Text 2 ein/aus | 30s / 42s | 30,9s / 42,9s | 31,2s / 43,2s |
+| Text 3 ein | 57s | 57,9s | 58,2s |
+
+Die ~1s Versatz sind der Abstand zwischen Seitenladen und React-Mount, die
+Timer laufen ab Mount. Reihenfolge Startseite: "Hi, ich bin Finn…" ->
+"Weißt du nicht, welcher Rechner passt?" -> "Frag mich alles rund um
+Immobilien". Im Renditerechner ersetzte die echte Datenlage Text 1 korrekt
+durch "Jeden Monat Minus…", danach folgten "Ist der Kaufpreis fair?" und
+"Trägt sich das Objekt selbst?". Tab-Wechsel auf Kredit: neue Sequenz startete
+3,1s spaeter mit "Unsicher bei Zins und Tilgung?". Prioritaetslogik und
+Startzeitpunkte zusaetzlich deterministisch gegen die Module getestet.
+
+**Nicht verifiziert:** Sanierung, §6-Trick und Vorfaelligkeit in der echten
+Oberflaeche - deren Assistenten-Widget haengt hinter ausgefuellten Eingaben,
+die sich per Script nicht zuverlaessig setzen liessen. Die Textauswahl dafuer
+ist getestet, die Anzeige im Rechner nicht.
+
+**Betroffene Dateien:** src/components/assistant/finnHints.js,
+src/hooks/useFinnBubble.js, src/components/assistant/MascotFab.jsx,
+src/components/assistant/AssistantWidget.jsx,
+src/components/assistant/LandingMascot.jsx,
+src/components/shell/Merkliste.jsx, src/i18n/assistant.js
+
 ## 2026-07-22 (1.55.46)
 
 ### Sprechblase: Kontext-Trigger statt Timer, klickbar, 1x pro Sitzung

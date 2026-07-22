@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { MascotFab } from "./MascotFab.jsx";
 import { AssistantSheet } from "./AssistantSheet.jsx";
-import { pickFinnHint } from "./finnHints.js";
+import { buildFinnHints } from "./finnHints.js";
+import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 
 // Buendelt Mascot-FAB -> Chat-Sheet. Generisch pro Rechner nutzbar.
@@ -17,11 +18,19 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 export function AssistantWidget({ rechner, kontext, contextLabel, suggested, lang, disabled, signale }) {
   const t = ASSISTANT_T[lang] || ASSISTANT_T.de;
   const [sheetOpen, setSheetOpen] = useState(false);
-  const hint = pickFinnHint(rechner, signale, t);
+  const hints = buildFinnHints(rechner, signale, t);
+  const [bubbleText, dismissBubble] = useFinnBubble(hints, !sheetOpen && !disabled);
 
   return (
     <>
-      <MascotFab label={t.dialogAria} hint={hint} t={t} hidden={disabled || sheetOpen} onOpen={() => setSheetOpen(true)} />
+      <MascotFab
+        label={t.dialogAria}
+        bubbleText={bubbleText}
+        onDismissBubble={dismissBubble}
+        t={t}
+        hidden={disabled || sheetOpen}
+        onOpen={() => setSheetOpen(true)}
+      />
       <AssistantSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
