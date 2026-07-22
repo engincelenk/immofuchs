@@ -8,7 +8,7 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, bottom = "calc(76
 
   return (
     <div style={{ position: "fixed", right: 18, bottom, zIndex: 120 }}>
-      {bubbleText && <FinnBubble text={bubbleText} visible={bubbleVisible} />}
+      {bubbleText && <FinnBubble text={bubbleText} visible={bubbleVisible} align="right" />}
       <button
         onClick={() => {
           setBubbleVisible(false);

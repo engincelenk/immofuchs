@@ -1,3 +1,59 @@
+## 2026-07-22 (1.55.37)
+
+### Verbesserungen: Landing-Beratung mit echtem Mehrwert + echter Online-Status
+
+Umsetzung der Verbesserungsliste aus der letzten Session, ohne den Punkt
+"FAB-Erstkontakt-Puls" (auf Nutzerwunsch ausgeklammert).
+
+- **`LandingMascot.jsx`:** Klick auf einen der 6 Chips springt nicht mehr
+  sofort zum Rechner, sondern zeigt zuerst eine kurze Begruendung als
+  Chat-Bubble ("Der Renditerechner zeigt dir sofort, ob sich das Investment
+  lohnt...") + "Zum Rechner"-Button + "Zurück"-Link. Vorher war der Flow
+  inhaltlich identisch zur Rechner-Kachel-Auswahl weiter unten auf der
+  Seite - jetzt gibt es echten Beratungs-Mehrwert statt einer zweiten
+  Navigation zum selben Ziel.
+- **`AssistantSheet.jsx`:** Der "● online"-Status im Sheet-Kopf war fest
+  verdrahtet und log auch, wenn der Assistent offline/pausiert/deaktiviert
+  war. Spiegelt jetzt den echten `status` aus `useAssistant.js` (offline
+  -> "offline", limit -> "pausiert", disabled -> "nicht verfügbar", sonst
+  weiterhin "online"), inkl. Farbwechsel (grau/gelb statt immer gruen).
+- **Uebersetzungen:** alle neuen Keys (Beratungstexte, Status-Labels) in
+  allen 5 Sprachen ergaenzt, mit besonderer Sorgfalt bei tr/zh/hi seit die
+  Landing-Page (hoehere Sichtbarkeit) betroffen ist. Bleibt trotzdem
+  Best-Effort ohne Muttersprachler-Review, siehe Datei-Kommentar.
+- **Bewusst nicht umgesetzt:** FAB-Erstkontakt-Puls (expliziter
+  Nutzerwunsch, ausgeklammert).
+
+**Betroffene Dateien:** src/components/assistant/LandingMascot.jsx,
+AssistantSheet.jsx, src/i18n/assistant.js
+
+## 2026-07-22 (1.55.36)
+
+### Fix: Sprechblase auf Mobile abgeschnitten + Uebersetzungs-Konsistenz
+
+Nutzer-Feedback: Die Finn-Sprechblase wurde auf Mobile am rechten Rand
+abgeschnitten. Ursache: `FinnBubble.jsx` war fix mit `left:14px` +
+`white-space:nowrap` positioniert - beim rechts-verankerten, schmalen
+Mascot-FAB (`right:18px`) wuchs laengerer Text ueber den Bildschirmrand
+hinaus, statt umzubrechen.
+
+- **`FinnBubble.jsx`:** neue `align`-Prop ("left" Default / "right").
+  `align="right"` verankert die Blase am rechten statt linken Rand ihres
+  Elternelements (waechst nach links). Zusaetzlich `white-space:normal`
+  statt `nowrap` + `maxWidth:min(230px, calc(100vw - 48px))` - bricht bei
+  Bedarf um und ragt nie mehr ueber den Viewport hinaus, unabhaengig von
+  der Sprache/Textlaenge.
+- **`MascotFab.jsx`:** nutzt jetzt `align="right"` (FAB haengt rechts am
+  Rand). Merkliste-Vergleichsbutton (volle Breite) bleibt beim Default
+  `align="left"`, dort bestand das Problem nicht.
+- **Uebersetzungs-Review:** `landingChipMiete` (de) nutzte `Vermieter:in` -
+  einzige Stelle im ganzen Code mit Doppelpunkt-Gender-Notation, der Rest
+  der App (inkl. Renditerechner-Texte) nutzt durchgaengig die neutrale Form
+  "Vermieter" ohne Suffix. Angeglichen fuer Konsistenz.
+
+**Betroffene Dateien:** src/components/assistant/FinnBubble.jsx,
+MascotFab.jsx, src/i18n/assistant.js
+
 ## 2026-07-21 (1.55.35)
 
 ### Feature: Nur noch Mascot-FAB als Einstieg + Landing-Berater + vertikale Chips

@@ -6,25 +6,36 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 // Vor der ersten Berechnung gibt es noch keinen Rechner-Kontext fuer den
 // echten Chat-Assistenten - hier reicht reine Routing-Hilfe zum passenden
 // Rechner, kein Freitext/Worker-Call (Nutzerwunsch 2026-07-21).
+//
+// Zwischenschritt mit kurzer Begruendung vor dem Sprung (statt sofortigem
+// Tab-Wechsel) - sonst ist das nur eine Kopie der Rechner-Kachel-Auswahl
+// weiter unten auf der Seite, ohne echten Beratungs-Mehrwert (Nutzer-
+// Feedback 2026-07-22).
 const ROUTES = [
-  { tab: "haupt", key: "landingChipRendite" },
-  { tab: "kredit", key: "landingChipFinanzierung" },
-  { tab: "miete", key: "landingChipMiete" },
-  { tab: "sanier", key: "landingChipSanierung" },
-  { tab: "steuer6", key: "landingChipSteuer" },
-  { tab: "vfe", key: "landingChipVfe" },
+  { tab: "haupt", chipKey: "landingChipRendite", adviceKey: "landingAdviceRendite" },
+  { tab: "kredit", chipKey: "landingChipFinanzierung", adviceKey: "landingAdviceFinanzierung" },
+  { tab: "miete", chipKey: "landingChipMiete", adviceKey: "landingAdviceMiete" },
+  { tab: "sanier", chipKey: "landingChipSanierung", adviceKey: "landingAdviceSanierung" },
+  { tab: "steuer6", chipKey: "landingChipSteuer", adviceKey: "landingAdviceSteuer" },
+  { tab: "vfe", chipKey: "landingChipVfe", adviceKey: "landingAdviceVfe" },
 ];
 
 export function LandingMascot({ onStart, lang }) {
   const t = ASSISTANT_T[lang] || ASSISTANT_T.de;
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState(null);
+
+  const close = () => {
+    setOpen(false);
+    setSelected(null);
+  };
 
   useEffect(() => {
     if (!open) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
     return () => {
@@ -44,7 +55,7 @@ export function LandingMascot({ onStart, lang }) {
       />
       {createPortal(
         <>
-          <div className={`if-lm-backdrop${open ? " open" : ""}`} onClick={() => setOpen(false)} aria-hidden={!open} />
+          <div className={`if-lm-backdrop${open ? " open" : ""}`} onClick={close} aria-hidden={!open} />
           <div
             className={`if-lm-sheet${open ? " open" : ""}`}
             role="dialog"
@@ -52,7 +63,7 @@ export function LandingMascot({ onStart, lang }) {
             aria-label={t.assistantName}
             {...(!open ? { inert: "" } : {})}
           >
-            <button onClick={() => setOpen(false)} aria-label={t.close} className="if-lm-close">
+            <button onClick={close} aria-label={t.close} className="if-lm-close">
               ✕
             </button>
             <div className="if-lm-handle" />
@@ -63,14 +74,28 @@ export function LandingMascot({ onStart, lang }) {
                 <span className="if-lm-online">● {t.onlineStatus}</span>
               </span>
             </div>
-            <div className="if-lm-intro">{t.landingIntro}</div>
-            <div className="if-lm-chips">
-              {ROUTES.map((r) => (
-                <button key={r.tab} className="if-lm-chip" onClick={() => onStart(r.tab)}>
-                  {t[r.key]}
+            {!selected ? (
+              <>
+                <div className="if-lm-intro">{t.landingIntro}</div>
+                <div className="if-lm-chips">
+                  {ROUTES.map((r) => (
+                    <button key={r.tab} className="if-lm-chip" onClick={() => setSelected(r)}>
+                      {t[r.chipKey]}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="if-lm-advice">
+                <div className="if-lm-advice-bubble">{t[selected.adviceKey]}</div>
+                <button className="if-lm-go" onClick={() => onStart(selected.tab)}>
+                  {t.landingGoToCalc}
                 </button>
-              ))}
-            </div>
+                <button className="if-lm-backlink" onClick={() => setSelected(null)}>
+                  {t.landingBack}
+                </button>
+              </div>
+            )}
           </div>
         </>,
         document.body
@@ -91,9 +116,16 @@ export function LandingMascot({ onStart, lang }) {
         .if-lm-chips{display:flex;flex-direction:column;gap:8px;padding:8px 18px calc(20px + env(safe-area-inset-bottom));overflow-y:auto}
         .if-lm-chip{display:block;width:100%;text-align:left;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ca);background:var(--ca-bg);border:1px solid var(--ca-bd);border-radius:12px;padding:12px 14px;cursor:pointer}
         .if-lm-chip:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+        .if-lm-advice{padding:16px 18px calc(20px + env(safe-area-inset-bottom))}
+        .if-lm-advice-bubble{background:var(--cc);border:1px solid var(--cb);color:var(--ct);font-size:13.5px;line-height:1.5;padding:12px 14px;border-radius:14px 14px 14px 4px;margin-bottom:14px;animation:ifLmBubbleIn .25s ease}
+        .if-lm-go{display:block;width:100%;height:44px;border-radius:22px;border:none;background:var(--ca);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:10px}
+        .if-lm-go:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+        .if-lm-backlink{display:block;width:100%;height:36px;border-radius:18px;border:none;background:transparent;color:var(--ch);font-family:inherit;font-weight:600;font-size:13px;cursor:pointer}
+        @keyframes ifLmBubbleIn{0%{opacity:0;transform:translateY(6px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
         @media (prefers-reduced-motion: reduce){
           .if-lm-sheet{transition:none}
           .if-lm-backdrop{transition:none}
+          .if-lm-advice-bubble{animation:none}
         }
       `}</style>
     </>

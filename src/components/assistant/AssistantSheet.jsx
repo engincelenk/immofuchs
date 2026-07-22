@@ -9,6 +9,17 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
   const inputRef = useRef(null);
   const sheetRef = useRef(null);
 
+  // Statusanzeige im Kopf spiegelt den echten Assistenten-Zustand statt
+  // immer "online" zu behaupten (Nutzer-Feedback 2026-07-22).
+  const statusInfo =
+    status === "offline"
+      ? { label: t.statusOffline, color: "#8C8C99" }
+      : status === "disabled"
+      ? { label: t.statusDisabled, color: "#8C8C99" }
+      : status === "limit"
+      ? { label: t.statusLimited, color: "#f59e0b" }
+      : { label: t.onlineStatus, color: "#1e8a5b" };
+
   useEffect(() => {
     if (open) {
       const id = setTimeout(() => inputRef.current?.focus(), 200);
@@ -86,7 +97,7 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
           <img src="/fuchs-mascot.webp" alt="" aria-hidden="true" className="if-asst-header-avatar" />
           <span>
             <span className="if-asst-header-name">{t.assistantName}</span>
-            <span className="if-asst-header-online">● {t.onlineStatus}</span>
+            <span className="if-asst-header-online" style={{ color: statusInfo.color }}>● {statusInfo.label}</span>
           </span>
         </div>
         <div className="if-asst-context">{contextLabel}</div>
