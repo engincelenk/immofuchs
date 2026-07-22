@@ -1,3 +1,34 @@
+## 2026-07-22 (1.55.51)
+
+### Sprechblase in warmem Hinweiston + Stromfluss als kurzer Impuls
+
+- **Sprechblase war fast schwarz** (`--ct`, #1A1A1A mit weisser Schrift) und
+  damit der einzige dunkle Fleck in einer sonst hellen Oberflaeche. Nach
+  Vergleich von fuenf Entwuerfen auf Variante D umgestellt: Hintergrund
+  `--ca-bg` (#FFF1E8), Text `--ca-dk` (#C44D00), 1px-Kontur `--ca-bd`
+  (#F5CBA9), Schliessen-Kreuz in `--ca`. Der Zipfel bekommt die Kontur ueber
+  einen `drop-shadow` fortgesetzt. Alle Werte aus den bestehenden
+  Design-Tokens, keine neue Farbe eingefuehrt.
+  Volles Orange (Entwurf E) schied bewusst aus - es konkurriert mit
+  "Jetzt rechnen" und dem Senden-Button um dieselbe Aufmerksamkeit.
+- **Stromfluss ist jetzt ein Impuls statt eines Dauerlaufs** (Nutzerwunsch):
+  Das Band schiesst in **1 s** durch die Figur, danach **19 s Ruhe**.
+  Umgesetzt ueber einen 20-s-Zyklus, in dem die gesamte Bewegung in den
+  ersten 5 % steckt; den Rest der Zeit steht das Band unsichtbar oberhalb.
+  Vorher lief es dauerhaft in 15 s durch.
+- Pulsieren unveraendert bei 8 s.
+
+**Live geprueft** (Dev-Server, Computed Styles): Blase `rgb(255,241,232)` auf
+`rgb(196,77,0)` mit Rand `rgb(245,203,169)`, Kreuz `rgb(232,96,10)`, Zipfel in
+Blasenfarbe; Band `ifFabStrom 20s`, Status `running`; App laedt fehlerfrei.
+
+**Nicht verifiziert:** die Optik - Screenshots sind in dieser Umgebung nicht
+moeglich. Die Farbwerte stammen aus der Entwurfsseite, die der Nutzer
+beurteilt hat.
+
+**Betroffene Dateien:** src/components/assistant/FinnBubble.jsx,
+src/components/assistant/MascotFab.jsx
+
 ## 2026-07-22 (1.55.50)
 
 ### Fix: Finn war auf Mobile nur in der Ergebnis-Ansicht sichtbar

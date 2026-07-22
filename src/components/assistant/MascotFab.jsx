@@ -84,13 +84,18 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, onDismissBubble, 
           -webkit-mask-position:center;mask-position:center;
           mix-blend-mode:screen}
         @supports (mix-blend-mode:plus-lighter){.if-mascot-fx{mix-blend-mode:plus-lighter}}
+        /* Kurzer Impuls statt Dauerlauf (Nutzerwunsch 2026-07-22): das Band
+           schiesst in 1s durch die Figur, danach 19s Ruhe. Umgesetzt ueber
+           einen 20s-Zyklus, in dem die Bewegung in den ersten 5% steckt -
+           1s von 20s. Den Rest der Zeit steht das Band unsichtbar oben. */
         .if-mascot-band{position:absolute;left:-12%;width:124%;height:42%;opacity:0;filter:blur(.6px);
           background:linear-gradient(to top,rgba(60,190,255,0) 0%,rgba(90,215,255,.7) 34%,rgba(215,248,255,1) 50%,rgba(90,215,255,.7) 66%,rgba(60,190,255,0) 100%);
-          animation:ifFabStrom 15s linear infinite}
+          animation:ifFabStrom 20s linear infinite}
         @keyframes ifFabStrom{
           0%{transform:translateY(150%);opacity:0}
-          12%{opacity:.63}
-          88%{opacity:.63}
+          0.4%{opacity:.63}
+          4.6%{opacity:.63}
+          5%{transform:translateY(-150%);opacity:0}
           100%{transform:translateY(-150%);opacity:0}
         }
         @media (prefers-reduced-motion: reduce){
