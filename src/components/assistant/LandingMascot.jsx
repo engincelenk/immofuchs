@@ -144,7 +144,13 @@ export function LandingMascot({ onStart, lang }) {
       {/* Keine eigene `bottom`-Angabe: der MascotFab-Default (76px) gilt auch
           hier, sonst sitzt Finn auf der Startseite tiefer als in den Rechnern
           (Nutzer-Screenshot-Vergleich 2026-07-22). */}
-      <MascotFab label={t.dialogAria} bubbleText={t.landingBubble} hidden={open} onOpen={() => setOpen(true)} />
+      <MascotFab
+        label={t.dialogAria}
+        hint={{ id: "landing", text: t.landingBubble, delay: 3000 }}
+        t={t}
+        hidden={open}
+        onOpen={() => setOpen(true)}
+      />
       {createPortal(
         <>
           <div className={`if-asst-backdrop${open ? " open" : ""}`} onClick={close} aria-hidden={!open} />

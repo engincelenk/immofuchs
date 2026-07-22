@@ -1,3 +1,80 @@
+## 2026-07-22 (1.55.46)
+
+### Sprechblase: Kontext-Trigger statt Timer, klickbar, 1x pro Sitzung
+
+Bisher steckte hinter der Sprechblase kein System, sondern ein Timer: zwei
+feste Texte ("Brauchst du Hilfe?" / Landing-Gruss), 5s Verzoegerung, 7s
+Standzeit, kein Gedaechtnis. Sie erschien bei jedem Tab-Wechsel und jedem
+Chat-Schliessen erneut - immer mit demselben Satz, unabhaengig davon, was auf
+dem Bildschirm stand.
+
+- **Befund vorab: die Blase war reine Deko.** `FinnBubble.jsx` hatte
+  `pointerEvents:"none"` - sie fragte "Brauchst du Hilfe?", und ein Klick
+  darauf tat nichts ausser sie auszublenden. Vermutlich der groesste
+  Einzelgrund, warum sie niemanden in den Assistenten gefuehrt hat.
+- **Blase ist jetzt ein echter Einstieg:** Klick auf den Text oeffnet den
+  Chat, daneben ein eigenes ✕. Auf der Merkliste oeffnet sie den
+  Objektvergleich.
+- **Globaler Klick-Listener entfernt:** vorher liess *jeder* Klick irgendwo
+  auf der Seite die Blase verschwinden, oft bevor sie gelesen war.
+  Geschlossen wird jetzt nur noch aktiv oder per Timeout.
+- **Timing:** 5s -> 3s bis zum Erscheinen, 7s -> 12s Standzeit.
+
+- **Neu: `finnHints.js`** - waehlt aus, WAS Finn sagt. Prioritaetsliste, es
+  wird nie mehr als ein Hinweis gleichzeitig gezeigt:
+
+  | Prioritaet | Bedingung | Verzoegerung |
+  |---|---|---|
+  | 1 | Ampel rot (`tier === "red"`) | 3s |
+  | 2 | Cashflow < 0 | 3s |
+  | 3 | Risikoscore > 60 | 3s |
+  | 4 | Sanierungsrechner (Foerderantrag-Warnung) | 3s |
+  | 5 | sonst: generischer Anstupser | 30s |
+
+  Die Foerderantrag-Warnung ("erst beantragen, dann beauftragen") steht seit
+  dem Erstkonzept als proaktiver Hinweis drin (Abschnitt 1, Praxisfehler der
+  Foerdergeld kostet), war aber nie umgesetzt.
+- **Signale kommen aus dem Rechner**, wo sie ohnehin berechnet werden - neue
+  optionale Prop `signale={{tier,cashflow,risiko}}` an `AssistantWidget`.
+  Aktuell liefert nur der Renditerechner welche (`nrTier`, `R.cf2`, `R.rk`);
+  alle anderen fallen automatisch auf den 30s-Anstupser zurueck, ohne
+  Anpassung.
+- **Jeder Hinweis genau 1x pro Sitzung** (`sessionStorage`, Nutzer-
+  entscheidung). Ohne dieses Gedaechtnis kaeme dieselbe Blase bei jedem
+  Tab-Wechsel wieder - sechs verschiedene, jeweils passende Ansprachen wirken
+  staerker als eine, die zwanzigmal dasselbe sagt.
+- **Texte direkter formuliert** (Nutzerwunsch) und auf den neuen Klick-
+  Charakter gemuenzt, z.B. "Nettorendite rot — klick hier, ich erklär dir
+  warum." / "Jeden Monat Minus. Klick hier, ich zeig dir was hilft." Sechs
+  neue i18n-Keys in 5 Sprachen (`hintTierRot`, `hintCashflowNegativ`,
+  `hintRisikoHoch`, `hintFoerderantrag`, `hintIdle`, `hintVergleich`),
+  `landingBubble` neu getextet, `bubbleHelp` entfaellt.
+
+**Geprueft:** Prioritaetslogik deterministisch gegen `finnHints.js` getestet
+(rot schlaegt Cashflow schlaegt Risiko schlaegt Foerder schlaegt Idle;
+Grenzwerte Risiko=60 und Cashflow=0 loesen korrekt NICHT aus; `{wert}`-
+Platzhalter wird ersetzt). Ende-zu-Ende im Dev-Server: Landing-Blase mit
+neuem Text, `pointerEvents:auto`, Klick oeffnet den Chat, nach dem Schliessen
+kommt sie nicht wieder, `sessionStorage` enthaelt `["landing"]`; im
+Renditerechner loeste die echte Datenlage `renditerechner:cashflow-negativ`
+mit dem passenden Text aus; ein Fremdklick auf die Seite blendet die Blase
+nicht mehr aus.
+
+**Nicht verifiziert:** die Foerderantrag-Blase im Sanierungsrechner - das
+Assistenten-Widget haengt dort hinter `R.rows.length>0` und braucht
+ausgefuellte Eingaben, die sich per Script nicht zuverlaessig setzen liessen
+(formatierte Custom-Inputs). Die Logik dahinter ist getestet, die Anzeige im
+Rechner selbst nicht. Ebenso ungeprueft: die Trigger "Ampel rot" und
+"Risiko > 60" in der echten Oberflaeche.
+
+**Betroffene Dateien:** src/components/assistant/finnHints.js (neu),
+src/hooks/useFinnBubble.js, src/components/assistant/FinnBubble.jsx,
+src/components/assistant/MascotFab.jsx,
+src/components/assistant/AssistantWidget.jsx,
+src/components/assistant/LandingMascot.jsx,
+src/components/shell/Merkliste.jsx,
+src/components/calculators/Renditerechner.jsx, src/i18n/assistant.js
+
 ## 2026-07-22 (1.55.45)
 
 ### Maskottchen finn3 + Chips auf 3 reduziert + Datenschritt entfernt + Name "Finn" in allen Sprachen

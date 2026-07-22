@@ -1,17 +1,32 @@
 import { FinnBubble } from "./FinnBubble.jsx";
 import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 
-export function MascotFab({ onOpen, hidden, label, bubbleText, bottom = "calc(76px + env(safe-area-inset-bottom))" }) {
-  const [bubbleVisible, setBubbleVisible] = useFinnBubble(!hidden && !!bubbleText);
+export function MascotFab({ onOpen, hidden, label, hint, t, bottom = "calc(76px + env(safe-area-inset-bottom))" }) {
+  const [bubbleVisible, dismissBubble] = useFinnBubble(hint, !hidden);
 
   if (hidden) return null;
 
+  const openFromBubble = () => {
+    dismissBubble();
+    onOpen();
+  };
+
   return (
     <div style={{ position: "fixed", right: 18, bottom, zIndex: 120 }}>
-      {bubbleText && <FinnBubble text={bubbleText} visible={bubbleVisible} align="right" />}
+      {hint?.text && (
+        <FinnBubble
+          text={hint.text}
+          visible={bubbleVisible}
+          align="right"
+          onOpen={openFromBubble}
+          onDismiss={dismissBubble}
+          openLabel={label}
+          dismissLabel={t?.close}
+        />
+      )}
       <button
         onClick={() => {
-          setBubbleVisible(false);
+          dismissBubble();
           onOpen();
         }}
         aria-label={label}
@@ -59,8 +74,8 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, bottom = "calc(76
         }
         .if-mascot-fab-img{animation:ifFabWiggle 4.5s ease-in-out infinite}
         .if-mascot-sparkle{position:absolute;color:#fff;text-shadow:0 0 4px var(--ca),0 0 9px var(--ca);opacity:0;pointer-events:none;animation:ifFabSparkle 4.5s ease-in-out infinite}
-        .if-mascot-sparkle-1{top:2px;right:0px;font-size:13px;animation-delay:0s}
-        .if-mascot-sparkle-2{top:24px;left:-3px;font-size:9px;animation-delay:.18s}
+        .if-mascot-sparkle-1{top:2px;right:6px;font-size:13px;animation-delay:0s}
+        .if-mascot-sparkle-2{top:26px;left:2px;font-size:9px;animation-delay:.18s}
         @keyframes ifFabSparkle{
           0%,84%,100%{opacity:0;transform:scale(.3) rotate(0deg)}
           90%{opacity:1;transform:scale(1) rotate(20deg)}

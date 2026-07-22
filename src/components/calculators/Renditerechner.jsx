@@ -499,7 +499,9 @@ export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp(
             at.suggested2,
             at.suggested4
           ];
-          return <AssistantWidget rechner="renditerechner" kontext={kontext} contextLabel={at.contextRendite} suggested={suggested} lang={lang}/>;
+          // Signale fuer die Sprechblase: Ampel, Monats-Cashflow und
+          // Risikoscore sind hier ohnehin schon berechnet (siehe finnHints.js).
+          return <AssistantWidget rechner="renditerechner" kontext={kontext} contextLabel={at.contextRendite} suggested={suggested} lang={lang} signale={{tier:nrTier,cashflow:R.cf2,risiko:R.rk}}/>;
         })()}
       </>}
     </div>

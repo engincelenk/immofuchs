@@ -1,16 +1,17 @@
 /**
- * Kleine Sprechblasen-Anzeige ueber dem Assistenten-Chip/FAB.
- * Erwartet ein relativ positioniertes Elternelement. Timing/Sichtbarkeit
- * kommt aus useFinnBubble.js.
+ * Sprechblase ueber dem Assistenten-FAB.
  *
- * `align="right"` fuer schmale, rechts-verankerte Container (z.B. der
- * Mascot-FAB) - Blase waechst nach links statt nach rechts, sonst wird sie
- * bei laengeren Uebersetzungen am rechten Bildschirmrand abgeschnitten
- * (Nutzer-Feedback 2026-07-22). Zusaetzlich Zeilenumbruch statt `nowrap` +
- * `maxWidth`, damit auch die laengsten Sprachvarianten nie ueber den
- * Viewport hinausragen.
+ * Sie ist jetzt ein echter Einstieg, kein Dekoelement: ein Klick auf den Text
+ * oeffnet den Chat. Vorher stand hier `pointerEvents:"none"` - die Blase
+ * fragte "Brauchst du Hilfe?", und ein Klick darauf tat nichts (Befund
+ * 2026-07-22). Daneben ein eigenes ✕, seit der globale Klick-Listener raus
+ * ist (siehe useFinnBubble.js).
+ *
+ * `align="right"` fuer schmale, rechts-verankerte Container (Mascot-FAB) -
+ * Blase waechst nach links, sonst wird sie bei laengeren Uebersetzungen am
+ * rechten Bildschirmrand abgeschnitten (Nutzer-Feedback 2026-07-22).
  */
-export function FinnBubble({ text, visible, align = "left" }) {
+export function FinnBubble({ text, visible, align = "left", onOpen, onDismiss, openLabel, dismissLabel }) {
   const isRight = align === "right";
   return (
     <div
@@ -22,21 +23,30 @@ export function FinnBubble({ text, visible, align = "left" }) {
         bottom: "calc(100% + 10px)",
         left: isRight ? "auto" : 14,
         right: isRight ? 0 : "auto",
-        maxWidth: "min(230px, calc(100vw - 48px))",
+        maxWidth: "min(250px, calc(100vw - 48px))",
         background: "var(--ct)",
         color: "#fff",
-        fontSize: 12.5,
-        fontWeight: 600,
-        lineHeight: 1.4,
-        padding: "8px 13px",
         borderRadius: 12,
-        whiteSpace: "normal",
         boxShadow: "0 6px 18px rgba(20,30,50,.18)",
-        pointerEvents: "none",
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 2,
+        pointerEvents: visible ? "auto" : "none",
         zIndex: 5,
       }}
     >
-      {text}
+      <button type="button" className="if-finn-bubble-text" onClick={onOpen} aria-label={openLabel} tabIndex={visible ? 0 : -1}>
+        {text}
+      </button>
+      <button
+        type="button"
+        className="if-finn-bubble-x"
+        onClick={onDismiss}
+        aria-label={dismissLabel}
+        tabIndex={visible ? 0 : -1}
+      >
+        ✕
+      </button>
       <span
         aria-hidden="true"
         style={{
@@ -54,6 +64,10 @@ export function FinnBubble({ text, visible, align = "left" }) {
       <style>{`
         .if-finn-bubble{opacity:0;transform:translateY(4px) scale(.96);transition:opacity .18s ease,transform .18s ease}
         .if-finn-bubble-show{opacity:1;transform:translateY(0) scale(1)}
+        .if-finn-bubble-text{flex:1;min-width:0;text-align:left;background:none;border:none;color:inherit;font-family:inherit;font-size:12.5px;font-weight:600;line-height:1.4;padding:9px 4px 9px 13px;cursor:pointer}
+        .if-finn-bubble-x{flex:none;background:none;border:none;color:rgba(255,255,255,.6);font-family:inherit;font-size:11px;line-height:1;padding:9px 10px 9px 4px;cursor:pointer}
+        .if-finn-bubble-x:hover{color:#fff}
+        .if-finn-bubble-text:focus-visible,.if-finn-bubble-x:focus-visible{outline:2px solid var(--ca);outline-offset:-2px;border-radius:8px}
         @media (prefers-reduced-motion: reduce){.if-finn-bubble{transition:opacity .18s ease}}
       `}</style>
     </div>
