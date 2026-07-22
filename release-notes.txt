@@ -1,3 +1,37 @@
+## 2026-07-22 (1.55.38)
+
+### Feature: Echte Chatbox auf Landing + Tagline statt Online-Status + halbe Sheet-Hoehe
+
+- **FAB-Position Landing:** `bottom` von 18px auf 30px erhoeht (Nutzerwunsch).
+- **`LandingMascot.jsx` komplett neu:** echte Chat-Oberflaeche wie bei den
+  Rechnern (`ChatBubble`, `useAssistant`, Freitext-Eingabe unten,
+  Vorschlag-Chips oben, Datenschutz-Erstkontakt vor dem ersten echten
+  Versand). Die 6 Routing-Chips bleiben lokal/kanonisch (kein Netzwerk-Call)
+  - Klick fuegt Nutzer-Bubble + Begruendung als Assistenten-Bubble +
+    "Zum Rechner"-Button in denselben Chat-Verlauf ein, statt eines
+    separaten Screens. Freitext geht echt an den Worker (`rechner="landing"`).
+  - ⚠️ Bekannte Einschraenkung: Der Worker-System-Prompt ist auf
+    Rechner-Kontext ausgelegt, allgemeine Landing-Fragen ohne Kontext
+    koennen ausweichend beantwortet werden - Server-Code, eigener Deploy,
+    hier nicht angefasst.
+- **Kopfzeile (beide Sheets):** "● online"/"● offline"/... ersetzt durch
+  statischen Text "Dein persönlicher KI-Assistent" (`assistantTagline`,
+  alle 5 Sprachen). Ausnahme: Tageslimit bekommt weiterhin eine eigene,
+  deutlich sichtbare Anzeige ("Limit erreicht" statt "pausiert" - auf
+  Nutzer-Klarstellung nicht ueber die offline/online-Logik gesteuert,
+  sondern als eigener Zustand). Offline/disabled zeigen die Tagline im Kopf,
+  bleiben aber weiterhin als eigene Bubble im Chatverlauf sichtbar, sobald
+  ein Versand tatsaechlich fehlschlaegt.
+- **Sheet-Hoehe Desktop (≥1024px):** war `height:100vh` (fuellte die ganze
+  Browserhoehe) - jetzt `height:50vh`, unten angedockt (bei der Tab-Leiste/
+  dem FAB), wirkt wie ein klassisches Chat-Widget statt Vollbild-Panel.
+  `LandingMascot.jsx` nutzt dieselbe Regel - vorher fehlte dort die
+  Desktop-Regel komplett, daher wirkte es "länglich" (volle Breite als
+  Bottom-Sheet auch auf breiten Bildschirmen statt kompakter Seitenleiste).
+
+**Betroffene Dateien:** src/components/assistant/LandingMascot.jsx (neu
+geschrieben), AssistantSheet.jsx, src/i18n/assistant.js
+
 ## 2026-07-22 (1.55.37)
 
 ### Verbesserungen: Landing-Beratung mit echtem Mehrwert + echter Online-Status

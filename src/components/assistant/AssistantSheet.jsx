@@ -9,16 +9,12 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
   const inputRef = useRef(null);
   const sheetRef = useRef(null);
 
-  // Statusanzeige im Kopf spiegelt den echten Assistenten-Zustand statt
-  // immer "online" zu behaupten (Nutzer-Feedback 2026-07-22).
+  // Kopfzeile zeigt normalerweise die Tagline statt eines "online"-Status
+  // (Nutzer-Feedback 2026-07-22) - nur das Tageslimit bekommt weiterhin eine
+  // eigene, deutlich sichtbare Anzeige (nicht ueber offline/online-Logik
+  // gesteuert, sondern als eigener Zustand, siehe Nutzer-Klarstellung).
   const statusInfo =
-    status === "offline"
-      ? { label: t.statusOffline, color: "#8C8C99" }
-      : status === "disabled"
-      ? { label: t.statusDisabled, color: "#8C8C99" }
-      : status === "limit"
-      ? { label: t.statusLimited, color: "#f59e0b" }
-      : { label: t.onlineStatus, color: "#1e8a5b" };
+    status === "limit" ? { label: t.statusLimited, color: "#f59e0b" } : { label: t.assistantTagline, color: "var(--ch)" };
 
   useEffect(() => {
     if (open) {
@@ -97,7 +93,10 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
           <img src="/fuchs-mascot.webp" alt="" aria-hidden="true" className="if-asst-header-avatar" />
           <span>
             <span className="if-asst-header-name">{t.assistantName}</span>
-            <span className="if-asst-header-online" style={{ color: statusInfo.color }}>● {statusInfo.label}</span>
+            <span className="if-asst-header-online" style={{ color: statusInfo.color }}>
+              {status === "limit" ? "● " : ""}
+              {statusInfo.label}
+            </span>
           </span>
         </div>
         <div className="if-asst-context">{contextLabel}</div>
@@ -153,7 +152,7 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
         .if-asst-send{flex:none;width:42px;height:42px;border-radius:50%;border:none;background:var(--ca);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
         .if-asst-send:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
         @media (min-width:1024px){
-          .if-asst-sheet{left:auto;width:400px;height:100vh;height:100dvh;max-height:none;top:0;border-radius:16px 0 0 16px}
+          .if-asst-sheet{left:auto;width:400px;height:50vh;height:50dvh;max-height:none}
         }
         .if-asst-dots{display:inline-flex;gap:3px}
         .if-asst-dots span{width:4px;height:4px;border-radius:50%;background:var(--ch);display:inline-block;animation:ifAsstDot 1.1s infinite ease-in-out}

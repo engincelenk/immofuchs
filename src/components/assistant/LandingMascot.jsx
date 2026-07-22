@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MascotFab } from "./MascotFab.jsx";
+import { PrivacyIntro } from "./PrivacyIntro.jsx";
+import { ChatBubble } from "./ChatBubble.jsx";
+import { SuggestedQuestionChip } from "./SuggestedQuestionChip.jsx";
+import { useAssistant } from "../../hooks/useAssistant.js";
+import { PRIVACY_SEEN_KEY } from "./AssistantWidget.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 
-// Vor der ersten Berechnung gibt es noch keinen Rechner-Kontext fuer den
-// echten Chat-Assistenten - hier reicht reine Routing-Hilfe zum passenden
-// Rechner, kein Freitext/Worker-Call (Nutzerwunsch 2026-07-21).
-//
-// Zwischenschritt mit kurzer Begruendung vor dem Sprung (statt sofortigem
-// Tab-Wechsel) - sonst ist das nur eine Kopie der Rechner-Kachel-Auswahl
-// weiter unten auf der Seite, ohne echten Beratungs-Mehrwert (Nutzer-
-// Feedback 2026-07-22).
+// Vor der ersten Berechnung gibt es noch keinen Rechner-Kontext - die 6
+// Routing-Chips bleiben deshalb lokal/kanonisch (kein Worker-Call, sofortige
+// Antwort als Chat-Bubble + Aktion). Zusaetzlich jetzt echtes Freitextfeld
+// wie bei den Rechnern (Nutzerwunsch 2026-07-22) - das geht echt an den
+// Worker (rechner="landing"), daher via denselben Datenschutz-Erstkontakt
+// wie bei den Rechnern gated, bevor der erste echte Versand rausgeht.
 const ROUTES = [
   { tab: "haupt", chipKey: "landingChipRendite", adviceKey: "landingAdviceRendite" },
   { tab: "kredit", chipKey: "landingChipFinanzierung", adviceKey: "landingAdviceFinanzierung" },
@@ -23,12 +26,24 @@ const ROUTES = [
 export function LandingMascot({ onStart, lang }) {
   const t = ASSISTANT_T[lang] || ASSISTANT_T.de;
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
+  const [localLog, setLocalLog] = useState([]); // kanonische Routing-Antworten, kein Netzwerk
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const { messages, status, ask, retry } = useAssistant();
+  const inputRef = useRef(null);
+  const sheetRef = useRef(null);
+  const pendingSendRef = useRef(null);
 
-  const close = () => {
-    setOpen(false);
-    setSelected(null);
-  };
+  const statusInfo =
+    status === "limit" ? { label: t.statusLimited, color: "#f59e0b" } : { label: t.assistantTagline, color: "var(--ch)" };
+
+  const close = () => setOpen(false);
+
+  useEffect(() => {
+    if (open) {
+      const id = setTimeout(() => inputRef.current?.focus(), 200);
+      return () => clearTimeout(id);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -44,88 +59,156 @@ export function LandingMascot({ onStart, lang }) {
     };
   }, [open]);
 
+  const pickRoute = (r) => {
+    setLocalLog((l) => [...l, { role: "user", text: t[r.chipKey] }, { role: "assistant", text: t[r.adviceKey], actionTab: r.tab }]);
+  };
+
+  const doSend = (frage) => {
+    ask(frage, "landing", {}, lang);
+  };
+
+  const handleSend = () => {
+    const frage = (inputRef.current?.value ?? "").trim();
+    if (!frage) return;
+    if (inputRef.current) inputRef.current.value = "";
+
+    let seen = false;
+    try {
+      seen = localStorage.getItem(PRIVACY_SEEN_KEY) === "1";
+    } catch {}
+    if (seen) {
+      doSend(frage);
+    } else {
+      pendingSendRef.current = frage;
+      setPrivacyOpen(true);
+    }
+  };
+
+  const confirmPrivacy = () => {
+    try {
+      localStorage.setItem(PRIVACY_SEEN_KEY, "1");
+    } catch {}
+    setPrivacyOpen(false);
+    if (pendingSendRef.current) {
+      doSend(pendingSendRef.current);
+      pendingSendRef.current = null;
+    }
+  };
+
   return (
     <>
       <MascotFab
         label={t.dialogAria}
         bubbleText={t.landingBubble}
-        bottom="calc(18px + env(safe-area-inset-bottom))"
+        bottom="calc(30px + env(safe-area-inset-bottom))"
         hidden={open}
         onOpen={() => setOpen(true)}
       />
+      {privacyOpen && <PrivacyIntro t={t} onConfirm={confirmPrivacy} onCancel={() => setPrivacyOpen(false)} />}
       {createPortal(
         <>
-          <div className={`if-lm-backdrop${open ? " open" : ""}`} onClick={close} aria-hidden={!open} />
+          <div className={`if-asst-backdrop${open ? " open" : ""}`} onClick={close} aria-hidden={!open} />
           <div
-            className={`if-lm-sheet${open ? " open" : ""}`}
+            ref={sheetRef}
+            className={`if-asst-sheet${open ? " open" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={t.assistantName}
             {...(!open ? { inert: "" } : {})}
           >
-            <button onClick={close} aria-label={t.close} className="if-lm-close">
+            <button onClick={close} aria-label={t.close} className="if-asst-close">
               ✕
             </button>
-            <div className="if-lm-handle" />
-            <div className="if-lm-header">
-              <img src="/fuchs-mascot.webp" alt="" aria-hidden="true" className="if-lm-avatar" />
+            <div className="if-asst-handle" />
+            <div className="if-asst-header">
+              <img src="/fuchs-mascot.webp" alt="" aria-hidden="true" className="if-asst-header-avatar" />
               <span>
-                <span className="if-lm-name">{t.assistantName}</span>
-                <span className="if-lm-online">● {t.onlineStatus}</span>
+                <span className="if-asst-header-name">{t.assistantName}</span>
+                <span className="if-asst-header-online" style={{ color: statusInfo.color }}>
+                  {status === "limit" ? "● " : ""}
+                  {statusInfo.label}
+                </span>
               </span>
             </div>
-            {!selected ? (
-              <>
-                <div className="if-lm-intro">{t.landingIntro}</div>
-                <div className="if-lm-chips">
-                  {ROUTES.map((r) => (
-                    <button key={r.tab} className="if-lm-chip" onClick={() => setSelected(r)}>
-                      {t[r.chipKey]}
+            <div className="if-asst-log" aria-live="polite">
+              <ChatBubble role="assistant" text={t.landingIntro} />
+              {localLog.map((m, i) => (
+                <div key={"l" + i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", gap: 6 }}>
+                  <ChatBubble role={m.role} text={m.text} />
+                  {m.actionTab && (
+                    <button className="if-lm-go" onClick={() => onStart(m.actionTab)}>
+                      {t.landingGoToCalc}
                     </button>
-                  ))}
+                  )}
                 </div>
-              </>
-            ) : (
-              <div className="if-lm-advice">
-                <div className="if-lm-advice-bubble">{t[selected.adviceKey]}</div>
-                <button className="if-lm-go" onClick={() => onStart(selected.tab)}>
-                  {t.landingGoToCalc}
-                </button>
-                <button className="if-lm-backlink" onClick={() => setSelected(null)}>
-                  {t.landingBack}
-                </button>
-              </div>
-            )}
+              ))}
+              {messages.map((m, i) => (
+                <ChatBubble key={"r" + i} role={m.role} text={m.text} tier={m.tier} />
+              ))}
+              {status === "loading" && <ChatBubble role="loading" text={t.loading} />}
+              {status === "error" && <ChatBubble role="error" text={t.error} onRetry={retry} retryLabel={t.retry} />}
+              {status === "limit" && <ChatBubble role="limit" text={t.limit} />}
+              {status === "offline" && <ChatBubble role="offline" text={t.offline} />}
+              {status === "disabled" && <ChatBubble role="system" text={t.disabled} />}
+            </div>
+            <div className="if-asst-suggested">
+              {ROUTES.map((r) => (
+                <SuggestedQuestionChip key={r.tab} label={t[r.chipKey]} onClick={() => pickRoute(r)} />
+              ))}
+            </div>
+            <div className="if-asst-input-row">
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder={t.placeholder}
+                aria-label={t.placeholder}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSend();
+                }}
+              />
+              <button onClick={handleSend} aria-label={t.sendAria} className="if-asst-send">
+                ➤
+              </button>
+            </div>
           </div>
         </>,
         document.body
       )}
       <style>{`
-        .if-lm-backdrop{position:fixed;inset:0;background:rgba(15,20,30,.32);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:1090}
-        .if-lm-backdrop.open{opacity:1;pointer-events:auto}
-        .if-lm-sheet{position:fixed;left:0;right:0;bottom:0;max-height:80vh;background:var(--bg);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(20,30,50,.25);transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,0,1);z-index:1091;display:flex;flex-direction:column}
-        .if-lm-sheet.open{transform:translateY(0)}
-        .if-lm-close{position:absolute;top:10px;right:12px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,.06);color:var(--ch);font-size:14px;cursor:pointer;z-index:2;font-family:inherit}
-        .if-lm-close:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
-        .if-lm-handle{width:36px;height:4px;border-radius:2px;background:var(--cb);margin:10px auto 4px;flex:none}
-        .if-lm-header{display:flex;align-items:center;gap:10px;padding:4px 18px 12px;border-bottom:1px solid var(--cb);flex:none}
-        .if-lm-avatar{width:34px;height:34px;object-fit:contain;flex-shrink:0}
-        .if-lm-name{display:block;font-size:15px;font-weight:800;color:var(--ct)}
-        .if-lm-online{display:block;font-size:12px;color:#1e8a5b;font-weight:600}
-        .if-lm-intro{font-size:13.5px;color:var(--ct);padding:14px 18px 6px;line-height:1.5;flex:none}
-        .if-lm-chips{display:flex;flex-direction:column;gap:8px;padding:8px 18px calc(20px + env(safe-area-inset-bottom));overflow-y:auto}
-        .if-lm-chip{display:block;width:100%;text-align:left;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ca);background:var(--ca-bg);border:1px solid var(--ca-bd);border-radius:12px;padding:12px 14px;cursor:pointer}
-        .if-lm-chip:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
-        .if-lm-advice{padding:16px 18px calc(20px + env(safe-area-inset-bottom))}
-        .if-lm-advice-bubble{background:var(--cc);border:1px solid var(--cb);color:var(--ct);font-size:13.5px;line-height:1.5;padding:12px 14px;border-radius:14px 14px 14px 4px;margin-bottom:14px;animation:ifLmBubbleIn .25s ease}
-        .if-lm-go{display:block;width:100%;height:44px;border-radius:22px;border:none;background:var(--ca);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:10px}
-        .if-lm-go:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
-        .if-lm-backlink{display:block;width:100%;height:36px;border-radius:18px;border:none;background:transparent;color:var(--ch);font-family:inherit;font-weight:600;font-size:13px;cursor:pointer}
-        @keyframes ifLmBubbleIn{0%{opacity:0;transform:translateY(6px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
+        .if-asst-backdrop{position:fixed;inset:0;background:rgba(15,20,30,.32);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:1090}
+        .if-asst-backdrop.open{opacity:1;pointer-events:auto}
+        .if-asst-sheet{position:fixed;left:0;right:0;bottom:0;height:82vh;height:82dvh;max-height:640px;background:var(--bg);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(20,30,50,.25);transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,0,1);z-index:1091;display:flex;flex-direction:column}
+        .if-asst-sheet.open{transform:translateY(0)}
+        .if-asst-close{position:absolute;top:10px;right:12px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,.06);color:var(--ch);font-size:14px;cursor:pointer;z-index:2;font-family:inherit}
+        .if-asst-close:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+        .if-asst-handle{width:36px;height:4px;border-radius:2px;background:var(--cb);margin:10px auto 4px;flex:none}
+        .if-asst-header{display:flex;align-items:center;gap:10px;padding:4px 18px 12px;border-bottom:1px solid var(--cb);flex:none}
+        .if-asst-header-avatar{width:34px;height:34px;object-fit:contain;flex-shrink:0}
+        .if-asst-header-name{display:block;font-size:15px;font-weight:800;color:var(--ct)}
+        .if-asst-header-online{display:block;font-size:12px;font-weight:600}
+        .if-asst-log{flex:1;min-height:0;overflow-y:auto;padding:14px 14px 4px;display:flex;flex-direction:column;gap:10px}
+        .if-asst-suggested{flex:none;display:flex;flex-direction:column;gap:8px;padding:2px 14px 10px}
+        .if-lm-go{align-self:flex-start;margin-left:34px;border:none;background:var(--ca);color:#fff;font-family:inherit;font-weight:700;font-size:12.5px;border-radius:14px;padding:8px 14px;cursor:pointer}
+        .if-asst-input-row{flex:none;display:flex;gap:8px;padding:10px 14px calc(16px + env(safe-area-inset-bottom))}
+        .if-asst-input-row input{flex:1;height:42px;border-radius:21px;border:1px solid var(--cb);padding:0 16px;font-size:16px;font-family:inherit;background:var(--ci);color:var(--ct)}
+        .if-asst-input-row input:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+        .if-asst-send{flex:none;width:42px;height:42px;border-radius:50%;border:none;background:var(--ca);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
+        .if-asst-send:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+        @media (min-width:1024px){
+          .if-asst-sheet{left:auto;width:400px;height:50vh;height:50dvh;max-height:none}
+        }
+        .if-asst-dots{display:inline-flex;gap:3px}
+        .if-asst-dots span{width:4px;height:4px;border-radius:50%;background:var(--ch);display:inline-block;animation:ifAsstDot 1.1s infinite ease-in-out}
+        .if-asst-dots span:nth-child(2){animation-delay:.15s}
+        .if-asst-dots span:nth-child(3){animation-delay:.3s}
+        @keyframes ifAsstDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
+        .if-asst-bubble-in{animation:ifBubbleIn .25s ease}
+        @keyframes ifBubbleIn{0%{opacity:0;transform:translateY(6px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
         @media (prefers-reduced-motion: reduce){
-          .if-lm-sheet{transition:none}
-          .if-lm-backdrop{transition:none}
-          .if-lm-advice-bubble{animation:none}
+          .if-asst-sheet{transition:none}
+          .if-asst-backdrop{transition:none}
+          .if-asst-dots span{animation:none;opacity:.6}
+          .if-asst-bubble-in{animation:none}
         }
       `}</style>
     </>
