@@ -1,3 +1,56 @@
+## 2026-07-22 (1.55.48)
+
+### Fix: iOS-Statusleiste ueberlappte die Chat-Kopfzeile + kompaktere Kopfzeile
+
+Nutzer-Screenshot vom iPhone: Uhrzeit und Batterieanzeige lagen ueber "Finn"
+und den Icon-Buttons.
+
+- **Ursache:** Auf Mobile ist das Sheet `height:100dvh` und liegt damit unter
+  der iOS-Statusleiste, die Kopfzeile hatte aber kein Safe-Area-Padding. Der
+  Rest der App macht das korrekt (`.hdr` in App.jsx nutzt
+  `calc(10px + env(safe-area-inset-top))`) - nur das Chat-Fenster wurde
+  vergessen. `viewport-fit=cover` ist gesetzt, der Inset greift also.
+- **Fix:** `.if-asst-header` bekommt
+  `padding-top: calc(12px + env(safe-area-inset-top))`, in der
+  Desktop-Media-Query auf feste 12px zurueckgesetzt (dort sitzt das Fenster
+  unten rechts, ein Inset waere falsch).
+
+- **Zweites Problem im selben Screenshot: die Tagline brach auf drei Zeilen
+  um** und blies die Kopfzeile auf ~120px auf. Das war kein iOS-Thema - das
+  Desktop-Fenster ist mit 380px genauso schmal und hatte es auch. Rechnung
+  fuer 375pt: Avatar 40 + 5 Buttons a 28 + Abstaende/Padding 78 = 258pt
+  belegt, 117pt blieben fuer einen Text, der 176pt braucht.
+- **Fix (Variante B, Nutzerentscheidung):** Avatar 40->34px, Buttons
+  28->26px, Abstaende 10->6px, Name und Tagline einzeilig mit Abschneidung
+  (`text-overflow:ellipsis`). Kopfzeile jetzt **61px statt ~120px**, Tagline
+  eine Zeile.
+- **Bekannte Folge:** Die Tagline wird angeschnitten - gemessen 141px
+  vorhanden zu 176px noetig auf dem iPhone, 146 zu 176 im Desktop-Fenster.
+  Sie zeigt also "Dein persoenlicher KI-Assis...". Das war die bewusste
+  Abwaegung gegen Variante A (Tagline auf schmalen Geraeten ganz weglassen).
+  Ein kuerzerer Text wie "Dein KI-Assistent" wuerde ohne Abschneidung passen.
+
+**Stolperfalle beim Bauen** (fuer kuenftige Aenderungen an diesen Dateien):
+Im ersten Anlauf enthielt ein CSS-Kommentar Backticks um einen Klassennamen -
+mitten im Template-Literal des `<style>`-Blocks. Das beendet den String
+vorzeitig, der Rest wird zum Tagged Template. **Der Build laeuft dabei sauber
+durch** (syntaktisch gueltig), die App stuerzt erst zur Laufzeit ab -
+`#root` blieb leer, sichtbar war nur noch das statische Cookie-Banner aus der
+index.html. In den Style-Bloecken dieser Komponenten also nie Backticks
+verwenden; ein Hinweis dazu steht jetzt im Kommentar selbst.
+
+**Geprueft** (Dev-Server, 375x812 und 1280x800): Kopfzeile 61px hoch,
+Tagline einzeilig, `calc(12px + env(safe-area-inset-top))` steht als gueltige
+Regel im Stylesheet (nicht vom Parser verworfen), Desktop-Override auf 12px
+greift.
+
+**Nicht verifiziert:** der Safe-Area-Inset selbst - im Browser-Emulator ist
+`env(safe-area-inset-top)` immer 0, gemessen wurden dort entsprechend 12px.
+Ob die Ueberlappung auf dem echten iPhone weg ist, muss am Geraet geprueft
+werden.
+
+**Betroffene Dateien:** src/components/assistant/AssistantHeaderBar.jsx
+
 ## 2026-07-22 (1.55.47)
 
 ### Sprechblase: 3 Texte je Flaeche, nacheinander in der ersten Minute
