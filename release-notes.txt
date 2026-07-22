@@ -1,3 +1,44 @@
+## 2026-07-22 (1.55.49)
+
+### Maskottchen: Stromfluss statt Glitzer, Pulsieren statt Wackeln
+
+Nutzerwunsch: Glitzer- und Sterneffekt raus, dafuer ein Stromfluss durch den
+Kopf. Nach vier Demo-Runden final entschieden.
+
+- **Raus:** die zwei ✦-Sterne (`ifFabSparkle`) und das Wackeln
+  (`ifFabWiggle`).
+- **Neu - Stromfluss:** ein blaues Leuchtband wandert in 15 s von unten nach
+  oben durch die Figur. Die Effektebene wird per `mask-image` auf den
+  Alphakanal des Maskottchen-Bildes maskiert - das Leuchten bleibt dadurch
+  exakt in der Silhouette und folgt der Kopfform, statt als Rechteck
+  darueberzuliegen. Blendmodus `plus-lighter`, mit `screen` als Rueckfall
+  ueber `@supports` fuer aeltere Browser.
+- **Neu - Pulsieren:** 8 s pro Zyklus, 100 % auf 107 % und zurueck,
+  Ursprung `50% 85%` (waechst aus dem Stand, nicht aus der Mitte).
+- **Bewegung liegt auf einer Huelle** (`.if-mascot-motion`) um Bild *und*
+  Effektebene, nicht mehr auf dem Bild selbst. Sonst muesste die maskierte
+  Ebene die Animation dupliziert mitlaufen lassen und wuerde beim kleinsten
+  Versatz verrutschen.
+- **Kein JavaScript noetig:** in Zwischenstaenden waren zufaellige Blitze
+  geplant (die brauchen einen Timer), die sind auf Nutzerwunsch entfallen.
+  Damit bleibt alles reines CSS.
+- Wie bisher nur am schwebenden FAB - die kleinen Avatare in Kopfzeile und
+  Chat-Blasen bleiben ruhig.
+- `prefers-reduced-motion`: Puls und Band aus.
+
+**Live geprueft** (Dev-Server, Computed Styles): App laedt fehlerfrei,
+`ifFabPuls 8s` und `ifFabStrom 15s` laufen beide (`playState: running`),
+Maske `url(fuchs-mascot.webp)` mit `mask-size: 80px 88px` steht als gueltige
+Regel (nicht vom Parser verworfen), Blendmodus aufgeloest zu `plus-lighter`,
+`transform-origin` bei 40px/74,8px (= 50% 85%), keine Glitzer-Elemente mehr
+im DOM.
+
+**Nicht verifiziert:** die Optik selbst - Screenshots sind in dieser Umgebung
+nicht moeglich. Beurteilt wurde sie vorab an einer CSS-Demo mit denselben
+Werten, nicht an der laufenden App.
+
+**Betroffene Dateien:** src/components/assistant/MascotFab.jsx
+
 ## 2026-07-22 (1.55.48)
 
 ### Fix: iOS-Statusleiste ueberlappte die Chat-Kopfzeile + kompaktere Kopfzeile

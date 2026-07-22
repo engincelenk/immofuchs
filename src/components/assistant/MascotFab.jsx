@@ -50,46 +50,52 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, onDismissBubble, 
           padding: 0,
         }}
       >
-        <span className="if-mascot-sparkle if-mascot-sparkle-1" aria-hidden="true">
-          ✦
+        {/* Bewegung liegt auf der Huelle, nicht auf dem Bild - dadurch bleibt
+            die maskierte Effektebene beim Pulsieren deckungsgleich. */}
+        <span className="if-mascot-motion">
+          <img
+            src="/fuchs-mascot.webp"
+            alt=""
+            aria-hidden="true"
+            className="if-mascot-fab-img"
+            style={{ width: 80, height: 88, objectFit: "contain", filter: "drop-shadow(0 5px 10px rgba(20,20,20,.28))" }}
+          />
+          <span className="if-mascot-fx" aria-hidden="true">
+            <span className="if-mascot-band" />
+          </span>
         </span>
-        <span className="if-mascot-sparkle if-mascot-sparkle-2" aria-hidden="true">
-          ✦
-        </span>
-        <img
-          src="/fuchs-mascot.webp"
-          alt=""
-          aria-hidden="true"
-          className="if-mascot-fab-img"
-          style={{
-            width: 80,
-            height: 88,
-            objectFit: "contain",
-            filter: "drop-shadow(0 5px 10px rgba(20,20,20,.28))",
-            transformOrigin: "50% 85%",
-          }}
-        />
       </button>
+      {/* ACHTUNG: in diesem Block keine Backticks verwenden - sie beenden das
+          Template-Literal, der Build laeuft trotzdem durch und es kracht erst
+          zur Laufzeit (Vorfall 2026-07-22). */}
       <style>{`
-        @keyframes ifFabWiggle{
-          0%,88%,100%{transform:rotate(0deg)}
-          90%{transform:rotate(-9deg)}
-          93%{transform:rotate(8deg)}
-          96%{transform:rotate(-4deg)}
-          98%{transform:rotate(2deg)}
-        }
-        .if-mascot-fab-img{animation:ifFabWiggle 4.5s ease-in-out infinite}
-        .if-mascot-sparkle{position:absolute;color:#fff;text-shadow:0 0 4px var(--ca),0 0 9px var(--ca);opacity:0;pointer-events:none;animation:ifFabSparkle 4.5s ease-in-out infinite}
-        .if-mascot-sparkle-1{top:2px;right:6px;font-size:13px;animation-delay:0s}
-        .if-mascot-sparkle-2{top:26px;left:2px;font-size:9px;animation-delay:.18s}
-        @keyframes ifFabSparkle{
-          0%,84%,100%{opacity:0;transform:scale(.3) rotate(0deg)}
-          90%{opacity:1;transform:scale(1) rotate(20deg)}
-          95%{opacity:0;transform:scale(.5) rotate(0deg)}
+        .if-mascot-motion{display:block;position:relative;width:80px;height:88px;transform-origin:50% 85%;animation:ifFabPuls 8s ease-in-out infinite}
+        @keyframes ifFabPuls{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+        .if-mascot-fab-img{display:block}
+
+        /* Stromfluss: ein Leuchtband wandert durch die Figur. Die Effektebene
+           wird auf den Alphakanal des Maskottchen-Bildes maskiert, das Leuchten
+           bleibt dadurch exakt in der Silhouette statt als Rechteck darueber
+           zu liegen (Nutzerwunsch 2026-07-22, ersetzt die Glitzer-Sterne). */
+        .if-mascot-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;
+          -webkit-mask-image:url(/fuchs-mascot.webp);mask-image:url(/fuchs-mascot.webp);
+          -webkit-mask-size:80px 88px;mask-size:80px 88px;
+          -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+          -webkit-mask-position:center;mask-position:center;
+          mix-blend-mode:screen}
+        @supports (mix-blend-mode:plus-lighter){.if-mascot-fx{mix-blend-mode:plus-lighter}}
+        .if-mascot-band{position:absolute;left:-12%;width:124%;height:42%;opacity:0;filter:blur(.6px);
+          background:linear-gradient(to top,rgba(60,190,255,0) 0%,rgba(90,215,255,.7) 34%,rgba(215,248,255,1) 50%,rgba(90,215,255,.7) 66%,rgba(60,190,255,0) 100%);
+          animation:ifFabStrom 15s linear infinite}
+        @keyframes ifFabStrom{
+          0%{transform:translateY(150%);opacity:0}
+          12%{opacity:.63}
+          88%{opacity:.63}
+          100%{transform:translateY(-150%);opacity:0}
         }
         @media (prefers-reduced-motion: reduce){
-          .if-mascot-fab-img{animation:none}
-          .if-mascot-sparkle{animation:none;opacity:0}
+          .if-mascot-motion{animation:none}
+          .if-mascot-band{animation:none;opacity:0}
         }
       `}</style>
     </div>
