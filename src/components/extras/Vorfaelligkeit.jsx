@@ -242,18 +242,23 @@ export function Vorfaelligkeit(){
           </div>
           <ExportPDF title={t.vfeFull||t.vfe}/>
 
-          {/* ═══ KI-ASSISTENT (Phase 3, Sprint 5 — Konzept Abschnitt 5) ═══ */}
-          {(()=>{
-            const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
-            const kontext=buildAssistantContext("vorfaelligkeit",d,{
-              nettoVfe:R.nettovfe,zinsverschlechterungsschaden:R.zinsverschlSchaden,
-              kappungDurch489:R.capped,bewertung:null
-            });
-            const suggested=[at.vfeSuggested1,at.vfeSuggested2,at.vfeSuggested3];
-            return <AssistantWidget rechner="vorfaelligkeit" kontext={kontext} contextLabel={at.contextVorfaelligkeit} suggested={suggested} lang={lang}/>;
-          })()}
         </>
       }
     </div>
-  </div></div>;
+  </div>
+  {/* ═══ KI-ASSISTENT (Phase 3, Sprint 5 — Konzept Abschnitt 5) ═══
+      Bewusst AUSSERHALB der beiden Panes: auf Mobile blendet
+      @media(max-width:699px) die gerade inaktive Pane per display:none aus.
+      Stand das Widget darin, verschwand der position:fixed-Fuchs in der
+      Eingabe-Ansicht komplett (Nutzer-Feedback 2026-07-22). */}
+  {R&&(()=>{
+    const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
+    const kontext=buildAssistantContext("vorfaelligkeit",d,{
+      nettoVfe:R.nettovfe,zinsverschlechterungsschaden:R.zinsverschlSchaden,
+      kappungDurch489:R.capped,bewertung:null
+    });
+    const suggested=[at.vfeSuggested1,at.vfeSuggested2,at.vfeSuggested3];
+    return <AssistantWidget rechner="vorfaelligkeit" kontext={kontext} contextLabel={at.contextVorfaelligkeit} suggested={suggested} lang={lang}/>;
+  })()}
+  </div>;
 }

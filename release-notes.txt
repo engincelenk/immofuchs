@@ -1,3 +1,36 @@
+## 2026-07-22 (1.55.50)
+
+### Fix: Finn war auf Mobile nur in der Ergebnis-Ansicht sichtbar
+
+- **Ursache:** Das Assistenten-Widget stand in allen Rechnern *innerhalb* der
+  `.res-pane`. Auf Mobile blendet `@media(max-width:699px)` die gerade
+  inaktive Pane per `display:none` aus - damit wird der komplette Teilbaum
+  nicht gerendert, und der `position:fixed`-Fuchs verschwindet mit. In der
+  Eingabe-Ansicht gab es also keinen Assistenten.
+- **Fix:** Widget in fuenf Rechnern (Rendite, Kredit, Miete, Sanierung,
+  Vorfaelligkeit) aus der Pane herausgezogen und als Geschwisterelement
+  hinter `.split` gehaengt - ausserhalb der Umschaltlogik. SteuerTrick war
+  nicht betroffen, dort stehen beide Panes fest auf `act`.
+- **Beratung funktioniert dort sofort mit:** Der Kontext sind die Werte aus
+  `d`, die unabhaengig von der sichtbaren Ansicht berechnet werden. Auf
+  Desktop aendert sich nichts, dort stehen beide Spalten nebeneinander.
+- **Nebenbei behoben:** Im Sanierungsrechner hing das Widget zusaetzlich
+  hinter `R.rows.length>0`, war also erst sichtbar, wenn mindestens eine
+  Massnahme gewaehlt war. Genau dann ist der Foerderhinweis ("erst
+  beantragen, dann beauftragen") aber schon fast zu spaet. Jetzt ist Finn ab
+  dem ersten Moment da. Die Kennzahlen sind in diesem Zustand 0 bzw. 0 %
+  (`eM` startet bei 1), es entstehen also keine NaN-Werte im Kontext.
+- Die Sprechblasen-Sequenz startet dadurch beim Betreten des Rechners statt
+  erst beim Umschalten auf "Ergebnis".
+
+**Live geprueft** (Dev-Server, 375x812): In allen sechs Rechnern ist der
+Fuchs in der Eingabe-Ansicht im DOM, waehrend `.res-pane` auf
+`display:none` steht. Chat aus der Eingabe-Ansicht geoeffnet: Kontextzeile
+"Bezieht sich auf: Rendite", die drei richtigen Chips, Begruessung da.
+
+**Betroffene Dateien:** src/components/calculators/Renditerechner.jsx,
+Finanzierung.jsx, Miete.jsx, Sanier.jsx, src/components/extras/Vorfaelligkeit.jsx
+
 ## 2026-07-22 (1.55.49)
 
 ### Maskottchen: Stromfluss statt Glitzer, Pulsieren statt Wackeln

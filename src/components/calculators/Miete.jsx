@@ -81,20 +81,25 @@ export default function Miete(){
         <ExportPDF title={t.mieteFull||t.miete}/>
         <Legal items={LEG.miete}/>
 
-        {/* ═══ KI-ASSISTENT (Phase 2, Sprint 4 — Konzept Abschnitt 5) ═══ */}
-        {(()=>{
-          const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
-          const nx=R.rows&&R.rows[0];
-          const kontext=buildAssistantContext("miete",d,{
-            naechsteErhoehungDatum:nx?nx.datum.toISOString().split("T")[0]:null,
-            naechsteErhoehungBetrag:nx?nx.mE:null,
-            kappungsgrenzeProzent:R.kP,
-            bewertung:null
-          });
-          const suggested=[at.mieteSuggested1,at.mieteSuggested2,at.mieteSuggested3];
-          return <AssistantWidget rechner="miete" kontext={kontext} contextLabel={at.contextMiete} suggested={suggested} lang={lang}/>;
-        })()}
       </>}
     </div>
-  </div></div>;
+  </div>
+  {/* ═══ KI-ASSISTENT (Phase 2, Sprint 4 — Konzept Abschnitt 5) ═══
+      Bewusst AUSSERHALB der beiden Panes: auf Mobile blendet
+      @media(max-width:699px) die gerade inaktive Pane per display:none aus.
+      Stand das Widget darin, verschwand der position:fixed-Fuchs in der
+      Eingabe-Ansicht komplett (Nutzer-Feedback 2026-07-22). */}
+  {R&&(()=>{
+    const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
+    const nx=R.rows&&R.rows[0];
+    const kontext=buildAssistantContext("miete",d,{
+      naechsteErhoehungDatum:nx?nx.datum.toISOString().split("T")[0]:null,
+      naechsteErhoehungBetrag:nx?nx.mE:null,
+      kappungsgrenzeProzent:R.kP,
+      bewertung:null
+    });
+    const suggested=[at.mieteSuggested1,at.mieteSuggested2,at.mieteSuggested3];
+    return <AssistantWidget rechner="miete" kontext={kontext} contextLabel={at.contextMiete} suggested={suggested} lang={lang}/>;
+  })()}
+  </div>;
 }

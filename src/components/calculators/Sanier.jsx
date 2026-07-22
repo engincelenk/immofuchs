@@ -373,18 +373,26 @@ export default function Sanier(){
       <ExportPDF title={t.sanierFull||t.sanier}/>
         <Legal items={LEG.sanier}/>
 
-        {/* ═══ KI-ASSISTENT (Phase 2, Sprint 4 — Konzept Abschnitt 5) ═══ */}
-        {(()=>{
-          const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
-          const kontext=buildAssistantContext("sanierung",d,{
-            gesamtkosten:R.tK,foerderung:R.tFo+R.tFoLand,nettokosten:R.ne,
-            amortisationJahre:R.amJ,energieeinsparungProzent:Math.round((1-R.eM)*100),
-            bewertung:null
-          });
-          const suggested=[at.sanSuggested1,at.sanSuggested2,at.sanSuggested3];
-          return <AssistantWidget rechner="sanierung" kontext={kontext} contextLabel={at.contextSanierung} suggested={suggested} lang={lang}/>;
-        })()}
       </>}
     </div>
-  </div></div>;
+  </div>
+  {/* ═══ KI-ASSISTENT (Phase 2, Sprint 4 — Konzept Abschnitt 5) ═══
+      Bewusst AUSSERHALB der beiden Panes: auf Mobile blendet
+      @media(max-width:699px) die gerade inaktive Pane per display:none aus.
+      Stand das Widget darin, verschwand der position:fixed-Fuchs in der
+      Eingabe-Ansicht komplett (Nutzer-Feedback 2026-07-22).
+      Ausserdem hing es hier zusaetzlich hinter "mindestens eine Massnahme
+      gewaehlt" - dadurch fehlte Finn genau dann, wenn der Foerderhinweis
+      (erst beantragen, dann beauftragen) am meisten wert ist. */}
+  {R&&(()=>{
+    const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
+    const kontext=buildAssistantContext("sanierung",d,{
+      gesamtkosten:R.tK,foerderung:R.tFo+R.tFoLand,nettokosten:R.ne,
+      amortisationJahre:R.amJ,energieeinsparungProzent:Math.round((1-R.eM)*100),
+      bewertung:null
+    });
+    const suggested=[at.sanSuggested1,at.sanSuggested2,at.sanSuggested3];
+    return <AssistantWidget rechner="sanierung" kontext={kontext} contextLabel={at.contextSanierung} suggested={suggested} lang={lang}/>;
+  })()}
+  </div>;
 }

@@ -483,27 +483,32 @@ export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp(
         <ExportPDF title={t.hauptFull||t.haupt}/>
         <Legal items={LEG.rendite}/>
 
-        {/* ═══ KI-ASSISTENT (Pilot, nur Renditerechner — Konzept Abschnitt 5, Phase 1) ═══ */}
-        {(()=>{
-          const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
-          const nrTier=rate('nettoR',R.nR).tier;
-          const kpF=R.gKP/Math.max((+d.kaltmiete||1)*12,1);
-          const kontext=buildAssistantContext("renditerechner",d,{
-            nettoRendite:R.nR,bruttoRendite:R.bR,kaufpreisfaktor:kpF,bewertung:{tier:nrTier}
-          });
-          // Auf die 3 entscheidungsrelevanten Fragen gekuerzt (Nutzerwunsch
-          // 2026-07-22) - Begriffsdefinition (suggested3) und Verkaufs-
-          // szenario (suggested5) sind ueber das Freitextfeld erreichbar.
-          const suggested=[
-            tpl(at.suggested1,{ampel:at["tier_"+nrTier]||nrTier}),
-            at.suggested2,
-            at.suggested4
-          ];
-          // Signale fuer die Sprechblase: Ampel, Monats-Cashflow und
-          // Risikoscore sind hier ohnehin schon berechnet (siehe finnHints.js).
-          return <AssistantWidget rechner="renditerechner" kontext={kontext} contextLabel={at.contextRendite} suggested={suggested} lang={lang} signale={{tier:nrTier,cashflow:R.cf2,risiko:R.rk}}/>;
-        })()}
       </>}
     </div>
-  </div></div>;
+  </div>
+  {/* ═══ KI-ASSISTENT (Pilot, nur Renditerechner — Konzept Abschnitt 5, Phase 1) ═══
+      Bewusst AUSSERHALB der beiden Panes: auf Mobile blendet
+      @media(max-width:699px) die gerade inaktive Pane per display:none aus.
+      Stand das Widget darin, verschwand der position:fixed-Fuchs in der
+      Eingabe-Ansicht komplett (Nutzer-Feedback 2026-07-22). */}
+  {R&&(()=>{
+    const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
+    const nrTier=rate('nettoR',R.nR).tier;
+    const kpF=R.gKP/Math.max((+d.kaltmiete||1)*12,1);
+    const kontext=buildAssistantContext("renditerechner",d,{
+      nettoRendite:R.nR,bruttoRendite:R.bR,kaufpreisfaktor:kpF,bewertung:{tier:nrTier}
+    });
+    // Auf die 3 entscheidungsrelevanten Fragen gekuerzt (Nutzerwunsch
+    // 2026-07-22) - Begriffsdefinition (suggested3) und Verkaufs-
+    // szenario (suggested5) sind ueber das Freitextfeld erreichbar.
+    const suggested=[
+      tpl(at.suggested1,{ampel:at["tier_"+nrTier]||nrTier}),
+      at.suggested2,
+      at.suggested4
+    ];
+    // Signale fuer die Sprechblase: Ampel, Monats-Cashflow und
+    // Risikoscore sind hier ohnehin schon berechnet (siehe finnHints.js).
+    return <AssistantWidget rechner="renditerechner" kontext={kontext} contextLabel={at.contextRendite} suggested={suggested} lang={lang} signale={{tier:nrTier,cashflow:R.cf2,risiko:R.rk}}/>;
+  })()}
+  </div>;
 }
