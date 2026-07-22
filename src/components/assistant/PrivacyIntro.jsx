@@ -30,9 +30,6 @@ export function PrivacyIntro({ t, onConfirm, onCancel }) {
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 32 }} aria-hidden="true">
-          🦊
-        </div>
         <h2 id="if-asst-privacy-title" style={{ fontSize: 17, fontWeight: 800, color: "var(--ct)", margin: "8px 0 10px" }}>
           {t.privacyTitle}
         </h2>

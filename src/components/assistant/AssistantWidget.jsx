@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AssistantChip } from "./AssistantChip.jsx";
+import { MascotFab } from "./MascotFab.jsx";
 import { PrivacyIntro } from "./PrivacyIntro.jsx";
 import { AssistantSheet } from "./AssistantSheet.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
@@ -8,7 +8,7 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 // Einstiegspunkt (Rechner-Chip oder Merkliste-Vergleich) - siehe Merkliste.jsx.
 export const PRIVACY_SEEN_KEY = "if_assistant_privacy_seen";
 
-// Buendelt Chip -> Datenschutz-Erstkontakt -> Chat-Sheet (Konzept 3.2, Schritt 1-3).
+// Buendelt Mascot-FAB -> Datenschutz-Erstkontakt -> Chat-Sheet (Konzept 3.2, Schritt 1-3).
 // Generisch pro Rechner nutzbar - Phase 2 haengt weitere Rechner hier ein,
 // ohne diese Datei anzufassen (nur Aufrufer-Props aendern sich).
 export function AssistantWidget({ rechner, kontext, contextLabel, suggested, lang, disabled }) {
@@ -35,7 +35,12 @@ export function AssistantWidget({ rechner, kontext, contextLabel, suggested, lan
 
   return (
     <>
-      <AssistantChip label={t.chip} disabled={disabled} onOpen={openFlow} />
+      <MascotFab
+        label={t.dialogAria}
+        bubbleText={t.bubbleHelp}
+        hidden={disabled || sheetOpen || privacyOpen}
+        onOpen={openFlow}
+      />
       {privacyOpen && <PrivacyIntro t={t} onConfirm={confirmPrivacy} onCancel={() => setPrivacyOpen(false)} />}
       <AssistantSheet
         open={sheetOpen}

@@ -1,3 +1,164 @@
+## 2026-07-21 (1.55.35)
+
+### Feature: Nur noch Mascot-FAB als Einstieg + Landing-Berater + vertikale Chips
+
+- **`AssistantChip.jsx` entfernt** (Datei geloescht) - der textuelle "Frag
+  Finn"-Button ist weg, einziger Einstiegspunkt in den 6 Rechnern ist jetzt
+  der Mascot-FAB. `AssistantWidget.jsx` rendert entsprechend nur noch
+  `MascotFab`.
+- **`MascotFab.jsx` erweitert:** neue Props `bubbleText` (nutzt
+  `useFinnBubble`/`FinnBubble`, uebernimmt die Sprechblasen-Logik, die
+  vorher am Chip haing) und `bottom` (frei positionierbar - Rechner nutzen
+  weiterhin 76px ueber der Tab-Leiste, Landing-Page 18px vom Rand, da dort
+  keine Tab-Leiste existiert).
+- **Neu: `LandingMascot.jsx`** - Mascot erscheint jetzt auch auf der
+  Landing-Page, zeigt 5s nach Laden eine Sprechblase ("Hi, ich bin Finn,
+  dein persoenlicher KI-Assistent!"), wiederholt sich bei jedem erneuten
+  Seitenbesuch. Klick oeffnet ein Bottom-Sheet mit 6 Routing-Chips
+  ("Ich will in eine Immobilie investieren" etc.), die direkt in den
+  passenden Rechner springen (`onStart(tabId)`). Bewusst kein Freitext/
+  Worker-Call hier - vor der ersten Berechnung gibt es keinen Rechner-
+  Kontext, den ein echter Chat sinnvoll einordnen koennte.
+- **Vertikale Vorschlag-Chips:** `.if-asst-suggested` in `AssistantSheet.jsx`
+  von horizontal scrollender Reihe auf untereinander gestapelte Chips
+  ueber die volle Breite umgestellt (`SuggestedQuestionChip.jsx` entsprechend
+  angepasst).
+- **`i18n/assistant.js`:** neue Keys `landingBubble`, `landingIntro`,
+  `landingChipRendite/Finanzierung/Miete/Sanierung/Steuer/Vfe` in allen
+  5 Sprachen.
+- **Bewusst nicht umgesetzt:** unterschiedliche Sprechblasen pro einzelnem
+  Eingabefeld (nur Nutzerwunsch als "vielleicht" formuliert) - haette
+  Fokus-Tracking in allen 6 Rechnern erfordert, klar groesserer Eingriff.
+  Pro-Tab-Unterscheidung (Landing vs. Rechner) ist umgesetzt.
+
+**Betroffene Dateien:** src/components/assistant/AssistantChip.jsx (geloescht),
+LandingMascot.jsx (neu), MascotFab.jsx, AssistantWidget.jsx, AssistantSheet.jsx,
+SuggestedQuestionChip.jsx, src/pages/Landing.jsx, src/i18n/assistant.js
+
+## 2026-07-21 (1.55.34)
+
+### Feature: Schwebender Maskottchen-FAB + Chat-Sheet-Redesign (Referenz-Mockup uebernommen)
+
+Nutzer hat eine externe Design-Referenz ("ImmoFuchs KI Assistent - Standalone.html",
+ein gebuendelter Prototyp mit eingebetteten Assets) geliefert und deren FAB-/
+Chat-Optik uebernommen lassen - Farben/Font der Referenz (Navy/Inter) wurden
+NICHT uebernommen, stattdessen die echten, aktuell laufenden Design-Tokens
+(Creme/Fast-Schwarz/Orange, DM Sans) verwendet, damit nichts stilistisch
+auseinanderfaellt.
+
+- **Neues Maskottchen-Bild:** `public/finn.png` (User-Upload, 1024x1024,
+  bereits sauber freigestellt) per `sharp` (aus `worker/node_modules`)
+  getrimmt + auf `public/fuchs-mascot.webp` (277x320, ~48 KB) verkleinert.
+  Rohbild danach geloescht.
+- **Neu: `MascotFab.jsx`** - schwebendes Bild (kein Kreis-Button) oberhalb
+  der Tab-Leiste, `position:fixed; bottom:calc(76px + env(safe-area-inset-
+  bottom))` (dieselbe bewaehrte Methode wie der Merkliste-Vergleichsbutton -
+  bewusst NICHT relativ zur `.tbar`-Hoehe, da `.tbar` aktuell doppelt
+  gerendert wird, siehe unten). Wackel-Animation `ifFabWiggle` alle 4,5 s,
+  respektiert `prefers-reduced-motion`. Oeffnet denselben `AssistantSheet`
+  wie der bestehende Inline-Chip (geteilter State, kein zweiter Chat).
+  Eingehaengt in `AssistantWidget.jsx` - erscheint damit automatisch in
+  allen 6 Rechnern zusaetzlich zum Inline-Chip. NICHT in `Merkliste.jsx`
+  eingebaut (wuerde den dortigen Vergleichs-Button an derselben Stelle
+  ueberlappen).
+- **`ChatBubble.jsx`:** Maskottchen-Avatar neben Assistenten-Nachrichten
+  wieder eingebaut (neues Bild, kein Badge-Hintergrund - passt besser zur
+  freigestellten Vollfigur als der Referenz-"cover"-Crop). Alle Bubbles
+  blenden jetzt sanft ein (`ifBubbleIn`, .25s).
+- **`AssistantSheet.jsx`:** neue Kopfzeile im Sheet (Avatar + Name + "●
+  online"-Status), Slide-up-Timing an Referenz angeglichen
+  (`.32s cubic-bezier(.32,.72,0,1)` statt vorher `.26s`).
+- **`i18n/assistant.js`:** neue Keys `assistantName`/`onlineStatus` in
+  allen 5 Sprachen.
+- **Bewusst nicht angefasst:** Landing-Hero-Bild (bleibt entfernt),
+  `PrivacyIntro`-Illustration (bleibt entfernt), Kopfzeilen-Logo (`App.jsx`
+  nutzt dort bereits `icon-192.png` - ein etabliertes, passendes
+  Fuchs+Haus+Rechner-Icon als PWA-App-Icon; Ersetzen haette den App-Icon
+  ueberall geaendert, das war nicht klar gewuenscht), Score-Ring/KPI-
+  Kacheln/Empfehlungskarten aus der Referenz (eigenes, groesseres Thema).
+- **Nicht angefasst:** Freitext-Chat + Worker-Backend (bleibt real, kein
+  Downgrade auf reine Klick-Chips).
+
+**Betroffene Dateien:** src/components/assistant/MascotFab.jsx (neu),
+AssistantWidget.jsx, AssistantSheet.jsx, ChatBubble.jsx, src/i18n/assistant.js,
+public/fuchs-mascot.webp (neu)
+
+## 2026-07-21 (1.55.33)
+
+### Entfernt: Finn-Maskottchen-Bild (Assistent-Funktion bleibt unveraendert)
+
+Nutzerwunsch: nur das Bild/Maskottchen entfernen, die KI-Assistent-Funktion
+(Chip, Sheet, Chat, Datenschutz-Intro, Vergleichs-Button) bleibt vollstaendig
+erhalten - nur ohne Grafik.
+
+- `FinnAvatar`-Einbindung entfernt aus `AssistantChip.jsx`, `ChatBubble.jsx`,
+  `PrivacyIntro.jsx`, `Landing.jsx` (Hero) und `Merkliste.jsx`
+  (Objektvergleich-Button). Layout jeweils minimal angepasst (z. B.
+  Chat-Bubble ohne Avatar-Spalte).
+- Geloescht: `src/components/assistant/FinnAvatar.jsx` (danach ungenutzt),
+  `public/finn-full.webp`, `public/finn-head.webp`, `docs/assets/`
+  (finn-quelle.png), `docs/plans/ImmoFuchs_Maskottchen_Konzept.md`.
+- `public/sw.js`: Precache-Eintrag `/finn-head.webp` entfernt.
+
+**Nicht angefasst:** `FinnBubble.jsx`/`useFinnBubble.js` (reine Text-
+Sprechblase "Brauchst du Hilfe?", kein Bild), Worker-Backend, Chat-/
+Datenschutz-Logik, Texte ("Frag Finn" etc. bleiben wie sie waren).
+
+**Betroffene Dateien:** src/components/assistant/AssistantChip.jsx,
+ChatBubble.jsx, PrivacyIntro.jsx, src/pages/Landing.jsx,
+src/components/shell/Merkliste.jsx, public/sw.js (alle geaendert);
+src/components/assistant/FinnAvatar.jsx, public/finn-full.webp,
+public/finn-head.webp, docs/assets/, docs/plans/ImmoFuchs_Maskottchen_Konzept.md
+(alle geloescht)
+
+## 2026-07-21 (1.55.32)
+
+### Feature: Finn als professionelles Rendering + proaktive Sprechblase
+
+Nachfolger von 1.55.31. Der selbstgezeichnete SVG-Vektor wurde vom Nutzer als
+"amateurhaft, nicht professionell" abgelehnt - Wunsch war ein qualitativ
+hochwertiges, statisches Bild ("kein einfaches Bild" hiess hier: kein Skizzen-
+Look, sondern ein sauberes 3D-Rendering) plus eine Sprechblase mit Hinweistext
+("Brauchst du Hilfe?").
+
+- **Neue Quelle:** `docs/assets/finn-quelle.png` (1024x1024, extern erstelltes
+  Rendering, vom Nutzer geliefert) - liegt **nicht** in `public/`, wird nicht
+  mitdeployt, dient nur als Referenz fuer kuenftige Zuschnitte.
+- **`public/finn-head.webp`** (160x160, 10 KB) - enger Kopf-Crop fuer kleine
+  Badges. Bei den fruehen Bitmap-Versuchen (1.55.30) war das Problem eine zu
+  niedrig aufgeloeste Quelle; diesmal ist die Quelle 1024px und bereits sauber
+  freigestellt (echte Alpha-Transparenz, keine Nachbearbeitung noetig) -
+  deshalb halten auch 28-32 px jetzt scharf.
+- **`public/finn-full.webp`** (320x320, 35 KB) - Vollfigur mit Laptop, fuer
+  Privacy-Intro und Landing-Hero.
+- **`FinnAvatar.jsx`** komplett vereinfacht: kein SVG, keine Keyframes, keine
+  `useId`-Gradienten mehr - nur noch ein `<img>` mit `variant="head"|"full"`.
+- **Neu: `useFinnBubble.js` + `FinnBubble.jsx`** - proaktive Sprechblase
+  ("Brauchst du Hilfe?" / uebersetzt in allen 5 Sprachen). Erscheint 5 s nach
+  Seitenaufruf, verschwindet nach 7 s von selbst oder bei Klick irgendwo hin.
+  Nutzerentscheidung: nicht auf Erstbesuch beschraenkt (erscheint bei jedem
+  erneuten Seiten-/Tab-Aufruf), nur an bestehenden Assistenten-Einstiegen -
+  kein neuer schwebender Button.
+- **Verbaut in:** `AssistantChip.jsx` (deckt automatisch alle 4 Rechner ab,
+  da `AssistantWidget` ueberall denselben Chip nutzt) und im Objektvergleich-
+  Button in `Merkliste.jsx` (dort bisher eigenstaendiger Button ohne Chip-
+  Komponente, daher Blase dort separat verdrahtet).
+- **`i18n/assistant.js`:** neuer Key `bubbleHelp` in allen 5 Sprachen (de/en
+  von Hand, tr/zh/hi als kurze Best-Effort-Uebersetzung wie der Rest der
+  Datei).
+- **Aufgeraeumt:** `public/finn.png` (2,3-MB-Konzept-Sheet, seit 1.55.31 ohne
+  Funktion) geloescht. `public/sw.js`-Precache von `finn-avatar.png` auf
+  `finn-head.webp` aktualisiert.
+
+**Nicht angefasst:** `useAssistant.js`, Worker, Rechner-Logik.
+
+**Betroffene Dateien:** src/components/assistant/FinnAvatar.jsx,
+FinnBubble.jsx (neu), src/hooks/useFinnBubble.js (neu), AssistantChip.jsx,
+AssistantWidget.jsx, ChatBubble.jsx, PrivacyIntro.jsx,
+src/components/shell/Merkliste.jsx, src/pages/Landing.jsx,
+src/i18n/assistant.js, public/sw.js, public/finn-head.webp (neu),
+public/finn-full.webp (neu), docs/assets/finn-quelle.png (neu, nicht deployt)
+
 ## 2026-07-21 (1.55.29)
 
 ### Infra: Separater Dev-Worker fuer den KI-Assistenten (dev.immofuchs.info von Prod entkoppelt)

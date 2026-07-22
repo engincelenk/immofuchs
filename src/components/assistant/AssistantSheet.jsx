@@ -82,6 +82,13 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
           ✕
         </button>
         <div className="if-asst-handle" />
+        <div className="if-asst-header">
+          <img src="/fuchs-mascot.webp" alt="" aria-hidden="true" className="if-asst-header-avatar" />
+          <span>
+            <span className="if-asst-header-name">{t.assistantName}</span>
+            <span className="if-asst-header-online">● {t.onlineStatus}</span>
+          </span>
+        </div>
         <div className="if-asst-context">{contextLabel}</div>
         <div className="if-asst-suggested">
           {suggested.map((label, i) => (
@@ -116,14 +123,18 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
       <style>{`
         .if-asst-backdrop{position:fixed;inset:0;background:rgba(15,20,30,.32);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:1090}
         .if-asst-backdrop.open{opacity:1;pointer-events:auto}
-        .if-asst-sheet{position:fixed;left:0;right:0;bottom:0;height:82vh;height:82dvh;max-height:640px;background:var(--bg);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(20,30,50,.25);transform:translateY(100%);transition:transform .26s cubic-bezier(.32,.72,.35,1);z-index:1091;display:flex;flex-direction:column}
+        .if-asst-sheet{position:fixed;left:0;right:0;bottom:0;height:82vh;height:82dvh;max-height:640px;background:var(--bg);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(20,30,50,.25);transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,0,1);z-index:1091;display:flex;flex-direction:column}
         .if-asst-sheet.open{transform:translateY(0)}
         .if-asst-close{position:absolute;top:10px;right:12px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,.06);color:var(--ch);font-size:14px;cursor:pointer;z-index:2;font-family:inherit}
         .if-asst-close:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
         .if-asst-handle{width:36px;height:4px;border-radius:2px;background:var(--cb);margin:10px auto 4px;flex:none}
-        .if-asst-context{font-size:11px;color:var(--ch);text-align:center;padding:2px 16px 8px;flex:none}
+        .if-asst-header{display:flex;align-items:center;gap:10px;padding:4px 18px 12px;border-bottom:1px solid var(--cb);flex:none}
+        .if-asst-header-avatar{width:34px;height:34px;object-fit:contain;flex-shrink:0}
+        .if-asst-header-name{display:block;font-size:15px;font-weight:800;color:var(--ct)}
+        .if-asst-header-online{display:block;font-size:12px;color:#1e8a5b;font-weight:600}
+        .if-asst-context{font-size:11px;color:var(--ch);text-align:center;padding:6px 16px 8px;flex:none}
         .if-asst-log{flex:1;min-height:0;overflow-y:auto;padding:4px 14px;display:flex;flex-direction:column;gap:10px}
-        .if-asst-suggested{flex:none;display:flex;gap:8px;padding:2px 14px 10px;overflow-x:auto}
+        .if-asst-suggested{flex:none;display:flex;flex-direction:column;gap:8px;padding:2px 14px 10px}
         .if-asst-sugg-chip:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
         .if-asst-input-row{flex:none;display:flex;gap:8px;padding:10px 14px calc(16px + env(safe-area-inset-bottom))}
         .if-asst-input-row input{flex:1;height:42px;border-radius:21px;border:1px solid var(--cb);padding:0 16px;font-size:16px;font-family:inherit;background:var(--ci);color:var(--ct)}
@@ -138,10 +149,13 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
         .if-asst-dots span:nth-child(2){animation-delay:.15s}
         .if-asst-dots span:nth-child(3){animation-delay:.3s}
         @keyframes ifAsstDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
+        .if-asst-bubble-in{animation:ifBubbleIn .25s ease}
+        @keyframes ifBubbleIn{0%{opacity:0;transform:translateY(6px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
         @media (prefers-reduced-motion: reduce){
           .if-asst-sheet{transition:none}
           .if-asst-backdrop{transition:none}
           .if-asst-dots span{animation:none;opacity:.6}
+          .if-asst-bubble-in{animation:none}
         }
       `}</style>
     </>,

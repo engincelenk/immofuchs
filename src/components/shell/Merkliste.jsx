@@ -4,6 +4,8 @@ import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
 import { fmt, LANG_LOCALE } from "../../utils/helpers.js";
 import { PrivacyIntro } from "../assistant/PrivacyIntro.jsx";
+import { FinnBubble } from "../assistant/FinnBubble.jsx";
+import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
 import { PRIVACY_SEEN_KEY } from "../assistant/AssistantWidget.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
@@ -70,6 +72,7 @@ export function Merkliste(){
   const[compareIds,setCompareIds]=useState([]);
   const[comparePrivacyOpen,setComparePrivacyOpen]=useState(false);
   const[compareSheetOpen,setCompareSheetOpen]=useState(false);
+  const[compareBubbleVisible,setCompareBubbleVisible]=useFinnBubble(compareIds.length>=2&&!comparePrivacyOpen&&!compareSheetOpen);
   const tabLabel={haupt:t.haupt||'Rendite',kredit:t.kredit||'Kredit',miete:t.miete||'Miete',sanier:t.sanier||'Sanierung'};
   const tabColor={haupt:'#1E3A5F',kredit:'#0a7ea4',miete:'#2d8a4e',sanier:'#8a5a0a'};
   const fmt=v=>v?Number(v).toLocaleString(locale):null;
@@ -160,9 +163,12 @@ export function Merkliste(){
 
       {/* ═══ KI-ASSISTENT OBJEKTVERGLEICH (Phase 3, Sprint 6 — Konzept 3.3a) ═══ */}
       {compareIds.length>=2&&createPortal(
-        <button className="no-print" onClick={openCompare} style={{position:'fixed',left:16,right:16,bottom:'calc(76px + env(safe-area-inset-bottom))',zIndex:120,height:48,borderRadius:24,border:'none',background:'var(--ca)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',boxShadow:'0 4px 16px rgba(0,0,0,.2)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-          <span aria-hidden="true">🦊</span>{at.compareButton} ({compareIds.length})
-        </button>,document.body
+        <div style={{position:'fixed',left:16,right:16,bottom:'calc(76px + env(safe-area-inset-bottom))',zIndex:120}}>
+          <FinnBubble text={at.bubbleHelp} visible={compareBubbleVisible}/>
+          <button className="no-print" onClick={()=>{setCompareBubbleVisible(false);openCompare();}} style={{width:'100%',height:48,borderRadius:24,border:'none',background:'var(--ca)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',boxShadow:'0 4px 16px rgba(0,0,0,.2)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            {at.compareButton} ({compareIds.length})
+          </button>
+        </div>,document.body
       )}
       {comparePrivacyOpen&&<PrivacyIntro t={at} onConfirm={confirmComparePrivacy} onCancel={()=>setComparePrivacyOpen(false)}/>}
       <AssistantSheet

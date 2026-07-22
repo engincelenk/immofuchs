@@ -4,6 +4,7 @@ import { MARKET_RATES } from "../data.js";
 import { LANG_LOCALE } from "../utils/helpers.js";
 import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
+import { LandingMascot } from "../components/assistant/LandingMascot.jsx";
 
 const navLink={background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:600,color:"var(--cl)",padding:"6px 0",letterSpacing:.1,transition:"color .15s"};
 const navLinkMobile={...navLink,padding:"12px 4px",fontSize:15,textAlign:"left",borderBottom:"1px solid var(--cb)"};
@@ -324,5 +325,6 @@ export function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLa
         .lp-cta{display:none!important}
       }
     `}</style>
+    <LandingMascot onStart={onStart} lang={lang}/>
   </div>;
 }

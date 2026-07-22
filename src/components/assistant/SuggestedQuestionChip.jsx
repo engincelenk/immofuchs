@@ -4,17 +4,18 @@ export function SuggestedQuestionChip({ label, onClick }) {
       onClick={onClick}
       className="if-asst-sugg-chip"
       style={{
-        flex: "none",
+        display: "block",
+        width: "100%",
+        textAlign: "left",
         fontFamily: "inherit",
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: 600,
         color: "var(--ca)",
         background: "var(--ca-bg)",
         border: "1px solid var(--ca-bd)",
-        borderRadius: 16,
-        padding: "7px 12px",
+        borderRadius: 12,
+        padding: "10px 14px",
         cursor: "pointer",
-        whiteSpace: "nowrap",
       }}
     >
       {label}
