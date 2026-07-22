@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useAssistant } from "../../hooks/useAssistant.js";
 import { useFloatingSheet } from "../../hooks/useFloatingSheet.js";
 import { useSpeechInput } from "../../hooks/useSpeechInput.js";
+import { useSpeechOutput } from "../../hooks/useSpeechOutput.js";
 import { AssistantHeaderBar } from "./AssistantHeaderBar.jsx";
 import { ResizeHandle } from "./ResizeHandle.jsx";
 import { ChatBubble } from "./ChatBubble.jsx";
@@ -30,6 +31,20 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
       inputRef.current.focus();
     }
   }, lang);
+  const speechOut = useSpeechOutput(lang);
+  const spokenCountRef = useRef(0);
+
+  // Liest neue Assistenten-Antworten vor, wenn der Lautsprecher-Toggle an
+  // ist (Nutzerwunsch 2026-07-22) - nur tatsaechlich neue Nachrichten, kein
+  // erneutes Vorlesen beim Wiederoeffnen/Re-Render.
+  useEffect(() => {
+    if (messages.length > spokenCountRef.current) {
+      const last = messages[messages.length - 1];
+      if (last.role === "assistant") speechOut.speak(last.text);
+    }
+    spokenCountRef.current = messages.length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   // Chips nur beim Erstkontakt permanent sichtbar (Vodafone-TOBi-Vorbild,
   // Nutzer-Feedback 2026-07-22) - sobald eine Frage lief, kollabieren sie zu
@@ -150,6 +165,9 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
           onRestart={handleRestart}
           minimized={minimized}
           onToggleMinimize={() => setMinimized((m) => !m)}
+          speechSupported={speechOut.supported}
+          speechEnabled={speechOut.enabled}
+          onToggleSpeech={speechOut.toggle}
         />
         {!minimized && (
           <>

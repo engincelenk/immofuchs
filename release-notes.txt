@@ -1,3 +1,66 @@
+## 2026-07-22 (1.55.43)
+
+### Feature: Neues Maskottchen-Bild (finn2.png) + Glitzer-Animation am FAB
+
+- **`public/fuchs-mascot.webp` ersetzt** durch das neue, futuristische Fox-
+  Rendering (`public/finn2.png`, User-Upload) - getrimmt + auf 312×320px
+  verkleinert (WebP, ~42 KB) mit demselben `sharp`-Workflow wie beim
+  letzten Maskottchen-Bild. Da alle 3 Einsatzorte (`MascotFab.jsx`,
+  `AssistantHeaderBar.jsx`, `ChatBubble.jsx`) nur den Dateipfad
+  referenzieren, war dafuer keine Code-Aenderung noetig - automatisch
+  ueberall aktualisiert. Rohbild (`finn2.png`) danach geloescht.
+  Alle bestehenden Animationen (Wackeln, Sprechblase, Bubble-Einblenden)
+  unveraendert erhalten.
+- **Neu: Glitzer-Animation am FAB** (`ifFabSparkle`) - zwei kleine Sterne
+  (✦) blitzen synchron zum bestehenden 4,5s-Wackel-Zyklus kurz auf (ca.
+  88-98% des Zyklus, ueberlappend mit dem Wackeln), respektiert
+  `prefers-reduced-motion`. Bewusst nur am FAB (nicht an den kleinen
+  Kopfzeilen-/Chat-Avataren, um dort nicht unruhig zu wirken).
+
+**Betroffene Dateien:** public/fuchs-mascot.webp (ersetzt),
+src/components/assistant/MascotFab.jsx
+
+## 2026-07-22 (1.55.42)
+
+### Fix: Verschieben/Verkleinern-Bugs (Root Cause) + Lautsprecher-Vorlesen
+
+Nutzer-Screenshots zeigten 5 zusammenhaengende Bugs beim Verschieben/
+Verkleinern/Vergroessern/Schliessen - alle hatten dieselbe Ursache.
+
+- **Root Cause:** Beim allerersten Verschieben/Resizen "fror" der Code die
+  gerade *live gerenderte* Groesse ein. Zwei Folgen: (1) im normalen
+  Zustand ist das die volle Seitenhoehe -> vertikal kein Bewegungsspielraum
+  beim ersten Ziehen. (2) War das Fenster gerade verkleinert (winzige
+  ~87px-Hoehe), fror stattdessen DIESE winzige Hoehe ein - beim
+  Wiederherstellen quetschte sich der ganze Chat-Inhalt hinein (sah
+  "zerschossen" aus), und der breite Schlagschatten unter der winzigen Box
+  wirkte wie ein langer Strich.
+- **Fix (`useFloatingSheet.js`):** Position (links/oben) wird weiterhin live
+  uebernommen (sicher, da Verkleinern die Box nicht verschiebt). Groesse
+  wird beim allerersten Verschieben nie mehr live gemessen, sondern auf
+  eine sinnvolle feste Startgroesse (400×600px) gesetzt - dadurch sofort
+  echter 2D-Bewegungsspielraum, kein Umweg mehr ueber "erst verkleinern"
+  noetig. Eine per Hand geaenderte Groesse (Resize-Griff) wird weiterhin
+  korrekt gemerkt und beim Verkleinern/Wiederherstellen beibehalten.
+  Schliessen funktioniert dadurch jetzt in jeder Kombination zuverlaessig
+  (vorher wirkte es in der "zerschossenen" Lage so, als reagiere der
+  X-Button nicht).
+- **Neu: Lautsprecher-Vorlesen** (`useSpeechOutput.js`, Web-Speech-
+  Synthesis-API, laeuft auch in Firefox) - Toggle-Button in der Kopfzeile
+  (🔊/🔇, standardmaessig aus). An: neue Assistenten-Antworten werden
+  automatisch vorgelesen - sowohl echte Freitext-Antworten als auch die
+  lokalen Routing-Begruendungen auf der Landing-Page.
+- **Aktualitaet der Rechner-Werte (gepruefte Nachfrage):** Live verifiziert,
+  kein Fix noetig - Kaufpreis mitten in der Session geaendert, ausgehende
+  Anfrage abgefangen: `kontext.kaufpreis` stand korrekt auf dem neuen Wert.
+  Kontext wird bei jeder Eingabe frisch aus dem aktuellen Formularzustand
+  gebaut, nie zwischengespeichert.
+
+**Betroffene Dateien:** src/hooks/useFloatingSheet.js,
+src/hooks/useSpeechOutput.js (neu), src/components/assistant/
+AssistantHeaderBar.jsx, AssistantSheet.jsx, LandingMascot.jsx,
+src/i18n/assistant.js
+
 ## 2026-07-22 (1.55.41)
 
 ### Feature: Fenster per Maus groessenveraenderbar (Breite + Hoehe)

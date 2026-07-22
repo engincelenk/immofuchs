@@ -16,6 +16,7 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, bottom = "calc(76
         }}
         aria-label={label}
         style={{
+          position: "relative",
           width: 64,
           height: 80,
           background: "transparent",
@@ -28,6 +29,12 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, bottom = "calc(76
           padding: 0,
         }}
       >
+        <span className="if-mascot-sparkle if-mascot-sparkle-1" aria-hidden="true">
+          ✦
+        </span>
+        <span className="if-mascot-sparkle if-mascot-sparkle-2" aria-hidden="true">
+          ✦
+        </span>
         <img
           src="/fuchs-mascot.webp"
           alt=""
@@ -62,8 +69,17 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, bottom = "calc(76
           98%{transform:rotate(2deg)}
         }
         .if-mascot-fab-img{animation:ifFabWiggle 4.5s ease-in-out infinite}
+        .if-mascot-sparkle{position:absolute;color:#fff;text-shadow:0 0 4px var(--ca),0 0 9px var(--ca);opacity:0;pointer-events:none;animation:ifFabSparkle 4.5s ease-in-out infinite}
+        .if-mascot-sparkle-1{top:2px;right:0px;font-size:13px;animation-delay:0s}
+        .if-mascot-sparkle-2{top:24px;left:-3px;font-size:9px;animation-delay:.18s}
+        @keyframes ifFabSparkle{
+          0%,84%,100%{opacity:0;transform:scale(.3) rotate(0deg)}
+          90%{opacity:1;transform:scale(1) rotate(20deg)}
+          95%{opacity:0;transform:scale(.5) rotate(0deg)}
+        }
         @media (prefers-reduced-motion: reduce){
           .if-mascot-fab-img{animation:none}
+          .if-mascot-sparkle{animation:none;opacity:0}
         }
       `}</style>
     </div>

@@ -17,6 +17,9 @@ export function AssistantHeaderBar({
   onRestart,
   minimized,
   onToggleMinimize,
+  speechSupported,
+  speechEnabled,
+  onToggleSpeech,
 }) {
   const [infoOpen, setInfoOpen] = useState(false);
   const stop = (e) => e.stopPropagation();
@@ -40,6 +43,17 @@ export function AssistantHeaderBar({
             </span>
           </span>
           <span className="if-asst-header-spacer" />
+          {speechSupported && (
+            <button
+              type="button"
+              aria-label={speechEnabled ? t.speakerOnAria : t.speakerOffAria}
+              className={`if-asst-icon-btn${speechEnabled ? " active" : ""}`}
+              onPointerDown={stop}
+              onClick={onToggleSpeech}
+            >
+              {speechEnabled ? "🔊" : "🔇"}
+            </button>
+          )}
           <button
             type="button"
             aria-label={t.aiNoticeAria}
@@ -78,6 +92,7 @@ export function AssistantHeaderBar({
         .if-asst-header-spacer{flex:1}
         .if-asst-icon-btn{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--cb);background:transparent;color:var(--ch);font-size:13px;font-family:inherit;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
         .if-asst-icon-btn:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+        .if-asst-icon-btn.active{border-color:var(--ca);background:var(--ca-bg)}
         @media (min-width:1024px){
           .if-asst-titlebar{cursor:grab;touch-action:none}
           .if-asst-sheet.floating .if-asst-titlebar{cursor:grabbing}
