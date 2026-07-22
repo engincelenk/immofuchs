@@ -1,3 +1,72 @@
+## 2026-07-22 (1.55.45)
+
+### Maskottchen finn3 + Chips auf 3 reduziert + Datenschritt entfernt + Name "Finn" in allen Sprachen
+
+- **Neues Maskottchen aus `finn3.png`** (lachende Variante). Gleiche Pipeline
+  wie zuvor: Schachbrett war auch hier als Pixel eingebrannt (kein Alpha),
+  Flood-Fill-Freistellung + Halo-Entschaerfung, Kopf-Ausschnitt (obere 46 %,
+  nativ 407x448), Export als transparentes WebP 320x352 / 33 KB nach
+  `public/fuchs-mascot.webp`. **Kein Code angefasst** - alle drei Einsatzorte
+  referenzieren nur den Pfad, saemtliche Animationen (Wackeln, Glitzer,
+  Sprechblase, Bubble-Einblenden) laufen unveraendert weiter. Rohbild nach
+  `_image_backups_card/finn3.png` verschoben (nicht nach `public/`, sonst
+  waeren 2 MB mit ausgeliefert worden).
+- **FAB-Hoehe auf der Startseite angeglichen:** `LandingMascot.jsx` hat den
+  `MascotFab`-Default mit `bottom: calc(30px + safe-area)` ueberschrieben,
+  die Rechner nutzen 76px - Finn stand auf der Landing sichtbar tiefer
+  (Nutzer-Screenshot-Vergleich). Ueberschreibung entfernt, beide jetzt 76px
+  (live gemessen).
+
+- **Chips auf 3 begrenzt** (Nutzer-Feedback: "sie sind zu viel").
+  - Rechner: nur der Renditerechner hatte 5, alle anderen laengst 3. Behalten
+    wurden die entscheidungsrelevanten drei (Ampel-Begruendung, Verbesserung,
+    Selbsttragfaehigkeit); Begriffsdefinition und Verkaufsszenario fliegen
+    raus - beides bleibt ueber das Freitextfeld erreichbar.
+  - Zusaetzlich `suggested.slice(0, 3)` in `AssistantSheet.jsx` als harte
+    Obergrenze, statt sich auf die Aufrufer zu verlassen. Damit liefert auch
+    "Schlage Fragen vor" garantiert nie mehr als drei.
+  - Landing: statt sechs Routing-Chips nur noch drei breitere Einstiege
+    ("Ich will eine Immobilie kaufen" / "Ich brauche eine Finanzierung" /
+    "Ich vermiete bereits"). Die drei Nischenthemen (Sanierung, §6-Trick,
+    Vorfaelligkeit) haengen hinter einem vierten Chip **"Weitere Themen"**
+    statt ersatzlos zu verschwinden - genau diese sucht niemand von selbst,
+    und §6-Trick/Vorfaelligkeit sind Alleinstellungsmerkmale. Neuer i18n-Key
+    `landingMoreTopics` in 5 Sprachen.
+
+- **Datenschutz-Zwischenschritt entfernt** (Nutzerwunsch): das Modal "Hallo,
+  ich bin Finn - ich schaue mir kurz deine Rechnerwerte an" erschien vor dem
+  ersten Chat. `PrivacyIntro.jsx` geloescht, ebenso `PRIVACY_SEEN_KEY` und
+  die vier `privacy*`-i18n-Keys (5 Sprachen). Betraf drei Einstiegspunkte:
+  Rechner-Chat (`AssistantWidget.jsx`), Landing-Freitextfrage
+  (`LandingMascot.jsx`) und Objektvergleich (`Merkliste.jsx`) - alle oeffnen
+  jetzt direkt. Die Vorstellung uebernimmt die `greeting`-Bubble im Chat, der
+  KI-Hinweis bleibt ueber das i-Icon erreichbar.
+
+- **"Finn" war in tr/zh/hi uebersetzt statt als Eigenname behalten** - im
+  tuerkischen Screenshot stand "Asistan" in der Kopfzeile. Betraf je 5 Keys
+  (`assistantName`, `chip`, `privacyTitle`, `placeholder`, `dialogAria`);
+  Hindi schrieb zusaetzlich "फिन" transliteriert in `landingBubble`. Ueberall
+  "Finn" eingesetzt, Satzbau bleibt landessprachlich ("Finn'e sor", "问问
+  Finn", "Finn से पूछें"). Nebenbefund: `privacyTitle` war in allen drei
+  Sprachen faelschlich mit dem Chip-Text gefuellt statt mit der Begruessung -
+  durch die Entfernung des Modals ohnehin erledigt.
+
+**Live geprueft** (Dev-Server, DOM-Messung): FAB auf Landing und Rechnern
+identisch bei 76px; Landing-Chips 3 + "Weitere Themen" -> Klick zeigt die
+drei Nischenthemen -> nach Routenwahl kollabiert auf "Schlage Fragen vor" ->
+erneut aufgeklappt wieder 3 + "Weitere Themen"; Rechner-Chips exakt 3, auch
+nach dem Wieder-Aufklappen; kein Datenschutz-Modal mehr; `assistantName`
+= "Finn" in allen 5 Sprachen; keine Konsolenfehler.
+
+**Betroffene Dateien:** public/fuchs-mascot.webp (ersetzt),
+_image_backups_card/finn3.png (neu),
+src/components/assistant/PrivacyIntro.jsx (geloescht),
+src/components/assistant/AssistantWidget.jsx,
+src/components/assistant/LandingMascot.jsx,
+src/components/assistant/AssistantSheet.jsx,
+src/components/shell/Merkliste.jsx,
+src/components/calculators/Renditerechner.jsx, src/i18n/assistant.js
+
 ## 2026-07-22 (1.55.44)
 
 ### Umbau: Assistent als festes Eckfenster (Allianz-Vorbild) + 3 Bugfixes + Begruessung

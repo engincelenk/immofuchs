@@ -3,11 +3,9 @@ import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
 import { fmt, LANG_LOCALE } from "../../utils/helpers.js";
-import { PrivacyIntro } from "../assistant/PrivacyIntro.jsx";
 import { FinnBubble } from "../assistant/FinnBubble.jsx";
 import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
-import { PRIVACY_SEEN_KEY } from "../assistant/AssistantWidget.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_FIELDS } from "../../utils/assistantContext.js";
 
@@ -70,9 +68,8 @@ export function Merkliste(){
   const at=ASSISTANT_T[lang]||ASSISTANT_T.de;
   const[confirmDel,setConfirmDel]=useState(null);
   const[compareIds,setCompareIds]=useState([]);
-  const[comparePrivacyOpen,setComparePrivacyOpen]=useState(false);
   const[compareSheetOpen,setCompareSheetOpen]=useState(false);
-  const[compareBubbleVisible,setCompareBubbleVisible]=useFinnBubble(compareIds.length>=2&&!comparePrivacyOpen&&!compareSheetOpen);
+  const[compareBubbleVisible,setCompareBubbleVisible]=useFinnBubble(compareIds.length>=2&&!compareSheetOpen);
   const tabLabel={haupt:t.haupt||'Rendite',kredit:t.kredit||'Kredit',miete:t.miete||'Miete',sanier:t.sanier||'Sanierung'};
   const tabColor={haupt:'#1E3A5F',kredit:'#0a7ea4',miete:'#2d8a4e',sanier:'#8a5a0a'};
   const fmt=v=>v?Number(v).toLocaleString(locale):null;
@@ -84,16 +81,9 @@ export function Merkliste(){
       return[...prev,id];
     });
   };
-  const openCompare=()=>{
-    let seen=false;
-    try{seen=localStorage.getItem(PRIVACY_SEEN_KEY)==="1";}catch{}
-    if(seen)setCompareSheetOpen(true);else setComparePrivacyOpen(true);
-  };
-  const confirmComparePrivacy=()=>{
-    try{localStorage.setItem(PRIVACY_SEEN_KEY,"1");}catch{}
-    setComparePrivacyOpen(false);
-    setCompareSheetOpen(true);
-  };
+  // Datenschutz-Zwischenschritt entfaellt (Nutzerwunsch 2026-07-22) -
+  // der Vergleichs-Chat oeffnet direkt.
+  const openCompare=()=>setCompareSheetOpen(true);
   const compareObjs=savedList.filter(o=>compareIds.includes(o.id));
   const vergleichsObjekte=compareObjs.map(o=>{
     const fields=ASSISTANT_FIELDS[o.tab]??[];
@@ -170,7 +160,6 @@ export function Merkliste(){
           </button>
         </div>,document.body
       )}
-      {comparePrivacyOpen&&<PrivacyIntro t={at} onConfirm={confirmComparePrivacy} onCancel={()=>setComparePrivacyOpen(false)}/>}
       <AssistantSheet
         open={compareSheetOpen}
         onClose={()=>setCompareSheetOpen(false)}

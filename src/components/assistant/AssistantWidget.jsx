@@ -1,47 +1,22 @@
 import { useState } from "react";
 import { MascotFab } from "./MascotFab.jsx";
-import { PrivacyIntro } from "./PrivacyIntro.jsx";
 import { AssistantSheet } from "./AssistantSheet.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 
-// Ein Gerät bestaetigt die Datenschutz-Intro nur einmal, unabhaengig vom
-// Einstiegspunkt (Rechner-Chip oder Merkliste-Vergleich) - siehe Merkliste.jsx.
-export const PRIVACY_SEEN_KEY = "if_assistant_privacy_seen";
-
-// Buendelt Mascot-FAB -> Datenschutz-Erstkontakt -> Chat-Sheet (Konzept 3.2, Schritt 1-3).
-// Generisch pro Rechner nutzbar - Phase 2 haengt weitere Rechner hier ein,
-// ohne diese Datei anzufassen (nur Aufrufer-Props aendern sich).
+// Buendelt Mascot-FAB -> Chat-Sheet. Generisch pro Rechner nutzbar.
+//
+// Der frueher vorgeschaltete Datenschutz-Erstkontakt ("Hallo, ich bin Finn -
+// ich schaue mir kurz deine Rechnerwerte an") ist auf Nutzerwunsch entfallen
+// (2026-07-22): der Chat oeffnet jetzt direkt. Die Vorstellung uebernimmt die
+// Begruessungs-Bubble im Chat (`greeting`), der KI-Hinweis bleibt ueber das
+// i-Icon in der Kopfleiste erreichbar.
 export function AssistantWidget({ rechner, kontext, contextLabel, suggested, lang, disabled }) {
   const t = ASSISTANT_T[lang] || ASSISTANT_T.de;
-  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-
-  const openFlow = () => {
-    let seen = false;
-    try {
-      seen = localStorage.getItem(PRIVACY_SEEN_KEY) === "1";
-    } catch {}
-    if (seen) setSheetOpen(true);
-    else setPrivacyOpen(true);
-  };
-
-  const confirmPrivacy = () => {
-    try {
-      localStorage.setItem(PRIVACY_SEEN_KEY, "1");
-    } catch {}
-    setPrivacyOpen(false);
-    setSheetOpen(true);
-  };
 
   return (
     <>
-      <MascotFab
-        label={t.dialogAria}
-        bubbleText={t.bubbleHelp}
-        hidden={disabled || sheetOpen || privacyOpen}
-        onOpen={openFlow}
-      />
-      {privacyOpen && <PrivacyIntro t={t} onConfirm={confirmPrivacy} onCancel={() => setPrivacyOpen(false)} />}
+      <MascotFab label={t.dialogAria} bubbleText={t.bubbleHelp} hidden={disabled || sheetOpen} onOpen={() => setSheetOpen(true)} />
       <AssistantSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}

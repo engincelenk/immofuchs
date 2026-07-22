@@ -44,6 +44,10 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
   // den eigentlichen Chatverlauf verdrängt.
   const [chipsForcedOpen, setChipsForcedOpen] = useState(false);
   const showChips = messages.length === 0 || chipsForcedOpen;
+  // Harte Obergrenze statt Verlass auf die Aufrufer: mehr als drei Chips
+  // verdraengen den Chatverlauf, und "Schlage Fragen vor" wuerde sonst die
+  // volle Liste zurueckholen (Nutzer-Feedback 2026-07-22).
+  const visibleSuggested = suggested.slice(0, 3);
 
   // Kopfzeile zeigt normalerweise die Tagline statt eines "online"-Status
   // (Nutzer-Feedback 2026-07-22) - nur das Tageslimit bekommt weiterhin eine
@@ -172,7 +176,7 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
             </div>
             <div className="if-asst-suggested">
               {showChips ? (
-                suggested.map((label, i) => <SuggestedQuestionChip key={i} label={label} onClick={() => submit(label)} />)
+                visibleSuggested.map((label, i) => <SuggestedQuestionChip key={i} label={label} onClick={() => submit(label)} />)
               ) : (
                 <SuggestedQuestionChip label={t.suggestQuestions} onClick={() => setChipsForcedOpen(true)} />
               )}

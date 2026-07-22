@@ -491,12 +491,13 @@ export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp(
           const kontext=buildAssistantContext("renditerechner",d,{
             nettoRendite:R.nR,bruttoRendite:R.bR,kaufpreisfaktor:kpF,bewertung:{tier:nrTier}
           });
+          // Auf die 3 entscheidungsrelevanten Fragen gekuerzt (Nutzerwunsch
+          // 2026-07-22) - Begriffsdefinition (suggested3) und Verkaufs-
+          // szenario (suggested5) sind ueber das Freitextfeld erreichbar.
           const suggested=[
             tpl(at.suggested1,{ampel:at["tier_"+nrTier]||nrTier}),
             at.suggested2,
-            at.suggested3,
-            at.suggested4,
-            tpl(at.suggested5,{jahre:R.j})
+            at.suggested4
           ];
           return <AssistantWidget rechner="renditerechner" kontext={kontext} contextLabel={at.contextRendite} suggested={suggested} lang={lang}/>;
         })()}

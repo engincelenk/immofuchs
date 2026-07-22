@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MascotFab } from "./MascotFab.jsx";
-import { PrivacyIntro } from "./PrivacyIntro.jsx";
 import { ChatBubble } from "./ChatBubble.jsx";
 import { SuggestedQuestionChip } from "./SuggestedQuestionChip.jsx";
 import { AssistantHeaderBar } from "./AssistantHeaderBar.jsx";
@@ -9,20 +8,24 @@ import { useAssistant } from "../../hooks/useAssistant.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { useSpeechInput } from "../../hooks/useSpeechInput.js";
 import { useSpeechOutput } from "../../hooks/useSpeechOutput.js";
-import { PRIVACY_SEEN_KEY } from "./AssistantWidget.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_SHEET_CSS } from "./assistantStyles.js";
 
-// Vor der ersten Berechnung gibt es noch keinen Rechner-Kontext - die 6
+// Vor der ersten Berechnung gibt es noch keinen Rechner-Kontext - die
 // Routing-Chips bleiben deshalb lokal/kanonisch (kein Worker-Call, sofortige
-// Antwort als Chat-Bubble + Aktion). Zusaetzlich jetzt echtes Freitextfeld
-// wie bei den Rechnern (Nutzerwunsch 2026-07-22) - das geht echt an den
-// Worker (rechner="landing"), daher via denselben Datenschutz-Erstkontakt
-// wie bei den Rechnern gated, bevor der erste echte Versand rausgeht.
-const ROUTES = [
+// Antwort als Chat-Bubble + Aktion). Zusaetzlich ein echtes Freitextfeld wie
+// bei den Rechnern - das geht wirklich an den Worker (rechner="landing").
+//
+// Sichtbar sind nur die drei Haupteinstiege (Nutzerwunsch 2026-07-22: sechs
+// Chips waren zu viel). Die drei Nischenthemen - genau die, die niemand von
+// selbst sucht - haengen hinter "Weitere Themen", statt ersatzlos zu
+// verschwinden.
+const ROUTES_PRIMARY = [
   { tab: "haupt", chipKey: "landingChipRendite", adviceKey: "landingAdviceRendite" },
   { tab: "kredit", chipKey: "landingChipFinanzierung", adviceKey: "landingAdviceFinanzierung" },
   { tab: "miete", chipKey: "landingChipMiete", adviceKey: "landingAdviceMiete" },
+];
+const ROUTES_MORE = [
   { tab: "sanier", chipKey: "landingChipSanierung", adviceKey: "landingAdviceSanierung" },
   { tab: "steuer6", chipKey: "landingChipSteuer", adviceKey: "landingAdviceSteuer" },
   { tab: "vfe", chipKey: "landingChipVfe", adviceKey: "landingAdviceVfe" },
@@ -33,10 +36,9 @@ export function LandingMascot({ onStart, lang }) {
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [localLog, setLocalLog] = useState([]); // kanonische Routing-Antworten, kein Netzwerk
-  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false); // "Weitere Themen" aufgeklappt
   const { messages, status, ask, retry, reset } = useAssistant();
   const inputRef = useRef(null);
-  const pendingSendRef = useRef(null);
   const isDesktop = useIsDesktop();
 
   const speech = useSpeechInput((text) => {
@@ -113,60 +115,36 @@ export function LandingMascot({ onStart, lang }) {
 
   const pickRoute = (r) => {
     setChipsForcedOpen(false);
+    setMoreOpen(false);
     setMinimized(false);
     setLocalLog((l) => [...l, { role: "user", text: t[r.chipKey] }, { role: "assistant", text: t[r.adviceKey], actionTab: r.tab }]);
   };
 
-  const doSend = (frage) => {
-    setChipsForcedOpen(false);
-    setMinimized(false);
-    ask(frage, "landing", {}, lang);
-  };
-
+  // Datenschutz-Zwischenschritt entfaellt (Nutzerwunsch 2026-07-22) - die
+  // Freitextfrage geht direkt an den Worker.
   const handleSend = () => {
     const frage = (inputRef.current?.value ?? "").trim();
     if (!frage) return;
     if (inputRef.current) inputRef.current.value = "";
-
-    let seen = false;
-    try {
-      seen = localStorage.getItem(PRIVACY_SEEN_KEY) === "1";
-    } catch {}
-    if (seen) {
-      doSend(frage);
-    } else {
-      pendingSendRef.current = frage;
-      setPrivacyOpen(true);
-    }
-  };
-
-  const confirmPrivacy = () => {
-    try {
-      localStorage.setItem(PRIVACY_SEEN_KEY, "1");
-    } catch {}
-    setPrivacyOpen(false);
-    if (pendingSendRef.current) {
-      doSend(pendingSendRef.current);
-      pendingSendRef.current = null;
-    }
+    setChipsForcedOpen(false);
+    setMoreOpen(false);
+    setMinimized(false);
+    ask(frage, "landing", {}, lang);
   };
 
   const handleRestart = () => {
     reset();
     setLocalLog([]);
     setChipsForcedOpen(false);
+    setMoreOpen(false);
   };
 
   return (
     <>
-      <MascotFab
-        label={t.dialogAria}
-        bubbleText={t.landingBubble}
-        bottom="calc(30px + env(safe-area-inset-bottom))"
-        hidden={open}
-        onOpen={() => setOpen(true)}
-      />
-      {privacyOpen && <PrivacyIntro t={t} onConfirm={confirmPrivacy} onCancel={() => setPrivacyOpen(false)} />}
+      {/* Keine eigene `bottom`-Angabe: der MascotFab-Default (76px) gilt auch
+          hier, sonst sitzt Finn auf der Startseite tiefer als in den Rechnern
+          (Nutzer-Screenshot-Vergleich 2026-07-22). */}
+      <MascotFab label={t.dialogAria} bubbleText={t.landingBubble} hidden={open} onOpen={() => setOpen(true)} />
       {createPortal(
         <>
           <div className={`if-asst-backdrop${open ? " open" : ""}`} onClick={close} aria-hidden={!open} />
@@ -220,7 +198,12 @@ export function LandingMascot({ onStart, lang }) {
                 </div>
                 <div className="if-asst-suggested">
                   {showChips ? (
-                    ROUTES.map((r) => <SuggestedQuestionChip key={r.tab} label={t[r.chipKey]} onClick={() => pickRoute(r)} />)
+                    <>
+                      {(moreOpen ? ROUTES_MORE : ROUTES_PRIMARY).map((r) => (
+                        <SuggestedQuestionChip key={r.tab} label={t[r.chipKey]} onClick={() => pickRoute(r)} />
+                      ))}
+                      {!moreOpen && <SuggestedQuestionChip label={t.landingMoreTopics} onClick={() => setMoreOpen(true)} />}
+                    </>
                   ) : (
                     <SuggestedQuestionChip label={t.suggestQuestions} onClick={() => setChipsForcedOpen(true)} />
                   )}
