@@ -77,5 +77,14 @@ export function useAssistant() {
     send(last.frage, last.rechner, last.kontext, last.lang, last.verlaufSource, last.vergleichsObjekte);
   }, [send]);
 
-  return { messages, status, ask, retry };
+  // "Chat neustart" (Nutzerwunsch 2026-07-22, Vodafone-TOBi-Vorbild) - leert
+  // den Verlauf lokal, der Worker selbst ist ohnehin zustandslos (siehe
+  // docs/plans/2026-07-19-ki-assistent-konzept.md 2.6).
+  const reset = useCallback(() => {
+    setMessages([]);
+    setStatus("idle");
+    lastAttemptRef.current = null;
+  }, []);
+
+  return { messages, status, ask, retry, reset };
 }

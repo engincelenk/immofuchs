@@ -1,3 +1,70 @@
+## 2026-07-22 (1.55.41)
+
+### Feature: Fenster per Maus groessenveraenderbar (Breite + Hoehe)
+
+Nachtrag zum verschiebbaren Fenster (1.55.40) - Nutzerwunsch: Fenster soll
+per Maus in Breite UND Hoehe frei angepasst werden koennen, damit man
+gleichzeitig auf der Seite dahinter weiterarbeiten kann.
+
+- **`useDraggableSheet.js` → `useFloatingSheet.js`** (umbenannt/erweitert):
+  verwaltet jetzt Position UND Groesse in einem gemeinsamen `rect`-State
+  (`{left, top, width, height}`). Sobald verschoben ODER resized wird,
+  "friert" der aktuell gerenderte Rect ein (`getBoundingClientRect()`) und
+  wird ab dann explizit gesteuert statt ueber die CSS-Docking-Regeln - das
+  loest sauber das Anker-Problem (angedockt haengt an `right:0`, frei
+  positioniert an `left`).
+- **Neu: `ResizeHandle.jsx`** - kleiner Eck-Griff unten rechts im Sheet
+  (nur Desktop ≥1024px, `cursor:nwse-resize`), Pointer-Capture-basiert wie
+  der Dreh-Griff, min. 300×320px, an Viewport-Grenzen geclamped. In beide
+  Sheets eingebaut.
+- **Fix:** Inline-Groesse/-Position haben immer Vorrang vor CSS-Klassen -
+  beim Verkleinern wird deshalb nur die Hoehe ausgespart (nicht die
+  Breite), damit `.minimized{height:auto}` weiterhin greifen kann, waehrend
+  eine per Hand gesetzte Breite erhalten bleibt.
+- CSS-Klasse `dragged` in `floating` umbenannt (deckt jetzt Verschieben UND
+  Resizen ab).
+
+**Betroffene Dateien:** src/hooks/useFloatingSheet.js (ersetzt
+useDraggableSheet.js), src/components/assistant/ResizeHandle.jsx (neu),
+AssistantSheet.jsx, LandingMascot.jsx, AssistantHeaderBar.jsx,
+src/i18n/assistant.js
+
+## 2026-07-22 (1.55.40)
+
+### Fix + Feature: Drag-Bugs behoben, volle Vodafone-TOBi-Funktionalitaet
+
+- **Fix: "nach Verschieben nicht mehr schliessbar".** Ursache: die
+  `dragged`-CSS-Klasse blieb nach dem Schliessen haengen und ihre
+  `transform:none`-Regel hatte hoehere Prioritaet als die Schliess-
+  Animation. `useDraggableSheet.js` hat jetzt `resetPos()`, aufgerufen beim
+  Schliessen in beiden Sheets.
+  - **Fix: "Verschieben funktioniert nicht".** Der Ziehgriff war nur ein
+  4px-duenner Balken - praktisch nicht zu treffen. Der Ziehbereich ist jetzt
+  die komplette Titelleiste (Avatar/Name/Status + Griff), Icon-Buttons
+  darin stoppen die Event-Propagation, damit ein Klick nicht gleichzeitig
+  einen Drag ausloest.
+- **Neu: `AssistantHeaderBar.jsx`** - gemeinsame Titelleiste fuer
+  `AssistantSheet.jsx` und `LandingMascot.jsx` mit allen Vodafone-TOBi-
+  Funktionen:
+  - **Spracheingabe:** Mikro-Button nutzt die Web-Speech-API des Browsers
+    (`useSpeechInput.js`, neu) - Chrome/Edge/Safari, nicht Firefox (Button
+    wird dort automatisch ausgeblendet). Erkannter Text landet im
+    Eingabefeld, wird nicht automatisch abgeschickt.
+  - **KI-Hinweis:** "i"-Button oeffnet `AiNoticeModal.jsx` (neu) mit Hinweis
+    auf moegliche KI-Fehler.
+  - **Chat neustart:** "↻"-Button leert Verlauf (`reset()`, neu in
+    `useAssistant.js`) und lokale Routing-Antworten (Landing).
+  - **Fenster verkleinern:** "—"/"▢"-Button schrumpft das Sheet auf die
+    Titelleiste (`minimized`-State, Inhalt bleibt erhalten, kein Datenverlust
+    - anders als Schliessen ist das explizit ein temporaeres Einklappen).
+  - **Fenster schliessen:** bestehender "✕", jetzt zusaetzlich mit
+    Drag-Reset (siehe Fix oben).
+
+**Betroffene Dateien:** src/components/assistant/AssistantHeaderBar.jsx (neu),
+AiNoticeModal.jsx (neu), AssistantSheet.jsx, LandingMascot.jsx,
+src/hooks/useSpeechInput.js (neu), useDraggableSheet.js, useAssistant.js,
+src/i18n/assistant.js
+
 ## 2026-07-22 (1.55.39)
 
 ### Fix + Feature: Fensterhoehe zurueckgesetzt, einklappbare Chips, verschiebbares Fenster (Vodafone-TOBi-Vorbild)
