@@ -6,7 +6,7 @@ function MascotAvatar() {
       src="/fuchs-mascot.webp"
       alt=""
       aria-hidden="true"
-      style={{ width: 28, height: 28, objectFit: "contain", flexShrink: 0, alignSelf: "flex-end" }}
+      style={{ width: 30, height: 32, objectFit: "contain", flexShrink: 0, alignSelf: "flex-end" }}
     />
   );
 }

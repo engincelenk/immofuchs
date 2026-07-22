@@ -1,3 +1,107 @@
+## 2026-07-22 (1.55.44)
+
+### Umbau: Assistent als festes Eckfenster (Allianz-Vorbild) + 3 Bugfixes + Begruessung
+
+Nutzer-Vorgabe per Screenshot (Allianz-Livechat): das Chatfenster soll nicht
+mehr verschiebbar sein, sondern fest unten rechts mit Abstand zu beiden
+Raendern sitzen und sich beim Verkleinern auf dieselbe Position zusammen-
+ziehen.
+
+- **Verschieben + Groessenaendern komplett entfernt.** `useFloatingSheet.js`
+  und `ResizeHandle.jsx` ersatzlos geloescht, samt Ziehgriff und allen
+  Drag-Handlern in `AssistantHeaderBar.jsx`. Die Inline-Styles fuer
+  Position/Groesse entfallen damit ebenfalls - die Geometrie kommt jetzt
+  ausschliesslich aus CSS und ist dadurch in jedem Zustand eindeutig.
+- **Neue Geometrie (`assistantStyles.js`, neu):** Desktop (>=1024px)
+  `right:24px; bottom:24px; width:380px; height:min(600px, 100dvh-120px)`.
+  Eingeklappt bleibt die Verankerung identisch, nur Breite/Hoehe schrumpfen
+  (`width:auto; min-width:236px; height:auto`) - das Fenster wandert also
+  nicht mehr. Mobile bleibt unveraendert Bottom-Sheet ueber volle Breite.
+  Live gemessen: offen 380x600 mit 24/24px Abstand, eingeklappt 236x50 an
+  exakt derselben Ecke.
+- **Sheet-CSS entdoppelt:** der komplette Style-Block lag wortgleich in
+  `AssistantSheet.jsx` UND `LandingMascot.jsx` und war bereits auseinander-
+  gelaufen. Liegt jetzt einmal in `assistantStyles.js`.
+- **Bugfix 1 - "Strich unterhalb der Box":** im eingeklappten Zustand blieb
+  die `border-bottom` der Kopfleiste stehen, obwohl darunter kein Inhalt
+  mehr kommt. `.if-asst-header.collapsed` hat jetzt keinen Rahmen und rundum
+  16px Radius. Gemessen: `border-bottom-width: 0px`, Sheet-Hoehe == Kopf-
+  leisten-Hoehe (50px), also kein ueberstehender Streifen mehr.
+- **Bugfix 2 - eingeklappt + X klebte am Rand:** `handleClose()` setzte nur
+  `open=false`, liess aber `minimized=true` stehen. Die Schliess-Bewegung
+  war `translateY(105%)` - bei einer 50px-Leiste sind das 53px, das Fenster
+  blieb sichtbar am Rand stehen und war wegen `inert` nicht mehr klickbar.
+  Zwei Aenderungen: `minimized` wird beim Schliessen zurueckgesetzt, und der
+  geschlossene Zustand ist zusaetzlich `visibility:hidden` - damit ist das
+  Fenster unabhaengig von seiner Hoehe garantiert weg. Live geprueft:
+  `elementFromPoint()` an der alten Fensterposition liefert wieder die
+  Seite darunter.
+- **Verkleinert = kompakte Leiste** (vom Nutzer als Alternative freigegeben,
+  ebenfalls Allianz-Vorbild): nur noch Avatar + Name + `＋` (aufklappen) und
+  `✕` (schliessen). Vorlesen/KI-Hinweis/Neustart erscheinen erst wieder im
+  aufgeklappten Zustand.
+- **Desktop-Fenster ist nicht mehr modal** (Nutzerwunsch): kein abdunkelndes
+  Overlay, keine Body-Scroll-Sperre, keine Fokus-Falle, `aria-modal="false"`.
+  Die Seite bleibt neben dem offenen Chat lesbar und bedienbar. Auf Mobile
+  bleibt alles modal wie bisher. Steuerung ueber den neuen Hook
+  `useIsDesktop.js` (`matchMedia`, zusaetzlich `resize`-Listener - in
+  emulierten Viewports feuert `change` nicht zuverlaessig).
+
+- **Maskottchen: echtes Freistellen + nur der Kopf.** Das bisherige
+  `fuchs-mascot.webp` hatte **gar keinen Alphakanal** (3 Kanaele) - das
+  Schachbrettmuster war als graue Pixel eingebrannt (RGB ~191-199), daher
+  der graue Karo-Kasten hinter Finn in der Kopfzeile. Das Gleiche galt fuer
+  das vom Nutzer gelieferte Original. Neuer Ablauf: Flood-Fill von den
+  Bildraendern ueber alle entsaettigten Hell-Pixel -> Alpha 0, Rand-
+  Mischpixel zusaetzlich abgeschwaecht (kein grauer Halo), dann Zuschnitt
+  auf den Kopf (obere 46 %) und Export als transparentes WebP 320x352,
+  34 KB. Quelle war diesmal das 1024px-Original, der Kopf ist nativ 407x448
+  gross und damit auch auf Retina scharf.
+- **Groesser dargestellt:** FAB 58px -> 80x88px, Kopfzeilen-Avatar 34 ->
+  40px, Chat-Avatar 28 -> 30x32px. Die Boden-Schatten-Ellipse unter dem FAB
+  entfaellt (ergibt bei einem Kopf ohne Koerper keinen Sinn), der
+  Schlagschatten am Bild bleibt.
+- **`public/finn-original.png` nach `_image_backups_card/` verschoben** -
+  in `public/` waere das 2-MB-Rohbild bei jedem Build mit ausgeliefert
+  worden.
+
+- **Begruessung beim Chat-Start** (Nutzerwunsch): neuer i18n-Key `greeting`
+  in allen 5 Sprachen. Finn stellt sich jetzt einmal vor, bevor die erste
+  Frage laeuft - im Rechner-Chat gab es vorher ueberhaupt keine
+  Startnachricht, auf der Landing steht die Vorstellung jetzt vor der
+  Routing-Frage.
+- **Ladetext ersetzt:** "Moment, ich rechne das fuer dich durch" ->
+  "Einen Moment, ich schau mir das an". Begruendung des Nutzers: es wird
+  nicht immer gerechnet, meistens beraten. In allen 5 Sprachen angepasst.
+- **`assistantTagline` fehlte in en/tr/zh/hi** (nur `de` hatte den Key) -
+  die Zeile unter "Finn" blieb dort leer. Nachgetragen.
+- **Verwaiste Keys `resizeAria` entfernt** (5 Sprachen) - der Groessen-Griff
+  existiert nicht mehr.
+
+- **`.tbar` doppelt gerendert - behoben.** In `App.jsx` standen zwei
+  wortgleiche `<div className="tbar">`-Zeilen direkt untereinander; beide
+  liegen `position:fixed` uebereinander, deshalb fiel es optisch nie auf.
+  Effekt: die komplette Tab-Leiste doppelt im DOM (14 statt 7 Buttons,
+  doppelte Vorlese-Ziele fuer Screenreader). Der Zustand war seit dem
+  Initial-Commit auf `main` UND `dev` eingecheckt und in diesen Release
+  Notes bisher nur dokumentiert (siehe Eintrag zu `MascotFab`), nie
+  gefixt. Live nachgemessen: vorher 2 `.tbar` / 14 `.tbtn`, jetzt 1 / 7.
+
+**Betroffene Dateien:** src/components/assistant/assistantStyles.js (neu),
+src/hooks/useIsDesktop.js (neu), src/hooks/useFloatingSheet.js (geloescht),
+src/components/assistant/ResizeHandle.jsx (geloescht),
+src/components/assistant/AssistantSheet.jsx,
+src/components/assistant/LandingMascot.jsx,
+src/components/assistant/AssistantHeaderBar.jsx,
+src/components/assistant/MascotFab.jsx,
+src/components/assistant/ChatBubble.jsx, src/i18n/assistant.js, src/App.jsx,
+public/fuchs-mascot.webp (ersetzt), _image_backups_card/finn-original.png (neu)
+
+**Nicht verifiziert:** Screenshots waren in dieser Umgebung nicht moeglich
+(Browser-Pane rendert keine Frames) - geprueft wurde per DOM-/Geometrie-
+Messung im laufenden Dev-Server, nicht per Augenschein. Optik von
+Maskottchen-Groesse und Sparkle-Position bitte kurz gegenlesen.
+
 ## 2026-07-22 (1.55.43)
 
 ### Feature: Neues Maskottchen-Bild (finn2.png) + Glitzer-Animation am FAB

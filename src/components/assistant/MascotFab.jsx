@@ -17,8 +17,8 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, bottom = "calc(76
         aria-label={label}
         style={{
           position: "relative",
-          width: 64,
-          height: 80,
+          width: 84,
+          height: 88,
           background: "transparent",
           border: "none",
           cursor: "pointer",
@@ -41,22 +41,11 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, bottom = "calc(76
           aria-hidden="true"
           className="if-mascot-fab-img"
           style={{
-            width: 58,
-            height: 58,
+            width: 80,
+            height: 88,
             objectFit: "contain",
-            filter: "drop-shadow(0 4px 8px rgba(20,20,20,.3))",
-            transformOrigin: "50% 100%",
-          }}
-        />
-        <span
-          aria-hidden="true"
-          style={{
-            width: 30,
-            height: 7,
-            borderRadius: 999,
-            background: "rgba(20,20,20,.2)",
-            marginTop: 2,
-            filter: "blur(1.5px)",
+            filter: "drop-shadow(0 5px 10px rgba(20,20,20,.28))",
+            transformOrigin: "50% 85%",
           }}
         />
       </button>
