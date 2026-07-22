@@ -1,3 +1,33 @@
+## 2026-07-22 (1.55.39)
+
+### Fix + Feature: Fensterhoehe zurueckgesetzt, einklappbare Chips, verschiebbares Fenster (Vodafone-TOBi-Vorbild)
+
+Nutzer hat Screenshots des Vodafone-KI-Assistenten (TOBi) als Referenz
+geliefert und auf einen Regressions-Bug hingewiesen.
+
+- **Fix (Regression):** Die Kombination aus vertikal gestapelten Chips +
+  halbierter Fensterhoehe (letzte Runde) hat sich gegenseitig verstaerkt -
+  6 gestapelte Chips liessen in der halbierten Hoehe praktisch keinen Platz
+  mehr fuer den Chatverlauf. Fensterhoehe in `AssistantSheet.jsx` und
+  `LandingMascot.jsx` zurueckgesetzt auf volle Seitenhoehe (mobil wie
+  Desktop: `100vh`/`100dvh`, vorher 82vh/640px-Cap mobil und 50vh Desktop).
+- **Einklappbare Vorschlag-Chips:** Chips sind nur beim Erstkontakt (noch
+  keine Nachricht gesendet) permanent sichtbar. Sobald eine Frage lief
+  (Chip-Klick oder Freitext), kollabieren sie zu einem einzelnen
+  "Schlage Fragen vor"-Chip, der die volle Liste bei Bedarf wieder einblendet
+  - genau das Vodafone-TOBi-Verhalten aus den Referenz-Screenshots. Neuer
+  i18n-Key `suggestQuestions` in allen 5 Sprachen.
+- **Neu: `src/hooks/useDraggableSheet.js`** - erlaubt freies Verschieben des
+  Sheets per Ziehgriff (der bestehende Handle-Balken oben) auf Desktop
+  (≥1024px). Pointer-Capture-basiert, an Viewport-Grenzen geclamped. Auf
+  Mobile bleibt es ein normales Bottom-Sheet ohne Drag (wie bei Vodafone
+  selbst - dort ist nur die Desktop-/breite Ansicht frei positionierbar).
+  In beide Sheets (`AssistantSheet.jsx`, `LandingMascot.jsx`) eingebaut.
+
+**Betroffene Dateien:** src/hooks/useDraggableSheet.js (neu),
+src/components/assistant/AssistantSheet.jsx, LandingMascot.jsx,
+src/i18n/assistant.js
+
 ## 2026-07-22 (1.55.38)
 
 ### Feature: Echte Chatbox auf Landing + Tagline statt Online-Status + halbe Sheet-Hoehe

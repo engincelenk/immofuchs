@@ -5,6 +5,7 @@ import { PrivacyIntro } from "./PrivacyIntro.jsx";
 import { ChatBubble } from "./ChatBubble.jsx";
 import { SuggestedQuestionChip } from "./SuggestedQuestionChip.jsx";
 import { useAssistant } from "../../hooks/useAssistant.js";
+import { useDraggableSheet } from "../../hooks/useDraggableSheet.js";
 import { PRIVACY_SEEN_KEY } from "./AssistantWidget.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 
@@ -32,6 +33,13 @@ export function LandingMascot({ onStart, lang }) {
   const inputRef = useRef(null);
   const sheetRef = useRef(null);
   const pendingSendRef = useRef(null);
+  const { pos, onPointerDown, onPointerMove, onPointerUp } = useDraggableSheet(sheetRef);
+
+  // Chips nur beim Erstkontakt permanent sichtbar (Vodafone-TOBi-Vorbild,
+  // Nutzer-Feedback 2026-07-22) - danach kollabieren sie zu einem einzelnen
+  // "Schlage Fragen vor"-Chip.
+  const [chipsForcedOpen, setChipsForcedOpen] = useState(false);
+  const showChips = (localLog.length === 0 && messages.length === 0) || chipsForcedOpen;
 
   const statusInfo =
     status === "limit" ? { label: t.statusLimited, color: "#f59e0b" } : { label: t.assistantTagline, color: "var(--ch)" };
@@ -60,10 +68,12 @@ export function LandingMascot({ onStart, lang }) {
   }, [open]);
 
   const pickRoute = (r) => {
+    setChipsForcedOpen(false);
     setLocalLog((l) => [...l, { role: "user", text: t[r.chipKey] }, { role: "assistant", text: t[r.adviceKey], actionTab: r.tab }]);
   };
 
   const doSend = (frage) => {
+    setChipsForcedOpen(false);
     ask(frage, "landing", {}, lang);
   };
 
@@ -110,16 +120,22 @@ export function LandingMascot({ onStart, lang }) {
           <div className={`if-asst-backdrop${open ? " open" : ""}`} onClick={close} aria-hidden={!open} />
           <div
             ref={sheetRef}
-            className={`if-asst-sheet${open ? " open" : ""}`}
+            className={`if-asst-sheet${open ? " open" : ""}${pos ? " dragged" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={t.assistantName}
+            style={pos ? { left: pos.left, top: pos.top, right: "auto", bottom: "auto" } : undefined}
             {...(!open ? { inert: "" } : {})}
           >
             <button onClick={close} aria-label={t.close} className="if-asst-close">
               ✕
             </button>
-            <div className="if-asst-handle" />
+            <div
+              className="if-asst-handle"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+            />
             <div className="if-asst-header">
               <img src="/fuchs-mascot.webp" alt="" aria-hidden="true" className="if-asst-header-avatar" />
               <span>
@@ -152,9 +168,11 @@ export function LandingMascot({ onStart, lang }) {
               {status === "disabled" && <ChatBubble role="system" text={t.disabled} />}
             </div>
             <div className="if-asst-suggested">
-              {ROUTES.map((r) => (
-                <SuggestedQuestionChip key={r.tab} label={t[r.chipKey]} onClick={() => pickRoute(r)} />
-              ))}
+              {showChips ? (
+                ROUTES.map((r) => <SuggestedQuestionChip key={r.tab} label={t[r.chipKey]} onClick={() => pickRoute(r)} />)
+              ) : (
+                <SuggestedQuestionChip label={t.suggestQuestions} onClick={() => setChipsForcedOpen(true)} />
+              )}
             </div>
             <div className="if-asst-input-row">
               <input
@@ -177,8 +195,9 @@ export function LandingMascot({ onStart, lang }) {
       <style>{`
         .if-asst-backdrop{position:fixed;inset:0;background:rgba(15,20,30,.32);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:1090}
         .if-asst-backdrop.open{opacity:1;pointer-events:auto}
-        .if-asst-sheet{position:fixed;left:0;right:0;bottom:0;height:82vh;height:82dvh;max-height:640px;background:var(--bg);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(20,30,50,.25);transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,0,1);z-index:1091;display:flex;flex-direction:column}
+        .if-asst-sheet{position:fixed;left:0;right:0;bottom:0;height:100vh;height:100dvh;background:var(--bg);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(20,30,50,.25);transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,0,1);z-index:1091;display:flex;flex-direction:column}
         .if-asst-sheet.open{transform:translateY(0)}
+        .if-asst-sheet.dragged{transform:none;border-radius:16px;box-shadow:0 14px 40px rgba(20,30,50,.3)}
         .if-asst-close{position:absolute;top:10px;right:12px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,.06);color:var(--ch);font-size:14px;cursor:pointer;z-index:2;font-family:inherit}
         .if-asst-close:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
         .if-asst-handle{width:36px;height:4px;border-radius:2px;background:var(--cb);margin:10px auto 4px;flex:none}
@@ -195,7 +214,9 @@ export function LandingMascot({ onStart, lang }) {
         .if-asst-send{flex:none;width:42px;height:42px;border-radius:50%;border:none;background:var(--ca);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
         .if-asst-send:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
         @media (min-width:1024px){
-          .if-asst-sheet{left:auto;width:400px;height:50vh;height:50dvh;max-height:none}
+          .if-asst-sheet{left:auto;width:400px;height:100vh;height:100dvh;max-height:none;top:0;border-radius:16px 0 0 16px}
+          .if-asst-handle{cursor:grab;touch-action:none;width:44px}
+          .if-asst-sheet.dragged .if-asst-handle{cursor:grabbing}
         }
         .if-asst-dots{display:inline-flex;gap:3px}
         .if-asst-dots span{width:4px;height:4px;border-radius:50%;background:var(--ch);display:inline-block;animation:ifAsstDot 1.1s infinite ease-in-out}
