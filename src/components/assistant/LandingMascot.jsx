@@ -9,7 +9,6 @@ import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { useAssistant } from "../../hooks/useAssistant.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { useSpeechInput } from "../../hooks/useSpeechInput.js";
-import { useSpeechOutput } from "../../hooks/useSpeechOutput.js";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_SHEET_CSS } from "./assistantStyles.js";
 
@@ -51,30 +50,6 @@ export function LandingMascot({ onStart, lang }) {
       inputRef.current.focus();
     }
   }, lang);
-  const speechOut = useSpeechOutput(lang);
-  const spokenLocalCountRef = useRef(0);
-  const spokenRealCountRef = useRef(0);
-
-  // Liest neue Assistenten-Antworten vor, wenn der Lautsprecher-Toggle an
-  // ist (Nutzerwunsch 2026-07-22) - sowohl die lokalen Routing-Antworten als
-  // auch echte Freitext-Antworten.
-  useEffect(() => {
-    if (localLog.length > spokenLocalCountRef.current) {
-      const last = localLog[localLog.length - 1];
-      if (last.role === "assistant") speechOut.speak(last.text);
-    }
-    spokenLocalCountRef.current = localLog.length;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localLog]);
-
-  useEffect(() => {
-    if (messages.length > spokenRealCountRef.current) {
-      const last = messages[messages.length - 1];
-      if (last.role === "assistant") speechOut.speak(last.text);
-    }
-    spokenRealCountRef.current = messages.length;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
 
   // Chips nur beim Erstkontakt permanent sichtbar (Vodafone-TOBi-Vorbild,
   // Nutzer-Feedback 2026-07-22) - danach kollabieren sie zu einem einzelnen
@@ -190,9 +165,6 @@ export function LandingMascot({ onStart, lang }) {
               onRestart={handleRestart}
               minimized={minimized}
               onToggleMinimize={() => setMinimized((m) => !m)}
-              speechSupported={speechOut.supported}
-              speechEnabled={speechOut.enabled}
-              onToggleSpeech={speechOut.toggle}
             />
             {!minimized && (
               <>

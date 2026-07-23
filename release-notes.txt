@@ -1,3 +1,16 @@
+## 2026-07-23 (1.55.60)
+
+### Finn: Lautsprecher/Vorlesen ausgeblendet
+
+Der 🔊/🔇-Toggle und die Vorlese-Funktion (Text-to-Speech) sind entfernt
+(Nutzerwunsch). Das Mikrofon (Spracheingabe) bleibt.
+
+- `AssistantHeaderBar.jsx`: Lautsprecher-Button + zugehörige Props raus.
+- `AssistantSheet.jsx` + `LandingMascot.jsx`: useSpeechOutput-Verdrahtung
+  (Hook, Vorlese-Effekte, Props) entfernt.
+- `useSpeechOutput.js` bleibt als Datei erhalten → später leicht reaktivierbar.
+
+
 ## 2026-07-23 (1.55.59)
 
 ### Finn: Freitextfragen von der Startseite gehen wieder
