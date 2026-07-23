@@ -58,8 +58,8 @@ export function MascotFab({
         aria-label={label}
         style={{
           position: "relative",
-          width: 84,
-          height: 88,
+          width: 68,
+          height: 70,
           background: "transparent",
           border: "none",
           cursor: "pointer",
@@ -83,8 +83,8 @@ export function MascotFab({
             fetchpriority="high"
             onLoad={() => setLoaded(true)}
             style={{
-              width: 80,
-              height: 88,
+              width: 64,
+              height: 70,
               objectFit: "contain",
               filter: loaded ? "drop-shadow(0 5px 10px rgba(20,20,20,.28))" : "none",
             }}
@@ -100,7 +100,7 @@ export function MascotFab({
           Template-Literal, der Build laeuft trotzdem durch und es kracht erst
           zur Laufzeit (Vorfall 2026-07-22). */}
       <style>{`
-        .if-mascot-motion{display:block;position:relative;width:80px;height:88px;transform-origin:50% 85%;animation:ifFabPuls 8s ease-in-out infinite}
+        .if-mascot-motion{display:block;position:relative;width:64px;height:70px;transform-origin:50% 85%;animation:ifFabPuls 8s ease-in-out infinite}
         @keyframes ifFabPuls{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
         .if-mascot-fab-img{display:block}
 
@@ -110,7 +110,7 @@ export function MascotFab({
            zu liegen (Nutzerwunsch 2026-07-22, ersetzt die Glitzer-Sterne). */
         .if-mascot-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;
           -webkit-mask-image:url(/fuchs-mascot.webp);mask-image:url(/fuchs-mascot.webp);
-          -webkit-mask-size:80px 88px;mask-size:80px 88px;
+          -webkit-mask-size:64px 70px;mask-size:64px 70px;
           -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
           -webkit-mask-position:center;mask-position:center;
           mix-blend-mode:screen}

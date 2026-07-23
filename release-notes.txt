@@ -1,3 +1,34 @@
+## 2026-07-23 (1.55.58)
+
+### Finn liest wieder vor (Vorlese-Toggle auf iOS repariert)
+
+Der Lautsprecher-Toggle war an, aber Finn las nichts vor — vor allem auf iOS.
+Ursachen in `useSpeechOutput.js` behoben:
+- **iOS-Gesten-Sperre:** iOS Safari spricht nur, wenn das erste speak() aus
+  einer Nutzergeste kommt. Unsere Antworten treffen asynchron ein. Jetzt wird
+  beim Einschalten (Klick = Geste) eine stille Prime-Utterance abgespielt, die
+  die API für spätere asynchrone Aufrufe freischaltet.
+- **Stimmen laden asynchron:** getVoices() ist anfangs leer -> wird jetzt
+  vorgewärmt und über "voiceschanged" nachgezogen, passende Stimme pro Sprache.
+- **Utterance-GC:** laufende Utterance wird in einer Ref gehalten, sonst bricht
+  die Ausgabe mitten im Satz ab.
+
+Was der Toggle macht: 🔊 an = Finn liest jede neue Antwort vor, 🔇 aus.
+
+
+## 2026-07-23 (1.55.57)
+
+### Finn-Maskottchen kleiner (auf Icon-Niveau anderer Seiten)
+
+Der Finn-FAB war im Vergleich zu üblichen Chat-Assistenten (Vodafone, Allianz)
+deutlich zu groß. Auf ~64×70 verkleinert (vorher 80×88, ~20 % kleiner), auf
+Allianz-Niveau. Seitenverhältnis und **alle Effekte bleiben erhalten**:
+Puls-Animation, drop-shadow und das Strom-Glühband (mask-size wandert mit).
+
+`MascotFab.jsx`: Bild, `.if-mascot-motion`, `.if-mascot-fx` mask-size und die
+Button-Tap-Fläche (68×70, weiterhin > 44px) proportional angepasst.
+
+
 ## 2026-07-23 (1.55.56)
 
 ### Finn-Maskottchen: graue Kästen beim Laden behoben
