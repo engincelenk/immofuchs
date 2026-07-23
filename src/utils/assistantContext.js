@@ -6,7 +6,15 @@
 // echten lokalen useState (ls/gst/grd) und baut seinen Kontext direkt in
 // SteuerTrick.jsx, ohne diese Helper-Funktion.
 export const ASSISTANT_FIELDS = {
-  renditerechner: ["kaufpreis", "flaeche", "kaltmiete", "eigenkapital", "zinssatz", "tilgung", "jahre"],
+  renditerechner: [
+    "kaufpreis",
+    "flaeche",
+    "kaltmiete",
+    "eigenkapital",
+    "zinssatz",
+    "tilgung",
+    "jahre",
+  ],
   finanzierung: ["kaufpreis", "eigenkapital", "zinssatz", "tilgung", "zinsbindung"],
   miete: ["vergleichsmiete", "letzteErhDatum", "letzteErhMiete", "mietJahre"],
   sanierung: ["baujahr", "sanFl", "sanHt", "sanHa", "sanPe", "sanIsfp"],

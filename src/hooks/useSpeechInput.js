@@ -11,7 +11,7 @@ export function useSpeechInput(onResult, lang) {
   const recognitionRef = useRef(null);
   const [listening, setListening] = useState(false);
   const supportedRef = useRef(
-    typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition)
+    typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition),
   );
 
   const toggle = useCallback(() => {

@@ -21,7 +21,7 @@ export async function callModel(
   env: Env,
   _lang: Lang,
   systemPrompt: string,
-  userPayload: string
+  userPayload: string,
 ): Promise<string> {
   try {
     // callGemini bricht via eigenem AbortController nach MODEL_TIMEOUT_MS ab
@@ -31,7 +31,10 @@ export async function callModel(
     // Fallback auf Workers AI (Llama), z.B. wenn Gemini-Kontingent erschoepft ist
     // (429) - schwaechere Antwortqualitaet, aber besser als ein harter Fehler.
     // env.AI.run kennt keinen Cancel, daher hier der withTimeout-Wrapper.
-    console.error("gemini_call_failed_fallback_workers_ai", err instanceof Error ? err.message : "unknown_error");
+    console.error(
+      "gemini_call_failed_fallback_workers_ai",
+      err instanceof Error ? err.message : "unknown_error",
+    );
     return withTimeout(callWorkersAI(env, systemPrompt, userPayload), MODEL_TIMEOUT_MS);
   }
 }
@@ -47,7 +50,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       (err) => {
         clearTimeout(timer);
         reject(err);
-      }
+      },
     );
   });
 }
@@ -80,21 +83,24 @@ async function callGemini(env: Env, systemPrompt: string, userPayload: string): 
 
   let res: Response;
   try {
-    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // Neuere ("Authorization")-Keys, an ein Service-Konto gebunden,
-        // werden per Header authentifiziert, nicht per ?key=-Query-Parameter.
-        "x-goog-api-key": env.GEMINI_API_KEY,
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // Neuere ("Authorization")-Keys, an ein Service-Konto gebunden,
+          // werden per Header authentifiziert, nicht per ?key=-Query-Parameter.
+          "x-goog-api-key": env.GEMINI_API_KEY,
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPayload }] }],
+          generationConfig: { maxOutputTokens: MAX_TOKENS, temperature: TEMPERATURE },
+        }),
+        signal: controller.signal,
       },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: "user", parts: [{ text: userPayload }] }],
-        generationConfig: { maxOutputTokens: MAX_TOKENS, temperature: TEMPERATURE },
-      }),
-      signal: controller.signal,
-    });
+    );
   } finally {
     clearTimeout(abortTimer);
   }

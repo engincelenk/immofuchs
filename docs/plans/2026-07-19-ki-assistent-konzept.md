@@ -9,24 +9,26 @@
 ## 1. Anforderungen (CEO-Immobilien-Perspektive)
 
 ### 1.1 Was der Assistent leisten soll
+
 Der Assistent erklärt **ausschließlich die eigenen Zahlen des Nutzers** aus den vier ImmoFuchs-Rechnern (Renditerechner, Finanzierungsrechner, Mieterhöhungsrechner, Sanierungsrechner) — kein generisches Immobilienwissen, keine Marktprognosen, keine Preisrecherche. Der Nutzer hat die Zahlen schon berechnet; der Assistent ordnet sie ein und beantwortet "warum" und "was jetzt".
 
 Das deckt sich mit den vier typischen Nutzerprofilen, die ImmoFuchs bereits ohne es zu wissen bedient:
 
-| Rechner | Nutzerprofil (typisch) | Was sie wirklich wissen wollen |
-|---|---|---|
-| Renditerechner | Kapitalanleger | „Ist mein Geld hier sicher und schlägt es die Inflation?" |
-| Finanzierungsrechner | Erstkäufer/Selbstnutzer | „Können wir uns das leisten, ohne uns zu übernehmen?" |
-| Mieterhöhungsrechner | Vermieter | „Was darf ich rechtssicher verlangen, ohne Ärger zu riskieren?" |
-| Sanierungsrechner | Bestandshalter/Eigennutzer | „Lohnt sich das, und was zahlt der Staat mit?" |
-| §6-Trick-Rechner | fortgeschrittener Kapitalanleger | „Rechnet sich der steuerliche Umweg wirklich?" |
-| Vorfälligkeitsrechner | Umschuldner/Verkäufer vor Zinsende | „Was kostet mich die vorzeitige Ablöse konkret?" |
+| Rechner               | Nutzerprofil (typisch)             | Was sie wirklich wissen wollen                                  |
+| --------------------- | ---------------------------------- | --------------------------------------------------------------- |
+| Renditerechner        | Kapitalanleger                     | „Ist mein Geld hier sicher und schlägt es die Inflation?"       |
+| Finanzierungsrechner  | Erstkäufer/Selbstnutzer            | „Können wir uns das leisten, ohne uns zu übernehmen?"           |
+| Mieterhöhungsrechner  | Vermieter                          | „Was darf ich rechtssicher verlangen, ohne Ärger zu riskieren?" |
+| Sanierungsrechner     | Bestandshalter/Eigennutzer         | „Lohnt sich das, und was zahlt der Staat mit?"                  |
+| §6-Trick-Rechner      | fortgeschrittener Kapitalanleger   | „Rechnet sich der steuerliche Umweg wirklich?"                  |
+| Vorfälligkeitsrechner | Umschuldner/Verkäufer vor Zinsende | „Was kostet mich die vorzeitige Ablöse konkret?"                |
 
 Der Assistent sollte diesen Kontext (welcher Rechner gerade aktiv ist) nutzen, um die Sprache passend zu wählen — Kapitalanleger bekommen Rendite-/Risikosprache, Erstkäufer eher Sicherheits-/Budgetsprache.
 
 **Entscheidung (2026-07-19):** Voller Ziel-Scope umfasst alle sechs Rechner **plus** die Möglichkeit, mehrere in der Merkliste gespeicherte Objekte vergleichend einzuordnen ("welches meiner drei Objekte schneidet am besten ab?"). Die Reihenfolge der Umsetzung ist trotzdem gestaffelt — siehe Rollout-Plan in Abschnitt 5.
 
 ### 1.2 Harte Grenzen (nicht verhandelbar)
+
 Direkt aus der Berufshaftung eines Immobilienprofis übernommen — der Assistent darf nie:
 
 - **Keine Rechtsberatung.** Bei §558-Mieterhöhung nur das Rechenergebnis erklären, nie „Sie dürfen das". Immer: „Rechtssicherer Rechenweg — bei Widerspruch des Mieters Anwalt/Mieterverein einschalten."
@@ -38,6 +40,7 @@ Direkt aus der Berufshaftung eines Immobilienprofis übernommen — der Assisten
 Bei Förderthemen (Sanierungsrechner) ist der wichtigste Reminder: **Förderantrag immer vor Beauftragung stellen** — das ist ein Praxisfehler, der Fördergeld kostet, und sollte der Assistent proaktiv erwähnen, wenn ein Nutzer nach Sanierungsmaßnahmen fragt.
 
 ### 1.3 Business-kritische Anforderung: Datenschutz-Kohärenz
+
 ImmoFuchs wirbt aktiv mit „Kein Login — keine Datenweitergabe, alles lokal gespeichert" und „komplett offline nutzbar". Ein Cloud-KI-Assistent bricht das teilweise — das muss sauber gelöst werden, sonst untergräbt das Feature das Kernversprechen der Marke:
 
 - **Opt-in, nicht Opt-out.** Assistent startet nicht automatisch, Nutzer aktiviert ihn bewusst (z. B. Button „Frag den Assistenten").
@@ -48,15 +51,18 @@ ImmoFuchs wirbt aktiv mit „Kein Login — keine Datenweitergabe, alles lokal g
 ### 1.4 Fähigkeiten-Scope (Kann / Kann nicht)
 
 **Kann:**
+
 - Eigene Zahlen einordnen und erklären (warum grün/gelb/rot, was die BANDS-Schwelle bedeutet)
 - Fachbegriffe erklären (Kaufpreisfaktor, Beleihungsauslauf, AfA, Kappungsgrenze, Amortisation, EK-Rendite …)
 - Auf naheliegende Stellschrauben hinweisen, ohne sie als Garantie zu formulieren
 
 **Kann/darf nicht:**
+
 - **Selbst nachrechnen.** Bei „Was wäre, wenn ich X ändere?" keine vom LLM erfundene Zahl ausgeben — Rechenfehler-Risiko bei Finanzzahlen ist inakzeptabel. Zwei Optionen: **(A) MVP** — Assistent verweist auf das entsprechende Eingabefeld im Rechner („ändere das im Formular, dann siehst du das echte Ergebnis"), rechnet nichts selbst. **(B) Ausbaustufe** — die App ruft die bestehende, geprüfte Rechenfunktion mit geänderten Werten erneut auf und gibt das echte Ergebnis als Kontext mit, der Assistent ordnet nur ein, erfindet nichts. Empfehlung: mit (A) starten.
 - Rechtsberatung, Steuerberatung, konkrete Kaufempfehlung, Marktprognosen (siehe 1.2)
 
 ### 1.5 Erfolgskriterium
+
 Der Assistent ist erfolgreich, wenn er das Vertrauen erhöht („ImmoFuchs erklärt mir das wie ein guter Berater, ohne mir was verkaufen zu wollen") — nicht wenn er möglichst viel redet. Kurz, konkret, ehrlich bei Risiken — das ist der Maßstab, nicht Gesprächslänge.
 
 ---
@@ -64,6 +70,7 @@ Der Assistent ist erfolgreich, wenn er das Vertrauen erhöht („ImmoFuchs erkl�
 ## 2. Architektur (Solution-Architect-Perspektive)
 
 ### 2.1 Ausgangslage (Discovery)
+
 ImmoFuchs ist heute **100 % clientseitig**: React + Vite + Tailwind, keine Server-Komponente, kein Backend, State zentral in `App.jsx` (ein `data`-Objekt mit allen Rechner-Feldern), Persistenz über `localStorage`, PLZ-Lookup lokal aus CSV. Genau dieses „kein Backend"-Prinzip ist der Grund, warum ein KI-Assistent eine **echte architektonische Erweiterung** ist, keine Kleinigkeit: Ein LLM-Aufruf braucht zwingend eine serverseitige Komponente, weil ein API-Key niemals im Client-Bundle liegen darf (sofort im Netzwerk-Tab auslesbar, Missbrauchsrisiko bei einer kostenlosen App ohne Login).
 
 **Wichtiger Befund für den Scope (§6-Trick, Vorfälligkeit):** Anders als die vier Hauptrechner hängen `SteuerTrick.jsx` und `SelbsttraegerCheck.jsx` **nicht** am globalen `data`-Context, sondern führen eigenen lokalen `useState` (z. B. `ls`, `gst`, `grd` in `SteuerTrick.jsx`). `Vorfaelligkeit.jsx` nutzt eine Mischung aus globalem `data` (`kaufpreis`, `eigenkapital`, `zinssatz`, `tilgung`) und eigenen `vfe*`-Feldern. Für diese beiden Rechner reicht `buildAssistantContext()` in der jetzigen Form (Abschnitt 4.4) **nicht** — die lokalen States müssten zusätzlich hochgereicht oder gezielt an die Sheet-Komponente durchgereicht werden. Das ist ein eigener kleiner Umbauschritt, kein reines Config-Mapping wie bei den vier Hauptrechnern — Grund für die spätere Rollout-Phase (siehe Abschnitt 5).
@@ -140,6 +147,7 @@ Option 3 verworfen: Ein Key bleibt im Netzwerk-Tab sichtbar, egal wie eingeschr�
 Option 2 verworfen: Unnötiger Betriebsaufwand für eine reine Proxy-Funktion, widerspricht dem Ziel „sehr geringe monatliche Kosten".
 
 **Consequences:**
+
 - ✓ Kein API-Key im Client, volle Kostenkontrolle über Rate-Limiting im Worker (KV-Zähler pro Session-ID)
 - ✓ Praktisch 0 € Fixkosten im Normalbetrieb, Skalierung nur bei echtem Bedarf kostenpflichtig
 - ✓ Modell austauschbar über eine Env-Var, kein Redeploy-Zwang bei Anbieterwechsel
@@ -220,19 +228,22 @@ Der Nutzerkontext (`kontext`, `vergleichsObjekte`, `verlauf`) wird als strukturi
 ### 2.9 Steuerung, Lernfähigkeit & Analytics
 
 **Wie das Verhalten kontrolliert wird (mehrschichtig, nicht nur Prompt):**
+
 1. System-Prompt (2.7) — Hauptsteuerung, bei jeder Anfrage mitgeschickt.
 2. Modell-Parameter: niedrige Temperature (konsistentere Antworten), `max_tokens` begrenzt Länge.
 3. **Output-Filter im Worker** (zusätzliches Sicherheitsnetz, nicht optional): Antwort wird vor dem Ausliefern auf verbotene Muster geprüft (z. B. Formulierungen wie „ich empfehle den Kauf", konkrete Rechtsaussagen) — LLMs halten sich nicht zuverlässig zu 100 % an Anweisungen, deshalb kein alleiniges Vertrauen auf den Prompt.
 4. Iterativer Prozess: Prompt wird anhand beobachteter Fehlantworten laufend manuell nachjustiert — kein Automatismus.
 
-**Lernfähigkeit — Klarstellung:** Der Assistent lernt **nicht** automatisch aus Nutzeranfragen. Jeder API-Aufruf an Llama 3.3/Gemini ist zustandslos, das Modell selbst verändert sich durch Nutzung nicht. Kein Cross-User-Lernen, keine automatische Verbesserung über Zeit — nur der `verlauf` (2.6) gibt Kontext *innerhalb einer* Session weiter, das ist kein Lernen, sondern reines Wiederholen der letzten Nachrichten im nächsten Request. Qualitätsverbesserung passiert ausschließlich über manuelle Prompt-Iteration.
+**Lernfähigkeit — Klarstellung:** Der Assistent lernt **nicht** automatisch aus Nutzeranfragen. Jeder API-Aufruf an Llama 3.3/Gemini ist zustandslos, das Modell selbst verändert sich durch Nutzung nicht. Kein Cross-User-Lernen, keine automatische Verbesserung über Zeit — nur der `verlauf` (2.6) gibt Kontext _innerhalb einer_ Session weiter, das ist kein Lernen, sondern reines Wiederholen der letzten Nachrichten im nächsten Request. Qualitätsverbesserung passiert ausschließlich über manuelle Prompt-Iteration.
 
 **Analytics — Zielkonflikt mit Datensparsamkeit:** Der Worker ist bewusst zustandslos (2.6) und speichert nichts. „Meistgestellte Fragen" auswerten würde zumindest aggregiertes Logging brauchen, was dem bisherigen Datensparsamkeits-Versprechen widerspricht, wenn Freitext mitgeschnitten wird. Empfehlung:
+
 - **Chip-Klicks zählen** (anonymer Zähler pro Vorschlag-Chip, kein Personen-/Session-Bezug) — deckt vermutlich die Mehrheit der Interaktionen ab, da die Chips gezielt für die häufigsten erwarteten Fragen designed sind (3.9).
 - **Freitext-Fragen nicht standardmäßig loggen.** Nur falls später explizit gewünscht: mit separatem Opt-in und eigenem Passus in der Datenschutzerklärung, nie an Sessions/Rechnerdaten gekoppelt.
 - Reine Nutzungszahlen (Requests/Tag, Fehlerraten, Latenz) liefert Cloudflare Workers Analytics ohnehin automatisch, ganz ohne Inhalte zu speichern — für die Kosten-/Stabilitätsüberwachung (2.10) reicht das bereits.
 
 ### 2.10 Implementierungs-Leitplanken
+
 - Neuer, getrennter Ordner `/worker` (eigenes `package.json`, Deploy via `wrangler`) — bewusst getrennt vom `src/`-Frontend, damit die harte Stack-Regel „React+Vite+Tailwind, keine Abweichungen" für das Frontend unangetastet bleibt.
 - Secrets (`GEMINI_API_KEY` etc.) ausschließlich als Wrangler-Secret, nie im Repo.
 - Rate-Limit über Session-ID (lokal generierte UUID in `localStorage`), nicht IP — mobile Nutzer teilen sich oft NAT-IPs.
@@ -240,12 +251,12 @@ Der Nutzerkontext (`kontext`, `vergleichsObjekte`, `verlauf`) wird als strukturi
 
 ### 2.11 Kosten-Übersicht (konsolidiert)
 
-| Baustein | Kostenlos bis | Danach | Realistische Erwartung |
-|---|---|---|---|
-| Cloudflare Worker (Requests) | 100.000/Tag | 0,30 $/Mio. Requests | 0 € — ImmoFuchs-Traffic liegt weit darunter |
-| Workers AI (Llama 3.3, DE/EN) | 10.000 Neurons/Tag | 0,011 $/1.000 Neurons | 0 € im Normalbetrieb |
-| Gemini 2.5 Flash-Lite (TR/ZH/HI-Fallback) | — (kein Freikontingent) | ~0,10 $/0,40 $ pro 1M Tokens (in/out) | Cent-Beträge/Monat bei kleinem Nutzeranteil |
-| KV Storage (Rate-Limit) | 100.000 Reads/Tag, 1.000 Writes/Tag | gering | 0 € |
+| Baustein                                  | Kostenlos bis                       | Danach                                | Realistische Erwartung                      |
+| ----------------------------------------- | ----------------------------------- | ------------------------------------- | ------------------------------------------- |
+| Cloudflare Worker (Requests)              | 100.000/Tag                         | 0,30 $/Mio. Requests                  | 0 € — ImmoFuchs-Traffic liegt weit darunter |
+| Workers AI (Llama 3.3, DE/EN)             | 10.000 Neurons/Tag                  | 0,011 $/1.000 Neurons                 | 0 € im Normalbetrieb                        |
+| Gemini 2.5 Flash-Lite (TR/ZH/HI-Fallback) | — (kein Freikontingent)             | ~0,10 $/0,40 $ pro 1M Tokens (in/out) | Cent-Beträge/Monat bei kleinem Nutzeranteil |
+| KV Storage (Rate-Limit)                   | 100.000 Reads/Tag, 1.000 Writes/Tag | gering                                | 0 €                                         |
 
 Rechenbeispiel: 1.000 Chat-Anfragen/Monat, Ø 300 Tokens Kontext + 150 Tokens Antwort → selbst vollständig über Gemini gerechnet ≈ 0,15 $/Monat. Mit Llama 3.3 als Standard für DE/EN (Großteil der Nutzer) bleibt es voraussichtlich dauerhaft bei 0 €.
 
@@ -254,6 +265,7 @@ Rechenbeispiel: 1.000 Chat-Anfragen/Monat, Ø 300 Tokens Kontext + 150 Tokens An
 ## 3. UX-Konzept (UX-Designer-Perspektive)
 
 ### 3.1 Persona (aus den vier Nutzerprofilen verdichtet)
+
 ```
 Name: Julia, 34
 Beruf: Angestellte, erste Eigentumswohnung als Kapitalanlage
@@ -318,6 +330,7 @@ Sonderfall: Tageslimit erreicht → freundliche Meldung statt Chat-Eingabe, kein
 ![ImmoFuchs KI-Assistent Wireframe: Ruhezustand mit Chip und geöffneter Chat-Bottom-Sheet](2026-07-19-ki-assistent-konzept-wireframe.svg)
 
 **Screen A — Ergebnis mit Assistant-Chip (Ruhezustand)**
+
 ```
 ┌─────────────────────────┐
 │ 🦊 ImmoFuchs             │  Header, navy
@@ -336,6 +349,7 @@ Sonderfall: Tageslimit erreicht → freundliche Meldung statt Chat-Eingabe, kein
 ```
 
 **Screen B — Chat-Bottom-Sheet (geöffnet)**
+
 ```
 ┌─────────────────────────┐
 │ 🦊 ImmoFuchs      (dim)  │
@@ -358,6 +372,7 @@ Sonderfall: Tageslimit erreicht → freundliche Meldung statt Chat-Eingabe, kein
 ```
 
 **Screen C — Erstkontakt / Datenschutz-Hinweis (einmalig)**
+
 ```
 ┌─────────────────────────┐
 │  🦊                       │
@@ -376,6 +391,7 @@ Sonderfall: Tageslimit erreicht → freundliche Meldung statt Chat-Eingabe, kein
 ```
 
 **Zustände, die Screen B abdecken muss:**
+
 - Loading: Bubble mit dezenter Fuchs-Denkanimation statt Skeleton (passt besser zum Maskottchen)
 - Leer: Direkt nach Öffnen — nur Vorschlag-Chips, kein leerer Chatverlauf-Hinweis nötig
 - Fehler: Bubble „Kurzer Aussetzer — nochmal versuchen?" + Retry-Button, kein Tech-Jargon
@@ -385,22 +401,26 @@ Sonderfall: Tageslimit erreicht → freundliche Meldung statt Chat-Eingabe, kein
 - Befüllt: normaler Chatverlauf wie Screen B
 
 ### 3.3a Zusatz-Flow: Objekt-Vergleich (Merkliste)
+
 Eigener Einstiegspunkt, nicht über den Rechner-Chip: In der Merkliste-Ansicht (`Merkliste.jsx`) bekommt jede Objekt-Karte eine Checkbox „zum Vergleich hinzufügen" (max. 5). Sobald ≥ 2 ausgewählt sind, erscheint ein Button „🦊 Objekte vergleichen" am unteren Bildschirmrand → öffnet dasselbe `AssistantSheet`, aber mit `vergleichsObjekte` statt `kontext` befüllt und eigenen Vorschlag-Chips („Welches lohnt sich am meisten?", „Größter Unterschied?"). Diese Variante ist bewusst als **eigenständiger, später umzusetzender Einstiegspunkt** markiert (siehe Rollout-Plan, Abschnitt 5) — nicht Teil des ersten Piloten.
 
 ### 3.4 Maskottchen-Asset
+
 Der Assistent bekommt ein eigenes Fuchs-Artwork (vom Nutzer bereitgestellt: Fuchs mit Brille, Headset, Laptop mit Haus-Icon, navy Blazer mit Fuchs-Pin — passt exakt zu den bestehenden Marken-Farben #1E3A5F/#E8650A). Ersetzt das 🦊-Emoji-Platzhalter aus den Wireframes oben an allen Touchpoints:
 
-| Einsatzort | Format-Bedarf |
-|---|---|
-| `AssistantChip` (Button-Icon) | quadratisch, ~40×40px, freigestellt/rund beschnitten |
-| Chat-Avatar (`ChatBubble`, assistant-Variante) | rund, ~32×32px |
-| `PrivacyIntro` (Erstkontakt-Screen) | volle Illustration, zentriert, ~160×160px |
-| Loading-State ("Fuchs denkt nach") | ggf. dezente Variante/Ausschnitt für Animation |
+| Einsatzort                                     | Format-Bedarf                                        |
+| ---------------------------------------------- | ---------------------------------------------------- |
+| `AssistantChip` (Button-Icon)                  | quadratisch, ~40×40px, freigestellt/rund beschnitten |
+| Chat-Avatar (`ChatBubble`, assistant-Variante) | rund, ~32×32px                                       |
+| `PrivacyIntro` (Erstkontakt-Screen)            | volle Illustration, zentriert, ~160×160px            |
+| Loading-State ("Fuchs denkt nach")             | ggf. dezente Variante/Ausschnitt für Animation       |
 
 Datei liegt aktuell nur als Chat-Anhang vor, noch nicht im Projektordner. Sobald sie unter `public/assets/mascot/` (oder vergleichbar) abgelegt ist, werden Zuschnitte für die vier Einsatzorte oben daraus abgeleitet.
 
 ### 3.5 Design-Tokens (bestehend, unverändert übernommen)
+
 Keine neuen Farben oder Schriften — der Assistent nutzt exakt das bestehende ImmoFuchs-System:
+
 ```
 Primary:   #1E3A5F   Accent: #E8650A   Surface: #F8F9FA   Text: #1A1A2E
 Radius:    12px       Font: Inter → system-ui → sans-serif
@@ -412,20 +432,22 @@ Grün:  #22c55e   Gelb: #f59e0b   Rot: #ef4444
 
 ### 3.6 Komponenten-Spezifikation
 
-| Komponente | Kategorie | Varianten | Zustände |
-|---|---|---|---|
-| `AssistantChip` | Atom | default | default, **first-seen** (einmaliger 2×-Pulse beim ersten Erscheinen, dann dauerhaft still), pressed, disabled (Kill-Switch → Chip komplett ausgeblendet, kein Fehlerzustand) |
-| `AssistantSheet` | Organism | Bottom-Sheet (mobile) / Side-Panel (Desktop ≥1024px) | öffnend, offen, schließend |
-| `ChatBubble` | Molecule | assistant, user, error, limit | default, mit Ampel-Akzent |
-| `SuggestedQuestionChip` | Atom | default | default, pressed |
-| `PrivacyIntro` | Organism | einmalig | default |
+| Komponente              | Kategorie | Varianten                                            | Zustände                                                                                                                                                                     |
+| ----------------------- | --------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AssistantChip`         | Atom      | default                                              | default, **first-seen** (einmaliger 2×-Pulse beim ersten Erscheinen, dann dauerhaft still), pressed, disabled (Kill-Switch → Chip komplett ausgeblendet, kein Fehlerzustand) |
+| `AssistantSheet`        | Organism  | Bottom-Sheet (mobile) / Side-Panel (Desktop ≥1024px) | öffnend, offen, schließend                                                                                                                                                   |
+| `ChatBubble`            | Molecule  | assistant, user, error, limit                        | default, mit Ampel-Akzent                                                                                                                                                    |
+| `SuggestedQuestionChip` | Atom      | default                                              | default, pressed                                                                                                                                                             |
+| `PrivacyIntro`          | Organism  | einmalig                                             | default                                                                                                                                                                      |
 
 Accessibility je Komponente: `role="dialog"` + `aria-modal="true"` für `AssistantSheet`, Fokus-Trap beim Öffnen, `Escape` schließt, `aria-live="polite"` auf dem Chat-Bubble-Container für neue Antworten, Fokusring 2px solid Primary mit 2px Offset auf allen interaktiven Elementen.
 
 ### 3.7 Wichtige projektspezifische Regel: kein Hover auf Touch
+
 ImmoFuchs ist mobile-first ohne Hover-Interaktion. Jede erklärende Zusatzinfo im Chat (z. B. „was ist Kaufpreisfaktor?") muss als **aufklappbares Element** (Tap-to-expand), nie als Hover-Tooltip umgesetzt werden — deckt sich mit der bestehenden Regel für alle anderen Tooltips in der App.
 
 ### 3.8 Accessibility-Checkliste
+
 - [ ] Farbkontrast Ampel-Text auf Surface ≥ 4.5:1 (bestehende Farben bereits geprüft im BANDS-System)
 - [ ] Sheet/Panel per Tastatur bedienbar (Tab-Reihenfolge, Escape zum Schließen)
 - [ ] Fehler- und Limit-Zustände nicht nur farblich, sondern textlich erkennbar
@@ -435,23 +457,26 @@ ImmoFuchs ist mobile-first ohne Hover-Interaktion. Jede erklärende Zusatzinfo i
 - [ ] `prefers-reduced-motion: reduce` respektiert — Pulse-Animation des `AssistantChip` (siehe 3.6, 4.3a) wird dann deaktiviert. Bisher nirgends in der App behandelt, hier bewusst als erster sauberer Präzedenzfall eingeführt.
 
 ### 3.9 Vorschlag-Fragen pro Rechner (Chips)
+
 Passen sich an die aktuelle Ampel-Farbe an — bei Rot eher „Was kann ich verbessern?", bei Grün eher „Was bedeutet das konkret für mich?". Übersetzung in alle 5 Sprachen nötig (i18n, wie der Rest der App).
 
-| Rechner | Vorschlag-Chips |
-|---|---|
-| Renditerechner | „Warum ist meine Nettorendite [Ampel]?" · „Was kann ich verbessern?" · „Was bedeutet Kaufpreisfaktor?" |
-| Finanzierungsrechner | „Was passiert nach der Zinsbindung?" · „Lohnt sich eine Sondertilgung?" · „Was bedeutet mein Beleihungsauslauf für die Konditionen?" |
+| Rechner              | Vorschlag-Chips                                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Renditerechner       | „Warum ist meine Nettorendite [Ampel]?" · „Was kann ich verbessern?" · „Was bedeutet Kaufpreisfaktor?"                                                                    |
+| Finanzierungsrechner | „Was passiert nach der Zinsbindung?" · „Lohnt sich eine Sondertilgung?" · „Was bedeutet mein Beleihungsauslauf für die Konditionen?"                                      |
 | Mieterhöhungsrechner | „Wann darf ich als nächstes erhöhen?" · „Wie kommt die Kappungsgrenze zustande?" · „Was, wenn der Mieter widerspricht?" (→ Antwort verweist klar auf Anwalt/Mieterverein) |
-| Sanierungsrechner | „Welche Maßnahme bringt am meisten?" · „Wie lange dauert die Amortisation?" · „Muss ich den Förderantrag vor Beauftragung stellen?" |
+| Sanierungsrechner    | „Welche Maßnahme bringt am meisten?" · „Wie lange dauert die Amortisation?" · „Muss ich den Förderantrag vor Beauftragung stellen?"                                       |
 
 ---
 
 ## 4. Frontend-Umsetzung (Frontend-Dev-Perspektive)
 
 ### 4.1 Stack-Realitätscheck (wichtig)
+
 Der reale ImmoFuchs-Stack laut `package.json` ist **reines JavaScript/JSX** (React 18 + Vite, keine `devDependencies` für TypeScript, React Query, Zustand oder Testing). Das weicht von einem generischen "moderner Frontend-Stack" ab — und genau das ist hier bindend: CLAUDE.md schreibt React+Vite+Tailwind **ohne Abweichungen ohne Freigabe** fest. Empfehlung: **kein** TypeScript, **kein** React Query, **keine** neue Runtime-Dependency einführen. Die Assistant-Anbindung ist ein einfacher `fetch`-Aufruf mit `useState`/`useEffect` in einem Custom Hook — das passt 1:1 zum bestehenden Code-Stil in `App.jsx` und den Rechner-Komponenten.
 
 ### 4.2 Neue Dateien (rein additiv, keine bestehende Datei verändert Logik)
+
 ```
 src/
   components/
@@ -468,6 +493,7 @@ src/
 ```
 
 ### 4.3 `useAssistant.js` — Grundgerüst
+
 ```javascript
 // src/hooks/useAssistant.js
 import { useState, useCallback, useRef } from "react";
@@ -572,6 +598,7 @@ export function AssistantChip({ label, onOpen, disabled }) {
 ```
 
 ### 4.4 Kontext-Aufbau pro Rechner (Datensparsamkeit, siehe 1.3)
+
 `utils/assistantContext.js` bildet je Rechner nur die relevanten Felder aus dem bestehenden `data`-State (`useApp()` → `Ctx`) ab — keine PII, keine irrelevanten Felder anderer Rechner:
 
 ```javascript
@@ -596,11 +623,13 @@ export function buildAssistantContext(rechner, data, bandsResults) {
 ```
 
 ### 4.5 Integrationspunkt (additiv, ohne Logik-Änderung)
+
 `AssistantChip` wird jeweils **am Ende** der bestehenden Ergebnis-Sektion der vier Rechner (`Renditerechner.jsx`, `Finanzierung.jsx`, `Miete.jsx`, `Sanier.jsx`) eingehängt — als reiner Zusatz-Baustein, keine bestehende Berechnung, kein bestehender JSX-Block wird verändert. Damit bleibt die harte Stabilitätsregel aus CLAUDE.md eingehalten: **§558-BGB-Logik und Annuität-Berechnung bleiben unangetastet**, der Assistent liest nur (read-only) aus dem bereits vorhandenen `data`-Context.
 
 `lang` wird beim Aufruf von `ask()` direkt aus `useApp().lang` gereicht — derselbe Wert, den der bestehende Sprachumschalter setzt. Keine separate Sprachlogik, kein eigener Selector im `AssistantSheet`.
 
 ### 4.6 Zustände & Qualitäts-Checkliste
+
 - [ ] Loading-State (Fuchs-Denkanimation statt generisches Spinner, siehe UX 3.3)
 - [ ] Error-State (Retry-Button, kein Tech-Jargon)
 - [ ] Limit-State (429 → freundliche Meldung statt Eingabefeld)
@@ -610,10 +639,13 @@ export function buildAssistantContext(rechner, data, bandsResults) {
 - [ ] Kein neuer Build-Schritt, keine neue Dependency ohne Freigabe (siehe 4.1)
 
 ### 4.7 Mehrsprachigkeit (i18n)
+
 Alle UI-Texte rund um den Assistenten — Vorschlag-Chips (3.9), `PrivacyIntro`-Text, Fehler-/Limit-/Offline-Meldungen (4.6) — müssen wie der Rest der App über `src/i18n/translations.js` laufen (bestätigt: `export const T = { de:{...}, en:{...}, tr:{...}, zh:{...}, hi:{...} }`). Kein Sonderweg, gleiche Struktur wie bestehende Keys, neue Keys je Sprachblock ergänzen. Die Modell-Antworten selbst kommen direkt vom LLM in der über `lang` übergebenen Sprache (System-Prompt 2.7), nicht aus `translations.js`.
 
 ### 4.8 Manuelle Test-Szenarien (kein Testing-Framework vorhanden — siehe 4.1)
+
 Da Vitest o. ä. aktuell nicht im Stack ist, empfiehlt sich vorerst manuelle Verifikation entlang fester Szenarien (analog zu `docs/testbericht-refactoring-2026-07-19.md`):
+
 1. Rendite-Rechner mit Beispieldaten befüllen → Chip erscheint erst nach vollständiger Berechnung, nicht vorher
 2. Erstkontakt-Hinweis erscheint nur beim allerersten Öffnen, danach nicht mehr (Session-Flag geprüft)
 3. Worker offline/Timeout simulieren → Error-Bubble mit Retry, App bleibt sonst voll funktionsfähig (Rechner selbst unberührt)
@@ -627,20 +659,23 @@ Da Vitest o. ä. aktuell nicht im Stack ist, empfiehlt sich vorerst manuelle Ver
 Voller Ziel-Scope ist alle sechs Rechner + Merkliste-Vergleich (siehe 1.1). Umsetzung bewusst gestaffelt, weil Prompt/Kosten/Qualität erst am lebenden System validiert werden sollten, bevor die komplexeren Bausteine (lokale States, Mehrfach-Objekt-Vergleich) dazukommen:
 
 **Phase 0 — Voraussetzung**
+
 - BANDS-Bewertungssystem fertig bauen (aus früherer Session freigegeben, noch nicht umgesetzt) — ohne die zentrale `rate()`-Quelle fehlt dem Assistenten die Ampel-Einordnung, die er erklären soll.
 - DSGVO/AVV-Klärung mit Cloudflare/Google abschließen (siehe 2.8) und Datenschutzerklärung ergänzen (siehe 1.3).
 - Cloudflare Worker + Model Router + Kill-Switch technisch aufsetzen, System-Prompt (2.7) final formulieren und gegentesten.
 
 **Phase 1 — Pilot: Renditerechner**
+
 - Nur `AssistantChip` im Renditerechner, ein Rechner, volle Fehler-/Limit-/Offline-Zustände.
 - Ziel: reale Kosten, Antwortqualität (v. a. Sprach-Routing DE/EN vs. TR/ZH/HI), Missbrauchsverhalten am Freitextfeld beobachten, bevor der Rest folgt.
 
 **Phase 2 — Rollout Hauptrechner**
+
 - Finanzierungsrechner, Mieterhöhungsrechner, Sanierungsrechner ergänzen — reines Config-Mapping (`ASSISTANT_FIELDS`), kein struktureller Umbau nötig, da alle am globalen `data`-Context hängen.
 
 **Phase 3 — Spezialrechner + Merkliste-Vergleich**
+
 - §6-Trick-Rechner und Vorfälligkeitsrechner: erst nachdem deren lokale States für den Assistenten zugänglich gemacht wurden (siehe 2.1/4.4 — kein reines Mapping, echter kleiner Umbau).
 - Merkliste-Objektvergleich (siehe 3.3a): neuer Einstiegspunkt, größere Kontext-Payloads, eigene Vorschlag-Chips — bewusst zuletzt, weil UX und Kosten hier am wenigsten erprobt sind.
 
 Jede Phase ist einzeln über den Kill-Switch pro Rechner abschaltbar (Env-Var je Rechner-Key), falls sich in einer Phase Probleme zeigen, ohne die vorherigen Phasen zu beeinträchtigen.
-

@@ -9,11 +9,31 @@ import { computeRendite } from "./rendite.js";
 
 // Ort bewusst nicht in der Kappungsgrenzen-15-Liste, damit k15=false deterministisch ist.
 const baseD = {
-  kaufpreis: "300000", garage: "0", flaeche: "60", kaltmiete: "900", eigenkapital: "60000",
-  zinssatz: "4", tilgung: "2", notar: "2.0", makler: "3.57", bundesland: "BW",
-  nichtUml: "100", leerstand: "0", steuersatz: "30", afaSatz: "2", gebAnteil: "80", grundAnteil: "20",
-  wertP: "2", jahre: "10", sonder: "0", renovierung: "0", vergleichsmiete: "0",
-  letzteErhDatum: "2099-01-01", letzteErhMiete: "0", ort: "Musterdorf", immLeer: "nein",
+  kaufpreis: "300000",
+  garage: "0",
+  flaeche: "60",
+  kaltmiete: "900",
+  eigenkapital: "60000",
+  zinssatz: "4",
+  tilgung: "2",
+  notar: "2.0",
+  makler: "3.57",
+  bundesland: "BW",
+  nichtUml: "100",
+  leerstand: "0",
+  steuersatz: "30",
+  afaSatz: "2",
+  gebAnteil: "80",
+  grundAnteil: "20",
+  wertP: "2",
+  jahre: "10",
+  sonder: "0",
+  renovierung: "0",
+  vergleichsmiete: "0",
+  letzteErhDatum: "2099-01-01",
+  letzteErhMiete: "0",
+  ort: "Musterdorf",
+  immLeer: "nein",
 };
 
 describe("computeRendite — Kernkennzahlen (Standardfall)", () => {

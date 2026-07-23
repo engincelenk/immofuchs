@@ -11,7 +11,15 @@
  * Blase waechst nach links, sonst wird sie bei laengeren Uebersetzungen am
  * rechten Bildschirmrand abgeschnitten (Nutzer-Feedback 2026-07-22).
  */
-export function FinnBubble({ text, visible, align = "left", onOpen, onDismiss, openLabel, dismissLabel }) {
+export function FinnBubble({
+  text,
+  visible,
+  align = "left",
+  onOpen,
+  onDismiss,
+  openLabel,
+  dismissLabel,
+}) {
   const isRight = align === "right";
   return (
     <div
@@ -40,7 +48,13 @@ export function FinnBubble({ text, visible, align = "left", onOpen, onDismiss, o
         zIndex: 5,
       }}
     >
-      <button type="button" className="if-finn-bubble-text" onClick={onOpen} aria-label={openLabel} tabIndex={visible ? 0 : -1}>
+      <button
+        type="button"
+        className="if-finn-bubble-text"
+        onClick={onOpen}
+        aria-label={openLabel}
+        tabIndex={visible ? 0 : -1}
+      >
         {text}
       </button>
       <button

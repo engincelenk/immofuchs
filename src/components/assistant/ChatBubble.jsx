@@ -14,7 +14,15 @@ function MascotAvatar() {
 export function ChatBubble({ role, text, tier, onRetry, retryLabel }) {
   if (role === "loading") {
     return (
-      <div style={{ alignSelf: "flex-start", maxWidth: "88%", display: "flex", alignItems: "flex-end", gap: 6 }}>
+      <div
+        style={{
+          alignSelf: "flex-start",
+          maxWidth: "88%",
+          display: "flex",
+          alignItems: "flex-end",
+          gap: 6,
+        }}
+      >
         <MascotAvatar />
         <div
           className="if-asst-bubble-in"
@@ -57,7 +65,13 @@ export function ChatBubble({ role, text, tier, onRetry, retryLabel }) {
         borderRadius: 14,
         borderBottomRightRadius: isUser ? 4 : 14,
         borderBottomLeftRadius: !isUser && !isSystem ? 4 : 14,
-        background: isUser ? "var(--ca)" : isError ? "#FDEDED" : isSystem ? "var(--ci)" : "var(--cc)",
+        background: isUser
+          ? "var(--ca)"
+          : isError
+            ? "#FDEDED"
+            : isSystem
+              ? "var(--ci)"
+              : "var(--cc)",
         color: isUser ? "#fff" : isError ? "#8a2020" : isSystem ? "var(--ch)" : "var(--ct)",
         fontSize: isSystem ? 12 : 13.5,
         textAlign: isSystem ? "center" : "left",
@@ -92,7 +106,15 @@ export function ChatBubble({ role, text, tier, onRetry, retryLabel }) {
   if (!showAvatar) return bubble;
 
   return (
-    <div style={{ alignSelf: "flex-start", maxWidth: "88%", display: "flex", alignItems: "flex-end", gap: 6 }}>
+    <div
+      style={{
+        alignSelf: "flex-start",
+        maxWidth: "88%",
+        display: "flex",
+        alignItems: "flex-end",
+        gap: 6,
+      }}
+    >
       <MascotAvatar />
       {bubble}
     </div>

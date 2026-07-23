@@ -82,7 +82,9 @@ export function LandingMascot({ onStart, lang }) {
   const showChips = (localLog.length === 0 && messages.length === 0) || chipsForcedOpen;
 
   const statusInfo =
-    status === "limit" ? { label: t.statusLimited, color: "#f59e0b" } : { label: t.assistantTagline, color: "var(--ch)" };
+    status === "limit"
+      ? { label: t.statusLimited, color: "#f59e0b" }
+      : { label: t.assistantTagline, color: "var(--ch)" };
 
   const close = () => {
     // Eingeklappt-Zustand mit zuruecksetzen - sonst bleibt die kompakte
@@ -120,7 +122,11 @@ export function LandingMascot({ onStart, lang }) {
     setChipsForcedOpen(false);
     setMoreOpen(false);
     setMinimized(false);
-    setLocalLog((l) => [...l, { role: "user", text: t[r.chipKey] }, { role: "assistant", text: t[r.adviceKey], actionTab: r.tab }]);
+    setLocalLog((l) => [
+      ...l,
+      { role: "user", text: t[r.chipKey] },
+      { role: "assistant", text: t[r.adviceKey], actionTab: r.tab },
+    ]);
   };
 
   // Datenschutz-Zwischenschritt entfaellt (Nutzerwunsch 2026-07-22) - die
@@ -157,7 +163,11 @@ export function LandingMascot({ onStart, lang }) {
       />
       {createPortal(
         <>
-          <div className={`if-asst-backdrop${open ? " open" : ""}`} onClick={close} aria-hidden={!open} />
+          <div
+            className={`if-asst-backdrop${open ? " open" : ""}`}
+            onClick={close}
+            aria-hidden={!open}
+          />
           <div
             className={`if-asst-sheet${open ? " open" : ""}${minimized ? " minimized" : ""}`}
             role="dialog"
@@ -187,7 +197,12 @@ export function LandingMascot({ onStart, lang }) {
                   {localLog.map((m, i) => (
                     <div
                       key={"l" + i}
-                      style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", gap: 6 }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: m.role === "user" ? "flex-end" : "flex-start",
+                        gap: 6,
+                      }}
                     >
                       <ChatBubble role={m.role} text={m.text} />
                       {m.actionTab && (
@@ -201,7 +216,9 @@ export function LandingMascot({ onStart, lang }) {
                     <ChatBubble key={"r" + i} role={m.role} text={m.text} tier={m.tier} />
                   ))}
                   {status === "loading" && <ChatBubble role="loading" text={t.loading} />}
-                  {status === "error" && <ChatBubble role="error" text={t.error} onRetry={retry} retryLabel={t.retry} />}
+                  {status === "error" && (
+                    <ChatBubble role="error" text={t.error} onRetry={retry} retryLabel={t.retry} />
+                  )}
                   {status === "limit" && <ChatBubble role="limit" text={t.limit} />}
                   {status === "offline" && <ChatBubble role="offline" text={t.offline} />}
                   {status === "disabled" && <ChatBubble role="system" text={t.disabled} />}
@@ -210,12 +227,24 @@ export function LandingMascot({ onStart, lang }) {
                   {showChips ? (
                     <>
                       {(moreOpen ? ROUTES_MORE : ROUTES_PRIMARY).map((r) => (
-                        <SuggestedQuestionChip key={r.tab} label={t[r.chipKey]} onClick={() => pickRoute(r)} />
+                        <SuggestedQuestionChip
+                          key={r.tab}
+                          label={t[r.chipKey]}
+                          onClick={() => pickRoute(r)}
+                        />
                       ))}
-                      {!moreOpen && <SuggestedQuestionChip label={t.landingMoreTopics} onClick={() => setMoreOpen(true)} />}
+                      {!moreOpen && (
+                        <SuggestedQuestionChip
+                          label={t.landingMoreTopics}
+                          onClick={() => setMoreOpen(true)}
+                        />
+                      )}
                     </>
                   ) : (
-                    <SuggestedQuestionChip label={t.suggestQuestions} onClick={() => setChipsForcedOpen(true)} />
+                    <SuggestedQuestionChip
+                      label={t.suggestQuestions}
+                      onClick={() => setChipsForcedOpen(true)}
+                    />
                   )}
                 </div>
                 <div className="if-asst-input-row">
@@ -246,7 +275,7 @@ export function LandingMascot({ onStart, lang }) {
             )}
           </div>
         </>,
-        document.body
+        document.body,
       )}
       <style>{`
         ${ASSISTANT_SHEET_CSS}

@@ -22,7 +22,8 @@ function pickDringend(signale, t) {
   const s = signale || {};
   if (s.tier === "red") return t.hintTierRot;
   if (typeof s.cashflow === "number" && s.cashflow < 0) return t.hintCashflowNegativ;
-  if (typeof s.risiko === "number" && s.risiko > 60) return tpl(t.hintRisikoHoch, { wert: Math.round(s.risiko) });
+  if (typeof s.risiko === "number" && s.risiko > 60)
+    return tpl(t.hintRisikoHoch, { wert: Math.round(s.risiko) });
   return null;
 }
 

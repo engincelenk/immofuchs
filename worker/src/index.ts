@@ -83,10 +83,17 @@ export default {
     } catch (err) {
       // Absichtlich kein Logging von "frage"/"kontext" - nur strukturelle Fehlerinfo,
       // damit kein Nutzer-Freitext in Cloudflare-Logs landet (Konzept 2.9/2.10).
-      console.error("assistant_model_call_failed", err instanceof Error ? err.message : "unknown_error");
+      console.error(
+        "assistant_model_call_failed",
+        err instanceof Error ? err.message : "unknown_error",
+      );
       // Fehlgeschlagener Request darf kein Kontingent kosten - alle drei
       // Schranken zurueckbuchen (Punkt 3 des Reviews).
-      await Promise.all([globalLimiter.decrement(), ipLimiter.decrement(), sessionLimiter.decrement()]);
+      await Promise.all([
+        globalLimiter.decrement(),
+        ipLimiter.decrement(),
+        sessionLimiter.decrement(),
+      ]);
       return jsonResponse({ error: "model_call_failed" }, 502, corsHeaders);
     }
 

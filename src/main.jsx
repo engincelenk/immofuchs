@@ -1,11 +1,11 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
-import InstallPrompt from './InstallPrompt'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import InstallPrompt from "./InstallPrompt";
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <>
     <App />
     <InstallPrompt />
-  </>
-)
+  </>,
+);

@@ -10,7 +10,18 @@ import { AiNoticeModal } from "./AiNoticeModal.jsx";
 //
 // Das Verschieben per Ziehgriff ist ersatzlos entfallen - das Fenster sitzt
 // jetzt fest unten rechts (siehe assistantStyles.js).
-export function AssistantHeaderBar({ t, status, statusInfo, onClose, onRestart, minimized, onToggleMinimize, speechSupported, speechEnabled, onToggleSpeech }) {
+export function AssistantHeaderBar({
+  t,
+  status,
+  statusInfo,
+  onClose,
+  onRestart,
+  minimized,
+  onToggleMinimize,
+  speechSupported,
+  speechEnabled,
+  onToggleSpeech,
+}) {
   const [infoOpen, setInfoOpen] = useState(false);
 
   return (
@@ -39,10 +50,20 @@ export function AssistantHeaderBar({ t, status, statusInfo, onClose, onRestart, 
         )}
         {!minimized && (
           <>
-            <button type="button" aria-label={t.aiNoticeAria} className="if-asst-icon-btn" onClick={() => setInfoOpen(true)}>
+            <button
+              type="button"
+              aria-label={t.aiNoticeAria}
+              className="if-asst-icon-btn"
+              onClick={() => setInfoOpen(true)}
+            >
               i
             </button>
-            <button type="button" aria-label={t.restartAria} className="if-asst-icon-btn" onClick={onRestart}>
+            <button
+              type="button"
+              aria-label={t.restartAria}
+              className="if-asst-icon-btn"
+              onClick={onRestart}
+            >
               ↻
             </button>
           </>

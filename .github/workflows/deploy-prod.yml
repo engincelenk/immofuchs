@@ -11,31 +11,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 🚚 Code aus GitHub auschecken
-      uses: actions/checkout@v4
+      - name: 🚚 Code aus GitHub auschecken
+        uses: actions/checkout@v4
 
-    - name: 🛠️ Node.js einrichten
-      uses: actions/setup-node@v4
-      with:
-        node-version: '24'
-        cache: 'npm'
+      - name: 🛠️ Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
 
-    - name: 📦 Abhängigkeiten installieren & Projekt bauen
-      run: |
-        npm ci
-        npm run build
+      - name: 📦 Abhängigkeiten installieren & Projekt bauen
+        run: |
+          npm ci
+          npm run build
 
-    - name: 📂 dist-Ordner auf IONOS-Server spiegeln via lftp (SFTP)
-      env:
-        SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
-        SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
-        SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
-      run: |
-        sudo apt-get update && sudo apt-get install -y lftp
+      - name: 📂 dist-Ordner auf IONOS-Server spiegeln via lftp (SFTP)
+        env:
+          SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
+          SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
+          SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y lftp
 
-        lftp -c "
-        set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
-        open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
-        mirror -R ./dist /immofuchs --reverse --verbose --continue --delete;
-        quit;
-        "
+          lftp -c "
+          set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
+          open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
+          mirror -R ./dist /immofuchs --reverse --verbose --continue --delete;
+          quit;
+          "

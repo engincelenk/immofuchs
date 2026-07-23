@@ -9,7 +9,17 @@ import { ChatBubble } from "./ChatBubble.jsx";
 import { SuggestedQuestionChip } from "./SuggestedQuestionChip.jsx";
 import { ASSISTANT_SHEET_CSS } from "./assistantStyles.js";
 
-export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObjekte, contextLabel, suggested, lang, t }) {
+export function AssistantSheet({
+  open,
+  onClose,
+  rechner,
+  kontext,
+  vergleichsObjekte,
+  contextLabel,
+  suggested,
+  lang,
+  t,
+}) {
   const { messages, status, ask, retry, reset } = useAssistant();
   const inputRef = useRef(null);
   const sheetRef = useRef(null);
@@ -54,7 +64,9 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
   // eigene, deutlich sichtbare Anzeige (nicht ueber offline/online-Logik
   // gesteuert, sondern als eigener Zustand, siehe Nutzer-Klarstellung).
   const statusInfo =
-    status === "limit" ? { label: t.statusLimited, color: "#f59e0b" } : { label: t.assistantTagline, color: "var(--ch)" };
+    status === "limit"
+      ? { label: t.statusLimited, color: "#f59e0b" }
+      : { label: t.assistantTagline, color: "var(--ch)" };
 
   useEffect(() => {
     if (open) {
@@ -95,7 +107,9 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
       // Fokus-Falle nur im modalen Bottom-Sheet - im nicht-modalen
       // Desktop-Fenster muss man per Tab wieder auf die Seite kommen.
       if (e.key !== "Tab" || isDesktop || !sheetRef.current) return;
-      const focusables = sheetRef.current.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])');
+      const focusables = sheetRef.current.querySelectorAll(
+        'button, input, [tabindex]:not([tabindex="-1"])',
+      );
       if (focusables.length === 0) return;
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
@@ -137,7 +151,11 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
           das Sheet haengt dann an .res-pane statt am echten Viewport (siehe
           release-notes.txt fuer die Live-Diagnose). Gleiches Muster wie
           LegalModal/SaveModal/Loesch-Bestaetigung in Merkliste.jsx. */}
-      <div onClick={handleClose} className={`if-asst-backdrop${open ? " open" : ""}`} aria-hidden={!open} />
+      <div
+        onClick={handleClose}
+        className={`if-asst-backdrop${open ? " open" : ""}`}
+        aria-hidden={!open}
+      />
       <div
         ref={sheetRef}
         className={`if-asst-sheet${open ? " open" : ""}${minimized ? " minimized" : ""}`}
@@ -169,16 +187,23 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
                 <ChatBubble key={i} role={m.role} text={m.text} tier={m.tier} />
               ))}
               {status === "loading" && <ChatBubble role="loading" text={t.loading} />}
-              {status === "error" && <ChatBubble role="error" text={t.error} onRetry={retry} retryLabel={t.retry} />}
+              {status === "error" && (
+                <ChatBubble role="error" text={t.error} onRetry={retry} retryLabel={t.retry} />
+              )}
               {status === "limit" && <ChatBubble role="limit" text={t.limit} />}
               {status === "offline" && <ChatBubble role="offline" text={t.offline} />}
               {status === "disabled" && <ChatBubble role="system" text={t.disabled} />}
             </div>
             <div className="if-asst-suggested">
               {showChips ? (
-                visibleSuggested.map((label, i) => <SuggestedQuestionChip key={i} label={label} onClick={() => submit(label)} />)
+                visibleSuggested.map((label, i) => (
+                  <SuggestedQuestionChip key={i} label={label} onClick={() => submit(label)} />
+                ))
               ) : (
-                <SuggestedQuestionChip label={t.suggestQuestions} onClick={() => setChipsForcedOpen(true)} />
+                <SuggestedQuestionChip
+                  label={t.suggestQuestions}
+                  onClick={() => setChipsForcedOpen(true)}
+                />
               )}
             </div>
             <div className="if-asst-input-row">
@@ -210,6 +235,6 @@ export function AssistantSheet({ open, onClose, rechner, kontext, vergleichsObje
       </div>
       <style>{ASSISTANT_SHEET_CSS}</style>
     </>,
-    document.body
+    document.body,
   );
 }

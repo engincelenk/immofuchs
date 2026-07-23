@@ -33,7 +33,8 @@ export const ASSISTANT_T = {
     hintVfe1: "Was kostet die Ablöse wirklich? Klick mich.",
     hintVfe2: "Kannst du kostenlos kündigen? Ich prüf's mit dir.",
     hintVfe3: "Lohnt sich Umschulden trotzdem? Frag mich.",
-    greeting: "Hallo, ich bin Finn 👋 Dein persönlicher KI-Assistent rund um Immobilien. Ich erkläre dir Zahlen, Begriffe und Regeln — verständlich und ohne Fachchinesisch.",
+    greeting:
+      "Hallo, ich bin Finn 👋 Dein persönlicher KI-Assistent rund um Immobilien. Ich erkläre dir Zahlen, Begriffe und Regeln — verständlich und ohne Fachchinesisch.",
     landingIntro: "Was bringt dich zu ImmoFuchs? Wähl einfach, was am besten passt:",
     landingChipRendite: "Ich will eine Immobilie kaufen",
     landingChipFinanzierung: "Ich brauche eine Finanzierung",
@@ -42,17 +43,24 @@ export const ASSISTANT_T = {
     landingChipSteuer: "Ich will mit dem §6-Trick Steuern sparen",
     landingChipVfe: "Ich will meinen Kredit vorzeitig ablösen",
     landingMoreTopics: "Weitere Themen",
-    landingAdviceRendite: "Der Renditerechner zeigt dir sofort, ob sich das Investment lohnt — Rendite, Cashflow und Risiko auf einen Blick.",
-    landingAdviceFinanzierung: "Der Finanzierungsrechner zeigt dir deine monatliche Rate und ob du dir das leisten kannst.",
-    landingAdviceMiete: "Der Mieterhöhungsrechner zeigt dir, wann und wie viel du rechtssicher erhöhen darfst.",
-    landingAdviceSanierung: "Der Sanierungsrechner zeigt dir Kosten, Förderung und wie schnell sich die Sanierung amortisiert.",
-    landingAdviceSteuer: "Der §6-Trick-Rechner zeigt dir, ob sich der steuerliche Umweg für dich lohnt.",
-    landingAdviceVfe: "Der Vorfälligkeitsrechner zeigt dir genau, was die vorzeitige Ablöse kostet.",
+    landingAdviceRendite:
+      "Der Renditerechner zeigt dir sofort, ob sich das Investment lohnt — Rendite, Cashflow und Risiko auf einen Blick.",
+    landingAdviceFinanzierung:
+      "Der Finanzierungsrechner zeigt dir deine monatliche Rate und ob du dir das leisten kannst.",
+    landingAdviceMiete:
+      "Der Mieterhöhungsrechner zeigt dir, wann und wie viel du rechtssicher erhöhen darfst.",
+    landingAdviceSanierung:
+      "Der Sanierungsrechner zeigt dir Kosten, Förderung und wie schnell sich die Sanierung amortisiert.",
+    landingAdviceSteuer:
+      "Der §6-Trick-Rechner zeigt dir, ob sich der steuerliche Umweg für dich lohnt.",
+    landingAdviceVfe:
+      "Der Vorfälligkeitsrechner zeigt dir genau, was die vorzeitige Ablöse kostet.",
     landingGoToCalc: "Zum Rechner",
     landingBack: "Zurück",
     suggestQuestions: "Schlage Fragen vor",
     aiNoticeTitle: "KI-Hinweis",
-    aiNoticeBody: "Antworten können mithilfe von Künstlicher Intelligenz entstehen und deshalb Fehler enthalten. Bitte prüfe wichtige Informationen sicherheitshalber nach.",
+    aiNoticeBody:
+      "Antworten können mithilfe von Künstlicher Intelligenz entstehen und deshalb Fehler enthalten. Bitte prüfe wichtige Informationen sicherheitshalber nach.",
     aiNoticeOk: "Verstanden",
     aiNoticeAria: "KI-Hinweis anzeigen",
     restartAria: "Neuen Chat starten",
@@ -140,7 +148,8 @@ export const ASSISTANT_T = {
     hintVfe1: "What does the early payoff really cost? Tap me.",
     hintVfe2: "Can you cancel free of charge? I'll check with you.",
     hintVfe3: "Is refinancing still worth it? Ask me.",
-    greeting: "Hi, I'm Finn 👋 Your personal AI assistant for everything property. I explain numbers, terms and rules — in plain language, no jargon.",
+    greeting:
+      "Hi, I'm Finn 👋 Your personal AI assistant for everything property. I explain numbers, terms and rules — in plain language, no jargon.",
     landingIntro: "What brings you to ImmoFuchs? Just pick what fits best:",
     landingChipRendite: "I want to buy a property",
     landingChipFinanzierung: "I need financing",
@@ -149,17 +158,24 @@ export const ASSISTANT_T = {
     landingChipSteuer: "I want to save taxes with the §6 trick",
     landingChipVfe: "I want to pay off my loan early",
     landingMoreTopics: "More topics",
-    landingAdviceRendite: "The yield calculator instantly shows whether the investment pays off — return, cash flow and risk at a glance.",
-    landingAdviceFinanzierung: "The financing calculator shows your monthly rate and whether you can afford it.",
-    landingAdviceMiete: "The rent increase calculator shows when and how much you can legally raise the rent.",
-    landingAdviceSanierung: "The renovation calculator shows costs, funding and how fast the renovation pays for itself.",
-    landingAdviceSteuer: "The §6 trick calculator shows whether the tax detour is worth it for you.",
-    landingAdviceVfe: "The prepayment penalty calculator shows exactly what an early payoff will cost.",
+    landingAdviceRendite:
+      "The yield calculator instantly shows whether the investment pays off — return, cash flow and risk at a glance.",
+    landingAdviceFinanzierung:
+      "The financing calculator shows your monthly rate and whether you can afford it.",
+    landingAdviceMiete:
+      "The rent increase calculator shows when and how much you can legally raise the rent.",
+    landingAdviceSanierung:
+      "The renovation calculator shows costs, funding and how fast the renovation pays for itself.",
+    landingAdviceSteuer:
+      "The §6 trick calculator shows whether the tax detour is worth it for you.",
+    landingAdviceVfe:
+      "The prepayment penalty calculator shows exactly what an early payoff will cost.",
     landingGoToCalc: "Go to calculator",
     landingBack: "Back",
     suggestQuestions: "Suggest questions",
     aiNoticeTitle: "AI notice",
-    aiNoticeBody: "Answers may be generated using artificial intelligence and can therefore contain mistakes. Please double-check important information.",
+    aiNoticeBody:
+      "Answers may be generated using artificial intelligence and can therefore contain mistakes. Please double-check important information.",
     aiNoticeOk: "Got it",
     aiNoticeAria: "Show AI notice",
     restartAria: "Start new chat",
@@ -247,7 +263,8 @@ export const ASSISTANT_T = {
     hintVfe1: "Erken kapatma gerçekte ne kadara mal olur? Tıkla.",
     hintVfe2: "Ücretsiz fesih mümkün mü? Birlikte bakalım.",
     hintVfe3: "Yine de yeniden finansman mantıklı mı? Bana sor.",
-    greeting: "Merhaba, ben Finn 👋 Gayrimenkul konusunda kişisel yapay zekâ asistanınım. Sayıları, terimleri ve kuralları anlaşılır bir dille açıklarım.",
+    greeting:
+      "Merhaba, ben Finn 👋 Gayrimenkul konusunda kişisel yapay zekâ asistanınım. Sayıları, terimleri ve kuralları anlaşılır bir dille açıklarım.",
     landingIntro: "Seni ImmoFuchs'a getiren ne? Sana en uygun olanı seç:",
     landingChipRendite: "Bir mülk satın almak istiyorum",
     landingChipFinanzierung: "Finansmana ihtiyacım var",
@@ -256,17 +273,24 @@ export const ASSISTANT_T = {
     landingChipSteuer: "§6 hilesiyle vergi tasarrufu yapmak istiyorum",
     landingChipVfe: "Kredimi erken kapatmak istiyorum",
     landingMoreTopics: "Diğer konular",
-    landingAdviceRendite: "Getiri hesaplayıcı yatırımın karlı olup olmadığını hemen gösterir — getiri, nakit akışı ve risk tek bakışta.",
-    landingAdviceFinanzierung: "Finansman hesaplayıcı aylık taksitini ve bunu karşılayıp karşılayamayacağını gösterir.",
-    landingAdviceMiete: "Kira artışı hesaplayıcı, kirayı ne zaman ve ne kadar yasal olarak artırabileceğini gösterir.",
-    landingAdviceSanierung: "Tadilat hesaplayıcı maliyetleri, teşvikleri ve tadilatın ne kadar sürede kendini amorti edeceğini gösterir.",
-    landingAdviceSteuer: "§6 hilesi hesaplayıcı, bu vergi yönteminin senin için mantıklı olup olmadığını gösterir.",
-    landingAdviceVfe: "Erken ödeme cezası hesaplayıcı, erken kapatmanın tam olarak ne kadara mal olacağını gösterir.",
+    landingAdviceRendite:
+      "Getiri hesaplayıcı yatırımın karlı olup olmadığını hemen gösterir — getiri, nakit akışı ve risk tek bakışta.",
+    landingAdviceFinanzierung:
+      "Finansman hesaplayıcı aylık taksitini ve bunu karşılayıp karşılayamayacağını gösterir.",
+    landingAdviceMiete:
+      "Kira artışı hesaplayıcı, kirayı ne zaman ve ne kadar yasal olarak artırabileceğini gösterir.",
+    landingAdviceSanierung:
+      "Tadilat hesaplayıcı maliyetleri, teşvikleri ve tadilatın ne kadar sürede kendini amorti edeceğini gösterir.",
+    landingAdviceSteuer:
+      "§6 hilesi hesaplayıcı, bu vergi yönteminin senin için mantıklı olup olmadığını gösterir.",
+    landingAdviceVfe:
+      "Erken ödeme cezası hesaplayıcı, erken kapatmanın tam olarak ne kadara mal olacağını gösterir.",
     landingGoToCalc: "Hesaplayıcıya git",
     landingBack: "Geri",
     suggestQuestions: "Soru öner",
     aiNoticeTitle: "Yapay zeka uyarısı",
-    aiNoticeBody: "Yanıtlar yapay zeka yardımıyla oluşturulabilir ve bu nedenle hata içerebilir. Önemli bilgileri lütfen tekrar kontrol et.",
+    aiNoticeBody:
+      "Yanıtlar yapay zeka yardımıyla oluşturulabilir ve bu nedenle hata içerebilir. Önemli bilgileri lütfen tekrar kontrol et.",
     aiNoticeOk: "Anladım",
     aiNoticeAria: "Yapay zeka uyarısını göster",
     restartAria: "Yeni sohbet başlat",
@@ -280,7 +304,8 @@ export const ASSISTANT_T = {
     statusDisabled: "kullanılamıyor",
     placeholder: "Finn'e bir şey sor...",
     loading: "Bir saniye, buna bir bakıyorum",
-    offline: "Bunun için internete ihtiyacım var. Hesaplayıcıların çevrimdışı çalışmaya devam ediyor.",
+    offline:
+      "Bunun için internete ihtiyacım var. Hesaplayıcıların çevrimdışı çalışmaya devam ediyor.",
     limit: "Bugünlük bu kadar soru yeter — yarın tekrar.",
     error: "Kısa bir aksaklık — tekrar dener misin?",
     retry: "Tekrar dene",
@@ -354,7 +379,8 @@ export const ASSISTANT_T = {
     hintVfe1: "提前还清究竟要花多少？点我。",
     hintVfe2: "你能免费解约吗？我陪你查。",
     hintVfe3: "转贷还值得吗？问我。",
-    greeting: "你好，我是 Finn 👋 你的房地产 AI 助手。我会用通俗易懂的语言，为你解释数字、术语和规则。",
+    greeting:
+      "你好，我是 Finn 👋 你的房地产 AI 助手。我会用通俗易懂的语言，为你解释数字、术语和规则。",
     landingIntro: "是什么让你来到 ImmoFuchs？选择最符合你情况的一项：",
     landingChipRendite: "我想买房",
     landingChipFinanzierung: "我需要贷款",
@@ -452,7 +478,8 @@ export const ASSISTANT_T = {
     hintMiete1: "आप कितना किराया बढ़ा सकते हैं? क्लिक करें।",
     hintMiete2: "बढ़ोतरी की सीमा समझ आई? एक वाक्य में बताता हूँ।",
     hintMiete3: "किरायेदार आपत्ति करे तो? क्लिक करें।",
-    hintSanier1: "ध्यान दें: काम सौंपने से पहले सब्सिडी के लिए आवेदन करें। विवरण के लिए क्लिक करें।",
+    hintSanier1:
+      "ध्यान दें: काम सौंपने से पहले सब्सिडी के लिए आवेदन करें। विवरण के लिए क्लिक करें।",
     hintSanier2: "कौन-सा उपाय सबसे ज़्यादा फायदा देता है? क्लिक करें।",
     hintSanier3: "नवीनीकरण कब वसूल होगा? मैं अवधि दिखाता हूँ।",
     hintSteuer1: "क्या §6 तरीका आपके लिए फायदेमंद है? क्लिक करें।",
@@ -461,7 +488,8 @@ export const ASSISTANT_T = {
     hintVfe1: "जल्दी चुकाने पर असल में कितना लगेगा? क्लिक करें।",
     hintVfe2: "क्या आप बिना शुल्क रद्द कर सकते हैं? मैं जाँचता हूँ।",
     hintVfe3: "क्या फिर भी रीफाइनेंस फायदेमंद है? पूछें।",
-    greeting: "नमस्ते, मैं Finn हूँ 👋 रियल एस्टेट के लिए आपका निजी AI सहायक। मैं आंकड़े, शब्द और नियम आसान भाषा में समझाता हूँ।",
+    greeting:
+      "नमस्ते, मैं Finn हूँ 👋 रियल एस्टेट के लिए आपका निजी AI सहायक। मैं आंकड़े, शब्द और नियम आसान भाषा में समझाता हूँ।",
     landingIntro: "आपको ImmoFuchs तक क्या लाया? जो सबसे उपयुक्त हो उसे चुनें:",
     landingChipRendite: "मैं संपत्ति खरीदना चाहता/चाहती हूँ",
     landingChipFinanzierung: "मुझे फाइनेंसिंग चाहिए",
@@ -470,17 +498,24 @@ export const ASSISTANT_T = {
     landingChipSteuer: "मैं §6 ट्रिक से टैक्स बचाना चाहता/चाहती हूं",
     landingChipVfe: "मैं अपना ऋण जल्दी चुकाना चाहता/चाहती हूं",
     landingMoreTopics: "अन्य विषय",
-    landingAdviceRendite: "रिटर्न कैलकुलेटर तुरंत दिखाता है कि निवेश फायदेमंद है या नहीं — रिटर्न, कैश फ़्लो और जोखिम एक नज़र में।",
-    landingAdviceFinanzierung: "वित्तपोषण कैलकुलेटर आपकी मासिक किस्त और यह दिखाता है कि क्या आप इसे वहन कर सकते हैं।",
-    landingAdviceMiete: "किराया वृद्धि कैलकुलेटर दिखाता है कि आप कब और कितना कानूनी रूप से किराया बढ़ा सकते हैं।",
-    landingAdviceSanierung: "नवीनीकरण कैलकुलेटर लागत, सब्सिडी और नवीनीकरण कितनी जल्दी अपनी लागत वसूल करता है, दिखाता है।",
-    landingAdviceSteuer: "§6 ट्रिक कैलकुलेटर दिखाता है कि यह टैक्स तरीका आपके लिए फायदेमंद है या नहीं।",
-    landingAdviceVfe: "समय-पूर्व भुगतान शुल्क कैलकुलेटर बिल्कुल दिखाता है कि जल्दी भुगतान करने पर कितना खर्च आएगा।",
+    landingAdviceRendite:
+      "रिटर्न कैलकुलेटर तुरंत दिखाता है कि निवेश फायदेमंद है या नहीं — रिटर्न, कैश फ़्लो और जोखिम एक नज़र में।",
+    landingAdviceFinanzierung:
+      "वित्तपोषण कैलकुलेटर आपकी मासिक किस्त और यह दिखाता है कि क्या आप इसे वहन कर सकते हैं।",
+    landingAdviceMiete:
+      "किराया वृद्धि कैलकुलेटर दिखाता है कि आप कब और कितना कानूनी रूप से किराया बढ़ा सकते हैं।",
+    landingAdviceSanierung:
+      "नवीनीकरण कैलकुलेटर लागत, सब्सिडी और नवीनीकरण कितनी जल्दी अपनी लागत वसूल करता है, दिखाता है।",
+    landingAdviceSteuer:
+      "§6 ट्रिक कैलकुलेटर दिखाता है कि यह टैक्स तरीका आपके लिए फायदेमंद है या नहीं।",
+    landingAdviceVfe:
+      "समय-पूर्व भुगतान शुल्क कैलकुलेटर बिल्कुल दिखाता है कि जल्दी भुगतान करने पर कितना खर्च आएगा।",
     landingGoToCalc: "कैलकुलेटर पर जाएं",
     landingBack: "वापस",
     suggestQuestions: "प्रश्न सुझाएं",
     aiNoticeTitle: "AI सूचना",
-    aiNoticeBody: "उत्तर आर्टिफिशियल इंटेलिजेंस की मदद से बन सकते हैं और इसलिए उनमें गलतियां हो सकती हैं। कृपया महत्वपूर्ण जानकारी दोबारा जांच लें।",
+    aiNoticeBody:
+      "उत्तर आर्टिफिशियल इंटेलिजेंस की मदद से बन सकते हैं और इसलिए उनमें गलतियां हो सकती हैं। कृपया महत्वपूर्ण जानकारी दोबारा जांच लें।",
     aiNoticeOk: "समझ गया",
     aiNoticeAria: "AI सूचना दिखाएं",
     restartAria: "नई चैट शुरू करें",

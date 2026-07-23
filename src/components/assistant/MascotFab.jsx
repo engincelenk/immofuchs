@@ -4,7 +4,15 @@ import { FinnBubble } from "./FinnBubble.jsx";
 // Rein darstellend: die Blasen-Sequenz wird eine Ebene hoeher gehalten
 // (AssistantWidget/LandingMascot), weil dieser Baustein beim Oeffnen des
 // Chats ausgehaengt wird und der Ablauf sonst jedes Mal neu anlaufen wuerde.
-export function MascotFab({ onOpen, hidden, label, bubbleText, onDismissBubble, t, bottom = "calc(76px + env(safe-area-inset-bottom))" }) {
+export function MascotFab({
+  onOpen,
+  hidden,
+  label,
+  bubbleText,
+  onDismissBubble,
+  t,
+  bottom = "calc(76px + env(safe-area-inset-bottom))",
+}) {
   // Letzten Text behalten, damit die Blase beim Ausblenden nicht schlagartig
   // leer wird - die Ausblend-Animation braucht ihren Inhalt noch.
   const letzterText = useRef("");
@@ -58,7 +66,12 @@ export function MascotFab({ onOpen, hidden, label, bubbleText, onDismissBubble, 
             alt=""
             aria-hidden="true"
             className="if-mascot-fab-img"
-            style={{ width: 80, height: 88, objectFit: "contain", filter: "drop-shadow(0 5px 10px rgba(20,20,20,.28))" }}
+            style={{
+              width: 80,
+              height: 88,
+              objectFit: "contain",
+              filter: "drop-shadow(0 5px 10px rgba(20,20,20,.28))",
+            }}
           />
           <span className="if-mascot-fx" aria-hidden="true">
             <span className="if-mascot-band" />

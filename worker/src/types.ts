@@ -1,10 +1,5 @@
 export type Rechner =
-  | "renditerechner"
-  | "finanzierung"
-  | "miete"
-  | "sanierung"
-  | "steuertrick"
-  | "vorfaelligkeit";
+  "renditerechner" | "finanzierung" | "miete" | "sanierung" | "steuertrick" | "vorfaelligkeit";
 
 export type Lang = "de" | "en" | "tr" | "zh" | "hi";
 

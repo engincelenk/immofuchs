@@ -47,7 +47,9 @@ export function useFinnBubble(texte, active = true) {
     const timers = [];
     startZeitpunkte(anzahl).forEach((start, i) => {
       timers.push(setTimeout(() => setIndex(i), start));
-      timers.push(setTimeout(() => setIndex((cur) => (cur === i ? -1 : cur)), start + STANDZEIT_MS));
+      timers.push(
+        setTimeout(() => setIndex((cur) => (cur === i ? -1 : cur)), start + STANDZEIT_MS),
+      );
     });
     return () => timers.forEach(clearTimeout);
   }, [anzahl]);
@@ -62,7 +64,6 @@ export function useFinnBubble(texte, active = true) {
   const text = useMemo(() => {
     if (!active || index < 0 || abgebrochen.current.has(index)) return null;
     return texte[index] ?? null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, index, texte]);
 
   return [text, dismiss];

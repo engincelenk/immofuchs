@@ -15,7 +15,15 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 // `signale` speist die Sprechblase: {tier, cashflow, risiko} - alles optional.
 // Rechner, die nichts uebergeben, bekommen automatisch den generischen
 // Anstupser nach 30s Untaetigkeit (siehe finnHints.js).
-export function AssistantWidget({ rechner, kontext, contextLabel, suggested, lang, disabled, signale }) {
+export function AssistantWidget({
+  rechner,
+  kontext,
+  contextLabel,
+  suggested,
+  lang,
+  disabled,
+  signale,
+}) {
   const t = ASSISTANT_T[lang] || ASSISTANT_T.de;
   const [sheetOpen, setSheetOpen] = useState(false);
   const hints = buildFinnHints(rechner, signale, t);

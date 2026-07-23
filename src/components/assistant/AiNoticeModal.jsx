@@ -31,10 +31,15 @@ export function AiNoticeModal({ t, onClose }) {
           textAlign: "center",
         }}
       >
-        <h2 id="if-asst-ai-notice-title" style={{ fontSize: 16, fontWeight: 800, color: "var(--ct)", margin: "0 0 10px" }}>
+        <h2
+          id="if-asst-ai-notice-title"
+          style={{ fontSize: 16, fontWeight: 800, color: "var(--ct)", margin: "0 0 10px" }}
+        >
           {t.aiNoticeTitle}
         </h2>
-        <p style={{ fontSize: 13, lineHeight: 1.55, color: "var(--cl)", margin: "0 0 18px" }}>{t.aiNoticeBody}</p>
+        <p style={{ fontSize: 13, lineHeight: 1.55, color: "var(--cl)", margin: "0 0 18px" }}>
+          {t.aiNoticeBody}
+        </p>
         <button
           onClick={onClose}
           style={{
@@ -59,6 +64,6 @@ export function AiNoticeModal({ t, onClose }) {
         @media (prefers-reduced-motion: reduce){.if-asst-ai-notice-card{animation:none}}
       `}</style>
     </div>,
-    document.body
+    document.body,
   );
 }

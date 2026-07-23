@@ -17,9 +17,7 @@ const MAX_VERLAUF_TEXT_LEN = 1000; // grosszuegiger als frage, deckt Assistant-A
 const MAX_VERGLEICHSOBJEKTE = 5;
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9-]{8,64}$/;
 
-type ValidationResult =
-  | { ok: true; data: AssistantRequest }
-  | { ok: false; error: string };
+type ValidationResult = { ok: true; data: AssistantRequest } | { ok: false; error: string };
 
 export function validateRequest(body: unknown): ValidationResult {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
@@ -31,7 +29,11 @@ export function validateRequest(body: unknown): ValidationResult {
     return { ok: false, error: "invalid_rechner" };
   }
 
-  if (typeof b.frage !== "string" || b.frage.trim().length === 0 || b.frage.length > MAX_FRAGE_LEN) {
+  if (
+    typeof b.frage !== "string" ||
+    b.frage.trim().length === 0 ||
+    b.frage.length > MAX_FRAGE_LEN
+  ) {
     return { ok: false, error: "invalid_frage" };
   }
 
@@ -71,7 +73,9 @@ export function validateRequest(body: unknown): ValidationResult {
   };
 }
 
-function validateVerlauf(value: unknown): { ok: true; data: VerlaufEintrag[] } | { ok: false; error: string } {
+function validateVerlauf(
+  value: unknown,
+): { ok: true; data: VerlaufEintrag[] } | { ok: false; error: string } {
   if (value === undefined) return { ok: true, data: [] };
   if (!Array.isArray(value) || value.length > MAX_VERLAUF_EINTRAEGE) {
     return { ok: false, error: "invalid_verlauf" };
@@ -80,7 +84,8 @@ function validateVerlauf(value: unknown): { ok: true; data: VerlaufEintrag[] } |
   for (const entry of value) {
     if (typeof entry !== "object" || entry === null) return { ok: false, error: "invalid_verlauf" };
     const e = entry as Record<string, unknown>;
-    if (e.rolle !== "user" && e.rolle !== "assistant") return { ok: false, error: "invalid_verlauf" };
+    if (e.rolle !== "user" && e.rolle !== "assistant")
+      return { ok: false, error: "invalid_verlauf" };
     if (typeof e.text !== "string" || e.text.length === 0 || e.text.length > MAX_VERLAUF_TEXT_LEN) {
       return { ok: false, error: "invalid_verlauf" };
     }
@@ -90,14 +95,15 @@ function validateVerlauf(value: unknown): { ok: true; data: VerlaufEintrag[] } |
 }
 
 function validateVergleichsObjekte(
-  value: unknown
+  value: unknown,
 ): { ok: true; data: VergleichsObjekt[] } | { ok: false; error: string } {
   if (!Array.isArray(value) || value.length > MAX_VERGLEICHSOBJEKTE) {
     return { ok: false, error: "invalid_vergleichsobjekte" };
   }
   const out: VergleichsObjekt[] = [];
   for (const entry of value) {
-    if (typeof entry !== "object" || entry === null) return { ok: false, error: "invalid_vergleichsobjekte" };
+    if (typeof entry !== "object" || entry === null)
+      return { ok: false, error: "invalid_vergleichsobjekte" };
     const e = entry as Record<string, unknown>;
     if (typeof e.name !== "string" || e.name.length === 0 || e.name.length > 120) {
       return { ok: false, error: "invalid_vergleichsobjekte" };

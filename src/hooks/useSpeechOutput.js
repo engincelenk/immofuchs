@@ -21,7 +21,7 @@ export function useSpeechOutput(lang) {
         window.speechSynthesis.speak(utter);
       } catch {}
     },
-    [supported, enabled, lang]
+    [supported, enabled, lang],
   );
 
   const toggle = useCallback(() => {
