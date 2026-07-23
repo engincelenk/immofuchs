@@ -22,6 +22,21 @@ Hinweis: das prod-Frontend selbst bleibt vorerst "ohne KI-Assistent" (main),
 bis das DSGVO/AVV-Go-Live-Gate bewusst freigegeben ist.
 
 
+## 2026-07-23 (1.55.55)
+
+### Finn — Beratungs-Hinweis nur noch einmal pro Chat
+
+Finn hängte den „keine offizielle Beratung"-Hinweis an jede Antwort — das nervte.
+Jetzt steht er genau einmal, ganz oben in der Begrüßung.
+
+- **Frontend:** Der `greeting`-Text in `src/i18n/assistant.js` bekommt den
+  Hinweissatz (alle 5 Sprachen). Er rendert einmalig als erste Bubble in beiden
+  Chat-Ansichten (`AssistantSheet`, `LandingMascot`).
+- **Prompt:** Regel 8 in `worker/src/systemPrompt.ts` weist Finn jetzt an,
+  KEINEN Beratungs-Hinweis mehr anzuhängen (Beispiele entsprechend angepasst).
+  Live gegen den Dev-Worker verifiziert.
+
+
 ## 2026-07-23 (1.55.54)
 
 ### Finn-Regelwerk neu gefasst — Experte statt Ausweich-Assistent
