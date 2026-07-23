@@ -1,3 +1,19 @@
+## 2026-07-23 (1.55.52)
+
+### KI-Assistent "Finn" auf der Landingpage angekündigt
+
+- Finn (schwebendes Chat-Icon) war bisher auf der Landingpage nirgends
+  erwähnt - nur wer zufällig draufklickte, entdeckte ihn. Zwei Bausteine
+  ergänzt, beide nutzen bestehende Design-Tokens (`--ca`, `--ca-bg`,
+  `--ca-bd`), keine neuen Farben:
+  - **5. USP-Karte** im Grid "Was macht Immofuchs besonders" mit
+    "Neu"-Badge, Text erklärt was Finn kann.
+  - **Trust-Badge im Hero** als eigenständige Orange-Pille neben den drei
+    grünen Vertrauens-Haken - bewusst visuell abgesetzt, da es sich um ein
+    Feature und keinen reinen Vertrauensfakt handelt.
+  - Alle 5 Sprachen (DE, EN, TR, ZH, HI) ergänzt: `uspAiH`, `uspAiP`,
+    `trustAi`, `badgeNeu`.
+
 ## 2026-07-22 (1.55.51)
 
 ### Sprechblase in warmem Hinweiston + Stromfluss als kurzer Impuls

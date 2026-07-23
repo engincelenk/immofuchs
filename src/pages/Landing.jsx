@@ -85,6 +85,10 @@ export function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLa
               <span style={{width:18,height:18,borderRadius:"50%",background:"#22c55e",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{tr.ic}</span>
               <span style={{fontWeight:500,color:"var(--cl)"}}>{tr.t}</span>
             </div>)}
+            <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--ca-bg)",border:"1px solid var(--ca-bd)",borderRadius:20,padding:"2px 10px 2px 2px"}}>
+              <span style={{width:18,height:18,borderRadius:"50%",background:"var(--ca)",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,flexShrink:0}}>💬</span>
+              <span style={{fontWeight:600,color:"var(--ca)"}}>{l.trustAi}</span>
+            </div>
           </div>
         </div>
 
@@ -255,9 +259,11 @@ export function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLa
             {ic:"⚖️",h:l.usp2H,p:l.usp2P},
             {ic:"🔒",h:l.usp5H,p:l.usp5P},
             {ic:"🌐",h:l.usp6H,p:l.usp6P},
-            {ic:"💻",h:l.usp4H,p:l.usp4P}
+            {ic:"💻",h:l.usp4H,p:l.usp4P},
+            {ic:"💬",h:l.uspAiH,p:l.uspAiP,neu:true}
           ].map((u,i)=><div key={i}>
             <div style={{fontSize:28,marginBottom:12}}>{u.ic}</div>
+            {u.neu&&<div style={{fontSize:9,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:"var(--ca)",marginBottom:4}}>{l.badgeNeu}</div>}
             <h3 style={{fontSize:15,fontWeight:700,color:"var(--ct)",margin:"0 0 6px"}}>{u.h}</h3>
             <p style={{fontSize:13,color:"var(--ch)",lineHeight:1.6,margin:0}}>{u.p}</p>
           </div>)}
