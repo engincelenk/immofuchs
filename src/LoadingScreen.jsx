@@ -1,9 +1,18 @@
 import { useEffect, useRef } from "react";
 import { MARKET_RATES, MIET_P } from "./data.js";
 
-const avg = MARKET_RATES.avg.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const top = MARKET_RATES.top.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const mietP = MIET_P.normal.pA.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const avg = MARKET_RATES.avg.toLocaleString("de-DE", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const top = MARKET_RATES.top.toLocaleString("de-DE", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const mietP = MIET_P.normal.pA.toLocaleString("de-DE", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
 
 const ITEMS = {
   haupt: [
@@ -67,7 +76,7 @@ export default function LoadingScreen({ tab, onDone }) {
     let pct = 0;
     const interval = 12;
     function tick() {
-      const phase = PHASES.find(p => pct < p.until) || PHASES[PHASES.length - 1];
+      const phase = PHASES.find((p) => pct < p.until) || PHASES[PHASES.length - 1];
       pct = Math.min(100, pct + phase.speed);
       if (fillEl) fillEl.style.width = pct + "%";
       if (pct < 100) {
@@ -103,7 +112,7 @@ export default function LoadingScreen({ tab, onDone }) {
     const items = ITEMS[tab] || ITEMS.haupt;
     container.innerHTML = "";
     const fills = [];
-    items.forEach(it => {
+    items.forEach((it) => {
       const div = document.createElement("div");
       div.className = "if-ls-item";
       div.innerHTML = `
@@ -118,7 +127,10 @@ export default function LoadingScreen({ tab, onDone }) {
     });
     const els = container.querySelectorAll(".if-ls-item");
     t(() => doItem(Array.from(els), fills, 0), 300);
-    return () => { timers.current.forEach(clearTimeout); timers.current = []; };
+    return () => {
+      timers.current.forEach(clearTimeout);
+      timers.current = [];
+    };
   }, [tab]);
 
   return (

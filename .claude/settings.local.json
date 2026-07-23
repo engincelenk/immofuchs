@@ -1,4 +1,10 @@
 {
+  "autoMode": {
+  "allow": [
+    "$defaults",
+    "Bash(npm run deploy)"
+  ]
+},
   "permissions": {
     "allow": [
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\engin\\\\OneDrive\\\\Dokumente\\\\Claude\\\\Projects\\\\Immofuchs.info\" -Recurse | Where-Object { $_.FullName -notmatch 'node_modules' })",
@@ -13,7 +19,9 @@
       "Bash(awk '{print NR\": \"substr\\($0,1,60\\)}' src/data/plzData.js)",
       "Bash(npm run *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)"
     ]
   }
 }
