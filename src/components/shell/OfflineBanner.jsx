@@ -12,7 +12,7 @@ export function OfflineBanner({ bottom }) {
           year: "numeric",
         });
       }
-    } catch (e) {}
+    } catch {}
     return null;
   }, []);
   return (

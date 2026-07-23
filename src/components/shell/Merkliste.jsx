@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
-import { fmt, LANG_LOCALE } from "../../utils/helpers.js";
+import { LANG_LOCALE } from "../../utils/helpers.js";
 import { FinnBubble } from "../assistant/FinnBubble.jsx";
 import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
@@ -141,7 +141,6 @@ export function SaveModal({ onClose, onSave, defaultName, lang }) {
 export function SaveBtn({ tab }) {
   const { d, saveObj, lang } = useApp();
   const t = T[lang] || T.de;
-  const locale = LANG_LOCALE[lang] || "de-DE";
   const [open, setOpen] = useState(false);
   const hasData = d.kaufpreis || d.vergleichsmiete;
   if (!hasData) return null;

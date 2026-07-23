@@ -226,7 +226,7 @@ export default function App() {
             return;
           }
         }
-      } catch (e) {
+      } catch {
         /* defekter/geblockter localStorage-Cache → einfach frisch laden */
       }
 
@@ -252,7 +252,7 @@ export default function App() {
       setZinsen(config);
       try {
         localStorage.setItem("if_zinsen_v3", JSON.stringify({ ts: Date.now(), data: config }));
-      } catch (e) {
+      } catch {
         /* Cache-Schreiben optional (z.B. Private-Mode/Quota) → nicht kritisch */
       }
     }

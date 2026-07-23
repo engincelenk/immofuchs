@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useContext } from "react";
 import { Ctx } from "../../context/AppContext.jsx";
 import { STEUER_T } from "../../i18n/steuerTrick.js";
 import { T } from "../../i18n/translations.js";
-import { fmt } from "../../utils/helpers.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";

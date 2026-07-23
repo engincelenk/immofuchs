@@ -13,16 +13,6 @@ export function RBar({ score, factors }) {
   // Color zones: 0-24 green, 25-49 yellow, 50-74 red, 75-100 dark red
   const col = score < 25 ? "#22c55e" : score < 50 ? "#f59e0b" : score < 75 ? "#ef4444" : "#b91c1c";
   const lbl = score < 25 ? t.niedrig : score < 50 ? t.mittel : t.hoch;
-  const bgGrad =
-    score < 25 ? "#22c55e" : score < 50 ? "#f59e0b" : score < 75 ? "#ef4444" : "#b91c1c";
-
-  // SVG semicircle gauge
-  const R = 58,
-    cx = 70,
-    cy = 68,
-    strokeW = 14;
-  const circumference = Math.PI * R; // half circle arc length
-  const dashOffset = animated ? circumference * (1 - Math.min(score, 100) / 100) : circumference;
 
   // Factor code → {icon, titleKey, descKey}
   const FACTOR_MAP = {

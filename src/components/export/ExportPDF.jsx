@@ -60,7 +60,7 @@ export function ExportPDF({ title }) {
         });
         logoHtml = `<div style="display:flex;align-items:center;gap:12px"><img src="${b64}" style="height:75px;width:75px;display:block;object-fit:contain">${wordmark}</div>`;
       }
-    } catch (e) {}
+    } catch {}
     const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Immofuchs - ${title}</title>
 <style>@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:#fff;color:#1a1a1a;padding:30px;max-width:800px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}

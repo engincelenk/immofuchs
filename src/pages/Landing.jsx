@@ -28,9 +28,7 @@ const navLinkMobile = {
 
 export function Landing({ onStart, zinsen, openDatenschutz, openImpressum, lang, setLang }) {
   const l = TL[lang] || TL.de;
-  const zD = zinsen && zinsen.datum ? zinsen.datum : null;
   const zB = zinsen?.bundesanleihe_10j;
-  const [tipOpen, setTipOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
 
   const scrollTo = (id) => {

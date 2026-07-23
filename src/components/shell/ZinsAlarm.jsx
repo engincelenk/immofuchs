@@ -63,7 +63,7 @@ export function ZinsAlarm({ zinsen, lang }) {
           .replace("{avg}", avg)
           .replace("{threshold}", th),
       });
-    } catch (e) {}
+    } catch {}
   }
 
   async function handleToggle() {

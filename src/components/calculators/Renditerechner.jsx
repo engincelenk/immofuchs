@@ -12,7 +12,7 @@ import { InvestmentCheckRadar } from "../charts/InvestmentCheckRadar.jsx";
 import { YearTable } from "../tables/YearTable.jsx";
 import { Detail } from "../tables/Detail.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
-import { SelbsttraegerCheck, BreakEvenCards } from "./SelbsttraegerCheck.jsx";
+import { BreakEvenCards } from "./SelbsttraegerCheck.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
@@ -21,7 +21,7 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 
 export default function Haupt() {
-  const { d, set, t, zinsen, tip, setTabExt, lang } = useApp();
+  const { d, set, t, tip, setTabExt, lang } = useApp();
   const [view, setView] = useState("input");
   const [secAllOpen, setSecAllOpen] = useState(false);
   const [secAllKey, setSecAllKey] = useState(0);

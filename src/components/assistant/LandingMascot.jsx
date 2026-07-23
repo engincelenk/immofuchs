@@ -115,7 +115,6 @@ export function LandingMascot({ onStart, lang }) {
       document.body.style.overflow = prevOverflow;
       document.removeEventListener("keydown", onKey);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isDesktop]);
 
   const pickRoute = (r) => {

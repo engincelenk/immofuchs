@@ -1,5 +1,5 @@
 import { useApp } from "../../context/AppContext.jsx";
-import { fmtE, fmtP, tpl } from "../../utils/helpers.js";
+import { fmtE, fmtP } from "../../utils/helpers.js";
 
 export function SelbsttraegerCheck({ R }) {
   const { t } = useApp();
@@ -18,9 +18,6 @@ export function SelbsttraegerCheck({ R }) {
       : ((R.yearRows || []).find((r) => (r.cfOhneSt ?? r.cf - r.steuer) >= 0)?.j ?? null);
 
   const alreadyOhne = R.cf2OhneSt >= 0;
-  const alreadyMit = !alreadyOhne && R.cf2MitSt >= 0;
-  const smallGap = !alreadyOhne && pctNeed <= 12;
-  const hasBeqJ = !alreadyOhne && beqJ !== null;
 
   // Verdikt rein auf Basis Cashflow OHNE Steuervorteil — das ist die ehrliche Antwort.
   const isJa = alreadyOhne;

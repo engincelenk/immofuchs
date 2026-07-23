@@ -26,7 +26,6 @@ export function F({
   value,
   onChange,
   type = "number",
-  step,
   readOnly,
   hint,
   tip,

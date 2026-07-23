@@ -104,8 +104,7 @@ export function Vorfaelligkeit() {
       totalVerwaltung = 0;
     const rows = [];
     let yrKey = ablT.getFullYear();
-    let yrRs = rsKuend,
-      yrTilg = 0,
+    let yrTilg = 0,
       yrZinsV = 0,
       yrZinsWA = 0,
       yrZinsverlust = 0,

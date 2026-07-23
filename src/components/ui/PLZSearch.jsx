@@ -5,7 +5,7 @@ import { BL_N } from "../../data.js";
 import { F, Row } from "./atoms.jsx";
 
 export function PLZSearch({ showKapp = true } = {}) {
-  const { d, set, t, tip } = useApp();
+  const { d, set, t } = useApp();
   const [ac, setAC] = useState([]);
   const [show, setShow] = useState(false);
   const ref = useRef();
