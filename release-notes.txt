@@ -1,3 +1,29 @@
+## 2026-07-23 (1.55.54)
+
+### Finn-Regelwerk neu gefasst — Experte statt Ausweich-Assistent
+
+Finn wich bei einfachen Wissens-/Definitionsfragen aus („Bitte wende dich an
+einen Steuerberater…"), weil der System-Prompt jedes steuer-/rechtsnahe Thema
+pauschal wegverwies und nur die Kontext-Zahlen erklären durfte. Der Prompt in
+`worker/src/systemPrompt.ts` wurde nach `docs/finn-regeln-2026-07-23.md`
+neu gefasst:
+
+- **Kopfzeile:** Finn ist jetzt ausgewiesener Experte für Immobilien,
+  Finanzierung, Sanierung und Immobilien-Steuerrecht (vorher „erklärt
+  AUSSCHLIESSLICH die mitgelieferten Rechenwerte").
+- **Regel 2 (neu):** Erklärt jeden Fachbegriff und jedes Eingabefeld der
+  Rechner verständlich, ohne Vorwissen vorauszusetzen.
+- **Regel 8 (neu):** Berät inhaltlich wie Steuerberater/Anwalt (keine
+  Themen-Tabus, inkl. Rechenwegen) — immer mit kurzem Hinweis, dass dies keine
+  offizielle/verbindliche Beratung ist. Erst beraten, dann der Hinweis.
+- **Regel 9 (neu):** Definiert den Fach-Themenraum und verpflichtet Finn, sein
+  Wissen zu zeigen statt auszuweichen.
+- **Regel 1 (präzisiert):** Verbietet nur erfundene Zahlen zum konkreten Objekt
+  des Nutzers; allgemeine Rechenwege und Beispielwerte sind erlaubt.
+- Beispiel-Liste um „nicht umlagefähige Kosten" und „Steuersatz berechnen"
+  erweitert. Output-Filter und Design-Tokens unverändert.
+
+
 ## 2026-07-23 (1.55.53)
 
 ### Clean-Code-Refactoring nach Code-Review (docs/code-review-2026-07-23.md)
