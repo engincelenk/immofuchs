@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FinnBubble } from "./FinnBubble.jsx";
 
 // Rein darstellend: die Blasen-Sequenz wird eine Ebene hoeher gehalten
@@ -19,6 +19,18 @@ export function MascotFab({
   useEffect(() => {
     if (bubbleText) letzterText.current = bubbleText;
   }, [bubbleText]);
+
+  // Schatten + Glueh-Ebene erst zeigen, wenn das WebP wirklich dekodiert ist.
+  // Vorher hat iOS Safari im ~72ms-Decode-Fenster den drop-shadow und die
+  // mix-blend-mode/-webkit-mask-Ebene mangels Silhouetten-Alpha auf die volle
+  // 80x88-Box gemalt -> graue Rechtecke um Finn herum, bei jedem Rechner-Mount
+  // neu (Bug-Report 2026-07-23). `complete` deckt den Cache-Treffer beim
+  // Re-Mount ab, wo `onLoad` u.U. nicht mehr feuert.
+  const imgRef = useRef(null);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true);
+  }, []);
 
   if (hidden) return null;
 
@@ -62,20 +74,26 @@ export function MascotFab({
             die maskierte Effektebene beim Pulsieren deckungsgleich. */}
         <span className="if-mascot-motion">
           <img
+            ref={imgRef}
             src="/fuchs-mascot.webp"
             alt=""
             aria-hidden="true"
             className="if-mascot-fab-img"
+            decoding="async"
+            fetchpriority="high"
+            onLoad={() => setLoaded(true)}
             style={{
               width: 80,
               height: 88,
               objectFit: "contain",
-              filter: "drop-shadow(0 5px 10px rgba(20,20,20,.28))",
+              filter: loaded ? "drop-shadow(0 5px 10px rgba(20,20,20,.28))" : "none",
             }}
           />
-          <span className="if-mascot-fx" aria-hidden="true">
-            <span className="if-mascot-band" />
-          </span>
+          {loaded && (
+            <span className="if-mascot-fx" aria-hidden="true">
+              <span className="if-mascot-band" />
+            </span>
+          )}
         </span>
       </button>
       {/* ACHTUNG: in diesem Block keine Backticks verwenden - sie beenden das

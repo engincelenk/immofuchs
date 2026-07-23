@@ -1,3 +1,23 @@
+## 2026-07-23 (1.55.56)
+
+### Finn-Maskottchen: graue Kästen beim Laden behoben
+
+Beim Laden der Seite/eines Rechners blitzten auf iOS graue Rechtecke um das
+Finn-Maskottchen (FAB unten rechts). Ursache: im ~72 ms-Decode-Fenster des
+WebP fehlte das Silhouetten-Alpha, sodass Safari den `drop-shadow` und die
+`mix-blend-mode`/`-webkit-mask`-Glühebene auf die volle 80×88-Box malte — und
+das bei jedem Rechner-Mount neu.
+
+Fix (`MascotFab.jsx` + `index.html`):
+- Schatten und Glühebene werden erst gezeigt, wenn das Bild dekodiert ist
+  (`onLoad` + `img.complete` für Cache-Treffer beim Re-Mount).
+- `decoding="async"` + `fetchpriority="high"` am Maskottchen-Bild.
+- `<link rel="preload" as="image">` für `fuchs-mascot.webp`, damit es vor dem
+  ersten FAB warm im Cache liegt.
+
+Look und Design-Tokens unverändert — nur *wann* Schatten/Glühen einsetzen.
+
+
 ## 2026-07-23 (1.55.55)
 
 ### Finn-Verdrahtung: qa + prod nutzen den Prod-Worker
