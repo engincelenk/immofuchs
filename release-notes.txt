@@ -1,3 +1,22 @@
+## 2026-07-23 (1.55.61)
+
+### Finn: grauer Schatten-Kasten endgültig weg (decode-Gating)
+
+Der graue Kasten hinter Finn kam zurück: beim Laden (paar Sekunden, dann weg)
+und nach dem Öffnen+Schließen des Chats. Ursache tiefer als gedacht: der
+vorige Fix schaltete Schatten/Glühen über onLoad/img.complete frei — beide
+bedeuten "geladen", NICHT "dekodiert". iOS Safari formt den drop-shadow aber
+aus dem dekodierten Alpha und malt ihn im Fenster davor als grauen
+Rechteck-Kasten.
+
+Finale Lösung (`MascotFab.jsx`): Schatten + Glüh-Ebene erst nach
+`img.decode()` (paint-fertig) zeigen, als Callback-Ref, damit es bei JEDEM
+(Re-)Mount neu läuft — der FAB wird beim Chat-Öffnen aus- und beim Schließen
+neu eingehängt. Zusätzlich `loaded`-Reset beim Ausblenden, damit auch das
+Schließen keinen Kasten mehr aufblitzen lässt. Alle Effekte (Puls, Schatten,
+Stromband) bleiben unverändert.
+
+
 ## 2026-07-23 (1.55.60)
 
 ### Finn: Lautsprecher/Vorlesen ausgeblendet
