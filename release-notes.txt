@@ -1,3 +1,27 @@
+## 2026-07-23 (1.55.55)
+
+### Finn-Verdrahtung: qa + prod nutzen den Prod-Worker
+
+Vorbereitung, um den KI-Assistenten Finn nach qa (und spaeter prod) zu bringen.
+Die Verdrahtung Frontend -> Finn-Worker ist jetzt pro Umgebung festgelegt:
+
+- **dev.immofuchs.info** -> Dev-Worker `immofuchs-assistant-dev` (unveraendert)
+- **qa.immofuchs.info** -> Prod-Worker `immofuchs-assistant` (neu)
+- **immofuchs.info** -> Prod-Worker `immofuchs-assistant` (vorverdrahtet, inert
+  bis das prod-Frontend bewusst live geht)
+
+Konkret:
+- `worker/wrangler.toml`: `https://qa.immofuchs.info` zu `ALLOWED_ORIGIN` des
+  Prod-Workers ergaenzt (sonst CORS-Block).
+- `.github/workflows/deploy-qa.yml` + `deploy-prod.yml`: `VITE_ASSISTANT_URL`
+  auf den Prod-Worker gesetzt (ohne das baut Vite "undefined" ein).
+- Prod-Worker per `wrangler deploy` aktualisiert (neuer Finn-Prompt aus 1.55.54
+  + qa-Origin jetzt live auf dem Worker).
+
+Hinweis: das prod-Frontend selbst bleibt vorerst "ohne KI-Assistent" (main),
+bis das DSGVO/AVV-Go-Live-Gate bewusst freigegeben ist.
+
+
 ## 2026-07-23 (1.55.54)
 
 ### Finn-Regelwerk neu gefasst — Experte statt Ausweich-Assistent

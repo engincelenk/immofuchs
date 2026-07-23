@@ -16,7 +16,7 @@ ASSISTANT_ENABLED = "true"
 # Punkt). Das allein schaltet noch nichts "live" - dafuer muss das Frontend
 # tatsaechlich dorthin deployt werden, siehe Go-Live-Gate im Sprint-Plan
 # (DSGVO/AVV) fuer echte Nutzerdaten.
-ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info,https://immofuchs.info"
+ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info,https://qa.immofuchs.info,https://immofuchs.info"
 DAILY_REQUEST_LIMIT = "20"
 # Zweite/dritte Schranke gegen sessionId-Rotation (siehe docs/code-review-2026-07-23.md).
 # Ueber das Dashboard ohne Redeploy anpassbar, wie ASSISTANT_ENABLED.

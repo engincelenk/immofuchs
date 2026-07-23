@@ -21,6 +21,12 @@ jobs:
           cache: "npm"
 
       - name: 📦 Abhängigkeiten installieren & Projekt bauen
+        env:
+          # Oeffentliche Worker-URL (kein Geheimnis, landet ohnehin im Client-
+          # Bundle) - ohne das baut Vite "undefined" ein. prod nutzt denselben
+          # Prod-Worker immofuchs-assistant wie qa - siehe worker/wrangler.toml,
+          # immofuchs.info ist in ALLOWED_ORIGIN.
+          VITE_ASSISTANT_URL: https://immofuchs-assistant.engincelenk.workers.dev/api/assistant
         run: |
           npm ci
           npm run build
