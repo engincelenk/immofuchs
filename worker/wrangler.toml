@@ -18,6 +18,10 @@ ASSISTANT_ENABLED = "true"
 # (DSGVO/AVV) fuer echte Nutzerdaten.
 ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info,https://immofuchs.info"
 DAILY_REQUEST_LIMIT = "20"
+# Zweite/dritte Schranke gegen sessionId-Rotation (siehe docs/code-review-2026-07-23.md).
+# Ueber das Dashboard ohne Redeploy anpassbar, wie ASSISTANT_ENABLED.
+IP_DAILY_LIMIT = "60"
+GLOBAL_DAILY_LIMIT = "2000"
 
 # Workers AI Binding (Llama 3.3, primaerer Pfad fuer DE/EN) - kein API-Key noetig,
 # nur ueber das Cloudflare-Konto freigeschaltet.
@@ -55,6 +59,8 @@ name = "immofuchs-assistant-dev"
 ASSISTANT_ENABLED = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info"
 DAILY_REQUEST_LIMIT = "20"
+IP_DAILY_LIMIT = "60"
+GLOBAL_DAILY_LIMIT = "2000"
 
 [env.dev.ai]
 binding = "AI"

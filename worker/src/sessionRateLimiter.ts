@@ -22,4 +22,17 @@ export class SessionRateLimiter extends DurableObject<Env> {
     await this.ctx.storage.put("state", state);
     return { allowed: true, remaining: dailyLimit - state.count };
   }
+
+  // Rueckbuchung eines zuvor gezaehlten Requests - genutzt, wenn ein Request
+  // zwar ein Kontingent belegt hat, danach aber scheitert (Modell-Fehler) oder
+  // eine andere Schranke ihn ablehnt. So kostet nur ein *erfolgreicher* Request
+  // wirklich Kontingent (siehe index.ts). Ueber die Tagesgrenze hinaus wird
+  // nichts abgezogen (neuer Tag/leerer Zaehler).
+  async decrement(): Promise<void> {
+    const today = new Date().toISOString().slice(0, 10);
+    const stored = await this.ctx.storage.get<{ count: number; day: string }>("state");
+    if (!stored || stored.day !== today) return;
+    stored.count = Math.max(0, stored.count - 1);
+    await this.ctx.storage.put("state", stored);
+  }
 }

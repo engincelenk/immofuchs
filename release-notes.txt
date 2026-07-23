@@ -1,3 +1,35 @@
+## 2026-07-23 (1.55.53)
+
+### Clean-Code-Refactoring nach Code-Review (docs/code-review-2026-07-23.md)
+
+Reines Aufräumen ohne Funktionsänderung. Der Renditerechner liefert exakt
+dieselben Zahlen wie zuvor (im Browser gegengeprüft: Brutto 4,11 % / Netto
+2,98 %, kein NaN) und alle neuen Tests sind grün.
+
+- **Rechenkern extrahiert & getestet:** Die ~65-zeilige `R=useMemo`-Berechnung
+  aus `Renditerechner.jsx` liegt jetzt als reine, benannte Funktion
+  `computeRendite(d, t)` in `src/utils/rendite.js` (Finanzmathematik von der
+  Darstellung getrennt, Ein-Buchstaben-Variablen durch sprechende Namen und
+  benannte Risiko-Schwellen ersetzt). Neu: `src/utils/rendite.test.js` mit
+  12 Vitest-Charakterisierungstests, die die Kennzahlen einfrieren.
+- **Mietprognose ausgelagert:** `buildMP` von `Miete.jsx` nach
+  `src/utils/mietprognose.js` — beide Rechner teilen sich jetzt dieselbe reine
+  Funktion, ohne dass ein Rechner das Komponenten-Modul des anderen importiert.
+- **Vitest eingeführt:** `npm test` / `npm run test:watch` (nur devDependency).
+- **Worker — Kostenschutz:** Zweite/dritte Rate-Limit-Schranke gegen
+  sessionId-Rotation: globales Tages-Cap (`GLOBAL_DAILY_LIMIT`, Default 2000) +
+  IP-Limit (`IP_DAILY_LIMIT`, Default 60) via `CF-Connecting-IP`, zusätzlich
+  zum bestehenden Session-Limit. Fehlgeschlagene Modell-Calls buchen alle drei
+  Zähler zurück (kosten kein Kontingent mehr). Doppelter Timeout im
+  `modelRouter` bereinigt (Gemini cancelt via AbortController selbst).
+- **Kleinteiliges:** totes `tf()` aus `helpers.js` entfernt; `App.jsx`
+  Startwerte als `createDefaults()`-Factory, doppelter „Zur Startseite"-Handler
+  und die `:root`-Design-Tokens dedupliziert; stille catch-Blöcke kommentiert;
+  grund-/gebAnteil-Kopplung in `setAnteil`-Handler ausgelagert.
+- **Doku:** Design-Tokens in `CLAUDE.md` an den Ist-Zustand angeglichen
+  (Accent #E8600A, Font 'DM Sans' — die zuvor dokumentierten Werte waren
+  veraltet). Nicht umgesetzt: keine Änderung an den gerenderten Farben/Fonts.
+
 ## 2026-07-23 (1.55.52)
 
 ### KI-Assistent "Finn" auf der Landingpage angekündigt

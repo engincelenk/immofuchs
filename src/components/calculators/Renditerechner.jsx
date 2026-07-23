@@ -1,10 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { GREST, BL_N, BL_O } from "../../data.js";
-import { isK15 } from "../../data/plzData.js";
+import { BL_N, BL_O } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
-import { fmt, fmtE, fmtP, addY, tpl } from "../../utils/helpers.js";
+import { fmt, fmtE, fmtP, tpl } from "../../utils/helpers.js";
 import { rate, vrd } from "../../utils/bands.js";
+import { computeRendite } from "../../utils/rendite.js";
 import { F, Sel, Row, Sec, Ins, VT, AmpelKPI, NeutralKPI } from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
 import { RBar } from "../charts/RBar.jsx";
@@ -15,7 +15,6 @@ import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SelbsttraegerCheck, BreakEvenCards } from "./SelbsttraegerCheck.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
 import { Legal } from "../ui/LangSel.jsx";
-import { buildMP } from "./Miete.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
@@ -23,6 +22,9 @@ import { buildAssistantContext } from "../../utils/assistantContext.js";
 
 export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp();const[view,setView]=useState("input");const[secAllOpen,setSecAllOpen]=useState(false);const[secAllKey,setSecAllKey]=useState(0);
   const lastEditedRef=useRef(null);
+  // Grund- und Gebaeudeanteil ergaenzen sich immer auf 100% - beim Editieren
+  // des einen wird der andere gegengerechnet.
+  const setAnteil=(feld,gegenfeld,v)=>{set(feld,v);set(gegenfeld,100-(+v||0));};
   // mieteQm: use typed value; if empty string, don't fall back (allow clearing)
   const mieteQm=d.mieteQm!==""?+d.mieteQm||0:0;
   useEffect(()=>{
@@ -41,71 +43,7 @@ export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp(
     }
     lastEditedRef.current=null;
   },[d.kaltmiete]);
-  const R=useMemo(()=>{
-    const kp=+d.kaufpreis||0,ga=+d.garage||0,gKP=kp+ga,qm=+d.flaeche||1,mi=+d.kaltmiete||0,ek=+d.eigenkapital||0;
-    const zP=+d.zinssatz||0,tP=+d.tilgung||0,nP=+d.notar||0,mP=+d.makler||0;
-    const gP=GREST[d.bundesland]||0,nu=+d.nichtUml||0,lM=+d.leerstand||0;
-    const sP=+d.steuersatz||0,aP=+d.afaSatz||0,gA=+d.gebAnteil||0;
-    const wP=+d.wertP||0,j=+d.jahre||10,so=+d.sonder||0,ren=+d.renovierung||0,vQ=+d.vergleichsmiete||0;
-    const renGebKP=(+d.kaufpreis||0)*((+d.gebAnteil||80)/100);
-    const ren15Grenze=renGebKP*0.15;
-    const renUnterGrenze=ren>0&&ren<=ren15Grenze;
-    const renUeberGrenze=ren>0&&ren>ren15Grenze;
-    const renAfaJ=renUeberGrenze?(ren*(+d.afaSatz||2)/100):0;
-    // Don't return null when kaufpreis=0 — show zeroes instead so res-pane stays visible
-    const pQm=qm>0?kp/qm:0,jM=mi*12,nbk=gKP*(gP+nP+mP)/100;
-    const da=Math.max(0,gKP-ek),bel=gKP>0?da/gKP*100:0;
-    const mz=zP/100/12,ann=da*(zP+tP)/100/12;
-    let lz=0;if(mz>0&&ann>da*mz)lz=Math.log(ann/(ann-da*mz))/Math.log(1+mz)/12;else if(mz===0&&ann>0)lz=da/ann/12;
-    const tM=j*12,lF=tM>0?Math.max(0,(tM-lM)/tM):1;
-    const gesamtInv=gKP+so; // Investitionsbasis inkl. Sonderumlage
-    const effJ=mi*lF,bR=gesamtInv>0?jM/gesamtInv*100:0;
-    const nuJ=nu*12,nR=(gesamtInv+nbk)>0?(effJ*12-nuJ)/(gesamtInv+nbk)*100:0;
-    const afJ=kp*(gA/100)*(aP/100)+renAfaJ;
-    const k15=isK15(d.ort)||d.bundesland==="BE"||d.bundesland==="HH",kP=k15?15:20;
-    const mt=buildMP(mi,qm,vQ,kP,d.letzteErhDatum,+d.letzteErhMiete||0,j,k15,t);
-    const gRJ=(jj)=>{const yS=addY(new Date(),jj-1);let r=mi;for(let i=0;i<mt.rows.length;i++){if(mt.rows[i].datum<=yS)r=mt.rows[i].neueMiete;else break}return r};
-    let rs=da,sZ=0,sT=0,sSt=0,sCF=0,sCFOhne=0,sM=0,sMB=0,beJ=null;
-    const yearRows=[];
-    for(let jj=1;jj<=j;jj++){
-      const restStart=rs;
-      const mJ=gRJ(jj)*lF,jMJ=mJ*12;
-      const zi=rs*(zP/100),ti=Math.min(ann*12-zi,rs),zt2=zi+ti;
-      const st2=(zi+afJ+nuJ+(jj===1&&renUnterGrenze?ren:0))*(sP/100);
-      const cfOhneSt=jMJ-nuJ-zt2;        // ohne Steuerersparnis
-      const cf=cfOhneSt+st2;              // mit Steuerersparnis
-      sZ+=zi;sT+=ti;sSt+=st2;sCF+=cf;sCFOhne+=cfOhneSt;sM+=jMJ;sMB+=mi*lF*12;
-      if(beJ===null&&sSt>=nbk)beJ=jj;
-      yearRows.push({j:jj,rest:Math.max(0,restStart),zP,zinsen:zi,tilgB:ti,zt:zt2,steuer:st2,miete:jMJ,cf,cfOhneSt,cfKum:sCF});
-      rs=Math.max(0,rs-ti);
-    }
-    const mehrMiet=sM-sMB;
-    const w=gKP*(Math.pow(1+wP/100,j)-1),vw=gKP+w;
-    const rsEnd=rs;
-    const total=(vw-rsEnd)+sCF-ek-nbk-so-ren;          // Gesamtsaldo MIT Steuer
-    const totalOhne=(vw-rsEnd)+sCFOhne-ek-nbk-so-ren;  // Gesamtsaldo OHNE Steuer
-    // Monatlicher Cashflow — Jahr 1 Basis (für KPI-Schnellüberblick)
-    const cf2OhneSt=(effJ-nu-ann);                              // OHNE Steuerersparnis
-    const cf2MitSt =(effJ-nu-ann)+(yearRows[0]?.steuer||0)/12; // MIT Steuerersparnis
-    const cf2=cf2OhneSt;
-    const ekQ=gKP>0?ek/gKP*100:0;
-    let rk=0;const rF=[];
-    if(bel>95){rk+=30;rF.push("bel>95")}else if(bel>90){rk+=22;rF.push("bel>90")}else if(bel>80){rk+=12;rF.push("bel>80")}
-    if(nR<1){rk+=20;rF.push("nR<1")}else if(nR<2){rk+=12;rF.push("nR<2")}else if(nR<3){rk+=5;rF.push("nR<3")}
-    if(cf2<-500){rk+=15;rF.push("cf<-500")}else if(cf2<0){rk+=8;rF.push("cf<0")}
-    if(zP>=5){rk+=12;rF.push("z≥5")}else if(zP>=4){rk+=6;rF.push("z≥4")}
-    if(tP<1){rk+=18;rF.push("t<1")}else if(tP<2){rk+=8;rF.push("t<2")}
-    if(isFinite(lz)&&lz>35){rk+=12;rF.push("lz>35")}else if(isFinite(lz)&&lz>30){rk+=6;rF.push("lz>30")}
-    if(!isFinite(lz)){rk+=15;rF.push("lz=∞")}
-    if(pQm>6000){rk+=8;rF.push("p>6k")}else if(pQm>5000){rk+=4;rF.push("p>5k")}
-    if(ekQ<10){rk+=15;rF.push("ek<10")}else if(ekQ<20){rk+=5;rF.push("ek<20")}
-    if(lM>tM*.08){rk+=8;rF.push("ls>8")}else if(lM>tM*.05){rk+=4;rF.push("ls>5")}
-    if(k15)rk=Math.max(0,rk-5);
-    if(bR>=5)rk=Math.max(0,rk-5);
-    if(cf2>0)rk=Math.max(0,rk-3);
-    rk=Math.min(100,Math.round(rk));
-    return{pQm,bR,nR,ann,cf2,cf2OhneSt,cf2MitSt,lz,nbk,da,bel,afJ,sSt,g:total,gOhne:totalOhne,vw,w,rk,rF,gP,j,sCF,sCFOhne,beJ,z1:da*mz,t1:ann-da*mz,yearRows,mehrMiet,kP,k15,gKP,rsEnd,ekQ,ren,ren15Grenze,renUnterGrenze,renUeberGrenze};
-  },[d]);
+  const R=useMemo(()=>computeRendite(d,t),[d,t]);
 
   const afaFromBj=bj=>{const y=+bj;if(!y)return null;if(y<1925)return"2.5";if(y>=2023)return"3";return"2";};
 
@@ -131,7 +69,7 @@ export default function Haupt(){const{d,set,t,zinsen,tip,setTabExt,lang}=useApp(
       <Row><F label={t.grEst} unit="%" value={R?.gP||"—"} readOnly hint={d.bundesland?BL_N[d.bundesland]:""} tip={tip("grEst")}/><F label={t.notar} unit="%" value={d.notar} onChange={v=>set("notar",v)} step="0.1" tip={tip("notar")}/></Row>
       <F label={t.makler} unit="%" value={d.makler} onChange={v=>set("makler",v)} step="0.01" tip={tip("makler")}/>
       <F label={t.steuersatz} unit="%" value={d.steuersatz} onChange={v=>set("steuersatz",v)} tip={tip("steuersatz")}/>
-      <Row><F label={t.grundAnteil} unit="%" value={d.grundAnteil} onChange={v=>{set("grundAnteil",v);set("gebAnteil",100-(+v||0))}} tip={tip("grundAnteil")}/><F label={t.gebAnteil} unit="%" value={d.gebAnteil} onChange={v=>{set("gebAnteil",v);set("grundAnteil",100-(+v||0))}} tip={tip("gebAnteil")}/></Row>
+      <Row><F label={t.grundAnteil} unit="%" value={d.grundAnteil} onChange={v=>setAnteil("grundAnteil","gebAnteil",v)} tip={tip("grundAnteil")}/><F label={t.gebAnteil} unit="%" value={d.gebAnteil} onChange={v=>setAnteil("gebAnteil","grundAnteil",v)} tip={tip("gebAnteil")}/></Row>
       <Sec title={t.wZ} icon="📈"/>
       <Row><F label={t.wertP} unit="% p.a." value={d.wertP} onChange={v=>set("wertP",v)} step="0.1" tip={tip("wertP")}/><Sel label={t.jahre} value={d.jahre} onChange={v=>set("jahre",v)} options={[5,10,15,20,25,30].map(y=>({v:y,l:`${y} J.`}))}/></Row>
       <F label={t.sonderUml} unit="€" value={d.sonder} onChange={v=>set("sonder",v)} tip={tip("sonder")}/>

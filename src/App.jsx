@@ -27,6 +27,28 @@ steuer6:a=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={a
 };
 
 const TAB_LABELS={haupt:"Renditerechner",kredit:"Finanzierungsrechner",miete:"Mieterhöhungsrechner",sanier:"Sanierungsrechner",steuer6:"Steuerrechner",saved:"Merkliste"};
+
+// Startwerte des Formulars. Als Factory (lazy useState-Init), damit die
+// datumsabhaengigen Felder beim Mounten berechnet werden und der Block lesbar bleibt.
+function createDefaults(){
+  const heute=new Date();
+  const mietbeginnDefault=new Date(heute.getFullYear(),heute.getMonth()+4,1).toISOString().split("T")[0];
+  return {
+    bundesland:"BW", plz:"70173", ort:"Stuttgart",
+    kaufpreis:"300000", flaeche:"60", kaltmiete:"900", mieteQm:"15", garage:"20000",
+    eigenkapital:"60000", zinssatz:String(MARKET_RATES.avg), tilgung:"1", zinsbindung:"10",
+    notar:"2.0", makler:"3.57", steuersatz:"30", afaSatz:"2", grundAnteil:"20", gebAnteil:"80",
+    wertP:"2", jahre:"10", sonder:"3000", renovierung:"15000", nichtUml:"100", leerstand:"2",
+    vergleichsmiete:"14", letzteErhDatum:mietbeginnDefault, letzteErhMiete:"0", mietJahre:"10",
+    sanFl:"60", baujahr:"1981", sanHt:"heizoel", sanHa:"alt", sanPe:"3", sanIsfp:false,
+    vermietet:"ja", immLeer:"nein",
+  };
+}
+
+// Gemeinsame CSS-Bausteine fuer Landing- und App-Ansicht (frueher in beiden
+// <style>-Bloecken dupliziert). Die Design-Tokens leben nur noch hier an einer Stelle.
+const FONT_CSS="@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');";
+const ROOT_TOKENS_CSS=":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9}";
 export default function App(){const[tab,setTab]=useState("haupt");const[lang,setLang]=useState("de");
   const[landed,setLanded]=useState(()=>sessionStorage.getItem("if_landed")==="1");
   const[zinsen,setZinsen]=useState(null); // holds the raw zinsen.json config (with live BBK)
@@ -46,7 +68,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
           const{ts,data}=JSON.parse(cached);
           if(Date.now()-ts < 60*60*1000){setZinsen(data);return;}
         }
-      }catch(e){}
+      }catch(e){/* defekter/geblockter localStorage-Cache → einfach frisch laden */}
 
       // 2. zinsen.json von eigenem Server laden (Bundesbank-API entfällt wegen CORS)
       let config=null;
@@ -63,7 +85,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
       config.top=Math.min(...werte);    // bester (niedrigster) Wert
 
       setZinsen(config);
-      try{localStorage.setItem("if_zinsen_v3",JSON.stringify({ts:Date.now(),data:config}));}catch(e){}
+      try{localStorage.setItem("if_zinsen_v3",JSON.stringify({ts:Date.now(),data:config}));}catch(e){/* Cache-Schreiben optional (z.B. Private-Mode/Quota) → nicht kritisch */}
     }
     loadZinsen();
   },[]);
@@ -77,7 +99,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
     }
   },[zinsen]);
 
-  const[data,setData]=useState({bundesland:"BW",plz:"70173",ort:"Stuttgart",kaufpreis:"300000",flaeche:"60",kaltmiete:"900",eigenkapital:"60000",zinssatz:String(MARKET_RATES.avg),tilgung:"1",zinsbindung:"10",notar:"2.0",makler:"3.57",steuersatz:"30",afaSatz:"2",grundAnteil:"20",gebAnteil:"80",wertP:"2",jahre:"10",sonder:"3000",renovierung:"15000",nichtUml:"100",leerstand:"2",vergleichsmiete:"14",letzteErhDatum:new Date(new Date().getFullYear(),new Date().getMonth()+4,1).toISOString().split("T")[0],letzteErhMiete:"0",mietJahre:"10",sanFl:"60",baujahr:"1981",sanHt:"heizoel",sanHa:"alt",sanPe:"3",sanIsfp:false,garage:"20000",mieteQm:"15",vermietet:"ja",immLeer:"nein"});
+  const[data,setData]=useState(createDefaults);
   const set=useCallback((k,v)=>{
     if(k==="zinssatz") zinssatzTouchedRef.current=true;
     setData(p=>({...p,[k]:v}));
@@ -87,11 +109,12 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
   const tabs=[{id:"haupt",l:t.haupt,ic:IC.haupt},{id:"kredit",l:t.kredit,ic:IC.kredit},{id:"miete",l:t.miete,ic:IC.miete},{id:"sanier",l:t.sanier,ic:IC.sanier},{id:"steuer6",l:t.steuer6,ic:IC.steuer6},{id:"vfe",l:t.vfe,ic:IC.vfe},{id:"saved",l:t.merkliste,ic:IC.saved}];
 
   const startApp=(startTab)=>{if(startTab&&tabs.find(x=>x.id===startTab))setTab(startTab);sessionStorage.setItem("if_landed","1");setLanded(true);window.scrollTo({top:0,behavior:"instant"});};
-  if(!landed)return <><style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');:root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9}html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y}*{box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased;position:relative}section,footer,header{min-width:0;max-width:100%}`}</style><Landing onStart={startApp} zinsen={zinsen} lang={lang} setLang={setLang} openDatenschutz={()=>setLegalModal("datenschutz")} openImpressum={()=>setLegalModal("impressum")}/><LegalModal type={legalModal} onClose={()=>setLegalModal(null)}/>{!isOnline&&<OfflineBanner bottom={"calc(16px + env(safe-area-inset-bottom))"}/>}</>;
+  // Zurueck zur Landing-Ansicht (frueher zweimal inline dupliziert).
+  const goHome=()=>{sessionStorage.removeItem("if_landed");setLanded(false);setTimeout(()=>window.scrollTo({top:0,behavior:"instant"}),0);};
+  if(!landed)return <><style>{`${FONT_CSS}${ROOT_TOKENS_CSS}html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y}*{box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased;position:relative}section,footer,header{min-width:0;max-width:100%}`}</style><Landing onStart={startApp} zinsen={zinsen} lang={lang} setLang={setLang} openDatenschutz={()=>setLegalModal("datenschutz")} openImpressum={()=>setLegalModal("impressum")}/><LegalModal type={legalModal} onClose={()=>setLegalModal(null)}/>{!isOnline&&<OfflineBanner bottom={"calc(16px + env(safe-area-inset-bottom))"}/>}</>;
 
   return <Ctx.Provider value={{d:data,set,t,lang,zinsen,tip:k=>(TIPS[lang]||TIPS.de)[k],savedList,saveObj,delObj,loadObj,setTabExt:(id)=>{setTab(id);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),50);}}}>
-    <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-      :root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9}
+    <style>{`${FONT_CSS}${ROOT_TOKENS_CSS}
       html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;-webkit-text-size-adjust:100%}body{position:relative}
       *{box-sizing:border-box}
       body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased}
@@ -151,7 +174,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
     <div className="shell" dir="ltr">
       <div className="hdr">
         <div className="hdr-inner">
-          <button onClick={()=>{sessionStorage.removeItem("if_landed");setLanded(false);setTimeout(()=>window.scrollTo({top:0,behavior:"instant"}),0)}} title="Zur Startseite" style={{display:"flex",alignItems:"center",gap:14,background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"inherit"}}>
+          <button onClick={goHome} title="Zur Startseite" style={{display:"flex",alignItems:"center",gap:14,background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"inherit"}}>
             <img src="/icon-192.png" alt="Immofuchs" style={{width:54,height:54,objectFit:"contain",flexShrink:0}}/>
             <div style={{fontSize:24,fontWeight:800,letterSpacing:-.5,lineHeight:1,color:"var(--ct)"}}>immo<span style={{color:"var(--ca)"}}>fuchs</span><span style={{color:"var(--ct)",fontWeight:700}}>.info</span></div>
           </button>
@@ -162,7 +185,7 @@ export default function App(){const[tab,setTab]=useState("haupt");const[lang,set
         <Statusleiste/>
         {tab==="haupt"&&<Haupt/>}{tab==="kredit"&&<Kredit/>}{tab==="miete"&&<Miete/>}{tab==="sanier"&&<Sanier/>}{tab==="steuer6"&&<SteuerTrick/>}{tab==="vfe"&&<Vorfaelligkeit/>}{tab==="saved"&&<Merkliste/>}
         <div style={{marginTop:32,paddingTop:18,borderTop:"1px solid var(--cb)",fontSize:10,color:"var(--ch)",textAlign:"center",display:"flex",justifyContent:"center",gap:16,flexWrap:"wrap"}}>
-          <button onClick={()=>{sessionStorage.removeItem("if_landed");setLanded(false);setTimeout(()=>window.scrollTo({top:0,behavior:"instant"}),0)}} style={{background:"none",border:"none",color:"var(--ca)",cursor:"pointer",fontSize:10,fontFamily:"inherit",padding:0}}>← Startseite</button>
+          <button onClick={goHome} style={{background:"none",border:"none",color:"var(--ca)",cursor:"pointer",fontSize:10,fontFamily:"inherit",padding:0}}>← Startseite</button>
           <span style={{opacity:.4}}>·</span>
           <button onClick={()=>setLegalModal("impressum")} style={{background:"none",border:"none",color:"var(--ca)",cursor:"pointer",fontSize:10,fontFamily:"inherit",padding:0}}>Impressum</button>
           <span style={{opacity:.4}}>·</span>

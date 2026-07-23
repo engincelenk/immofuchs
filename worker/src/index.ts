@@ -42,10 +42,35 @@ export default {
     }
     const req = validation.data;
 
+    // Drei gestaffelte Schranken (siehe docs/code-review-2026-07-23.md, Punkt 1):
+    //   1. global  - hartes Tages-Cap ueber alle Nutzer, deckelt die Kosten,
+    //                da das Session-Limit ueber rotierende sessionId umgehbar ist.
+    //   2. ip      - pro CF-Connecting-IP, bremst Missbrauch ohne fremde Nutzer
+    //                (hinter geteiltem NAT) zu hart zu treffen.
+    //   3. session - unveraendertes Komfort-Limit pro Browser-Session.
+    // Reihenfolge global→ip→session; wird eine spaetere Schranke abgelehnt,
+    // werden die bereits gezaehlten frueheren zurueckgebucht.
     const dailyLimit = parseInt(env.DAILY_REQUEST_LIMIT, 10) || 20;
-    const limiterStub = env.RATE_LIMITER_DO.getByName(req.sessionId);
-    const rateLimit = await limiterStub.checkAndIncrement(dailyLimit);
-    if (!rateLimit.allowed) {
+    const ipLimit = parseInt(env.IP_DAILY_LIMIT || "", 10) || 60;
+    const globalLimit = parseInt(env.GLOBAL_DAILY_LIMIT || "", 10) || 2000;
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+
+    const globalLimiter = env.RATE_LIMITER_DO.getByName("global");
+    const ipLimiter = env.RATE_LIMITER_DO.getByName(`ip:${ip}`);
+    const sessionLimiter = env.RATE_LIMITER_DO.getByName(req.sessionId);
+
+    const globalRl = await globalLimiter.checkAndIncrement(globalLimit);
+    if (!globalRl.allowed) {
+      return jsonResponse({ error: "rate_limit_exceeded" }, 429, corsHeaders);
+    }
+    const ipRl = await ipLimiter.checkAndIncrement(ipLimit);
+    if (!ipRl.allowed) {
+      await globalLimiter.decrement();
+      return jsonResponse({ error: "rate_limit_exceeded" }, 429, corsHeaders);
+    }
+    const sessionRl = await sessionLimiter.checkAndIncrement(dailyLimit);
+    if (!sessionRl.allowed) {
+      await Promise.all([globalLimiter.decrement(), ipLimiter.decrement()]);
       return jsonResponse({ error: "rate_limit_exceeded" }, 429, corsHeaders);
     }
 
@@ -59,6 +84,9 @@ export default {
       // Absichtlich kein Logging von "frage"/"kontext" - nur strukturelle Fehlerinfo,
       // damit kein Nutzer-Freitext in Cloudflare-Logs landet (Konzept 2.9/2.10).
       console.error("assistant_model_call_failed", err instanceof Error ? err.message : "unknown_error");
+      // Fehlgeschlagener Request darf kein Kontingent kosten - alle drei
+      // Schranken zurueckbuchen (Punkt 3 des Reviews).
+      await Promise.all([globalLimiter.decrement(), ipLimiter.decrement(), sessionLimiter.decrement()]);
       return jsonResponse({ error: "model_call_failed" }, 502, corsHeaders);
     }
 

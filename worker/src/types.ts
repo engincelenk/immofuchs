@@ -42,5 +42,7 @@ export interface Env {
   ASSISTANT_ENABLED: string;
   ALLOWED_ORIGIN: string;
   DAILY_REQUEST_LIMIT: string;
+  IP_DAILY_LIMIT?: string;
+  GLOBAL_DAILY_LIMIT?: string;
   GEMINI_API_KEY?: string;
 }

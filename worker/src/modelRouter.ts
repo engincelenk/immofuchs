@@ -24,10 +24,13 @@ export async function callModel(
   userPayload: string
 ): Promise<string> {
   try {
-    return await withTimeout(callGemini(env, systemPrompt, userPayload), MODEL_TIMEOUT_MS);
+    // callGemini bricht via eigenem AbortController nach MODEL_TIMEOUT_MS ab
+    // und cancelt dabei den fetch - deshalb hier kein zusaetzliches withTimeout.
+    return await callGemini(env, systemPrompt, userPayload);
   } catch (err) {
     // Fallback auf Workers AI (Llama), z.B. wenn Gemini-Kontingent erschoepft ist
     // (429) - schwaechere Antwortqualitaet, aber besser als ein harter Fehler.
+    // env.AI.run kennt keinen Cancel, daher hier der withTimeout-Wrapper.
     console.error("gemini_call_failed_fallback_workers_ai", err instanceof Error ? err.message : "unknown_error");
     return withTimeout(callWorkersAI(env, systemPrompt, userPayload), MODEL_TIMEOUT_MS);
   }
