@@ -1,3 +1,18 @@
+## 2026-07-23 (1.55.59)
+
+### Finn: Freitextfragen von der Startseite gehen wieder
+
+Auf der Startseite schlug JEDE Freitextfrage an Finn fehl ("Kurzer Aussetzer
+bei mir — nochmal?"). Ursache: LandingMascot schickte rechner="landing", der
+Worker whitelistet aber nur die sechs echten Rechner-Kontexte und wies das mit
+400 invalid_rechner ab. Live gegen den Dev-Worker verifiziert.
+
+Fix (`LandingMascot.jsx`): Freitextfragen der Startseite senden jetzt
+rechner="renditerechner" (allgemeiner Flaggschiff-Kontext, kontext={}) statt
+"landing". Kein Worker-Deploy nötig. Die Routing-Chips waren nie betroffen
+(rein lokal, kein Worker-Call).
+
+
 ## 2026-07-23 (1.55.58)
 
 ### Finn liest wieder vor (Vorlese-Toggle auf iOS repariert)

@@ -16,7 +16,8 @@ import { ASSISTANT_SHEET_CSS } from "./assistantStyles.js";
 // Vor der ersten Berechnung gibt es noch keinen Rechner-Kontext - die
 // Routing-Chips bleiben deshalb lokal/kanonisch (kein Worker-Call, sofortige
 // Antwort als Chat-Bubble + Aktion). Zusaetzlich ein echtes Freitextfeld wie
-// bei den Rechnern - das geht wirklich an den Worker (rechner="landing").
+// bei den Rechnern - das geht wirklich an den Worker (rechner="renditerechner",
+// siehe handleSend: der Worker kennt keinen "landing"-Kontext).
 //
 // Sichtbar sind nur die drei Haupteinstiege (Nutzerwunsch 2026-07-22: sechs
 // Chips waren zu viel). Die drei Nischenthemen - genau die, die niemand von
@@ -130,6 +131,13 @@ export function LandingMascot({ onStart, lang }) {
 
   // Datenschutz-Zwischenschritt entfaellt (Nutzerwunsch 2026-07-22) - die
   // Freitextfrage geht direkt an den Worker.
+  //
+  // rechner="renditerechner" statt "landing": der Worker whitelistet nur die
+  // sechs echten Rechner-Kontexte und weist "landing" mit 400 invalid_rechner
+  // ab - dadurch schlug JEDE Freitextfrage von der Startseite fehl
+  // ("Kurzer Aussetzer bei mir", Bug-Report 2026-07-23). Auf der Landing gibt
+  // es keinen Rechner-Kontext (kontext={}), also nehmen wir den allgemeinen
+  // Flaggschiff-Rechner; Finn antwortet ohnehin als genereller Experte.
   const handleSend = () => {
     const frage = (inputRef.current?.value ?? "").trim();
     if (!frage) return;
@@ -137,7 +145,7 @@ export function LandingMascot({ onStart, lang }) {
     setChipsForcedOpen(false);
     setMoreOpen(false);
     setMinimized(false);
-    ask(frage, "landing", {}, lang);
+    ask(frage, "renditerechner", {}, lang);
   };
 
   const handleRestart = () => {
