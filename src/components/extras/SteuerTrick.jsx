@@ -1,129 +1,11 @@
-import { useState, useRef, useEffect, useContext } from "react";
+import { useState, useContext } from "react";
 import { Ctx } from "../../context/AppContext.jsx";
 import { STEUER_T } from "../../i18n/steuerTrick.js";
 import { T } from "../../i18n/translations.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
-
-function InfoTooltip({ text }) {
-  const [open, setOpen] = useState(false);
-  const [mPos, setMPos] = useState({ top: 0, left: 0, width: 268 });
-  const wrap = useRef(null);
-  const btn = useRef(null);
-  const isTch = useRef(
-    typeof window !== "undefined" && window.matchMedia("(pointer:coarse)").matches,
-  );
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => {
-      if (wrap.current && !wrap.current.contains(e.target)) setOpen(false);
-    };
-    const t = setTimeout(() => document.addEventListener("pointerdown", h), 50);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("pointerdown", h);
-    };
-  }, [open]);
-  const toggle = () => {
-    if (!open && isTch.current && btn.current) {
-      const r = btn.current.getBoundingClientRect();
-      const w = Math.min(268, window.innerWidth - 16);
-      setMPos({
-        top: r.bottom + 8,
-        left: Math.max(8, Math.min(r.left - w / 2 + 8, window.innerWidth - w - 8)),
-        width: w,
-      });
-    }
-    setOpen((o) => !o);
-  };
-  return (
-    <span
-      ref={wrap}
-      style={{
-        position: "relative",
-        display: "inline-flex",
-        verticalAlign: "middle",
-        marginLeft: 6,
-      }}
-    >
-      <button
-        ref={btn}
-        type="button"
-        onClick={toggle}
-        onMouseEnter={!isTch.current ? () => setOpen(true) : undefined}
-        onMouseLeave={!isTch.current ? () => setOpen(false) : undefined}
-        style={{
-          width: 16,
-          height: 16,
-          borderRadius: "50%",
-          border: "1.5px solid",
-          borderColor: open ? "var(--ca)" : "var(--ch)",
-          background: open ? "var(--ca-bg)" : "transparent",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 0,
-          fontSize: 9,
-          fontWeight: 800,
-          color: open ? "var(--ca)" : "var(--ch)",
-          fontFamily: "Georgia,serif",
-          flexShrink: 0,
-          lineHeight: 1,
-          userSelect: "none",
-        }}
-      >
-        ?
-      </button>
-      {open && (
-        <div
-          style={{
-            ...(isTch.current
-              ? {
-                  position: "fixed",
-                  top: mPos.top,
-                  left: mPos.left,
-                  width: mPos.width,
-                  pointerEvents: "auto",
-                }
-              : {
-                  position: "absolute",
-                  bottom: "calc(100% + 8px)",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  width: 260,
-                  pointerEvents: "none",
-                }),
-            background: "#1E3A5F",
-            color: "#fff",
-            fontSize: 11,
-            lineHeight: 1.65,
-            padding: "10px 13px",
-            borderRadius: 8,
-            boxShadow: "0 6px 28px rgba(0,0,0,.25)",
-            zIndex: 500,
-            whiteSpace: "pre-line",
-          }}
-        >
-          {text}
-          <div
-            style={{
-              position: "absolute",
-              ...(isTch.current
-                ? { top: -5, left: 16 }
-                : { bottom: -5, left: "50%", marginLeft: -5 }),
-              width: 10,
-              height: 10,
-              background: "#1E3A5F",
-              transform: "rotate(45deg)",
-            }}
-          />
-        </div>
-      )}
-    </span>
-  );
-}
+import { Tip } from "../ui/Tip.jsx";
 
 export function SteuerTrick() {
   const { lang } = useContext(Ctx);
@@ -206,7 +88,7 @@ export function SteuerTrick() {
             <div style={{ marginBottom: 14 }}>
               <label style={lbl}>
                 {st.lsLabel}
-                <InfoTooltip text={st.lsTip} />
+                <Tip text={st.lsTip} label={st.lsLabel} />
               </label>
               <div style={{ position: "relative" }}>
                 <input
@@ -233,7 +115,7 @@ export function SteuerTrick() {
             <div style={{ marginBottom: 14 }}>
               <label style={lbl}>
                 {st.gstLabel}
-                <InfoTooltip text={st.gstTip} />
+                <Tip text={st.gstTip} label={st.gstLabel} />
               </label>
               <div style={{ position: "relative" }}>
                 <input
@@ -263,7 +145,7 @@ export function SteuerTrick() {
             <div>
               <label style={lbl}>
                 {st.grdLabel}
-                <InfoTooltip text={st.grdTip} />
+                <Tip text={st.grdTip} label={st.grdLabel} />
               </label>
               <div style={{ position: "relative" }}>
                 <input

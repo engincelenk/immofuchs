@@ -421,7 +421,20 @@ export default function Kredit() {
             sondertilgungSatzProzent: +sondTP,
             bewertung: { tier: belTier },
           });
-          const suggested = [at.finSuggested1, at.finSuggested2, at.finSuggested3];
+          const suggested = [
+            at.finSuggested1,
+            at.finSuggested2,
+            at.finSuggested3,
+            at.finSuggested4,
+            at.finSuggested5,
+            at.finSuggested6,
+            at.finSuggested7,
+            at.finSuggested8,
+            at.finSuggested9,
+            at.finSuggested10,
+            at.finSuggested11,
+            at.finSuggested12,
+          ];
           return (
             <AssistantWidget
               rechner="finanzierung"
