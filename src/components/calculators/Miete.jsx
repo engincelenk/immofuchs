@@ -361,7 +361,18 @@ export default function Miete() {
             kappungsgrenzeProzent: R.kP,
             bewertung: null,
           });
-          const suggested = [at.mieteSuggested1, at.mieteSuggested2, at.mieteSuggested3];
+          const suggested = [
+            at.mieteSuggested1,
+            at.mieteSuggested2,
+            at.mieteSuggested3,
+            at.mieteSuggested4,
+            at.mieteSuggested5,
+            at.mieteSuggested6,
+            at.mieteSuggested7,
+            at.mieteSuggested8,
+            at.mieteSuggested9,
+            at.mieteSuggested10,
+          ];
           return (
             <AssistantWidget
               rechner="miete"
