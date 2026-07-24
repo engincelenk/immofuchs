@@ -1327,7 +1327,22 @@ export default function Sanier() {
             energieeinsparungProzent: Math.round((1 - R.eM) * 100),
             bewertung: null,
           });
-          const suggested = [at.sanSuggested1, at.sanSuggested2, at.sanSuggested3];
+          const suggested = [
+            at.sanSuggested1,
+            at.sanSuggested2,
+            at.sanSuggested3,
+            at.sanSuggested4,
+            at.sanSuggested5,
+            at.sanSuggested6,
+            at.sanSuggested7,
+            at.sanSuggested8,
+            at.sanSuggested9,
+            at.sanSuggested10,
+            at.sanSuggested11,
+            at.sanSuggested12,
+            at.sanSuggested13,
+            at.sanSuggested14,
+          ];
           return (
             <AssistantWidget
               rechner="sanierung"
