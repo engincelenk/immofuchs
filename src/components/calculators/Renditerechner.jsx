@@ -1444,13 +1444,24 @@ export default function Haupt() {
             kaufpreisfaktor: kpF,
             bewertung: { tier: nrTier },
           });
-          // Auf die 3 entscheidungsrelevanten Fragen gekuerzt (Nutzerwunsch
-          // 2026-07-22) - Begriffsdefinition (suggested3) und Verkaufs-
-          // szenario (suggested5) sind ueber das Freitextfeld erreichbar.
+          // Fragenkatalog (Nutzerwunsch 2026-07-24): voller kuratierter Pool
+          // statt nur 3 Fragen - Blaettern uebernimmt AssistantSheet.jsx.
           const suggested = [
             tpl(at.suggested1, { ampel: at["tier_" + nrTier] || nrTier }),
             at.suggested2,
             at.suggested4,
+            at.suggested3,
+            tpl(at.suggested5, { jahre: d.jahre || 10 }),
+            at.suggested6,
+            at.suggested7,
+            at.suggested8,
+            at.suggested9,
+            at.suggested10,
+            at.suggested11,
+            at.suggested12,
+            at.suggested13,
+            at.suggested14,
+            at.suggested15,
           ];
           // Signale fuer die Sprechblase: Ampel, Monats-Cashflow und
           // Risikoscore sind hier ohnehin schon berechnet (siehe finnHints.js).
