@@ -1,3 +1,33 @@
+## 2026-07-24 (1.55.62)
+
+### 6%-Trick: Tooltip-Farbe an übrige Rechner angeglichen
+
+Die Info-Tooltips im Sanierungs-Steuertrick-Rechner (`SteuerTrick.jsx`) hatten
+einen eigenen, lokal duplizierten Tooltip mit blauem Hintergrund (#1E3A5F)
+statt schwarz wie bei allen anderen Rechnern. Lokale `InfoTooltip`-Komponente
+entfernt und durch die zentrale `Tip`-Komponente (`components/ui/Tip.jsx`,
+Hintergrund #1a1a1a) ersetzt — konsistentes Look&Feel, ein Tooltip-Code
+weniger zu pflegen.
+
+
+## 2026-07-24 (1.55.63)
+
+### Finn: Fragen-Chips als durchblätterbarer Fragenkatalog
+
+Bisher zeigte jeder Rechner nur 3 feste Frage-Chips. Jetzt hat jeder der 4
+Rechner (Rendite, Finanzierung, Mieterhöhung, Sanierung) einen kuratierten
+Fragen-Pool (10-15 Fragen) - weiterhin 3 Fragen-Chips gleichzeitig sichtbar,
+plus "◂ Vorherige Fragen" / "Weitere Fragen ▸"-Chips zum Durchblättern.
+Bestehende Fragen bleiben unverändert, neue Fragen sind in allen 5 Sprachen
+übersetzt.
+
+- `suggestedPaging.js` (neu): reine Paginierungslogik, getestet.
+- `SuggestedQuestionChip.jsx`: neue `compact`-Variante für die Nav-Chips.
+- `AssistantSheet.jsx`: `page`-State, Reset beim Öffnen/Neustart.
+- `assistant.js`: 37 neue Frage-Strings + `moreQuestions`/`prevQuestions`,
+  je 5 Sprachen.
+
+
 ## 2026-07-23 (1.55.61)
 
 ### Finn: grauer Schatten-Kasten endgültig weg (decode-Gating)
