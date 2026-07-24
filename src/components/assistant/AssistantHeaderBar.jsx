@@ -18,9 +18,6 @@ export function AssistantHeaderBar({
   onRestart,
   minimized,
   onToggleMinimize,
-  speechSupported,
-  speechEnabled,
-  onToggleSpeech,
 }) {
   const [infoOpen, setInfoOpen] = useState(false);
 
@@ -38,16 +35,6 @@ export function AssistantHeaderBar({
           )}
         </span>
         <span className="if-asst-header-spacer" />
-        {!minimized && speechSupported && (
-          <button
-            type="button"
-            aria-label={speechEnabled ? t.speakerOnAria : t.speakerOffAria}
-            className={`if-asst-icon-btn${speechEnabled ? " active" : ""}`}
-            onClick={onToggleSpeech}
-          >
-            {speechEnabled ? "🔊" : "🔇"}
-          </button>
-        )}
         {!minimized && (
           <>
             <button

@@ -9,14 +9,14 @@ import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { useAssistant } from "../../hooks/useAssistant.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { useSpeechInput } from "../../hooks/useSpeechInput.js";
-import { useSpeechOutput } from "../../hooks/useSpeechOutput.js";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_SHEET_CSS } from "./assistantStyles.js";
 
 // Vor der ersten Berechnung gibt es noch keinen Rechner-Kontext - die
 // Routing-Chips bleiben deshalb lokal/kanonisch (kein Worker-Call, sofortige
 // Antwort als Chat-Bubble + Aktion). Zusaetzlich ein echtes Freitextfeld wie
-// bei den Rechnern - das geht wirklich an den Worker (rechner="landing").
+// bei den Rechnern - das geht wirklich an den Worker (rechner="renditerechner",
+// siehe handleSend: der Worker kennt keinen "landing"-Kontext).
 //
 // Sichtbar sind nur die drei Haupteinstiege (Nutzerwunsch 2026-07-22: sechs
 // Chips waren zu viel). Die drei Nischenthemen - genau die, die niemand von
@@ -50,30 +50,6 @@ export function LandingMascot({ onStart, lang }) {
       inputRef.current.focus();
     }
   }, lang);
-  const speechOut = useSpeechOutput(lang);
-  const spokenLocalCountRef = useRef(0);
-  const spokenRealCountRef = useRef(0);
-
-  // Liest neue Assistenten-Antworten vor, wenn der Lautsprecher-Toggle an
-  // ist (Nutzerwunsch 2026-07-22) - sowohl die lokalen Routing-Antworten als
-  // auch echte Freitext-Antworten.
-  useEffect(() => {
-    if (localLog.length > spokenLocalCountRef.current) {
-      const last = localLog[localLog.length - 1];
-      if (last.role === "assistant") speechOut.speak(last.text);
-    }
-    spokenLocalCountRef.current = localLog.length;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localLog]);
-
-  useEffect(() => {
-    if (messages.length > spokenRealCountRef.current) {
-      const last = messages[messages.length - 1];
-      if (last.role === "assistant") speechOut.speak(last.text);
-    }
-    spokenRealCountRef.current = messages.length;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
 
   // Chips nur beim Erstkontakt permanent sichtbar (Vodafone-TOBi-Vorbild,
   // Nutzer-Feedback 2026-07-22) - danach kollabieren sie zu einem einzelnen
@@ -130,6 +106,13 @@ export function LandingMascot({ onStart, lang }) {
 
   // Datenschutz-Zwischenschritt entfaellt (Nutzerwunsch 2026-07-22) - die
   // Freitextfrage geht direkt an den Worker.
+  //
+  // rechner="renditerechner" statt "landing": der Worker whitelistet nur die
+  // sechs echten Rechner-Kontexte und weist "landing" mit 400 invalid_rechner
+  // ab - dadurch schlug JEDE Freitextfrage von der Startseite fehl
+  // ("Kurzer Aussetzer bei mir", Bug-Report 2026-07-23). Auf der Landing gibt
+  // es keinen Rechner-Kontext (kontext={}), also nehmen wir den allgemeinen
+  // Flaggschiff-Rechner; Finn antwortet ohnehin als genereller Experte.
   const handleSend = () => {
     const frage = (inputRef.current?.value ?? "").trim();
     if (!frage) return;
@@ -137,7 +120,7 @@ export function LandingMascot({ onStart, lang }) {
     setChipsForcedOpen(false);
     setMoreOpen(false);
     setMinimized(false);
-    ask(frage, "landing", {}, lang);
+    ask(frage, "renditerechner", {}, lang);
   };
 
   const handleRestart = () => {
@@ -182,9 +165,6 @@ export function LandingMascot({ onStart, lang }) {
               onRestart={handleRestart}
               minimized={minimized}
               onToggleMinimize={() => setMinimized((m) => !m)}
-              speechSupported={speechOut.supported}
-              speechEnabled={speechOut.enabled}
-              onToggleSpeech={speechOut.toggle}
             />
             {!minimized && (
               <>

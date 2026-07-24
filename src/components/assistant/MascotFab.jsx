@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FinnBubble } from "./FinnBubble.jsx";
 
 // Rein darstellend: die Blasen-Sequenz wird eine Ebene hoeher gehalten
@@ -19,6 +19,36 @@ export function MascotFab({
   useEffect(() => {
     if (bubbleText) letzterText.current = bubbleText;
   }, [bubbleText]);
+
+  // Schatten + Glueh-Ebene erst zeigen, wenn das WebP paint-fertig DEKODIERT
+  // ist. onLoad/complete feuern schon bei "geladen, aber noch nicht dekodiert";
+  // iOS Safari formt den drop-shadow aber aus dem dekodierten Alpha und malt
+  // ihn in diesem Fenster mangels Silhouette als grauen Rechteck-Kasten
+  // ("Schatten beim Laden da, nach paar Sekunden weg"). img.decode() loest sich
+  // erst wirklich paint-fertig.
+  //
+  // Als Callback-Ref, damit das decode() bei JEDEM (Re-)Mount des Bildes neu
+  // laeuft: der FAB wird beim Oeffnen des Chats ausgehaengt (return null) und
+  // beim Schliessen neu gemountet - sonst kaeme der Kasten beim Schliessen
+  // zurueck (Bug-Report 2026-07-23).
+  const imgRef = useRef(null);
+  const [loaded, setLoaded] = useState(false);
+  const setImg = useCallback((node) => {
+    imgRef.current = node;
+    if (!node) return;
+    const markLoaded = () => {
+      if (imgRef.current === node) setLoaded(true);
+    };
+    if (node.decode) node.decode().then(markLoaded, markLoaded);
+    else markLoaded();
+  }, []);
+
+  // Beim Ausblenden zuruecksetzen: das beim Wiedereinblenden frisch gemountete
+  // Bild bekommt Schatten/Gluehen erst nach erneutem decode() - so blitzt auch
+  // beim Schliessen des Chats kein Kasten auf.
+  useEffect(() => {
+    if (hidden) setLoaded(false);
+  }, [hidden]);
 
   if (hidden) return null;
 
@@ -46,8 +76,8 @@ export function MascotFab({
         aria-label={label}
         style={{
           position: "relative",
-          width: 84,
-          height: 88,
+          width: 68,
+          height: 70,
           background: "transparent",
           border: "none",
           cursor: "pointer",
@@ -62,27 +92,32 @@ export function MascotFab({
             die maskierte Effektebene beim Pulsieren deckungsgleich. */}
         <span className="if-mascot-motion">
           <img
+            ref={setImg}
             src="/fuchs-mascot.webp"
             alt=""
             aria-hidden="true"
             className="if-mascot-fab-img"
+            decoding="async"
+            fetchpriority="high"
             style={{
-              width: 80,
-              height: 88,
+              width: 64,
+              height: 70,
               objectFit: "contain",
-              filter: "drop-shadow(0 5px 10px rgba(20,20,20,.28))",
+              filter: loaded ? "drop-shadow(0 5px 10px rgba(20,20,20,.28))" : "none",
             }}
           />
-          <span className="if-mascot-fx" aria-hidden="true">
-            <span className="if-mascot-band" />
-          </span>
+          {loaded && (
+            <span className="if-mascot-fx" aria-hidden="true">
+              <span className="if-mascot-band" />
+            </span>
+          )}
         </span>
       </button>
       {/* ACHTUNG: in diesem Block keine Backticks verwenden - sie beenden das
           Template-Literal, der Build laeuft trotzdem durch und es kracht erst
           zur Laufzeit (Vorfall 2026-07-22). */}
       <style>{`
-        .if-mascot-motion{display:block;position:relative;width:80px;height:88px;transform-origin:50% 85%;animation:ifFabPuls 8s ease-in-out infinite}
+        .if-mascot-motion{display:block;position:relative;width:64px;height:70px;transform-origin:50% 85%;animation:ifFabPuls 8s ease-in-out infinite}
         @keyframes ifFabPuls{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
         .if-mascot-fab-img{display:block}
 
@@ -92,7 +127,7 @@ export function MascotFab({
            zu liegen (Nutzerwunsch 2026-07-22, ersetzt die Glitzer-Sterne). */
         .if-mascot-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;
           -webkit-mask-image:url(/fuchs-mascot.webp);mask-image:url(/fuchs-mascot.webp);
-          -webkit-mask-size:80px 88px;mask-size:80px 88px;
+          -webkit-mask-size:64px 70px;mask-size:64px 70px;
           -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
           -webkit-mask-position:center;mask-position:center;
           mix-blend-mode:screen}

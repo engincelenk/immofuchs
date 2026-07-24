@@ -114,6 +114,11 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
+    <!-- Finn-Maskottchen vorab laden: liegt so vor dem ersten FAB-Mount warm im
+         Cache, damit im Decode-Fenster keine grauen Schatten-/Blend-Kaesten um
+         Finn blitzen (iOS Safari, Bug-Report 2026-07-23). -->
+    <link rel="preload" as="image" href="/fuchs-mascot.webp" />
+
     <!-- ═══ Cookie Consent Styles ═══ -->
     <style>
       /* Global mobile-first resets */

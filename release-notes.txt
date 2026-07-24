@@ -1,3 +1,101 @@
+## 2026-07-23 (1.55.61)
+
+### Finn: grauer Schatten-Kasten endgültig weg (decode-Gating)
+
+Der graue Kasten hinter Finn kam zurück: beim Laden (paar Sekunden, dann weg)
+und nach dem Öffnen+Schließen des Chats. Ursache tiefer als gedacht: der
+vorige Fix schaltete Schatten/Glühen über onLoad/img.complete frei — beide
+bedeuten "geladen", NICHT "dekodiert". iOS Safari formt den drop-shadow aber
+aus dem dekodierten Alpha und malt ihn im Fenster davor als grauen
+Rechteck-Kasten.
+
+Finale Lösung (`MascotFab.jsx`): Schatten + Glüh-Ebene erst nach
+`img.decode()` (paint-fertig) zeigen, als Callback-Ref, damit es bei JEDEM
+(Re-)Mount neu läuft — der FAB wird beim Chat-Öffnen aus- und beim Schließen
+neu eingehängt. Zusätzlich `loaded`-Reset beim Ausblenden, damit auch das
+Schließen keinen Kasten mehr aufblitzen lässt. Alle Effekte (Puls, Schatten,
+Stromband) bleiben unverändert.
+
+
+## 2026-07-23 (1.55.60)
+
+### Finn: Lautsprecher/Vorlesen ausgeblendet
+
+Der 🔊/🔇-Toggle und die Vorlese-Funktion (Text-to-Speech) sind entfernt
+(Nutzerwunsch). Das Mikrofon (Spracheingabe) bleibt.
+
+- `AssistantHeaderBar.jsx`: Lautsprecher-Button + zugehörige Props raus.
+- `AssistantSheet.jsx` + `LandingMascot.jsx`: useSpeechOutput-Verdrahtung
+  (Hook, Vorlese-Effekte, Props) entfernt.
+- `useSpeechOutput.js` bleibt als Datei erhalten → später leicht reaktivierbar.
+
+
+## 2026-07-23 (1.55.59)
+
+### Finn: Freitextfragen von der Startseite gehen wieder
+
+Auf der Startseite schlug JEDE Freitextfrage an Finn fehl ("Kurzer Aussetzer
+bei mir — nochmal?"). Ursache: LandingMascot schickte rechner="landing", der
+Worker whitelistet aber nur die sechs echten Rechner-Kontexte und wies das mit
+400 invalid_rechner ab. Live gegen den Dev-Worker verifiziert.
+
+Fix (`LandingMascot.jsx`): Freitextfragen der Startseite senden jetzt
+rechner="renditerechner" (allgemeiner Flaggschiff-Kontext, kontext={}) statt
+"landing". Kein Worker-Deploy nötig. Die Routing-Chips waren nie betroffen
+(rein lokal, kein Worker-Call).
+
+
+## 2026-07-23 (1.55.58)
+
+### Finn liest wieder vor (Vorlese-Toggle auf iOS repariert)
+
+Der Lautsprecher-Toggle war an, aber Finn las nichts vor — vor allem auf iOS.
+Ursachen in `useSpeechOutput.js` behoben:
+- **iOS-Gesten-Sperre:** iOS Safari spricht nur, wenn das erste speak() aus
+  einer Nutzergeste kommt. Unsere Antworten treffen asynchron ein. Jetzt wird
+  beim Einschalten (Klick = Geste) eine stille Prime-Utterance abgespielt, die
+  die API für spätere asynchrone Aufrufe freischaltet.
+- **Stimmen laden asynchron:** getVoices() ist anfangs leer -> wird jetzt
+  vorgewärmt und über "voiceschanged" nachgezogen, passende Stimme pro Sprache.
+- **Utterance-GC:** laufende Utterance wird in einer Ref gehalten, sonst bricht
+  die Ausgabe mitten im Satz ab.
+
+Was der Toggle macht: 🔊 an = Finn liest jede neue Antwort vor, 🔇 aus.
+
+
+## 2026-07-23 (1.55.57)
+
+### Finn-Maskottchen kleiner (auf Icon-Niveau anderer Seiten)
+
+Der Finn-FAB war im Vergleich zu üblichen Chat-Assistenten (Vodafone, Allianz)
+deutlich zu groß. Auf ~64×70 verkleinert (vorher 80×88, ~20 % kleiner), auf
+Allianz-Niveau. Seitenverhältnis und **alle Effekte bleiben erhalten**:
+Puls-Animation, drop-shadow und das Strom-Glühband (mask-size wandert mit).
+
+`MascotFab.jsx`: Bild, `.if-mascot-motion`, `.if-mascot-fx` mask-size und die
+Button-Tap-Fläche (68×70, weiterhin > 44px) proportional angepasst.
+
+
+## 2026-07-23 (1.55.56)
+
+### Finn-Maskottchen: graue Kästen beim Laden behoben
+
+Beim Laden der Seite/eines Rechners blitzten auf iOS graue Rechtecke um das
+Finn-Maskottchen (FAB unten rechts). Ursache: im ~72 ms-Decode-Fenster des
+WebP fehlte das Silhouetten-Alpha, sodass Safari den `drop-shadow` und die
+`mix-blend-mode`/`-webkit-mask`-Glühebene auf die volle 80×88-Box malte — und
+das bei jedem Rechner-Mount neu.
+
+Fix (`MascotFab.jsx` + `index.html`):
+- Schatten und Glühebene werden erst gezeigt, wenn das Bild dekodiert ist
+  (`onLoad` + `img.complete` für Cache-Treffer beim Re-Mount).
+- `decoding="async"` + `fetchpriority="high"` am Maskottchen-Bild.
+- `<link rel="preload" as="image">` für `fuchs-mascot.webp`, damit es vor dem
+  ersten FAB warm im Cache liegt.
+
+Look und Design-Tokens unverändert — nur *wann* Schatten/Glühen einsetzen.
+
+
 ## 2026-07-23 (1.55.55)
 
 ### Finn-Verdrahtung: qa + prod nutzen den Prod-Worker
