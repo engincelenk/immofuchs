@@ -58,6 +58,8 @@ export const ASSISTANT_T = {
     landingGoToCalc: "Zum Rechner",
     landingBack: "Zurück",
     suggestQuestions: "Schlage Fragen vor",
+    moreQuestions: "Weitere Fragen",
+    prevQuestions: "Vorherige Fragen",
     aiNoticeTitle: "KI-Hinweis",
     aiNoticeBody:
       "Antworten können mithilfe von Künstlicher Intelligenz entstehen und deshalb Fehler enthalten. Bitte prüfe wichtige Informationen sicherheitshalber nach.",
@@ -173,6 +175,8 @@ export const ASSISTANT_T = {
     landingGoToCalc: "Go to calculator",
     landingBack: "Back",
     suggestQuestions: "Suggest questions",
+    moreQuestions: "More questions",
+    prevQuestions: "Previous questions",
     aiNoticeTitle: "AI notice",
     aiNoticeBody:
       "Answers may be generated using artificial intelligence and can therefore contain mistakes. Please double-check important information.",
@@ -288,6 +292,8 @@ export const ASSISTANT_T = {
     landingGoToCalc: "Hesaplayıcıya git",
     landingBack: "Geri",
     suggestQuestions: "Soru öner",
+    moreQuestions: "Diğer sorular",
+    prevQuestions: "Önceki sorular",
     aiNoticeTitle: "Yapay zeka uyarısı",
     aiNoticeBody:
       "Yanıtlar yapay zeka yardımıyla oluşturulabilir ve bu nedenle hata içerebilir. Önemli bilgileri lütfen tekrar kontrol et.",
@@ -398,6 +404,8 @@ export const ASSISTANT_T = {
     landingGoToCalc: "前往计算器",
     landingBack: "返回",
     suggestQuestions: "推荐问题",
+    moreQuestions: "更多问题",
+    prevQuestions: "上一组问题",
     aiNoticeTitle: "AI 提示",
     aiNoticeBody: "回答可能由人工智能生成，因此可能包含错误。请仔细核实重要信息。",
     aiNoticeOk: "知道了",
@@ -513,6 +521,8 @@ export const ASSISTANT_T = {
     landingGoToCalc: "कैलकुलेटर पर जाएं",
     landingBack: "वापस",
     suggestQuestions: "प्रश्न सुझाएं",
+    moreQuestions: "और प्रश्न",
+    prevQuestions: "पिछले प्रश्न",
     aiNoticeTitle: "AI सूचना",
     aiNoticeBody:
       "उत्तर आर्टिफिशियल इंटेलिजेंस की मदद से बन सकते हैं और इसलिए उनमें गलतियां हो सकती हैं। कृपया महत्वपूर्ण जानकारी दोबारा जांच लें।",

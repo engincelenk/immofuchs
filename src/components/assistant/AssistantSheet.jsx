@@ -6,6 +6,7 @@ import { useSpeechInput } from "../../hooks/useSpeechInput.js";
 import { AssistantHeaderBar } from "./AssistantHeaderBar.jsx";
 import { ChatBubble } from "./ChatBubble.jsx";
 import { SuggestedQuestionChip } from "./SuggestedQuestionChip.jsx";
+import { getSuggestedPage } from "./suggestedPaging.js";
 import { ASSISTANT_SHEET_CSS } from "./assistantStyles.js";
 
 export function AssistantSheet({
@@ -39,10 +40,16 @@ export function AssistantSheet({
   // den eigentlichen Chatverlauf verdrängt.
   const [chipsForcedOpen, setChipsForcedOpen] = useState(false);
   const showChips = messages.length === 0 || chipsForcedOpen;
-  // Harte Obergrenze statt Verlass auf die Aufrufer: mehr als drei Chips
-  // verdraengen den Chatverlauf, und "Schlage Fragen vor" wuerde sonst die
-  // volle Liste zurueckholen (Nutzer-Feedback 2026-07-22).
-  const visibleSuggested = suggested.slice(0, 3);
+  // Fragenkatalog (Nutzerwunsch 2026-07-24): "suggested" ist jetzt ein
+  // voller, kuratierter Fragen-Pool pro Rechner statt nur 3 Eintraegen.
+  // Weiterhin harte Obergrenze von 3 sichtbaren Fragen-Chips gleichzeitig
+  // (Nutzer-Feedback 2026-07-22) - "Vorherige"/"Weitere" sind eigene,
+  // zusaetzliche Nav-Chips ausserhalb dieses 3er-Caps.
+  const [page, setPage] = useState(0);
+  useEffect(() => {
+    if (open) setPage(0);
+  }, [open, rechner]);
+  const { items: visibleSuggested, hasPrev, hasNext } = getSuggestedPage(suggested, page, 3);
 
   // Kopfzeile zeigt normalerweise die Tagline statt eines "online"-Status
   // (Nutzer-Feedback 2026-07-22) - nur das Tageslimit bekommt weiterhin eine
@@ -127,6 +134,7 @@ export function AssistantSheet({
   const handleRestart = () => {
     reset();
     setChipsForcedOpen(false);
+    setPage(0);
   };
 
   return createPortal(
@@ -178,9 +186,29 @@ export function AssistantSheet({
             </div>
             <div className="if-asst-suggested">
               {showChips ? (
-                visibleSuggested.map((label, i) => (
-                  <SuggestedQuestionChip key={i} label={label} onClick={() => submit(label)} />
-                ))
+                <>
+                  {visibleSuggested.map((label, i) => (
+                    <SuggestedQuestionChip key={i} label={label} onClick={() => submit(label)} />
+                  ))}
+                  {(hasPrev || hasNext) && (
+                    <div className="if-asst-nav-row">
+                      {hasPrev && (
+                        <SuggestedQuestionChip
+                          compact
+                          label={`◂ ${t.prevQuestions}`}
+                          onClick={() => setPage((p) => p - 1)}
+                        />
+                      )}
+                      {hasNext && (
+                        <SuggestedQuestionChip
+                          compact
+                          label={`${t.moreQuestions} ▸`}
+                          onClick={() => setPage((p) => p + 1)}
+                        />
+                      )}
+                    </div>
+                  )}
+                </>
               ) : (
                 <SuggestedQuestionChip
                   label={t.suggestQuestions}
