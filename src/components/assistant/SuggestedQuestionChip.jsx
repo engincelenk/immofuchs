@@ -1,11 +1,11 @@
-export function SuggestedQuestionChip({ label, onClick }) {
+export function SuggestedQuestionChip({ label, onClick, compact = false }) {
   return (
     <button
       onClick={onClick}
       className="if-asst-sugg-chip"
       style={{
-        display: "block",
-        width: "100%",
+        display: compact ? "inline-block" : "block",
+        width: compact ? "auto" : "100%",
         textAlign: "left",
         fontFamily: "inherit",
         fontSize: 13,
