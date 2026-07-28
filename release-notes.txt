@@ -1,3 +1,32 @@
+## 2026-07-28 (1.55.77)
+
+### Instandhaltungsruecklage als eigenes Feld wieder entfernt
+
+Das Feld samt Ampel (grün/gelb/rot je nach Ruecklagenhoehe) kam erst in
+1.55.74 dazu, war aber von Anfang an strukturell zum Leerlaufen verurteilt:
+die Angabe steht fast nie im Expose, ohne Wert blieb die Ampel dauerhaft aus.
+Ausserdem war es eine Doppelung - der `nichtUml`-Tooltip nennt "Verwaltung,
+Instandhaltung und Ruecklage" bereits als das, was der Richtwert von
+1,75 €/m²/Monat abdeckt; Murr im Referenzexpose bestaetigt das woertlich
+("nicht umlagefaehiger Anteil ... inkl. Ruecklage").
+
+Entfernt: das Eingabefeld und die Ampel im Renditerechner, `RUECKLAGE_QM` aus
+data.js, die Labels `ruecklage`/`rlGreen`/`rlYellow`/`rlRed`/`richtwert` aus
+allen fuenf Sprachen, der zugehoerige Tooltip. Das Expose-Feld
+`ruecklage_monatlich` bleibt bestehen, ist jetzt aber wie
+`hausgeld_nicht_umlagefaehig` reine Anzeige ohne Uebernahme - der Wert bleibt
+sichtbar, wenn ein Expose ihn ausnahmsweise nennt, fliesst aber nirgends mehr
+in eine Berechnung ein (er tat das auch vorher nicht: `ruecklage` stand in
+keiner Formel in rendite.js, nur in der jetzt entfernten Ampel).
+
+Vollstaendigkeits-Waechter angepasst: prueft jetzt zusaetzlich, dass die
+verwaisten Schluessel wirklich verschwunden sind, nicht nur, dass die
+verbliebenen vollstaendig sind.
+
+9 Tests angepasst, 149 gesamt (weiterhin gruen), Lint und Build unveraendert
+sauber. Keine Browser-Verifikation - reine Entfernung ohne neue Logik, durch
+Build + Testsuite abgedeckt.
+
 ## 2026-07-28 (1.55.76)
 
 ### PDF-Limit auf 25 MB, Feinschliff an Beschriftung und Tooltips

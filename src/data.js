@@ -106,17 +106,6 @@ export const MIET_P = {
   normal: { pA: 2.5, q: "Stat. Bundesamt 2025" },
 };
 
-// ── INSTANDHALTUNGSRÜCKLAGE ──────────────────────────────────────────────
-// Monatliche Zuführung der WEG je m² Wohnfläche. Bleibt sie darunter, kann
-// die Gemeinschaft größere Maßnahmen (Dach, Fassade, Heizung) nicht aus der
-// Rücklage bezahlen — die Differenz kommt dann als Sonderumlage.
-// Faustregel aus der WEG-Praxis; die Peters'sche Formel liegt je nach
-// Herstellungskosten in derselben Größenordnung.
-export const RUECKLAGE_QM = {
-  gut: 1.0, // €/m²/Monat und mehr → auskömmlich
-  schwach: 0.6, // darunter → deutliche Unterdeckung
-};
-
 // ── ENERGIEAUSWEIS: PLAUSIBILITÄTSGRENZEN ────────────────────────────────
 // Für den Endenergie-Kennwert in kWh/m²a. Außerhalb dieser Spanne liegt fast
 // sicher ein Lesefehler vor (verrutschtes Komma, Jahresverbrauch in kWh statt

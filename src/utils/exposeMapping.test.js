@@ -370,9 +370,15 @@ describe("Uebernahme der neuen Felder", () => {
     expect(z.ziele).toEqual([]);
   });
 
-  it("uebernimmt die Instandhaltungsruecklage fuer die Ampel", () => {
-    const gesetzt = uebernehme(ergebnis({ kosten: { ruecklage_monatlich: 45.83 } }));
-    expect(gesetzt.ruecklage).toBe("45.83");
+  it("uebernimmt die Instandhaltungsruecklage NIE aus dem Expose", () => {
+    // Kein eigenes Ruecklage-Feld im Rechner mehr (2026-07-28 entfernt) -
+    // dieselbe Begruendung wie bei hausgeld_nicht_umlagefaehig: Doppelung zu
+    // nichtUml, und im Expose steht der Wert ohnehin selten.
+    const zeilen = baueZeilen(ergebnis({ kosten: { ruecklage_monatlich: 45.83 } }), {}, t);
+    const z = zeile(zeilen, "ruecklage_monatlich");
+    expect(z.gefunden).toBe(true);
+    expect(z.uebernehmbar).toBe(false);
+    expect(z.ziele).toEqual([]);
   });
 
   it("uebernimmt Strasse und Hausnummer fuer den Merklisten-Namen", () => {

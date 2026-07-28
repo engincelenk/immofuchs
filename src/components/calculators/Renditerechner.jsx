@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { BL_N, BL_O, RUECKLAGE_QM } from "../../data.js";
+import { BL_N, BL_O } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP, tpl } from "../../utils/helpers.js";
 import { rate, vrd } from "../../utils/bands.js";
@@ -36,13 +36,6 @@ export default function Haupt() {
   };
   // mieteQm: use typed value; if empty string, don't fall back (allow clearing)
   const mieteQm = d.mieteQm !== "" ? +d.mieteQm || 0 : 0;
-  // Ruecklage je m² und Monat. null = keine Angabe (kein Expose-Wert, nichts
-  // eingetippt) - dann bleibt die Ampel aus, statt eine 0 zu bewerten.
-  const ruecklageQm = (() => {
-    const betrag = +d.ruecklage || 0;
-    const fl = +d.flaeche || 0;
-    return betrag > 0 && fl > 0 ? betrag / fl : null;
-  })();
   useEffect(() => {
     if (lastEditedRef.current === "kalt") return;
     if (mieteQm > 0 && (+d.flaeche || 0) > 0) {
@@ -292,18 +285,6 @@ export default function Haupt() {
               options={[5, 10, 15, 20, 25, 30].map((y) => ({ v: y, l: `${y} J.` }))}
             />
           </Row>
-          <F
-            label={t.ruecklage}
-            unit={`€/${t.monLabel || "Mon."}`}
-            value={d.ruecklage ?? ""}
-            onChange={(v) => set("ruecklage", v)}
-            tip={tip("ruecklage")}
-            hint={
-              ruecklageQm !== null
-                ? `${fmt(ruecklageQm, 2)} €/m² · ${t.richtwert} ${fmt(RUECKLAGE_QM.gut, 2)}`
-                : ""
-            }
-          />
           <F
             label={t.sonderUml}
             unit="€"
@@ -629,32 +610,6 @@ export default function Haupt() {
                     {R.nR > 0 && R.nR < +d.zinssatz && (
                       <div style={{ marginTop: 4 }}>
                         <Ins emoji="📉" text={t.adv3} type="bad" />
-                      </div>
-                    )}
-                    {/* Instandhaltungsruecklage: nur bewerten, wenn ein Betrag
-                        vorliegt. Eine zu duenne Ruecklage ist der haeufigste
-                        Grund fuer eine spaetere Sonderumlage - die Zahl steht
-                        im Expose, wird aber sonst nirgends ausgewertet. */}
-                    {ruecklageQm !== null && (
-                      <div style={{ marginTop: 4 }}>
-                        <Ins
-                          emoji="🧰"
-                          type={
-                            ruecklageQm >= RUECKLAGE_QM.gut
-                              ? "good"
-                              : ruecklageQm >= RUECKLAGE_QM.schwach
-                                ? "warn"
-                                : "bad"
-                          }
-                          text={tpl(
-                            ruecklageQm >= RUECKLAGE_QM.gut
-                              ? t.rlGreen
-                              : ruecklageQm >= RUECKLAGE_QM.schwach
-                                ? t.rlYellow
-                                : t.rlRed,
-                            { a: fmt(ruecklageQm, 2), b: fmt(RUECKLAGE_QM.gut, 2) },
-                          )}
-                        />
                       </div>
                     )}
                     {lang === "de" && (

@@ -33,19 +33,14 @@ describe("Expose-Feldlabels", () => {
 describe("Tooltips und Beschriftungen der neuen Felder", () => {
   // Felder, die in dieser Runde dazugekommen sind bzw. deren Berechnung sich
   // geaendert hat - fuer die muss die Erklaerung in jeder Sprache stehen.
-  it.each(SPRACHEN)("hat in %s die Tooltips zu nichtUml/Ruecklage/Ist-Verbrauch", (lang) => {
-    for (const key of ["nichtUml", "ruecklage", "sanIstVerbrauch"]) {
+  it.each(SPRACHEN)("hat in %s die Tooltips zu nichtUml/Ist-Verbrauch", (lang) => {
+    for (const key of ["nichtUml", "sanIstVerbrauch"]) {
       expect(TIPS[lang][key], `${lang}.${key}`).toBeTruthy();
     }
   });
 
-  it.each(SPRACHEN)("hat in %s die Beschriftungen und Ampeltexte", (lang) => {
+  it.each(SPRACHEN)("hat in %s die Ist-Verbrauch-Beschriftungen", (lang) => {
     for (const key of [
-      "richtwert",
-      "ruecklage",
-      "rlGreen",
-      "rlYellow",
-      "rlRed",
       "sIstVerbrauch",
       "sIstVerbrauchAktiv",
       "sIstVerbrauchNachWw",
@@ -55,14 +50,17 @@ describe("Tooltips und Beschriftungen der neuen Felder", () => {
     }
   });
 
-  it("fuellt in den Ampeltexten beide Platzhalter", () => {
-    // rlYellow/rlRed vergleichen Ist-Wert {a} gegen Richtwert {b}; fehlt einer,
-    // stuende im Hinweis woertlich "{b}".
-    for (const lang of SPRACHEN) {
-      for (const key of ["rlYellow", "rlRed"]) {
-        expect(T[lang][key], `${lang}.${key}`).toContain("{a}");
-        expect(T[lang][key], `${lang}.${key}`).toContain("{b}");
-      }
+  // Instandhaltungsruecklage als eigenes Feld/Ampel ist 2026-07-28 wieder
+  // entfernt worden (kaum im Expose vorhanden, Doppelung zu nichtUml). Der
+  // Hinweis darauf steckt jetzt im nichtUml-Tooltip selbst.
+  it.each(SPRACHEN)("hat in %s keine verwaisten Ruecklage-Schluessel mehr", (lang) => {
+    for (const key of ["ruecklage", "rlGreen", "rlYellow", "rlRed", "richtwert"]) {
+      expect(T[lang][key], `${lang}.${key}`).toBeUndefined();
+      expect(TIPS[lang][key], `TIPS.${lang}.${key}`).toBeUndefined();
     }
+  });
+
+  it.each(SPRACHEN)("erwaehnt die Ruecklage im nichtUml-Tooltip", (lang) => {
+    expect(TIPS[lang].nichtUml, `${lang}.nichtUml`).toMatch(/r[üu]cklage|reserve|rezerv|储备金|आरक्षित/i);
   });
 });

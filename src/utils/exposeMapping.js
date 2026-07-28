@@ -225,7 +225,11 @@ export const FELD_DEFS = [
   // waere der Wert mal gerechnet und mal gelesen und Objekte nicht mehr
   // vergleichbar.
   { key: "hausgeld_nicht_umlagefaehig", gruppe: "kosten", typ: "zahl", einheit: "€" },
-  { key: "ruecklage_monatlich", gruppe: "kosten", typ: "zahl", einheit: "€", ziele: ["ruecklage"] },
+  // Ebenfalls nur Anzeige (2026-07-28, dasselbe Argument wie oben): ein
+  // eigenes Ruecklage-Feld im Rechner gab es nur kurz, es war eine Doppelung
+  // zu nichtUml und stand fast nie im Expose - ohne Wert lief die zugehoerige
+  // Ampel praktisch immer leer.
+  { key: "ruecklage_monatlich", gruppe: "kosten", typ: "zahl", einheit: "€" },
   {
     key: "provision_kaeufer_prozent",
     gruppe: "kosten",

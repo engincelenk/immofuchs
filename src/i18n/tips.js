@@ -1,4 +1,4 @@
-import { MARKET_RATES, NICHT_UML, RUECKLAGE_QM, VERBRAUCH_GRENZEN } from "../data.js";
+import { MARKET_RATES, NICHT_UML, VERBRAUCH_GRENZEN } from "../data.js";
 
 // Richtwert-Zahlen fuer die nichtUml-Tooltips direkt aus data.js, damit
 // Erklaerung und Formel (berechneNichtUml in utils/rendite.js) nicht
@@ -70,7 +70,6 @@ export const TIPS = {
     pvLeistung: "1 kWp ≈ 7m² Dachfläche. Ertrag ca. 950 kWh/kWp pro Jahr.",
     isfp: "Individueller Sanierungsfahrplan: Ein Energieberater erstellt einen maßgeschneiderten Sanierungsplan. Belohnung: +5% BAFA-Bonus auf jede BEG-Maßnahme. Energieberatung wird mit 50% bezuschusst. Antrag stets VOR Auftragsvergabe!",
     sanIstVerbrauch: `Endenergieverbrauch aus dem Energieausweis (kWh/m²a). Ist der Wert gesetzt, rechnet der Rechner damit statt mit der groben Baujahr-Schätzung — die liegt bei Bauten der 90er oft 30–50 % zu hoch. Der Warmwasseranteil wird abgezogen, weil er im Ausweis schon enthalten ist. Werte außerhalb ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} werden ignoriert.`,
-    ruecklage: `Monatliche Zuführung der Eigentümergemeinschaft zur Instandhaltungsrücklage, laut Hausgeldabrechnung. Als auskömmlich gelten etwa ${RUECKLAGE_QM.gut.toFixed(2)} € je m² Wohnfläche und Monat; unter ${RUECKLAGE_QM.schwach.toFixed(2)} €/m² ist die Rücklage deutlich unterdeckt. Warum das zählt: Dach, Fassade oder Heizung werden aus dieser Rücklage bezahlt. Reicht sie nicht, beschließt die Eigentümerversammlung eine Sonderumlage — und die trifft dich als Käufer, auch wenn der Verschleiß aus den Jahren davor stammt. Vor dem Kauf den Rücklagenstand und die Protokolle der letzten Eigentümerversammlungen einsehen.`,
   },
   en: {
     kaufpreis: "Agreed purchase price excluding closing costs.",
@@ -128,7 +127,6 @@ export const TIPS = {
     pvLeistung: "1 kWp ≈ 7m² roof area. Yield ~950 kWh/kWp per year.",
     isfp: "Individual Energy Renovation Roadmap: A certified energy consultant creates a personalised step-by-step plan. Reward: +5% extra BAFA subsidy on every BEG measure. Consulting is 50% subsidised. Apply before placing any orders!",
     sanIstVerbrauch: `Final energy consumption from the energy certificate (kWh/m²a). When set, the calculator uses it instead of the rough year-built estimate — for 1990s buildings that is often 30–50 % too high. The hot water share is deducted because the certificate already includes it. Values outside ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} are ignored.`,
-    ruecklage: `Monthly contribution by the owners' association to the maintenance reserve, per the service charge statement. Around EUR ${RUECKLAGE_QM.gut.toFixed(2)} per m² of living area per month is considered adequate; below EUR ${RUECKLAGE_QM.schwach.toFixed(2)}/m² the reserve is clearly underfunded. Why it matters: roof, facade and heating works are paid from this reserve. If it falls short, the owners' meeting resolves a special levy — and that hits you as the buyer, even though the wear predates your purchase. Check the reserve balance and recent meeting minutes before buying.`,
   },
   tr: {
     kaufpreis: "Kapanış maliyetleri hariç anlaşılan satın alma fiyatı.",
@@ -184,7 +182,6 @@ export const TIPS = {
     pvLeistung: "1 kWp ≈ 7m² çatı alanı. Yıllık verim ~950 kWh/kWp.",
     isfp: "Bireysel Enerji Yenileme Planı: Sertifikalı enerji danışmanı adım adım yenileme planı oluşturur. Ödül: Her BEG önlemi için +%5 BAFA teşviki. Danışmanlık %50 sübvanse edilir. Siparişten ÖNCE başvurun!",
     sanIstVerbrauch: `Enerji sertifikasındaki nihai enerji tüketimi (kWh/m²a). Girildiğinde hesaplayıcı, inşaat yılına dayalı kaba tahmin yerine bunu kullanır — 90'lı yılların yapılarında bu tahmin çoğu kez %30–50 fazladır. Sıcak su payı düşülür, çünkü sertifikada zaten dahildir. ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} dışındaki değerler yok sayılır.`,
-    ruecklage: `Kat malikleri birliğinin bakım rezervine aylık katkısı (aidat hesabına göre). Aylık m² başına yaklaşık ${RUECKLAGE_QM.gut.toFixed(2)} € yeterli sayılır; ${RUECKLAGE_QM.schwach.toFixed(2)} €/m² altında rezerv belirgin şekilde yetersizdir. Neden önemli: çatı, cephe ve ısıtma işleri bu rezervden ödenir. Yetmezse kat malikleri toplantısı ek ödeme kararı alır — yıpranma sizden önceki yıllardan kaynaklansa bile bu sizi alıcı olarak etkiler. Satın almadan önce rezerv durumunu ve son toplantı tutanaklarını inceleyin.`,
   },
   zh: {
     kaufpreis: "商定的购买价格，不含交易费用。",
@@ -232,7 +229,6 @@ export const TIPS = {
     pvLeistung: "1 kWp ≈ 7 m² 屋顶面积。年产量约 950 kWh/kWp。",
     isfp: "个人能源改造路线图：认证能源顾问制定个性化改造计划。奖励：每项BEG措施+5% BAFA补贴。咨询费用50%受补贴。下订单前申请！",
     sanIstVerbrauch: `能源证书中的终端能耗（kWh/m²a）。填入后，计算器采用该数值而非依据建筑年份的粗略估算——对90年代建筑该估算常偏高30–50%。热水部分会被扣除，因为证书已包含该部分。超出 ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} 的数值将被忽略。`,
-    ruecklage: `业主共同体每月向维修储备金的缴存额（依据物业费结算单）。每平方米居住面积每月约 ${RUECKLAGE_QM.gut.toFixed(2)} 欧元视为充足；低于 ${RUECKLAGE_QM.schwach.toFixed(2)} 欧元/m² 则明显不足。为何重要：屋顶、外墙和供暖工程均由该储备金支付。若储备不足，业主大会将决议特别征收——即使损耗发生在您购买之前，费用仍由您这位买家承担。购买前请查看储备金余额和近期业主大会记录。`,
   },
   hi: {
     kaufpreis: "क्लोजिंग लागत को छोड़कर सहमत खरीद मूल्य।",
@@ -285,6 +281,5 @@ export const TIPS = {
     pvLeistung: "1 kWp ≈ 7 m² छत क्षेत्र। वार्षिक उत्पादन ~950 kWh/kWp।",
     isfp: "व्यक्तिगत ऊर्जा नवीनीकरण रोडमैप: प्रमाणित ऊर्जा सलाहकार चरण-दर-चरण योजना बनाता है। पुरस्कार: हर BEG उपाय पर +5% BAFA सब्सिडी। परामर्श 50% अनुदानित। ऑर्डर से पहले आवेदन करें!",
     sanIstVerbrauch: `ऊर्जा प्रमाणपत्र से अंतिम ऊर्जा खपत (kWh/m²a)। मान भरने पर कैलकुलेटर निर्माण-वर्ष के मोटे अनुमान के बजाय इसका उपयोग करता है — 1990 के दशक की इमारतों के लिए वह अनुमान अक्सर 30–50 % अधिक होता है। गर्म पानी का हिस्सा घटा दिया जाता है, क्योंकि प्रमाणपत्र में वह पहले से शामिल है। ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} से बाहर के मान अनदेखे किए जाते हैं।`,
-    ruecklage: `सर्विस चार्ज विवरण के अनुसार मालिक समुदाय द्वारा रखरखाव निधि में मासिक अंशदान। प्रति m² रहने के क्षेत्र प्रति माह लगभग ${RUECKLAGE_QM.gut.toFixed(2)} यूरो पर्याप्त माना जाता है; ${RUECKLAGE_QM.schwach.toFixed(2)} यूरो/m² से कम होने पर निधि स्पष्ट रूप से अपर्याप्त है। यह क्यों मायने रखता है: छत, मुखौटा और हीटिंग के काम इसी निधि से चुकाए जाते हैं। कम पड़ने पर मालिक बैठक विशेष शुल्क तय करती है — और वह आप पर, खरीदार पर पड़ता है, भले ही टूट-फूट आपकी खरीद से पहले की हो। खरीद से पहले निधि शेष और हाल की बैठक कार्यवाही देखें।`,
   },
 };

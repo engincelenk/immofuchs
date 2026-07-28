@@ -178,9 +178,6 @@ function createDefaults() {
     // solange der Nutzer das Feld nicht selbst anfasst (Effekt in App()).
     nichtUml: String(berechneNichtUml(FLAECHE_DEFAULT)),
     leerstand: "2",
-    // Monatliche Zufuehrung zur Instandhaltungsruecklage laut Hausgeldabrechnung.
-    // Leer = unbekannt; die Ampel im Renditerechner bleibt dann aus.
-    ruecklage: "",
     vergleichsmiete: "14",
     letzteErhDatum: mietbeginnDefault,
     letzteErhMiete: "0",
