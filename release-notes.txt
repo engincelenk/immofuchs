@@ -1,3 +1,50 @@
+## 2026-07-28 (1.55.75)
+
+### Worker-Haelfte der neuen Expose-Felder
+
+Nachtrag zu 1.55.74: dort war bewusst nur die Client-Seite umgesetzt, die zehn
+neuen Felder standen in der Ergebniskarte dauerhaft auf "nicht gefunden".
+Jetzt fragt der Worker sie an und reicht sie durch.
+
+Betroffen sind drei Dateien, nicht eine - das war beim Planen zu knapp
+eingeschaetzt: `exposePrompt.ts` (JSON-Schema fuer den Workers-AI-Fallback,
+Schema-Text im Prompt, Extraktionsregeln), `exposeOutput.ts` (die Antwort wird
+dort Feld fuer Feld neu aufgebaut, eine strikte Allowlist - ein Feld nur im
+Prompt zu ergaenzen haette nichts gebracht, es waere danach wieder
+herausgefiltert worden) und `types.ts`.
+
+Die Extraktionsregeln adressieren die Fallstricke aus den beiden
+Referenzexposes:
+
+- Nutzflaeche darf NIE zur Wohnflaeche addiert werden (Murr: 76 + 8 m²)
+- bei zwei genannten Wohnflaechen die kleinere, belegte Zahl plus Warnung
+  (Ingersheim: "ca. 50 m²" vs. "gemaess Berechnung 47,88 m²")
+- "baujahr_waermeerzeuger" ist das Baujahr der HEIZUNG; fehlt es, bleibt das
+  Feld null. Niemals das Gebaeude-Baujahr eintragen - ein falsches "alt"
+  schaltet im Sanierungsrechner den 20-%-Klimabonus frei, den es nicht gibt
+- "vermietet_seit" ist der Beginn der aktuellen Miete, nicht "bezugsfrei ab"
+- Hausgeld-Aufteilung und Ruecklage nur uebernehmen, wenn das Expose sie
+  ausdruecklich beziffert - niemals aus dem Hausgeld schaetzen
+- "vermietet_seit" laeuft bewusst als Text durch die Normalisierung: haette
+  `zahl` darauf gegriffen, waere aus "01.10.2025" die Zahl 1.102025 geworden
+
+Neu ist ausserdem ein Vertragstest (`src/utils/exposeVertrag.test.js`), der
+FELD_DEFS und das Worker-Schema in beide Richtungen abgleicht und prueft, dass
+der Prompt-Text jedes Schema-Feld nennt. Genau die Luecke, die zwischen 1.55.74
+und diesem Nachtrag bestand, faellt damit kuenftig sofort auf: sie erzeugt
+weder Fehler noch Log-Eintrag, das Feld bleibt einfach stumm leer. Der
+Prompt-Text ist dabei die eigentlich kritische Haelfte - das maschinenlesbare
+Schema gilt nur fuer den Workers-AI-Fallback, Gemini sieht ausschliesslich den
+Text.
+
+11 neue Tests (128 gesamt, gruen), Worker-Typecheck sauber.
+Geaenderte Dateien: `worker/src/exposePrompt.ts`, `worker/src/exposeOutput.ts`,
+`worker/src/types.ts`, `worker/src/exposeOutput.test.ts` + neu
+`src/utils/exposeVertrag.test.js`.
+
+ACHTUNG: Diese Aenderung wird von der CI NICHT ausgeliefert. Sie braucht ein
+manuelles `npx wrangler deploy --env dev` im Ordner `worker/`.
+
 ## 2026-07-28 (1.55.74)
 
 ### Nicht umlagefaehige Kosten aus der Wohnflaeche, Energieausweis schlaegt Baujahr

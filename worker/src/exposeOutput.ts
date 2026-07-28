@@ -34,18 +34,30 @@ export function parseExposeOutput(raw: string): ExposeExtractResponse {
       kaufpreis_pro_qm: zahl(objekt.kaufpreis_pro_qm),
       zimmer: zahl(objekt.zimmer),
       wohnflaeche: zahl(objekt.wohnflaeche),
+      nutzflaeche: zahl(objekt.nutzflaeche),
       plz: text(objekt.plz),
       ort: text(objekt.ort),
+      strasse: text(objekt.strasse),
+      hausnummer: text(objekt.hausnummer),
       stockwerk: text(objekt.stockwerk),
       baujahr: zahl(objekt.baujahr),
+      zustand: text(objekt.zustand),
+      wohneinheiten: zahl(objekt.wohneinheiten),
+      vermietet: bool(objekt.vermietet),
+      // Bewusst als Text, nicht ueber `zahl`: der Client parst das Datum
+      // selbst (mapDatum in utils/exposeMapping.js) und erwartet die
+      // Originalschreibweise "01.10.2025" oder ISO.
+      vermietet_seit: text(objekt.vermietet_seit, 40),
     },
     ausstattung: {
       balkon_terrasse: bool(ausstattung.balkon_terrasse),
       einbaukueche: bool(ausstattung.einbaukueche),
       stellplatz: text(ausstattung.stellplatz),
+      stellplatz_anzahl: zahl(ausstattung.stellplatz_anzahl),
       keller: bool(ausstattung.keller),
       barrierefrei: bool(ausstattung.barrierefrei),
       heizungsart: text(ausstattung.heizungsart),
+      baujahr_waermeerzeuger: zahl(ausstattung.baujahr_waermeerzeuger),
     },
     energie: {
       energieausweistyp: text(energie.energieausweistyp),
@@ -55,6 +67,8 @@ export function parseExposeOutput(raw: string): ExposeExtractResponse {
     },
     kosten: {
       hausgeld: zahl(kosten.hausgeld),
+      hausgeld_nicht_umlagefaehig: zahl(kosten.hausgeld_nicht_umlagefaehig),
+      ruecklage_monatlich: zahl(kosten.ruecklage_monatlich),
       provision_kaeufer_prozent: zahl(kosten.provision_kaeufer_prozent),
       kaufnebenkosten: zahl(kosten.kaufnebenkosten),
       gesamtkosten: zahl(kosten.gesamtkosten),

@@ -74,19 +74,39 @@ export interface ExposeObjekt {
   kaufpreis_pro_qm: number | null;
   zimmer: number | null;
   wohnflaeche: number | null;
+  // Keller-/Abstellflaeche. Bewusst getrennt von der Wohnflaeche: ohne eigenes
+  // Feld hat das Modell beide addiert, was Preis je m² und Rendite verfaelscht.
+  nutzflaeche: number | null;
   plz: string | null;
   ort: string | null;
+  strasse: string | null;
+  hausnummer: string | null;
   stockwerk: string | null;
   baujahr: number | null;
+  // Zustandsangabe im Klartext ("gepflegt", "renovierungsbeduerftig") - der
+  // Client leitet daraus eine grobe Renovierungskostenschaetzung ab.
+  zustand: string | null;
+  // Anzahl Wohneinheiten im Haus: Basis fuer den eigenen Anteil an einer
+  // Sonderumlage.
+  wohneinheiten: number | null;
+  vermietet: boolean | null;
+  // Mietbeginn bzw. Datum, ab dem die aktuelle Miete gilt. Speist zusammen mit
+  // der Kaltmiete den Mieterhoehungsrechner (§ 558 BGB).
+  vermietet_seit: string | null;
 }
 
 export interface ExposeAusstattung {
   balkon_terrasse: boolean | null;
   einbaukueche: boolean | null;
   stellplatz: string | null;
+  // Mehr Stellplaetze als Wohnungen heisst: einer laesst sich separat vermieten.
+  stellplatz_anzahl: number | null;
   keller: boolean | null;
   barrierefrei: boolean | null;
   heizungsart: string | null;
+  // Baujahr des Waermeerzeugers, nicht des Gebaeudes. Entscheidet ueber die
+  // Altersstufe im Sanierungsrechner und damit ueber den 20-%-Klimabonus.
+  baujahr_waermeerzeuger: number | null;
 }
 
 export interface ExposeEnergie {
@@ -98,6 +118,12 @@ export interface ExposeEnergie {
 
 export interface ExposeKosten {
   hausgeld: number | null;
+  // Nicht umlagefaehiger Anteil des Hausgelds. Reine Anzeige im Client: die
+  // nicht umlagefaehigen Kosten werden dort aus der Wohnflaeche gerechnet,
+  // damit der Wert ueber Objekte hinweg vergleichbar bleibt.
+  hausgeld_nicht_umlagefaehig: number | null;
+  // Monatliche Zufuehrung zur Instandhaltungsruecklage.
+  ruecklage_monatlich: number | null;
   provision_kaeufer_prozent: number | null;
   kaufnebenkosten: number | null;
   gesamtkosten: number | null;

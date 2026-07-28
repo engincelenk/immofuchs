@@ -115,3 +115,68 @@ describe("parseExposeOutput", () => {
       .titelbild_index).toBe(3);
   });
 });
+
+// ── Felder aus dem Abgleich der Referenzexposes (Ingersheim, Murr) ─────────
+describe("parseExposeOutput - neue Felder", () => {
+  it("reicht die Felder des Expose Murr durch", () => {
+    const raw = JSON.stringify({
+      objekt: {
+        wohnflaeche: 76,
+        nutzflaeche: 8,
+        strasse: "Bottenaeckerstr.",
+        hausnummer: "3",
+        zustand: "Gepflegt",
+        wohneinheiten: 22,
+        vermietet: true,
+        vermietet_seit: "01.10.2025",
+      },
+      ausstattung: { stellplatz_anzahl: 1, baujahr_waermeerzeuger: 1995 },
+      kosten: { hausgeld: 256, hausgeld_nicht_umlagefaehig: 77.07, ruecklage_monatlich: 45.83 },
+    });
+    const r = parseExposeOutput(raw);
+
+    // Nutzflaeche bleibt getrennt - sie darf nie in der Wohnflaeche landen.
+    expect(r.objekt.wohnflaeche).toBe(76);
+    expect(r.objekt.nutzflaeche).toBe(8);
+    expect(r.objekt.strasse).toBe("Bottenaeckerstr.");
+    expect(r.objekt.hausnummer).toBe("3");
+    expect(r.objekt.zustand).toBe("Gepflegt");
+    expect(r.objekt.wohneinheiten).toBe(22);
+    expect(r.objekt.vermietet).toBe(true);
+    expect(r.ausstattung.baujahr_waermeerzeuger).toBe(1995);
+    expect(r.kosten.hausgeld_nicht_umlagefaehig).toBe(77.07);
+    expect(r.kosten.ruecklage_monatlich).toBe(45.83);
+  });
+
+  it("laesst das Mietbeginn-Datum als Text stehen", () => {
+    // Der Client parst es selbst (mapDatum). Wuerde `zahl` darauf laufen,
+    // bliebe von "01.10.2025" die Zahl 1.102025 uebrig.
+    const r = parseExposeOutput(JSON.stringify({ objekt: { vermietet_seit: "01.10.2025" } }));
+    expect(r.objekt.vermietet_seit).toBe("01.10.2025");
+  });
+
+  it("nimmt 'Ja'/'Nein' als Vermietungsstatus", () => {
+    expect(parseExposeOutput(JSON.stringify({ objekt: { vermietet: "Ja" } })).objekt.vermietet).toBe(
+      true,
+    );
+    expect(
+      parseExposeOutput(JSON.stringify({ objekt: { vermietet: "Nein" } })).objekt.vermietet,
+    ).toBe(false);
+  });
+
+  it("liefert null, wenn die neuen Felder fehlen", () => {
+    const r = parseExposeOutput("{}");
+    expect(r.objekt.nutzflaeche).toBeNull();
+    expect(r.objekt.vermietet).toBeNull();
+    expect(r.objekt.vermietet_seit).toBeNull();
+    expect(r.ausstattung.baujahr_waermeerzeuger).toBeNull();
+    expect(r.kosten.ruecklage_monatlich).toBeNull();
+  });
+
+  it("rettet die Ruecklage aus deutscher Schreibweise", () => {
+    const r = parseExposeOutput(
+      JSON.stringify({ kosten: { ruecklage_monatlich: "ca. 45,83 EUR monatlich" } }),
+    );
+    expect(r.kosten.ruecklage_monatlich).toBe(45.83);
+  });
+});

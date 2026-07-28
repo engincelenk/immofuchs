@@ -29,18 +29,27 @@ export const EXPOSE_JSON_SCHEMA = {
       kaufpreis_pro_qm: N,
       zimmer: N,
       wohnflaeche: N,
+      nutzflaeche: N,
       plz: S,
       ort: S,
+      strasse: S,
+      hausnummer: S,
       stockwerk: S,
       baujahr: N,
+      zustand: S,
+      wohneinheiten: N,
+      vermietet: B,
+      vermietet_seit: S,
     }),
     ausstattung: gruppe({
       balkon_terrasse: B,
       einbaukueche: B,
       stellplatz: S,
+      stellplatz_anzahl: N,
       keller: B,
       barrierefrei: B,
       heizungsart: S,
+      baujahr_waermeerzeuger: N,
     }),
     energie: gruppe({
       energieausweistyp: S,
@@ -50,6 +59,8 @@ export const EXPOSE_JSON_SCHEMA = {
     }),
     kosten: gruppe({
       hausgeld: N,
+      hausgeld_nicht_umlagefaehig: N,
+      ruecklage_monatlich: N,
       provision_kaeufer_prozent: N,
       kaufnebenkosten: N,
       gesamtkosten: N,
@@ -74,18 +85,24 @@ const SCHEMA = `{
     "titel": string|null, "objektart": string|null, "kaufpreis": number|null,
     "stellplatz_kaufpreis": number|null,
     "kaufpreis_pro_qm": number|null, "zimmer": number|null, "wohnflaeche": number|null,
-    "plz": string|null, "ort": string|null, "stockwerk": string|null, "baujahr": number|null
+    "nutzflaeche": number|null,
+    "plz": string|null, "ort": string|null, "strasse": string|null, "hausnummer": string|null,
+    "stockwerk": string|null, "baujahr": number|null, "zustand": string|null,
+    "wohneinheiten": number|null, "vermietet": boolean|null, "vermietet_seit": string|null
   },
   "ausstattung": {
     "balkon_terrasse": boolean|null, "einbaukueche": boolean|null, "stellplatz": string|null,
-    "keller": boolean|null, "barrierefrei": boolean|null, "heizungsart": string|null
+    "stellplatz_anzahl": number|null,
+    "keller": boolean|null, "barrierefrei": boolean|null, "heizungsart": string|null,
+    "baujahr_waermeerzeuger": number|null
   },
   "energie": {
     "energieausweistyp": string|null, "energietraeger": string|null,
     "endenergiebedarf": number|null, "energieeffizienzklasse": string|null
   },
   "kosten": {
-    "hausgeld": number|null, "provision_kaeufer_prozent": number|null,
+    "hausgeld": number|null, "hausgeld_nicht_umlagefaehig": number|null,
+    "ruecklage_monatlich": number|null, "provision_kaeufer_prozent": number|null,
     "kaufnebenkosten": number|null, "gesamtkosten": number|null,
     "kaltmiete": number|null, "nebenkosten_miete": number|null
   },
@@ -119,6 +136,37 @@ Regeln:
   eintragen, confidence "unsicher" setzen und im "warnungen"-Array melden.
 - Nennt das Expose nur EINEN Gesamtpreis ohne Aufteilung, gehoert dieser in
   "kaufpreis"; "stellplatz_kaufpreis" bleibt dann null.
+- "wohnflaeche" ist AUSSCHLIESSLICH die Wohnflaeche. Keller-, Abstell- und
+  sonstige Nebenflaechen gehoeren in "nutzflaeche" und duerfen NIEMALS zur
+  Wohnflaeche addiert werden. Beispiel: "Wohnflaeche ca. 76 m2, Nutzflaeche
+  ca. 8 m2" ergibt wohnflaeche=76 und nutzflaeche=8 - nicht 84.
+- Nennt das Expose zwei verschiedene Wohnflaechen (z.B. "ca. 50 m2" im
+  Kopfbereich, "gemaess Berechnung 47,88 m2" im Text), trage die kleinere,
+  belegte Zahl ein und melde die Abweichung im "warnungen"-Array.
+- "strasse" und "hausnummer" getrennt eintragen: "Murrstrasse 2" ergibt
+  strasse="Murrstrasse" und hausnummer="2".
+- "baujahr_waermeerzeuger" ist das Baujahr der HEIZUNG, nicht des Gebaeudes
+  ("Baujahr Waermeerzeuger 1996", "Gas-Zentralheizung aus 1996"). Steht im
+  Expose kein eigenes Baujahr fuer die Heizung, MUSS das Feld null bleiben -
+  niemals das Gebaeude-Baujahr hier eintragen. Ein falscher Wert schaltet im
+  Rechner eine Foerderung frei, die es nicht gibt.
+- "vermietet_seit" ist das Datum, ab dem die AKTUELLE Miete gilt (Mietbeginn
+  oder letzte Mietanpassung), z.B. "Vermietet seit 01.10.2025". Schreibweise
+  aus dem Expose uebernehmen ("01.10.2025" oder "2025-10-01"). Bezugsfreiheits-
+  angaben wie "bezugsfrei ab sofort" gehoeren NICHT hierher - dann null.
+- "zustand" ist die Zustandsangabe im Klartext, so wie sie im Expose steht
+  ("Gepflegt", "renovierungsbeduerftig", "Erstbezug nach Sanierung").
+- "hausgeld_nicht_umlagefaehig" ist der monatliche NICHT umlagefaehige Anteil
+  des Hausgelds, "ruecklage_monatlich" die monatliche Zufuehrung zur
+  Instandhaltungsruecklage. Beide nur eintragen, wenn das Expose sie
+  ausdruecklich beziffert - niemals aus dem Hausgeld schaetzen. Beispiel:
+  "Hausgeld 256 EUR, davon umlagefaehig 179,09 EUR, nicht umlagefaehig 77,07
+  EUR, davon Ruecklage 45,83 EUR" ergibt hausgeld=256,
+  hausgeld_nicht_umlagefaehig=77.07 und ruecklage_monatlich=45.83.
+  Sind die Betraege pro Jahr angegeben, auf den Monat umrechnen.
+- "wohneinheiten" ist die Zahl der Wohnungen im GESAMTEN Haus ("umfasst 12
+  Wohneinheiten"), nicht die Zimmerzahl der angebotenen Wohnung.
+- "stellplatz_anzahl" ist die Anzahl der zur Wohnung gehoerenden Stellplaetze.
 - Wenn ein Feld nicht auffindbar ist: null setzen, confidence "nicht_gefunden"
 - Wenn ein Feld nur indirekt ableitbar ist (z.B. Stockwerk aus dem Titel):
   Wert trotzdem setzen, aber confidence "unsicher"
