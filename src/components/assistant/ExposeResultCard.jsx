@@ -27,6 +27,18 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
 
   const zahlen = useMemo(() => zaehleZeilen(zeilen), [zeilen]);
 
+  // "Alles markieren" (Nutzertest 2026-07-28): hakt auch die Konflikt-Felder an,
+  // die die Vorauswahl bewusst auslaesst - sonst muss der Nutzer sie einzeln
+  // antippen. Der Konflikt-Hinweis ("aktuell: ...") bleibt dabei sichtbar, es
+  // aendert sich nur das Haekchen. Als Toggle, damit man genauso schnell wieder
+  // auf null kommt.
+  const uebernehmbareKeys = useMemo(
+    () => zeilen.filter((z) => z.uebernehmbar).map((z) => z.key),
+    [zeilen],
+  );
+  const alleMarkiert =
+    uebernehmbareKeys.length > 0 && uebernehmbareKeys.every((k) => auswahl.has(k));
+
   if (erledigt) {
     return (
       <div className="if-exp-chip" role="status">
@@ -43,6 +55,9 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
       return neu;
     });
 
+  const toggleAlle = () =>
+    setAuswahl(alleMarkiert ? new Set() : new Set(uebernehmbareKeys));
+
   const uebernehmen = () => {
     const n = uebernehmeZeilen(zeilen, auswahl, set);
     onUebernommen(n);
@@ -57,6 +72,17 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
           pruefen: zahlen.zuPruefen,
         })}
       </div>
+
+      {uebernehmbareKeys.length > 0 && (
+        <button
+          type="button"
+          className="if-exp-selectall"
+          onClick={toggleAlle}
+          aria-pressed={alleMarkiert}
+        >
+          {alleMarkiert ? t.auswahlAufheben : t.allesMarkieren}
+        </button>
+      )}
 
       {GRUPPEN.map((gruppe) => {
         const gruppenZeilen = zeilen.filter((z) => z.gruppe === gruppe);

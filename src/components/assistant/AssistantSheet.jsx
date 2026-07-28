@@ -84,14 +84,15 @@ export function AssistantSheet({
   const showChips = messages.length === 0 || chipsForcedOpen;
   // Fragenkatalog (Nutzerwunsch 2026-07-24): "suggested" ist jetzt ein
   // voller, kuratierter Fragen-Pool pro Rechner statt nur 3 Eintraegen.
-  // Weiterhin harte Obergrenze von 3 sichtbaren Fragen-Chips gleichzeitig
-  // (Nutzer-Feedback 2026-07-22) - "Vorherige"/"Weitere" sind eigene,
-  // zusaetzliche Nav-Chips ausserhalb dieses 3er-Caps.
+  // Harte Obergrenze von 2 sichtbaren Fragen-Chips gleichzeitig (vorher 3,
+  // reduziert nach Nutzertest 2026-07-28) - "Vorherige"/"Weitere" sind eigene,
+  // zusaetzliche Nav-Chips ausserhalb dieses Caps. Der Fragen-Pool selbst
+  // bleibt unveraendert, nur die Anzeigegroesse schrumpft.
   const [page, setPage] = useState(0);
   useEffect(() => {
     if (open) setPage(0);
   }, [open, rechner]);
-  const { items: visibleSuggested, hasPrev, hasNext } = getSuggestedPage(suggested, page, 3);
+  const { items: visibleSuggested, hasPrev, hasNext } = getSuggestedPage(suggested, page, 2);
 
   // Kopfzeile zeigt normalerweise die Tagline statt eines "online"-Status
   // (Nutzer-Feedback 2026-07-22) - nur das Tageslimit bekommt weiterhin eine
@@ -424,12 +425,18 @@ export function AssistantSheet({
             <div className="if-asst-input-row">
               {uploadMoeglich && (
                 <>
+                  {/* Bewusst OHNE capture-Attribut (Nutzertest 2026-07-28):
+                      capture="environment" zwingt iOS/Android direkt in die
+                      Kamera-App, die native Auswahl "Foto aufnehmen /
+                      Fotomediathek / Durchsuchen" erscheint dann gar nicht -
+                      und ein PDF laesst sich so nie waehlen. Ohne capture
+                      zeigen mobile Browser die volle Auswahl, Desktop nur den
+                      normalen Datei-Dialog. Nicht wieder ergaenzen. */}
                   <input
                     ref={fileRef}
                     type="file"
                     accept="image/*,application/pdf"
                     multiple
-                    capture="environment"
                     onChange={handleDateien}
                     style={{ display: "none" }}
                     tabIndex={-1}

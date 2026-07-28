@@ -66,6 +66,11 @@ export interface ExposeObjekt {
   titel: string | null;
   objektart: string | null;
   kaufpreis: number | null;
+  // Separat ausgewiesener Kaufpreis fuer Stellplatz/Garage (Nutzertest
+  // 2026-07-28). Ohne eigenes Feld hat das Modell den Stellplatzpreis in
+  // `kaufpreis` mit aufaddiert - der Renditerechner hat dafuer aber ein
+  // eigenes Feld (`garage`) und rechnet die Summe selbst.
+  stellplatz_kaufpreis: number | null;
   kaufpreis_pro_qm: number | null;
   zimmer: number | null;
   wohnflaeche: number | null;

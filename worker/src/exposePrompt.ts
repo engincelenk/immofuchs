@@ -25,6 +25,7 @@ export const EXPOSE_JSON_SCHEMA = {
       titel: S,
       objektart: S,
       kaufpreis: N,
+      stellplatz_kaufpreis: N,
       kaufpreis_pro_qm: N,
       zimmer: N,
       wohnflaeche: N,
@@ -71,6 +72,7 @@ export const EXPOSE_JSON_SCHEMA = {
 const SCHEMA = `{
   "objekt": {
     "titel": string|null, "objektart": string|null, "kaufpreis": number|null,
+    "stellplatz_kaufpreis": number|null,
     "kaufpreis_pro_qm": number|null, "zimmer": number|null, "wohnflaeche": number|null,
     "plz": string|null, "ort": string|null, "stockwerk": string|null, "baujahr": number|null
   },
@@ -105,6 +107,18 @@ ${SCHEMA}
 Regeln:
 - Antworte NUR mit validem JSON, kein Fliesstext, keine Markdown-Codebloecke
 - Zahlen als reine Zahlen ohne Einheit und ohne Tausenderpunkt (269000, nicht "269.000 EUR")
+- "kaufpreis" ist AUSSCHLIESSLICH der Kaufpreis der Wohnung/des Objekts selbst.
+  Rechne NIEMALS separat ausgewiesene Stellplatz-, Garagen- oder Tiefgaragenpreise
+  hinzu - die gehoeren in "stellplatz_kaufpreis". Beispiel: "Kaufpreis Wohnung:
+  199.000 EUR", "Aussenstellplaetze: 15.000 EUR", "Gesamtkaufpreis: 214.000 EUR"
+  ergibt kaufpreis=199000 und stellplatz_kaufpreis=15000 - NICHT kaufpreis=214000.
+- "stellplatz_kaufpreis" ist der Gesamtpreis ALLER angebotenen Stellplaetze/Garagen
+  zusammen, nicht der Preis pro Stueck. Nennt das Expose einen Preis je Stellplatz
+  und die Anzahl ("2 Stellplaetze je 7.500 EUR"), trage die Summe ein (15000).
+  Bleibt unklar, ob der Betrag pro Stueck oder insgesamt gilt: Wert trotzdem
+  eintragen, confidence "unsicher" setzen und im "warnungen"-Array melden.
+- Nennt das Expose nur EINEN Gesamtpreis ohne Aufteilung, gehoert dieser in
+  "kaufpreis"; "stellplatz_kaufpreis" bleibt dann null.
 - Wenn ein Feld nicht auffindbar ist: null setzen, confidence "nicht_gefunden"
 - Wenn ein Feld nur indirekt ableitbar ist (z.B. Stockwerk aus dem Titel):
   Wert trotzdem setzen, aber confidence "unsicher"

@@ -1,3 +1,66 @@
+## 2026-07-28 (1.55.69)
+
+### Upload-Nachbesserungen aus dem Nutzertest
+
+Sechs Befunde aus `docs/upload-verbesserungen-2026-07-28.md`, alle umgesetzt.
+
+**Büroklammer öffnete auf dem iPhone direkt die Kamera.** Der versteckte
+File-Input hatte `capture="environment"` — das zwingt iOS und Android in die
+Kamera-App, die native Auswahl "Foto aufnehmen / Fotomediathek / Durchsuchen"
+erschien gar nicht erst, und ein PDF war so überhaupt nicht wählbar. Attribut
+entfernt (mit Kommentar, damit es nicht zurückkommt). Mobil erscheint jetzt die
+volle Auswahl, Desktop zeigt den normalen Datei-Dialog.
+
+**Finns Begrüßung gekürzt** (alle 5 Sprachen), rund 45 % kürzer. Wer Finn ist
+und der Hinweis auf fehlende Rechtsverbindlichkeit bleiben, der Absatz über
+"Zahlen, Begriffe und Regeln ohne Fachchinesisch" fällt weg.
+
+**Fragen-Chips 3 → 2.** Nur die Anzeigegröße schrumpft, der Fragen-Pool und die
+"Weitere/Vorherige"-Navigation bleiben unverändert.
+
+**Neuer Button "Alles markieren"** in der Ergebnis-Karte, als Toggle
+("Alles markieren" ↔ "Auswahl aufheben"). Hintergrund: der Renditerechner ist
+mit Defaults vorbelegt, deshalb steht bei fast jedem Feld schon ein Wert — im
+Test waren nur 1 von 9 übernehmbaren Zeilen vorausgewählt, alle anderen galten
+als Konflikt und mussten einzeln angetippt werden. Der Konflikt-Hinweis
+("aktuell: 300000") bleibt in jedem Fall sichtbar; nur das Häkchen ändert sich,
+überschrieben wird weiterhin ausschließlich, was angehakt ist.
+
+**Stellplatz-Kaufpreis verschwand — behoben.** Im Extraktionsschema gab es für
+einen separat ausgewiesenen Stellplatzpreis kein Zielfeld; `ausstattung.stellplatz`
+ist reiner Text. Das Modell hat den Betrag deshalb in `objekt.kaufpreis`
+mit aufaddiert: aus 199.000 € Wohnung + 15.000 € Stellplätze wurden 214.000 €
+Kaufpreis — rechnerisch die richtige Summe, aber der Nutzer sah nicht, dass ein
+Stellplatzanteil darin steckt, und Grunderwerbsteuer wie Kaufnebenkosten liefen
+auf dem Mischwert.
+
+- `exposePrompt.ts`: neues Zahlenfeld `objekt.stellplatz_kaufpreis` in Schema
+  und `guided_json`, plus drei Prompt-Regeln — `kaufpreis` ist ausschließlich
+  der Preis des Objekts selbst (nie inkl. Stellplatz), `stellplatz_kaufpreis`
+  ist der Gesamtpreis *aller* Stellplätze (nicht pro Stück), und bei nur einem
+  genannten Gesamtpreis ohne Aufteilung bleibt das neue Feld null.
+- `exposeOutput.ts` / `types.ts`: Feld wird geparst und gehärtet wie die
+  übrigen Zahlenfelder.
+- `exposeMapping.js`: neue Zeile "Stellplatz-Kaufpreis" (5 Sprachen), Ziel ist
+  das **bestehende** Rechnerfeld `garage` ("Garage/Stellplatz"). Kein neues
+  Rechnerfeld nötig — `rendite.js` rechnet seit jeher
+  `gesamtKaufpreis = kaufpreis + garage`.
+
+**Ende-zu-Ende geprüft** mit dem Exposé aus dem Nutzertest ("Der Kaufpreis der
+Wohnung beträgt 199.000 €, die beiden Außenstellplätze werden beide für zzgl.
+insgesamt 15.000 € mitverkauft. Somit beträgt der Gesamtkaufpreis 214.000 €"):
+Karte zeigt Kaufpreis 199.000 € und Stellplatz-Kaufpreis 15.000 € getrennt,
+nach "Alles markieren" + "Übernehmen" stehen im Rechner 199000 und 15000, die
+Summenzeile zeigt 214.000 €. Toggle 1 → 9 → 0 → 9 Häkchen, `aria-pressed`
+korrekt, alle 8 Konflikt-Hinweise durchgehend sichtbar. 57 Tests grün, Lint
+0 Fehler, Build grün, Worker-Typecheck grün, keine Konsolenfehler.
+
+**Deploy-Hinweis:** Die Änderungen an `worker/src/` gehen nicht über den
+Git-Push mit — der Worker braucht ein eigenes `wrangler deploy`, sonst kennt
+das Backend `stellplatz_kaufpreis` nicht und das Feld bleibt dauerhaft leer.
+
+---
+
 ## 2026-07-27 (1.55.68)
 
 ### PDF-Exposés lesbar + ehrliche Fehlermeldungen

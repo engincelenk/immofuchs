@@ -85,6 +85,8 @@ export const ASSISTANT_SHEET_CSS = `
 
   .if-exp-card{align-self:stretch;background:var(--cc);border:1px solid var(--cb);border-radius:12px;padding:12px;font-size:13px;color:var(--ct)}
   .if-exp-card-head{font-weight:700;font-size:12.5px;color:var(--cl);padding-bottom:8px;border-bottom:1px solid var(--cb);margin-bottom:6px}
+  .if-exp-selectall{width:100%;background:transparent;color:var(--ca-dk);border:1px solid var(--cb);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;min-height:44px}
+  .if-exp-selectall:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
   .if-exp-gruppe{padding-top:6px}
   .if-exp-gruppe-titel{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--ch);margin:4px 0 2px}
   .if-exp-row{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--cro)}

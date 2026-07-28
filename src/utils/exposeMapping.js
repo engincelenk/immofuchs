@@ -19,6 +19,17 @@ export const FELD_DEFS = [
   { key: "titel", gruppe: "objekt", typ: "text" },
   { key: "objektart", gruppe: "objekt", typ: "text" },
   { key: "kaufpreis", gruppe: "objekt", typ: "zahl", einheit: "€", ziele: ["kaufpreis"] },
+  // Separat ausgewiesener Stellplatz-/Garagenpreis (Nutzertest 2026-07-28).
+  // Zielfeld ist das bestehende `garage` im Renditerechner - rendite.js rechnet
+  // gesamtKaufpreis = kaufpreis + garage, die Aufteilung bleibt fuer den Nutzer
+  // also sichtbar, statt still im Kaufpreis zu verschwinden.
+  {
+    key: "stellplatz_kaufpreis",
+    gruppe: "objekt",
+    typ: "zahl",
+    einheit: "€",
+    ziele: ["garage"],
+  },
   { key: "kaufpreis_pro_qm", gruppe: "objekt", typ: "zahl", einheit: "€/m²" },
   { key: "zimmer", gruppe: "objekt", typ: "zahl" },
   // Wohnflaeche speist zwei Rechner: Rendite (flaeche) und Sanierung (sanFl).

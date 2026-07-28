@@ -30,6 +30,7 @@ export function parseExposeOutput(raw: string): ExposeExtractResponse {
       titel: text(objekt.titel),
       objektart: text(objekt.objektart),
       kaufpreis: zahl(objekt.kaufpreis),
+      stellplatz_kaufpreis: zahl(objekt.stellplatz_kaufpreis),
       kaufpreis_pro_qm: zahl(objekt.kaufpreis_pro_qm),
       zimmer: zahl(objekt.zimmer),
       wohnflaeche: zahl(objekt.wohnflaeche),
