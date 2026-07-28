@@ -22,6 +22,11 @@ DAILY_REQUEST_LIMIT = "20"
 # Ueber das Dashboard ohne Redeploy anpassbar, wie ASSISTANT_ENABLED.
 IP_DAILY_LIMIT = "60"
 GLOBAL_DAILY_LIMIT = "2000"
+# Text-Chat-Modell fuer Gemini. Ohne Eintrag nimmt der Worker
+# "gemini-2.5-flash-lite" (siehe modelRouter.ts). Ueber das Dashboard
+# umstellbar, ohne Redeploy - wichtig bei Googles kurzen Deprecation-Zyklen
+# (der Vorgaenger "gemini-2.0-flash-lite" wurde zum 01.06.2026 abgeschaltet).
+# GEMINI_MODEL = "gemini-2.5-flash-lite"
 # ── Expose-/Screenshot-Extraktion (/api/expose-extract) ──
 # Eigener Kill-Switch, unabhaengig von ASSISTANT_ENABLED: Bild-Calls sind
 # teurer und riskanter als Text-Chat und muessen isoliert abschaltbar sein

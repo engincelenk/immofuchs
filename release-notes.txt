@@ -1,3 +1,40 @@
+## 2026-07-28 (1.55.76)
+
+### PDF-Limit auf 25 MB, Feinschliff an Beschriftung und Tooltips
+
+**PDF-Limit von 15 auf 25 MB.** Bildlastige Makler-Exposes liegen regelmaessig
+darueber - der Referenzfall aus dem Nutzertest hatte 17 MB und war schlicht
+nicht auswertbar. Angehoben in `exposeUpload.js` (Client) und `validator.ts`
+(Worker); die Gesamtschranke steigt von 20 auf 30 MB mit, sonst waere ein
+gerade noch erlaubtes PDF an ihr gescheitert - mit einer Fehlermeldung, die
+von zu vielen Bildern spricht.
+
+Die Fehlermeldung nennt die Groesse woertlich ("max. 25 MB") und steht in
+fuenf Sprachen. Damit Text und Konstante nicht auseinanderlaufen, bindet
+`src/utils/exposeLimits.test.js` sie aneinander: der Test liest MAX_PDF_MB und
+prueft, dass jede Sprachfassung diese Zahl enthaelt.
+
+VORBEHALT: Gemini nimmt Inline-Daten nur bis rund 20 MB Gesamt-Request an. Ein
+25-MB-PDF wird base64-kodiert zu etwa 33 MB und duerfte dort abgelehnt werden.
+Der Worker faellt dann auf Workers AI zurueck, das das PDF ueber
+`env.AI.toMarkdown` zu Text wandelt - der Weg sollte tragen, ist bei dieser
+Groesse aber ungetestet. Wenn sich das bestaetigt, ist der saubere Weg Geminis
+File API statt Inline-Daten.
+
+**Beschriftung.** "Nicht umlagef." heisst jetzt ausgeschrieben "Nicht
+umlagefaehige Kosten" (fuenf Sprachen).
+
+**Herleitungszeile entfernt.** Die Zeile "Richtwert: 105 € (1,75 €/m² × 60 m²)"
+unter dem Feld faellt weg; die Erklaerung steht im Tooltip. Die dadurch
+ungenutzten Importe in `Renditerechner.jsx` sind mit entfernt.
+
+**Zwei Tooltips gekuerzt** (jeweils fuenf Sprachen): `nichtUml` von 507 auf
+260 Zeichen, `sanIstVerbrauch` von 643 auf 354. Kernaussagen - Richtwertspanne
+bzw. Warmwasser-Abzug und Plausibilitaetsgrenzen - bleiben, Herleitungen und
+Beispiele entfallen.
+
+12 neue Tests (140 gesamt, gruen).
+
 ## 2026-07-28 (1.55.75)
 
 ### Worker-Haelfte der neuen Expose-Felder

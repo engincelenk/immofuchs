@@ -65,13 +65,20 @@ export const ASSISTANT_SHEET_CSS = `
   .if-exp-consent{flex:none;margin:0 14px 8px;padding:10px 12px;background:var(--ca-bg);border:1px solid var(--ca-bd);border-radius:12px;font-size:12px;color:var(--cl);line-height:1.45;display:flex;flex-direction:column;gap:8px}
   .if-exp-consent button{align-self:flex-start;background:var(--ca);color:#fff;border:none;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
 
-  .if-exp-thumbs{flex:none;display:flex;gap:8px;overflow-x:auto;padding:6px 14px 8px;align-items:center}
+  /* Zwei Zeilen statt einer: die Thumbs scrollen horizontal, der Auswerten-
+     Knopf sitzt darunter in voller Breite und bleibt dadurch immer sichtbar
+     (Nutzertest 2026-07-28, mehrere Fotos auf dem Handy). */
+  .if-exp-sel{flex:none;display:flex;flex-direction:column;gap:8px;padding-bottom:8px}
+  .if-exp-thumbs{display:flex;gap:8px;overflow-x:auto;padding:6px 14px 0;align-items:center}
   .if-exp-thumb{position:relative;flex:none;width:52px;height:52px;border-radius:8px;overflow:hidden;border:1px solid var(--cb);background:var(--ci)}
   .if-exp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .if-exp-thumb.pdf{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ch)}
   .if-exp-thumb button{position:absolute;top:1px;right:1px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(26,26,26,.62);color:#fff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
-  .if-exp-start{flex:none;background:var(--ca);color:#fff;border:none;border-radius:16px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+  .if-exp-start{flex:none;align-self:stretch;margin:0 14px;min-height:44px;background:var(--ca);color:#fff;border:none;border-radius:16px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
   .if-exp-start:disabled{opacity:.5;cursor:default}
+  .if-exp-start:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
+  .if-exp-goto{align-self:stretch;min-height:44px;background:var(--ca);color:#fff;border:none;border-radius:12px;padding:10px 14px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
+  .if-exp-goto:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
   .if-exp-fehler{flex:none;margin:0 14px 8px;font-size:12px;color:#8a2020;background:#FDEDED;border-radius:8px;padding:7px 10px}
 
   .if-exp-progress{align-self:stretch;background:var(--cc);border:1px solid var(--cb);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--cl)}

@@ -4,15 +4,21 @@
 // 11.1 (Verkleinern auf ~1500px, nur React-State, kein localStorage).
 //
 // Die Limits hier spiegeln bewusst die des Workers (worker/src/validator.ts) -
-// der Client soll dem Nutzer sofort sagen, was nicht geht, statt ihn 15 MB
+// der Client soll dem Nutzer sofort sagen, was nicht geht, statt ihn 25 MB
 // hochladen und dann ein 400 sehen zu lassen. Der Worker bleibt trotzdem die
 // verbindliche Schranke.
 
 export const MAX_IMAGES = 15;
 export const MAX_IMAGE_EDGE = 1500; // laengste Kante nach dem Verkleinern
-export const MAX_PDF_BYTES = 15 * 1024 * 1024;
+// 2026-07-28 von 15 auf 25 MB angehoben: bildlastige Makler-Exposes liegen
+// regelmaessig darueber (Referenzfall: 17 MB). Die Fehlermeldung nennt diese
+// Zahl - i18n/expose.js, abgesichert durch exposeLimits.test.js.
+export const MAX_PDF_MB = 25;
+export const MAX_PDF_BYTES = MAX_PDF_MB * 1024 * 1024;
 export const MAX_PDF_PAGES = 20;
-export const MAX_TOTAL_BYTES = 20 * 1024 * 1024;
+// Muss ueber MAX_PDF_BYTES liegen, sonst scheitert ein gerade noch erlaubtes
+// PDF an der Gesamtschranke.
+export const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 
 const JPEG_QUALITY = 0.85; // Screenshots enthalten Text - niedriger wird unleserlich
 export const ERLAUBTE_BILD_TYPEN = ["image/jpeg", "image/png", "image/webp"];

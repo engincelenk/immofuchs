@@ -134,11 +134,16 @@ function validateVergleichsObjekte(
 
 const MAX_IMAGES = 15; // Spec 6, "Pro einzelner Anfrage"
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
-const MAX_PDF_BYTES = 15 * 1024 * 1024;
+// 2026-07-28 von 15 auf 25 MB angehoben, spiegelt MAX_PDF_BYTES im Client
+// (src/utils/exposeUpload.js). Bildlastige Makler-Exposes liegen regelmaessig
+// ueber 15 MB.
+const MAX_PDF_BYTES = 25 * 1024 * 1024;
 // Zusaetzliche Gesamtschranke: 15 Bilder x 15 MB waeren 225 MB und wuerden den
 // Worker beim JSON-Parsen sprengen. Bilder werden client-seitig auf ~1500px
 // verkleinert (Spec 11.1), damit bleibt eine reale Anfrage deutlich darunter.
-const MAX_TOTAL_BYTES = 20 * 1024 * 1024;
+// Muss ueber MAX_PDF_BYTES liegen, sonst scheitert ein gerade noch erlaubtes
+// PDF an dieser Schranke statt an der eigenen.
+const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 
 const ALLOWED_IMAGE_MIME: ReadonlySet<string> = new Set([
   "image/jpeg",

@@ -161,6 +161,10 @@ export interface Env {
   IP_DAILY_LIMIT?: string;
   GLOBAL_DAILY_LIMIT?: string;
   GEMINI_API_KEY?: string;
+  // Erlaubt, das Text-Chat-Modell ohne Redeploy zu wechseln (siehe modelRouter.ts,
+  // analog zu EXPOSE_GEMINI_MODEL fuer Vision) - wichtig, weil Google Gemini-Modelle
+  // in kurzen Zyklen abkuendigt (z.B. gemini-2.0-flash-lite zum 01.06.2026).
+  GEMINI_MODEL?: string;
   // Eigener Kill-Switch fuer die Bild-Extraktion (Spec 11.4): teurer und
   // riskanter als Text-Chat, muss isoliert abschaltbar sein, ohne Finn
   // insgesamt lahmzulegen.

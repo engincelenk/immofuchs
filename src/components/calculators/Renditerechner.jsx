@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { BL_N, BL_O, NICHT_UML, RUECKLAGE_QM } from "../../data.js";
+import { BL_N, BL_O, RUECKLAGE_QM } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP, tpl } from "../../utils/helpers.js";
 import { rate, vrd } from "../../utils/bands.js";
-import { computeRendite, berechneNichtUml } from "../../utils/rendite.js";
+import { computeRendite } from "../../utils/rendite.js";
 import { F, Sel, Row, Sec, Ins, VT, AmpelKPI, NeutralKPI } from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
 import { RBar } from "../charts/RBar.jsx";
@@ -36,9 +36,6 @@ export default function Haupt() {
   };
   // mieteQm: use typed value; if empty string, don't fall back (allow clearing)
   const mieteQm = d.mieteQm !== "" ? +d.mieteQm || 0 : 0;
-  // Richtwert der nicht umlagefaehigen Kosten. Nachgefuehrt wird das Feld in
-  // App.jsx; hier dient der Wert nur der Anzeige unter dem Eingabefeld.
-  const richtwertNichtUml = berechneNichtUml(d.flaeche);
   // Ruecklage je m² und Monat. null = keine Angabe (kein Expose-Wert, nichts
   // eingetippt) - dann bleibt die Ampel aus, statt eine 0 zu bewerten.
   const ruecklageQm = (() => {
@@ -185,13 +182,6 @@ export default function Haupt() {
               value={d.nichtUml}
               onChange={(v) => set("nichtUml", v)}
               tip={tip("nichtUml")}
-              // Richtwert immer anzeigen, auch wenn der Nutzer ueberschrieben
-              // hat - dann ist die Abweichung sofort sichtbar.
-              hint={
-                richtwertNichtUml !== null
-                  ? `${t.richtwert}: ${fmtE(richtwertNichtUml)} (${fmt(NICHT_UML.mittel, 2)} €/m² × ${fmt(+d.flaeche || 0)} m²)`
-                  : ""
-              }
             />
             <F
               label={t.leerstand}

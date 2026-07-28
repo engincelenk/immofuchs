@@ -51,6 +51,7 @@ export function AssistantSheet({
   const inputRef = useRef(null);
   const sheetRef = useRef(null);
   const fileRef = useRef(null);
+  const logRef = useRef(null);
   const isDesktop = useIsDesktop();
   const [minimized, setMinimized] = useState(false);
 
@@ -255,6 +256,15 @@ export function AssistantSheet({
     extrahiereExpose(zuSenden, pdfZuSenden, lang);
   };
 
+  // Nach der Uebernahme ans Ende des Verlaufs scrollen: Disclaimer und der
+  // "Weiter zum Rechner"-Knopf stehen ganz unten und waeren sonst je nach
+  // Scrollposition unsichtbar - genau der Weg, den der Nutzer jetzt braucht.
+  useEffect(() => {
+    if (!zeigeDisclaimer || !logRef.current) return;
+    const el = logRef.current;
+    el.scrollTop = el.scrollHeight;
+  }, [zeigeDisclaimer]);
+
   // Objekt-URLs der Vorschaubilder freigeben, wenn das Sheet verschwindet.
   useEffect(() => {
     return () => thumbs.forEach((url) => URL.revokeObjectURL(url));
@@ -293,7 +303,7 @@ export function AssistantSheet({
         {!minimized && (
           <>
             <div className="if-asst-context">{contextLabel}</div>
-            <div className="if-asst-log" aria-live="polite">
+            <div className="if-asst-log" ref={logRef} aria-live="polite">
               {/* Begruessung: Finn stellt sich einmal vor, bevor die erste
                   Frage laeuft (Nutzerwunsch 2026-07-22). */}
               <ChatBubble role="assistant" text={t.greeting} />
@@ -321,7 +331,18 @@ export function AssistantSheet({
               )}
               {/* Fachlicher Pflichthinweis nach der Uebernahme (Spec 9,
                   CEO-Auflage): Anbieterangaben sind ungeprueft. */}
-              {zeigeDisclaimer && <ChatBubble role="system" text={xt.disclaimer} />}
+              {zeigeDisclaimer && (
+                <>
+                  <ChatBubble role="system" text={xt.disclaimer} />
+                  {/* Ausgang nach der Uebernahme (Nutzertest 2026-07-28): vorher
+                      fuehrte der einzige Weg zum Rechner ueber das X in der
+                      Kopfzeile. Bewusst UNTER dem Disclaimer, damit der
+                      Pflichthinweis vor dem Weiterklicken sichtbar ist. */}
+                  <button type="button" className="if-exp-goto" onClick={handleClose}>
+                    {xt.zumRechnerBtn}
+                  </button>
+                </>
+              )}
               {status === "loading" && <ChatBubble role="loading" text={t.loading} />}
               {status === "error" && (
                 <ChatBubble
@@ -385,27 +406,36 @@ export function AssistantSheet({
 
             {/* Ausgewaehlte Dateien: horizontal scrollbare Thumbnail-Reihe */}
             {(thumbs.length > 0 || pdf) && (
-              <div className="if-exp-thumbs">
-                {thumbs.map((url, i) => (
-                  <div key={url} className="if-exp-thumb">
-                    <img src={url} alt="" />
-                    <button
-                      type="button"
-                      onClick={() => entferneBild(i)}
-                      aria-label={xt.entfernenAria}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                {pdf && (
-                  <div className="if-exp-thumb pdf">
-                    <span aria-hidden="true">PDF</span>
-                    <button type="button" onClick={() => setPdf(null)} aria-label={xt.entfernenAria}>
-                      ×
-                    </button>
-                  </div>
-                )}
+              <div className="if-exp-sel">
+                {/* Auswerten-Knopf bewusst AUSSERHALB der Thumb-Leiste
+                    (Nutzertest 2026-07-28): innerhalb scrollte er ab ca. vier
+                    Bildern mit den Thumbnails nach rechts aus dem Bild. */}
+                <div className="if-exp-thumbs">
+                  {thumbs.map((url, i) => (
+                    <div key={url} className="if-exp-thumb">
+                      <img src={url} alt="" />
+                      <button
+                        type="button"
+                        onClick={() => entferneBild(i)}
+                        aria-label={xt.entfernenAria}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {pdf && (
+                    <div className="if-exp-thumb pdf">
+                      <span aria-hidden="true">PDF</span>
+                      <button
+                        type="button"
+                        onClick={() => setPdf(null)}
+                        aria-label={xt.entfernenAria}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   className="if-exp-start"

@@ -6,10 +6,14 @@ const TEMPERATURE = 0.3; // niedrig fuer konsistentere Antworten, siehe Konzept 
 const MODEL_TIMEOUT_MS = 20000; // Schutz gegen haengende/degradierte Model-Calls (siehe release-notes.txt)
 
 const WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-// Verifiziert per /v1beta/models-Abfrage gegen den echten Key (2026-07-19) -
-// "gemini-2.5-flash-lite" existierte fuer dieses Konto nicht (404), dieser
-// Name ist bestaetigt vorhanden. Siehe release-notes.txt fuer die Diagnose.
-const GEMINI_MODEL = "gemini-2.0-flash-lite";
+// "gemini-2.0-flash-lite" wurde von Google zum 01.06.2026 abgeschaltet
+// (bestaetigte Deprecation, siehe release-notes.txt 2026-07-28) - jeder
+// Gemini-Call lief seitdem sofort in einen Fehler und fiel auf den
+// schwaecheren Workers-AI-Fallback zurueck, ohne dass das sichtbar war.
+// Ersetzt durch "gemini-2.5-flash-lite". Ueber env.GEMINI_MODEL ohne Redeploy
+// wechselbar (Dashboard-Var, analog zu EXPOSE_GEMINI_MODEL), damit der naechste
+// Google-Deprecation-Zyklus keinen Code-Redeploy mehr braucht.
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
 
 // Alle Sprachen primaer ueber Gemini (bessere Antwortqualitaet als das kostenlose
 // Llama 3.3 auch fuer DE/EN, siehe release-notes.txt) - Workers AI nur noch als
@@ -81,12 +85,12 @@ const VISION_MAX_TOKENS = 4096; // ein voller Datensatz nach Schema, nicht ein C
 const VISION_TEMPERATURE = 0; // Extraktion, nicht Formulierung - so wenig Streuung wie moeglich
 const VISION_TIMEOUT_MS = 60000; // 15 Bilder brauchen deutlich laenger als ein Text-Call
 
-// Dasselbe Modell wie der Text-Chat (Nutzerentscheidung 2026-07-27). Der
-// urspruenglich gewaehlte staerkere "gemini-2.0-flash" lief in denselben
-// 429 wie alles andere auf diesem Key - die Modellwahl war nicht die Ursache,
-// siehe release-notes.txt. Ueber EXPOSE_GEMINI_MODEL ohne Redeploy wechselbar,
-// falls sich die Extraktionsqualitaet als zu schwach erweist.
-const DEFAULT_VISION_MODEL = "gemini-2.0-flash-lite";
+// Dasselbe Modell wie der Text-Chat (Nutzerentscheidung 2026-07-27), jetzt
+// aktualisiert auf "gemini-2.5-flash-lite" (siehe DEFAULT_GEMINI_MODEL oben -
+// "gemini-2.0-flash-lite" ist seit 01.06.2026 abgeschaltet). Ueber
+// EXPOSE_GEMINI_MODEL ohne Redeploy wechselbar, falls sich die
+// Extraktionsqualitaet als zu schwach erweist.
+const DEFAULT_VISION_MODEL = "gemini-2.5-flash-lite";
 
 // Fallback-Modell auf Workers AI. Die urspruengliche Spec-Annahme "kein
 // Vision-Fallback moeglich" galt fuer Llama 3.3 (Text-Chat) - inzwischen liegen
@@ -248,13 +252,15 @@ async function callGemini(env: Env, systemPrompt: string, userPayload: string): 
     throw new Error("gemini_api_key_missing");
   }
 
+  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+
   const controller = new AbortController();
   const abortTimer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
 
   let res: Response;
   try {
     res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
         headers: {
