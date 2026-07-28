@@ -212,6 +212,13 @@ export default function App() {
   }, [tab]);
   const [legalModal, setLegalModal] = useState(null);
   const zinssatzTouchedRef = useRef(false); // true once user manually edits the field
+  // Welches der beiden gekoppelten Mietfelder im Renditerechner zuletzt gesetzt
+  // wurde ("kalt" = Kaltmiete ist fuehrend, mieteQm wird daraus abgeleitet).
+  // Liegt hier statt im Renditerechner, weil auch die Expose-Uebernahme die
+  // Richtung vorgeben muss - und das auch dann, wenn der Rechner gerade nicht
+  // gemountet ist. Bewusst ein Ref und nicht Teil von `d`: kein Re-Render und
+  // nichts, was in gespeicherten Objekten landet.
+  const mietQuelleRef = useRef(null);
 
   // ── Zinsen laden: zinsen.json (lokal, kein Bundesbank-API-Call wegen CORS) ──
   useEffect(() => {
@@ -319,6 +326,7 @@ export default function App() {
       value={{
         d: data,
         set,
+        mietQuelleRef,
         t,
         lang,
         zinsen,

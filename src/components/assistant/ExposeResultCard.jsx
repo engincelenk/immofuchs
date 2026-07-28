@@ -6,8 +6,15 @@
 // bleibt stehen, bis der Nutzer aktiv uebernimmt.
 
 import { useMemo, useState } from "react";
+import { useApp } from "../../context/AppContext.jsx";
 import { ExposeFieldRow } from "./ExposeFieldRow.jsx";
-import { baueZeilen, uebernehmeZeilen, zaehleZeilen, GRUPPEN } from "../../utils/exposeMapping.js";
+import {
+  baueZeilen,
+  uebernehmeZeilen,
+  zaehleZeilen,
+  enthaeltKaltmiete,
+  GRUPPEN,
+} from "../../utils/exposeMapping.js";
 import { fuelle } from "../../i18n/expose.js";
 
 const GRUPPEN_LABEL = {
@@ -19,6 +26,7 @@ const GRUPPEN_LABEL = {
 };
 
 export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebernommen }) {
+  const { mietQuelleRef } = useApp() || {};
   const zeilen = useMemo(() => baueZeilen(ergebnis, d, t), [ergebnis, d, t]);
 
   const [auswahl, setAuswahl] = useState(
@@ -59,6 +67,14 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
     setAuswahl(alleMarkiert ? new Set() : new Set(uebernehmbareKeys));
 
   const uebernehmen = () => {
+    // Kaltmiete und Wohnflaeche sind im Renditerechner ueber zwei Effekte
+    // gekoppelt; ohne Vorgabe rechnet er die gerade uebernommene Kaltmiete
+    // sofort wieder aus dem alten €/m²-Wert um. Kommt die Kaltmiete aus dem
+    // Expose, ist sie die Vorgabe - mieteQm wird daraus abgeleitet, nicht
+    // umgekehrt. Nur setzen, wenn die Kaltmiete wirklich Teil der Uebernahme
+    // ist: sonst soll die Kaltmiete weiter aus €/m² × neuer Flaeche folgen.
+    if (mietQuelleRef && enthaeltKaltmiete(zeilen, auswahl)) mietQuelleRef.current = "kalt";
+
     const n = uebernehmeZeilen(zeilen, auswahl, set);
     onUebernommen(n);
   };

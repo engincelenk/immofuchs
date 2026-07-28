@@ -200,6 +200,16 @@ export function uebernehmeZeilen(zeilen, auswahl, set) {
   return anzahl;
 }
 
+// Ist die Kaltmiete Teil dieser Uebernahme? Der Renditerechner koppelt
+// Kaltmiete und €/m² ueber zwei Effekte; kommt die Kaltmiete aus dem Expose,
+// muss sie die fuehrende Groesse sein, sonst rechnet der Rechner sie sofort
+// wieder aus dem alten €/m²-Wert um (Nutzertest 2026-07-28). Ohne Kaltmiete in
+// der Auswahl bleibt es bei der Gegenrichtung - dann soll eine uebernommene
+// Wohnflaeche die Kaltmiete neu berechnen.
+export function enthaeltKaltmiete(zeilen, auswahl) {
+  return zeilen.some((z) => z.key === "kaltmiete" && z.uebernehmbar && auswahl.has(z.key));
+}
+
 // Kopfzeile der Karte: "18 von 22 Feldern gefunden · 3 zu pruefen" (Spec 8).
 export function zaehleZeilen(zeilen) {
   const gesamt = zeilen.length;

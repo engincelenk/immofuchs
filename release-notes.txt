@@ -1,3 +1,85 @@
+## 2026-07-28 (1.55.71)
+
+### Expose-Uebernahme: Kaltmiete wird nicht mehr sofort ueberschrieben
+
+Aus dem Nutzertest: Eine aus dem Expose uebernommene Kaltmiete von 650 € stand
+danach nicht im Feld — dort erschienen 748 €. Die Karte meldete trotzdem
+"9 Werte uebernommen".
+
+Ursache waren die zwei Effekte im Renditerechner, die Kaltmiete und €/m²
+gegenseitig synchronisieren. Welche der beiden Groessen fuehrt, stand in einem
+Ref, den nur die beiden Eingabefelder setzen konnten. Die Expose-Uebernahme
+schreibt aber direkt über `set()` und lief damit an dieser Markierung vorbei:
+React verarbeitet alle Werte in einem Rutsch, danach rechnete der Effekt die
+frisch uebernommene Kaltmiete wieder aus dem *alten* €/m²-Wert aus
+(15 €/m² × 49,88 m² = 748). Der Expose-Wert war komplett verloren, und weil
+€/m² unveraendert bei 15 stehen blieb, sah die 748 unter dem Feld auch noch
+plausibel aus ("= 15 × 49,88 m²").
+
+Die Markierung liegt jetzt im geteilten Context statt im Renditerechner. Ist
+die Kaltmiete Teil der Uebernahme, gibt die Karte sie als fuehrende Groesse vor
+— €/m² wird daraus abgeleitet (650 / 49,88 = 13,03), nicht umgekehrt. Ohne
+Kaltmiete in der Auswahl bleibt es bei der Gegenrichtung: eine uebernommene
+Wohnflaeche zieht die Kaltmiete weiter aus €/m² nach. Weil der Ref im Context
+liegt, greift das auch dann, wenn der Renditerechner beim Uebernehmen gar nicht
+offen ist — die Ableitung wird beim naechsten Oeffnen nachgeholt.
+
+Der Effekt fuer die Gegenrichtung haengt zusaetzlich an der Wohnflaeche. Sonst
+bliebe der Fall unversorgt, in dem das Expose dieselbe Kaltmiete wie der
+Rechner liefert und sich nur die Flaeche aendert — dann muss €/m² trotzdem neu
+abgeleitet werden.
+
+## 2026-07-28 (1.55.70)
+
+### push.ps1 mit echten Umgebungs-Modi
+
+CLAUDE.md verspricht seit jeher ein Deploy-Menü mit `push.ps1 dev|qa|prod`.
+Diese Modi gab es im Skript nie: der erste Parameter war die **Commit-Message**,
+und gepusht wurde **immer** `Immofuchs-qa` — unabhängig davon, auf welchem
+Branch committet wurde. `.\push.ps1 dev` hätte also mit der Message "dev"
+committet und danach einen völlig anderen, womöglich veralteten Branch
+hochgeladen. Das ist am 22.07. und erneut am 28.07. nur aufgefallen, weil das
+Skript vorher gelesen wurde.
+
+Jetzt entsprechen die Modi der Realität — und der Branch-Zuordnung aus
+`.github/workflows/` (`Immofuchs-dev` → dev, `Immofuchs-qa` → qa, `main` → prod):
+
+    .\push.ps1 dev  "Message"   -> Commit + Push nach Immofuchs-dev
+    .\push.ps1 qa   "Message"   -> Commit auf dev, Merge dev -> qa, beide pushen
+    .\push.ps1 prod             -> Immofuchs-qa nach main, kein neuer Commit
+
+Ohne Umgebung bricht das Skript mit Kurzhilfe ab, statt still das Falsche zu
+tun. Der alte Aufruf `.\push.ps1 "fix: xy"` läuft damit bewusst auf einen
+Fehler ("Der erste Parameter ist die Umgebung, nicht die Commit-Message").
+`-PushMain` und `-OnlyMain` bleiben als Alias auf `qa` bzw. `prod` erhalten.
+
+Zwei Absicherungen dazu:
+
+- **`git add -A` fragt nach.** Im Arbeitsverzeichnis liegen regelmäßig
+  Änderungen aus parallelen Sessions. Heute waren es 22 Einträge unter `docs/`
+  (eine Archivierung plus ein 1-MB-PDF), die kommentarlos mitgewandert wären.
+  Das Skript listet jetzt alles auf, was außerhalb von `src/`, `worker/`,
+  `public/`, `scripts/`, `.github/` und den bekannten Wurzel-Dateien liegt, und
+  fragt einmal nach. "Nein" staged nur den Projekt-Code.
+- **Prod-Gate.** `prod` zeigt erst die Commits, die nach `main` wandern, und
+  verlangt eine Bestätigung. Ist `main` schon auf Stand, endet das Skript
+  ohne Push.
+
+Weitere Härtungen: `qa` prüft, dass man auf `Immofuchs-dev` steht, bricht bei
+Merge-Konflikt mit konkreter Auflösungsanleitung ab (statt den Nutzer auf dem
+falschen Branch stehen zu lassen) und wechselt am Ende zurück auf dev.
+git-Aufrufe werden nur noch über den Exit-Code bewertet — git schreibt auch
+bei Erfolg nach stderr, was PowerShell sonst als Fehler wertet.
+
+**Getestet:** Syntax-Check grün; Abbruch ohne Umgebung, mit alter
+Message-Syntax und mit Tippfehler ("prd") liefern je exit 1 mit Kurzhilfe; die
+Fremddatei-Erkennung gegen das echte Arbeitsverzeichnis klassifiziert 22
+docs-Einträge als fremd und `push.ps1`/`src/App.jsx` als Projekt-Code. Die
+interaktiven Bestätigungen und der vollständige Merge-Durchlauf sind nicht
+automatisiert getestet — sie lösen echte Pushes aus.
+
+---
+
 ## 2026-07-28 (1.55.69)
 
 ### Upload-Nachbesserungen aus dem Nutzertest

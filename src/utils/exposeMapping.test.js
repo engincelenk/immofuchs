@@ -3,6 +3,7 @@ import {
   baueZeilen,
   uebernehmeZeilen,
   zaehleZeilen,
+  enthaeltKaltmiete,
   mapEnergietraeger,
   FELD_DEFS,
 } from "./exposeMapping.js";
@@ -179,6 +180,25 @@ describe("uebernehmeZeilen", () => {
     const anzahl = uebernehmeZeilen(zeilen, new Set(["hausgeld", "titel"]), set);
     expect(anzahl).toBe(0);
     expect(d).toEqual({});
+  });
+});
+
+describe("enthaeltKaltmiete", () => {
+  it("erkennt eine ausgewaehlte Kaltmiete", () => {
+    const zeilen = baueZeilen(ergebnis({ kosten: { kaltmiete: 650 } }), {}, t);
+    expect(enthaeltKaltmiete(zeilen, new Set(["kaltmiete", "wohnflaeche"]))).toBe(true);
+  });
+
+  it("meldet false, wenn nur die Wohnflaeche uebernommen wird", () => {
+    // Wichtig fuer die Sync-Richtung: ohne Kaltmiete soll der Renditerechner
+    // die Kaltmiete weiter aus €/m² × neuer Flaeche nachziehen.
+    const zeilen = baueZeilen(ergebnis({ kosten: { kaltmiete: 650 } }), {}, t);
+    expect(enthaeltKaltmiete(zeilen, new Set(["wohnflaeche"]))).toBe(false);
+  });
+
+  it("meldet false, wenn im Expose gar keine Kaltmiete steht", () => {
+    const zeilen = baueZeilen(ergebnis(), {}, t);
+    expect(enthaeltKaltmiete(zeilen, new Set(["kaltmiete"]))).toBe(false);
   });
 });
 
