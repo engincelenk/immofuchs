@@ -1,3 +1,196 @@
+## 2026-07-27 (1.55.68)
+
+### PDF-Exposés lesbar + ehrliche Fehlermeldungen
+
+Bug-Report: Ein echtes Exposé-PDF (`docs/expose.pdf`, 1 MB, 15 Seiten) lief auf
+"Konnte nichts lesen — bitte schärfere Screenshots". Log-Diagnose:
+
+    gemini_vision_failed_fallback_workers_ai gemini_vision_request_failed_429
+    8007: cannot identify image file <_io.BytesIO object>
+
+Gemini war weiter im 429, und der Workers-AI-Fallback schickte das PDF als
+*Bild* weiter — Bildmodelle können damit nichts anfangen. Das PDF ist also nie
+bei einem Modell angekommen. Größe und Seitenzahl waren nie das Problem.
+
+- `modelRouter.ts`: Im Fallback-Pfad wird ein PDF jetzt vorher über
+  `env.AI.toMarkdown()` in Text gewandelt und als Textteil übergeben. Kein
+  neues Paket im Client-Bundle nötig. Gemini bekommt das PDF weiterhin im
+  Original — dort bleibt das Layout erhalten, der Umweg ist die Rettung, nicht
+  der Normalfall.
+- PDFs ohne Textebene (reine Scans) werfen `pdf_ohne_text` und werden als
+  `extraction_failed` gemeldet — ein Inhaltsproblem, kein Dienstausfall.
+
+Fehlermeldungen getrennt, statt alles in einen Satz zu werfen (alle 5 Sprachen):
+- `model_call_failed` → "Ich konnte das Exposé gerade nicht auswerten. Bitte
+  versuch es gleich noch einmal."
+- `extraction_failed` → "Aus dem Exposé konnte ich nichts auslesen. Bei Fotos
+  hilft eine höhere Auflösung, bei PDFs eines mit echtem Text statt
+  eingescannter Seiten."
+
+Das Wort "Screenshots" ist aus den Fehler- und Consent-Texten verschwunden —
+es ging nie nur um Screenshots. Der Consent-Text nennt jetzt "Bilder und PDFs",
+was auch datenschutzrechtlich genauer ist (PDFs werden ebenfalls übertragen).
+
+**Test mit dem echten Exposé:** 32 Sekunden, HTTP 200, 22 von 28 Feldern.
+Kaufpreis 214.000 €, 4.280 €/m², 2 Zimmer, 50 m², 74379 Ingersheim, Baujahr
+1996, Hausgeld 208 €, Provision 3,57 %, Gas/Verbrauchsausweis/77,4 kWh/Klasse C,
+Balkon, EBK, Keller, 2 Stellplätze, Zentralheizung, plus Objekt- und
+Lagebeschreibung. Zwei Warnungen erkannt — darunter eine echte Abweichung im
+Original: 50 m² im Exposé gegen 47,88 m² im Grundriss. Übernahme in den
+Renditerechner geprüft, Umlaute korrekt.
+
+
+## 2026-07-27 (1.55.67)
+
+### Exposé-Extraktion: Vision-Fallback auf Workers AI — Kette läuft echt
+
+Die Spec-Annahme "kein Vision-Fallback möglich" (Abschnitt 11.6) galt für Llama
+3.3. Auf dem Cloudflare-Konto liegen bildfähige Modelle. Der Worker versucht
+jetzt erst Gemini, dann Workers AI — dasselbe Muster wie der Chat.
+
+- `modelRouter.ts`: `callVisionModel` (Gemini → Workers AI), Fallback-Modell
+  `@cf/mistralai/mistral-small-3.1-24b-instruct`, umstellbar über
+  `EXPOSE_VISION_FALLBACK_MODEL`.
+- `exposePrompt.ts`: `EXPOSE_JSON_SCHEMA` für `guided_json` — beim Fallback ist
+  die Struktur damit erzwungen statt nur erbeten.
+- Mistral nimmt Bilder als Data-URL entgegen, also exakt das Format, das der
+  Client ohnehin schickt. 502 gibt es nur noch, wenn beide Wege scheitern.
+
+**Erster echter Durchlauf** (Dev-Worker, zwei synthetische Exposé-Screenshots,
+Gemini weiterhin 429 → Fallback lief): 22 Sekunden, sauberes JSON nach Schema.
+Alle Zahlen korrekt (349.000 €, 4.361 €/m², 3 Zimmer, 80,05 m², Baujahr 1996,
+Hausgeld 285 €, Provision 3,57 %, Nebenkosten 36.900 €, 112,4 kWh/m²·a,
+Klasse D). Daten aus BEIDEN Screenshots zu einem Datensatz zusammengeführt,
+Keller und Stellplatz aus dem Fließtext gezogen — und der eingebaute
+Wohnflächen-Widerspruch (80,05 vs. 78,20 m²) landete korrekt als Warnung an
+genau dem Feld. Übernahme in den Renditerechner geprüft: 6 Werte geschrieben,
+PLZ 70599 zog Ort und Bundesland nach.
+
+Dabei zwei Formatierungsfehler gefunden und behoben: Baujahr wurde als "1.996"
+mit Tausenderpunkt angezeigt, Zimmer als "3,0". Nachkommastellen richten sich
+jetzt nach dem Wert (80,05 m² bleibt 80,05 statt auf 80 gerundet zu werden).
+
+Lokales `.env` zeigt jetzt auf den Dev-Worker statt auf Prod — lokale Tests
+verbrauchen so kein Prod-Kontingent, und nur dev kennt den neuen Endpunkt.
+
+
+## 2026-07-27 (1.55.66)
+
+### Dev-Worker deployt + Befund: Gemini antwortet gar nicht mehr (429)
+
+Worker mit dem Exposé-Endpunkt auf `immofuchs-assistant-dev` deployt
+(`wrangler deploy --env dev`). Prod/QA unverändert — dort ist der Endpunkt
+weiter 404 und `EXPOSE_EXTRACT_ENABLED="false"`.
+
+Live gegen den Dev-Worker geprüft: Routing, Validierung (400 für
+invalid_json/no_input/invalid_image_mime/too_many_images) und die
+Kontingent-Rückbuchung bei Fehlern greifen wie lokal.
+
+**Befund beim ersten echten Modell-Call:** Google gibt auf diesem API-Key
+durchgängig 429 zurück — für Bilder UND für Text, auf `gemini-2.0-flash`
+ebenso wie auf `gemini-2.0-flash-lite`. Die Modellwahl war also nicht die
+Ursache. Konsequenz für den laufenden Betrieb:
+
+- **Finn beantwortet Chat-Fragen auf dev UND prod derzeit über den
+  Workers-AI-Fallback (Llama 3.3), nicht über Gemini.** Der Chat gibt 200
+  zurück, deshalb fällt es von außen nicht auf; sichtbar wird es nur im
+  `wrangler tail` als `gemini_call_failed_fallback_workers_ai
+  gemini_request_failed_429`.
+- Die Exposé-Extraktion hat per Design keinen Fallback (Llama kann keine
+  Bilder) und scheitert deshalb hart mit 502 `model_call_failed`.
+
+Vision-Modell auf `gemini-2.0-flash-lite` gesetzt (Nutzerentscheidung),
+weiterhin über `EXPOSE_GEMINI_MODEL` ohne Redeploy wechselbar.
+
+Damit ist der erste echte Extraktionslauf weiter offen — nicht mangels Code,
+sondern mangels Gemini-Kontingent. Nächster Schritt: bezahlter Tarif prüfen
+(steht ohnehin als M4-Gate in der Spec) bzw. Quota-Reset abwarten.
+
+
+## 2026-07-27 (1.55.65)
+
+### Exposé-Upload Sprint 2–6: Extraktion komplett (Worker + Finn-UI)
+
+Rest der Spec `docs/plans/expose-screenshot-upload-spec.md` gebaut: Vision-Call
+im Worker, Upload-Einstieg im Finn-Chat, Ergebnis-Karte mit Übernahme,
+5 Sprachen, Accessibility, Tests.
+
+Worker (Sprint 2):
+- `exposePrompt.ts` (neu): Extraktions-Prompt inkl. `warnungen`-Regel.
+- `modelRouter.ts`: `callGeminiVision` mit `inline_data`, JSON-erzwungener
+  Ausgabe, 60s-Timeout. Kein Workers-AI-Fallback — Llama kann keine Bilder.
+- `exposeOutput.ts` (neu): härtet die Modellantwort. Zahlenfelder werden aus
+  deutscher Schreibweise gerettet ("269.000 EUR") oder verworfen, statt als
+  Freitext in eine Renditerechnung zu laufen.
+
+Frontend (Sprint 3–5):
+- 📎 im Chat-Eingabefeld, Mehrfachauswahl + Kamera, Thumbnail-Reihe,
+  einmalige Consent-Bubble. Nur in den vier Objekt-Rechnern — in §6-Trick und
+  Vorfälligkeit gibt es kein Feld, das ein Exposé befüllen könnte.
+- `exposeUpload.js` (neu): Canvas-Verkleinerung auf 1500px, Limits wie im
+  Worker, grobe PDF-Seitenschätzung.
+- `ExposeUploadProgress` / `ExposeResultCard` / `ExposeFieldRow` (neu),
+  `useAssistant.js` um `uploading`/`extracting` erweitert.
+- `exposeMapping.js` (neu): Feld → Rechnerfeld, inkl. PLZ→Ort/Bundesland und
+  Energieträger→Heizungsart. Hausgeld bekommt bewusst kein Ziel.
+- `i18n/expose.js` (neu): ~50 Strings + 28 Feldbezeichner in de/en/tr/zh/hi.
+
+Abweichungen von der Spec (bewusst):
+- Bilder gehen als Data-URL statt als nacktes Base64 — sonst ist der MIME-Typ
+  serverseitig nicht prüfbar.
+- Phase 1 heißt "vorbereitet", nicht "hochgeladen": messbar ist die
+  Komprimierung, der eigentliche POST ist ein einziger Request.
+- Kein Titelbild-Thumbnail in der Karte — `titelbild_base64` ist laut Spec
+  Abschnitt 10 noch nicht entschieden.
+- Vision-Modell `gemini-2.0-flash` (statt Chat-Modell 2.0-flash-lite), über
+  `EXPOSE_GEMINI_MODEL` ohne Redeploy wechselbar.
+
+Verifiziert im Browser (dev-Server, Worker-Antwort gestubbt): Consent-Bubble
+einmalig, Auswahl/Entfernen, echter Fortschritt "0…7 von 8 Bildern",
+Ergebnis-Karte "26 von 28 Feldern · 7 zu prüfen", Warnung an der Wohnfläche,
+6 Konflikte standardmäßig NICHT angehakt, Übernehmen schreibt nur Angehaktes
+(Kaufpreis 300.000 → 269.000, PLZ/Fläche unverändert), Karte kollabiert zur
+Chip-Zeile, Disclaimer erscheint. Fehlerpfade 429/503/502 mit eigenen
+Exposé-Texten. Türkisch komplett durchgeklickt. 56 Tests grün, Lint ohne neue
+Warnungen, Worker-Typecheck grün.
+
+Offen (kein Code): bezahlter Gemini-Tarif + ZDR (Hard-Gate vor Prod, deshalb
+`EXPOSE_EXTRACT_ENABLED="false"` auf Prod/QA), juristische Prüfung der
+Datenschutz-/Disclaimer-Texte, Testlauf mit echten Referenz-Screenshots.
+
+
+## 2026-07-27 (1.55.64)
+
+### Exposé-Upload Sprint 1: Worker-Endpunkt /api/expose-extract (Fundament)
+
+Erster Baustein der Exposé-/Screenshot-Extraktion (Spec:
+`docs/plans/expose-screenshot-upload-spec.md`, Abschnitt 12, Phase A).
+Reines Backend, noch kein UI und noch kein Modell-Call — der Endpunkt
+antwortet aktuell schema-konform mit einem leeren Datensatz (Platzhalter bis
+Sprint 2).
+
+- `types.ts`: `ExposeExtractRequest`/`ExposeExtractResponse` inkl.
+  `confidence` und `warnungen`, `InlineDatei` (mimeType + Base64) für den
+  späteren Gemini-`inline_data`-Call.
+- `validator.ts`: `validateExposeExtractRequest` — max. 15 Bilder, MIME nur
+  jpeg/png/webp bzw. application/pdf, je 15 MB, 20 MB gesamt. Data-URL statt
+  nacktem Base64, damit der MIME-Typ serverseitig prüfbar ist. Das
+  PDF-Seitenlimit (20) prüft später der Client — der Worker müsste dafür das
+  PDF parsen.
+- `index.ts`: zweiter Route-Zweig `/api/expose-extract` mit eigenem
+  Kill-Switch `EXPOSE_EXTRACT_ENABLED` und eigenem Rate-Limit-Namensraum
+  (`expose:`-Präfix) auf derselben `RATE_LIMITER_DO` — keine neue Infrastruktur.
+- `wrangler.toml`: neue Vars top-level und unter `env.dev`. Auf dev
+  eingeschaltet, auf Prod/QA bewusst `false`, solange nur der Platzhalter
+  antwortet.
+
+Verifiziert gegen einen lokalen Worker: 404/405, 400 für invalid_json,
+invalid_lang, invalid_session_id, no_input, invalid_images,
+invalid_image_mime, too_many_images; 200 für gültige Bilder bzw. nur-PDF;
+429 beim 6. Aufruf derselben Session (Limit 5/Tag); 503 mit Prod-Vars.
+`npm run typecheck` grün.
+
+
 ## 2026-07-24 (1.55.62)
 
 ### 6%-Trick: Tooltip-Farbe an übrige Rechner angeglichen

@@ -55,11 +55,61 @@ export const ASSISTANT_SHEET_CSS = `
   .if-asst-bubble-in{animation:ifBubbleIn .25s ease}
   @keyframes ifBubbleIn{0%{opacity:0;transform:translateY(6px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
 
+  /* ═══ Expose-/Screenshot-Upload (Spec Abschnitt 8) ═══
+     Bewusst im selben Stylesheet wie der Chat: der Upload ist eine Faehigkeit
+     von Finn, kein zweiter Einstiegspunkt mit eigenem Look. */
+  .if-exp-attach{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid var(--cb);background:var(--ci);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ca)}
+  .if-exp-attach:disabled{opacity:.45;cursor:default}
+  .if-exp-attach:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+
+  .if-exp-consent{flex:none;margin:0 14px 8px;padding:10px 12px;background:var(--ca-bg);border:1px solid var(--ca-bd);border-radius:12px;font-size:12px;color:var(--cl);line-height:1.45;display:flex;flex-direction:column;gap:8px}
+  .if-exp-consent button{align-self:flex-start;background:var(--ca);color:#fff;border:none;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
+
+  .if-exp-thumbs{flex:none;display:flex;gap:8px;overflow-x:auto;padding:6px 14px 8px;align-items:center}
+  .if-exp-thumb{position:relative;flex:none;width:52px;height:52px;border-radius:8px;overflow:hidden;border:1px solid var(--cb);background:var(--ci)}
+  .if-exp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .if-exp-thumb.pdf{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ch)}
+  .if-exp-thumb button{position:absolute;top:1px;right:1px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(26,26,26,.62);color:#fff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .if-exp-start{flex:none;background:var(--ca);color:#fff;border:none;border-radius:16px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+  .if-exp-start:disabled{opacity:.5;cursor:default}
+  .if-exp-fehler{flex:none;margin:0 14px 8px;font-size:12px;color:#8a2020;background:#FDEDED;border-radius:8px;padding:7px 10px}
+
+  .if-exp-progress{align-self:stretch;background:var(--cc);border:1px solid var(--cb);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--cl)}
+  .if-exp-progress-text{display:flex;align-items:center;gap:7px}
+  .if-exp-dots{display:inline-flex;gap:3px}
+  .if-exp-dots i{width:4px;height:4px;border-radius:50%;background:var(--ca);display:inline-block;animation:ifAsstDot 1.1s infinite ease-in-out}
+  .if-exp-dots i:nth-child(2){animation-delay:.15s}
+  .if-exp-dots i:nth-child(3){animation-delay:.3s}
+  .if-exp-bar{margin-top:8px;height:4px;border-radius:2px;background:var(--cro);overflow:hidden}
+  .if-exp-bar-fill{height:100%;background:var(--ca);transition:width .2s ease}
+
+  .if-exp-card{align-self:stretch;background:var(--cc);border:1px solid var(--cb);border-radius:12px;padding:12px;font-size:13px;color:var(--ct)}
+  .if-exp-card-head{font-weight:700;font-size:12.5px;color:var(--cl);padding-bottom:8px;border-bottom:1px solid var(--cb);margin-bottom:6px}
+  .if-exp-gruppe{padding-top:6px}
+  .if-exp-gruppe-titel{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--ch);margin:4px 0 2px}
+  .if-exp-row{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--cro)}
+  .if-exp-row.leer{opacity:.5}
+  .if-exp-icon{flex:none;font-size:13px;line-height:1.5}
+  .if-exp-feld{flex:1;min-width:0}
+  .if-exp-label{font-size:11px;color:var(--ch)}
+  .if-exp-wert{font-size:13px;font-weight:600;word-break:break-word}
+  .if-exp-konflikt{font-size:11px;color:var(--ca-dk)}
+  .if-exp-warnung{font-size:11px;color:#8a6a20;background:#FFF8E6;border-radius:6px;padding:4px 6px;margin-top:3px}
+  .if-exp-hinweis{font-size:11px;color:var(--ca-dk)}
+  .if-exp-nurinfo{flex:none;font-size:10px;color:var(--ch);align-self:center}
+  .if-exp-toggle{flex:none;align-self:center;display:flex;align-items:center;min-width:24px;min-height:24px;justify-content:center}
+  .if-exp-toggle input{width:18px;height:18px;accent-color:var(--ca)}
+  .if-exp-apply{width:100%;margin-top:10px;background:var(--ca);color:#fff;border:none;border-radius:12px;padding:11px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;min-height:44px}
+  .if-exp-apply:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
+  .if-exp-chip{align-self:center;background:var(--ci);border:1px solid var(--cb);border-radius:14px;padding:6px 12px;font-size:12px;color:var(--ch)}
+
   @media (prefers-reduced-motion: reduce){
     .if-asst-sheet{transition:none}
     .if-asst-backdrop{transition:none}
     .if-asst-dots span{animation:none;opacity:.6}
     .if-asst-bubble-in{animation:none}
     .if-asst-mic.listening{animation:none}
+    .if-exp-dots i{animation:none;opacity:.6}
+    .if-exp-bar-fill{transition:none}
   }
 `;
