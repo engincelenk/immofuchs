@@ -106,6 +106,43 @@ export const MIET_P = {
   normal: { pA: 2.5, q: "Stat. Bundesamt 2025" },
 };
 
+// ── INSTANDHALTUNGSRÜCKLAGE ──────────────────────────────────────────────
+// Monatliche Zuführung der WEG je m² Wohnfläche. Bleibt sie darunter, kann
+// die Gemeinschaft größere Maßnahmen (Dach, Fassade, Heizung) nicht aus der
+// Rücklage bezahlen — die Differenz kommt dann als Sonderumlage.
+// Faustregel aus der WEG-Praxis; die Peters'sche Formel liegt je nach
+// Herstellungskosten in derselben Größenordnung.
+export const RUECKLAGE_QM = {
+  gut: 1.0, // €/m²/Monat und mehr → auskömmlich
+  schwach: 0.6, // darunter → deutliche Unterdeckung
+};
+
+// ── ENERGIEAUSWEIS: PLAUSIBILITÄTSGRENZEN ────────────────────────────────
+// Für den Endenergie-Kennwert in kWh/m²a. Außerhalb dieser Spanne liegt fast
+// sicher ein Lesefehler vor (verrutschtes Komma, Jahresverbrauch in kWh statt
+// Kennwert je m²). Dann ist die Baujahr-Schätzung des Sanierungsrechners die
+// bessere Näherung als ein falscher Messwert.
+// Referenz: Passivhaus ~15, unsanierter Altbau bis ~350 kWh/m²a.
+export const VERBRAUCH_GRENZEN = { min: 20, max: 400 };
+
+// ── NICHT UMLAGEFÄHIGE KOSTEN ────────────────────────────────────────────
+// Verwaltung + Instandhaltung + Rücklage, also der Teil des Hausgelds, den
+// der Vermieter selbst traegt. Branchenueblicher Richtwert: 1,00–2,50 € je m²
+// Wohnflaeche und Monat. Der Rechner setzt die Mitte an.
+//
+// Bewusst NICHT aus dem Expose uebernommen: die Aufteilung des Hausgelds in
+// umlagefaehig/nicht umlagefaehig steht nur in einem Bruchteil der Exposes.
+// Ein einheitlich gerechneter Wert ist ueber Objekte hinweg vergleichbar, ein
+// mal vorhandener und mal geschaetzter Wert waere es nicht.
+//
+// Die Tooltips in i18n/tips.js lesen diese Werte - Formel und Erklaerung
+// koennen dadurch nicht auseinanderlaufen.
+export const NICHT_UML = {
+  min: 1.0, // €/m²/Monat unteres Ende des Richtwerts
+  max: 2.5, // €/m²/Monat oberes Ende
+  mittel: 1.75, // €/m²/Monat — damit rechnet die App
+};
+
 // ── KFW FÖRDERQUOTEN BEG ─────────────────────────────────────────────────
 // Intervall: quartalsweise
 // Quelle: kfw.de

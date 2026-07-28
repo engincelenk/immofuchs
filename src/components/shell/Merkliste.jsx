@@ -144,8 +144,14 @@ export function SaveBtn({ tab }) {
   const [open, setOpen] = useState(false);
   const hasData = d.kaufpreis || d.vergleichsmiete;
   if (!hasData) return null;
-  const defaultName = d.ort
-    ? `${d.ort}${d.kaufpreis ? ` · ${Number(d.kaufpreis).toLocaleString("de-DE")} €` : ""}`
+  // Strasse und Hausnummer voranstellen, sobald sie bekannt sind (aus dem
+  // Expose oder von Hand): zwei Wohnungen in derselben Stadt sind sonst beide
+  // nur "Ingersheim · 199.000 €" und in der Merkliste nicht auseinanderzuhalten.
+  // Der Name ist im Speichern-Dialog weiterhin frei ueberschreibbar.
+  const adresse = [d.strasse, d.hausnummer].filter(Boolean).join(" ").trim();
+  const ortTeil = [adresse, d.ort].filter(Boolean).join(", ");
+  const defaultName = ortTeil
+    ? `${ortTeil}${d.kaufpreis ? ` · ${Number(d.kaufpreis).toLocaleString("de-DE")} €` : ""}`
     : "";
   return (
     <>

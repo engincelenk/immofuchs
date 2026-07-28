@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { MARKET_RATES } from "./data.js";
+import { berechneNichtUml } from "./utils/rendite.js";
 import { Ctx } from "./context/AppContext.jsx";
 import { T } from "./i18n/translations.js";
 import { TIPS } from "./i18n/tips.js";
@@ -134,6 +135,10 @@ const TAB_LABELS = {
   saved: "Merkliste",
 };
 
+// Steht ausserhalb von createDefaults, weil sowohl der Startwert von nichtUml
+// als auch dessen Nachfuehr-Ref (nichtUmlAutoRef in App()) davon ausgehen.
+const FLAECHE_DEFAULT = "60";
+
 // Startwerte des Formulars. Als Factory (lazy useState-Init), damit die
 // datumsabhaengigen Felder beim Mounten berechnet werden und der Block lesbar bleibt.
 function createDefaults() {
@@ -145,8 +150,13 @@ function createDefaults() {
     bundesland: "BW",
     plz: "70173",
     ort: "Stuttgart",
+    // Strasse/Hausnummer werden nicht gerechnet, sondern benennen das Objekt in
+    // der Merkliste - ohne sie sind zwei Wohnungen in derselben Stadt dort
+    // nicht unterscheidbar.
+    strasse: "",
+    hausnummer: "",
     kaufpreis: "300000",
-    flaeche: "60",
+    flaeche: FLAECHE_DEFAULT,
     kaltmiete: "900",
     mieteQm: "15",
     garage: "20000",
@@ -164,8 +174,13 @@ function createDefaults() {
     jahre: "10",
     sonder: "3000",
     renovierung: "15000",
-    nichtUml: "100",
+    // Richtwert 1,75 €/m²/Monat (NICHT_UML.mittel) — folgt der Wohnflaeche,
+    // solange der Nutzer das Feld nicht selbst anfasst (Effekt in App()).
+    nichtUml: String(berechneNichtUml(FLAECHE_DEFAULT)),
     leerstand: "2",
+    // Monatliche Zufuehrung zur Instandhaltungsruecklage laut Hausgeldabrechnung.
+    // Leer = unbekannt; die Ampel im Renditerechner bleibt dann aus.
+    ruecklage: "",
     vergleichsmiete: "14",
     letzteErhDatum: mietbeginnDefault,
     letzteErhMiete: "0",
@@ -176,7 +191,9 @@ function createDefaults() {
     sanHa: "alt",
     sanPe: "3",
     sanIsfp: false,
-    vermietet: "ja",
+    // Ist-Verbrauch laut Energieausweis (kWh/m²a). Leer = unbekannt, dann
+    // schaetzt der Sanierungsrechner den Kennwert weiter aus dem Baujahr.
+    sanIstVerbrauch: "",
     immLeer: "nein",
   };
 }
@@ -219,6 +236,18 @@ export default function App() {
   // gemountet ist. Bewusst ein Ref und nicht Teil von `d`: kein Re-Render und
   // nichts, was in gespeicherten Objekten landet.
   const mietQuelleRef = useRef(null);
+  // Nicht umlagefaehige Kosten folgen der Wohnflaeche (Richtwert 1,75 €/m²/Mon),
+  // bis der Nutzer das Feld selbst setzt - danach gilt sein Wert. Gleiches
+  // Muster wie zinssatzTouchedRef.
+  //
+  // Warum zwei Refs: das Eingabefeld (atoms.jsx, F) feuert onChange auch beim
+  // blossen Verlassen des Feldes, ohne dass sich etwas geaendert hat. Wuerde
+  // jedes onChange als "vom Nutzer gesetzt" zaehlen, wuerde einmaliges
+  // Durchtabben die Automatik dauerhaft abschalten. Deshalb merkt sich
+  // nichtUmlAutoRef den zuletzt automatisch gesetzten Wert; nur ein davon
+  // abweichender Wert gilt als echte Eingabe.
+  const nichtUmlTouchedRef = useRef(false);
+  const nichtUmlAutoRef = useRef(String(berechneNichtUml(FLAECHE_DEFAULT)));
 
   // ── Zinsen laden: zinsen.json (lokal, kein Bundesbank-API-Call wegen CORS) ──
   useEffect(() => {
@@ -278,9 +307,34 @@ export default function App() {
   const [data, setData] = useState(createDefaults);
   const set = useCallback((k, v) => {
     if (k === "zinssatz") zinssatzTouchedRef.current = true;
+    // Nur ein vom automatisch gesetzten Richtwert abweichender Wert zaehlt als
+    // echte Nutzereingabe - siehe Kommentar bei nichtUmlAutoRef.
+    if (k === "nichtUml" && String(v) !== nichtUmlAutoRef.current) nichtUmlTouchedRef.current = true;
     setData((p) => ({ ...p, [k]: v }));
   }, []);
-  const { savedList, saveObj, delObj, loadObj } = useSavedObjects(setData);
+
+  // Wohnflaeche geaendert (manuell oder per Expose-Uebernahme) → nicht
+  // umlagefaehige Kosten neu ableiten, solange der Nutzer sie nicht selbst
+  // gesetzt hat.
+  useEffect(() => {
+    if (nichtUmlTouchedRef.current) return;
+    const wert = berechneNichtUml(data.flaeche);
+    if (wert === null) return; // Feld leer/0 → bestehenden Wert stehen lassen
+    const neu = String(wert);
+    nichtUmlAutoRef.current = neu;
+    setData((p) => (p.nichtUml === neu ? p : { ...p, nichtUml: neu }));
+  }, [data.flaeche]);
+
+  const { savedList, saveObj, delObj, loadObj: loadObjRaw } = useSavedObjects(setData);
+  // Ein gespeichertes Objekt ist ein Snapshot: sein nichtUml wurde damals
+  // bewusst so gespeichert und darf beim Laden nicht ueberschrieben werden.
+  const loadObj = useCallback(
+    (obj, setTab) => {
+      nichtUmlTouchedRef.current = true;
+      loadObjRaw(obj, setTab);
+    },
+    [loadObjRaw],
+  );
   const t = T[lang];
   const tabs = [
     { id: "haupt", l: t.haupt, ic: IC.haupt },

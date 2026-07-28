@@ -11,6 +11,7 @@ import {
   LAND_BONUS_CAP,
   ENERGIE_KLASSEN,
   BL_O,
+  VERBRAUCH_GRENZEN,
 } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
@@ -141,9 +142,16 @@ export default function Sanier() {
   const sF = (k, v) => setS((p) => ({ ...p, [k]: v }));
   const tog = (k) => setAct((p) => ({ ...p, [k]: !p[k] }));
   const setT = (k, v) => setTier((p) => ({ ...p, [k]: v }));
+  // Energieklasse fuer das Badge neben dem Baujahr. Liegt ein Wert aus dem
+  // Energieausweis vor, hat er Vorrang vor der Baualtersklasse - sonst stuende
+  // hier eine andere Klasse als im Ergebnis und als im Ausweis selbst
+  // (Expose Ingersheim: Baujahr 1996 → D, Ausweis 77,4 → C).
   const getEkl = (bj) => {
-    const y = +bj || 1981;
-    const hk = SAN_NORMEN.hkBaujahr.find((r) => y <= r.bis)?.hk ?? 50;
+    const ist = +d.sanIstVerbrauch || 0;
+    const hk =
+      ist >= VERBRAUCH_GRENZEN.min && ist <= VERBRAUCH_GRENZEN.max
+        ? ist
+        : (SAN_NORMEN.hkBaujahr.find((r) => (+bj || 1981) <= r.bis)?.hk ?? 50);
     return ENERGIE_KLASSEN.find((r) => hk <= r.bis)?.kl ?? "H";
   };
 
@@ -156,7 +164,30 @@ export default function Sanier() {
     const hkEntry =
       SAN_NORMEN.hkBaujahr.find((e) => bj <= e.bis) ||
       SAN_NORMEN.hkBaujahr[SAN_NORMEN.hkBaujahr.length - 1];
-    const hk = hkEntry.hk;
+    const hkSchaetzung = hkEntry.hk;
+    // Steht ein Wert aus dem Energieausweis zur Verfuegung, schlaegt er die
+    // Schaetzung aus dem Baujahr. Die Tabelle hkBaujahr arbeitet mit groben
+    // Baualtersklassen: fuer Baujahr 1996 nimmt sie 120 kWh/m²a an, reale
+    // Ausweise derselben Baujahre liegen bei 77-95. Ohne diesen Vorrang faellt
+    // die berechnete Einsparung entsprechend zu hoch aus.
+    //
+    // Warmwasser: der ausgewiesene Kennwert enthaelt bei zentraler Anlage - wie
+    // in beiden Referenzexposes - das Warmwasser bereits. Weiter unten wird es
+    // ueber pe * warmwasserKWhPerson erneut aufgeschlagen, deshalb hier der
+    // Abzug je m². Ohne ihn zaehlt das Warmwasser doppelt. Untergrenze 10,
+    // damit eine kleine Wohnung mit vielen Personen nicht ins Negative rutscht.
+    const istVerbrauch = +d.sanIstVerbrauch || 0;
+    const istVerbrauchGueltig =
+      istVerbrauch >= VERBRAUCH_GRENZEN.min && istVerbrauch <= VERBRAUCH_GRENZEN.max;
+    const hk = istVerbrauchGueltig
+      ? Math.max(10, Math.round(istVerbrauch - (pe * SAN_NORMEN.warmwasserKWhPerson) / fl))
+      : hkSchaetzung;
+    // Fuer die Energieklasse zaehlt der Gesamtkennwert, nicht der um das
+    // Warmwasser bereinigte Heizwert: der Energieausweis weist die Klasse auf
+    // Basis der gesamten Endenergie aus. Wuerde die Anzeige `hk` verwenden,
+    // stuende dort eine bessere Klasse als im Dokument, auf das sich der Wert
+    // beruft - Expose Ingersheim (77,4 = Klasse C) erschiene als A+.
+    const hkGesamt = istVerbrauchGueltig ? Math.round(istVerbrauch) : hkSchaetzung;
     const co2F = SAN_ENERGIE.co2F[ht] || 0.2;
     const ep = SAN_ENERGIE.ep[ht] || 0.12;
     const eH =
@@ -419,10 +450,10 @@ export default function Sanier() {
       gegReq.push({ law: "§ 47 GEG", text: t.sanMassN8 + " — " + t.sHTyp, sev: "info" });
     if (bj < 1978)
       gegReq.push({ law: "§ 71 GEG", text: t.sanMassN3 + ": 65% " + t.str, sev: "info" });
-    if (hk > 200)
+    if (hkGesamt > 200)
       gegReq.push({
         law: "EU-EPBD",
-        text: `${t.eKl} ${EC_O[kw2ec(hk)]} (${hk} kWh/m²a)`,
+        text: `${t.eKl} ${EC_O[kw2ec(hkGesamt)]} (${hkGesamt} kWh/m²a)`,
         sev: "warn",
       });
 
@@ -434,9 +465,14 @@ export default function Sanier() {
       ekG,
       co2G,
       amJ,
-      ecV: kw2ec(hk),
-      ecN: kw2ec(Math.max(hk * eM, 10)),
+      ecV: kw2ec(hkGesamt),
+      ecN: kw2ec(Math.max(hkGesamt * eM, 10)),
       hk,
+      hkGesamt,
+      // Fuer die Herkunftszeile unter dem Eingabefeld: rechnet der Rechner mit
+      // dem Energieausweis oder mit der Baujahr-Schaetzung?
+      hkSchaetzung,
+      istVerbrauchGueltig,
       eM,
       cM,
       kH,
@@ -624,6 +660,21 @@ export default function Sanier() {
             onChange={(v) => set("sanPe", v)}
             tip={tip("pers")}
           />
+          <F
+            label={t.sIstVerbrauch}
+            unit="kWh/m²a"
+            value={d.sanIstVerbrauch ?? ""}
+            placeholder={String(R.hkSchaetzung)}
+            onChange={(v) => set("sanIstVerbrauch", v)}
+            tip={tip("sanIstVerbrauch")}
+          />
+          {/* Herkunft des Kennwerts sichtbar machen: sonst aendert sich das
+              Ergebnis nach einer Expose-Uebernahme ohne erkennbare Ursache. */}
+          <div style={{ fontSize: 10, color: "var(--ch)", marginTop: -6, marginBottom: 10, paddingLeft: 4 }}>
+            {R.istVerbrauchGueltig
+              ? `✓ ${t.sIstVerbrauchAktiv} — ${fmt(R.hk)} kWh/m²a ${t.sIstVerbrauchNachWw}`
+              : `${t.sIstVerbrauchSchaetzung}: ${fmt(R.hkSchaetzung)} kWh/m²a (${t.sBJ} ${d.baujahr || "1981"})`}
+          </div>
           <Sec title={t.sEnergie} icon="⚡" />
           <Row>
             <F
@@ -1108,8 +1159,10 @@ export default function Sanier() {
                     >
                       {EC_O[R.ecV]}
                     </div>
+                    {/* Gesamtkennwert, nicht der um Warmwasser bereinigte
+                        Heizwert - er muss zur angezeigten Klasse passen. */}
                     <div style={{ fontSize: 10, color: "var(--ch)", marginTop: 4 }}>
-                      {fmt(R.hk)} kWh/m²a
+                      {fmt(R.hkGesamt)} kWh/m²a
                     </div>
                   </div>
                   <div style={{ fontSize: 26, color: "var(--ca)", fontWeight: 600, lineHeight: 1 }}>
@@ -1135,7 +1188,7 @@ export default function Sanier() {
                       {EC_O[R.ecN]}
                     </div>
                     <div style={{ fontSize: 10, color: "var(--ch)", marginTop: 4 }}>
-                      {fmt(Math.round(R.hk * R.eM))} kWh/m²a
+                      {fmt(Math.round(R.hkGesamt * R.eM))} kWh/m²a
                     </div>
                   </div>
                 </div>

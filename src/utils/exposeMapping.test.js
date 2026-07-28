@@ -5,6 +5,11 @@ import {
   zaehleZeilen,
   enthaeltKaltmiete,
   mapEnergietraeger,
+  mapVermietet,
+  mapDatum,
+  mapHeizungsalter,
+  mapEndenergie,
+  mapZustandRenovierung,
   FELD_DEFS,
 } from "./exposeMapping.js";
 import { EXPOSE_T } from "../i18n/expose.js";
@@ -226,5 +231,184 @@ describe("mapEnergietraeger", () => {
   it("gibt null zurueck, wenn nichts passt", () => {
     expect(mapEnergietraeger("Kernfusion")).toBeNull();
     expect(mapEnergietraeger(null)).toBeNull();
+  });
+});
+
+// ── Neue Uebernahmen (Referenzexposes Ingersheim + Murr) ───────────────────
+
+describe("mapVermietet", () => {
+  it("bildet den Bool auf die Belegungs-Auswahl ab", () => {
+    expect(mapVermietet(true)).toBe("ja");
+    expect(mapVermietet(false)).toBe("nein");
+  });
+
+  it("liefert null bei fehlender Angabe statt 'nein' zu raten", () => {
+    // Ein Expose, das nichts zur Vermietung sagt, ist nicht dasselbe wie ein
+    // Expose, das ausdruecklich "nicht vermietet" sagt.
+    expect(mapVermietet(null)).toBe(null);
+    expect(mapVermietet("ja")).toBe(null);
+  });
+});
+
+describe("mapDatum", () => {
+  it("wandelt das deutsche Expose-Format in den Wert des date-Inputs", () => {
+    expect(mapDatum("01.10.2025")).toBe("2025-10-01");
+    expect(mapDatum("1.9.2024")).toBe("2024-09-01");
+  });
+
+  it("laesst ISO unveraendert", () => {
+    expect(mapDatum("2025-10-01")).toBe("2025-10-01");
+  });
+
+  it("weist Unbrauchbares ab", () => {
+    expect(mapDatum("ab sofort")).toBe(null);
+    expect(mapDatum("32.01.2025")).toBe(null);
+    expect(mapDatum("01.13.2025")).toBe(null);
+    expect(mapDatum(null)).toBe(null);
+  });
+});
+
+describe("mapHeizungsalter", () => {
+  const heute = new Date("2026-07-28");
+
+  it("stuft nach dem Alter des Waermeerzeugers ein", () => {
+    expect(mapHeizungsalter(1996, heute)).toBe("alt"); // 30 J. — Expose Ingersheim
+    expect(mapHeizungsalter(2010, heute)).toBe("mittel"); // 16 J.
+    expect(mapHeizungsalter(2020, heute)).toBe("neu"); // 6 J.
+  });
+
+  it("trifft die Stufengrenzen 10 und 20 Jahre", () => {
+    // Die Auswahl heisst "Ueber 20 J." / "10-20 J." / "Unter 10 J." - genau 20
+    // Jahre gehoeren deshalb noch in die mittlere Stufe.
+    expect(mapHeizungsalter(2006, heute)).toBe("mittel"); // exakt 20
+    expect(mapHeizungsalter(2005, heute)).toBe("alt"); // 21
+    expect(mapHeizungsalter(2016, heute)).toBe("mittel"); // exakt 10
+    expect(mapHeizungsalter(2017, heute)).toBe("neu"); // 9
+  });
+
+  it("weist unplausible Jahre ab", () => {
+    expect(mapHeizungsalter(1800, heute)).toBe(null);
+    expect(mapHeizungsalter(2030, heute)).toBe(null);
+    expect(mapHeizungsalter(null, heute)).toBe(null);
+  });
+});
+
+describe("mapEndenergie", () => {
+  it("uebernimmt Werte innerhalb der Plausibilitaetsgrenzen", () => {
+    expect(mapEndenergie(77.4)).toBe("77.4"); // Expose Ingersheim
+    expect(mapEndenergie(94)).toBe("94"); // Expose Murr
+  });
+
+  it("verwirft Ausreisser, damit die Baujahr-Schaetzung greift", () => {
+    expect(mapEndenergie(7)).toBe(null); // verrutschtes Komma
+    expect(mapEndenergie(12128)).toBe(null); // Jahresverbrauch statt Kennwert
+  });
+});
+
+describe("mapZustandRenovierung", () => {
+  it("leitet aus dem Zustand einen Betrag je m² ab", () => {
+    expect(mapZustandRenovierung("Gepflegt", 76)).toBe("0"); // Expose Murr
+    expect(mapZustandRenovierung("renovierungsbedürftig", 50)).toBe("30000"); // 600 €/m²
+    expect(mapZustandRenovierung("nach Vereinbarung", 60)).toBe("15000"); // 250 €/m²
+  });
+
+  it("bewertet 'unsaniert' als schlechten Zustand, nicht als 'saniert'", () => {
+    // "unsaniert" enthaelt "saniert" - die Pruefreihenfolge muss das abfangen.
+    expect(mapZustandRenovierung("unsaniert", 50)).toBe("30000");
+  });
+
+  it("liefert null ohne Wohnflaeche", () => {
+    expect(mapZustandRenovierung("Gepflegt", 0)).toBe(null);
+    expect(mapZustandRenovierung(null, 76)).toBe(null);
+  });
+});
+
+describe("Uebernahme der neuen Felder", () => {
+  function uebernehme(erg) {
+    const zeilen = baueZeilen(erg, {}, t);
+    const auswahl = new Set(zeilen.filter((z) => z.uebernehmbar).map((z) => z.key));
+    const gesetzt = {};
+    uebernehmeZeilen(zeilen, auswahl, (k, v) => (gesetzt[k] = v), erg);
+    return gesetzt;
+  }
+
+  it("setzt aus dem Mietbeginn zugleich die Ausgangsmiete des Mietrechners", () => {
+    const gesetzt = uebernehme(
+      ergebnis({
+        objekt: { vermietet: true, vermietet_seit: "01.10.2025" },
+        kosten: { kaltmiete: 1000 },
+      }),
+    );
+    expect(gesetzt.letzteErhDatum).toBe("2025-10-01");
+    // Gleiche Miete davor und danach = keine Erhoehung in der Historie.
+    expect(gesetzt.letzteErhMiete).toBe("1000");
+    expect(gesetzt.immLeer).toBe("ja");
+  });
+
+  it("uebernimmt den Energieausweis-Wert in den Sanierungsrechner", () => {
+    const gesetzt = uebernehme(ergebnis({ energie: { endenergiebedarf: 94 } }));
+    expect(gesetzt.sanIstVerbrauch).toBe("94");
+  });
+
+  it("laesst den Sanierungsrechner bei unplausiblem Kennwert schaetzen", () => {
+    const zeilen = baueZeilen(ergebnis({ energie: { endenergiebedarf: 12128 } }), {}, t);
+    expect(zeile(zeilen, "endenergiebedarf").uebernehmbar).toBe(false);
+  });
+
+  it("uebernimmt die nicht umlagefaehigen Kosten NIE aus dem Expose", () => {
+    // Bewusste Produktentscheidung: nichtUml wird aus der Wohnflaeche
+    // gerechnet, damit der Wert ueber Objekte hinweg vergleichbar bleibt.
+    // Der Expose-Wert ist reine Anzeige.
+    const zeilen = baueZeilen(
+      ergebnis({ kosten: { hausgeld_nicht_umlagefaehig: 77.07 } }),
+      {},
+      t,
+    );
+    const z = zeile(zeilen, "hausgeld_nicht_umlagefaehig");
+    expect(z.gefunden).toBe(true);
+    expect(z.uebernehmbar).toBe(false);
+    expect(z.ziele).toEqual([]);
+  });
+
+  it("uebernimmt die Instandhaltungsruecklage fuer die Ampel", () => {
+    const gesetzt = uebernehme(ergebnis({ kosten: { ruecklage_monatlich: 45.83 } }));
+    expect(gesetzt.ruecklage).toBe("45.83");
+  });
+
+  it("uebernimmt Strasse und Hausnummer fuer den Merklisten-Namen", () => {
+    const gesetzt = uebernehme(
+      ergebnis({ objekt: { strasse: "Murrstrasse", hausnummer: "2" } }),
+    );
+    expect(gesetzt.strasse).toBe("Murrstrasse");
+    expect(gesetzt.hausnummer).toBe("2");
+  });
+
+  it("laesst Nutzflaeche und Wohneinheiten als reine Anzeige stehen", () => {
+    const zeilen = baueZeilen(
+      ergebnis({ objekt: { nutzflaeche: 8, wohneinheiten: 22 } }),
+      {},
+      t,
+    );
+    expect(zeile(zeilen, "nutzflaeche").uebernehmbar).toBe(false);
+    expect(zeile(zeilen, "wohneinheiten").uebernehmbar).toBe(false);
+  });
+});
+
+describe("Mietbeginn ohne Kaltmiete-Uebernahme", () => {
+  it("setzt keine Ausgangsmiete, wenn die Kaltmiete abgewaehlt ist", () => {
+    // Sonst entsteht eine erfundene Mieterhoehung: letzteErhMiete waere die
+    // Expose-Miete (1000), die Ist-Miete im Rechner aber der alte Wert (1200).
+    // buildMP in mietprognose.js legt bei lM < miete einen Historieneintrag an
+    // und verbraucht damit Kappungsgrenze, die nie genutzt wurde.
+    const erg = ergebnis({
+      objekt: { vermietet_seit: "01.10.2025" },
+      kosten: { kaltmiete: 1000 },
+    });
+    const zeilen = baueZeilen(erg, {}, t);
+    const auswahl = new Set(["vermietet_seit"]); // Kaltmiete bewusst NICHT dabei
+    const gesetzt = {};
+    uebernehmeZeilen(zeilen, auswahl, (k, v) => (gesetzt[k] = v), erg);
+    expect(gesetzt.letzteErhDatum).toBe("2025-10-01");
+    expect(gesetzt.letzteErhMiete).toBeUndefined();
   });
 });

@@ -75,7 +75,7 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
     // ist: sonst soll die Kaltmiete weiter aus €/m² × neuer Flaeche folgen.
     if (mietQuelleRef && enthaeltKaltmiete(zeilen, auswahl)) mietQuelleRef.current = "kalt";
 
-    const n = uebernehmeZeilen(zeilen, auswahl, set);
+    const n = uebernehmeZeilen(zeilen, auswahl, set, ergebnis);
     onUebernommen(n);
   };
 

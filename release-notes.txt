@@ -1,3 +1,135 @@
+## 2026-07-28 (1.55.74)
+
+### Nicht umlagefaehige Kosten aus der Wohnflaeche, Energieausweis schlaegt Baujahr
+
+Aus dem Abgleich zweier echter Exposes (Ingersheim 2 Zi./50 m², Murr 3 Zi./
+76 m²) mit den Rechnerfeldern. Drei Bloecke:
+
+**1. `nichtUml` wird gerechnet statt geraten.**
+Das Feld stand fix auf 100 € und hatte mit dem Objekt nichts zu tun. Es folgt
+jetzt der Wohnflaeche: Richtwert fuer Verwaltung + Instandhaltung + Ruecklage
+sind 1,00-2,50 €/m²/Monat, die App setzt die Mitte an (1,75 €/m², `NICHT_UML`
+in `data.js`). 60 m² → 105 €, 76 m² → 133 €. Unter dem Feld steht die
+Herleitung, der Tooltip erklaert die Spanne in allen fuenf Sprachen.
+
+Nachgefuehrt wird nur, solange der Nutzer das Feld nicht selbst gesetzt hat -
+gleiches Muster wie beim Zinssatz. Zwei Refs statt einem, weil das
+Eingabe-Atom `onChange` auch beim blossen Verlassen des Feldes feuert:
+einmaliges Durchtabben soll die Automatik nicht abschalten. Gespeicherte
+Objekte aus der Merkliste behalten beim Laden ihren Wert.
+
+Aus dem Expose wird `nichtUml` bewusst NIE uebernommen. Die Aufteilung des
+Hausgelds steht nur in einem Bruchteil der Exposes; ein mal gelesener, mal
+gerechneter Wert waere ueber Objekte hinweg nicht vergleichbar. Nennt ein
+Expose die Aufteilung doch (Murr: 77,07 €), wird sie angezeigt, nicht gesetzt.
+
+**2. Neue Expose-Felder (Client-Seite).**
+`vermietet` → Belegung, `vermietet_seit` + Kaltmiete → Mieterhoehungsrechner
+(der bekam bisher aus einem Upload gar nichts), `baujahr_waermeerzeuger` →
+Heizungsalter, `zustand` → Renovierungskosten-Schaetzung, `ruecklage_monatlich`
+→ neues Ruecklagenfeld, `strasse`/`hausnummer` → Merklisten-Name. Dazu als
+reine Anzeige: Nutzflaeche, Wohneinheiten, Stellplatzanzahl, nicht
+umlagefaehiges Hausgeld. Labels in allen fuenf Sprachen.
+
+Die Umrechnungen laufen jetzt ueber ein `transform` je Feld statt ueber
+Sonderfaelle in `zielWert` - liefert eine Umrechnung null, bleibt das Feld
+Anzeige ohne Uebernahme.
+
+**Wichtig:** Der Worker wurde bewusst nicht angefasst. Bis `exposePrompt.ts`
+um die neuen Schema-Felder ergaenzt und deployt ist, bleiben sie in der Karte
+auf "nicht gefunden" - die Client-Seite ist vollstaendig vorbereitet.
+
+**3. Energieausweis schlaegt die Baujahr-Schaetzung.**
+Der Sanierungsrechner leitete den Heizkennwert allein aus dem Baujahr ab
+(`hkBaujahr`): Baujahr 1996 → 120 kWh/m²a. Die beiden Referenzexposes weisen
+77,4 bzw. 94 aus - die berechnete Einsparung fiel entsprechend 28-55 % zu
+hoch aus. Neues Feld `sanIstVerbrauch` hat Vorrang, sobald es gefuellt ist.
+
+Der Warmwasseranteil wird dabei abgezogen: der ausgewiesene Kennwert enthaelt
+ihn bei zentraler Anlage bereits, weiter unten schlaegt die Formel ihn ueber
+`pe * warmwasserKWhPerson` erneut auf. Ohne den Abzug zaehlt er doppelt.
+Werte ausserhalb 20-400 kWh/m²a gelten als Lesefehler und werden ignoriert.
+Eine Zeile unter dem Feld nennt immer die verwendete Quelle.
+
+Wichtig dabei: die **Energieklasse** rechnet weiterhin mit dem Gesamtkennwert
+(`hkGesamt`), nicht mit dem um das Warmwasser bereinigten Heizwert. Sonst
+stuende in der App eine bessere Klasse als in dem Ausweis, auf den sich der
+Wert beruft - Expose Ingersheim (77,4 = Klasse C) waere als A+ erschienen.
+Das betrifft die Vorher/Nachher-Anzeige, die EU-EPBD-Warnung und das Badge
+neben dem Baujahr; letzteres richtete sich vorher rein nach der
+Baualtersklasse und widersprach dem eingetragenen Ausweis.
+
+**Ausserdem:** Ampel fuer die Instandhaltungsruecklage im Renditerechner
+(gruen ab 1,00 €/m²/Mon., gelb ab 0,60, darunter rot - Murr liegt mit 0,60
+an der Grenze). Ohne Angabe bleibt sie aus. Totes Feld `vermietet` entfernt,
+das von keinem Rechner gelesen wurde.
+
+**Beim Nachpruefen gefunden und behoben:** Wurde der Mietbeginn uebernommen,
+die Kaltmiete aber abgewaehlt, setzte die Uebernahme trotzdem die Expose-Miete
+als Ausgangsmiete. Lag die eigene Ist-Miete darueber, legte `buildMP` daraus
+eine Mieterhoehung an, die es nie gegeben hat - das verbraucht Kappungsgrenze
+und deckelt die naechste zulaessige Erhoehung zu frueh. Die Ausgangsmiete wird
+jetzt nur zusammen mit der Kaltmiete gesetzt (Test deckt den Fall ab).
+
+42 neue Tests (120 gesamt, gruen), darunter ein neuer Waechter
+`src/i18n/vollstaendigkeit.test.js`: er haelt die fuenf Sprachbloecke
+deckungsgleich und prueft, dass jedes Feld aus `FELD_DEFS` in jeder Sprache ein
+Label hat - ein vergessener Schluessel faellt sonst erst im Betrieb auf, wenn
+jemand die Sprache umstellt und dort "undefined" steht.
+
+Geaenderte Dateien: `src/data.js`,
+`src/App.jsx`, `src/utils/rendite.js`, `src/utils/exposeMapping.js`,
+`src/i18n/tips.js`, `src/i18n/translations.js`, `src/i18n/expose.js`,
+`src/components/calculators/Renditerechner.jsx`,
+`src/components/calculators/Sanier.jsx`, `src/components/shell/Merkliste.jsx`,
+`src/components/assistant/ExposeResultCard.jsx`, beide Testdateien und neu
+`src/i18n/vollstaendigkeit.test.js`.
+
+## 2026-07-28 (1.55.73)
+
+### Finn-Upload: Auswerten-Knopf bleibt sichtbar, Ausgang zum Rechner
+
+Zwei Funde aus dem Mobil-Test:
+
+1. Wer mehrere Fotos auswaehlte, sah den Knopf "Exposé auswerten" nicht mehr.
+   Er stand innerhalb der horizontal scrollenden Thumbnail-Leiste und rutschte
+   ab etwa vier Bildern mit den Vorschaubildern nach rechts aus dem Bild -
+   sichtbar nur, wenn man die Leiste seitwaerts scrollte. Der Knopf sitzt jetzt
+   ausserhalb der Leiste in einer eigenen Zeile darunter, ueber die volle
+   Breite und mit 44 px Hoehe. Die Thumbnails scrollen unveraendert horizontal.
+   Geprueft bis 15 Bildern auf 320 px Breite.
+
+2. Nach dem Uebernehmen der Expose-Werte fuehrte der einzige Weg zum Rechner
+   ueber das X in der Kopfzeile. Unter dem Pflicht-Disclaimer steht jetzt ein
+   Knopf "Weiter zum Rechner ▸", der Finn schliesst; der Verlauf scrollt dabei
+   ans Ende, damit Hinweis und Knopf sicher im Bild sind. Bewusst als eigener
+   Schritt nach der Uebernahme statt "Übernehmen und zum Rechner": sonst
+   wuerde der Disclaimer beim Schliessen ungelesen verschwinden.
+
+Geaenderte Dateien: `src/components/assistant/AssistantSheet.jsx`,
+`src/components/assistant/assistantStyles.js`, `src/i18n/expose.js`
+(neuer Schluessel `zumRechnerBtn` in allen fuenf Sprachen).
+
+## 2026-07-28 (1.55.72)
+
+### Gemini-Modell aktualisiert: gemini-2.0-flash-lite war seit 01.06.2026 tot
+
+Google hat "gemini-2.0-flash-lite" zum 01.06.2026 abgeschaltet. Der Worker
+hat das Modell aber weiterhin fest im Code eingetragen gehabt (Text-Chat und
+Vision-Extraktion) - jeder Gemini-Call ist seitdem sofort fehlgeschlagen und
+lief auf den schwaecheren Workers-AI-Fallback (Llama 3.3 fuer Text, Mistral
+Small 3.1 fuer Vision), ohne dass das irgendwo sichtbar war. Fast zwei Monate
+lang hat Finn damit vermutlich durchgehend mit dem Fallback-Modell geantwortet.
+
+Beide Modell-Konstanten in `modelRouter.ts` (Text-Chat und Vision) zeigen jetzt
+auf "gemini-2.5-flash-lite". Zusaetzlich ist das Text-Chat-Modell jetzt ueber
+`env.GEMINI_MODEL` ohne Redeploy umstellbar (Dashboard-Var), analog zum
+bereits bestehenden `EXPOSE_GEMINI_MODEL` fuer die Vision-Seite - damit der
+naechste Google-Deprecation-Zyklus keinen Code-Redeploy mehr braucht.
+
+Geaenderte Dateien: `worker/src/modelRouter.ts`, `worker/src/types.ts`,
+`worker/wrangler.toml` (Kommentar-Doku fuer die neue optionale Var).
+
 ## 2026-07-28 (1.55.71)
 
 ### Expose-Uebernahme: Kaltmiete wird nicht mehr sofort ueberschrieben

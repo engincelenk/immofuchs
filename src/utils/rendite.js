@@ -1,7 +1,19 @@
-import { GREST } from "../data.js";
+import { GREST, NICHT_UML } from "../data.js";
 import { isK15 } from "../data/plzData.js";
 import { addY } from "./helpers.js";
 import { buildMP } from "./mietprognose.js";
+
+// Nicht umlagefaehige Kosten aus der Wohnflaeche: Richtwertmitte aus data.js
+// (NICHT_UML.mittel) mal Quadratmeter, gerundet auf ganze Euro. Bei einem
+// Richtwert waeren Nachkommastellen Scheingenauigkeit.
+//
+// Rueckgabe null bei fehlender oder unplausibler Flaeche - der Aufrufer laesst
+// das Feld dann unveraendert, statt es auf 0 zu ziehen.
+export function berechneNichtUml(flaeche) {
+  const fl = +flaeche || 0;
+  if (fl <= 0) return null;
+  return Math.round(fl * NICHT_UML.mittel);
+}
 
 // Reiner Rechenkern des Renditerechners — 2026-07-23 aus Renditerechner.jsx
 // (R=useMemo) ausgelagert und mit sprechenden Namen versehen (Clean-Code-Review).
