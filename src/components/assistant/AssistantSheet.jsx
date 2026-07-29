@@ -68,6 +68,9 @@ export function AssistantSheet({
   const [auswahlFehler, setAuswahlFehler] = useState(null);
   const [consentOffen, setConsentOffen] = useState(false);
   const [zeigeDisclaimer, setZeigeDisclaimer] = useState(false);
+  // Puls-Hervorhebung des Attach-Buttons als Mobile-Fallback fuer den
+  // Deep-Link-Upload, siehe Kommentar beim autoOpenUpload-Effekt weiter unten.
+  const [highlightAttach, setHighlightAttach] = useState(false);
   const uploadAktiv = status === "uploading" || status === "extracting";
   const uploadMoeglich = Boolean(set) && UPLOAD_RECHNER.includes(rechner);
 
@@ -117,17 +120,34 @@ export function AssistantSheet({
   // wie ein manueller Klick auf 📎 (Consent-Bubble beim ersten Mal, sonst
   // direkt der Datei-Dialog). onAutoOpenUploadHandled() meldet den Verbrauch
   // an App.jsx zurueck, damit ein spaeteres Wieder-Oeffnen des Sheets nicht
-  // erneut den Dialog aufreisst. Verzoegerung, damit die Oeffnen-Animation
-  // des Sheets nicht mit dem Datei-Dialog kollidiert.
+  // erneut den Dialog aufreisst.
+  //
+  // Nur auf Desktop per echtem .click() - auf Mobile (Nutzer-Bugreport
+  // 2026-07-29) scheitert das strukturell: der eigentliche Tap war auf der
+  // Landing-Page, dazwischen liegt eine Navigation + Remount des Sheets, und
+  // iOS Safari (u.a.) laesst einen Datei-Dialog nur oeffnen, wenn .click()
+  // synchron im selben Tap passiert, der die "User Activation" erzeugt hat.
+  // Kein Timeout-Wert der Welt behebt das - die Activation ist zu dem
+  // Zeitpunkt bereits verbraucht. Deshalb dort stattdessen nur den
+  // Attach-Button kurz per Puls-Ring hervorheben, der Nutzer tippt selbst
+  // einmal drauf (siehe highlightAttach, .if-exp-attach--pulse).
   useEffect(() => {
     if (!open || !autoOpenUpload || !uploadMoeglich) return;
-    const id = setTimeout(() => {
-      handleAttachClick();
-      onAutoOpenUploadHandled?.();
-    }, 350);
+    if (isDesktop) {
+      // Verzoegerung, damit die Oeffnen-Animation des Sheets nicht mit dem
+      // Datei-Dialog kollidiert.
+      const id = setTimeout(() => {
+        handleAttachClick();
+        onAutoOpenUploadHandled?.();
+      }, 350);
+      return () => clearTimeout(id);
+    }
+    setHighlightAttach(true);
+    onAutoOpenUploadHandled?.();
+    const id = setTimeout(() => setHighlightAttach(false), 4000);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, autoOpenUpload, uploadMoeglich]);
+  }, [open, autoOpenUpload, uploadMoeglich, isDesktop]);
 
   useEffect(() => {
     // Body-Scroll-Lock nur im modalen Bottom-Sheet (Mobile): ohne das scrollt
@@ -213,6 +233,7 @@ export function AssistantSheet({
   // Beim ersten Antippen erscheint die Consent-Bubble (Spec 8, Punkt 3) -
   // inline im Chat, kein Modal, kein Blocker.
   const handleAttachClick = () => {
+    setHighlightAttach(false);
     let bekannt = false;
     try {
       bekannt = localStorage.getItem(CONSENT_KEY) === "1";
@@ -494,7 +515,7 @@ export function AssistantSheet({
                     onClick={handleAttachClick}
                     aria-label={xt.attachAria}
                     title={xt.attachAria}
-                    className="if-exp-attach"
+                    className={`if-exp-attach${highlightAttach ? " if-exp-attach--pulse" : ""}`}
                     disabled={uploadAktiv}
                   >
                     📎

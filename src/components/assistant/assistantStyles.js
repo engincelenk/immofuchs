@@ -61,6 +61,14 @@ export const ASSISTANT_SHEET_CSS = `
   .if-exp-attach{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid var(--cb);background:var(--ci);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ca)}
   .if-exp-attach:disabled{opacity:.45;cursor:default}
   .if-exp-attach:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+  /* Mobile-Fallback fuer den Deep-Link-Upload (Nutzer-Bugreport 2026-07-29):
+     dort laesst sich der Datei-Dialog nicht automatisch oeffnen, stattdessen
+     pulsiert dieser Button kurz, damit sofort klar ist, wo man tippen muss. */
+  .if-exp-attach--pulse{animation:if-attach-pulse 1.1s ease-in-out infinite}
+  @keyframes if-attach-pulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(232,96,10,.45)}
+    50%{box-shadow:0 0 0 8px rgba(232,96,10,0)}
+  }
 
   .if-exp-consent{flex:none;margin:0 14px 8px;padding:10px 12px;background:var(--ca-bg);border:1px solid var(--ca-bd);border-radius:12px;font-size:12px;color:var(--cl);line-height:1.45;display:flex;flex-direction:column;gap:8px}
   .if-exp-consent button{align-self:flex-start;background:var(--ca);color:#fff;border:none;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}

@@ -1,3 +1,32 @@
+## 2026-07-29 (1.55.87)
+
+### Fix: Deep-Link-Upload auf Mobile - Attach-Puls statt stillem Fehlschlag
+
+Bugreport: "Jetzt hochladen" landet auf Mobile bei Finn, aber ohne dass sich
+der Datei-Dialog oeffnet - auf Desktop funktioniert derselbe Link.
+
+Ursache: der automatische Klick auf den Datei-Dialog kam bisher immer aus
+einem `setTimeout` nach dem Oeffnen des Sheets. Auf Desktop tolerieren
+Browser das, auf Mobile (v.a. iOS Safari) nicht - dort muss ein
+Datei-Dialog synchron im selben Tap ausgeloest werden, der die "User
+Activation" erzeugt hat. Der eigentliche Tap war aber auf der Landing-Page;
+dazwischen liegt eine Navigation zum Renditerechner samt Sheet-Neustart, und
+zu dem Zeitpunkt ist die Activation auf strengen Mobile-Browsern bereits
+verbraucht - kein Timing-Wert behebt das strukturell.
+
+Fix: Automatischer `.click()` bleibt nur auf Desktop bestehen. Auf Mobile
+hebt sich der 📎-Attach-Button stattdessen 4 Sekunden lang mit einem
+pulsierenden Orange-Ring hervor (`.if-exp-attach--pulse` in
+`assistantStyles.js`) - ein Tap darauf funktioniert dann zuverlaessig ueberall,
+verschwindet sofort beim Antippen.
+
+Betroffene Dateien: `components/assistant/AssistantSheet.jsx`,
+`components/assistant/assistantStyles.js`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine, insbesondere
+auf einem echten Mobilgeraet, verifizieren.
+
 ## 2026-07-29 (1.55.86)
 
 ### Fix: push.ps1 - git-Kommandos liefen ins Leere
