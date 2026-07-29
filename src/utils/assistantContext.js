@@ -5,6 +5,37 @@
 // `d` (kein separater React-State), deshalb hier mit drin. Steuertrick nutzt
 // echten lokalen useState (ls/gst/grd) und baut seinen Kontext direkt in
 // SteuerTrick.jsx, ohne diese Helper-Funktion.
+// Uebersetzt die UI-Tab-Id (so speichert die Merkliste, siehe SaveBtn-Aufrufe
+// in den Rechnern) auf den rechner-Wert, den der Worker akzeptiert
+// (worker/src/validator.ts, RECHNER_VALUES). Beide Namensraeume sind
+// historisch auseinandergelaufen: nur "miete" heisst zufaellig gleich, alle
+// anderen wurden vom Worker mit 400 invalid_rechner abgelehnt - der
+// Objektvergleich funktionierte dadurch ausser Miete/Miete nie
+// (Bugreport 2026-07-29).
+//
+// Uebersetzt wird beim LESEN, nicht beim Speichern: in den localStorage der
+// Nutzer sind die alten Ids laengst geschrieben, ein Umstellen von SaveBtn
+// wuerde die bestehenden Eintraege nicht heilen und zusaetzlich ein zweites
+// Format in Umlauf bringen.
+//
+// steuer6/vfe fehlen bewusst: beide Rechner haben keinen SaveBtn, koennen also
+// nicht in der Merkliste landen - und fuer "steuertrick" gibt es unten auch
+// keine ASSISTANT_FIELDS, die Zuordnung waere also ohnehin wirkungslos.
+export const TAB_TO_RECHNER = {
+  haupt: "renditerechner",
+  kredit: "finanzierung",
+  miete: "miete",
+  sanier: "sanierung",
+};
+
+// Fallback bewusst auf einen GUELTIGEN Wert statt auf den Rohwert: ein
+// unbekannter tab (alter localStorage-Eintrag) wuerde sonst unveraendert
+// durchgereicht und liefe wieder in genau den 400er, den dieses Mapping
+// beseitigt.
+export function tabZuRechner(tab) {
+  return TAB_TO_RECHNER[tab] ?? "renditerechner";
+}
+
 export const ASSISTANT_FIELDS = {
   renditerechner: [
     "kaufpreis",

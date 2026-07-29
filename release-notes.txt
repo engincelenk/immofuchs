@@ -1,3 +1,104 @@
+## 2026-07-29 (1.55.89)
+
+### Fix: Luecke im Renditerechner, Vergleichs-Button in den Seitenfluss,
+### Sprechblase nur noch einmal je Rechner
+
+Bugreport 1 - Luecke ueber "Analyse & Kennzahlen" beim Zuklappen aller
+Sektionen (Chrome, alle Umgebungen, ohne Scrollen).
+
+Messung (1440px, Renditerechner):
+  zugeklappt:  .res-pane 1147px, .split 2386px -> Versatz 50px  <- Luecke
+  aufgeklappt: .res-pane 5443px, .split 5443px -> Versatz  0px
+
+Ursache: `.shell` und `.content` hatten `overflow-x:hidden`. Nach CSS-Spec
+zwingt das `overflow-y` still auf `auto` - beide werden dadurch zu
+Scroll-Containern. Das `position:sticky; top:94px` der `.res-pane` rechnet
+dann gegen diesen Phantom-Container statt gegen den Viewport und schiebt die
+Ergebnisspalte statisch nach unten, ganz ohne Scrollen. Sticky darf nur
+innerhalb der Gitterzelle verschieben: aufgeklappt fuellt die Ergebnisspalte
+die Zelle exakt aus -> kein Spielraum -> keine Luecke; zugeklappt ist sie
+kuerzer als die Eingabespalte -> 50px Spielraum -> Luecke.
+
+Fix: `overflow-x:clip` statt `hidden` auf `.shell`/`.content` (plus
+`overflow-y:visible`). `clip` klippt identisch, erzeugt aber keinen
+Scroll-Container. Die vorangestellte `hidden`-Zeile ist die Rueckfallebene
+fuer Safari < 16. Verifiziert: Versatz 50 -> 0 in beiden Zustaenden, kein
+horizontaler Ueberlauf bei 375 / 768 / 1440px.
+
+Verworfen: ein erster Versuch mit `willChange:"transform"` auf der
+RBar-Karte (Compositing-Theorie) war wirkungslos und ist zurueckgenommen -
+RBar.jsx ist wieder unveraendert.
+
+Nebenbefund, bewusst NICHT geaendert: das `sticky` der Ergebnisspalte
+funktioniert dadurch seit jeher gar nicht (die Spalte scrollt normal mit).
+Es scharfzuschalten waere eine sichtbare Verhaltensaenderung und gehoert in
+eine eigene Entscheidung.
+
+Bugreport 2 - "Objekte vergleichen"-Button war ein `createPortal`-Overlay
+mit `position:fixed` ueber die volle Breite (1233x48px bei 1440px Viewport)
+und lag optisch auf einer eigenen Ebene ueber der Seite. Jetzt im normalen
+Seitenfluss der Merkliste unter der Objektliste, rechtsbuendig und kompakt
+(192x38px, Hoehe wie die "Laden"-Buttons). Die Finn-Sprechblase wandert mit.
+
+Ausserdem loeste das Oeffnen bisher nur Begruessung + Frage-Chips aus, obwohl
+die Sprechblase "ich vergleiche" verspricht - fuehlte sich wie "nichts
+passiert" an. Oeffnen ueber Button/Bubble stellt jetzt sofort die erste
+Vergleichsfrage.
+
+Bugreport 3 - Finns Sprechblase lief in jedem Rechner als 3er-Sequenz
+(3s / 30s / 57s). Jetzt poppt sie je Rechner nur noch einmal auf; der erste
+Text traegt ohnehin die wichtigste Aussage inklusive der ergebnisbezogenen
+Warnung aus `pickDringend()`. Die Landing-Page behaelt ihre volle Sequenz.
+
+Bugreport 4 - Nach Fix 2 meldete Finn beim Objektvergleich sofort "Kurzer
+Aussetzer bei mir". Ursache ist NICHT der Worker, sondern ein
+Namensraum-Drift im Frontend: die Merkliste speichert die UI-Tab-Id
+(`SaveBtn tab="haupt"|"kredit"|"miete"|"sanier"`), der Worker whitelistet
+aber eigene rechner-Werte (`renditerechner`, `finanzierung`, `miete`,
+`sanierung`, `steuertrick`, `vorfaelligkeit`, siehe
+`worker/src/validator.ts`). Merkliste.jsx reichte die Tab-Id unveraendert
+weiter - als `rechner` UND als `vergleichsObjekte[].tab`, beide werden gegen
+dieselbe Whitelist geprueft. Nur "miete" hiess zufaellig in beiden Welten
+gleich.
+
+Folge: der Objektvergleich hat ausser Miete/Miete NIE funktioniert. Die
+Auto-Frage aus Fix 2 hat den Fehler nicht verursacht, nur sofort sichtbar
+gemacht statt erst beim Klick auf einen Frage-Chip.
+
+Zweiter, stiller Fehler im selben Pfad: `ASSISTANT_FIELDS[o.tab]` war fuer
+`haupt`/`kredit`/`sanier` ebenfalls undefined -> `?? []` -> `felder` blieb
+leer. Finn haette also selbst bei bestandener Validierung zu jedem Objekt
+null Daten bekommen.
+
+Fix: `TAB_TO_RECHNER` + `tabZuRechner()` in `utils/assistantContext.js`,
+angewandt beim LESEN in Merkliste.jsx (nicht beim Speichern) - die alten Ids
+liegen laengst im localStorage der Nutzer und werden so mitgeheilt. Der
+Fallback zeigt bewusst auf einen GUELTIGEN Wert statt auf den Rohwert, sonst
+liefe ein unbekannter tab wieder in denselben 400er. `steuer6`/`vfe` sind
+bewusst nicht im Mapping: beide haben keinen SaveBtn, und fuer "steuertrick"
+existieren ohnehin keine ASSISTANT_FIELDS.
+
+Neuer Test `src/utils/assistantContext.test.js` laesst den ECHTEN
+Worker-Validator gegen die ECHTE Merklisten-Payload laufen (beides liegt im
+selben Repo, kein Netzaufruf). Genau dieser Vertrag ist unbemerkt
+auseinandergelaufen, weil ihn nichts gegengeprueft hat. Gegenprobe: mit
+sabotiertem Mapping fallen 4 der 7 Tests - der Test kann also wirklich
+fehlschlagen.
+
+Angrenzender Fund, bewusst NICHT geaendert: das Namensfeld beim Speichern
+hat kein `maxLength`. Ein Name ueber 120 Zeichen wird vom Worker mit
+derselben unspezifischen Fehlermeldung abgelehnt.
+
+Betroffene Dateien: `App.jsx`, `components/shell/Merkliste.jsx`,
+`components/assistant/AssistantSheet.jsx`,
+`components/assistant/finnHints.js`, `utils/assistantContext.js`,
+`utils/assistantContext.test.js`.
+
+Geprueft: `vitest run` 156/156 gruen, `eslint` sauber, `vite build`
+erfolgreich. Messungen live im Browser gegengeprueft; die abgefangene
+Laufzeit-Payload zeigt `rechner: renditerechner` und je Objekt 7 bzw. 6
+befuellte Felder (vorher `haupt`/`sanier` und 0 Felder).
+
 ## 2026-07-29 (1.55.88)
 
 ### Fester "Exposé hochladen"-Chip an erster Stelle (alle Upload-Rechner)

@@ -36,5 +36,11 @@ export function buildFinnHints(rechner, signale, t) {
   if (texte.length === 0) return [];
   const dringend = pickDringend(signale, t);
   if (dringend) texte[0] = dringend;
+  // In den Rechnern poppt die Blase nur noch EINMAL auf statt als 3er-Sequenz
+  // (Nutzerwunsch 2026-07-29): die Wiederholungen bei 30s und 57s wurden als
+  // stoerend empfunden. Der erste Text traegt ohnehin die wichtigste Aussage -
+  // inklusive der ergebnisbezogenen Warnung aus pickDringend(), die genau
+  // diesen Platz belegt. Die Landing-Page behaelt ihre volle Sequenz.
+  if (rechner !== "landing") return texte.slice(0, 1);
   return texte;
 }

@@ -38,6 +38,8 @@ export function AssistantSheet({
   t,
   autoOpenUpload,
   onAutoOpenUploadHandled,
+  autoAskQuestion,
+  onAutoAskHandled,
 }) {
   const {
     messages,
@@ -124,6 +126,18 @@ export function AssistantSheet({
       return () => clearTimeout(id);
     }
   }, [open]);
+
+  // Objektvergleich (Merkliste): die Sprechblase verspricht "ich vergleiche" -
+  // damit das eingeloest wird, stellt das Sheet die erste Vergleichsfrage
+  // sofort selbst, statt nur die Frage-Chips zu zeigen (Nutzer-Feedback
+  // 2026-07-29). onAutoAskHandled() meldet den Verbrauch an Merkliste.jsx
+  // zurueck, damit ein spaeteres Wieder-Oeffnen nicht erneut fragt.
+  useEffect(() => {
+    if (!open || !autoAskQuestion) return;
+    submit(autoAskQuestion);
+    onAutoAskHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoAskQuestion]);
 
   // Deep-Link "Exposé hochladen" vom Landing-Hero: stoesst denselben Weg an
   // wie ein manueller Klick auf 📎 (Consent-Bubble beim ersten Mal, sonst
