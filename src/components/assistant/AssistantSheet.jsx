@@ -94,11 +94,20 @@ export function AssistantSheet({
   // reduziert nach Nutzertest 2026-07-28) - "Vorherige"/"Weitere" sind eigene,
   // zusaetzliche Nav-Chips ausserhalb dieses Caps. Der Fragen-Pool selbst
   // bleibt unveraendert, nur die Anzeigegroesse schrumpft.
+  //
+  // Nutzerwunsch 2026-07-29: wo Upload moeglich ist, ersetzt ein fester
+  // "Exposé hochladen"-Chip an erster Stelle einen der beiden Frage-Chips -
+  // Cap bleibt bei 2 sichtbaren Chips insgesamt (1 fest + 1 aus dem Pool
+  // statt bisher 2 aus dem Pool), siehe Rendering weiter unten.
   const [page, setPage] = useState(0);
   useEffect(() => {
     if (open) setPage(0);
   }, [open, rechner]);
-  const { items: visibleSuggested, hasPrev, hasNext } = getSuggestedPage(suggested, page, 2);
+  const { items: visibleSuggested, hasPrev, hasNext } = getSuggestedPage(
+    suggested,
+    page,
+    uploadMoeglich ? 1 : 2,
+  );
 
   // Kopfzeile zeigt normalerweise die Tagline statt eines "online"-Status
   // (Nutzer-Feedback 2026-07-22) - nur das Tageslimit bekommt weiterhin eine
@@ -404,6 +413,9 @@ export function AssistantSheet({
             <div className="if-asst-suggested">
               {showChips ? (
                 <>
+                  {uploadMoeglich && (
+                    <SuggestedQuestionChip label={xt.chipUpload} onClick={handleAttachClick} />
+                  )}
                   {visibleSuggested.map((label, i) => (
                     <SuggestedQuestionChip key={i} label={label} onClick={() => submit(label)} />
                   ))}

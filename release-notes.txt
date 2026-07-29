@@ -1,3 +1,28 @@
+## 2026-07-29 (1.55.88)
+
+### Fester "Exposé hochladen"-Chip an erster Stelle (alle Upload-Rechner)
+
+Wo Upload moeglich ist (Rendite, Finanzierung, Miete, Sanierung), ersetzt ein
+fester "📄 Exposé hochladen"-Chip an erster Stelle einen der bisher zwei
+Frage-Chips - Cap bleibt bei 2 sichtbaren Chips insgesamt (1 fest + 1 aus dem
+Fragen-Pool statt bisher 2 aus dem Pool). Chip loest denselben Weg aus wie
+ein Klick auf 📎 (Consent-Bubble beim ersten Mal, sonst direkt der
+Datei-Dialog). Neuer i18n-Key `chipUpload` in `i18n/expose.js`, 5 Sprachen.
+
+Klarstellung zum automatischen Oeffnen auf Mobile (Nutzerfrage): ein Tap
+bleibt dort unvermeidbar - iOS/Android verweigern das automatische Oeffnen
+eines Datei-/Foto-Dialogs ohne direkten, synchronen Nutzer-Tap als
+Sicherheitsmassnahme, unabhaengig davon ob Browser-Tab oder installierte
+PWA. Das ist keine Einschraenkung unseres Codes, sondern der Browser-Engines
+selbst - der Puls-Hinweis auf 📎 (1.55.87) plus jetzt dieser Chip sind die
+naeher moeglichen Wege, den noetigen Tap so leicht wie moeglich zu machen.
+
+Betroffene Dateien: `components/assistant/AssistantSheet.jsx`,
+`i18n/expose.js`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
 ## 2026-07-29 (1.55.87)
 
 ### Fix: Deep-Link-Upload auf Mobile - Attach-Puls statt stillem Fehlschlag
