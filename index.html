@@ -144,8 +144,7 @@
       .cc-all{background:#e8600a;color:#fff}.cc-all:hover{background:#c44d00}
       .cc-sel{background:#f5f5f0;color:#1a1a1a;border:1px solid #e5e5dc}.cc-sel:hover{background:#e5e5dc}
       .cc-rej{background:transparent;color:#8a8a80;font-weight:400}.cc-rej:hover{color:#1a1a1a}
-      .cc-gear{position:fixed;bottom:90px;left:12px;z-index:9000;width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #e5e5dc;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.06);font-size:14px}
-      @media print{.cc-banner,.cc-overlay,.cc-gear{display:none!important}}
+      @media print{.cc-banner,.cc-overlay{display:none!important}}
     </style>
 
     <!-- ═══ SEO — FAQ Structured Data ═══ -->
@@ -210,8 +209,10 @@
           Immofuchs verwendet <strong>nur technisch notwendige Speicherung</strong> (localStorage)
           für Ihre Eingaben. Wir setzen <strong>keine</strong> Tracking-, Werbe- oder
           Drittanbieter-Cookies ein. Ihre Daten verlassen Ihren Browser nicht. <br /><a
-            href="/datenschutz"
+            href="/datenschutz.html"
             id="cc-dse"
+            target="_blank"
+            rel="noopener"
             >Datenschutzerklärung</a
           >
         </div>
@@ -255,14 +256,13 @@
               Abs. 1 lit. f DSGVO (berechtigtes Interesse).
             </p>
             <p>
-              <strong>Widerruf:</strong> Jederzeit über das ⚙-Symbol unten links oder durch Löschen
-              der Browser-Daten.
+              <strong>Widerruf:</strong> Jederzeit über den Link „Cookie-Einstellungen" im Footer
+              oder durch Löschen der Browser-Daten.
             </p>
           </div>
         </details>
       </div>
     </div>
-    <button id="cc-gear" class="cc-gear no-print" title="Cookie-Einstellungen ändern">⚙</button>
 
     <!-- ═══ Google Consent Mode v2 (DSGVO-konform) ═══ -->
     <script>
@@ -288,9 +288,9 @@
             analytics_storage: granted ? 'granted' : 'denied'
           });
         }
-        var b=document.getElementById('cc-ban'),o=document.getElementById('cc-ov'),g=document.getElementById('cc-gear');
-        function show(){b.classList.add('show');o.classList.add('show');g.style.display='none'}
-        function hide(){b.classList.remove('show');o.classList.remove('show');g.style.display='flex'}
+        var b=document.getElementById('cc-ban'),o=document.getElementById('cc-ov');
+        function show(){b.classList.add('show');o.classList.add('show')}
+        function hide(){b.classList.remove('show');o.classList.remove('show')}
         function save(s){
           localStorage.setItem('cc_consent',JSON.stringify({necessary:true,analytics:s,v:1,ts:Date.now()}));
           updateConsent(s);
@@ -299,14 +299,9 @@
         document.getElementById('cc-yes').onclick=function(){save(true)};
         document.getElementById('cc-ok').onclick=function(){save(document.getElementById('cc-stat').checked)};
         document.getElementById('cc-no').onclick=function(){save(false)};
-        g.onclick=show;
-        document.getElementById('cc-dse').onclick=function(e){
-          e.preventDefault();
-          window.open('/datenschutz','_blank');
-        };
+        window.ccReopen=show;
         var existing=localStorage.getItem('cc_consent');
         if(!existing){setTimeout(show,600);}else{
-          g.style.display='flex';
           try{var c=JSON.parse(existing);updateConsent(!!c.analytics);}catch(e){}
         }
       })();

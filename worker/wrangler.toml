@@ -22,6 +22,28 @@ DAILY_REQUEST_LIMIT = "20"
 # Ueber das Dashboard ohne Redeploy anpassbar, wie ASSISTANT_ENABLED.
 IP_DAILY_LIMIT = "60"
 GLOBAL_DAILY_LIMIT = "2000"
+# Text-Chat-Modell fuer Gemini. Ohne Eintrag nimmt der Worker
+# "gemini-2.5-flash-lite" (siehe modelRouter.ts). Ueber das Dashboard
+# umstellbar, ohne Redeploy - wichtig bei Googles kurzen Deprecation-Zyklen
+# (der Vorgaenger "gemini-2.0-flash-lite" wurde zum 01.06.2026 abgeschaltet).
+# GEMINI_MODEL = "gemini-2.5-flash-lite"
+# ── Expose-/Screenshot-Extraktion (/api/expose-extract) ──
+# Eigener Kill-Switch, unabhaengig von ASSISTANT_ENABLED: Bild-Calls sind
+# teurer und riskanter als Text-Chat und muessen isoliert abschaltbar sein
+# (Spec 11.4). Hier bewusst "false" - auf Prod/QA laeuft bis Sprint 2 nur der
+# Platzhalter-Endpunkt, der soll dort nicht erreichbar sein. Umschalten
+# spaeter ueber das Dashboard, ohne Redeploy.
+EXPOSE_EXTRACT_ENABLED = "false"
+# Deutlich niedriger als beim Text-Chat (Spec 6/11.3): 5 Extraktionen pro
+# Session/Tag, IP und Global anteilig.
+EXPOSE_DAILY_LIMIT = "5"
+EXPOSE_IP_DAILY_LIMIT = "15"
+EXPOSE_GLOBAL_DAILY_LIMIT = "300"
+# Vision-Modell fuer die Extraktion. Ohne Eintrag nimmt der Worker
+# "gemini-2.0-flash-lite" (siehe modelRouter.ts) - dasselbe Modell wie der
+# Text-Chat. Ueber das Dashboard umstellbar, ohne Redeploy, falls sich die
+# Extraktionsqualitaet als zu schwach erweist.
+# EXPOSE_GEMINI_MODEL = "gemini-2.0-flash"
 
 # Workers AI Binding (Llama 3.3, primaerer Pfad fuer DE/EN) - kein API-Key noetig,
 # nur ueber das Cloudflare-Konto freigeschaltet.
@@ -61,6 +83,11 @@ ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info"
 DAILY_REQUEST_LIMIT = "20"
 IP_DAILY_LIMIT = "60"
 GLOBAL_DAILY_LIMIT = "2000"
+# Auf dev eingeschaltet - hier wird der Endpunkt entwickelt und per curl getestet.
+EXPOSE_EXTRACT_ENABLED = "true"
+EXPOSE_DAILY_LIMIT = "5"
+EXPOSE_IP_DAILY_LIMIT = "15"
+EXPOSE_GLOBAL_DAILY_LIMIT = "300"
 
 [env.dev.ai]
 binding = "AI"

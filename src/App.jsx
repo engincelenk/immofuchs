@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { MARKET_RATES } from "./data.js";
+import { berechneNichtUml } from "./utils/rendite.js";
 import { Ctx } from "./context/AppContext.jsx";
 import { T } from "./i18n/translations.js";
 import { TIPS } from "./i18n/tips.js";
@@ -11,7 +12,6 @@ import Sanier from "./components/calculators/Sanier.jsx";
 import { SteuerTrick } from "./components/extras/SteuerTrick.jsx";
 import { Vorfaelligkeit } from "./components/extras/Vorfaelligkeit.jsx";
 import { Landing } from "./pages/Landing.jsx";
-import { LegalModal } from "./components/shell/LegalModal.jsx";
 import { Statusleiste } from "./components/shell/Statusleiste.jsx";
 import { useSavedObjects, Merkliste } from "./components/shell/Merkliste.jsx";
 import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
@@ -134,6 +134,10 @@ const TAB_LABELS = {
   saved: "Merkliste",
 };
 
+// Steht ausserhalb von createDefaults, weil sowohl der Startwert von nichtUml
+// als auch dessen Nachfuehr-Ref (nichtUmlAutoRef in App()) davon ausgehen.
+const FLAECHE_DEFAULT = "60";
+
 // Startwerte des Formulars. Als Factory (lazy useState-Init), damit die
 // datumsabhaengigen Felder beim Mounten berechnet werden und der Block lesbar bleibt.
 function createDefaults() {
@@ -145,8 +149,13 @@ function createDefaults() {
     bundesland: "BW",
     plz: "70173",
     ort: "Stuttgart",
+    // Strasse/Hausnummer werden nicht gerechnet, sondern benennen das Objekt in
+    // der Merkliste - ohne sie sind zwei Wohnungen in derselben Stadt dort
+    // nicht unterscheidbar.
+    strasse: "",
+    hausnummer: "",
     kaufpreis: "300000",
-    flaeche: "60",
+    flaeche: FLAECHE_DEFAULT,
     kaltmiete: "900",
     mieteQm: "15",
     garage: "20000",
@@ -164,7 +173,9 @@ function createDefaults() {
     jahre: "10",
     sonder: "3000",
     renovierung: "15000",
-    nichtUml: "100",
+    // Richtwert 1,75 €/m²/Monat (NICHT_UML.mittel) — folgt der Wohnflaeche,
+    // solange der Nutzer das Feld nicht selbst anfasst (Effekt in App()).
+    nichtUml: String(berechneNichtUml(FLAECHE_DEFAULT)),
     leerstand: "2",
     vergleichsmiete: "14",
     letzteErhDatum: mietbeginnDefault,
@@ -176,7 +187,9 @@ function createDefaults() {
     sanHa: "alt",
     sanPe: "3",
     sanIsfp: false,
-    vermietet: "ja",
+    // Ist-Verbrauch laut Energieausweis (kWh/m²a). Leer = unbekannt, dann
+    // schaetzt der Sanierungsrechner den Kennwert weiter aus dem Baujahr.
+    sanIstVerbrauch: "",
     immLeer: "nein",
   };
 }
@@ -191,6 +204,13 @@ export default function App() {
   const [tab, setTab] = useState("haupt");
   const [lang, setLang] = useState("de");
   const [landed, setLanded] = useState(() => sessionStorage.getItem("if_landed") === "1");
+  // Deep-Link "Exposé hochladen" vom Hero-Spotlight auf der Startseite: wird
+  // beim Wechsel in den Renditerechner einmal an AssistantWidget/AssistantSheet
+  // durchgereicht, die daraus denselben Weg wie ein manueller Klick auf 📎
+  // anstossen. clearAutoExpose() wird von AssistantSheet nach dem Verbrauch
+  // aufgerufen, damit ein spaeteres Wieder-Oeffnen des Sheets nicht erneut
+  // den Datei-Dialog aufreisst.
+  const [autoExpose, setAutoExpose] = useState(false);
   const [zinsen, setZinsen] = useState(null); // holds the raw zinsen.json config (with live BBK)
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -210,8 +230,26 @@ export default function App() {
       window.gtag("event", "tab_view", { tab_id: tab, tab_name: TAB_LABELS[tab] || tab });
     }
   }, [tab]);
-  const [legalModal, setLegalModal] = useState(null);
   const zinssatzTouchedRef = useRef(false); // true once user manually edits the field
+  // Welches der beiden gekoppelten Mietfelder im Renditerechner zuletzt gesetzt
+  // wurde ("kalt" = Kaltmiete ist fuehrend, mieteQm wird daraus abgeleitet).
+  // Liegt hier statt im Renditerechner, weil auch die Expose-Uebernahme die
+  // Richtung vorgeben muss - und das auch dann, wenn der Rechner gerade nicht
+  // gemountet ist. Bewusst ein Ref und nicht Teil von `d`: kein Re-Render und
+  // nichts, was in gespeicherten Objekten landet.
+  const mietQuelleRef = useRef(null);
+  // Nicht umlagefaehige Kosten folgen der Wohnflaeche (Richtwert 1,75 €/m²/Mon),
+  // bis der Nutzer das Feld selbst setzt - danach gilt sein Wert. Gleiches
+  // Muster wie zinssatzTouchedRef.
+  //
+  // Warum zwei Refs: das Eingabefeld (atoms.jsx, F) feuert onChange auch beim
+  // blossen Verlassen des Feldes, ohne dass sich etwas geaendert hat. Wuerde
+  // jedes onChange als "vom Nutzer gesetzt" zaehlen, wuerde einmaliges
+  // Durchtabben die Automatik dauerhaft abschalten. Deshalb merkt sich
+  // nichtUmlAutoRef den zuletzt automatisch gesetzten Wert; nur ein davon
+  // abweichender Wert gilt als echte Eingabe.
+  const nichtUmlTouchedRef = useRef(false);
+  const nichtUmlAutoRef = useRef(String(berechneNichtUml(FLAECHE_DEFAULT)));
 
   // ── Zinsen laden: zinsen.json (lokal, kein Bundesbank-API-Call wegen CORS) ──
   useEffect(() => {
@@ -271,9 +309,34 @@ export default function App() {
   const [data, setData] = useState(createDefaults);
   const set = useCallback((k, v) => {
     if (k === "zinssatz") zinssatzTouchedRef.current = true;
+    // Nur ein vom automatisch gesetzten Richtwert abweichender Wert zaehlt als
+    // echte Nutzereingabe - siehe Kommentar bei nichtUmlAutoRef.
+    if (k === "nichtUml" && String(v) !== nichtUmlAutoRef.current) nichtUmlTouchedRef.current = true;
     setData((p) => ({ ...p, [k]: v }));
   }, []);
-  const { savedList, saveObj, delObj, loadObj } = useSavedObjects(setData);
+
+  // Wohnflaeche geaendert (manuell oder per Expose-Uebernahme) → nicht
+  // umlagefaehige Kosten neu ableiten, solange der Nutzer sie nicht selbst
+  // gesetzt hat.
+  useEffect(() => {
+    if (nichtUmlTouchedRef.current) return;
+    const wert = berechneNichtUml(data.flaeche);
+    if (wert === null) return; // Feld leer/0 → bestehenden Wert stehen lassen
+    const neu = String(wert);
+    nichtUmlAutoRef.current = neu;
+    setData((p) => (p.nichtUml === neu ? p : { ...p, nichtUml: neu }));
+  }, [data.flaeche]);
+
+  const { savedList, saveObj, delObj, loadObj: loadObjRaw } = useSavedObjects(setData);
+  // Ein gespeichertes Objekt ist ein Snapshot: sein nichtUml wurde damals
+  // bewusst so gespeichert und darf beim Laden nicht ueberschrieben werden.
+  const loadObj = useCallback(
+    (obj, setTab) => {
+      nichtUmlTouchedRef.current = true;
+      loadObjRaw(obj, setTab);
+    },
+    [loadObjRaw],
+  );
   const t = T[lang];
   const tabs = [
     { id: "haupt", l: t.haupt, ic: IC.haupt },
@@ -285,8 +348,9 @@ export default function App() {
     { id: "saved", l: t.merkliste, ic: IC.saved },
   ];
 
-  const startApp = (startTab) => {
+  const startApp = (startTab, opts) => {
     if (startTab && tabs.find((x) => x.id === startTab)) setTab(startTab);
+    setAutoExpose(Boolean(opts?.openUpload));
     sessionStorage.setItem("if_landed", "1");
     setLanded(true);
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -301,15 +365,7 @@ export default function App() {
     return (
       <>
         <style>{`${FONT_CSS}${ROOT_TOKENS_CSS}html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y}*{box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased;position:relative}section,footer,header{min-width:0;max-width:100%}`}</style>
-        <Landing
-          onStart={startApp}
-          zinsen={zinsen}
-          lang={lang}
-          setLang={setLang}
-          openDatenschutz={() => setLegalModal("datenschutz")}
-          openImpressum={() => setLegalModal("impressum")}
-        />
-        <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />
+        <Landing onStart={startApp} zinsen={zinsen} lang={lang} setLang={setLang} />
         {!isOnline && <OfflineBanner bottom={"calc(16px + env(safe-area-inset-bottom))"} />}
       </>
     );
@@ -319,6 +375,7 @@ export default function App() {
       value={{
         d: data,
         set,
+        mietQuelleRef,
         t,
         lang,
         zinsen,
@@ -327,6 +384,8 @@ export default function App() {
         saveObj,
         delObj,
         loadObj,
+        autoExpose,
+        clearAutoExpose: () => setAutoExpose(false),
         setTabExt: (id) => {
           setTab(id);
           setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
@@ -467,23 +526,32 @@ export default function App() {
               ← Startseite
             </button>
             <span style={{ opacity: 0.4 }}>·</span>
-            <button
-              onClick={() => setLegalModal("impressum")}
+            <a
+              href="/impressum.html"
               style={{
-                background: "none",
-                border: "none",
                 color: "var(--ca)",
-                cursor: "pointer",
                 fontSize: 10,
                 fontFamily: "inherit",
-                padding: 0,
+                textDecoration: "none",
               }}
             >
               Impressum
-            </button>
+            </a>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <a
+              href="/datenschutz.html"
+              style={{
+                color: "var(--ca)",
+                fontSize: 10,
+                fontFamily: "inherit",
+                textDecoration: "none",
+              }}
+            >
+              Datenschutz
+            </a>
             <span style={{ opacity: 0.4 }}>·</span>
             <button
-              onClick={() => setLegalModal("datenschutz")}
+              onClick={() => window.ccReopen?.()}
               style={{
                 background: "none",
                 border: "none",
@@ -494,7 +562,7 @@ export default function App() {
                 padding: 0,
               }}
             >
-              Datenschutz
+              Cookie-Einstellungen
             </button>
           </div>
         </div>
@@ -514,7 +582,6 @@ export default function App() {
           ))}
         </div>
       </div>
-      <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />
       {!isOnline && <OfflineBanner bottom={"calc(72px + env(safe-area-inset-bottom))"} />}
     </Ctx.Provider>
   );

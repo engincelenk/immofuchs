@@ -34,7 +34,7 @@ export const ASSISTANT_T = {
     hintVfe2: "Kannst du kostenlos kündigen? Ich prüf's mit dir.",
     hintVfe3: "Lohnt sich Umschulden trotzdem? Frag mich.",
     greeting:
-      "Hallo, ich bin Finn 👋 Dein persönlicher KI-Assistent rund um Immobilien. Ich erkläre dir Zahlen, Begriffe und Regeln — verständlich und ohne Fachchinesisch. Hinweis: Meine Antworten sind keine offizielle bzw. verbindliche Steuer- oder Rechtsberatung — bei wichtigen Entscheidungen zieh bitte eine Fachperson hinzu.",
+      "Hallo, ich bin Finn 👋 Dein KI-Assistent rund um Immobilien. Hinweis: Meine Antworten sind keine verbindliche Steuer- oder Rechtsberatung — bei wichtigen Entscheidungen zieh bitte eine Fachperson hinzu.",
     landingIntro: "Was bringt dich zu ImmoFuchs? Wähl einfach, was am besten passt:",
     landingChipRendite: "Ich will eine Immobilie kaufen",
     landingChipFinanzierung: "Ich brauche eine Finanzierung",
@@ -188,7 +188,7 @@ export const ASSISTANT_T = {
     hintVfe2: "Can you cancel free of charge? I'll check with you.",
     hintVfe3: "Is refinancing still worth it? Ask me.",
     greeting:
-      "Hi, I'm Finn 👋 Your personal AI assistant for everything property. I explain numbers, terms and rules — in plain language, no jargon. Note: My answers are not official or binding tax or legal advice — for important decisions please consult a professional.",
+      "Hi, I'm Finn 👋 Your AI assistant for everything property. Note: My answers are not binding tax or legal advice — for important decisions please consult a professional.",
     landingIntro: "What brings you to ImmoFuchs? Just pick what fits best:",
     landingChipRendite: "I want to buy a property",
     landingChipFinanzierung: "I need financing",
@@ -342,7 +342,7 @@ export const ASSISTANT_T = {
     hintVfe2: "Ücretsiz fesih mümkün mü? Birlikte bakalım.",
     hintVfe3: "Yine de yeniden finansman mantıklı mı? Bana sor.",
     greeting:
-      "Merhaba, ben Finn 👋 Gayrimenkul konusunda kişisel yapay zekâ asistanınım. Sayıları, terimleri ve kuralları anlaşılır bir dille açıklarım. Not: Yanıtlarım resmi ya da bağlayıcı bir vergi veya hukuk danışmanlığı değildir — önemli kararlarda lütfen bir uzmana danış.",
+      "Merhaba, ben Finn 👋 Gayrimenkul konusunda yapay zekâ asistanınım. Not: Yanıtlarım bağlayıcı bir vergi veya hukuk danışmanlığı değildir — önemli kararlarda lütfen bir uzmana danış.",
     landingIntro: "Seni ImmoFuchs'a getiren ne? Sana en uygun olanı seç:",
     landingChipRendite: "Bir mülk satın almak istiyorum",
     landingChipFinanzierung: "Finansmana ihtiyacım var",
@@ -497,7 +497,7 @@ export const ASSISTANT_T = {
     hintVfe2: "你能免费解约吗？我陪你查。",
     hintVfe3: "转贷还值得吗？问我。",
     greeting:
-      "你好，我是 Finn 👋 你的房地产 AI 助手。我会用通俗易懂的语言，为你解释数字、术语和规则。提示：我的回答不构成正式或有约束力的税务或法律咨询——重要决策请咨询专业人士。",
+      "你好，我是 Finn 👋 你的房地产 AI 助手。提示：我的回答不构成有约束力的税务或法律咨询——重要决策请咨询专业人士。",
     landingIntro: "是什么让你来到 ImmoFuchs？选择最符合你情况的一项：",
     landingChipRendite: "我想买房",
     landingChipFinanzierung: "我需要贷款",
@@ -645,7 +645,7 @@ export const ASSISTANT_T = {
     hintVfe2: "क्या आप बिना शुल्क रद्द कर सकते हैं? मैं जाँचता हूँ।",
     hintVfe3: "क्या फिर भी रीफाइनेंस फायदेमंद है? पूछें।",
     greeting:
-      "नमस्ते, मैं Finn हूँ 👋 रियल एस्टेट के लिए आपका निजी AI सहायक। मैं आंकड़े, शब्द और नियम आसान भाषा में समझाता हूँ। सूचना: मेरे उत्तर आधिकारिक या बाध्यकारी कर या कानूनी सलाह नहीं हैं — महत्वपूर्ण निर्णयों के लिए कृपया किसी विशेषज्ञ से सलाह लें।",
+      "नमस्ते, मैं Finn हूँ 👋 रियल एस्टेट के लिए आपका AI सहायक। सूचना: मेरे उत्तर बाध्यकारी कर या कानूनी सलाह नहीं हैं — महत्वपूर्ण निर्णयों के लिए कृपया किसी विशेषज्ञ से सलाह लें।",
     landingIntro: "आपको ImmoFuchs तक क्या लाया? जो सबसे उपयुक्त हो उसे चुनें:",
     landingChipRendite: "मैं संपत्ति खरीदना चाहता/चाहती हूँ",
     landingChipFinanzierung: "मुझे फाइनेंसिंग चाहिए",

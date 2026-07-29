@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { BL_N, BL_O } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
@@ -21,11 +21,13 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 
 export default function Haupt() {
-  const { d, set, t, tip, setTabExt, lang } = useApp();
+  const { d, set, t, tip, setTabExt, lang, mietQuelleRef, autoExpose, clearAutoExpose } = useApp();
   const [view, setView] = useState("input");
   const [secAllOpen, setSecAllOpen] = useState(false);
   const [secAllKey, setSecAllKey] = useState(0);
-  const lastEditedRef = useRef(null);
+  // Liegt im Context (App.jsx), damit auch die Expose-Uebernahme die
+  // Sync-Richtung setzen kann - siehe Kommentar dort.
+  const lastEditedRef = mietQuelleRef;
   // Grund- und Gebaeudeanteil ergaenzen sich immer auf 100% - beim Editieren
   // des einen wird der andere gegengerechnet.
   const setAnteil = (feld, gegenfeld, v) => {
@@ -50,7 +52,12 @@ export default function Haupt() {
       if (String(newQm) !== d.mieteQm) set("mieteQm", String(newQm));
     }
     lastEditedRef.current = null;
-  }, [d.kaltmiete]);
+    // d.flaeche gehoert in die Deps, weil die Expose-Uebernahme Kaltmiete und
+    // Wohnflaeche in einem Rutsch setzt: aendert sich dabei nur die Flaeche
+    // (Kaltmiete war schon identisch), muss mieteQm trotzdem neu abgeleitet
+    // werden. Im normalen Betrieb ist der Ref hier laengst null - der Effekt
+    // steigt dann oben aus.
+  }, [d.kaltmiete, d.flaeche]);
   const R = useMemo(() => computeRendite(d, t), [d, t]);
 
   const afaFromBj = (bj) => {
@@ -1473,6 +1480,8 @@ export default function Haupt() {
               suggested={suggested}
               lang={lang}
               signale={{ tier: nrTier, cashflow: R.cf2, risiko: R.rk }}
+              autoOpenUpload={autoExpose}
+              onAutoOpenUploadHandled={clearAutoExpose}
             />
           );
         })()}

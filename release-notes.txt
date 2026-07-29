@@ -1,3 +1,851 @@
+## 2026-07-29 (1.55.88)
+
+### Fester "Exposé hochladen"-Chip an erster Stelle (alle Upload-Rechner)
+
+Wo Upload moeglich ist (Rendite, Finanzierung, Miete, Sanierung), ersetzt ein
+fester "📄 Exposé hochladen"-Chip an erster Stelle einen der bisher zwei
+Frage-Chips - Cap bleibt bei 2 sichtbaren Chips insgesamt (1 fest + 1 aus dem
+Fragen-Pool statt bisher 2 aus dem Pool). Chip loest denselben Weg aus wie
+ein Klick auf 📎 (Consent-Bubble beim ersten Mal, sonst direkt der
+Datei-Dialog). Neuer i18n-Key `chipUpload` in `i18n/expose.js`, 5 Sprachen.
+
+Klarstellung zum automatischen Oeffnen auf Mobile (Nutzerfrage): ein Tap
+bleibt dort unvermeidbar - iOS/Android verweigern das automatische Oeffnen
+eines Datei-/Foto-Dialogs ohne direkten, synchronen Nutzer-Tap als
+Sicherheitsmassnahme, unabhaengig davon ob Browser-Tab oder installierte
+PWA. Das ist keine Einschraenkung unseres Codes, sondern der Browser-Engines
+selbst - der Puls-Hinweis auf 📎 (1.55.87) plus jetzt dieser Chip sind die
+naeher moeglichen Wege, den noetigen Tap so leicht wie moeglich zu machen.
+
+Betroffene Dateien: `components/assistant/AssistantSheet.jsx`,
+`i18n/expose.js`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.87)
+
+### Fix: Deep-Link-Upload auf Mobile - Attach-Puls statt stillem Fehlschlag
+
+Bugreport: "Jetzt hochladen" landet auf Mobile bei Finn, aber ohne dass sich
+der Datei-Dialog oeffnet - auf Desktop funktioniert derselbe Link.
+
+Ursache: der automatische Klick auf den Datei-Dialog kam bisher immer aus
+einem `setTimeout` nach dem Oeffnen des Sheets. Auf Desktop tolerieren
+Browser das, auf Mobile (v.a. iOS Safari) nicht - dort muss ein
+Datei-Dialog synchron im selben Tap ausgeloest werden, der die "User
+Activation" erzeugt hat. Der eigentliche Tap war aber auf der Landing-Page;
+dazwischen liegt eine Navigation zum Renditerechner samt Sheet-Neustart, und
+zu dem Zeitpunkt ist die Activation auf strengen Mobile-Browsern bereits
+verbraucht - kein Timing-Wert behebt das strukturell.
+
+Fix: Automatischer `.click()` bleibt nur auf Desktop bestehen. Auf Mobile
+hebt sich der 📎-Attach-Button stattdessen 4 Sekunden lang mit einem
+pulsierenden Orange-Ring hervor (`.if-exp-attach--pulse` in
+`assistantStyles.js`) - ein Tap darauf funktioniert dann zuverlaessig ueberall,
+verschwindet sofort beim Antippen.
+
+Betroffene Dateien: `components/assistant/AssistantSheet.jsx`,
+`components/assistant/assistantStyles.js`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine, insbesondere
+auf einem echten Mobilgeraet, verifizieren.
+
+## 2026-07-29 (1.55.86)
+
+### Fix: push.ps1 - git-Kommandos liefen ins Leere
+
+`Invoke-Git` hatte den Parameter `$Args` genannt - kollidiert mit der
+gleichnamigen automatischen PowerShell-Variable. Dadurch war `@Args` beim
+Splatten leer, `git` wurde ohne Argumente aufgerufen (druckte nur seine
+Kurzhilfe) und jeder `.\push.ps1`-Lauf brach bei `git add` mit "FEHLER: git
+add fehlgeschlagen" ab, obwohl an den Aenderungen selbst nichts falsch war.
+Parameter in `$GitArgs` umbenannt, Aufrufstellen unveraendert (binden
+positional).
+
+Betroffene Datei: `push.ps1`. Kein App-Code betroffen.
+
+## 2026-07-29 (1.55.85)
+
+### Upload-Kachel final: nur noch eine, halbe Hoehe, Split-Layout, Orange-CTA
+
+Die zusaetzliche Kachel-Instanz in der linken Hero-Spalte ist komplett
+entfallen - sie war redundant, weil rechts unter dem Mockup dieselbe Kachel
+steht. Damit auch kein CSS-Toggle und keine `renderUploadCard()`-Hilfsfunktion
+mehr noetig.
+
+Die verbleibende Kachel ist jetzt exakt wie die grosse Renditerechner-Karte
+weiter unten aufgebaut (`.calc-hero-card`-Muster): weisse Flaeche `--cc`,
+1.5px `--cb`-Rahmen, Radius 14, oranger Hover mit Schatten - Bild links,
+Text rechts, je 50% (unter 640px gestapelt). Das halbiert die Hoehe und
+verhindert unnoetige Textzeilen, weil Badge, Titel, Beschreibung und CTA
+neben statt unter dem Bild sitzen.
+
+"Jetzt hochladen" ist jetzt ein gefuellter Orange-Pill (`--ca`, weisse
+Schrift, Schatten) statt einer blauen Textzeile - deutlich sichtbarer.
+Neuer Badge-Chip ueber dem Titel ("KI-Exposé", neuer i18n-Key
+`heroUploadBadge` in 5 Sprachen); das Dokument-Emoji ist dafuer aus
+`heroUploadTitle` entfernt.
+
+Bild `public/finn-expose-tile.webp` neu zugeschnitten (jetzt 680×448 aus
+`finn-expose3.png`, x 930-1610) - engerer Ausschnitt auf Finn + "EXPOSE",
+passend fuer die halbe Spalte mit `objectFit:cover`.
+
+Betroffene Dateien: `pages/Landing.jsx`, `i18n/translations.js`,
+`public/finn-expose-tile.webp`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.84)
+
+### Hero-Upload-Spotlight: responsives Layout (Desktop unter Mockup, Mobile bleibt oben)
+
+Karte wird jetzt aus einer gemeinsamen `renderUploadCard()`-Funktion gerendert
+und per CSS zweimal ein-/ausgeblendet (Breakpoint 880/881px, gleiches Muster
+wie `.lp-nav`/`.lp-burger`): auf Mobile bleibt sie an der bisherigen Stelle
+direkt nach den CTA-Buttons (maximale Sichtbarkeit dort, wo die meisten
+Erstbesucher landen). Ab 881px erscheint sie stattdessen unter dem
+Browser-Mockup rechts, in dessen voller Breite statt der bisherigen 420px -
+inhaltlich passt das als Einheit besser zusammen ("Mockup zeigt Ergebnis" +
+"Karte zeigt schnellsten Weg dahin"). Damit das Mockup nicht mehr vertikal
+zentriert (und dadurch nach unten verschoben) wirkt, jetzt der ganze
+Hero-Grid auf `alignItems:start` umgestellt - Mockup sitzt jetzt oben,
+buendig mit der Ueberschrift links.
+
+Betroffene Datei: `pages/Landing.jsx` (kein i18n-/Logik-Eingriff).
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.83)
+
+### Hero-Upload-Spotlight final: blauer Akzent, Bild-Zuschnitt, expliziter CTA
+### + "So funktioniert's" spiegelt jetzt den Upload-Pfad
+
+Karte nochmal ueberarbeitet (Nutzerfeedback: Bild zu breit, kein erkennbarer
+Call-to-Action): neuer Bildzuschnitt `public/finn-expose-tile.webp` (1010×448,
+aus `finn-expose3.png` geschnitten - zeigt nur Finn + "EXPOSE"-Panel, beide
+Datentabellen-Seitenpanels raus). Kartenfarbe auf Blau umgestellt (`#EAF2FE`
+Hintergrund, `#9DC4F7` Rahmen, `#0C447C`/`#185FA5` Text) statt des sonst
+durchgaengigen Orange-Akzents - hebt die Karte bewusst ab, passt zum
+Cyan-Glow im Bild. Titel "📄 Exposé hochladen" und CTA "Jetzt hochladen →"
+sind wieder eigene, fette Textzeilen (`heroUploadTitle`/`heroUploadCta`,
+5 Sprachen) - der Pfeiltext steht auf eigener Zeile unter der Beschreibung,
+damit nichts umbricht.
+
+Ausserdem: "So funktioniert's"-Sektion (`step1H/P`, `step2H/P`, 5 Sprachen)
+spiegelt jetzt beide Wege - Schritt 1 nennt Rechner-Wahl ODER Expose-Upload,
+Schritt 2 heisst "Daten prüfen" statt "Daten eingeben" (da Felder je nach
+Weg vorausgefuellt sein koennen).
+
+Betroffene Dateien: `pages/Landing.jsx`, `i18n/translations.js`, neues Asset
+`public/finn-expose-tile.webp`. `finn-expose-badge.webp` und `finn-expose3.png`
+liegen weiterhin unbenutzt/als Quelle in `public/`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.82)
+
+### Hero-Upload-Spotlight: komplettes Banner-Bild statt Icon+Text-Layout
+
+Weitere Nachbesserung: statt Icon-Badge + Titel/Beschreibung/CTA-Text nebeneinander
+zeigt die Kachel jetzt ein einzelnes vom Nutzer geliefertes Bild
+(`public/finn-expose3.png`, 2400×448, Finn + Objekt-Stammdaten/Datenuebersicht-
+Mockup, passendes Seitenverhaeltnis ~5,36:1 fuer die kompakte Kachel). Darunter
+eine kurze, echte (uebersetzbare) Bildunterschrift statt ins Bild gebrannter
+Text: "Finn übernimmt, was im Exposé steht – den Rest trägst du ein." (in
+allen 5 Sprachen). Bild ist dekorativ (`alt=""`), die Caption traegt den
+zugaenglichen Namen des Buttons. Klick-Verhalten unveraendert (Deep-Link in
+Renditerechner + Auto-Open Upload-Dialog).
+
+`finn-expose-badge.webp` (vorherige Icon-Loesung, freigestellter Fuchs-Crop)
+ist dadurch verwaist - liegt noch in `public/`, auf Rueckmeldung entfernbar.
+
+Betroffene Dateien: `pages/Landing.jsx`, `i18n/translations.js`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.81)
+
+### Hero-Upload-Spotlight: Finn-Bild statt Icon, Text praezisiert, "NEU" weg
+
+Nachbesserung zu 1.55.80 auf Nutzer-Feedback: Das 📄-Emoji im Badge ersetzt
+durch `finn-expose-badge.webp` (neues Asset, 220×220, transparent) - ein
+freigestellter Crop aus dem vom Nutzer bereitgestellten `finn-expose.png`
+(1024×1024, Finn haelt ein leuchtendes "EXPOSE"-Panel). Freistellung per
+OpenCV GrabCut (Saettigungs-Heuristik: Fuchs-Kupfer/Cyan-Glow sind
+gesaettigt, das eingebrannte Schachbrett-Muster im Original-PNG war
+achromatisch) - automatisiert, da das Quellbild keinen echten Alphakanal
+hatte (komplett opak, Schachbrett+Schwarz waren Pixel, keine Transparenz).
+Bei Bedarf sauberer nachliefern, falls der Nutzer ein neu freigestelltes
+Original bereitstellt.
+
+"NEU"-Label ueber der Karte entfernt (`heroUploadBadge`-Key + Markup, alle
+5 Sprachen). Beschreibungstext praezisiert: vorher unklar, was automatisch
+uebernommen wird und was der Nutzer selbst eintragen muss - jetzt
+zweigeteilt ("Kaufpreis, Flaeche & Miete uebernimmt Finn direkt ... den
+Rest traegst du wie gewohnt ein"), in allen 5 Sprachen uebersetzt.
+
+Betroffene Dateien: `pages/Landing.jsx`, `i18n/translations.js`, neues
+Asset `public/finn-expose-badge.webp`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.80)
+
+### Exposé-Upload auf der Startseite sichtbar gemacht (Hero-Spotlight)
+
+Der Expose-Upload war bisher nur nach 2 Klicks (Rechner öffnen → Finn öffnen
+→ 📎 finden) zu entdecken. Neu: ein eigener, visuell abgesetzter Block im
+Hero-Bereich der Landingpage (`Landing.jsx`, unter den beiden CTA-Buttons) -
+Dokument-Icon mit Puls-Punkt (greift das bestehende Animationsmuster aus dem
+Zinsen-Ticker auf, keine neue Animation), ehrliche Copy ("Kaufpreis, Fläche,
+Miete & mehr direkt übernehmen – den Rest prüfst du kurz", bewusst nicht
+"alle Zahlen" - Nutzer-Korrektur).
+
+Klick springt direkt in den Renditerechner UND öffnet dort automatisch Finn
+mit dem Datei-Dialog (derselbe Weg wie ein manueller 📎-Klick, inkl.
+Consent-Bubble beim ersten Mal). Dafür neuer Deep-Link-Zustand `autoExpose`
+in `App.jsx` (per Context durchgereicht), konsumiert und zurückgesetzt in
+`AssistantSheet.jsx`, damit ein späteres Wieder-Öffnen des Sheets nicht
+erneut den Dialog aufreisst. Neue i18n-Keys (`heroUpload*`) in allen 5
+Sprachen ergänzt.
+
+Betroffene Dateien: `App.jsx`, `pages/Landing.jsx`, `i18n/translations.js`,
+`components/calculators/Renditerechner.jsx`,
+`components/assistant/AssistantWidget.jsx`,
+`components/assistant/AssistantSheet.jsx`.
+
+Build in der Sandbox nicht prüfbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.79)
+
+### Stern beim Rendite-Badge entfernt, Logo aus Impressum entfernt
+
+Landing.jsx: `★ ` vor dem "RENDITE"-Badge auf der Renditerechner-Karte
+entfernt (`Landing.jsx:872`). `impressum.html`: Logo-Block ueber der
+Ueberschrift entfernt - reine Optik-Anpassungen, keine neue Logik.
+
+Build gruen.
+
+## 2026-07-29 (1.55.78)
+
+### Cookie-Icon entfernt, Datenschutz/Impressum als feste Seiten statt Modal
+
+Das schwebende Zahnrad-Icon (`#cc-gear`, `index.html`) kollidierte auf Mobile
+mit dem OfflineBanner (beide im Bereich `bottom:72-124px`) und war mit
+34x34px unter dem WCAG-Touchziel von 44x44px. Ersetzt durch einen normalen
+Footer-Link "Cookie-Einstellungen" (Landing- und App-Footer), der ueber
+`window.ccReopen()` das Banner erneut oeffnet - kein fixiertes Element mehr,
+das mit anderer UI kollidieren kann.
+
+Ausserdem behoben: `/datenschutz` und `/impressum` lieferten auf allen drei
+Umgebungen 404, weil das Deployment ueber SFTP-Mirror auf IONOS laeuft
+(nicht Cloudflare Pages) und ohne `.htaccess`-Rewrite nur die tatsaechlichen
+Dateinamen `datenschutz.html`/`impressum.html` aufgeloest werden. Statt einer
+Server-Config-Loesung wurden alle internen Links (Cookie-Banner, Landing-
+Footer, App-Footer, die beiden statischen Seiten untereinander) direkt auf
+die `.html`-Endung umgestellt - keine `.htaccess` noetig.
+
+Das bisher parallel gepflegte `LegalModal.jsx` (eigener, unabhaengig
+gepflegter Text-Duplikat von Impressum/Datenschutz) ist entfernt; Landing-
+und App-Footer verlinken jetzt direkt auf die statischen Seiten
+`public/datenschutz.html`/`impressum.html`, die damit die einzige
+Textquelle sind.
+
+Build gruen. Browser-Verifikation: Cookie-Banner oeffnet/schliesst korrekt,
+Footer-Link reaktiviert das Banner, `/datenschutz.html` laedt direkt, Links
+zwischen den beiden Rechtsseiten funktionieren.
+
+## 2026-07-28 (1.55.77)
+
+### Instandhaltungsruecklage als eigenes Feld wieder entfernt
+
+Das Feld samt Ampel (grün/gelb/rot je nach Ruecklagenhoehe) kam erst in
+1.55.74 dazu, war aber von Anfang an strukturell zum Leerlaufen verurteilt:
+die Angabe steht fast nie im Expose, ohne Wert blieb die Ampel dauerhaft aus.
+Ausserdem war es eine Doppelung - der `nichtUml`-Tooltip nennt "Verwaltung,
+Instandhaltung und Ruecklage" bereits als das, was der Richtwert von
+1,75 €/m²/Monat abdeckt; Murr im Referenzexpose bestaetigt das woertlich
+("nicht umlagefaehiger Anteil ... inkl. Ruecklage").
+
+Entfernt: das Eingabefeld und die Ampel im Renditerechner, `RUECKLAGE_QM` aus
+data.js, die Labels `ruecklage`/`rlGreen`/`rlYellow`/`rlRed`/`richtwert` aus
+allen fuenf Sprachen, der zugehoerige Tooltip. Das Expose-Feld
+`ruecklage_monatlich` bleibt bestehen, ist jetzt aber wie
+`hausgeld_nicht_umlagefaehig` reine Anzeige ohne Uebernahme - der Wert bleibt
+sichtbar, wenn ein Expose ihn ausnahmsweise nennt, fliesst aber nirgends mehr
+in eine Berechnung ein (er tat das auch vorher nicht: `ruecklage` stand in
+keiner Formel in rendite.js, nur in der jetzt entfernten Ampel).
+
+Vollstaendigkeits-Waechter angepasst: prueft jetzt zusaetzlich, dass die
+verwaisten Schluessel wirklich verschwunden sind, nicht nur, dass die
+verbliebenen vollstaendig sind.
+
+9 Tests angepasst, 149 gesamt (weiterhin gruen), Lint und Build unveraendert
+sauber. Keine Browser-Verifikation - reine Entfernung ohne neue Logik, durch
+Build + Testsuite abgedeckt.
+
+## 2026-07-28 (1.55.76)
+
+### PDF-Limit auf 25 MB, Feinschliff an Beschriftung und Tooltips
+
+**PDF-Limit von 15 auf 25 MB.** Bildlastige Makler-Exposes liegen regelmaessig
+darueber - der Referenzfall aus dem Nutzertest hatte 17 MB und war schlicht
+nicht auswertbar. Angehoben in `exposeUpload.js` (Client) und `validator.ts`
+(Worker); die Gesamtschranke steigt von 20 auf 30 MB mit, sonst waere ein
+gerade noch erlaubtes PDF an ihr gescheitert - mit einer Fehlermeldung, die
+von zu vielen Bildern spricht.
+
+Die Fehlermeldung nennt die Groesse woertlich ("max. 25 MB") und steht in
+fuenf Sprachen. Damit Text und Konstante nicht auseinanderlaufen, bindet
+`src/utils/exposeLimits.test.js` sie aneinander: der Test liest MAX_PDF_MB und
+prueft, dass jede Sprachfassung diese Zahl enthaelt.
+
+VORBEHALT: Gemini nimmt Inline-Daten nur bis rund 20 MB Gesamt-Request an. Ein
+25-MB-PDF wird base64-kodiert zu etwa 33 MB und duerfte dort abgelehnt werden.
+Der Worker faellt dann auf Workers AI zurueck, das das PDF ueber
+`env.AI.toMarkdown` zu Text wandelt - der Weg sollte tragen, ist bei dieser
+Groesse aber ungetestet. Wenn sich das bestaetigt, ist der saubere Weg Geminis
+File API statt Inline-Daten.
+
+**Beschriftung.** "Nicht umlagef." heisst jetzt ausgeschrieben "Nicht
+umlagefaehige Kosten" (fuenf Sprachen).
+
+**Herleitungszeile entfernt.** Die Zeile "Richtwert: 105 € (1,75 €/m² × 60 m²)"
+unter dem Feld faellt weg; die Erklaerung steht im Tooltip. Die dadurch
+ungenutzten Importe in `Renditerechner.jsx` sind mit entfernt.
+
+**Zwei Tooltips gekuerzt** (jeweils fuenf Sprachen): `nichtUml` von 507 auf
+260 Zeichen, `sanIstVerbrauch` von 643 auf 354. Kernaussagen - Richtwertspanne
+bzw. Warmwasser-Abzug und Plausibilitaetsgrenzen - bleiben, Herleitungen und
+Beispiele entfallen.
+
+12 neue Tests (140 gesamt, gruen).
+
+## 2026-07-28 (1.55.75)
+
+### Worker-Haelfte der neuen Expose-Felder
+
+Nachtrag zu 1.55.74: dort war bewusst nur die Client-Seite umgesetzt, die zehn
+neuen Felder standen in der Ergebniskarte dauerhaft auf "nicht gefunden".
+Jetzt fragt der Worker sie an und reicht sie durch.
+
+Betroffen sind drei Dateien, nicht eine - das war beim Planen zu knapp
+eingeschaetzt: `exposePrompt.ts` (JSON-Schema fuer den Workers-AI-Fallback,
+Schema-Text im Prompt, Extraktionsregeln), `exposeOutput.ts` (die Antwort wird
+dort Feld fuer Feld neu aufgebaut, eine strikte Allowlist - ein Feld nur im
+Prompt zu ergaenzen haette nichts gebracht, es waere danach wieder
+herausgefiltert worden) und `types.ts`.
+
+Die Extraktionsregeln adressieren die Fallstricke aus den beiden
+Referenzexposes:
+
+- Nutzflaeche darf NIE zur Wohnflaeche addiert werden (Murr: 76 + 8 m²)
+- bei zwei genannten Wohnflaechen die kleinere, belegte Zahl plus Warnung
+  (Ingersheim: "ca. 50 m²" vs. "gemaess Berechnung 47,88 m²")
+- "baujahr_waermeerzeuger" ist das Baujahr der HEIZUNG; fehlt es, bleibt das
+  Feld null. Niemals das Gebaeude-Baujahr eintragen - ein falsches "alt"
+  schaltet im Sanierungsrechner den 20-%-Klimabonus frei, den es nicht gibt
+- "vermietet_seit" ist der Beginn der aktuellen Miete, nicht "bezugsfrei ab"
+- Hausgeld-Aufteilung und Ruecklage nur uebernehmen, wenn das Expose sie
+  ausdruecklich beziffert - niemals aus dem Hausgeld schaetzen
+- "vermietet_seit" laeuft bewusst als Text durch die Normalisierung: haette
+  `zahl` darauf gegriffen, waere aus "01.10.2025" die Zahl 1.102025 geworden
+
+Neu ist ausserdem ein Vertragstest (`src/utils/exposeVertrag.test.js`), der
+FELD_DEFS und das Worker-Schema in beide Richtungen abgleicht und prueft, dass
+der Prompt-Text jedes Schema-Feld nennt. Genau die Luecke, die zwischen 1.55.74
+und diesem Nachtrag bestand, faellt damit kuenftig sofort auf: sie erzeugt
+weder Fehler noch Log-Eintrag, das Feld bleibt einfach stumm leer. Der
+Prompt-Text ist dabei die eigentlich kritische Haelfte - das maschinenlesbare
+Schema gilt nur fuer den Workers-AI-Fallback, Gemini sieht ausschliesslich den
+Text.
+
+11 neue Tests (128 gesamt, gruen), Worker-Typecheck sauber.
+Geaenderte Dateien: `worker/src/exposePrompt.ts`, `worker/src/exposeOutput.ts`,
+`worker/src/types.ts`, `worker/src/exposeOutput.test.ts` + neu
+`src/utils/exposeVertrag.test.js`.
+
+ACHTUNG: Diese Aenderung wird von der CI NICHT ausgeliefert. Sie braucht ein
+manuelles `npx wrangler deploy --env dev` im Ordner `worker/`.
+
+## 2026-07-28 (1.55.74)
+
+### Nicht umlagefaehige Kosten aus der Wohnflaeche, Energieausweis schlaegt Baujahr
+
+Aus dem Abgleich zweier echter Exposes (Ingersheim 2 Zi./50 m², Murr 3 Zi./
+76 m²) mit den Rechnerfeldern. Drei Bloecke:
+
+**1. `nichtUml` wird gerechnet statt geraten.**
+Das Feld stand fix auf 100 € und hatte mit dem Objekt nichts zu tun. Es folgt
+jetzt der Wohnflaeche: Richtwert fuer Verwaltung + Instandhaltung + Ruecklage
+sind 1,00-2,50 €/m²/Monat, die App setzt die Mitte an (1,75 €/m², `NICHT_UML`
+in `data.js`). 60 m² → 105 €, 76 m² → 133 €. Unter dem Feld steht die
+Herleitung, der Tooltip erklaert die Spanne in allen fuenf Sprachen.
+
+Nachgefuehrt wird nur, solange der Nutzer das Feld nicht selbst gesetzt hat -
+gleiches Muster wie beim Zinssatz. Zwei Refs statt einem, weil das
+Eingabe-Atom `onChange` auch beim blossen Verlassen des Feldes feuert:
+einmaliges Durchtabben soll die Automatik nicht abschalten. Gespeicherte
+Objekte aus der Merkliste behalten beim Laden ihren Wert.
+
+Aus dem Expose wird `nichtUml` bewusst NIE uebernommen. Die Aufteilung des
+Hausgelds steht nur in einem Bruchteil der Exposes; ein mal gelesener, mal
+gerechneter Wert waere ueber Objekte hinweg nicht vergleichbar. Nennt ein
+Expose die Aufteilung doch (Murr: 77,07 €), wird sie angezeigt, nicht gesetzt.
+
+**2. Neue Expose-Felder (Client-Seite).**
+`vermietet` → Belegung, `vermietet_seit` + Kaltmiete → Mieterhoehungsrechner
+(der bekam bisher aus einem Upload gar nichts), `baujahr_waermeerzeuger` →
+Heizungsalter, `zustand` → Renovierungskosten-Schaetzung, `ruecklage_monatlich`
+→ neues Ruecklagenfeld, `strasse`/`hausnummer` → Merklisten-Name. Dazu als
+reine Anzeige: Nutzflaeche, Wohneinheiten, Stellplatzanzahl, nicht
+umlagefaehiges Hausgeld. Labels in allen fuenf Sprachen.
+
+Die Umrechnungen laufen jetzt ueber ein `transform` je Feld statt ueber
+Sonderfaelle in `zielWert` - liefert eine Umrechnung null, bleibt das Feld
+Anzeige ohne Uebernahme.
+
+**Wichtig:** Der Worker wurde bewusst nicht angefasst. Bis `exposePrompt.ts`
+um die neuen Schema-Felder ergaenzt und deployt ist, bleiben sie in der Karte
+auf "nicht gefunden" - die Client-Seite ist vollstaendig vorbereitet.
+
+**3. Energieausweis schlaegt die Baujahr-Schaetzung.**
+Der Sanierungsrechner leitete den Heizkennwert allein aus dem Baujahr ab
+(`hkBaujahr`): Baujahr 1996 → 120 kWh/m²a. Die beiden Referenzexposes weisen
+77,4 bzw. 94 aus - die berechnete Einsparung fiel entsprechend 28-55 % zu
+hoch aus. Neues Feld `sanIstVerbrauch` hat Vorrang, sobald es gefuellt ist.
+
+Der Warmwasseranteil wird dabei abgezogen: der ausgewiesene Kennwert enthaelt
+ihn bei zentraler Anlage bereits, weiter unten schlaegt die Formel ihn ueber
+`pe * warmwasserKWhPerson` erneut auf. Ohne den Abzug zaehlt er doppelt.
+Werte ausserhalb 20-400 kWh/m²a gelten als Lesefehler und werden ignoriert.
+Eine Zeile unter dem Feld nennt immer die verwendete Quelle.
+
+Wichtig dabei: die **Energieklasse** rechnet weiterhin mit dem Gesamtkennwert
+(`hkGesamt`), nicht mit dem um das Warmwasser bereinigten Heizwert. Sonst
+stuende in der App eine bessere Klasse als in dem Ausweis, auf den sich der
+Wert beruft - Expose Ingersheim (77,4 = Klasse C) waere als A+ erschienen.
+Das betrifft die Vorher/Nachher-Anzeige, die EU-EPBD-Warnung und das Badge
+neben dem Baujahr; letzteres richtete sich vorher rein nach der
+Baualtersklasse und widersprach dem eingetragenen Ausweis.
+
+**Ausserdem:** Ampel fuer die Instandhaltungsruecklage im Renditerechner
+(gruen ab 1,00 €/m²/Mon., gelb ab 0,60, darunter rot - Murr liegt mit 0,60
+an der Grenze). Ohne Angabe bleibt sie aus. Totes Feld `vermietet` entfernt,
+das von keinem Rechner gelesen wurde.
+
+**Beim Nachpruefen gefunden und behoben:** Wurde der Mietbeginn uebernommen,
+die Kaltmiete aber abgewaehlt, setzte die Uebernahme trotzdem die Expose-Miete
+als Ausgangsmiete. Lag die eigene Ist-Miete darueber, legte `buildMP` daraus
+eine Mieterhoehung an, die es nie gegeben hat - das verbraucht Kappungsgrenze
+und deckelt die naechste zulaessige Erhoehung zu frueh. Die Ausgangsmiete wird
+jetzt nur zusammen mit der Kaltmiete gesetzt (Test deckt den Fall ab).
+
+42 neue Tests (120 gesamt, gruen), darunter ein neuer Waechter
+`src/i18n/vollstaendigkeit.test.js`: er haelt die fuenf Sprachbloecke
+deckungsgleich und prueft, dass jedes Feld aus `FELD_DEFS` in jeder Sprache ein
+Label hat - ein vergessener Schluessel faellt sonst erst im Betrieb auf, wenn
+jemand die Sprache umstellt und dort "undefined" steht.
+
+Geaenderte Dateien: `src/data.js`,
+`src/App.jsx`, `src/utils/rendite.js`, `src/utils/exposeMapping.js`,
+`src/i18n/tips.js`, `src/i18n/translations.js`, `src/i18n/expose.js`,
+`src/components/calculators/Renditerechner.jsx`,
+`src/components/calculators/Sanier.jsx`, `src/components/shell/Merkliste.jsx`,
+`src/components/assistant/ExposeResultCard.jsx`, beide Testdateien und neu
+`src/i18n/vollstaendigkeit.test.js`.
+
+## 2026-07-28 (1.55.73)
+
+### Finn-Upload: Auswerten-Knopf bleibt sichtbar, Ausgang zum Rechner
+
+Zwei Funde aus dem Mobil-Test:
+
+1. Wer mehrere Fotos auswaehlte, sah den Knopf "Exposé auswerten" nicht mehr.
+   Er stand innerhalb der horizontal scrollenden Thumbnail-Leiste und rutschte
+   ab etwa vier Bildern mit den Vorschaubildern nach rechts aus dem Bild -
+   sichtbar nur, wenn man die Leiste seitwaerts scrollte. Der Knopf sitzt jetzt
+   ausserhalb der Leiste in einer eigenen Zeile darunter, ueber die volle
+   Breite und mit 44 px Hoehe. Die Thumbnails scrollen unveraendert horizontal.
+   Geprueft bis 15 Bildern auf 320 px Breite.
+
+2. Nach dem Uebernehmen der Expose-Werte fuehrte der einzige Weg zum Rechner
+   ueber das X in der Kopfzeile. Unter dem Pflicht-Disclaimer steht jetzt ein
+   Knopf "Weiter zum Rechner ▸", der Finn schliesst; der Verlauf scrollt dabei
+   ans Ende, damit Hinweis und Knopf sicher im Bild sind. Bewusst als eigener
+   Schritt nach der Uebernahme statt "Übernehmen und zum Rechner": sonst
+   wuerde der Disclaimer beim Schliessen ungelesen verschwinden.
+
+Geaenderte Dateien: `src/components/assistant/AssistantSheet.jsx`,
+`src/components/assistant/assistantStyles.js`, `src/i18n/expose.js`
+(neuer Schluessel `zumRechnerBtn` in allen fuenf Sprachen).
+
+## 2026-07-28 (1.55.72)
+
+### Gemini-Modell aktualisiert: gemini-2.0-flash-lite war seit 01.06.2026 tot
+
+Google hat "gemini-2.0-flash-lite" zum 01.06.2026 abgeschaltet. Der Worker
+hat das Modell aber weiterhin fest im Code eingetragen gehabt (Text-Chat und
+Vision-Extraktion) - jeder Gemini-Call ist seitdem sofort fehlgeschlagen und
+lief auf den schwaecheren Workers-AI-Fallback (Llama 3.3 fuer Text, Mistral
+Small 3.1 fuer Vision), ohne dass das irgendwo sichtbar war. Fast zwei Monate
+lang hat Finn damit vermutlich durchgehend mit dem Fallback-Modell geantwortet.
+
+Beide Modell-Konstanten in `modelRouter.ts` (Text-Chat und Vision) zeigen jetzt
+auf "gemini-2.5-flash-lite". Zusaetzlich ist das Text-Chat-Modell jetzt ueber
+`env.GEMINI_MODEL` ohne Redeploy umstellbar (Dashboard-Var), analog zum
+bereits bestehenden `EXPOSE_GEMINI_MODEL` fuer die Vision-Seite - damit der
+naechste Google-Deprecation-Zyklus keinen Code-Redeploy mehr braucht.
+
+Geaenderte Dateien: `worker/src/modelRouter.ts`, `worker/src/types.ts`,
+`worker/wrangler.toml` (Kommentar-Doku fuer die neue optionale Var).
+
+## 2026-07-28 (1.55.71)
+
+### Expose-Uebernahme: Kaltmiete wird nicht mehr sofort ueberschrieben
+
+Aus dem Nutzertest: Eine aus dem Expose uebernommene Kaltmiete von 650 € stand
+danach nicht im Feld — dort erschienen 748 €. Die Karte meldete trotzdem
+"9 Werte uebernommen".
+
+Ursache waren die zwei Effekte im Renditerechner, die Kaltmiete und €/m²
+gegenseitig synchronisieren. Welche der beiden Groessen fuehrt, stand in einem
+Ref, den nur die beiden Eingabefelder setzen konnten. Die Expose-Uebernahme
+schreibt aber direkt über `set()` und lief damit an dieser Markierung vorbei:
+React verarbeitet alle Werte in einem Rutsch, danach rechnete der Effekt die
+frisch uebernommene Kaltmiete wieder aus dem *alten* €/m²-Wert aus
+(15 €/m² × 49,88 m² = 748). Der Expose-Wert war komplett verloren, und weil
+€/m² unveraendert bei 15 stehen blieb, sah die 748 unter dem Feld auch noch
+plausibel aus ("= 15 × 49,88 m²").
+
+Die Markierung liegt jetzt im geteilten Context statt im Renditerechner. Ist
+die Kaltmiete Teil der Uebernahme, gibt die Karte sie als fuehrende Groesse vor
+— €/m² wird daraus abgeleitet (650 / 49,88 = 13,03), nicht umgekehrt. Ohne
+Kaltmiete in der Auswahl bleibt es bei der Gegenrichtung: eine uebernommene
+Wohnflaeche zieht die Kaltmiete weiter aus €/m² nach. Weil der Ref im Context
+liegt, greift das auch dann, wenn der Renditerechner beim Uebernehmen gar nicht
+offen ist — die Ableitung wird beim naechsten Oeffnen nachgeholt.
+
+Der Effekt fuer die Gegenrichtung haengt zusaetzlich an der Wohnflaeche. Sonst
+bliebe der Fall unversorgt, in dem das Expose dieselbe Kaltmiete wie der
+Rechner liefert und sich nur die Flaeche aendert — dann muss €/m² trotzdem neu
+abgeleitet werden.
+
+## 2026-07-28 (1.55.70)
+
+### push.ps1 mit echten Umgebungs-Modi
+
+CLAUDE.md verspricht seit jeher ein Deploy-Menü mit `push.ps1 dev|qa|prod`.
+Diese Modi gab es im Skript nie: der erste Parameter war die **Commit-Message**,
+und gepusht wurde **immer** `Immofuchs-qa` — unabhängig davon, auf welchem
+Branch committet wurde. `.\push.ps1 dev` hätte also mit der Message "dev"
+committet und danach einen völlig anderen, womöglich veralteten Branch
+hochgeladen. Das ist am 22.07. und erneut am 28.07. nur aufgefallen, weil das
+Skript vorher gelesen wurde.
+
+Jetzt entsprechen die Modi der Realität — und der Branch-Zuordnung aus
+`.github/workflows/` (`Immofuchs-dev` → dev, `Immofuchs-qa` → qa, `main` → prod):
+
+    .\push.ps1 dev  "Message"   -> Commit + Push nach Immofuchs-dev
+    .\push.ps1 qa   "Message"   -> Commit auf dev, Merge dev -> qa, beide pushen
+    .\push.ps1 prod             -> Immofuchs-qa nach main, kein neuer Commit
+
+Ohne Umgebung bricht das Skript mit Kurzhilfe ab, statt still das Falsche zu
+tun. Der alte Aufruf `.\push.ps1 "fix: xy"` läuft damit bewusst auf einen
+Fehler ("Der erste Parameter ist die Umgebung, nicht die Commit-Message").
+`-PushMain` und `-OnlyMain` bleiben als Alias auf `qa` bzw. `prod` erhalten.
+
+Zwei Absicherungen dazu:
+
+- **`git add -A` fragt nach.** Im Arbeitsverzeichnis liegen regelmäßig
+  Änderungen aus parallelen Sessions. Heute waren es 22 Einträge unter `docs/`
+  (eine Archivierung plus ein 1-MB-PDF), die kommentarlos mitgewandert wären.
+  Das Skript listet jetzt alles auf, was außerhalb von `src/`, `worker/`,
+  `public/`, `scripts/`, `.github/` und den bekannten Wurzel-Dateien liegt, und
+  fragt einmal nach. "Nein" staged nur den Projekt-Code.
+- **Prod-Gate.** `prod` zeigt erst die Commits, die nach `main` wandern, und
+  verlangt eine Bestätigung. Ist `main` schon auf Stand, endet das Skript
+  ohne Push.
+
+Weitere Härtungen: `qa` prüft, dass man auf `Immofuchs-dev` steht, bricht bei
+Merge-Konflikt mit konkreter Auflösungsanleitung ab (statt den Nutzer auf dem
+falschen Branch stehen zu lassen) und wechselt am Ende zurück auf dev.
+git-Aufrufe werden nur noch über den Exit-Code bewertet — git schreibt auch
+bei Erfolg nach stderr, was PowerShell sonst als Fehler wertet.
+
+**Getestet:** Syntax-Check grün; Abbruch ohne Umgebung, mit alter
+Message-Syntax und mit Tippfehler ("prd") liefern je exit 1 mit Kurzhilfe; die
+Fremddatei-Erkennung gegen das echte Arbeitsverzeichnis klassifiziert 22
+docs-Einträge als fremd und `push.ps1`/`src/App.jsx` als Projekt-Code. Die
+interaktiven Bestätigungen und der vollständige Merge-Durchlauf sind nicht
+automatisiert getestet — sie lösen echte Pushes aus.
+
+---
+
+## 2026-07-28 (1.55.69)
+
+### Upload-Nachbesserungen aus dem Nutzertest
+
+Sechs Befunde aus `docs/upload-verbesserungen-2026-07-28.md`, alle umgesetzt.
+
+**Büroklammer öffnete auf dem iPhone direkt die Kamera.** Der versteckte
+File-Input hatte `capture="environment"` — das zwingt iOS und Android in die
+Kamera-App, die native Auswahl "Foto aufnehmen / Fotomediathek / Durchsuchen"
+erschien gar nicht erst, und ein PDF war so überhaupt nicht wählbar. Attribut
+entfernt (mit Kommentar, damit es nicht zurückkommt). Mobil erscheint jetzt die
+volle Auswahl, Desktop zeigt den normalen Datei-Dialog.
+
+**Finns Begrüßung gekürzt** (alle 5 Sprachen), rund 45 % kürzer. Wer Finn ist
+und der Hinweis auf fehlende Rechtsverbindlichkeit bleiben, der Absatz über
+"Zahlen, Begriffe und Regeln ohne Fachchinesisch" fällt weg.
+
+**Fragen-Chips 3 → 2.** Nur die Anzeigegröße schrumpft, der Fragen-Pool und die
+"Weitere/Vorherige"-Navigation bleiben unverändert.
+
+**Neuer Button "Alles markieren"** in der Ergebnis-Karte, als Toggle
+("Alles markieren" ↔ "Auswahl aufheben"). Hintergrund: der Renditerechner ist
+mit Defaults vorbelegt, deshalb steht bei fast jedem Feld schon ein Wert — im
+Test waren nur 1 von 9 übernehmbaren Zeilen vorausgewählt, alle anderen galten
+als Konflikt und mussten einzeln angetippt werden. Der Konflikt-Hinweis
+("aktuell: 300000") bleibt in jedem Fall sichtbar; nur das Häkchen ändert sich,
+überschrieben wird weiterhin ausschließlich, was angehakt ist.
+
+**Stellplatz-Kaufpreis verschwand — behoben.** Im Extraktionsschema gab es für
+einen separat ausgewiesenen Stellplatzpreis kein Zielfeld; `ausstattung.stellplatz`
+ist reiner Text. Das Modell hat den Betrag deshalb in `objekt.kaufpreis`
+mit aufaddiert: aus 199.000 € Wohnung + 15.000 € Stellplätze wurden 214.000 €
+Kaufpreis — rechnerisch die richtige Summe, aber der Nutzer sah nicht, dass ein
+Stellplatzanteil darin steckt, und Grunderwerbsteuer wie Kaufnebenkosten liefen
+auf dem Mischwert.
+
+- `exposePrompt.ts`: neues Zahlenfeld `objekt.stellplatz_kaufpreis` in Schema
+  und `guided_json`, plus drei Prompt-Regeln — `kaufpreis` ist ausschließlich
+  der Preis des Objekts selbst (nie inkl. Stellplatz), `stellplatz_kaufpreis`
+  ist der Gesamtpreis *aller* Stellplätze (nicht pro Stück), und bei nur einem
+  genannten Gesamtpreis ohne Aufteilung bleibt das neue Feld null.
+- `exposeOutput.ts` / `types.ts`: Feld wird geparst und gehärtet wie die
+  übrigen Zahlenfelder.
+- `exposeMapping.js`: neue Zeile "Stellplatz-Kaufpreis" (5 Sprachen), Ziel ist
+  das **bestehende** Rechnerfeld `garage` ("Garage/Stellplatz"). Kein neues
+  Rechnerfeld nötig — `rendite.js` rechnet seit jeher
+  `gesamtKaufpreis = kaufpreis + garage`.
+
+**Ende-zu-Ende geprüft** mit dem Exposé aus dem Nutzertest ("Der Kaufpreis der
+Wohnung beträgt 199.000 €, die beiden Außenstellplätze werden beide für zzgl.
+insgesamt 15.000 € mitverkauft. Somit beträgt der Gesamtkaufpreis 214.000 €"):
+Karte zeigt Kaufpreis 199.000 € und Stellplatz-Kaufpreis 15.000 € getrennt,
+nach "Alles markieren" + "Übernehmen" stehen im Rechner 199000 und 15000, die
+Summenzeile zeigt 214.000 €. Toggle 1 → 9 → 0 → 9 Häkchen, `aria-pressed`
+korrekt, alle 8 Konflikt-Hinweise durchgehend sichtbar. 57 Tests grün, Lint
+0 Fehler, Build grün, Worker-Typecheck grün, keine Konsolenfehler.
+
+**Deploy-Hinweis:** Die Änderungen an `worker/src/` gehen nicht über den
+Git-Push mit — der Worker braucht ein eigenes `wrangler deploy`, sonst kennt
+das Backend `stellplatz_kaufpreis` nicht und das Feld bleibt dauerhaft leer.
+
+---
+
+## 2026-07-27 (1.55.68)
+
+### PDF-Exposés lesbar + ehrliche Fehlermeldungen
+
+Bug-Report: Ein echtes Exposé-PDF (`docs/expose.pdf`, 1 MB, 15 Seiten) lief auf
+"Konnte nichts lesen — bitte schärfere Screenshots". Log-Diagnose:
+
+    gemini_vision_failed_fallback_workers_ai gemini_vision_request_failed_429
+    8007: cannot identify image file <_io.BytesIO object>
+
+Gemini war weiter im 429, und der Workers-AI-Fallback schickte das PDF als
+*Bild* weiter — Bildmodelle können damit nichts anfangen. Das PDF ist also nie
+bei einem Modell angekommen. Größe und Seitenzahl waren nie das Problem.
+
+- `modelRouter.ts`: Im Fallback-Pfad wird ein PDF jetzt vorher über
+  `env.AI.toMarkdown()` in Text gewandelt und als Textteil übergeben. Kein
+  neues Paket im Client-Bundle nötig. Gemini bekommt das PDF weiterhin im
+  Original — dort bleibt das Layout erhalten, der Umweg ist die Rettung, nicht
+  der Normalfall.
+- PDFs ohne Textebene (reine Scans) werfen `pdf_ohne_text` und werden als
+  `extraction_failed` gemeldet — ein Inhaltsproblem, kein Dienstausfall.
+
+Fehlermeldungen getrennt, statt alles in einen Satz zu werfen (alle 5 Sprachen):
+- `model_call_failed` → "Ich konnte das Exposé gerade nicht auswerten. Bitte
+  versuch es gleich noch einmal."
+- `extraction_failed` → "Aus dem Exposé konnte ich nichts auslesen. Bei Fotos
+  hilft eine höhere Auflösung, bei PDFs eines mit echtem Text statt
+  eingescannter Seiten."
+
+Das Wort "Screenshots" ist aus den Fehler- und Consent-Texten verschwunden —
+es ging nie nur um Screenshots. Der Consent-Text nennt jetzt "Bilder und PDFs",
+was auch datenschutzrechtlich genauer ist (PDFs werden ebenfalls übertragen).
+
+**Test mit dem echten Exposé:** 32 Sekunden, HTTP 200, 22 von 28 Feldern.
+Kaufpreis 214.000 €, 4.280 €/m², 2 Zimmer, 50 m², 74379 Ingersheim, Baujahr
+1996, Hausgeld 208 €, Provision 3,57 %, Gas/Verbrauchsausweis/77,4 kWh/Klasse C,
+Balkon, EBK, Keller, 2 Stellplätze, Zentralheizung, plus Objekt- und
+Lagebeschreibung. Zwei Warnungen erkannt — darunter eine echte Abweichung im
+Original: 50 m² im Exposé gegen 47,88 m² im Grundriss. Übernahme in den
+Renditerechner geprüft, Umlaute korrekt.
+
+
+## 2026-07-27 (1.55.67)
+
+### Exposé-Extraktion: Vision-Fallback auf Workers AI — Kette läuft echt
+
+Die Spec-Annahme "kein Vision-Fallback möglich" (Abschnitt 11.6) galt für Llama
+3.3. Auf dem Cloudflare-Konto liegen bildfähige Modelle. Der Worker versucht
+jetzt erst Gemini, dann Workers AI — dasselbe Muster wie der Chat.
+
+- `modelRouter.ts`: `callVisionModel` (Gemini → Workers AI), Fallback-Modell
+  `@cf/mistralai/mistral-small-3.1-24b-instruct`, umstellbar über
+  `EXPOSE_VISION_FALLBACK_MODEL`.
+- `exposePrompt.ts`: `EXPOSE_JSON_SCHEMA` für `guided_json` — beim Fallback ist
+  die Struktur damit erzwungen statt nur erbeten.
+- Mistral nimmt Bilder als Data-URL entgegen, also exakt das Format, das der
+  Client ohnehin schickt. 502 gibt es nur noch, wenn beide Wege scheitern.
+
+**Erster echter Durchlauf** (Dev-Worker, zwei synthetische Exposé-Screenshots,
+Gemini weiterhin 429 → Fallback lief): 22 Sekunden, sauberes JSON nach Schema.
+Alle Zahlen korrekt (349.000 €, 4.361 €/m², 3 Zimmer, 80,05 m², Baujahr 1996,
+Hausgeld 285 €, Provision 3,57 %, Nebenkosten 36.900 €, 112,4 kWh/m²·a,
+Klasse D). Daten aus BEIDEN Screenshots zu einem Datensatz zusammengeführt,
+Keller und Stellplatz aus dem Fließtext gezogen — und der eingebaute
+Wohnflächen-Widerspruch (80,05 vs. 78,20 m²) landete korrekt als Warnung an
+genau dem Feld. Übernahme in den Renditerechner geprüft: 6 Werte geschrieben,
+PLZ 70599 zog Ort und Bundesland nach.
+
+Dabei zwei Formatierungsfehler gefunden und behoben: Baujahr wurde als "1.996"
+mit Tausenderpunkt angezeigt, Zimmer als "3,0". Nachkommastellen richten sich
+jetzt nach dem Wert (80,05 m² bleibt 80,05 statt auf 80 gerundet zu werden).
+
+Lokales `.env` zeigt jetzt auf den Dev-Worker statt auf Prod — lokale Tests
+verbrauchen so kein Prod-Kontingent, und nur dev kennt den neuen Endpunkt.
+
+
+## 2026-07-27 (1.55.66)
+
+### Dev-Worker deployt + Befund: Gemini antwortet gar nicht mehr (429)
+
+Worker mit dem Exposé-Endpunkt auf `immofuchs-assistant-dev` deployt
+(`wrangler deploy --env dev`). Prod/QA unverändert — dort ist der Endpunkt
+weiter 404 und `EXPOSE_EXTRACT_ENABLED="false"`.
+
+Live gegen den Dev-Worker geprüft: Routing, Validierung (400 für
+invalid_json/no_input/invalid_image_mime/too_many_images) und die
+Kontingent-Rückbuchung bei Fehlern greifen wie lokal.
+
+**Befund beim ersten echten Modell-Call:** Google gibt auf diesem API-Key
+durchgängig 429 zurück — für Bilder UND für Text, auf `gemini-2.0-flash`
+ebenso wie auf `gemini-2.0-flash-lite`. Die Modellwahl war also nicht die
+Ursache. Konsequenz für den laufenden Betrieb:
+
+- **Finn beantwortet Chat-Fragen auf dev UND prod derzeit über den
+  Workers-AI-Fallback (Llama 3.3), nicht über Gemini.** Der Chat gibt 200
+  zurück, deshalb fällt es von außen nicht auf; sichtbar wird es nur im
+  `wrangler tail` als `gemini_call_failed_fallback_workers_ai
+  gemini_request_failed_429`.
+- Die Exposé-Extraktion hat per Design keinen Fallback (Llama kann keine
+  Bilder) und scheitert deshalb hart mit 502 `model_call_failed`.
+
+Vision-Modell auf `gemini-2.0-flash-lite` gesetzt (Nutzerentscheidung),
+weiterhin über `EXPOSE_GEMINI_MODEL` ohne Redeploy wechselbar.
+
+Damit ist der erste echte Extraktionslauf weiter offen — nicht mangels Code,
+sondern mangels Gemini-Kontingent. Nächster Schritt: bezahlter Tarif prüfen
+(steht ohnehin als M4-Gate in der Spec) bzw. Quota-Reset abwarten.
+
+
+## 2026-07-27 (1.55.65)
+
+### Exposé-Upload Sprint 2–6: Extraktion komplett (Worker + Finn-UI)
+
+Rest der Spec `docs/plans/expose-screenshot-upload-spec.md` gebaut: Vision-Call
+im Worker, Upload-Einstieg im Finn-Chat, Ergebnis-Karte mit Übernahme,
+5 Sprachen, Accessibility, Tests.
+
+Worker (Sprint 2):
+- `exposePrompt.ts` (neu): Extraktions-Prompt inkl. `warnungen`-Regel.
+- `modelRouter.ts`: `callGeminiVision` mit `inline_data`, JSON-erzwungener
+  Ausgabe, 60s-Timeout. Kein Workers-AI-Fallback — Llama kann keine Bilder.
+- `exposeOutput.ts` (neu): härtet die Modellantwort. Zahlenfelder werden aus
+  deutscher Schreibweise gerettet ("269.000 EUR") oder verworfen, statt als
+  Freitext in eine Renditerechnung zu laufen.
+
+Frontend (Sprint 3–5):
+- 📎 im Chat-Eingabefeld, Mehrfachauswahl + Kamera, Thumbnail-Reihe,
+  einmalige Consent-Bubble. Nur in den vier Objekt-Rechnern — in §6-Trick und
+  Vorfälligkeit gibt es kein Feld, das ein Exposé befüllen könnte.
+- `exposeUpload.js` (neu): Canvas-Verkleinerung auf 1500px, Limits wie im
+  Worker, grobe PDF-Seitenschätzung.
+- `ExposeUploadProgress` / `ExposeResultCard` / `ExposeFieldRow` (neu),
+  `useAssistant.js` um `uploading`/`extracting` erweitert.
+- `exposeMapping.js` (neu): Feld → Rechnerfeld, inkl. PLZ→Ort/Bundesland und
+  Energieträger→Heizungsart. Hausgeld bekommt bewusst kein Ziel.
+- `i18n/expose.js` (neu): ~50 Strings + 28 Feldbezeichner in de/en/tr/zh/hi.
+
+Abweichungen von der Spec (bewusst):
+- Bilder gehen als Data-URL statt als nacktes Base64 — sonst ist der MIME-Typ
+  serverseitig nicht prüfbar.
+- Phase 1 heißt "vorbereitet", nicht "hochgeladen": messbar ist die
+  Komprimierung, der eigentliche POST ist ein einziger Request.
+- Kein Titelbild-Thumbnail in der Karte — `titelbild_base64` ist laut Spec
+  Abschnitt 10 noch nicht entschieden.
+- Vision-Modell `gemini-2.0-flash` (statt Chat-Modell 2.0-flash-lite), über
+  `EXPOSE_GEMINI_MODEL` ohne Redeploy wechselbar.
+
+Verifiziert im Browser (dev-Server, Worker-Antwort gestubbt): Consent-Bubble
+einmalig, Auswahl/Entfernen, echter Fortschritt "0…7 von 8 Bildern",
+Ergebnis-Karte "26 von 28 Feldern · 7 zu prüfen", Warnung an der Wohnfläche,
+6 Konflikte standardmäßig NICHT angehakt, Übernehmen schreibt nur Angehaktes
+(Kaufpreis 300.000 → 269.000, PLZ/Fläche unverändert), Karte kollabiert zur
+Chip-Zeile, Disclaimer erscheint. Fehlerpfade 429/503/502 mit eigenen
+Exposé-Texten. Türkisch komplett durchgeklickt. 56 Tests grün, Lint ohne neue
+Warnungen, Worker-Typecheck grün.
+
+Offen (kein Code): bezahlter Gemini-Tarif + ZDR (Hard-Gate vor Prod, deshalb
+`EXPOSE_EXTRACT_ENABLED="false"` auf Prod/QA), juristische Prüfung der
+Datenschutz-/Disclaimer-Texte, Testlauf mit echten Referenz-Screenshots.
+
+
+## 2026-07-27 (1.55.64)
+
+### Exposé-Upload Sprint 1: Worker-Endpunkt /api/expose-extract (Fundament)
+
+Erster Baustein der Exposé-/Screenshot-Extraktion (Spec:
+`docs/plans/expose-screenshot-upload-spec.md`, Abschnitt 12, Phase A).
+Reines Backend, noch kein UI und noch kein Modell-Call — der Endpunkt
+antwortet aktuell schema-konform mit einem leeren Datensatz (Platzhalter bis
+Sprint 2).
+
+- `types.ts`: `ExposeExtractRequest`/`ExposeExtractResponse` inkl.
+  `confidence` und `warnungen`, `InlineDatei` (mimeType + Base64) für den
+  späteren Gemini-`inline_data`-Call.
+- `validator.ts`: `validateExposeExtractRequest` — max. 15 Bilder, MIME nur
+  jpeg/png/webp bzw. application/pdf, je 15 MB, 20 MB gesamt. Data-URL statt
+  nacktem Base64, damit der MIME-Typ serverseitig prüfbar ist. Das
+  PDF-Seitenlimit (20) prüft später der Client — der Worker müsste dafür das
+  PDF parsen.
+- `index.ts`: zweiter Route-Zweig `/api/expose-extract` mit eigenem
+  Kill-Switch `EXPOSE_EXTRACT_ENABLED` und eigenem Rate-Limit-Namensraum
+  (`expose:`-Präfix) auf derselben `RATE_LIMITER_DO` — keine neue Infrastruktur.
+- `wrangler.toml`: neue Vars top-level und unter `env.dev`. Auf dev
+  eingeschaltet, auf Prod/QA bewusst `false`, solange nur der Platzhalter
+  antwortet.
+
+Verifiziert gegen einen lokalen Worker: 404/405, 400 für invalid_json,
+invalid_lang, invalid_session_id, no_input, invalid_images,
+invalid_image_mime, too_many_images; 200 für gültige Bilder bzw. nur-PDF;
+429 beim 6. Aufruf derselben Session (Limit 5/Tag); 503 mit Prod-Vars.
+`npm run typecheck` grün.
+
+
 ## 2026-07-24 (1.55.62)
 
 ### 6%-Trick: Tooltip-Farbe an übrige Rechner angeglichen

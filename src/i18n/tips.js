@@ -1,11 +1,23 @@
-import { MARKET_RATES } from "../data.js";
+import { MARKET_RATES, NICHT_UML, VERBRAUCH_GRENZEN } from "../data.js";
+
+// Richtwert-Zahlen fuer die nichtUml-Tooltips direkt aus data.js, damit
+// Erklaerung und Formel (berechneNichtUml in utils/rendite.js) nicht
+// auseinanderlaufen. Dezimaltrennzeichen je Sprachraum.
+const nu = (locale) => {
+  const f = (v) =>
+    v.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return { min: f(NICHT_UML.min), max: f(NICHT_UML.max), mittel: f(NICHT_UML.mittel) };
+};
+const NU_DE = nu("de-DE");
+const NU_EN = nu("en-GB");
+const NU_TR = nu("tr-TR");
 
 export const TIPS = {
   de: {
     kaufpreis: "Vereinbarter Kaufpreis ohne Kaufnebenkosten.",
     flaeche: "Nettowohnfläche nach Wohnflächenverordnung (WoFlV).",
     kaltmiete: "Nettokaltmiete ohne Betriebskosten.",
-    nichtUml: "Kosten, die nicht auf Mieter umlegbar sind: Verwaltung, Instandhaltung, Rücklagen.",
+    nichtUml: `Verwaltung, Instandhaltung und Rücklage — der Teil des Hausgelds, den du selbst trägst. Richtwert ${NU_DE.min}–${NU_DE.max} € je m² und Monat; der Rechner setzt die Mitte an (${NU_DE.mittel} €/m²) und folgt der Wohnfläche, bis du das Feld selbst überschreibst.`,
     leerstand:
       "Erwartete Leerstandsmonate im Analysezeitraum. Realistisch: 2-4 Monate pro 10 Jahre.",
     eigenkapital:
@@ -57,12 +69,13 @@ export const TIPS = {
     keFl: "Fläche der Kellerdecke. Bei unbeheiztem Keller empfehlenswert.",
     pvLeistung: "1 kWp ≈ 7m² Dachfläche. Ertrag ca. 950 kWh/kWp pro Jahr.",
     isfp: "Individueller Sanierungsfahrplan: Ein Energieberater erstellt einen maßgeschneiderten Sanierungsplan. Belohnung: +5% BAFA-Bonus auf jede BEG-Maßnahme. Energieberatung wird mit 50% bezuschusst. Antrag stets VOR Auftragsvergabe!",
+    sanIstVerbrauch: `Endenergieverbrauch aus dem Energieausweis (kWh/m²a). Ist der Wert gesetzt, rechnet der Rechner damit statt mit der groben Baujahr-Schätzung — die liegt bei Bauten der 90er oft 30–50 % zu hoch. Der Warmwasseranteil wird abgezogen, weil er im Ausweis schon enthalten ist. Werte außerhalb ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} werden ignoriert.`,
   },
   en: {
     kaufpreis: "Agreed purchase price excluding closing costs.",
     flaeche: "Net living area per German WoFlV regulation.",
     kaltmiete: "Net cold rent excluding utilities.",
-    nichtUml: "Costs not chargeable to tenants: management, maintenance, reserves.",
+    nichtUml: `Management, maintenance and reserve — the part of the service charge you bear yourself. Benchmark €${NU_EN.min}–${NU_EN.max} per m² per month; the calculator applies the midpoint (€${NU_EN.mittel}/m²) and follows the living area until you override the field.`,
     leerstand:
       "Expected vacancy months over the analysis period. Realistic: 2-4 months per 10 years.",
     eigenkapital:
@@ -113,12 +126,13 @@ export const TIPS = {
     keFl: "Area of basement ceiling. Recommended for unheated basements.",
     pvLeistung: "1 kWp ≈ 7m² roof area. Yield ~950 kWh/kWp per year.",
     isfp: "Individual Energy Renovation Roadmap: A certified energy consultant creates a personalised step-by-step plan. Reward: +5% extra BAFA subsidy on every BEG measure. Consulting is 50% subsidised. Apply before placing any orders!",
+    sanIstVerbrauch: `Final energy consumption from the energy certificate (kWh/m²a). When set, the calculator uses it instead of the rough year-built estimate — for 1990s buildings that is often 30–50 % too high. The hot water share is deducted because the certificate already includes it. Values outside ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} are ignored.`,
   },
   tr: {
     kaufpreis: "Kapanış maliyetleri hariç anlaşılan satın alma fiyatı.",
     flaeche: "Alman WoFlV yönetmeliğine göre net yaşam alanı.",
     kaltmiete: "İşletme giderleri hariç net soğuk kira.",
-    nichtUml: "Kiracılara yüklenemeyen maliyetler: yönetim, bakım, rezerv.",
+    nichtUml: `Yönetim, bakım ve rezerv — aidatın sizin üstlendiğiniz kısmı. Referans: aylık m² başına ${NU_TR.min}–${NU_TR.max} €; hesaplayıcı orta değeri (${NU_TR.mittel} €/m²) kullanır ve siz değiştirene kadar yaşam alanını takip eder.`,
     leerstand: "Analiz dönemi boyunca beklenen boş ay sayısı. Gerçekçi: 10 yılda 2-4 ay.",
     eigenkapital:
       "Satın alma için likit fonlar. Kural: en az kapanış maliyetleri + alım fiyatının %20'si.",
@@ -167,12 +181,13 @@ export const TIPS = {
     keFl: "Bodrum tavanı alanı. Isıtılmamış bodrumlar için önerilir.",
     pvLeistung: "1 kWp ≈ 7m² çatı alanı. Yıllık verim ~950 kWh/kWp.",
     isfp: "Bireysel Enerji Yenileme Planı: Sertifikalı enerji danışmanı adım adım yenileme planı oluşturur. Ödül: Her BEG önlemi için +%5 BAFA teşviki. Danışmanlık %50 sübvanse edilir. Siparişten ÖNCE başvurun!",
+    sanIstVerbrauch: `Enerji sertifikasındaki nihai enerji tüketimi (kWh/m²a). Girildiğinde hesaplayıcı, inşaat yılına dayalı kaba tahmin yerine bunu kullanır — 90'lı yılların yapılarında bu tahmin çoğu kez %30–50 fazladır. Sıcak su payı düşülür, çünkü sertifikada zaten dahildir. ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} dışındaki değerler yok sayılır.`,
   },
   zh: {
     kaufpreis: "商定的购买价格，不含交易费用。",
     flaeche: "根据德国 WoFlV 法规的净居住面积。",
     kaltmiete: "不含运营费用的净冷租金。",
-    nichtUml: "不能向租户收取的费用：管理、维护、储备金。",
+    nichtUml: `管理费、维护费和储备金——物业费中由您承担的部分。参考值为每平方米每月 ${NU_EN.min}–${NU_EN.max} 欧元；计算器采用中间值（${NU_EN.mittel} 欧元/m²），并跟随居住面积，直到您手动修改该字段。`,
     leerstand: "分析期内预期空置月数。现实值：每10年2-4个月。",
     eigenkapital: "购买的流动资金。经验法则：至少交易费用 + 购买价的20%。",
     zinssatz: `年度名义利率（非有效利率）。当前市场平均水平：${MARKET_RATES.avg}%（截至 ${MARKET_RATES.stand}）。来源：Dr. Klein、Vergleich.de、Finanztip、Finanzfacts、Interhyp、德国联邦银行。`,
@@ -213,12 +228,13 @@ export const TIPS = {
     keFl: "地下室天花板面积。对于无供暖的地下室建议。",
     pvLeistung: "1 kWp ≈ 7 m² 屋顶面积。年产量约 950 kWh/kWp。",
     isfp: "个人能源改造路线图：认证能源顾问制定个性化改造计划。奖励：每项BEG措施+5% BAFA补贴。咨询费用50%受补贴。下订单前申请！",
+    sanIstVerbrauch: `能源证书中的终端能耗（kWh/m²a）。填入后，计算器采用该数值而非依据建筑年份的粗略估算——对90年代建筑该估算常偏高30–50%。热水部分会被扣除，因为证书已包含该部分。超出 ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} 的数值将被忽略。`,
   },
   hi: {
     kaufpreis: "क्लोजिंग लागत को छोड़कर सहमत खरीद मूल्य।",
     flaeche: "जर्मन WoFlV विनियमन के अनुसार शुद्ध रहने का क्षेत्र।",
     kaltmiete: "उपयोगिताओं को छोड़कर शुद्ध ठंडा किराया।",
-    nichtUml: "किरायेदारों पर शुल्क नहीं किए जा सकने वाले खर्च: प्रबंधन, रखरखाव, आरक्षित।",
+    nichtUml: `प्रबंधन, रखरखाव और आरक्षित निधि — मेंटेनेंस शुल्क का वह हिस्सा जो आप स्वयं वहन करते हैं। मानक: प्रति m² प्रति माह €${NU_EN.min}–${NU_EN.max}; कैलकुलेटर मध्य मान (€${NU_EN.mittel}/m²) लेता है और जब तक आप इसे स्वयं न बदलें, रहने के क्षेत्र का अनुसरण करता है।`,
     leerstand: "विश्लेषण अवधि में अपेक्षित खाली महीने। यथार्थवादी: 10 वर्षों में 2-4 महीने।",
     eigenkapital: "खरीद के लिए तरल धन। नियम: कम से कम क्लोजिंग लागत + खरीद मूल्य का 20%।",
     zinssatz: `प्रति वर्ष नाममात्र दर (प्रभावी दर नहीं)। वर्तमान बाजार औसत: ${MARKET_RATES.avg}% (${MARKET_RATES.stand} तक)। स्रोत: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank।`,
@@ -264,5 +280,6 @@ export const TIPS = {
     keFl: "तहखाने की छत का क्षेत्र। बिना गर्म तहखाने के लिए अनुशंसित।",
     pvLeistung: "1 kWp ≈ 7 m² छत क्षेत्र। वार्षिक उत्पादन ~950 kWh/kWp।",
     isfp: "व्यक्तिगत ऊर्जा नवीनीकरण रोडमैप: प्रमाणित ऊर्जा सलाहकार चरण-दर-चरण योजना बनाता है। पुरस्कार: हर BEG उपाय पर +5% BAFA सब्सिडी। परामर्श 50% अनुदानित। ऑर्डर से पहले आवेदन करें!",
+    sanIstVerbrauch: `ऊर्जा प्रमाणपत्र से अंतिम ऊर्जा खपत (kWh/m²a)। मान भरने पर कैलकुलेटर निर्माण-वर्ष के मोटे अनुमान के बजाय इसका उपयोग करता है — 1990 के दशक की इमारतों के लिए वह अनुमान अक्सर 30–50 % अधिक होता है। गर्म पानी का हिस्सा घटा दिया जाता है, क्योंकि प्रमाणपत्र में वह पहले से शामिल है। ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} से बाहर के मान अनदेखे किए जाते हैं।`,
   },
 };

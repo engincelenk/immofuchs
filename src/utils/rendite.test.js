@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeRendite } from "./rendite.js";
+import { computeRendite, berechneNichtUml } from "./rendite.js";
 
 // Charakterisierungs-Tests: frieren die aktuellen Ergebnisse des Rechenkerns ein
 // (Clean-Code-Review 2026-07-23). Sie sichern die datums-unabhaengigen Kern-
@@ -108,5 +108,30 @@ describe("computeRendite — Randfall Kaufpreis 0", () => {
     expect(Number.isNaN(R.bR)).toBe(false);
     expect(R.pQm).toBe(0);
     expect(R.bel).toBe(0);
+  });
+});
+
+// ── Nicht umlagefaehige Kosten aus der Wohnflaeche ─────────────────────────
+// Richtwert 1,00-2,50 €/m²/Monat, der Rechner setzt die Mitte an (NICHT_UML
+// in data.js). Die Werte hier sind bewusst hart kodiert statt aus der
+// Konstante abgeleitet: aendert jemand den Richtwert, sollen diese Tests
+// auffallen und nicht stillschweigend mitwandern.
+describe("berechneNichtUml", () => {
+  it("rechnet Wohnflaeche x 1,75 EUR und rundet auf ganze Euro", () => {
+    expect(berechneNichtUml("60")).toBe(105); // Default-Wohnflaeche
+    expect(berechneNichtUml(76)).toBe(133); // Referenzexpose Murr
+    expect(berechneNichtUml(50)).toBe(88); // Referenzexpose Ingersheim (87,5)
+  });
+
+  it("rundet kaufmaennisch statt abzuschneiden", () => {
+    expect(berechneNichtUml(47.88)).toBe(84); // 83,79
+  });
+
+  it("liefert null statt 0, wenn keine Flaeche vorliegt", () => {
+    // Der Aufrufer laesst das Feld dann unveraendert, statt es auf 0 zu ziehen.
+    expect(berechneNichtUml("")).toBe(null);
+    expect(berechneNichtUml(0)).toBe(null);
+    expect(berechneNichtUml(-10)).toBe(null);
+    expect(berechneNichtUml(undefined)).toBe(null);
   });
 });
