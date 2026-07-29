@@ -36,6 +36,8 @@ export function AssistantSheet({
   suggested,
   lang,
   t,
+  autoOpenUpload,
+  onAutoOpenUploadHandled,
 }) {
   const {
     messages,
@@ -110,6 +112,22 @@ export function AssistantSheet({
       return () => clearTimeout(id);
     }
   }, [open]);
+
+  // Deep-Link "Exposé hochladen" vom Landing-Hero: stoesst denselben Weg an
+  // wie ein manueller Klick auf 📎 (Consent-Bubble beim ersten Mal, sonst
+  // direkt der Datei-Dialog). onAutoOpenUploadHandled() meldet den Verbrauch
+  // an App.jsx zurueck, damit ein spaeteres Wieder-Oeffnen des Sheets nicht
+  // erneut den Dialog aufreisst. Verzoegerung, damit die Oeffnen-Animation
+  // des Sheets nicht mit dem Datei-Dialog kollidiert.
+  useEffect(() => {
+    if (!open || !autoOpenUpload || !uploadMoeglich) return;
+    const id = setTimeout(() => {
+      handleAttachClick();
+      onAutoOpenUploadHandled?.();
+    }, 350);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoOpenUpload, uploadMoeglich]);
 
   useEffect(() => {
     // Body-Scroll-Lock nur im modalen Bottom-Sheet (Mobile): ohne das scrollt

@@ -12,7 +12,6 @@ import Sanier from "./components/calculators/Sanier.jsx";
 import { SteuerTrick } from "./components/extras/SteuerTrick.jsx";
 import { Vorfaelligkeit } from "./components/extras/Vorfaelligkeit.jsx";
 import { Landing } from "./pages/Landing.jsx";
-import { LegalModal } from "./components/shell/LegalModal.jsx";
 import { Statusleiste } from "./components/shell/Statusleiste.jsx";
 import { useSavedObjects, Merkliste } from "./components/shell/Merkliste.jsx";
 import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
@@ -205,6 +204,13 @@ export default function App() {
   const [tab, setTab] = useState("haupt");
   const [lang, setLang] = useState("de");
   const [landed, setLanded] = useState(() => sessionStorage.getItem("if_landed") === "1");
+  // Deep-Link "Exposé hochladen" vom Hero-Spotlight auf der Startseite: wird
+  // beim Wechsel in den Renditerechner einmal an AssistantWidget/AssistantSheet
+  // durchgereicht, die daraus denselben Weg wie ein manueller Klick auf 📎
+  // anstossen. clearAutoExpose() wird von AssistantSheet nach dem Verbrauch
+  // aufgerufen, damit ein spaeteres Wieder-Oeffnen des Sheets nicht erneut
+  // den Datei-Dialog aufreisst.
+  const [autoExpose, setAutoExpose] = useState(false);
   const [zinsen, setZinsen] = useState(null); // holds the raw zinsen.json config (with live BBK)
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -224,7 +230,6 @@ export default function App() {
       window.gtag("event", "tab_view", { tab_id: tab, tab_name: TAB_LABELS[tab] || tab });
     }
   }, [tab]);
-  const [legalModal, setLegalModal] = useState(null);
   const zinssatzTouchedRef = useRef(false); // true once user manually edits the field
   // Welches der beiden gekoppelten Mietfelder im Renditerechner zuletzt gesetzt
   // wurde ("kalt" = Kaltmiete ist fuehrend, mieteQm wird daraus abgeleitet).
@@ -343,8 +348,9 @@ export default function App() {
     { id: "saved", l: t.merkliste, ic: IC.saved },
   ];
 
-  const startApp = (startTab) => {
+  const startApp = (startTab, opts) => {
     if (startTab && tabs.find((x) => x.id === startTab)) setTab(startTab);
+    setAutoExpose(Boolean(opts?.openUpload));
     sessionStorage.setItem("if_landed", "1");
     setLanded(true);
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -359,15 +365,7 @@ export default function App() {
     return (
       <>
         <style>{`${FONT_CSS}${ROOT_TOKENS_CSS}html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y}*{box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased;position:relative}section,footer,header{min-width:0;max-width:100%}`}</style>
-        <Landing
-          onStart={startApp}
-          zinsen={zinsen}
-          lang={lang}
-          setLang={setLang}
-          openDatenschutz={() => setLegalModal("datenschutz")}
-          openImpressum={() => setLegalModal("impressum")}
-        />
-        <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />
+        <Landing onStart={startApp} zinsen={zinsen} lang={lang} setLang={setLang} />
         {!isOnline && <OfflineBanner bottom={"calc(16px + env(safe-area-inset-bottom))"} />}
       </>
     );
@@ -386,6 +384,8 @@ export default function App() {
         saveObj,
         delObj,
         loadObj,
+        autoExpose,
+        clearAutoExpose: () => setAutoExpose(false),
         setTabExt: (id) => {
           setTab(id);
           setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
@@ -526,23 +526,32 @@ export default function App() {
               ← Startseite
             </button>
             <span style={{ opacity: 0.4 }}>·</span>
-            <button
-              onClick={() => setLegalModal("impressum")}
+            <a
+              href="/impressum.html"
               style={{
-                background: "none",
-                border: "none",
                 color: "var(--ca)",
-                cursor: "pointer",
                 fontSize: 10,
                 fontFamily: "inherit",
-                padding: 0,
+                textDecoration: "none",
               }}
             >
               Impressum
-            </button>
+            </a>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <a
+              href="/datenschutz.html"
+              style={{
+                color: "var(--ca)",
+                fontSize: 10,
+                fontFamily: "inherit",
+                textDecoration: "none",
+              }}
+            >
+              Datenschutz
+            </a>
             <span style={{ opacity: 0.4 }}>·</span>
             <button
-              onClick={() => setLegalModal("datenschutz")}
+              onClick={() => window.ccReopen?.()}
               style={{
                 background: "none",
                 border: "none",
@@ -553,7 +562,7 @@ export default function App() {
                 padding: 0,
               }}
             >
-              Datenschutz
+              Cookie-Einstellungen
             </button>
           </div>
         </div>
@@ -573,7 +582,6 @@ export default function App() {
           ))}
         </div>
       </div>
-      <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />
       {!isOnline && <OfflineBanner bottom={"calc(72px + env(safe-area-inset-bottom))"} />}
     </Ctx.Provider>
   );

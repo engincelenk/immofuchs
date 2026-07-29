@@ -1,3 +1,214 @@
+## 2026-07-29 (1.55.86)
+
+### Fix: push.ps1 - git-Kommandos liefen ins Leere
+
+`Invoke-Git` hatte den Parameter `$Args` genannt - kollidiert mit der
+gleichnamigen automatischen PowerShell-Variable. Dadurch war `@Args` beim
+Splatten leer, `git` wurde ohne Argumente aufgerufen (druckte nur seine
+Kurzhilfe) und jeder `.\push.ps1`-Lauf brach bei `git add` mit "FEHLER: git
+add fehlgeschlagen" ab, obwohl an den Aenderungen selbst nichts falsch war.
+Parameter in `$GitArgs` umbenannt, Aufrufstellen unveraendert (binden
+positional).
+
+Betroffene Datei: `push.ps1`. Kein App-Code betroffen.
+
+## 2026-07-29 (1.55.85)
+
+### Upload-Kachel final: nur noch eine, halbe Hoehe, Split-Layout, Orange-CTA
+
+Die zusaetzliche Kachel-Instanz in der linken Hero-Spalte ist komplett
+entfallen - sie war redundant, weil rechts unter dem Mockup dieselbe Kachel
+steht. Damit auch kein CSS-Toggle und keine `renderUploadCard()`-Hilfsfunktion
+mehr noetig.
+
+Die verbleibende Kachel ist jetzt exakt wie die grosse Renditerechner-Karte
+weiter unten aufgebaut (`.calc-hero-card`-Muster): weisse Flaeche `--cc`,
+1.5px `--cb`-Rahmen, Radius 14, oranger Hover mit Schatten - Bild links,
+Text rechts, je 50% (unter 640px gestapelt). Das halbiert die Hoehe und
+verhindert unnoetige Textzeilen, weil Badge, Titel, Beschreibung und CTA
+neben statt unter dem Bild sitzen.
+
+"Jetzt hochladen" ist jetzt ein gefuellter Orange-Pill (`--ca`, weisse
+Schrift, Schatten) statt einer blauen Textzeile - deutlich sichtbarer.
+Neuer Badge-Chip ueber dem Titel ("KI-Exposé", neuer i18n-Key
+`heroUploadBadge` in 5 Sprachen); das Dokument-Emoji ist dafuer aus
+`heroUploadTitle` entfernt.
+
+Bild `public/finn-expose-tile.webp` neu zugeschnitten (jetzt 680×448 aus
+`finn-expose3.png`, x 930-1610) - engerer Ausschnitt auf Finn + "EXPOSE",
+passend fuer die halbe Spalte mit `objectFit:cover`.
+
+Betroffene Dateien: `pages/Landing.jsx`, `i18n/translations.js`,
+`public/finn-expose-tile.webp`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.84)
+
+### Hero-Upload-Spotlight: responsives Layout (Desktop unter Mockup, Mobile bleibt oben)
+
+Karte wird jetzt aus einer gemeinsamen `renderUploadCard()`-Funktion gerendert
+und per CSS zweimal ein-/ausgeblendet (Breakpoint 880/881px, gleiches Muster
+wie `.lp-nav`/`.lp-burger`): auf Mobile bleibt sie an der bisherigen Stelle
+direkt nach den CTA-Buttons (maximale Sichtbarkeit dort, wo die meisten
+Erstbesucher landen). Ab 881px erscheint sie stattdessen unter dem
+Browser-Mockup rechts, in dessen voller Breite statt der bisherigen 420px -
+inhaltlich passt das als Einheit besser zusammen ("Mockup zeigt Ergebnis" +
+"Karte zeigt schnellsten Weg dahin"). Damit das Mockup nicht mehr vertikal
+zentriert (und dadurch nach unten verschoben) wirkt, jetzt der ganze
+Hero-Grid auf `alignItems:start` umgestellt - Mockup sitzt jetzt oben,
+buendig mit der Ueberschrift links.
+
+Betroffene Datei: `pages/Landing.jsx` (kein i18n-/Logik-Eingriff).
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.83)
+
+### Hero-Upload-Spotlight final: blauer Akzent, Bild-Zuschnitt, expliziter CTA
+### + "So funktioniert's" spiegelt jetzt den Upload-Pfad
+
+Karte nochmal ueberarbeitet (Nutzerfeedback: Bild zu breit, kein erkennbarer
+Call-to-Action): neuer Bildzuschnitt `public/finn-expose-tile.webp` (1010×448,
+aus `finn-expose3.png` geschnitten - zeigt nur Finn + "EXPOSE"-Panel, beide
+Datentabellen-Seitenpanels raus). Kartenfarbe auf Blau umgestellt (`#EAF2FE`
+Hintergrund, `#9DC4F7` Rahmen, `#0C447C`/`#185FA5` Text) statt des sonst
+durchgaengigen Orange-Akzents - hebt die Karte bewusst ab, passt zum
+Cyan-Glow im Bild. Titel "📄 Exposé hochladen" und CTA "Jetzt hochladen →"
+sind wieder eigene, fette Textzeilen (`heroUploadTitle`/`heroUploadCta`,
+5 Sprachen) - der Pfeiltext steht auf eigener Zeile unter der Beschreibung,
+damit nichts umbricht.
+
+Ausserdem: "So funktioniert's"-Sektion (`step1H/P`, `step2H/P`, 5 Sprachen)
+spiegelt jetzt beide Wege - Schritt 1 nennt Rechner-Wahl ODER Expose-Upload,
+Schritt 2 heisst "Daten prüfen" statt "Daten eingeben" (da Felder je nach
+Weg vorausgefuellt sein koennen).
+
+Betroffene Dateien: `pages/Landing.jsx`, `i18n/translations.js`, neues Asset
+`public/finn-expose-tile.webp`. `finn-expose-badge.webp` und `finn-expose3.png`
+liegen weiterhin unbenutzt/als Quelle in `public/`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.82)
+
+### Hero-Upload-Spotlight: komplettes Banner-Bild statt Icon+Text-Layout
+
+Weitere Nachbesserung: statt Icon-Badge + Titel/Beschreibung/CTA-Text nebeneinander
+zeigt die Kachel jetzt ein einzelnes vom Nutzer geliefertes Bild
+(`public/finn-expose3.png`, 2400×448, Finn + Objekt-Stammdaten/Datenuebersicht-
+Mockup, passendes Seitenverhaeltnis ~5,36:1 fuer die kompakte Kachel). Darunter
+eine kurze, echte (uebersetzbare) Bildunterschrift statt ins Bild gebrannter
+Text: "Finn übernimmt, was im Exposé steht – den Rest trägst du ein." (in
+allen 5 Sprachen). Bild ist dekorativ (`alt=""`), die Caption traegt den
+zugaenglichen Namen des Buttons. Klick-Verhalten unveraendert (Deep-Link in
+Renditerechner + Auto-Open Upload-Dialog).
+
+`finn-expose-badge.webp` (vorherige Icon-Loesung, freigestellter Fuchs-Crop)
+ist dadurch verwaist - liegt noch in `public/`, auf Rueckmeldung entfernbar.
+
+Betroffene Dateien: `pages/Landing.jsx`, `i18n/translations.js`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.81)
+
+### Hero-Upload-Spotlight: Finn-Bild statt Icon, Text praezisiert, "NEU" weg
+
+Nachbesserung zu 1.55.80 auf Nutzer-Feedback: Das 📄-Emoji im Badge ersetzt
+durch `finn-expose-badge.webp` (neues Asset, 220×220, transparent) - ein
+freigestellter Crop aus dem vom Nutzer bereitgestellten `finn-expose.png`
+(1024×1024, Finn haelt ein leuchtendes "EXPOSE"-Panel). Freistellung per
+OpenCV GrabCut (Saettigungs-Heuristik: Fuchs-Kupfer/Cyan-Glow sind
+gesaettigt, das eingebrannte Schachbrett-Muster im Original-PNG war
+achromatisch) - automatisiert, da das Quellbild keinen echten Alphakanal
+hatte (komplett opak, Schachbrett+Schwarz waren Pixel, keine Transparenz).
+Bei Bedarf sauberer nachliefern, falls der Nutzer ein neu freigestelltes
+Original bereitstellt.
+
+"NEU"-Label ueber der Karte entfernt (`heroUploadBadge`-Key + Markup, alle
+5 Sprachen). Beschreibungstext praezisiert: vorher unklar, was automatisch
+uebernommen wird und was der Nutzer selbst eintragen muss - jetzt
+zweigeteilt ("Kaufpreis, Flaeche & Miete uebernimmt Finn direkt ... den
+Rest traegst du wie gewohnt ein"), in allen 5 Sprachen uebersetzt.
+
+Betroffene Dateien: `pages/Landing.jsx`, `i18n/translations.js`, neues
+Asset `public/finn-expose-badge.webp`.
+
+Build in der Sandbox nicht pruefbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.80)
+
+### Exposé-Upload auf der Startseite sichtbar gemacht (Hero-Spotlight)
+
+Der Expose-Upload war bisher nur nach 2 Klicks (Rechner öffnen → Finn öffnen
+→ 📎 finden) zu entdecken. Neu: ein eigener, visuell abgesetzter Block im
+Hero-Bereich der Landingpage (`Landing.jsx`, unter den beiden CTA-Buttons) -
+Dokument-Icon mit Puls-Punkt (greift das bestehende Animationsmuster aus dem
+Zinsen-Ticker auf, keine neue Animation), ehrliche Copy ("Kaufpreis, Fläche,
+Miete & mehr direkt übernehmen – den Rest prüfst du kurz", bewusst nicht
+"alle Zahlen" - Nutzer-Korrektur).
+
+Klick springt direkt in den Renditerechner UND öffnet dort automatisch Finn
+mit dem Datei-Dialog (derselbe Weg wie ein manueller 📎-Klick, inkl.
+Consent-Bubble beim ersten Mal). Dafür neuer Deep-Link-Zustand `autoExpose`
+in `App.jsx` (per Context durchgereicht), konsumiert und zurückgesetzt in
+`AssistantSheet.jsx`, damit ein späteres Wieder-Öffnen des Sheets nicht
+erneut den Dialog aufreisst. Neue i18n-Keys (`heroUpload*`) in allen 5
+Sprachen ergänzt.
+
+Betroffene Dateien: `App.jsx`, `pages/Landing.jsx`, `i18n/translations.js`,
+`components/calculators/Renditerechner.jsx`,
+`components/assistant/AssistantWidget.jsx`,
+`components/assistant/AssistantSheet.jsx`.
+
+Build in der Sandbox nicht prüfbar (bekanntes OneDrive/Windows-node_modules-
+Problem), Code manuell gegengelesen - bitte auf deiner Maschine verifizieren.
+
+## 2026-07-29 (1.55.79)
+
+### Stern beim Rendite-Badge entfernt, Logo aus Impressum entfernt
+
+Landing.jsx: `★ ` vor dem "RENDITE"-Badge auf der Renditerechner-Karte
+entfernt (`Landing.jsx:872`). `impressum.html`: Logo-Block ueber der
+Ueberschrift entfernt - reine Optik-Anpassungen, keine neue Logik.
+
+Build gruen.
+
+## 2026-07-29 (1.55.78)
+
+### Cookie-Icon entfernt, Datenschutz/Impressum als feste Seiten statt Modal
+
+Das schwebende Zahnrad-Icon (`#cc-gear`, `index.html`) kollidierte auf Mobile
+mit dem OfflineBanner (beide im Bereich `bottom:72-124px`) und war mit
+34x34px unter dem WCAG-Touchziel von 44x44px. Ersetzt durch einen normalen
+Footer-Link "Cookie-Einstellungen" (Landing- und App-Footer), der ueber
+`window.ccReopen()` das Banner erneut oeffnet - kein fixiertes Element mehr,
+das mit anderer UI kollidieren kann.
+
+Ausserdem behoben: `/datenschutz` und `/impressum` lieferten auf allen drei
+Umgebungen 404, weil das Deployment ueber SFTP-Mirror auf IONOS laeuft
+(nicht Cloudflare Pages) und ohne `.htaccess`-Rewrite nur die tatsaechlichen
+Dateinamen `datenschutz.html`/`impressum.html` aufgeloest werden. Statt einer
+Server-Config-Loesung wurden alle internen Links (Cookie-Banner, Landing-
+Footer, App-Footer, die beiden statischen Seiten untereinander) direkt auf
+die `.html`-Endung umgestellt - keine `.htaccess` noetig.
+
+Das bisher parallel gepflegte `LegalModal.jsx` (eigener, unabhaengig
+gepflegter Text-Duplikat von Impressum/Datenschutz) ist entfernt; Landing-
+und App-Footer verlinken jetzt direkt auf die statischen Seiten
+`public/datenschutz.html`/`impressum.html`, die damit die einzige
+Textquelle sind.
+
+Build gruen. Browser-Verifikation: Cookie-Banner oeffnet/schliesst korrekt,
+Footer-Link reaktiviert das Banner, `/datenschutz.html` laedt direkt, Links
+zwischen den beiden Rechtsseiten funktionieren.
+
 ## 2026-07-28 (1.55.77)
 
 ### Instandhaltungsruecklage als eigenes Feld wieder entfernt

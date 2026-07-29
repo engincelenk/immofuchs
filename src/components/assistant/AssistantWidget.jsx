@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MascotFab } from "./MascotFab.jsx";
 import { AssistantSheet } from "./AssistantSheet.jsx";
 import { buildFinnHints } from "./finnHints.js";
@@ -23,11 +23,20 @@ export function AssistantWidget({
   lang,
   disabled,
   signale,
+  autoOpenUpload,
+  onAutoOpenUploadHandled,
 }) {
   const t = ASSISTANT_T[lang] || ASSISTANT_T.de;
   const [sheetOpen, setSheetOpen] = useState(false);
   const hints = buildFinnHints(rechner, signale, t);
   const [bubbleText, dismissBubble] = useFinnBubble(hints, !sheetOpen && !disabled);
+
+  // Deep-Link "Exposé hochladen" vom Landing-Hero (App.jsx autoExpose): oeffnet
+  // das Sheet automatisch, den eigentlichen Datei-Dialog stoesst AssistantSheet
+  // selbst an (dort liegt auch die Consent-Pruefung).
+  useEffect(() => {
+    if (autoOpenUpload) setSheetOpen(true);
+  }, [autoOpenUpload]);
 
   return (
     <>
@@ -48,6 +57,8 @@ export function AssistantWidget({
         suggested={suggested}
         lang={lang}
         t={t}
+        autoOpenUpload={autoOpenUpload}
+        onAutoOpenUploadHandled={onAutoOpenUploadHandled}
       />
     </>
   );

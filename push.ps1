@@ -49,11 +49,16 @@ function Invoke-Git {
     # git schreibt auch bei Erfolg nach stderr (Fortschritt, "Everything up-to-date").
     # PowerShell wuerde das bei ErrorActionPreference=Stop als Fehler werten, deshalb
     # wird hier ausschliesslich der Exit-Code ausgewertet.
-    param([string[]]$Args, [string]$FailMessage)
+    # $Args nicht als Parametername verwenden - das ist eine reservierte
+    # automatische PowerShell-Variable und kollidiert damit (siehe
+    # about_Automatic_Variables). Genau das hat am 2026-07-29 dazu gefuehrt,
+    # dass @Args beim Splatten leer war und git ohne Argumente aufgerufen
+    # wurde (druckt seine generische Kurzhilfe statt "add -A" auszufuehren).
+    param([string[]]$GitArgs, [string]$FailMessage)
 
     $old = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    & git @Args
+    & git @GitArgs
     $code = $LASTEXITCODE
     $ErrorActionPreference = $old
 

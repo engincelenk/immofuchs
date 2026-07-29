@@ -26,7 +26,7 @@ const navLinkMobile = {
   borderBottom: "1px solid var(--cb)",
 };
 
-export function Landing({ onStart, zinsen, openDatenschutz, openImpressum, lang, setLang }) {
+export function Landing({ onStart, zinsen, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const zB = zinsen?.bundesanleihe_10j;
   const [navOpen, setNavOpen] = useState(false);
@@ -218,7 +218,7 @@ export function Landing({ onStart, zinsen, openDatenschutz, openImpressum, lang,
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,360px),1fr))",
             gap: "clamp(28px,5vw,48px)",
-            alignItems: "center",
+            alignItems: "start",
             justifyItems: "center",
           }}
         >
@@ -652,6 +652,123 @@ export function Landing({ onStart, zinsen, openDatenschutz, openImpressum, lang,
                 </div>
               </div>
             </div>
+
+            {/* Expose-Upload Spotlight (Nutzerwunsch 2026-07-29, finale Form):
+                nur noch EINE Kachel, hier unter dem Mockup in dessen Breite -
+                die frueher zusaetzlich in der linken Spalte gerenderte
+                Mobile-Instanz ist entfallen (doppelte Kachel war redundant).
+                Aufbau bewusst identisch zur grossen Renditerechner-Karte weiter
+                unten (`.calc-hero-card`): weisse Flaeche, 1.5px --cb-Rahmen,
+                Radius 14, oranger Hover - Bild links / Text rechts je 50%.
+                Das halbiert die Kachelhoehe gegenueber der frueheren
+                Bild-ueber-Text-Variante und verhindert unnoetige Textzeilen,
+                weil Titel, Beschreibung und CTA neben dem Bild stehen.
+                "Jetzt hochladen" ist ein gefuellter Orange-Pill statt einer
+                Textzeile (Nutzerwunsch: soll deutlich sichtbarer sein).
+                Klick springt in den Renditerechner UND stoesst dort
+                automatisch den Upload-Dialog an (App.jsx autoExpose). */}
+            <button
+              onClick={() => onStart("haupt", { openUpload: true })}
+              className="hero-upload-spot"
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: 20,
+                background: "var(--cc)",
+                border: "1.5px solid var(--cb)",
+                borderRadius: 14,
+                overflow: "hidden",
+                padding: 0,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                textAlign: "left",
+                WebkitAppearance: "none",
+              }}
+            >
+              <span className="hero-upload-grid" style={{ display: "grid" }}>
+                <span
+                  style={{
+                    display: "block",
+                    overflow: "hidden",
+                    background: "#E6F1FB",
+                    minHeight: 150,
+                  }}
+                >
+                  <img
+                    src="/finn-expose-tile.webp"
+                    alt=""
+                    aria-hidden="true"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
+                </span>
+                <span
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    padding: "20px 22px",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: "fit-content",
+                      fontSize: 9,
+                      fontWeight: 700,
+                      letterSpacing: 1.2,
+                      textTransform: "uppercase",
+                      color: "#185FA5",
+                      background: "#E6F1FB",
+                      padding: "3px 8px",
+                      borderRadius: 4,
+                      marginBottom: 10,
+                    }}
+                  >
+                    {l.heroUploadBadge}
+                  </span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 19,
+                      fontWeight: 700,
+                      color: "var(--ct)",
+                      letterSpacing: -0.3,
+                      marginBottom: 6,
+                    }}
+                  >
+                    {l.heroUploadTitle}
+                  </span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 12.5,
+                      color: "var(--ch)",
+                      lineHeight: 1.45,
+                      marginBottom: 14,
+                    }}
+                  >
+                    {l.heroUploadDesc}
+                  </span>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      width: "fit-content",
+                      background: "var(--ca)",
+                      color: "#fff",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      padding: "9px 16px",
+                      borderRadius: 9,
+                      boxShadow: "0 4px 12px rgba(232,96,10,.25)",
+                    }}
+                  >
+                    {l.heroUploadCta} <span style={{ fontSize: 15, marginTop: -1 }}>→</span>
+                  </span>
+                </span>
+              </span>
+            </button>
           </div>
         </div>
       </section>
@@ -869,7 +986,7 @@ export function Landing({ onStart, zinsen, openDatenschutz, openImpressum, lang,
                     width: "fit-content",
                   }}
                 >
-                  ★ {l.fullBadge}
+                  {l.fullBadge}
                 </div>
                 <h3
                   style={{
@@ -1356,11 +1473,20 @@ export function Landing({ onStart, zinsen, openDatenschutz, openImpressum, lang,
                 flexWrap: "wrap",
               }}
             >
-              <button onClick={openImpressum} style={{ ...navLink, fontSize: 13 }}>
+              <a href="/impressum.html" style={{ ...navLink, fontSize: 13, textDecoration: "none" }}>
                 {l.imp}
-              </button>
-              <button onClick={openDatenschutz} style={{ ...navLink, fontSize: 13 }}>
+              </a>
+              <a
+                href="/datenschutz.html"
+                style={{ ...navLink, fontSize: 13, textDecoration: "none" }}
+              >
                 {l.dse}
+              </a>
+              <button
+                onClick={() => window.ccReopen?.()}
+                style={{ ...navLink, fontSize: 13 }}
+              >
+                Cookie-Einstellungen
               </button>
             </div>
           </div>
@@ -1385,6 +1511,10 @@ export function Landing({ onStart, zinsen, openDatenschutz, openImpressum, lang,
 
       {/* Responsive nav styles */}
       <style>{`
+      .hero-upload-spot{transition:border-color .2s,box-shadow .2s}
+      .hero-upload-spot:hover{border-color:var(--ca);box-shadow:0 8px 28px rgba(232,96,10,.14)}
+      .hero-upload-grid{grid-template-columns:1fr}
+      @media(min-width:640px){.hero-upload-grid{grid-template-columns:1fr 1fr}}
       .calc-hero-card{grid-template-columns:1fr!important}
       @media(min-width:640px){.calc-hero-card{grid-template-columns:1fr 1fr!important}}
       .calc-hero-card>div:first-child{min-height:200px}
