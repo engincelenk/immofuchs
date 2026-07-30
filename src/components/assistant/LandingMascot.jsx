@@ -81,10 +81,8 @@ export function LandingMascot({ onStart, lang }) {
     if (!open) return;
     // Scroll-Sperre nur im modalen Bottom-Sheet (Mobile) - auf Desktop ist
     // das kleine Eckfenster bewusst nicht-modal (Nutzerwunsch 2026-07-22).
-    // Im minimierten Zustand ebenfalls kein Lock - genau dann soll die Seite
-    // dahinter bedienbar sein (Bug-Report 2026-07-30).
     const prevOverflow = document.body.style.overflow;
-    if (!isDesktop && !minimized) document.body.style.overflow = "hidden";
+    if (!isDesktop) document.body.style.overflow = "hidden";
     const onKey = (e) => {
       if (e.key === "Escape") close();
     };
@@ -93,7 +91,15 @@ export function LandingMascot({ onStart, lang }) {
       document.body.style.overflow = prevOverflow;
       document.removeEventListener("keydown", onKey);
     };
-  }, [open, isDesktop, minimized]);
+  }, [open, isDesktop]);
+
+  // Minimieren gibt es nur auf Desktop (siehe AssistantHeaderBar) - wird das
+  // Browserfenster waehrend minimiert unter 1024px verkleinert, faellt der
+  // Zustand zurueck, statt die kompakte Leiste auf Mobile-Breite stehen zu
+  // lassen (Bug-Report 2026-07-30: Overlap mit der Bottom-Tab-Bar).
+  useEffect(() => {
+    if (!isDesktop) setMinimized(false);
+  }, [isDesktop]);
 
   const pickRoute = (r) => {
     setChipsForcedOpen(false);
@@ -148,9 +154,9 @@ export function LandingMascot({ onStart, lang }) {
       {createPortal(
         <>
           <div
-            className={`if-asst-backdrop${open ? " open" : ""}${minimized ? " minimized" : ""}`}
+            className={`if-asst-backdrop${open ? " open" : ""}`}
             onClick={close}
-            aria-hidden={!open || minimized}
+            aria-hidden={!open}
           />
           <div
             className={`if-asst-sheet${open ? " open" : ""}${minimized ? " minimized" : ""}`}
@@ -167,6 +173,7 @@ export function LandingMascot({ onStart, lang }) {
               onRestart={handleRestart}
               minimized={minimized}
               onToggleMinimize={() => setMinimized((m) => !m)}
+              isDesktop={isDesktop}
             />
             {!minimized && (
               <>

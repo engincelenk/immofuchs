@@ -18,6 +18,7 @@ export function AssistantHeaderBar({
   onRestart,
   minimized,
   onToggleMinimize,
+  isDesktop,
 }) {
   const [infoOpen, setInfoOpen] = useState(false);
 
@@ -55,15 +56,21 @@ export function AssistantHeaderBar({
             </button>
           </>
         )}
-        <button
-          type="button"
-          aria-label={minimized ? t.expandAria : t.minimizeAria}
-          aria-expanded={!minimized}
-          className="if-asst-icon-btn"
-          onClick={onToggleMinimize}
-        >
-          {minimized ? "＋" : "—"}
-        </button>
+        {/* Nur Desktop (Eckfenster): auf Mobile konkurriert die eingeklappte
+            Leiste mit der eigenen Bottom-Tab-Bar der App um denselben Platz
+            (Nutzer-Screenshot 2026-07-30, Overlap mit "Sanierung"/"§6-Trick"/
+            "Merkliste") - dort bleibt nur noch Schliessen. */}
+        {isDesktop && (
+          <button
+            type="button"
+            aria-label={minimized ? t.expandAria : t.minimizeAria}
+            aria-expanded={!minimized}
+            className="if-asst-icon-btn"
+            onClick={onToggleMinimize}
+          >
+            {minimized ? "＋" : "—"}
+          </button>
+        )}
         <button type="button" aria-label={t.close} className="if-asst-icon-btn" onClick={onClose}>
           ✕
         </button>

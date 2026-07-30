@@ -1,3 +1,29 @@
+## 2026-07-30 (1.55.93)
+
+### Fix: Finn-Minimieren auf Mobile entfernt (Overlap mit Tab-Bar)
+
+Bug-Report (Screenshot): die eingeklappte Finn-Leiste sitzt wie die App-eigene
+Bottom-Tab-Bar auf `position:fixed; bottom:0` - beide stapelten sich am
+unteren Rand, Finn ueberlappte sichtbar "Sanierung"/"§6-Trick"/"Merkliste".
+Grundproblem: der Minimieren-Button war nie auf Desktop beschraenkt, obwohl
+das Eckfenster-Konzept (kein Overlay, keine Tab-Bar) nur dort gilt.
+
+Fix: Minimieren-Button in AssistantHeaderBar.jsx nur noch bei isDesktop
+sichtbar (>=1024px) - auf Mobile bleibt nur noch das Schliessen-Kreuz.
+Zusaetzlich ein Reset-Effekt in AssistantSheet.jsx/LandingMascot.jsx: faellt
+isDesktop waehrend minimiert unter 1024px (Fenster verkleinert), wird
+minimized automatisch zurueckgesetzt. Der Backdrop-Pointer-events-Fix von
+1.55.91 wurde dadurch gegenstandslos und ist wieder entfernt (minimiert
+kann jetzt gar nicht mehr auf Mobile vorkommen).
+Betrifft: AssistantHeaderBar.jsx, AssistantSheet.jsx, LandingMascot.jsx,
+assistantStyles.js.
+
+Verifiziert im Dev-Server (Mobile-Viewport 375x812, Service Worker vor jedem
+Test abgemeldet + Cache geleert - sonst wurde faelschlich der alte Stand mit
+sichtbarem Minimieren-Button ausgeliefert): Kopfzeile zeigt auf Mobile nur
+noch "Schliessen", auf Desktop (1280px) bleibt "Fenster verkleinern"
+unveraendert erhalten.
+
 ## 2026-07-30 (1.55.92)
 
 ### Finn-Systemprompt: vier Fachwissens-Bereiche ergänzt
