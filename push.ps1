@@ -90,8 +90,15 @@ if ($env_ -notin @("dev", "qa", "prod")) {
     exit 1
 }
 
-# ── 3. Lock-Files aufraumen ──────────────────────────────────────────────────
-$locks = @(".git\index.lock", ".git\HEAD.lock", ".git\COMMIT_EDITMSG.lock")
+# ── 3. Git-Prozesse beenden und Locks aufraumen ──────────────────────────────
+$gitProcs = Get-Process -Name "git" -ErrorAction SilentlyContinue
+if ($gitProcs) {
+    Write-Host "Beende $($gitProcs.Count) laufende git-Prozesse..." -ForegroundColor Yellow
+    $gitProcs | Stop-Process -Force
+    Start-Sleep -Milliseconds 600
+}
+
+$locks = @(".git\index.lock", ".git\HEAD.lock", ".git\COMMIT_EDITMSG.lock", ".git\MERGE_HEAD.lock")
 foreach ($lock in $locks) {
     if (Test-Path $lock) {
         Remove-Item $lock -Force
