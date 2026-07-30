@@ -19,7 +19,7 @@ import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
-import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
+import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 
@@ -1316,43 +1316,44 @@ export default function Sanier() {
       Ausserdem hing es hier zusaetzlich hinter "mindestens eine Massnahme
       gewaehlt" - dadurch fehlte Finn genau dann, wenn der Foerderhinweis
       (erst beantragen, dann beauftragen) am meisten wert ist. */}
-      {R &&
-        (() => {
-          const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
-          const kontext = buildAssistantContext("sanierung", d, {
-            gesamtkosten: R.tK,
-            foerderung: R.tFo + R.tFoLand,
-            nettokosten: R.ne,
-            amortisationJahre: R.amJ,
-            energieeinsparungProzent: Math.round((1 - R.eM) * 100),
-            bewertung: null,
-          });
-          const suggested = [
-            at.sanSuggested1,
-            at.sanSuggested2,
-            at.sanSuggested3,
-            at.sanSuggested4,
-            at.sanSuggested5,
-            at.sanSuggested6,
-            at.sanSuggested7,
-            at.sanSuggested8,
-            at.sanSuggested9,
-            at.sanSuggested10,
-            at.sanSuggested11,
-            at.sanSuggested12,
-            at.sanSuggested13,
-            at.sanSuggested14,
-          ];
-          return (
-            <AssistantWidget
-              rechner="sanierung"
-              kontext={kontext}
-              contextLabel={at.contextSanierung}
-              suggested={suggested}
-              lang={lang}
-            />
-          );
-        })()}
+      {(() => {
+        const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
+        const suggested = [
+          at.sanSuggested1,
+          at.sanSuggested2,
+          at.sanSuggested3,
+          at.sanSuggested4,
+          at.sanSuggested5,
+          at.sanSuggested6,
+          at.sanSuggested7,
+          at.sanSuggested8,
+          at.sanSuggested9,
+          at.sanSuggested10,
+          at.sanSuggested11,
+          at.sanSuggested12,
+          at.sanSuggested13,
+          at.sanSuggested14,
+        ];
+        return (
+          <AssistantGate
+            active={!!R}
+            rechner="sanierung"
+            buildKontext={() =>
+              buildAssistantContext("sanierung", d, {
+                gesamtkosten: R.tK,
+                foerderung: R.tFo + R.tFoLand,
+                nettokosten: R.ne,
+                amortisationJahre: R.amJ,
+                energieeinsparungProzent: Math.round((1 - R.eM) * 100),
+                bewertung: null,
+              })
+            }
+            contextLabel={at.contextSanierung}
+            suggested={suggested}
+            lang={lang}
+          />
+        );
+      })()}
     </div>
   );
 }
