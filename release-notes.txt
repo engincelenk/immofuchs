@@ -1,3 +1,28 @@
+## 2026-07-30 (1.55.65)
+
+### Fix: Finn zitierte rohe JSON-Feldnamen statt Klartext (alle Rechner)
+
+**Problem**
+- Screenshot-Feedback: Finns Antworten enthielten rohe Code-Feldnamen aus
+  dem Kontext-JSON, z.B. "sanHt: 'heizoel'", "sanFl: '60'",
+  "bewertung: null", "nettokosten" — statt verständlicher Bezeichnungen wie
+  im Rechner selbst.
+- Ursache: `promptBuilder.ts` schickt den Kontext als rohes JSON ans
+  Modell. Das Regelwerk (`systemPrompt.ts`) sagte zwar "erkläre jedes
+  Feld verständlich" (Regel 2), aber nirgends "zitiere nie die rohen
+  JSON-Schlüssel/-Werte" — das Modell übernahm die Feldnamen deshalb 1:1
+  aus dem JSON in die Antwort. Betraf alle 6 Rechner gleichermaßen, da sie
+  sich dasselbe Regelwerk teilen.
+
+**Fix**
+- `systemPrompt.ts`: neue Regel 10 — Kontext-JSON ist reines Datenmaterial
+  für das Modell, keine Zitatquelle. Rohe Schlüssel/Werte sind tabu,
+  stattdessen immer die natürlichsprachliche, im Rechner sichtbare
+  Bezeichnung nutzen.
+
+**Betroffene Dateien:** worker/src/systemPrompt.ts
+
+
 ## 2026-07-30 (1.55.64)
 
 ### Fix: Finn zeigte rote Fehlermeldung statt still zu bleiben, wenn noch kein Ergebnis vorlag
