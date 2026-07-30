@@ -1,3 +1,42 @@
+## 2026-07-30 (1.55.92)
+
+### Finn-Systemprompt: vier Fachwissens-Bereiche ergänzt
+
+Regel 10 in worker/src/systemPrompt.ts hinzugefügt (Fachentscheidung, keine
+reine Code-Änderung):
+  Steuer     — AfA-Varianten (linear/degressiv/Sonder/Denkmal), Spekulations-
+               frist §23 EStG, Grunderwerbsteuer je Bundesland, 3-Objekt-Grenze
+  Recht      — WEG: Hausgeld/Rücklage/Sonderumlage, Beschlussfähigkeit
+  Sanierung  — KfW-261 fachlich erklärbar (Rechner bildet es noch nicht ab,
+               das wird explizit dazugesagt), GEG-2024-Heizungstausch-Pflichten
+  Markt      — Mikro-/Makrolage, Marktzyklen, Leerstandsrisiko als Ergänzung
+               zu den BANDS-Kennzahlen
+
+Betroffene Datei: worker/src/systemPrompt.ts
+
+## 2026-07-30 (1.55.91)
+
+### Fix: Finn-Minimieren auf Mobile blockierte den Rechner dahinter
+
+Bug-Report: Nach dem Einklappen von Finn blieb der volltransparente Backdrop
+(if-asst-backdrop) samt Body-Scroll-Lock aktiv. Jeder Tap auf die Seite
+dahinter (z.B. den Rechner) traf in Wirklichkeit den Backdrop, dessen
+onClick die kompakte Leiste komplett schloss - die Einklapp-Funktion war
+dadurch faktisch nutzlos, da sie beim ersten Tap wieder verschwand statt
+erreichbar zu bleiben.
+
+Fix: Backdrop bekommt im minimierten Zustand zusaetzlich `opacity:0` +
+`pointer-events:none`, der Body-Scroll-Lock wird ebenfalls ausgesetzt.
+Betrifft zwei Stellen mit dupliziertem Sheet/Backdrop-Markup:
+  src/components/assistant/AssistantSheet.jsx   (Rechner-Seiten)
+  src/components/assistant/LandingMascot.jsx    (Startseite)
+  src/components/assistant/assistantStyles.js   (.if-asst-backdrop.minimized)
+
+Verifiziert im Dev-Server (mobile Viewport 375x812): waehrend minimiert
+trifft ein Klick auf die Seite dahinter jetzt das echte Seitenelement statt
+des Backdrops, Finn bleibt eingeklappt statt zu schliessen; Aufklappen per
+"+" stellt Backdrop-Opazitaet und Scroll-Lock wieder normal her.
+
 ## 2026-07-30 (1.55.90)
 
 ### Finn Expose-Analyse, Etappe 1: Konsistenz-Engine, Realpreis-Rechner,

@@ -81,8 +81,10 @@ export function LandingMascot({ onStart, lang }) {
     if (!open) return;
     // Scroll-Sperre nur im modalen Bottom-Sheet (Mobile) - auf Desktop ist
     // das kleine Eckfenster bewusst nicht-modal (Nutzerwunsch 2026-07-22).
+    // Im minimierten Zustand ebenfalls kein Lock - genau dann soll die Seite
+    // dahinter bedienbar sein (Bug-Report 2026-07-30).
     const prevOverflow = document.body.style.overflow;
-    if (!isDesktop) document.body.style.overflow = "hidden";
+    if (!isDesktop && !minimized) document.body.style.overflow = "hidden";
     const onKey = (e) => {
       if (e.key === "Escape") close();
     };
@@ -91,7 +93,7 @@ export function LandingMascot({ onStart, lang }) {
       document.body.style.overflow = prevOverflow;
       document.removeEventListener("keydown", onKey);
     };
-  }, [open, isDesktop]);
+  }, [open, isDesktop, minimized]);
 
   const pickRoute = (r) => {
     setChipsForcedOpen(false);
@@ -146,9 +148,9 @@ export function LandingMascot({ onStart, lang }) {
       {createPortal(
         <>
           <div
-            className={`if-asst-backdrop${open ? " open" : ""}`}
+            className={`if-asst-backdrop${open ? " open" : ""}${minimized ? " minimized" : ""}`}
             onClick={close}
-            aria-hidden={!open}
+            aria-hidden={!open || minimized}
           />
           <div
             className={`if-asst-sheet${open ? " open" : ""}${minimized ? " minimized" : ""}`}

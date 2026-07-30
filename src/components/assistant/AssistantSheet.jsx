@@ -177,14 +177,16 @@ export function AssistantSheet({
     // Body-Scroll-Lock nur im modalen Bottom-Sheet (Mobile): ohne das scrollt
     // die Hintergrundseite mit, statt dass Scroll-Gesten im Sheet landen
     // (Nutzer-Feedback 2026-07-19). Auf Desktop ist das Fenster bewusst
-    // nicht-modal, dort bleibt die Seite scrollbar.
-    if (!open || isDesktop) return;
+    // nicht-modal, dort bleibt die Seite scrollbar. Im minimierten Zustand
+    // ebenfalls kein Lock - genau dann soll die Seite dahinter bedienbar
+    // sein (Bug-Report 2026-07-30: Rechner unter dem Backdrop gefangen).
+    if (!open || isDesktop || minimized) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prevOverflow;
     };
-  }, [open, isDesktop]);
+  }, [open, isDesktop, minimized]);
 
   const handleClose = () => {
     // Eingeklappt-Zustand mit zuruecksetzen: sonst bleibt beim naechsten
@@ -343,8 +345,8 @@ export function AssistantSheet({
           LegalModal/SaveModal/Loesch-Bestaetigung in Merkliste.jsx. */}
       <div
         onClick={handleClose}
-        className={`if-asst-backdrop${open ? " open" : ""}`}
-        aria-hidden={!open}
+        className={`if-asst-backdrop${open ? " open" : ""}${minimized ? " minimized" : ""}`}
+        aria-hidden={!open || minimized}
       />
       <div
         ref={sheetRef}
