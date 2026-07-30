@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { bereiteDateienVor } from "../utils/exposeUpload.js";
+import { analysiereExpose } from "../utils/finnAnalyse.js";
 
 const SESSION_KEY = "if_assistant_session"; // Naming-Konvention wie if_landed in App.jsx
 const MAX_HISTORY_TURNS = 3; // letzte 3 Frage/Antwort-Paare, Kostenbegrenzung (Konzept 2.6)
@@ -130,6 +131,14 @@ export function useAssistant() {
     setStatus("uploading");
     setUploadFortschritt({ fertig: 0, gesamt: bilder.length });
 
+    // Finn sagt an, was er gleich tut. Ohne das ist der Upload eine Blackbox
+    // mit Fortschrittsbalken - der Nutzer weiss weder, wonach gesucht wird,
+    // noch dass danach ein Handout auf ihn wartet.
+    // Als Schluessel statt als fertiger Text, wie schon `exposeFehler`: die
+    // Blase folgt damit einem spaeteren Sprachwechsel, statt in der Sprache
+    // von vorhin stehen zu bleiben.
+    setMessages((m) => [...m, { role: "assistant", textKey: "finnSagt.upload" }]);
+
     let vorbereitet;
     try {
       vorbereitet = await bereiteDateienVor(bilder, pdf, (fertig) =>
@@ -181,7 +190,21 @@ export function useAssistant() {
         return;
       }
       const ergebnis = await res.json();
-      setMessages((m) => [...m, { role: "expose", ergebnis, erledigt: false, anzahl: 0 }]);
+      // Die Handout-Analyse laeuft einmal hier, nicht im Render: sie ist
+      // Eingang fuer die Fragen-Auswahl und haengt damit am selben
+      // Lebenszyklus wie `ergebnis`. Der try/catch gehoert an genau diesen
+      // Aufrufpunkt - waehrend des Renders wuerde ein Fehler das ganze Sheet
+      // mitreissen, hier bleibt der Rest nutzbar (Spec v2, NF-04).
+      let analyse = null;
+      try {
+        analyse = analysiereExpose(ergebnis);
+      } catch {
+        analyse = null;
+      }
+      setMessages((m) => [
+        ...m,
+        { role: "expose", ergebnis, analyse, erledigt: false, anzahl: 0 },
+      ]);
       setStatus("idle");
     } catch {
       setExposeFehler("fehlerDienst");

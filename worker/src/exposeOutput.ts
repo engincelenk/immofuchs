@@ -1,5 +1,6 @@
 import type {
   ConfidenceWert,
+  ExposeAbweichung,
   ExposeExtractResponse,
   ExposeWarnung,
 } from "./types";
@@ -14,6 +15,8 @@ import type {
 const MAX_TEXT_LEN = 400;
 const MAX_BESCHREIBUNG_LEN = 1500;
 const MAX_WARNUNGEN = 20;
+const MAX_ABWEICHUNGEN = 10;
+const MAX_QUELLE_LEN = 60;
 
 export function parseExposeOutput(raw: string): ExposeExtractResponse {
   const data = parseJson(raw);
@@ -85,6 +88,7 @@ export function parseExposeOutput(raw: string): ExposeExtractResponse {
     },
     confidence: confidence(data.confidence),
     warnungen: warnungen(data.warnungen),
+    abweichungen: abweichungen(data.abweichungen),
   };
 }
 
@@ -190,6 +194,53 @@ function warnungen(value: unknown): ExposeWarnung[] {
     const hinweis = text(e.hinweis);
     if (!feld || !hinweis) continue;
     out.push({ feld, hinweis });
+  }
+  return out;
+}
+
+// Einheiten und Waehrungszeichen, die an einer sonst reinen Zahl haengen
+// duerfen ("15.000,00 EUR", "47,88 m2"). Bewusst eng gehalten: alles andere
+// bleibt Text, damit aus "2 Aussenstellplaetze inklusive" nicht die Zahl 2 wird.
+const NUR_EINHEIT = /\s*(?:eur|euro|€|m2|m²|qm|%)\s*$/i;
+
+// Ein Abweichungs-Wert ist entweder eine echte Zahl (dann rechnet die
+// Konsistenz-Engine damit) oder eine Aussage im Klartext ("im Kaufpreis
+// enthalten"). Deshalb hier NICHT `zahl()` auf alles loslassen: das wuerde aus
+// jeder Aussage mit einer Ziffer eine Zahl machen und die Engine mit
+// Fantasiewerten fuettern. Nur was nach Abzug der Einheit vollstaendig eine
+// Zahl ist, wird auch als Zahl uebernommen.
+function abweichungsWert(value: unknown): number | string | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+
+  const ohneEinheit = trimmed.replace(NUR_EINHEIT, "").trim();
+  if (/^-?\d[\d.,]*$/.test(ohneEinheit)) {
+    const n = zahl(ohneEinheit);
+    if (n !== null) return n;
+  }
+  return trimmed.slice(0, MAX_TEXT_LEN);
+}
+
+function abweichungen(value: unknown): ExposeAbweichung[] {
+  if (!Array.isArray(value)) return [];
+  const out: ExposeAbweichung[] = [];
+  for (const entry of value.slice(0, MAX_ABWEICHUNGEN)) {
+    const e = obj(entry);
+    const feld = text(e.feld, 60);
+    const quelle_a = text(e.quelle_a, MAX_QUELLE_LEN);
+    const quelle_b = text(e.quelle_b, MAX_QUELLE_LEN);
+    const hinweis = text(e.hinweis);
+    const wert_a = abweichungsWert(e.wert_a);
+    const wert_b = abweichungsWert(e.wert_b);
+    if (!feld || !quelle_a || !quelle_b || !hinweis) continue;
+    if (wert_a === null || wert_b === null) continue;
+    // Zwei identische Werte sind kein Widerspruch. Kommt vor, wenn das Modell
+    // die Regel als "melde jede Fundstelle" missversteht - waere im Handout ein
+    // Finding ohne Inhalt.
+    if (wert_a === wert_b) continue;
+    out.push({ feld, wert_a, quelle_a, wert_b, quelle_b, hinweis });
   }
   return out;
 }

@@ -1,3 +1,129 @@
+## 2026-07-30 (1.55.90)
+
+### Finn Expose-Analyse, Etappe 1: Konsistenz-Engine, Realpreis-Rechner,
+### Fragenkatalog-Abgleich (noch ohne UI)
+
+Erste von drei Etappen aus docs/Finn_Expose_Analyse_Spec_v2.md. Finn soll
+vom Expose-Zusammenfasser zum Deal-Analysten werden: finanziell relevante
+Widersprueche im Expose finden, nach Euro-Relevanz sortieren und als
+Besichtigungs-Handout ausgeben. Diese Etappe liefert nur den Rechenkern -
+sichtbar wird davon noch nichts (Panel = E2, PDF = E3).
+
+Neu im Client (alles deterministisch, kein zweiter KI-Call, <50ms):
+  src/data/finnFragenkatalog.js  44 Fragen in 11 Abschnitten, 12 davon
+                                 Kern-Fragen; Uebertragung von
+                                 docs/Finn_Fragenkatalog.md
+  src/utils/finnRealpreis.js     All-in-Preis, EUR/m2 beworben vs. real,
+                                 Brutto-/Nettomietrendite
+  src/utils/finnKonsistenz.js    Regeln K1-K7 + Red-Flag-Radar + Verdict
+  src/utils/finnAbgleich.js      Katalog filtern (ETW/Haus, vermietet),
+                                 automatisch beantworten, Rest offen lassen
+  src/utils/finnAnalyse.js       Orchestrator
+  src/utils/finnFixtures.js      Extraktionsergebnisse beider Referenz-
+                                 Exposes als Abnahmegegenstand
+
+Worker (die einzige noetige Aenderung dort): neues `abweichungen`-Array
+neben dem bestehenden `warnungen`. Grund: `warnungen` ist Freitext und
+verliert den *beworbenen* Wert - fuer die Tabelle "Beworben | Real" und den
+Euro-Schaden werden beide Zahlen mit Fundstelle gebraucht. `warnungen`
+bleibt unveraendert, die Feldzeilen-Anzeige haengt daran.
+  ACHTUNG: Die CI deployt den Worker nicht. Ohne manuelles
+  `npx wrangler deploy --env dev` liefert der Worker weiter das alte Schema;
+  die Analyse degradiert dann sauber (K2 entfaellt, Rest laeuft).
+
+Gegen die zwei realen Referenz-Exposes nachgerechnet:
+  Ingersheim  50 m2 beworben vs. 47,88 m2 belegt -> 8.437,60 EUR Differenz;
+              3.980 EUR/m2 beworben, 4.156,22 EUR/m2 real, 4.469,51 all-in.
+              Nicht vermietet -> Abschnitt "Vermietung" faellt komplett weg.
+  Murr        Tiefgarage im selben Fliesstext einmal "im Kaufpreis
+              enthalten", einmal "zzgl. 15.000 EUR" -> groesster Fund.
+              Zweiter, bisher unbekannter Widerspruch: 76 m2 in der Tabelle
+              vs. 75 m2 im Text (3.671,05 EUR). Rendite 4,08 % brutto /
+              3,77 % netto auf 294.000 EUR.
+
+Korrektur an der Vorgaenger-Spec: die dort und im PDF-Prototyp genannten
+4.157 und 4.471 EUR/m2 sind handgerundet und je ~1 EUR/m2 zu hoch.
+Maszgeblich sind die gerechneten Werte.
+
+47 neue Tests, Worker-Typecheck und Build sauber.
+
+### Etappe 2 + 3: Handout-Panel, PDF-Export, freigestelltes Logo
+
+Trigger (useAssistant.js): die Analyse laeuft einmal beim Eintreffen des
+Extraktionsergebnisses, nicht im Render - sie ist Eingang fuer die
+Fragen-Auswahl. Der try/catch sitzt an genau diesem Aufrufpunkt; waehrend
+des Renders wuerde ein Fehler das ganze Assistenten-Sheet mitreissen.
+
+Panel (FinnHandoutPanel.jsx): sitzt unter der Uebernahme-Karte, startet
+eingeklappt - die Uebernahme ist die Kernfunktion des Uploads und darf
+nicht nach unten geschoben werden. Kopfzeile traegt Verdict, Score und den
+groessten Euro-Fund. Aufgeklappt: GR-01-Hinweis, Top-Findings mit
+Fundstellen, Preistabelle Beworben/Real, Bereits bekannt, Noch zu klaeren
+mit Checkboxen, Vor Ort pruefen, PDF-Button. Keine neuen Farben, alles
+ueber die bestehenden Token.
+
+PDF (finnHandoutPdf.js): clientseitig ueber ein Druckfenster wie
+ExportPDF.jsx - kein Server, kein Endpunkt, der abzusichern waere.
+window.open() laeuft synchron VOR jedem await, sonst blockt iOS Safari das
+Fenster. Text aus dem Expose wird maskiert, bevor er ins document.write
+geht.
+
+Persistenz (finnAuswahl.js) - ABWEICHUNG ZUR SPEC: geplant war, die
+Auswahl an den gemerkten Objekten aufzuhaengen. Diese Verbindung gibt es
+nicht: saveObj() speichert den Formular-State der Rechner, ein gemerktes
+Objekt weiss nichts von dem Expose, aus dem seine Werte stammen.
+Stattdessen eigener Store, adressiert ueber einen Fingerabdruck aus
+Adresse, Kaufpreis und Wohnflaeche. Besser als geplant: die Auswahl
+ueberlebt auch ohne gemerktes Objekt.
+
+Logo freigestellt (war Backlog-Punkt der Spec): public/logo.png ist RGBA,
+aber vollflaechig deckend mit Fast-Weiss und haette im Handout-Kopf einen
+sichtbaren Kasten hinterlassen. scripts/logo-freistellen.py erzeugt
+public/logo-transparent.png per Flood-Fill vom Bildrand - NICHT per
+globalem Farbschluessel, der haette das weisse Fell an Brust, Wangen und
+Schwanzspitze sowie die Taschenrechner-Tasten mit ausgestanzt. Zweiter
+Durchgang federt den Anti-Aliasing-Saum ab. Gegen Marineblau,
+Fuchs-Orange und Hellgrau geprueft. public/logo.png bleibt unveraendert,
+ExportPDF.jsx laeuft weiter darauf.
+
+Zwei Fehler, die erst in der Browser-Pruefung sichtbar wurden:
+  - Stockwerk stand als nackte Tabellen-Zahl im Kopf ("Baujahr 1995, 1,
+    ca. 75 m2") - wird jetzt zu "1. OG" ausgeschrieben.
+  - Der Auswahl-Store konnte den gerade geschriebenen Eintrag selbst
+    hinauswerfen: mehrere Schreibvorgaenge in derselben Millisekunde haben
+    denselben Zeitstempel, die Sortierung ist dann stabil und behaelt die
+    aeltesten. Der zuletzt geschriebene Eintrag ist jetzt gesetzt.
+
+i18n: Handout-Beschriftungen in allen fuenf Sprachen. Die Katalogfragen
+selbst bleiben deutsch - sie haengen an deutschem Recht (§ 577a BGB, GEG,
+WoFlV, WEG), uebersetzt waeren sie inhaltlich irrefuehrend.
+
+### Finn fuehrt durch den Upload
+
+Finn sagt jetzt an, was er tut und was danach kommt - vorher war der Upload
+eine Blackbox mit Fortschrittsbalken.
+
+Beim Start: "Alles klar, ich schaue es mir an. Ich lese das Exposé durch und
+ziehe die Werte heraus, die deine Rechner brauchen - Kaufpreis, Wohnflaeche,
+Hausgeld, Energiedaten. Das Abtippen sparst du dir."
+
+Nach dem Ergebnis, ueber dem Handout: nennt die Zahl der Funde und wofuer
+das Handout gut ist. Zwei Fassungen - bei einem unauffaelligen Exposé waere
+"ich habe 0 Punkte gefunden" die falsche Nachricht.
+
+Die Blasen liegen als Textschluessel in den Nachrichten, nicht als fertiger
+Text: so folgen sie einem spaeteren Sprachwechsel, statt in der Sprache von
+vorhin stehen zu bleiben. Alle fuenf Sprachen.
+
+Verifiziert im Browser mit gestubtem Worker-Call (voller Ablauf ohne
+Deploy): beide Ansagen erscheinen an der richtigen Stelle, Panel-Kopf zeigt
+"Verhandeln vor Zusage · groesster Fund -8.438 EUR · 3,3/5", 4 von 27 Fragen
+vorausgewaehlt. Auswahl geaendert, Seite neu geladen, erneut hochgeladen -
+exakt die 5 gespeicherten Fragen sind wieder angehakt. Mobile 375px ohne
+Ueberlauf. Handout beider Referenz-Exposes gegengelesen, Logo laedt.
+
+251 Tests gruen, Lint 0 Fehler, Build und Worker-Typecheck sauber.
+
 ## 2026-07-29 (1.55.89)
 
 ### Fix: Luecke im Renditerechner, Vergleichs-Button in den Seitenfluss,

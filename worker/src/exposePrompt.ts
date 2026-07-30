@@ -77,6 +77,20 @@ export const EXPOSE_JSON_SCHEMA = {
         properties: { feld: { type: "string" }, hinweis: { type: "string" } },
       },
     },
+    abweichungen: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          feld: { type: "string" },
+          wert_a: { type: ["number", "string"] },
+          quelle_a: { type: "string" },
+          wert_b: { type: ["number", "string"] },
+          quelle_b: { type: "string" },
+          hinweis: { type: "string" },
+        },
+      },
+    },
   },
 };
 
@@ -109,7 +123,11 @@ const SCHEMA = `{
   "kontext": { "objektbeschreibung": string|null, "lagebeschreibung": string|null },
   "bild": { "titelbild_index": number|null, "bildbeschreibung": string|null },
   "confidence": { "<feldname>": "sicher"|"unsicher"|"nicht_gefunden" },
-  "warnungen": [ { "feld": string, "hinweis": string } ]
+  "warnungen": [ { "feld": string, "hinweis": string } ],
+  "abweichungen": [ {
+    "feld": string, "wert_a": number|string, "quelle_a": string,
+    "wert_b": number|string, "quelle_b": string, "hinweis": string
+  } ]
 }`;
 
 export const EXPOSE_SYSTEM_PROMPT = `Du bist ein Extraktions-Assistent fuer Immobilien-Exposes.
@@ -182,4 +200,23 @@ Regeln:
   (z.B. abweichende Wohnflaeche in Kopfbereich vs. Grundriss): trage den
   wahrscheinlichsten Wert normal ein, UND melde den Widerspruch zusaetzlich
   im "warnungen"-Array mit Feldname und kurzem Hinweistext
+- Zusaetzlich zu "warnungen": JEDEN Widerspruch, bei dem dieselbe Kennzahl an
+  zwei Stellen unterschiedlich angegeben ist, auch im "abweichungen"-Array
+  eintragen - dort mit BEIDEN Werten und beiden Fundstellen, nicht nur als
+  Hinweistext. "wert_a"/"quelle_a" ist die prominente, beworbene Angabe
+  (Titel, Kopfbereich, Eckdaten-Tabelle), "wert_b"/"quelle_b" die belegte oder
+  kleingedruckte (Berechnung, Ausstattungsliste, Fliesstext). Beispiele:
+  * Titel "ca. 50 m2", Ausstattungsliste "gemaess Berechnung: 47,88 m2" ergibt
+    {"feld":"wohnflaeche","wert_a":50,"quelle_a":"Eckdaten-Tabelle",
+     "wert_b":47.88,"quelle_b":"Ausstattungsliste","hinweis":"..."}
+  * Fliesstext "im Kaufpreis enthaltener Tiefgaragenstellplatz" vs. spaeter
+    "wird separat ausgewiesen: zzgl. 15.000 EUR" ergibt
+    {"feld":"stellplatz_kaufpreis","wert_a":"im Kaufpreis enthalten",
+     "quelle_a":"Objektbeschreibung","wert_b":15000,
+     "quelle_b":"Objektbeschreibung","hinweis":"..."}
+  "quelle_a"/"quelle_b" sind kurze Fundstellenbezeichnungen (max. 60 Zeichen),
+  keine Zitate. Numerische Werte als reine Zahl, Aussagen als kurzer Text.
+- "hinweis" in "warnungen" und "abweichungen" ist neutral und sachlich zu
+  formulieren ("im Expose unterschiedlich angegeben", "noch zu klaeren") -
+  niemals wertend oder anklagend gegenueber dem Anbieter.
 - Erfinde nichts. Lieber null als geraten.`;

@@ -11,7 +11,8 @@ import { getSuggestedPage } from "./suggestedPaging.js";
 import { ASSISTANT_SHEET_CSS } from "./assistantStyles.js";
 import { ExposeUploadProgress } from "./ExposeUploadProgress.jsx";
 import { ExposeResultCard } from "./ExposeResultCard.jsx";
-import { EXPOSE_T } from "../../i18n/expose.js";
+import { FinnHandoutPanel } from "./FinnHandoutPanel.jsx";
+import { EXPOSE_T, loeseTextKey, handoutAnsage } from "../../i18n/expose.js";
 import {
   pruefeAuswahl,
   schaetzePdfSeiten,
@@ -371,21 +372,39 @@ export function AssistantSheet({
               <ChatBubble role="assistant" text={t.greeting} />
               {messages.map((m, i) =>
                 m.role === "expose" ? (
-                  <ExposeResultCard
-                    key={i}
-                    ergebnis={m.ergebnis}
-                    d={d}
-                    set={set}
-                    t={xt}
-                    erledigt={m.erledigt}
-                    anzahl={m.anzahl}
-                    onUebernommen={(n) => {
-                      markiereExposeErledigt(i, n);
-                      setZeigeDisclaimer(true);
-                    }}
-                  />
+                  // Uebernahme-Karte zuerst, Handout darunter: die Uebernahme
+                  // ist die Kernfunktion des Uploads (Spec v2, Abschnitt 7).
+                  // Das Handout bleibt auch nach der Uebernahme stehen, wenn
+                  // die Karte oben schon zur Chip-Zeile kollabiert ist.
+                  <div key={i} className="if-exp-block">
+                    <ExposeResultCard
+                      ergebnis={m.ergebnis}
+                      d={d}
+                      set={set}
+                      t={xt}
+                      erledigt={m.erledigt}
+                      anzahl={m.anzahl}
+                      onUebernommen={(n) => {
+                        markiereExposeErledigt(i, n);
+                        setZeigeDisclaimer(true);
+                      }}
+                    />
+                    {m.analyse && (
+                      <>
+                        {/* Finn ordnet ein, bevor das Handout kommt: was er
+                            gefunden hat und wofuer das Ding gut ist. */}
+                        <ChatBubble role="assistant" text={handoutAnsage(m.analyse, xt)} />
+                        <FinnHandoutPanel analyse={m.analyse} t={xt} />
+                      </>
+                    )}
+                  </div>
                 ) : (
-                  <ChatBubble key={i} role={m.role} text={m.text} tier={m.tier} />
+                  <ChatBubble
+                    key={i}
+                    role={m.role}
+                    text={m.textKey ? loeseTextKey(m.textKey, xt) : m.text}
+                    tier={m.tier}
+                  />
                 ),
               )}
               {uploadAktiv && (

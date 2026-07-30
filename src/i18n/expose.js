@@ -59,6 +59,49 @@ export const EXPOSE_T = {
     fehlerLesen: "Eine Datei konnte nicht gelesen werden.",
     disclaimer:
       "Diese Werte stammen aus der Anzeige des Anbieters — nicht geprüft. Wohnfläche und Energiewerte weichen in der Praxis häufig ab; bei ernsthaftem Interesse vor Ort nachmessen bzw. Energieausweis im Original einsehen.",
+    // Was Finn im Chat sagt, waehrend und nach dem Upload. Zweck: der Nutzer
+    // soll wissen, was gerade passiert und was gleich auf ihn zukommt -
+    // sonst ist der Upload eine Blackbox mit Fortschrittsbalken.
+    // Ton: Finn nimmt Arbeit ab (Abtippen) und bereitet auf den Termin vor.
+    // Neutral gegenueber dem Anbieter (GR-02), keine Kaufempfehlung.
+    finnSagt: {
+      upload:
+        "Alles klar, ich schaue es mir an. Ich lese das Exposé durch und ziehe die Werte heraus, die deine Rechner brauchen — Kaufpreis, Wohnfläche, Hausgeld, Energiedaten. Das Abtippen sparst du dir.",
+      handout:
+        "Fertig. Ich habe das Exposé gleich noch gegengelesen und dabei {n} Punkte gefunden, die vor einer Zusage geklärt gehören. Unten liegt dein Handout für die Besichtigung: der echte Preis, die offenen Punkte und die Fragen, die beim Termin wirklich zählen. Ausdrucken, mitnehmen, abhaken.",
+      handoutLeer:
+        "Fertig. Beim Gegenlesen ist mir nichts Größeres aufgefallen — gutes Zeichen. Ein Handout für die Besichtigung habe ich dir trotzdem vorbereitet: der echte Preis auf einen Blick und die Fragen, die das Exposé offenlässt. Damit gehst du vorbereitet in den Termin.",
+    },
+    handout: {
+      titel: "Besichtigungs-Handout",
+      oeffnen: "Handout öffnen",
+      schliessen: "Handout schließen",
+      groessterFund: "größter Fund {betrag}",
+      keinFund: "keine Auffälligkeiten",
+      // GR-01: muss im Panel stehen, nicht nur im PDF.
+      automatisiert: "Automatisiert erkannt — bitte vor einer Verhandlung selbst prüfen.",
+      findings: "Die wichtigsten Punkte",
+      weitere: "+{n} weitere nicht angezeigt",
+      quellen: "Fundstellen: {quellen}",
+      schwereCritical: "kritisch",
+      schwereWarning: "prüfen",
+      schwereInfo: "Info",
+      preis: "Der echte Preis",
+      beworben: "Beworben",
+      real: "Real",
+      bekannt: "Bereits bekannt",
+      offen: "Noch zu klären",
+      vorOrt: "Vor Ort prüfen",
+      leer: "Keine wesentlichen Auffälligkeiten gefunden. Die offenen Fragen unten lohnen den Termin trotzdem.",
+      alleWaehlen: "Alle auswählen",
+      alleAbwaehlen: "Auswahl aufheben",
+      pdfBtn: "PDF für die Besichtigung",
+      pdfLeer: "Bitte mindestens eine Frage auswählen.",
+      // PDF-Texte
+      pdfDisclaimer: "Keine Rechts- oder Anlageberatung",
+      pdfFooter: "Erstellt mit Finn · immofuchs.info",
+      pdfVerdict: "Finn-Einschätzung {score} / 5",
+    },
     felder: {
       titel: "Titel",
       objektart: "Objektart",
@@ -152,6 +195,46 @@ export const EXPOSE_T = {
     fehlerLesen: "One of the files could not be read.",
     disclaimer:
       "These values come from the seller's listing — unverified. Floor area and energy figures often differ in practice; if you're seriously interested, measure on site and view the original energy certificate.",
+    // Hinweis: die Fragen des Katalogs selbst bleiben in allen Sprachen
+    // deutsch - sie haengen an deutschem Immobilienrecht (§ 577a BGB, GEG,
+    // WoFlV, WEG). Uebersetzt waeren sie inhaltlich irrefuehrend (Spec v2,
+    // Abschnitt 7, i18n-Absatz). Nur die Rahmen-Beschriftungen sind lokalisiert.
+    finnSagt: {
+      upload:
+        "Right, let me take a look. I'll read through the listing and pull out the figures your calculators need — purchase price, floor area, service charge, energy data. Saves you the typing.",
+      handout:
+        "Done. I also cross-read the listing and found {n} points worth clarifying before you commit. Your viewing handout is below: the real price, the open points and the questions that actually matter on the day. Print it, take it, tick it off.",
+      handoutLeer:
+        "Done. Nothing major stood out on the cross-read — a good sign. I've prepared a viewing handout anyway: the real price at a glance and the questions the listing leaves open. So you walk in prepared.",
+    },
+    handout: {
+      titel: "Viewing handout",
+      oeffnen: "Open handout",
+      schliessen: "Close handout",
+      groessterFund: "largest finding {betrag}",
+      keinFund: "nothing unusual",
+      automatisiert: "Detected automatically — please verify yourself before negotiating.",
+      findings: "The key points",
+      weitere: "+{n} more not shown",
+      quellen: "Found in: {quellen}",
+      schwereCritical: "critical",
+      schwereWarning: "check",
+      schwereInfo: "info",
+      preis: "The real price",
+      beworben: "Advertised",
+      real: "Real",
+      bekannt: "Already known",
+      offen: "Still to clarify",
+      vorOrt: "Check on site",
+      leer: "Nothing significant found. The open questions below are still worth raising at the viewing.",
+      alleWaehlen: "Select all",
+      alleAbwaehlen: "Clear selection",
+      pdfBtn: "PDF for the viewing",
+      pdfLeer: "Please select at least one question.",
+      pdfDisclaimer: "Not legal or investment advice",
+      pdfFooter: "Created with Finn · immofuchs.info",
+      pdfVerdict: "Finn assessment {score} / 5",
+    },
     felder: {
       titel: "Title",
       objektart: "Property type",
@@ -245,6 +328,42 @@ export const EXPOSE_T = {
     fehlerLesen: "Dosyalardan biri okunamadı.",
     disclaimer:
       "Bu değerler satıcının ilanından alınmıştır — doğrulanmamıştır. Yaşam alanı ve enerji değerleri pratikte sıklıkla farklılık gösterir; ciddi ilgi durumunda yerinde ölçüm yapın ve enerji belgesinin aslını görün.",
+    finnSagt: {
+      upload:
+        "Tamam, bir bakayım. İlanı okuyup hesaplayıcıların ihtiyaç duyduğu değerleri çıkaracağım — satış fiyatı, yaşam alanı, aidat, enerji verileri. Elle yazma derdinden kurtulursun.",
+      handout:
+        "Hazır. İlanı ayrıca karşılaştırmalı okudum ve söz vermeden önce netleştirilmesi gereken {n} nokta buldum. Görüşme notun aşağıda: gerçek fiyat, açık kalan noktalar ve randevuda asıl önemli olan sorular. Yazdır, yanına al, tek tek işaretle.",
+      handoutLeer:
+        "Hazır. Karşılaştırmalı okumada dikkat çeken büyük bir şey çıkmadı — iyi işaret. Yine de görüşme için bir not hazırladım: tek bakışta gerçek fiyat ve ilanın yanıtsız bıraktığı sorular. Böylece randevuya hazırlıklı gidersin.",
+    },
+    handout: {
+      titel: "Görüşme notu",
+      oeffnen: "Notu aç",
+      schliessen: "Notu kapat",
+      groessterFund: "en büyük bulgu {betrag}",
+      keinFund: "dikkat çeken bir şey yok",
+      automatisiert: "Otomatik tespit edildi — pazarlıktan önce lütfen kendiniz doğrulayın.",
+      findings: "En önemli noktalar",
+      weitere: "+{n} tane daha gösterilmiyor",
+      quellen: "Bulunduğu yer: {quellen}",
+      schwereCritical: "kritik",
+      schwereWarning: "kontrol et",
+      schwereInfo: "bilgi",
+      preis: "Gerçek fiyat",
+      beworben: "İlan edilen",
+      real: "Gerçek",
+      bekannt: "Zaten bilinen",
+      offen: "Netleştirilecek",
+      vorOrt: "Yerinde kontrol et",
+      leer: "Önemli bir bulgu yok. Aşağıdaki açık sorular yine de görüşmede sorulmaya değer.",
+      alleWaehlen: "Tümünü seç",
+      alleAbwaehlen: "Seçimi kaldır",
+      pdfBtn: "Görüşme için PDF",
+      pdfLeer: "Lütfen en az bir soru seçin.",
+      pdfDisclaimer: "Hukuki veya yatırım danışmanlığı değildir",
+      pdfFooter: "Finn ile oluşturuldu · immofuchs.info",
+      pdfVerdict: "Finn değerlendirmesi {score} / 5",
+    },
     felder: {
       titel: "Başlık",
       objektart: "Taşınmaz türü",
@@ -337,6 +456,42 @@ export const EXPOSE_T = {
     fehlerLesen: "有一个文件无法读取。",
     disclaimer:
       "这些数据来自卖方房源信息 — 未经核实。实际居住面积和能耗数据常有出入；如认真考虑，请实地测量并查看能源证书原件。",
+    finnSagt: {
+      upload:
+        "好，我来看看。我会通读这份房源资料，把计算器需要的数据提取出来 — 购买价格、居住面积、物业费、能耗数据。省得你手动输入。",
+      handout:
+        "完成。我还对照通读了一遍，发现 {n} 处在你答应之前值得先弄清楚的地方。看房清单在下面：真实价格、待澄清的要点，以及看房当天真正该问的问题。打印带上，逐项核对。",
+      handoutLeer:
+        "完成。对照通读下来没有发现大问题 — 这是好迹象。我还是为你准备了看房清单：一眼看到真实价格，以及房源资料没有回答的问题。这样你看房时心里有数。",
+    },
+    handout: {
+      titel: "看房清单",
+      oeffnen: "打开清单",
+      schliessen: "关闭清单",
+      groessterFund: "最大发现 {betrag}",
+      keinFund: "未发现异常",
+      automatisiert: "由系统自动识别 — 议价前请自行核实。",
+      findings: "关键要点",
+      weitere: "还有 {n} 项未显示",
+      quellen: "出处：{quellen}",
+      schwereCritical: "严重",
+      schwereWarning: "需核对",
+      schwereInfo: "提示",
+      preis: "真实价格",
+      beworben: "宣传值",
+      real: "实际值",
+      bekannt: "已知信息",
+      offen: "待澄清",
+      vorOrt: "现场查看",
+      leer: "未发现明显问题。下方的待澄清问题仍值得在看房时提出。",
+      alleWaehlen: "全选",
+      alleAbwaehlen: "取消全选",
+      pdfBtn: "看房用 PDF",
+      pdfLeer: "请至少选择一个问题。",
+      pdfDisclaimer: "不构成法律或投资建议",
+      pdfFooter: "由 Finn 生成 · immofuchs.info",
+      pdfVerdict: "Finn 评估 {score} / 5",
+    },
     felder: {
       titel: "标题",
       objektart: "房产类型",
@@ -430,6 +585,42 @@ export const EXPOSE_T = {
     fehlerLesen: "एक फ़ाइल पढ़ी नहीं जा सकी।",
     disclaimer:
       "ये मान विक्रेता की लिस्टिंग से हैं — असत्यापित। रहने का क्षेत्रफल और ऊर्जा आँकड़े व्यवहार में अक्सर भिन्न होते हैं; गंभीर रुचि होने पर मौके पर माप लें और मूल ऊर्जा प्रमाणपत्र देखें।",
+    finnSagt: {
+      upload:
+        "ठीक है, मैं देखता हूँ। मैं लिस्टिंग पढ़कर वे मान निकालूँगा जो आपके कैलकुलेटर को चाहिए — क्रय मूल्य, रहने का क्षेत्रफल, रखरखाव शुल्क, ऊर्जा आँकड़े। टाइप करने की मेहनत बच जाएगी।",
+      handout:
+        "हो गया। मैंने लिस्टिंग को मिलान करके भी पढ़ा और {n} ऐसे बिंदु मिले जिन्हें हामी भरने से पहले स्पष्ट कर लेना चाहिए। आपका मुआयना हैंडआउट नीचे है: असली कीमत, खुले बिंदु और वे प्रश्न जो मौके पर सचमुच मायने रखते हैं। प्रिंट करें, साथ ले जाएँ, टिक करते जाएँ।",
+      handoutLeer:
+        "हो गया। मिलान पढ़ने पर कुछ बड़ा सामने नहीं आया — अच्छा संकेत। फिर भी मैंने मुआयने के लिए हैंडआउट तैयार किया है: एक नज़र में असली कीमत और वे प्रश्न जो लिस्टिंग अनुत्तरित छोड़ती है। इससे आप तैयार होकर जाएँगे।",
+    },
+    handout: {
+      titel: "मुआयना हैंडआउट",
+      oeffnen: "हैंडआउट खोलें",
+      schliessen: "हैंडआउट बंद करें",
+      groessterFund: "सबसे बड़ा निष्कर्ष {betrag}",
+      keinFund: "कुछ असामान्य नहीं",
+      automatisiert: "स्वचालित रूप से पहचाना गया — मोलभाव से पहले स्वयं जाँच लें।",
+      findings: "मुख्य बिंदु",
+      weitere: "+{n} और नहीं दिखाए गए",
+      quellen: "कहाँ मिला: {quellen}",
+      schwereCritical: "गंभीर",
+      schwereWarning: "जाँचें",
+      schwereInfo: "जानकारी",
+      preis: "असली कीमत",
+      beworben: "विज्ञापित",
+      real: "वास्तविक",
+      bekannt: "पहले से ज्ञात",
+      offen: "अभी स्पष्ट करना है",
+      vorOrt: "मौके पर जाँचें",
+      leer: "कोई बड़ी बात सामने नहीं आई। नीचे दिए खुले प्रश्न फिर भी मुआयने में पूछने लायक हैं।",
+      alleWaehlen: "सभी चुनें",
+      alleAbwaehlen: "चयन हटाएँ",
+      pdfBtn: "मुआयने के लिए PDF",
+      pdfLeer: "कृपया कम से कम एक प्रश्न चुनें।",
+      pdfDisclaimer: "यह कानूनी या निवेश सलाह नहीं है",
+      pdfFooter: "Finn से बनाया गया · immofuchs.info",
+      pdfVerdict: "Finn आकलन {score} / 5",
+    },
     felder: {
       titel: "शीर्षक",
       objektart: "संपत्ति प्रकार",
@@ -481,4 +672,26 @@ export function fuelle(vorlage, werte) {
     (text, [k, v]) => text.replace(new RegExp(`\\{${k}\\}`, "g"), String(v)),
     vorlage ?? "",
   );
+}
+
+// Loest einen gepunkteten Textschluessel ("finnSagt.upload") gegen den
+// Sprachblock auf. Chat-Nachrichten von Finn werden als Schluessel abgelegt,
+// nicht als fertiger Text - sonst bliebe eine Blase nach einem Sprachwechsel
+// in der Sprache stehen, in der sie entstanden ist.
+// Unbekannter Schluessel liefert null, damit die Blase leer bleibt statt
+// "undefined" anzuzeigen.
+export function loeseTextKey(key, t) {
+  if (typeof key !== "string") return null;
+  const wert = key.split(".").reduce((o, teil) => (o == null ? o : o[teil]), t);
+  return typeof wert === "string" ? wert : null;
+}
+
+// Finns Einordnung ueber dem Handout. Zwei Fassungen, weil "ich habe 0 Punkte
+// gefunden" niemand lesen will - und weil ein unauffaelliges Expose eine
+// andere Nachricht verdient als eines mit drei kritischen Funden.
+// Gezaehlt werden ALLE Findings, nicht nur die angezeigten fuenf.
+export function handoutAnsage(analyse, t) {
+  const anzahl = analyse?.findingsGesamt ?? 0;
+  if (anzahl === 0) return t.finnSagt.handoutLeer;
+  return fuelle(t.finnSagt.handout, { n: anzahl });
 }

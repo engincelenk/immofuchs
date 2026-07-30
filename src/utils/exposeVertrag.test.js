@@ -36,6 +36,18 @@ describe("Feldvertrag Client ↔ Worker", () => {
     expect(ohneAnzeige).toEqual([]);
   });
 
+  it("nennt der Prompt die Abweichungs-Struktur, die die Analyse voraussetzt", () => {
+    // `abweichungen` ist kein Feld einer Gruppe, sondern ein eigenes Array
+    // (Spec v2, Abschnitt 1.1) und faellt deshalb durch die Gruppen-Pruefungen
+    // oben durch. Ohne die Schluessel im Prompt-Text liefert Gemini das Array
+    // nie - der Flaechen-Widerspruch waere dann stumm nicht mehr auffindbar.
+    const schluessel = Object.keys(EXPOSE_JSON_SCHEMA.properties.abweichungen.items.properties);
+    expect(schluessel).toEqual(["feld", "wert_a", "quelle_a", "wert_b", "quelle_b", "hinweis"]);
+    for (const key of schluessel) {
+      expect(EXPOSE_SYSTEM_PROMPT, `Prompt nennt "${key}" nicht`).toContain(`"${key}"`);
+    }
+  });
+
   it("nennt der Prompt jedes Feld des Schemas", () => {
     // Das maschinenlesbare Schema (guided_json) gilt nur fuer den
     // Workers-AI-Fallback. Gemini bekommt ausschliesslich den Prompt-Text -
