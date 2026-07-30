@@ -1,3 +1,36 @@
+## 2026-07-30 (1.55.94)
+
+### Fix: Finn zeigte rote Fehlermeldung statt still zu bleiben, wenn noch kein Ergebnis vorlag
+
+**Problem**
+- Nutzer-Feedback (mobil): Finn konnte auf bestimmte Fragen nicht antworten,
+  wenn noch kein Rechenergebnis vorlag (z.B. Mieterhöhungsrechner ohne
+  gültige Eingabe), und zeigte stattdessen eine rote Fehlermeldung statt
+  einfach zu schweigen.
+- Konkreter Fund: Im Mieterhöhungsrechner (`Miete.jsx`) konnte ein
+  ungültiges Datum bei "letzte Erhöhung" (z.B. mobiler Freitext-Fallback
+  bei `<input type="date">`) beim Kontextaufbau für Finn eine ungefangene
+  `RangeError: Invalid time value` auslösen (`.toISOString()` auf
+  Invalid Date) — das riss ungebremst den ganzen React-Baum runter (keine
+  ErrorBoundary in der App).
+
+**Fix**
+- `Miete.jsx`: Datum wird vor `.toISOString()` auf Gültigkeit geprüft
+  (`instanceof Date && !isNaN(...)`), sonst wird `null` an Finn übergeben.
+- Neue gemeinsame Komponente `AssistantGate.jsx`: bündelt für alle 6
+  Rechner (Rendite, Finanzierung, Miete, Sanierung, Vorfälligkeit,
+  6%-Trick) den bisher pro Rechner duplizierten "Finn nur bei vorhandenem
+  Ergebnis anzeigen"-Block und faengt Fehler beim Kontextaufbau über eine
+  React-ErrorBoundary ab. Schlägt der Kontextaufbau eines Rechners
+  künftig fehl, bleibt Finn einfach unsichtbar statt die App abstürzen zu
+  lassen. Reicht neu auch `autoOpenUpload`/`onAutoOpenUploadHandled`
+  durch, damit der Expose-Upload-Deep-Link (1.55.9x) weiter funktioniert.
+
+**Betroffene Dateien:** src/components/assistant/AssistantGate.jsx (neu),
+src/components/calculators/Renditerechner.jsx, Finanzierung.jsx, Miete.jsx,
+Sanier.jsx, src/components/extras/Vorfaelligkeit.jsx, SteuerTrick.jsx
+
+
 ## 2026-07-30 (1.55.93)
 
 ### Fix: Finn-Minimieren auf Mobile entfernt (Overlap mit Tab-Bar)
@@ -1136,7 +1169,6 @@ invalid_lang, invalid_session_id, no_input, invalid_images,
 invalid_image_mime, too_many_images; 200 für gültige Bilder bzw. nur-PDF;
 429 beim 6. Aufruf derselben Session (Limit 5/Tag); 503 mit Prod-Vars.
 `npm run typecheck` grün.
-
 
 ## 2026-07-24 (1.55.62)
 

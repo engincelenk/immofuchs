@@ -3,7 +3,7 @@ import { Ctx } from "../../context/AppContext.jsx";
 import { STEUER_T } from "../../i18n/steuerTrick.js";
 import { T } from "../../i18n/translations.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
-import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
+import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { Tip } from "../ui/Tip.jsx";
 
@@ -401,20 +401,20 @@ export function SteuerTrick() {
               Kontext wird deshalb direkt gebaut statt ueber buildAssistantContext(). */}
               {(() => {
                 const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
-                const kontext = {
-                  lohnsteuer,
-                  grenzsteuersatzProzent: grenzSatz,
-                  grundstueckswert: grundstueck,
-                  sanierungskosten: sanK,
-                  gebaeudewert: gebW,
-                  gesamtkaufpreis: gesKP,
-                  bewertung: null,
-                };
                 const suggested = [at.steuerSuggested1, at.steuerSuggested2, at.steuerSuggested3];
                 return (
-                  <AssistantWidget
+                  <AssistantGate
+                    active={true}
                     rechner="steuertrick"
-                    kontext={kontext}
+                    buildKontext={() => ({
+                      lohnsteuer,
+                      grenzsteuersatzProzent: grenzSatz,
+                      grundstueckswert: grundstueck,
+                      sanierungskosten: sanK,
+                      gebaeudewert: gebW,
+                      gesamtkaufpreis: gesKP,
+                      bewertung: null,
+                    })}
                     contextLabel={at.contextSteuertrick}
                     suggested={suggested}
                     lang={lang}

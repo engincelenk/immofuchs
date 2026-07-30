@@ -8,7 +8,7 @@ import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
-import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
+import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { rate } from "../../utils/bands.js";
@@ -412,39 +412,40 @@ export default function Kredit() {
       @media(max-width:699px) die gerade inaktive Pane per display:none aus.
       Stand das Widget darin, verschwand der position:fixed-Fuchs in der
       Eingabe-Ansicht komplett (Nutzer-Feedback 2026-07-22). */}
-      {R &&
-        (() => {
-          const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
-          const belTier = rate("bel", R.bel).tier;
-          const kontext = buildAssistantContext("finanzierung", d, {
-            beleihungsauslauf: R.bel,
-            sondertilgungSatzProzent: +sondTP,
-            bewertung: { tier: belTier },
-          });
-          const suggested = [
-            at.finSuggested1,
-            at.finSuggested2,
-            at.finSuggested3,
-            at.finSuggested4,
-            at.finSuggested5,
-            at.finSuggested6,
-            at.finSuggested7,
-            at.finSuggested8,
-            at.finSuggested9,
-            at.finSuggested10,
-            at.finSuggested11,
-            at.finSuggested12,
-          ];
-          return (
-            <AssistantWidget
-              rechner="finanzierung"
-              kontext={kontext}
-              contextLabel={at.contextFinanzierung}
-              suggested={suggested}
-              lang={lang}
-            />
-          );
-        })()}
+      {(() => {
+        const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
+        const suggested = [
+          at.finSuggested1,
+          at.finSuggested2,
+          at.finSuggested3,
+          at.finSuggested4,
+          at.finSuggested5,
+          at.finSuggested6,
+          at.finSuggested7,
+          at.finSuggested8,
+          at.finSuggested9,
+          at.finSuggested10,
+          at.finSuggested11,
+          at.finSuggested12,
+        ];
+        return (
+          <AssistantGate
+            active={!!R}
+            rechner="finanzierung"
+            buildKontext={() => {
+              const belTier = rate("bel", R.bel).tier;
+              return buildAssistantContext("finanzierung", d, {
+                beleihungsauslauf: R.bel,
+                sondertilgungSatzProzent: +sondTP,
+                bewertung: { tier: belTier },
+              });
+            }}
+            contextLabel={at.contextFinanzierung}
+            suggested={suggested}
+            lang={lang}
+          />
+        );
+      })()}
     </div>
   );
 }
