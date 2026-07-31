@@ -33,7 +33,7 @@ GLOBAL_DAILY_LIMIT = "2000"
 # (Spec 11.4). Hier bewusst "false" - auf Prod/QA laeuft bis Sprint 2 nur der
 # Platzhalter-Endpunkt, der soll dort nicht erreichbar sein. Umschalten
 # spaeter ueber das Dashboard, ohne Redeploy.
-EXPOSE_EXTRACT_ENABLED = "false"
+EXPOSE_EXTRACT_ENABLED = "true"
 # Deutlich niedriger als beim Text-Chat (Spec 6/11.3): 5 Extraktionen pro
 # Session/Tag, IP und Global anteilig.
 EXPOSE_DAILY_LIMIT = "5"
