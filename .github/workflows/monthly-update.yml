@@ -9,13 +9,39 @@ on:
 
 jobs:
   update-and-deploy:
-    name: Update Market Data & Deploy
+    name: Update Market Data & Deploy (${{ matrix.env.name }})
     runs-on: ubuntu-latest
+    strategy:
+      # fail-fast: false, damit z.B. ein fehlgeschlagener PROD-Build nicht auch
+      # den DEV/QA-Lauf abbricht - die drei Umgebungen sind unabhaengig.
+      fail-fast: false
+      matrix:
+        env:
+          - name: PROD
+            branch: main
+            target: /immofuchs
+          - name: DEV
+            branch: Immofuchs-dev
+            target: /dev.immofuchs.info
+          - name: QA
+            branch: Immofuchs-qa
+            target: /qa.immofuchs.info
 
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────────────────
-      - name: 🚚 Code auschecken
+      # ── 1. Checkout - JEDE Umgebung von ihrem EIGENEN Branch ──────────────
+      # Frueher: ein einziger Checkout von main, dessen Build wurde auf PROD,
+      # DEV und QA gemeinsam deployt. main lag aber oft Wochen hinter
+      # Immofuchs-dev/-qa zurueck (Feature-Branches werden manuell per
+      # push.ps1 gemergt) - der Monats-Job hat dev.immofuchs.info und
+      # qa.immofuchs.info damit jedes Mal auf den alten main-Stand
+      # zurueckgesetzt und bereits live getestete Features praktisch wieder
+      # "ausgerollt" (siehe 2026-08-01/02: Expose-Upload verschwand so von
+      # dev+qa). Jetzt bekommt jede Umgebung ihren eigenen Branch-Stand,
+      # nur die Marktdaten werden aufgefrischt.
+      - name: 🚚 Code auschecken (${{ matrix.env.branch }})
         uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.env.branch }}
 
       # ── 2. Python einrichten ─────────────────────────────────────────────
       - name: 🐍 Python einrichten
@@ -32,7 +58,9 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/monthly_update.py
 
-      # ── 4. Änderungen committen (nur wenn vorhanden) ─────────────────────
+      # ── 4. Änderungen committen (nur lokal im Runner, wie bisher - kein
+      #      Push, damit kein Bot-Commit ungefragt in die Branches landet;
+      #      der Commit dient nur als Grundlage fuer den Build unten) ───────
       - name: 📝 Änderungen committen
         run: |
           git config --global user.name "ImmoFuchs Bot"
@@ -42,7 +70,7 @@ jobs:
             echo "Keine Änderungen — kein Commit nötig"
           else
             MONTH=$(date +'%B %Y')
-            git commit -m "data: Monatliches Update $MONTH"
+            git commit -m "data: Monatliches Update $MONTH (${{ matrix.env.name }})"
             echo "✓ Commit erstellt"
           fi
 
@@ -58,11 +86,11 @@ jobs:
           npm ci
           npm run build
 
-      # ── 6. Deploy zu IONOS (PROD + DEV + QA) ────────────────────────────
+      # ── 6. Deploy - NUR die eigene Umgebung, nicht mehr alle drei ─────────
       - name: 📦 lftp installieren
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      - name: 🚀 Deploy PROD → immofuchs.info
+      - name: 🚀 Deploy → ${{ matrix.env.name }}
         env:
           SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
           SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
@@ -71,32 +99,6 @@ jobs:
           lftp -c "
           set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
           open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
-          mirror -R ./dist /immofuchs --reverse --verbose --continue --delete;
-          quit;
-          "
-
-      - name: 🛠️ Deploy DEV → dev.immofuchs.info
-        env:
-          SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
-          SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
-          SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
-        run: |
-          lftp -c "
-          set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
-          open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
-          mirror -R ./dist /dev.immofuchs.info --reverse --verbose --continue --delete;
-          quit;
-          "
-
-      - name: 🧪 Deploy QA → qa.immofuchs.info
-        env:
-          SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
-          SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
-          SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
-        run: |
-          lftp -c "
-          set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
-          open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
-          mirror -R ./dist /qa.immofuchs.info --reverse --verbose --continue --delete;
+          mirror -R ./dist ${{ matrix.env.target }} --reverse --verbose --continue --delete;
           quit;
           "
