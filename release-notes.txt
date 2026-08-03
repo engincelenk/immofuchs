@@ -1,3 +1,49 @@
+## 2026-08-03 (1.55.96)
+
+### Fix: Finn zeigte generischen Fehler nach der 2. Chat-Frage (Dev-Worker)
+
+**Problem**
+- Nutzer-Feedback: Im Dev-Worker meldete Finn nach der 2. Frage im selben
+  Chat "Kurzer Aussetzer bei mir — nochmal?", obwohl der Server (laut
+  `wrangler tail` und Browser-Network-Tab) sauber geantwortet hatte.
+- Ursache gefunden ueber Network-Tab: Status 400, nicht 502/429/503.
+  `worker/src/validator.ts` liess pro `verlauf`-Eintrag (inkl. Finns eigener
+  vorheriger Antwort) nur `MAX_VERLAUF_TEXT_LEN = 1000` Zeichen zu.
+  `modelRouter.ts` erlaubt dem Modell aber `MAX_TOKENS = 350` (bewusst
+  erhoeht fuer laengere Antworten, ~160 statt 80 Woerter) - eine
+  ausfuehrliche Antwort auf Frage 1 kann leicht ueber 1000 Zeichen liegen.
+  Bei Frage 2 wird genau diese Antwort im `verlauf` mitgeschickt -> Server
+  lehnt mit 400 (`invalid_verlauf`) ab -> Client wirft `assistant_failed`
+  -> generische Fehlermeldung im Chat, obwohl kein Modell-/CORS-/Rate-Limit-
+  Problem vorlag.
+
+**Fix**
+- `validator.ts`: `MAX_VERLAUF_TEXT_LEN` von 1000 auf 2500 angehoben -
+  deckt auch ungewoehnlich lange Antworten mit Reserve ab.
+
+**Betroffene Dateien:** worker/src/validator.ts
+
+### Chore: Rate-Limits auf Free-Tier-Maximum kalibriert (Dev + QA/Prod)
+
+**Kontext**
+- Auf Nutzerwunsch: alle Tages-/IP-/Session-Limits fuer Text-Chat und
+  Expose-Extraktion so hoch wie moeglich gesetzt, ohne die kostenlosen
+  Kontingente von Gemini (1.000 Requests/Tag, 15/Minute, pro Projekt/Key)
+  und Workers AI (10.000 Neuronen/Tag, kontoweit, nur Fallback) zu
+  ueberschreiten. QA und Prod teilen sich denselben Worker
+  ("immofuchs-assistant", siehe deploy-qa.yml/deploy-prod.yml) und damit
+  ein gemeinsames Kontingent - eine Aenderung hier wirkt auf beide.
+- Neue Werte (Top-Level [vars] = QA+Prod, [env.dev.vars] = Dev):
+  DAILY_REQUEST_LIMIT 20→50, IP_DAILY_LIMIT 60→100,
+  GLOBAL_DAILY_LIMIT 2000→800, EXPOSE_DAILY_LIMIT 5→8,
+  EXPOSE_IP_DAILY_LIMIT 15→20, EXPOSE_GLOBAL_DAILY_LIMIT 300→150.
+  GLOBAL_DAILY_LIMIT + EXPOSE_GLOBAL_DAILY_LIMIT bleiben bewusst unter
+  1.000, damit ein normaler Tag nicht in den kapazitaetsschwachen
+  Workers-AI-Fallback rutscht.
+
+**Betroffene Dateien:** worker/wrangler.toml
+
+
 ## 2026-07-30 (1.55.95)
 
 ### Fix: Finn zitierte rohe JSON-Feldnamen statt Klartext (alle Rechner)

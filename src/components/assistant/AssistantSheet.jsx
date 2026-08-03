@@ -51,6 +51,7 @@ export function AssistantSheet({
     extrahiereExpose,
     uploadFortschritt,
     exposeFehler,
+    chatFehlerTechnisch,
     markiereExposeErledigt,
   } = useAssistant();
   const inputRef = useRef(null);
@@ -437,7 +438,13 @@ export function AssistantSheet({
               {status === "error" && (
                 <ChatBubble
                   role="error"
-                  text={exposeFehler ? xt[exposeFehler] : t.error}
+                  text={
+                    exposeFehler
+                      ? xt[exposeFehler]
+                      : chatFehlerTechnisch
+                        ? t.errorTechnical
+                        : t.error
+                  }
                   onRetry={exposeFehler ? undefined : retry}
                   retryLabel={t.retry}
                 />

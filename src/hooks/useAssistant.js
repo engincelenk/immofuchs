@@ -35,6 +35,15 @@ export function useAssistant() {
   const [status, setStatus] = useState("idle"); // idle | loading | uploading | extracting | error | limit | offline | disabled
   const [uploadFortschritt, setUploadFortschritt] = useState({ fertig: 0, gesamt: 0 });
   const [exposeFehler, setExposeFehler] = useState(null);
+  // Unterscheidet zwei Fehlerarten im Chat (Nutzerwunsch 2026-08-03, siehe
+  // release-notes.txt): ein 4xx vom Worker (invalid_frage/invalid_verlauf/...)
+  // ist ein strukturelles Problem mit der Anfrage, kein zufaelliger
+  // Netzwerk-/Modell-Aussetzer (5xx). "Nochmal versuchen" hilft dabei nur,
+  // wenn sich vorher etwas an der Nachricht/am Verlauf aendert - der Nutzer
+  // bekommt deshalb einen anderen Hinweistext (t.errorTechnical statt
+  // t.error), keine neue Statusvariante, um den restlichen Render-Code
+  // unveraendert zu lassen.
+  const [chatFehlerTechnisch, setChatFehlerTechnisch] = useState(false);
   const sessionId = useRef(getSessionId());
   const lastAttemptRef = useRef(null);
 
@@ -47,6 +56,7 @@ export function useAssistant() {
       // Eine neue Chat-Frage loest den Expose-Fehlertext ab - sonst zeigt der
       // Chat weiter "Exposé"-Wortlaut fuer einen Text-Fehler.
       setExposeFehler(null);
+      setChatFehlerTechnisch(false);
       setStatus("loading");
 
       const verlauf = verlaufSource
@@ -71,11 +81,33 @@ export function useAssistant() {
           setStatus("disabled");
           return;
         }
-        if (!res.ok) throw new Error("assistant_failed");
+        if (!res.ok) {
+          // Fehlercode aus dem Response-Body mitloggen (Nutzerwunsch
+          // 2026-08-03) - sonst braucht jede Fehlersuche wieder Network-Tab
+          // oder `wrangler tail`. Der Code selbst geht NICHT in die UI (waere
+          // fuer echte Nutzer bedeutungslos), nur in die Konsole.
+          const code = await res
+            .json()
+            .then((j) => j?.error)
+            .catch(() => null);
+          console.error("assistant_request_failed", res.status, code || "unknown");
+          // 4xx heisst: die Anfrage selbst war ungueltig (z.B. Frage/Verlauf
+          // zu lang) - kein Netzwerk-/Modell-Aussetzer, blindes "Nochmal"
+          // hilft ohne Aenderung an der Nachricht meist nicht. 5xx bleibt der
+          // bisherige, ehrliche "kurzer Aussetzer"-Wortlaut.
+          setChatFehlerTechnisch(res.status >= 400 && res.status < 500);
+          throw new Error("assistant_failed");
+        }
         const { antwort, tier } = await res.json();
         setMessages((m) => [...m, { role: "assistant", text: antwort, tier }]);
         setStatus("idle");
-      } catch {
+      } catch (err) {
+        // Netzwerkfehler (fetch wirft, res.json() scheitert etc.) landen auch
+        // hier - ebenfalls loggen, damit ein "Nochmal versuchen ohne
+        // Server-Log" nicht wieder blind macht.
+        if (!(err instanceof Error) || err.message !== "assistant_failed") {
+          console.error("assistant_request_failed", "network_or_parse_error", err);
+        }
         setStatus("error");
       }
     },
@@ -185,6 +217,9 @@ export function useAssistant() {
           .json()
           .then((j) => j?.error)
           .catch(() => null);
+        // Gleiches Logging wie im Text-Chat (siehe send() oben) - Nutzerwunsch
+        // 2026-08-03.
+        console.error("expose_extract_request_failed", res.status, code || "unknown");
         setExposeFehler(code === "extraction_failed" ? "fehlerUnlesbar" : "fehlerDienst");
         setStatus("error");
         return;
@@ -206,7 +241,8 @@ export function useAssistant() {
         { role: "expose", ergebnis, analyse, erledigt: false, anzahl: 0 },
       ]);
       setStatus("idle");
-    } catch {
+    } catch (err) {
+      console.error("expose_extract_request_failed", "network_or_parse_error", err);
       setExposeFehler("fehlerDienst");
       setStatus("error");
     }
@@ -229,6 +265,7 @@ export function useAssistant() {
     setMessages([]);
     setStatus("idle");
     setExposeFehler(null);
+    setChatFehlerTechnisch(false);
     setUploadFortschritt({ fertig: 0, gesamt: 0 });
     lastAttemptRef.current = null;
   }, []);
@@ -242,6 +279,7 @@ export function useAssistant() {
     extrahiereExpose,
     uploadFortschritt,
     exposeFehler,
+    chatFehlerTechnisch,
     markiereExposeErledigt,
   };
 }
