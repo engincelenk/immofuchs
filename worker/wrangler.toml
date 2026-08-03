@@ -17,11 +17,28 @@ ASSISTANT_ENABLED = "true"
 # tatsaechlich dorthin deployt werden, siehe Go-Live-Gate im Sprint-Plan
 # (DSGVO/AVV) fuer echte Nutzerdaten.
 ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info,https://qa.immofuchs.info,https://immofuchs.info"
-DAILY_REQUEST_LIMIT = "20"
+# ═══ Limits 2026-08-03: auf das Maximum kalibriert, das die kostenlosen
+# Kontingente von Gemini und Workers AI tatsaechlich hergeben (siehe
+# release-notes.txt) - NICHT einfach hochgesetzt. Dieser Worker bedient
+# QA UND PROD gleichzeitig (beide zeigen auf "immofuchs-assistant", siehe
+# deploy-qa.yml/deploy-prod.yml), teilen sich also EIN Kontingent:
+#   - Gemini "gemini-2.5-flash-lite" Free-Tier: 1.000 Requests/Tag,
+#     15/Minute, PRO PROJEKT/KEY - Text-Chat UND Expose-Extraktion nutzen
+#     dasselbe Modell und damit denselben Topf.
+#   - Workers AI Free-Tier: 10.000 Neuronen/Tag, KONTOWEIT (gilt fuer alle
+#     Worker im Account inkl. Dev), nur als Fallback wenn Gemini scheitert.
+#     Eine Text-Antwort verbraucht ca. 400-600 Neuronen -> ca. 20-25
+#     Fallback-Antworten/Tag sind das realistische Maximum, danach schlaegt
+#     auch der Fallback fehl (das war der urspruengliche "Kurzer Aussetzer"-
+#     Verdacht, bevor sich das invalid_verlauf-Problem herausstellte).
+# GLOBAL_DAILY_LIMIT (Text) + EXPOSE_GLOBAL_DAILY_LIMIT (Bild) bleiben in
+# Summe unter 1.000, damit an einem normalen Tag nicht in den Workers-AI-
+# Fallback gerutscht wird, dessen Kapazitaet viel kleiner ist.
+DAILY_REQUEST_LIMIT = "50"
 # Zweite/dritte Schranke gegen sessionId-Rotation (siehe docs/code-review-2026-07-23.md).
 # Ueber das Dashboard ohne Redeploy anpassbar, wie ASSISTANT_ENABLED.
-IP_DAILY_LIMIT = "60"
-GLOBAL_DAILY_LIMIT = "2000"
+IP_DAILY_LIMIT = "100"
+GLOBAL_DAILY_LIMIT = "800"
 # Text-Chat-Modell fuer Gemini. Ohne Eintrag nimmt der Worker
 # "gemini-2.5-flash-lite" (siehe modelRouter.ts). Ueber das Dashboard
 # umstellbar, ohne Redeploy - wichtig bei Googles kurzen Deprecation-Zyklen
@@ -33,12 +50,12 @@ GLOBAL_DAILY_LIMIT = "2000"
 # (Spec 11.4). Hier bewusst "false" - auf Prod/QA laeuft bis Sprint 2 nur der
 # Platzhalter-Endpunkt, der soll dort nicht erreichbar sein. Umschalten
 # spaeter ueber das Dashboard, ohne Redeploy.
-EXPOSE_EXTRACT_ENABLED = "false"
-# Deutlich niedriger als beim Text-Chat (Spec 6/11.3): 5 Extraktionen pro
-# Session/Tag, IP und Global anteilig.
-EXPOSE_DAILY_LIMIT = "5"
-EXPOSE_IP_DAILY_LIMIT = "15"
-EXPOSE_GLOBAL_DAILY_LIMIT = "300"
+EXPOSE_EXTRACT_ENABLED = "true"
+# Deutlich niedriger als beim Text-Chat (Spec 6/11.3): Extraktionen pro
+# Session/Tag, IP und Global anteilig - siehe Limits-Kommentar oben.
+EXPOSE_DAILY_LIMIT = "8"
+EXPOSE_IP_DAILY_LIMIT = "20"
+EXPOSE_GLOBAL_DAILY_LIMIT = "150"
 # Vision-Modell fuer die Extraktion. Ohne Eintrag nimmt der Worker
 # "gemini-2.0-flash-lite" (siehe modelRouter.ts) - dasselbe Modell wie der
 # Text-Chat. Ueber das Dashboard umstellbar, ohne Redeploy, falls sich die
@@ -80,14 +97,18 @@ name = "immofuchs-assistant-dev"
 [env.dev.vars]
 ASSISTANT_ENABLED = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info"
-DAILY_REQUEST_LIMIT = "20"
-IP_DAILY_LIMIT = "60"
-GLOBAL_DAILY_LIMIT = "2000"
+# Gleiche Kalibrierung wie oben im Top-Level-[vars]-Block (siehe Kommentar
+# dort) - dev hat einen eigenen GEMINI_API_KEY/eigenes Projekt, damit ein
+# eigenes 1.000/Tag-Kontingent, aber teilt sich den kontoweiten Workers-AI-
+# Fallback-Topf (10.000 Neuronen/Tag) mit dem QA/Prod-Worker.
+DAILY_REQUEST_LIMIT = "50"
+IP_DAILY_LIMIT = "100"
+GLOBAL_DAILY_LIMIT = "800"
 # Auf dev eingeschaltet - hier wird der Endpunkt entwickelt und per curl getestet.
 EXPOSE_EXTRACT_ENABLED = "true"
-EXPOSE_DAILY_LIMIT = "5"
-EXPOSE_IP_DAILY_LIMIT = "15"
-EXPOSE_GLOBAL_DAILY_LIMIT = "300"
+EXPOSE_DAILY_LIMIT = "8"
+EXPOSE_IP_DAILY_LIMIT = "20"
+EXPOSE_GLOBAL_DAILY_LIMIT = "150"
 
 [env.dev.ai]
 binding = "AI"

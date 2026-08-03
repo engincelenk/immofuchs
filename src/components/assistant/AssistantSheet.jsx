@@ -11,7 +11,8 @@ import { getSuggestedPage } from "./suggestedPaging.js";
 import { ASSISTANT_SHEET_CSS } from "./assistantStyles.js";
 import { ExposeUploadProgress } from "./ExposeUploadProgress.jsx";
 import { ExposeResultCard } from "./ExposeResultCard.jsx";
-import { EXPOSE_T } from "../../i18n/expose.js";
+import { FinnHandoutPanel } from "./FinnHandoutPanel.jsx";
+import { EXPOSE_T, loeseTextKey, handoutAnsage } from "../../i18n/expose.js";
 import {
   pruefeAuswahl,
   schaetzePdfSeiten,
@@ -38,6 +39,8 @@ export function AssistantSheet({
   t,
   autoOpenUpload,
   onAutoOpenUploadHandled,
+  autoAskQuestion,
+  onAutoAskHandled,
 }) {
   const {
     messages,
@@ -48,6 +51,7 @@ export function AssistantSheet({
     extrahiereExpose,
     uploadFortschritt,
     exposeFehler,
+    chatFehlerTechnisch,
     markiereExposeErledigt,
   } = useAssistant();
   const inputRef = useRef(null);
@@ -125,6 +129,18 @@ export function AssistantSheet({
     }
   }, [open]);
 
+  // Objektvergleich (Merkliste): die Sprechblase verspricht "ich vergleiche" -
+  // damit das eingeloest wird, stellt das Sheet die erste Vergleichsfrage
+  // sofort selbst, statt nur die Frage-Chips zu zeigen (Nutzer-Feedback
+  // 2026-07-29). onAutoAskHandled() meldet den Verbrauch an Merkliste.jsx
+  // zurueck, damit ein spaeteres Wieder-Oeffnen nicht erneut fragt.
+  useEffect(() => {
+    if (!open || !autoAskQuestion) return;
+    submit(autoAskQuestion);
+    onAutoAskHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoAskQuestion]);
+
   // Deep-Link "Exposé hochladen" vom Landing-Hero: stoesst denselben Weg an
   // wie ein manueller Klick auf 📎 (Consent-Bubble beim ersten Mal, sonst
   // direkt der Datei-Dialog). onAutoOpenUploadHandled() meldet den Verbrauch
@@ -170,6 +186,14 @@ export function AssistantSheet({
       document.body.style.overflow = prevOverflow;
     };
   }, [open, isDesktop]);
+
+  // Minimieren gibt es nur auf Desktop (siehe AssistantHeaderBar) - wird das
+  // Browserfenster waehrend minimiert unter 1024px verkleinert, faellt der
+  // Zustand zurueck, statt die kompakte Leiste auf Mobile-Breite stehen zu
+  // lassen (Bug-Report 2026-07-30: Overlap mit der Bottom-Tab-Bar).
+  useEffect(() => {
+    if (!isDesktop) setMinimized(false);
+  }, [isDesktop]);
 
   const handleClose = () => {
     // Eingeklappt-Zustand mit zuruecksetzen: sonst bleibt beim naechsten
@@ -347,6 +371,7 @@ export function AssistantSheet({
           onRestart={handleRestart}
           minimized={minimized}
           onToggleMinimize={() => setMinimized((m) => !m)}
+          isDesktop={isDesktop}
         />
         {!minimized && (
           <>
@@ -357,21 +382,39 @@ export function AssistantSheet({
               <ChatBubble role="assistant" text={t.greeting} />
               {messages.map((m, i) =>
                 m.role === "expose" ? (
-                  <ExposeResultCard
-                    key={i}
-                    ergebnis={m.ergebnis}
-                    d={d}
-                    set={set}
-                    t={xt}
-                    erledigt={m.erledigt}
-                    anzahl={m.anzahl}
-                    onUebernommen={(n) => {
-                      markiereExposeErledigt(i, n);
-                      setZeigeDisclaimer(true);
-                    }}
-                  />
+                  // Uebernahme-Karte zuerst, Handout darunter: die Uebernahme
+                  // ist die Kernfunktion des Uploads (Spec v2, Abschnitt 7).
+                  // Das Handout bleibt auch nach der Uebernahme stehen, wenn
+                  // die Karte oben schon zur Chip-Zeile kollabiert ist.
+                  <div key={i} className="if-exp-block">
+                    <ExposeResultCard
+                      ergebnis={m.ergebnis}
+                      d={d}
+                      set={set}
+                      t={xt}
+                      erledigt={m.erledigt}
+                      anzahl={m.anzahl}
+                      onUebernommen={(n) => {
+                        markiereExposeErledigt(i, n);
+                        setZeigeDisclaimer(true);
+                      }}
+                    />
+                    {m.analyse && (
+                      <>
+                        {/* Finn ordnet ein, bevor das Handout kommt: was er
+                            gefunden hat und wofuer das Ding gut ist. */}
+                        <ChatBubble role="assistant" text={handoutAnsage(m.analyse, xt)} />
+                        <FinnHandoutPanel analyse={m.analyse} t={xt} />
+                      </>
+                    )}
+                  </div>
                 ) : (
-                  <ChatBubble key={i} role={m.role} text={m.text} tier={m.tier} />
+                  <ChatBubble
+                    key={i}
+                    role={m.role}
+                    text={m.textKey ? loeseTextKey(m.textKey, xt) : m.text}
+                    tier={m.tier}
+                  />
                 ),
               )}
               {uploadAktiv && (
@@ -395,7 +438,13 @@ export function AssistantSheet({
               {status === "error" && (
                 <ChatBubble
                   role="error"
-                  text={exposeFehler ? xt[exposeFehler] : t.error}
+                  text={
+                    exposeFehler
+                      ? xt[exposeFehler]
+                      : chatFehlerTechnisch
+                        ? t.errorTechnical
+                        : t.error
+                  }
                   onRetry={exposeFehler ? undefined : retry}
                   retryLabel={t.retry}
                 />

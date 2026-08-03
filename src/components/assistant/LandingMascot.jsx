@@ -93,6 +93,14 @@ export function LandingMascot({ onStart, lang }) {
     };
   }, [open, isDesktop]);
 
+  // Minimieren gibt es nur auf Desktop (siehe AssistantHeaderBar) - wird das
+  // Browserfenster waehrend minimiert unter 1024px verkleinert, faellt der
+  // Zustand zurueck, statt die kompakte Leiste auf Mobile-Breite stehen zu
+  // lassen (Bug-Report 2026-07-30: Overlap mit der Bottom-Tab-Bar).
+  useEffect(() => {
+    if (!isDesktop) setMinimized(false);
+  }, [isDesktop]);
+
   const pickRoute = (r) => {
     setChipsForcedOpen(false);
     setMoreOpen(false);
@@ -165,6 +173,7 @@ export function LandingMascot({ onStart, lang }) {
               onRestart={handleRestart}
               minimized={minimized}
               onToggleMinimize={() => setMinimized((m) => !m)}
+              isDesktop={isDesktop}
             />
             {!minimized && (
               <>

@@ -21,7 +21,15 @@ const LANG_VALUES: ReadonlySet<Lang> = new Set(["de", "en", "tr", "zh", "hi"]);
 
 const MAX_FRAGE_LEN = 400;
 const MAX_VERLAUF_EINTRAEGE = 6; // letzte 3 Frage/Antwort-Paare, siehe Konzept 2.6
-const MAX_VERLAUF_TEXT_LEN = 1000; // grosszuegiger als frage, deckt Assistant-Antworten ab
+// 2026-08-03: von 1000 auf 2500 angehoben - war zu knapp bemessen fuer
+// modelRouter.ts MAX_TOKENS=350 (seit 2026-07-3x erhoeht fuer "laengere
+// Antworten"). Eine ausfuehrliche Finn-Antwort auf Frage 1 konnte >1000
+// Zeichen haben; sobald sie bei Frage 2 im verlauf mitgeschickt wurde, hat
+// validateVerlauf() sie abgelehnt (400 invalid_verlauf) - der Client zeigt
+// das als generischen "Kurzer Aussetzer"-Fehler, obwohl der Server sauber
+// geantwortet hatte. 2500 laesst auch bei ungewoehnlich langen Antworten
+// Luft (Reserve zur reinen Token->Zeichen-Hochrechnung von ~350*6).
+const MAX_VERLAUF_TEXT_LEN = 2500;
 const MAX_VERGLEICHSOBJEKTE = 5;
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9-]{8,64}$/;
 

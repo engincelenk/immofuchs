@@ -5,7 +5,7 @@ import { PFANDBRIEF, MARKET_RATES } from "../../data.js";
 import { fmtE } from "../../utils/helpers.js";
 import { F, Row, Sec, VT } from "../ui/atoms.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
-import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
+import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 
@@ -698,25 +698,26 @@ export function Vorfaelligkeit() {
       @media(max-width:699px) die gerade inaktive Pane per display:none aus.
       Stand das Widget darin, verschwand der position:fixed-Fuchs in der
       Eingabe-Ansicht komplett (Nutzer-Feedback 2026-07-22). */}
-      {R &&
-        (() => {
-          const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
-          const kontext = buildAssistantContext("vorfaelligkeit", d, {
-            nettoVfe: R.nettovfe,
-            zinsverschlechterungsschaden: R.zinsverschlSchaden,
-            kappungDurch489: R.capped,
-            bewertung: null,
-          });
-          const suggested = [at.vfeSuggested1, at.vfeSuggested2, at.vfeSuggested3];
-          return (
-            <AssistantWidget
-              rechner="vorfaelligkeit"
-              kontext={kontext}
-              contextLabel={at.contextVorfaelligkeit}
-              suggested={suggested}
-              lang={lang}
-            />
-          );
+      {(() => {
+        const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
+        const suggested = [at.vfeSuggested1, at.vfeSuggested2, at.vfeSuggested3];
+        return (
+          <AssistantGate
+            active={!!R}
+            rechner="vorfaelligkeit"
+            buildKontext={() =>
+              buildAssistantContext("vorfaelligkeit", d, {
+                nettoVfe: R.nettovfe,
+                zinsverschlechterungsschaden: R.zinsverschlSchaden,
+                kappungDurch489: R.capped,
+                bewertung: null,
+              })
+            }
+            contextLabel={at.contextVorfaelligkeit}
+            suggested={suggested}
+            lang={lang}
+          />
+        );
         })()}
     </div>
   );

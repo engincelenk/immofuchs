@@ -399,14 +399,21 @@ export default function App() {
       body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased}
       input,select,button,textarea{font-family:inherit;font-size:16px}
       input[type="number"]::-webkit-inner-spin-button{opacity:.3}
-      .shell{max-width:1400px;margin:0 auto;padding:calc(78px + env(safe-area-inset-top)) 0 calc(72px + env(safe-area-inset-bottom));min-height:100dvh;overflow-x:hidden;position:relative;width:100%}
+      /* overflow-x:clip statt hidden - hidden zwingt overflow-y still auf auto
+         und macht .shell/.content damit zu Scroll-Containern. Das sticky der
+         .res-pane rechnet dann gegen die und schiebt die Ergebnisspalte im
+         zugeklappten Zustand 50px nach unten (sichtbare Luecke ueber
+         "Analyse & Kennzahlen", Bugreport 2026-07-29). clip klippt genauso,
+         erzeugt aber keinen Scroll-Container. Die hidden-Zeile davor ist die
+         Rueckfallebene fuer Safari < 16. Nicht zu hidden zurueckdrehen. */
+      .shell{max-width:1400px;margin:0 auto;padding:calc(78px + env(safe-area-inset-top)) 0 calc(72px + env(safe-area-inset-bottom));min-height:100dvh;overflow-x:hidden;overflow-x:clip;overflow-y:visible;position:relative;width:100%}
       .hdr{position:fixed;top:0;left:0;right:0;z-index:50;padding:10px 16px;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);display:flex;justify-content:space-between;align-items:center;height:78px;padding-top:calc(10px + env(safe-area-inset-top))}
       .hdr{height:calc(78px + env(safe-area-inset-top))}
       .hdr-inner{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;width:100%}
       .tbar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--cc);border-top:1px solid var(--cb);padding:6px 0 calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:center}
       .tbtn{flex:1;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border:none;background:none;cursor:pointer;min-height:48px}
       .tbtn span{font-size:11px;font-weight:600;letter-spacing:.3px}
-      .content{padding:14px 14px;max-width:1400px;margin:0 auto;width:100%;overflow-x:hidden}
+      .content{padding:14px 14px;max-width:1400px;margin:0 auto;width:100%;overflow-x:hidden;overflow-x:clip;overflow-y:visible}
       .ls{font-size:14px;padding:8px 10px;border:1px solid var(--cb);border-radius:8px;background:var(--ci);color:var(--ct);cursor:pointer;font-family:inherit;min-height:38px}
       /* MOBILE-FIRST DEFAULTS — apply to all viewports < 700px */
       .if-row{display:grid;grid-template-columns:1fr;gap:0}

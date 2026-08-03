@@ -9,7 +9,7 @@ import { Legal } from "../ui/LangSel.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
-import { AssistantWidget } from "../assistant/AssistantWidget.jsx";
+import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 
@@ -351,38 +351,40 @@ export default function Miete() {
       @media(max-width:699px) die gerade inaktive Pane per display:none aus.
       Stand das Widget darin, verschwand der position:fixed-Fuchs in der
       Eingabe-Ansicht komplett (Nutzer-Feedback 2026-07-22). */}
-      {R &&
-        (() => {
-          const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
-          const nx = R.rows && R.rows[0];
-          const kontext = buildAssistantContext("miete", d, {
-            naechsteErhoehungDatum: nx ? nx.datum.toISOString().split("T")[0] : null,
-            naechsteErhoehungBetrag: nx ? nx.mE : null,
-            kappungsgrenzeProzent: R.kP,
-            bewertung: null,
-          });
-          const suggested = [
-            at.mieteSuggested1,
-            at.mieteSuggested2,
-            at.mieteSuggested3,
-            at.mieteSuggested4,
-            at.mieteSuggested5,
-            at.mieteSuggested6,
-            at.mieteSuggested7,
-            at.mieteSuggested8,
-            at.mieteSuggested9,
-            at.mieteSuggested10,
-          ];
-          return (
-            <AssistantWidget
-              rechner="miete"
-              kontext={kontext}
-              contextLabel={at.contextMiete}
-              suggested={suggested}
-              lang={lang}
-            />
-          );
-        })()}
+      {(() => {
+        const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
+        const suggested = [
+          at.mieteSuggested1,
+          at.mieteSuggested2,
+          at.mieteSuggested3,
+          at.mieteSuggested4,
+          at.mieteSuggested5,
+          at.mieteSuggested6,
+          at.mieteSuggested7,
+          at.mieteSuggested8,
+          at.mieteSuggested9,
+          at.mieteSuggested10,
+        ];
+        return (
+          <AssistantGate
+            active={!!R}
+            rechner="miete"
+            buildKontext={() => {
+              const nx = R.rows && R.rows[0];
+              const gueltigesDatum = nx && nx.datum instanceof Date && !isNaN(nx.datum);
+              return buildAssistantContext("miete", d, {
+                naechsteErhoehungDatum: gueltigesDatum ? nx.datum.toISOString().split("T")[0] : null,
+                naechsteErhoehungBetrag: nx ? nx.mE : null,
+                kappungsgrenzeProzent: R.kP,
+                bewertung: null,
+              });
+            }}
+            contextLabel={at.contextMiete}
+            suggested={suggested}
+            lang={lang}
+          />
+        );
+      })()}
     </div>
   );
 }

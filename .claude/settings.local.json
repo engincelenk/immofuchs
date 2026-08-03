@@ -1,10 +1,4 @@
 {
-  "autoMode": {
-  "allow": [
-    "$defaults",
-    "Bash(npm run deploy)"
-  ]
-},
   "permissions": {
     "allow": [
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\engin\\\\OneDrive\\\\Dokumente\\\\Claude\\\\Projects\\\\Immofuchs.info\" -Recurse | Where-Object { $_.FullName -notmatch 'node_modules' })",
@@ -21,7 +15,14 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Skill(artifact-design)",
-      "Skill(artifact-design:*)"
+      "Skill(artifact-design:*)",
+      "Bash(npx skills *)"
+    ]
+  },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Bash(npm run deploy)"
     ]
   }
 }

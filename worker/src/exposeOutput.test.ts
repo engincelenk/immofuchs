@@ -99,6 +99,78 @@ describe("parseExposeOutput", () => {
     expect(r.warnungen).toEqual([{ feld: "ort", hinweis: "abweichend" }]);
   });
 
+  it("uebernimmt strukturierte Abweichungen mit beiden Fundstellen", () => {
+    const r = parseExposeOutput(
+      JSON.stringify({
+        abweichungen: [
+          {
+            feld: "wohnflaeche",
+            wert_a: 50,
+            quelle_a: "Eckdaten-Tabelle",
+            wert_b: "47,88 m2",
+            quelle_b: "Ausstattungsliste",
+            hinweis: "unterschiedlich angegeben",
+          },
+        ],
+      }),
+    );
+    // "47,88 m2" ist nach Abzug der Einheit vollstaendig eine Zahl und wird
+    // deshalb als Zahl uebernommen - die Konsistenz-Engine rechnet damit.
+    expect(r.abweichungen).toEqual([
+      {
+        feld: "wohnflaeche",
+        wert_a: 50,
+        quelle_a: "Eckdaten-Tabelle",
+        wert_b: 47.88,
+        quelle_b: "Ausstattungsliste",
+        hinweis: "unterschiedlich angegeben",
+      },
+    ]);
+  });
+
+  it("laesst Aussagen in Abweichungen als Text stehen, statt eine Zahl daraus zu machen", () => {
+    const r = parseExposeOutput(
+      JSON.stringify({
+        abweichungen: [
+          {
+            feld: "stellplatz_kaufpreis",
+            wert_a: "2 Stellplaetze im Kaufpreis enthalten",
+            quelle_a: "Objektbeschreibung",
+            wert_b: 15000,
+            quelle_b: "Eckdaten-Tabelle",
+            hinweis: "zu klaeren",
+          },
+        ],
+      }),
+    );
+    expect(r.abweichungen[0].wert_a).toBe("2 Stellplaetze im Kaufpreis enthalten");
+    expect(r.abweichungen[0].wert_b).toBe(15000);
+  });
+
+  it("verwirft unvollstaendige und inhaltsleere Abweichungen", () => {
+    const r = parseExposeOutput(
+      JSON.stringify({
+        abweichungen: [
+          { feld: "wohnflaeche", wert_a: 50, wert_b: 48, hinweis: "ohne Quellen" },
+          {
+            feld: "kaufpreis",
+            wert_a: 199000,
+            quelle_a: "Titel",
+            wert_b: 199000,
+            quelle_b: "Tabelle",
+            hinweis: "identisch, kein Widerspruch",
+          },
+          "kaputt",
+        ],
+      }),
+    );
+    expect(r.abweichungen).toEqual([]);
+  });
+
+  it("liefert ein leeres Abweichungs-Array, wenn das Modell keins schickt", () => {
+    expect(parseExposeOutput("{}").abweichungen).toEqual([]);
+  });
+
   it("wirft bei unbrauchbarer Antwort", () => {
     expect(() => parseExposeOutput("Tut mir leid, ich kann das nicht lesen.")).toThrow(
       "expose_output_not_json",

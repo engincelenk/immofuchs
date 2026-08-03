@@ -7,7 +7,7 @@ import { FinnBubble } from "../assistant/FinnBubble.jsx";
 import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
-import { ASSISTANT_FIELDS } from "../../utils/assistantContext.js";
+import { ASSISTANT_FIELDS, tabZuRechner } from "../../utils/assistantContext.js";
 
 const MAX_COMPARE = 5;
 
@@ -213,6 +213,11 @@ export function Merkliste() {
   const [confirmDel, setConfirmDel] = useState(null);
   const [compareIds, setCompareIds] = useState([]);
   const [compareSheetOpen, setCompareSheetOpen] = useState(false);
+  // Die Sprechblase verspricht "ich vergleiche" - damit das eingeloest wird,
+  // stellt das Oeffnen ueber den Vergleichs-Button/die Bubble sofort die erste
+  // Vergleichsfrage, statt nur die Frage-Chips zu zeigen (Nutzer-Feedback
+  // 2026-07-29).
+  const [compareAutoAsk, setCompareAutoAsk] = useState(false);
   // Sprechblase ueber dem Vergleichs-Button: die Merkliste ist kein Rechner,
   // hier reicht ein Text (Nutzerentscheidung 2026-07-22).
   const [compareBubbleText, dismissCompareBubble] = useFinnBubble(
@@ -237,14 +242,21 @@ export function Merkliste() {
   };
   // Datenschutz-Zwischenschritt entfaellt (Nutzerwunsch 2026-07-22) -
   // der Vergleichs-Chat oeffnet direkt.
-  const openCompare = () => setCompareSheetOpen(true);
+  const openCompare = () => {
+    setCompareAutoAsk(true);
+    setCompareSheetOpen(true);
+  };
   const compareObjs = savedList.filter((o) => compareIds.includes(o.id));
+  // o.tab ist die UI-Tab-Id (haupt/kredit/...), der Worker will seinen eigenen
+  // rechner-Wert - siehe tabZuRechner(). Die Uebersetzung muss auch den
+  // ASSISTANT_FIELDS-Zugriff speisen, sonst bleiben die felder leer.
   const vergleichsObjekte = compareObjs.map((o) => {
-    const fields = ASSISTANT_FIELDS[o.tab] ?? [];
+    const rechner = tabZuRechner(o.tab);
+    const fields = ASSISTANT_FIELDS[rechner] ?? [];
     const felder = Object.fromEntries(fields.map((f) => [f, o.data[f]]));
-    return { name: o.name, tab: o.tab, felder };
+    return { name: o.name, tab: rechner, felder };
   });
-  const compareRechner = compareObjs[0]?.tab || "renditerechner";
+  const compareRechner = tabZuRechner(compareObjs[0]?.tab);
   if (!savedList.length)
     return (
       <div style={{ padding: "60px 20px", textAlign: "center" }}>
@@ -495,57 +507,59 @@ export function Merkliste() {
           document.body,
         )}
 
-      {/* ═══ KI-ASSISTENT OBJEKTVERGLEICH (Phase 3, Sprint 6 — Konzept 3.3a) ═══ */}
-      {compareIds.length >= 2 &&
-        createPortal(
-          <div
+      {/* ═══ KI-ASSISTENT OBJEKTVERGLEICH (Phase 3, Sprint 6 — Konzept 3.3a) ═══
+          Bewusst IM Seitenfluss unter der Objektliste, nicht als fixes Overlay
+          per createPortal (Nutzer-Feedback 2026-07-29): das Overlay lag optisch
+          auf einer eigenen Ebene ueber der Seite und war ueber die volle Breite
+          viel zu gross. Jetzt kompakt und rechtsbuendig direkt an der Liste. */}
+      {compareIds.length >= 2 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: 8,
+            marginTop: 4,
+          }}
+        >
+          <FinnBubble
+            text={compareBubbleText || at.hintVergleich}
+            visible={!!compareBubbleText}
+            onOpen={() => {
+              dismissCompareBubble();
+              openCompare();
+            }}
+            onDismiss={dismissCompareBubble}
+            openLabel={at.compareButton}
+            dismissLabel={at.close}
+          />
+          <button
+            className="no-print"
+            onClick={() => {
+              dismissCompareBubble();
+              openCompare();
+            }}
             style={{
-              position: "fixed",
-              left: 16,
-              right: 16,
-              bottom: "calc(76px + env(safe-area-inset-bottom))",
-              zIndex: 120,
+              height: 38,
+              padding: "0 16px",
+              borderRadius: 10,
+              border: "1.5px solid var(--ca)",
+              background: "var(--ca)",
+              color: "#fff",
+              fontSize: 14,
+              fontWeight: 600,
+              fontFamily: "inherit",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
             }}
           >
-            <FinnBubble
-              text={compareBubbleText || at.hintVergleich}
-              visible={!!compareBubbleText}
-              onOpen={() => {
-                dismissCompareBubble();
-                openCompare();
-              }}
-              onDismiss={dismissCompareBubble}
-              openLabel={at.compareButton}
-              dismissLabel={at.close}
-            />
-            <button
-              className="no-print"
-              onClick={() => {
-                dismissCompareBubble();
-                openCompare();
-              }}
-              style={{
-                width: "100%",
-                height: 48,
-                borderRadius: 24,
-                border: "none",
-                background: "var(--ca)",
-                color: "#fff",
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 4px 16px rgba(0,0,0,.2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-            >
-              {at.compareButton} ({compareIds.length})
-            </button>
-          </div>,
-          document.body,
-        )}
+            {at.compareButton} ({compareIds.length})
+          </button>
+        </div>
+      )}
       <AssistantSheet
         open={compareSheetOpen}
         onClose={() => setCompareSheetOpen(false)}
@@ -556,6 +570,8 @@ export function Merkliste() {
         suggested={[at.vglSuggested1, at.vglSuggested2]}
         lang={lang}
         t={at}
+        autoAskQuestion={compareAutoAsk ? at.vglSuggested1 : null}
+        onAutoAskHandled={() => setCompareAutoAsk(false)}
       />
     </div>
   );

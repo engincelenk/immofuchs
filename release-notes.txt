@@ -1,3 +1,399 @@
+## 2026-08-03 (1.55.96)
+
+### Fix: Finn zeigte generischen Fehler nach der 2. Chat-Frage (Dev-Worker)
+
+**Problem**
+- Nutzer-Feedback: Im Dev-Worker meldete Finn nach der 2. Frage im selben
+  Chat "Kurzer Aussetzer bei mir — nochmal?", obwohl der Server (laut
+  `wrangler tail` und Browser-Network-Tab) sauber geantwortet hatte.
+- Ursache gefunden ueber Network-Tab: Status 400, nicht 502/429/503.
+  `worker/src/validator.ts` liess pro `verlauf`-Eintrag (inkl. Finns eigener
+  vorheriger Antwort) nur `MAX_VERLAUF_TEXT_LEN = 1000` Zeichen zu.
+  `modelRouter.ts` erlaubt dem Modell aber `MAX_TOKENS = 350` (bewusst
+  erhoeht fuer laengere Antworten, ~160 statt 80 Woerter) - eine
+  ausfuehrliche Antwort auf Frage 1 kann leicht ueber 1000 Zeichen liegen.
+  Bei Frage 2 wird genau diese Antwort im `verlauf` mitgeschickt -> Server
+  lehnt mit 400 (`invalid_verlauf`) ab -> Client wirft `assistant_failed`
+  -> generische Fehlermeldung im Chat, obwohl kein Modell-/CORS-/Rate-Limit-
+  Problem vorlag.
+
+**Fix**
+- `validator.ts`: `MAX_VERLAUF_TEXT_LEN` von 1000 auf 2500 angehoben -
+  deckt auch ungewoehnlich lange Antworten mit Reserve ab.
+
+**Betroffene Dateien:** worker/src/validator.ts
+
+### Chore: Rate-Limits auf Free-Tier-Maximum kalibriert (Dev + QA/Prod)
+
+**Kontext**
+- Auf Nutzerwunsch: alle Tages-/IP-/Session-Limits fuer Text-Chat und
+  Expose-Extraktion so hoch wie moeglich gesetzt, ohne die kostenlosen
+  Kontingente von Gemini (1.000 Requests/Tag, 15/Minute, pro Projekt/Key)
+  und Workers AI (10.000 Neuronen/Tag, kontoweit, nur Fallback) zu
+  ueberschreiten. QA und Prod teilen sich denselben Worker
+  ("immofuchs-assistant", siehe deploy-qa.yml/deploy-prod.yml) und damit
+  ein gemeinsames Kontingent - eine Aenderung hier wirkt auf beide.
+- Neue Werte (Top-Level [vars] = QA+Prod, [env.dev.vars] = Dev):
+  DAILY_REQUEST_LIMIT 20→50, IP_DAILY_LIMIT 60→100,
+  GLOBAL_DAILY_LIMIT 2000→800, EXPOSE_DAILY_LIMIT 5→8,
+  EXPOSE_IP_DAILY_LIMIT 15→20, EXPOSE_GLOBAL_DAILY_LIMIT 300→150.
+  GLOBAL_DAILY_LIMIT + EXPOSE_GLOBAL_DAILY_LIMIT bleiben bewusst unter
+  1.000, damit ein normaler Tag nicht in den kapazitaetsschwachen
+  Workers-AI-Fallback rutscht.
+
+**Betroffene Dateien:** worker/wrangler.toml
+
+
+## 2026-07-30 (1.55.95)
+
+### Fix: Finn zitierte rohe JSON-Feldnamen statt Klartext (alle Rechner)
+
+**Problem**
+- Screenshot-Feedback: Finns Antworten enthielten rohe Code-Feldnamen aus
+  dem Kontext-JSON, z.B. "sanHt: 'heizoel'", "sanFl: '60'",
+  "bewertung: null", "nettokosten" — statt verständlicher Bezeichnungen wie
+  im Rechner selbst.
+- Ursache: `promptBuilder.ts` schickt den Kontext als rohes JSON ans
+  Modell. Das Regelwerk (`systemPrompt.ts`) sagte zwar "erkläre jedes
+  Feld verständlich" (Regel 2), aber nirgends "zitiere nie die rohen
+  JSON-Schlüssel/-Werte" — das Modell übernahm die Feldnamen deshalb 1:1
+  aus dem JSON in die Antwort. Betraf alle 6 Rechner gleichermaßen, da sie
+  sich dasselbe Regelwerk teilen.
+
+**Fix**
+- `systemPrompt.ts`: neue Regel 11 — Kontext-JSON ist reines Datenmaterial
+  für das Modell, keine Zitatquelle. Rohe Schlüssel/Werte sind tabu,
+  stattdessen immer die natürlichsprachliche, im Rechner sichtbare
+  Bezeichnung nutzen.
+
+**Betroffene Dateien:** worker/src/systemPrompt.ts
+
+
+## 2026-07-30 (1.55.94)
+
+### Fix: Finn zeigte rote Fehlermeldung statt still zu bleiben, wenn noch kein Ergebnis vorlag
+
+**Problem**
+- Nutzer-Feedback (mobil): Finn konnte auf bestimmte Fragen nicht antworten,
+  wenn noch kein Rechenergebnis vorlag (z.B. Mieterhöhungsrechner ohne
+  gültige Eingabe), und zeigte stattdessen eine rote Fehlermeldung statt
+  einfach zu schweigen.
+- Konkreter Fund: Im Mieterhöhungsrechner (`Miete.jsx`) konnte ein
+  ungültiges Datum bei "letzte Erhöhung" (z.B. mobiler Freitext-Fallback
+  bei `<input type="date">`) beim Kontextaufbau für Finn eine ungefangene
+  `RangeError: Invalid time value` auslösen (`.toISOString()` auf
+  Invalid Date) — das riss ungebremst den ganzen React-Baum runter (keine
+  ErrorBoundary in der App).
+
+**Fix**
+- `Miete.jsx`: Datum wird vor `.toISOString()` auf Gültigkeit geprüft
+  (`instanceof Date && !isNaN(...)`), sonst wird `null` an Finn übergeben.
+- Neue gemeinsame Komponente `AssistantGate.jsx`: bündelt für alle 6
+  Rechner (Rendite, Finanzierung, Miete, Sanierung, Vorfälligkeit,
+  6%-Trick) den bisher pro Rechner duplizierten "Finn nur bei vorhandenem
+  Ergebnis anzeigen"-Block und faengt Fehler beim Kontextaufbau über eine
+  React-ErrorBoundary ab. Schlägt der Kontextaufbau eines Rechners
+  künftig fehl, bleibt Finn einfach unsichtbar statt die App abstürzen zu
+  lassen. Reicht neu auch `autoOpenUpload`/`onAutoOpenUploadHandled`
+  durch, damit der Expose-Upload-Deep-Link (1.55.9x) weiter funktioniert.
+
+**Betroffene Dateien:** src/components/assistant/AssistantGate.jsx (neu),
+src/components/calculators/Renditerechner.jsx, Finanzierung.jsx, Miete.jsx,
+Sanier.jsx, src/components/extras/Vorfaelligkeit.jsx, SteuerTrick.jsx
+
+
+## 2026-07-30 (1.55.93)
+
+### Fix: Finn-Minimieren auf Mobile entfernt (Overlap mit Tab-Bar)
+
+Bug-Report (Screenshot): die eingeklappte Finn-Leiste sitzt wie die App-eigene
+Bottom-Tab-Bar auf `position:fixed; bottom:0` - beide stapelten sich am
+unteren Rand, Finn ueberlappte sichtbar "Sanierung"/"§6-Trick"/"Merkliste".
+Grundproblem: der Minimieren-Button war nie auf Desktop beschraenkt, obwohl
+das Eckfenster-Konzept (kein Overlay, keine Tab-Bar) nur dort gilt.
+
+Fix: Minimieren-Button in AssistantHeaderBar.jsx nur noch bei isDesktop
+sichtbar (>=1024px) - auf Mobile bleibt nur noch das Schliessen-Kreuz.
+Zusaetzlich ein Reset-Effekt in AssistantSheet.jsx/LandingMascot.jsx: faellt
+isDesktop waehrend minimiert unter 1024px (Fenster verkleinert), wird
+minimized automatisch zurueckgesetzt. Der Backdrop-Pointer-events-Fix von
+1.55.91 wurde dadurch gegenstandslos und ist wieder entfernt (minimiert
+kann jetzt gar nicht mehr auf Mobile vorkommen).
+Betrifft: AssistantHeaderBar.jsx, AssistantSheet.jsx, LandingMascot.jsx,
+assistantStyles.js.
+
+Verifiziert im Dev-Server (Mobile-Viewport 375x812, Service Worker vor jedem
+Test abgemeldet + Cache geleert - sonst wurde faelschlich der alte Stand mit
+sichtbarem Minimieren-Button ausgeliefert): Kopfzeile zeigt auf Mobile nur
+noch "Schliessen", auf Desktop (1280px) bleibt "Fenster verkleinern"
+unveraendert erhalten.
+
+## 2026-07-30 (1.55.92)
+
+### Finn-Systemprompt: vier Fachwissens-Bereiche ergänzt
+
+Regel 10 in worker/src/systemPrompt.ts hinzugefügt (Fachentscheidung, keine
+reine Code-Änderung):
+  Steuer     — AfA-Varianten (linear/degressiv/Sonder/Denkmal), Spekulations-
+               frist §23 EStG, Grunderwerbsteuer je Bundesland, 3-Objekt-Grenze
+  Recht      — WEG: Hausgeld/Rücklage/Sonderumlage, Beschlussfähigkeit
+  Sanierung  — KfW-261 fachlich erklärbar (Rechner bildet es noch nicht ab,
+               das wird explizit dazugesagt), GEG-2024-Heizungstausch-Pflichten
+  Markt      — Mikro-/Makrolage, Marktzyklen, Leerstandsrisiko als Ergänzung
+               zu den BANDS-Kennzahlen
+
+Betroffene Datei: worker/src/systemPrompt.ts
+
+## 2026-07-30 (1.55.91)
+
+### Fix: Finn-Minimieren auf Mobile blockierte den Rechner dahinter
+
+Bug-Report: Nach dem Einklappen von Finn blieb der volltransparente Backdrop
+(if-asst-backdrop) samt Body-Scroll-Lock aktiv. Jeder Tap auf die Seite
+dahinter (z.B. den Rechner) traf in Wirklichkeit den Backdrop, dessen
+onClick die kompakte Leiste komplett schloss - die Einklapp-Funktion war
+dadurch faktisch nutzlos, da sie beim ersten Tap wieder verschwand statt
+erreichbar zu bleiben.
+
+Fix: Backdrop bekommt im minimierten Zustand zusaetzlich `opacity:0` +
+`pointer-events:none`, der Body-Scroll-Lock wird ebenfalls ausgesetzt.
+Betrifft zwei Stellen mit dupliziertem Sheet/Backdrop-Markup:
+  src/components/assistant/AssistantSheet.jsx   (Rechner-Seiten)
+  src/components/assistant/LandingMascot.jsx    (Startseite)
+  src/components/assistant/assistantStyles.js   (.if-asst-backdrop.minimized)
+
+Verifiziert im Dev-Server (mobile Viewport 375x812): waehrend minimiert
+trifft ein Klick auf die Seite dahinter jetzt das echte Seitenelement statt
+des Backdrops, Finn bleibt eingeklappt statt zu schliessen; Aufklappen per
+"+" stellt Backdrop-Opazitaet und Scroll-Lock wieder normal her.
+
+## 2026-07-30 (1.55.90)
+
+### Finn Expose-Analyse, Etappe 1: Konsistenz-Engine, Realpreis-Rechner,
+### Fragenkatalog-Abgleich (noch ohne UI)
+
+Erste von drei Etappen aus docs/Finn_Expose_Analyse_Spec_v2.md. Finn soll
+vom Expose-Zusammenfasser zum Deal-Analysten werden: finanziell relevante
+Widersprueche im Expose finden, nach Euro-Relevanz sortieren und als
+Besichtigungs-Handout ausgeben. Diese Etappe liefert nur den Rechenkern -
+sichtbar wird davon noch nichts (Panel = E2, PDF = E3).
+
+Neu im Client (alles deterministisch, kein zweiter KI-Call, <50ms):
+  src/data/finnFragenkatalog.js  44 Fragen in 11 Abschnitten, 12 davon
+                                 Kern-Fragen; Uebertragung von
+                                 docs/Finn_Fragenkatalog.md
+  src/utils/finnRealpreis.js     All-in-Preis, EUR/m2 beworben vs. real,
+                                 Brutto-/Nettomietrendite
+  src/utils/finnKonsistenz.js    Regeln K1-K7 + Red-Flag-Radar + Verdict
+  src/utils/finnAbgleich.js      Katalog filtern (ETW/Haus, vermietet),
+                                 automatisch beantworten, Rest offen lassen
+  src/utils/finnAnalyse.js       Orchestrator
+  src/utils/finnFixtures.js      Extraktionsergebnisse beider Referenz-
+                                 Exposes als Abnahmegegenstand
+
+Worker (die einzige noetige Aenderung dort): neues `abweichungen`-Array
+neben dem bestehenden `warnungen`. Grund: `warnungen` ist Freitext und
+verliert den *beworbenen* Wert - fuer die Tabelle "Beworben | Real" und den
+Euro-Schaden werden beide Zahlen mit Fundstelle gebraucht. `warnungen`
+bleibt unveraendert, die Feldzeilen-Anzeige haengt daran.
+  ACHTUNG: Die CI deployt den Worker nicht. Ohne manuelles
+  `npx wrangler deploy --env dev` liefert der Worker weiter das alte Schema;
+  die Analyse degradiert dann sauber (K2 entfaellt, Rest laeuft).
+
+Gegen die zwei realen Referenz-Exposes nachgerechnet:
+  Ingersheim  50 m2 beworben vs. 47,88 m2 belegt -> 8.437,60 EUR Differenz;
+              3.980 EUR/m2 beworben, 4.156,22 EUR/m2 real, 4.469,51 all-in.
+              Nicht vermietet -> Abschnitt "Vermietung" faellt komplett weg.
+  Murr        Tiefgarage im selben Fliesstext einmal "im Kaufpreis
+              enthalten", einmal "zzgl. 15.000 EUR" -> groesster Fund.
+              Zweiter, bisher unbekannter Widerspruch: 76 m2 in der Tabelle
+              vs. 75 m2 im Text (3.671,05 EUR). Rendite 4,08 % brutto /
+              3,77 % netto auf 294.000 EUR.
+
+Korrektur an der Vorgaenger-Spec: die dort und im PDF-Prototyp genannten
+4.157 und 4.471 EUR/m2 sind handgerundet und je ~1 EUR/m2 zu hoch.
+Maszgeblich sind die gerechneten Werte.
+
+47 neue Tests, Worker-Typecheck und Build sauber.
+
+### Etappe 2 + 3: Handout-Panel, PDF-Export, freigestelltes Logo
+
+Trigger (useAssistant.js): die Analyse laeuft einmal beim Eintreffen des
+Extraktionsergebnisses, nicht im Render - sie ist Eingang fuer die
+Fragen-Auswahl. Der try/catch sitzt an genau diesem Aufrufpunkt; waehrend
+des Renders wuerde ein Fehler das ganze Assistenten-Sheet mitreissen.
+
+Panel (FinnHandoutPanel.jsx): sitzt unter der Uebernahme-Karte, startet
+eingeklappt - die Uebernahme ist die Kernfunktion des Uploads und darf
+nicht nach unten geschoben werden. Kopfzeile traegt Verdict, Score und den
+groessten Euro-Fund. Aufgeklappt: GR-01-Hinweis, Top-Findings mit
+Fundstellen, Preistabelle Beworben/Real, Bereits bekannt, Noch zu klaeren
+mit Checkboxen, Vor Ort pruefen, PDF-Button. Keine neuen Farben, alles
+ueber die bestehenden Token.
+
+PDF (finnHandoutPdf.js): clientseitig ueber ein Druckfenster wie
+ExportPDF.jsx - kein Server, kein Endpunkt, der abzusichern waere.
+window.open() laeuft synchron VOR jedem await, sonst blockt iOS Safari das
+Fenster. Text aus dem Expose wird maskiert, bevor er ins document.write
+geht.
+
+Persistenz (finnAuswahl.js) - ABWEICHUNG ZUR SPEC: geplant war, die
+Auswahl an den gemerkten Objekten aufzuhaengen. Diese Verbindung gibt es
+nicht: saveObj() speichert den Formular-State der Rechner, ein gemerktes
+Objekt weiss nichts von dem Expose, aus dem seine Werte stammen.
+Stattdessen eigener Store, adressiert ueber einen Fingerabdruck aus
+Adresse, Kaufpreis und Wohnflaeche. Besser als geplant: die Auswahl
+ueberlebt auch ohne gemerktes Objekt.
+
+Logo freigestellt (war Backlog-Punkt der Spec): public/logo.png ist RGBA,
+aber vollflaechig deckend mit Fast-Weiss und haette im Handout-Kopf einen
+sichtbaren Kasten hinterlassen. scripts/logo-freistellen.py erzeugt
+public/logo-transparent.png per Flood-Fill vom Bildrand - NICHT per
+globalem Farbschluessel, der haette das weisse Fell an Brust, Wangen und
+Schwanzspitze sowie die Taschenrechner-Tasten mit ausgestanzt. Zweiter
+Durchgang federt den Anti-Aliasing-Saum ab. Gegen Marineblau,
+Fuchs-Orange und Hellgrau geprueft. public/logo.png bleibt unveraendert,
+ExportPDF.jsx laeuft weiter darauf.
+
+Zwei Fehler, die erst in der Browser-Pruefung sichtbar wurden:
+  - Stockwerk stand als nackte Tabellen-Zahl im Kopf ("Baujahr 1995, 1,
+    ca. 75 m2") - wird jetzt zu "1. OG" ausgeschrieben.
+  - Der Auswahl-Store konnte den gerade geschriebenen Eintrag selbst
+    hinauswerfen: mehrere Schreibvorgaenge in derselben Millisekunde haben
+    denselben Zeitstempel, die Sortierung ist dann stabil und behaelt die
+    aeltesten. Der zuletzt geschriebene Eintrag ist jetzt gesetzt.
+
+i18n: Handout-Beschriftungen in allen fuenf Sprachen. Die Katalogfragen
+selbst bleiben deutsch - sie haengen an deutschem Recht (§ 577a BGB, GEG,
+WoFlV, WEG), uebersetzt waeren sie inhaltlich irrefuehrend.
+
+### Finn fuehrt durch den Upload
+
+Finn sagt jetzt an, was er tut und was danach kommt - vorher war der Upload
+eine Blackbox mit Fortschrittsbalken.
+
+Beim Start: "Alles klar, ich schaue es mir an. Ich lese das Exposé durch und
+ziehe die Werte heraus, die deine Rechner brauchen - Kaufpreis, Wohnflaeche,
+Hausgeld, Energiedaten. Das Abtippen sparst du dir."
+
+Nach dem Ergebnis, ueber dem Handout: nennt die Zahl der Funde und wofuer
+das Handout gut ist. Zwei Fassungen - bei einem unauffaelligen Exposé waere
+"ich habe 0 Punkte gefunden" die falsche Nachricht.
+
+Die Blasen liegen als Textschluessel in den Nachrichten, nicht als fertiger
+Text: so folgen sie einem spaeteren Sprachwechsel, statt in der Sprache von
+vorhin stehen zu bleiben. Alle fuenf Sprachen.
+
+Verifiziert im Browser mit gestubtem Worker-Call (voller Ablauf ohne
+Deploy): beide Ansagen erscheinen an der richtigen Stelle, Panel-Kopf zeigt
+"Verhandeln vor Zusage · groesster Fund -8.438 EUR · 3,3/5", 4 von 27 Fragen
+vorausgewaehlt. Auswahl geaendert, Seite neu geladen, erneut hochgeladen -
+exakt die 5 gespeicherten Fragen sind wieder angehakt. Mobile 375px ohne
+Ueberlauf. Handout beider Referenz-Exposes gegengelesen, Logo laedt.
+
+251 Tests gruen, Lint 0 Fehler, Build und Worker-Typecheck sauber.
+
+## 2026-07-29 (1.55.89)
+
+### Fix: Luecke im Renditerechner, Vergleichs-Button in den Seitenfluss,
+### Sprechblase nur noch einmal je Rechner
+
+Bugreport 1 - Luecke ueber "Analyse & Kennzahlen" beim Zuklappen aller
+Sektionen (Chrome, alle Umgebungen, ohne Scrollen).
+
+Messung (1440px, Renditerechner):
+  zugeklappt:  .res-pane 1147px, .split 2386px -> Versatz 50px  <- Luecke
+  aufgeklappt: .res-pane 5443px, .split 5443px -> Versatz  0px
+
+Ursache: `.shell` und `.content` hatten `overflow-x:hidden`. Nach CSS-Spec
+zwingt das `overflow-y` still auf `auto` - beide werden dadurch zu
+Scroll-Containern. Das `position:sticky; top:94px` der `.res-pane` rechnet
+dann gegen diesen Phantom-Container statt gegen den Viewport und schiebt die
+Ergebnisspalte statisch nach unten, ganz ohne Scrollen. Sticky darf nur
+innerhalb der Gitterzelle verschieben: aufgeklappt fuellt die Ergebnisspalte
+die Zelle exakt aus -> kein Spielraum -> keine Luecke; zugeklappt ist sie
+kuerzer als die Eingabespalte -> 50px Spielraum -> Luecke.
+
+Fix: `overflow-x:clip` statt `hidden` auf `.shell`/`.content` (plus
+`overflow-y:visible`). `clip` klippt identisch, erzeugt aber keinen
+Scroll-Container. Die vorangestellte `hidden`-Zeile ist die Rueckfallebene
+fuer Safari < 16. Verifiziert: Versatz 50 -> 0 in beiden Zustaenden, kein
+horizontaler Ueberlauf bei 375 / 768 / 1440px.
+
+Verworfen: ein erster Versuch mit `willChange:"transform"` auf der
+RBar-Karte (Compositing-Theorie) war wirkungslos und ist zurueckgenommen -
+RBar.jsx ist wieder unveraendert.
+
+Nebenbefund, bewusst NICHT geaendert: das `sticky` der Ergebnisspalte
+funktioniert dadurch seit jeher gar nicht (die Spalte scrollt normal mit).
+Es scharfzuschalten waere eine sichtbare Verhaltensaenderung und gehoert in
+eine eigene Entscheidung.
+
+Bugreport 2 - "Objekte vergleichen"-Button war ein `createPortal`-Overlay
+mit `position:fixed` ueber die volle Breite (1233x48px bei 1440px Viewport)
+und lag optisch auf einer eigenen Ebene ueber der Seite. Jetzt im normalen
+Seitenfluss der Merkliste unter der Objektliste, rechtsbuendig und kompakt
+(192x38px, Hoehe wie die "Laden"-Buttons). Die Finn-Sprechblase wandert mit.
+
+Ausserdem loeste das Oeffnen bisher nur Begruessung + Frage-Chips aus, obwohl
+die Sprechblase "ich vergleiche" verspricht - fuehlte sich wie "nichts
+passiert" an. Oeffnen ueber Button/Bubble stellt jetzt sofort die erste
+Vergleichsfrage.
+
+Bugreport 3 - Finns Sprechblase lief in jedem Rechner als 3er-Sequenz
+(3s / 30s / 57s). Jetzt poppt sie je Rechner nur noch einmal auf; der erste
+Text traegt ohnehin die wichtigste Aussage inklusive der ergebnisbezogenen
+Warnung aus `pickDringend()`. Die Landing-Page behaelt ihre volle Sequenz.
+
+Bugreport 4 - Nach Fix 2 meldete Finn beim Objektvergleich sofort "Kurzer
+Aussetzer bei mir". Ursache ist NICHT der Worker, sondern ein
+Namensraum-Drift im Frontend: die Merkliste speichert die UI-Tab-Id
+(`SaveBtn tab="haupt"|"kredit"|"miete"|"sanier"`), der Worker whitelistet
+aber eigene rechner-Werte (`renditerechner`, `finanzierung`, `miete`,
+`sanierung`, `steuertrick`, `vorfaelligkeit`, siehe
+`worker/src/validator.ts`). Merkliste.jsx reichte die Tab-Id unveraendert
+weiter - als `rechner` UND als `vergleichsObjekte[].tab`, beide werden gegen
+dieselbe Whitelist geprueft. Nur "miete" hiess zufaellig in beiden Welten
+gleich.
+
+Folge: der Objektvergleich hat ausser Miete/Miete NIE funktioniert. Die
+Auto-Frage aus Fix 2 hat den Fehler nicht verursacht, nur sofort sichtbar
+gemacht statt erst beim Klick auf einen Frage-Chip.
+
+Zweiter, stiller Fehler im selben Pfad: `ASSISTANT_FIELDS[o.tab]` war fuer
+`haupt`/`kredit`/`sanier` ebenfalls undefined -> `?? []` -> `felder` blieb
+leer. Finn haette also selbst bei bestandener Validierung zu jedem Objekt
+null Daten bekommen.
+
+Fix: `TAB_TO_RECHNER` + `tabZuRechner()` in `utils/assistantContext.js`,
+angewandt beim LESEN in Merkliste.jsx (nicht beim Speichern) - die alten Ids
+liegen laengst im localStorage der Nutzer und werden so mitgeheilt. Der
+Fallback zeigt bewusst auf einen GUELTIGEN Wert statt auf den Rohwert, sonst
+liefe ein unbekannter tab wieder in denselben 400er. `steuer6`/`vfe` sind
+bewusst nicht im Mapping: beide haben keinen SaveBtn, und fuer "steuertrick"
+existieren ohnehin keine ASSISTANT_FIELDS.
+
+Neuer Test `src/utils/assistantContext.test.js` laesst den ECHTEN
+Worker-Validator gegen die ECHTE Merklisten-Payload laufen (beides liegt im
+selben Repo, kein Netzaufruf). Genau dieser Vertrag ist unbemerkt
+auseinandergelaufen, weil ihn nichts gegengeprueft hat. Gegenprobe: mit
+sabotiertem Mapping fallen 4 der 7 Tests - der Test kann also wirklich
+fehlschlagen.
+
+Angrenzender Fund, bewusst NICHT geaendert: das Namensfeld beim Speichern
+hat kein `maxLength`. Ein Name ueber 120 Zeichen wird vom Worker mit
+derselben unspezifischen Fehlermeldung abgelehnt.
+
+Betroffene Dateien: `App.jsx`, `components/shell/Merkliste.jsx`,
+`components/assistant/AssistantSheet.jsx`,
+`components/assistant/finnHints.js`, `utils/assistantContext.js`,
+`utils/assistantContext.test.js`.
+
+Geprueft: `vitest run` 156/156 gruen, `eslint` sauber, `vite build`
+erfolgreich. Messungen live im Browser gegengeprueft; die abgefangene
+Laufzeit-Payload zeigt `rechner: renditerechner` und je Objekt 7 bzw. 6
+befuellte Felder (vorher `haupt`/`sanier` und 0 Felder).
+
 ## 2026-07-29 (1.55.88)
 
 ### Fester "Exposé hochladen"-Chip an erster Stelle (alle Upload-Rechner)
@@ -844,7 +1240,6 @@ invalid_lang, invalid_session_id, no_input, invalid_images,
 invalid_image_mime, too_many_images; 200 für gültige Bilder bzw. nur-PDF;
 429 beim 6. Aufruf derselben Session (Limit 5/Tag); 503 mit Prod-Vars.
 `npm run typecheck` grün.
-
 
 ## 2026-07-24 (1.55.62)
 

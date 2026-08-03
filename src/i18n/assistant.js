@@ -79,6 +79,12 @@ export const ASSISTANT_T = {
     offline: "Dafür brauche ich kurz Internet. Deine Rechner laufen offline weiter.",
     limit: "Für heute war's das mit Fragen — morgen bin ich wieder da.",
     error: "Kurzer Aussetzer bei mir — nochmal?",
+    // Bewusst getrennt von `error` (Nutzerwunsch 2026-08-03): ein 4xx vom
+    // Worker (z.B. Frage/Verlauf zu lang) ist kein Netzwerk-/Modell-
+    // Aussetzer, sondern ein strukturelles Problem mit der Anfrage - siehe
+    // useAssistant.js chatFehlerTechnisch.
+    errorTechnical:
+      "Da ist bei mir technisch etwas schiefgelaufen (kein Netzwerkproblem) — versuch's mit einer kürzeren Nachricht oder starte den Chat neu.",
     retry: "Nochmal versuchen",
     disabled: "Ich bin gerade nicht erreichbar. Deine Rechner funktionieren trotzdem.",
     close: "Schließen",
@@ -233,6 +239,8 @@ export const ASSISTANT_T = {
     offline: "I need a moment of internet for that. Your calculators keep working offline.",
     limit: "That's it for questions today — I'll be back tomorrow.",
     error: "Brief hiccup on my end — try again?",
+    errorTechnical:
+      "Something went wrong on my end technically (not a network issue) — try a shorter message or restart the chat.",
     retry: "Try again",
     disabled: "I'm not reachable right now. Your calculators still work.",
     close: "Close",
@@ -388,6 +396,8 @@ export const ASSISTANT_T = {
       "Bunun için internete ihtiyacım var. Hesaplayıcıların çevrimdışı çalışmaya devam ediyor.",
     limit: "Bugünlük bu kadar soru yeter — yarın tekrar.",
     error: "Kısa bir aksaklık — tekrar dener misin?",
+    errorTechnical:
+      "Burada teknik bir sorun oluştu (ağ sorunu değil) — daha kısa bir mesaj dene ya da sohbeti yeniden başlat.",
     retry: "Tekrar dene",
     disabled: "Asistan şu anda kullanılamıyor.",
     close: "Kapat",
@@ -535,6 +545,7 @@ export const ASSISTANT_T = {
     offline: "这个功能需要联网。你的计算器离线仍可使用。",
     limit: "今天的提问额度已用完——明天再来。",
     error: "出现短暂故障——要重试吗？",
+    errorTechnical: "我这边出现了技术故障（不是网络问题）——试试更短的消息，或重新开始对话。",
     retry: "重试",
     disabled: "助手当前不可用。",
     close: "关闭",
@@ -690,6 +701,8 @@ export const ASSISTANT_T = {
     offline: "इसके लिए इंटरनेट चाहिए। आपके कैलकुलेटर ऑफ़लाइन भी काम करते रहेंगे।",
     limit: "आज के लिए इतने सवाल काफ़ी — कल फिर आना।",
     error: "थोड़ी रुकावट — दोबारा कोशिश करें?",
+    errorTechnical:
+      "यहाँ कोई तकनीकी गड़बड़ी हुई (नेटवर्क समस्या नहीं) — कृपया छोटा संदेश आज़माएँ या चैट फिर से शुरू करें।",
     retry: "दोबारा कोशिश करें",
     disabled: "सहायक अभी उपलब्ध नहीं है।",
     close: "बंद करें",

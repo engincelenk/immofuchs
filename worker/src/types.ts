@@ -62,6 +62,25 @@ export interface ExposeWarnung {
   hinweis: string;
 }
 
+// Strukturierter Widerspruch fuer die Finn-Konsistenz-Engine
+// (Finn_Expose_Analyse_Spec_v2.md, Abschnitt 1.1).
+//
+// Warum zusaetzlich zu `warnungen`: dort steht der Widerspruch nur als
+// Freitext-Hinweis an einem Feld. Der zweite, *beworbene* Wert geht dabei
+// verloren - genau der wird aber gebraucht, um die Preistabelle
+// "Beworben | Real" zu bauen und den Euro-Schaden zu beziffern
+// ("50 m2 beworben, 47,88 m2 belegt" -> 2,12 m2 x 3.980 EUR = 8.437,60 EUR).
+// `warnungen` bleibt unveraendert bestehen: die Feldzeilen-Anzeige im Client
+// (exposeMapping.js) liest sie weiterhin.
+export interface ExposeAbweichung {
+  feld: string;
+  wert_a: number | string;
+  quelle_a: string;
+  wert_b: number | string;
+  quelle_b: string;
+  hinweis: string;
+}
+
 export interface ExposeObjekt {
   titel: string | null;
   objektart: string | null;
@@ -150,6 +169,7 @@ export interface ExposeExtractResponse {
   bild: ExposeBild;
   confidence: Record<string, ConfidenceWert>;
   warnungen: ExposeWarnung[];
+  abweichungen: ExposeAbweichung[];
 }
 
 export interface Env {

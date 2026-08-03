@@ -120,6 +120,68 @@ export const ASSISTANT_SHEET_CSS = `
   .if-exp-apply:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
   .if-exp-chip{align-self:center;background:var(--ci);border:1px solid var(--cb);border-radius:14px;padding:6px 12px;font-size:12px;color:var(--ch)}
 
+  /* Umschlag um Uebernahme-Karte + Handout. Der Log ist ein Flex-Container
+     mit gap:10px - ohne eigenen Block wuerde das Handout wie eine zweite,
+     unverbundene Nachricht wirken. */
+  .if-exp-block{align-self:stretch;display:flex;flex-direction:column;gap:8px}
+
+  /* Handout-Panel (Finn_Expose_Analyse_Spec_v2.md, Abschnitt 7). Startet
+     eingeklappt: die Uebernahme-Karte darueber ist die Kernfunktion des
+     Uploads und darf nicht nach unten geschoben werden. Keine neuen Farben -
+     alles ueber die bestehenden Token. */
+  .if-hnd{align-self:stretch;background:var(--cc);border:1px solid var(--cb);border-radius:12px;overflow:hidden}
+  .if-hnd-head{width:100%;display:flex;align-items:center;gap:8px;background:transparent;border:none;padding:11px 12px;font-family:inherit;font-size:13px;color:var(--ct);cursor:pointer;text-align:left;min-height:44px}
+  .if-hnd-head:focus-visible{outline:2px solid var(--ca);outline-offset:-2px}
+  .if-hnd-head-txt{flex:1;min-width:0}
+  .if-hnd-head-titel{font-weight:700;font-size:12.5px}
+  .if-hnd-head-sub{font-size:11px;color:var(--ch);margin-top:1px}
+  .if-hnd-score{flex:none;font-size:11px;font-weight:700;color:var(--ca-dk);background:var(--ca-bg);border:1px solid var(--ca-bd);border-radius:10px;padding:2px 7px}
+  .if-hnd-caret{flex:none;font-size:11px;color:var(--ch)}
+  .if-hnd-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:12px}
+
+  .if-hnd-gr1{font-size:11px;color:var(--cl);background:var(--ci);border:1px solid var(--cb);border-radius:8px;padding:7px 9px;line-height:1.45}
+  .if-hnd-sekt-titel{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--ch);margin-bottom:5px}
+  .if-hnd-leer{font-size:12.5px;color:var(--cl);line-height:1.5}
+
+  .if-hnd-find{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--cro)}
+  .if-hnd-find:last-child{border-bottom:none}
+  .if-hnd-find-tag{flex:none;width:74px;font-size:10.5px;font-weight:700;line-height:1.4;padding-top:1px}
+  .if-hnd-find-tag.critical{color:var(--ca-dk)}
+  .if-hnd-find-tag.warning{color:#8a6a20}
+  .if-hnd-find-tag.info{color:var(--ch)}
+  .if-hnd-find-txt{flex:1;min-width:0;font-size:12.5px;line-height:1.5;word-break:break-word}
+  .if-hnd-find-quellen{font-size:10.5px;color:var(--ch);margin-top:3px}
+  .if-hnd-mehr{font-size:11px;color:var(--ch);padding-top:6px}
+
+  .if-hnd-tab{width:100%;font-size:12.5px}
+  .if-hnd-tab th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--ch);text-align:right;padding:0 0 4px 8px}
+  .if-hnd-tab th:first-child{text-align:left;padding-left:0}
+  .if-hnd-tab td{padding:4px 0 4px 8px;text-align:right;border-top:1px solid var(--cro)}
+  .if-hnd-tab td:first-child{text-align:left;padding-left:0;color:var(--cl)}
+  .if-hnd-tab td.real{font-weight:700}
+  .if-hnd-tab tr.abw td.real{color:var(--ca-dk)}
+  .if-hnd-tab td.leer{color:var(--ch)}
+
+  .if-hnd-fakt{font-size:12.5px;line-height:1.5;padding:3px 0 3px 14px;position:relative;color:var(--cl)}
+  .if-hnd-fakt:before{content:"✓";position:absolute;left:0;top:3px;font-size:10px;color:var(--ca)}
+
+  .if-hnd-frage{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--cro)}
+  .if-hnd-frage:last-child{border-bottom:none}
+  .if-hnd-frage input{flex:none;width:18px;height:18px;margin-top:1px;accent-color:var(--ca)}
+  .if-hnd-frage-txt{flex:1;min-width:0;font-size:12.5px;line-height:1.45;word-break:break-word}
+  .if-hnd-frage-kat{display:block;font-size:10.5px;color:var(--ch);margin-top:1px}
+  .if-hnd-kern{color:var(--ca-dk);font-weight:700}
+
+  /* flex:none: .if-hnd-body ist ein Spalten-Flex. Bei knappem Platz koennte
+     der Flex-Algorithmus die Knoepfe sonst unter ihre min-height stauchen.
+     Gleiche Absicherung wie bei .if-exp-start im Bestand. */
+  .if-hnd-alle{flex:none;align-self:flex-start;background:transparent;color:var(--ca-dk);border:1px solid var(--cb);border-radius:10px;padding:6px 11px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer;min-height:32px}
+  .if-hnd-alle:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
+  .if-hnd-pdf{flex:none;width:100%;background:var(--ca);color:#fff;border:none;border-radius:12px;padding:11px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;min-height:44px}
+  .if-hnd-pdf:disabled{opacity:.5;cursor:default}
+  .if-hnd-pdf:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
+  .if-hnd-merken{font-size:10.5px;color:var(--ch);text-align:center;margin-top:6px;line-height:1.45}
+
   @media (prefers-reduced-motion: reduce){
     .if-asst-sheet{transition:none}
     .if-asst-backdrop{transition:none}
