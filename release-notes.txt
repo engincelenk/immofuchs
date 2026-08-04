@@ -1,3 +1,27 @@
+## 2026-08-04 (1.6.6)
+
+### Fix: CSP connect-src blockierte die neue Custom Domain api-dev.immofuchs.info
+
+**Problem**
+- Nach dem Umstellen von `VITE_ASSISTANT_URL` auf `https://api-dev.immofuchs.info`
+  (1.6.5) blieb jeder `fetch()`-Aufruf vom Frontend aus mit `TypeError: Failed
+  to fetch` erfolglos — obwohl die Custom Domain selbst per direkter
+  Navigation und `curl` nachweislich erreichbar war (SSL-Zertifikat korrekt,
+  `/api/v1/me` antwortet mit `401`). Direkte Navigation ist von `connect-src`
+  nicht betroffen, `fetch()`/XHR aus der Seite heraus schon — das erklärte den
+  Unterschied und führte zunächst auf die falsche Fährte „DNS-Propagation".
+- Ursache gefunden: Die `Content-Security-Policy` in `index.html`
+  (`connect-src`, S0-2/Spec 5.1) listete zwar `immofuchs-assistant-dev.
+  engincelenk.workers.dev` und das künftige `api.immofuchs.info`, aber nicht
+  die neue Dev-Custom-Domain `api-dev.immofuchs.info` — der Browser blockierte
+  den Request also korrekt gemäß CSP, nur ohne für den Entwickler sichtbare
+  Fehlermeldung im hier verwendeten Testpfad.
+
+**Fix**
+- `index.html`: `https://api-dev.immofuchs.info` zu `connect-src` ergänzt.
+
+**Betroffene Dateien:** `index.html`.
+
 ## 2026-08-04 (1.6.5)
 
 ### Fix: Dev-Worker auf Custom Domain umgezogen — Login-Session wird jetzt vom Frontend erkannt
@@ -29,6 +53,66 @@
   (`immofuchs.info`), `SameSite=Lax` funktioniert damit wie vorgesehen.
 
 **Betroffene Dateien:** `worker/wrangler.toml`, `.github/workflows/deploy-dev.yml`.
+
+## 2026-08-04 (1.6.5)
+
+### Spec: E-Mail + Passwort als fünfter Login-Weg aufgenommen (nur Dokumentation)
+
+**Was wurde geändert**
+- `docs/kommerzialisierung-spec.md` auf v8 gehoben. E-Mail + Passwort ist ab
+  sofort fester Bestandteil von Registrierung und Login. Login-Kennung bleibt
+  die E-Mail-Adresse — ein separater Benutzername wurde bewusst verworfen.
+  Betroffene Abschnitte:
+  - Kopfzeile: neue Ergänzungs-Notiz v8, Stand auf 2026-08-04
+  - §4.0 / §4.0b: Login-Optionen 4 → 5
+  - §4.2: `users.password_hash`, `password_set_at`, `email_verified_at`;
+    neue Tabellen `email_verification_tokens`, `password_reset_tokens`,
+    `login_attempts` (+2 Indizes); alter Satz „bewusst kein Passwort-Feld"
+    durchgestrichen statt gelöscht, mit Revisionsbegründung
+  - §4.3: Login-Masken-Mockup um Passwortfeld/Toggle/Reset-Link erweitert,
+    neue Zustände, Begründung gegen separaten Benutzernamen
+  - §4.4: kompletter Passwort-Registrierungsablauf inkl. Double-Opt-In,
+    Passwort-Regel (Länge statt Zeichenklassen, Leak-Abgleich), Reset-Pfad
+  - §4.5: Hashing-Abschnitt; Argon2id vs. WebCrypto-PBKDF2 als offener,
+    zu messender Punkt markiert — nicht geraten
+  - §4.13: 8 neue Sicherheitsregeln (Brute-Force pro Konto UND IP,
+    Enumerationsschutz, Session-Invalidierung bei Reset, Token nur gehasht)
+  - §4.14: 4 neue E-Mail-Auslöser
+  - §10.4 Sprint 2: 4 neue Stories (S2-7 bis S2-10), 7 → 13 PT
+  - §12: IMP-11 bis IMP-14 (Sicherheitsfläche, Hash-Verfahren,
+    Sprint-Überbuchung, Auswahlparadoxon)
+  - §13: offene Punkte 15–19
+  - §14 / §14.1: Vorwort revidiert, Tabelle auf 17 Use Cases erweitert,
+    neue Spalte „Wireframe" mit Kartenverweis
+- `docs/wireframes-kommerzialisierung-2026-07-31.html`: Karten in 14.1
+  sichtbar durchnummeriert (1–17), damit die Spec-Verweise auflösbar sind.
+  Nummerierungsfehler korrigiert (9 statt 8 passwortlose Karten), interne
+  „Card X"-Verweise auf die neue Nummerierung angeglichen.
+
+**Warum**
+- Nutzerentscheidung vom 04.08.2026. Die Wireframe-Ergänzung aus 1.6.4 stand
+  im Widerspruch zur Spec — dieser Schritt löst den Widerspruch auf, statt
+  ihn stehen zu lassen.
+
+**Betroffene Dateien**
+- `docs/kommerzialisierung-spec.md`
+- `docs/wireframes-kommerzialisierung-2026-07-31.html`
+- `release-notes.txt`
+
+**Breaking Changes**
+- Keine im Code. Konzeptionell erheblich: Das System ist nicht mehr
+  passwortlos. Passwort-Hashing, Reset-Flow und Leak-Risiko kehren bewusst
+  zurück.
+
+**Blockierende offene Punkte**
+- IMP-12: Hash-Verfahren in der Cloudflare-Workers-Runtime ungeklärt.
+  Argon2id läuft dort nicht nativ (nur WASM gegen 128-MB-/CPU-Limit),
+  PBKDF2 über WebCrypto ist nativ, aber schwächer gegen GPU-Angriffe.
+  Vor Sprint 2 beide Varianten messen. Blockiert S2-7.
+- IMP-13: Sprint 2 wächst von 7 auf 13 PT und sprengt den Sprint-Rahmen.
+  Entscheidung nötig: eigener Sprint 2b oder Verschiebung von S2-1/S2-2.
+
+---
 
 ## 2026-08-04 (1.6.4)
 
