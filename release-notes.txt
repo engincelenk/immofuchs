@@ -1,3 +1,52 @@
+## 2026-08-04 (1.6.2)
+
+### Fix: WEBAUTHN_RP_ID/WEBAUTHN_ORIGIN zeigten in Dev und Prod fälschlich auf localhost
+
+**Problem**
+- Nach dem Redeploy des `immofuchs-assistant-dev`-Workers (1.6.1) schlug der
+  Google-Login live mit `redirect_uri_mismatch` fehl (externer Konfigurations-
+  schritt, siehe unten) — beim Durchklicken der Pro-Flows auf
+  `dev.immofuchs.info` fiel zusätzlich auf, dass Passkey ebenfalls gebrochen
+  gewesen wäre: `worker/wrangler.toml` setzte `WEBAUTHN_RP_ID`/
+  `WEBAUTHN_ORIGIN` für `[env.dev.vars]` **und** für den Prod-Block (`[vars]`)
+  auf `localhost`/`http://localhost:5173` — WebAuthn verlangt aber exakte
+  Übereinstimmung mit der tatsächlich ausliefernden Origin, sonst lehnt der
+  Browser die Ceremony bereits clientseitig ab, bevor der Worker überhaupt
+  gefragt wird. Nur QA (`qa.immofuchs.info`) war schon korrekt gesetzt.
+- Ursache für `env.dev`: dieselbe Umgebung wird sowohl lokal (`wrangler dev
+  --env dev`, Frontend auf `localhost:5173`) als auch remote deployt
+  (`dev.immofuchs.info`) genutzt — ein einzelner `[vars]`-Wert kann nur für
+  einen der beiden Fälle stimmen (anders als `ALLOWED_ORIGIN`, das gegen eine
+  Liste prüft, nicht einen Einzelwert).
+
+**Fix**
+- `env.dev`: `WEBAUTHN_RP_ID`/`WEBAUTHN_ORIGIN` aus `[env.dev.vars]` entfernt.
+  Lokal kommen die Werte jetzt aus `worker/.dev.vars` (`localhost` /
+  `http://localhost:5173`, dort ergänzt + `.dev.vars.example` nachgezogen),
+  remote aus einem Secret (`wrangler secret put WEBAUTHN_RP_ID/
+  WEBAUTHN_ORIGIN --env dev`, Werte `dev.immofuchs.info` /
+  `https://dev.immofuchs.info`) — live verifiziert:
+  `POST /api/v1/auth/passkey/register/options` liefert jetzt korrekt
+  `"rp":{"id":"dev.immofuchs.info"}`.
+- Prod-Block (`[vars]`): kein Secret-Umweg nötig (kein lokaler Nutzungsfall,
+  Prod läuft nie über `wrangler dev`) — direkt auf `immofuchs.info` /
+  `https://immofuchs.info` korrigiert, bevor der Kommerzialisierungs-Code
+  jemals nach Prod deployt wird.
+- Nebenbei: Remote-D1-Migrationen für `immofuchs-dev` angewendet (10/10),
+  `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`SESSION_SIGNING_SECRET` als
+  Dev-Worker-Secrets gesetzt, Dev-Worker mit dem 1.6.1-Code neu deployt —
+  vorher lief dort noch der alte Code (kein `/api/v1/*`), jeder Kontostatus-
+  Aufruf scheiterte mit `TypeError: Failed to fetch`.
+
+**Weiterhin offen, externe Handlungsschritte (nicht Code):**
+- Google Cloud Console: `https://immofuchs-assistant-dev.engincelenk.workers.dev/api/v1/auth/google/callback`
+  fehlt als autorisierte Redirect-URI beim OAuth-Client → `redirect_uri_mismatch`.
+- `PADDLE_API_KEY`/`PADDLE_WEBHOOK_SECRET` als Dev-Worker-Secrets stehen noch
+  aus (vom Auto-Mode-Classifier als sensibel eingestuft, bewusst nicht
+  automatisiert gesetzt).
+
+**Betroffene Dateien:** `worker/wrangler.toml`, `worker/.dev.vars.example`.
+
 ## 2026-08-04 (1.6.1)
 
 ### Chore: Kommerzialisierung (Sprints 0-5b) committed, Phase-D/E-Vorbereitung wieder zurückgenommen

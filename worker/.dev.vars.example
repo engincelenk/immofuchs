@@ -12,6 +12,13 @@ GEMINI_API_KEY=dein-lokaler-test-key
 # Session/Entitlement-Cache (4.9) - beliebiger langer Zufallsstring, pro Umgebung anders.
 SESSION_SIGNING_SECRET=dein-lokaler-hmac-secret
 
+# Passkey/WebAuthn (4.2/4.5) - muss zur lokalen Frontend-Origin passen (Vite,
+# localhost:5173). Fuer den DEPLOYTEN Dev-Worker kommt der Wert stattdessen
+# aus einem Secret (siehe wrangler.toml [env.dev.vars]-Kommentar), nicht von
+# hier - .dev.vars wird beim Deploy nicht mit hochgeladen.
+WEBAUTHN_RP_ID=localhost
+WEBAUTHN_ORIGIN=http://localhost:5173
+
 # Google OAuth (V-3) - Google Cloud Console > APIs & Services > Credentials.
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=

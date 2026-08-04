@@ -70,12 +70,15 @@ EXPOSE_GLOBAL_DAILY_LIMIT = "150"
 
 # ═══ Kommerzialisierung (2026-08-03, Sprints 0-5b) ═══
 # WEBAUTHN_RP_ID/ORIGIN muessen zur tatsaechlich ausgeliefernden Domain passen,
-# sonst lehnt der Browser die Passkey-Ceremony ab. WEBAUTHN_RP_ID ist die reine
-# Domain ohne Schema/Port (z.B. "immofuchs.info"), WEBAUTHN_ORIGIN die volle
-# Origin inkl. Schema (z.B. "https://immofuchs.info").
-WEBAUTHN_RP_ID = "localhost"
+# sonst lehnt der Browser die Passkey-Ceremony ab. Anders als bei env.dev gibt
+# es hier keinen lokalen Nutzungsfall (Prod laeuft nie ueber `wrangler dev`),
+# deshalb reicht ein direkter Wert statt eines Secrets (Befund + Fix
+# 2026-08-04, war faelschlich auf "localhost" stehengeblieben - Passkey haette
+# sonst schon beim ersten Prod-Deploy des Kommerzialisierungs-Codes gegen die
+# echte Domain gebrochen).
+WEBAUTHN_RP_ID = "immofuchs.info"
 WEBAUTHN_RP_NAME = "ImmoFuchs"
-WEBAUTHN_ORIGIN = "http://localhost:5173"
+WEBAUTHN_ORIGIN = "https://immofuchs.info"
 # Kostenloser Exposé-Scan / Konto-Kauf: freiwillige 14-Tage-Geld-zurueck-Frist
 # und 3-Tage-Dunning-Kulanzfrist sind Code-Konstanten (siehe subscriptions.ts),
 # nicht hier - reine Geschaeftslogik, kein Infrastruktur-Flag.
@@ -143,9 +146,18 @@ name = "immofuchs-assistant-dev"
 [env.dev.vars]
 ASSISTANT_ENABLED = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info"
-WEBAUTHN_RP_ID = "localhost"
+# WEBAUTHN_RP_ID/ORIGIN bewusst NICHT hier als [vars] - anders als ALLOWED_ORIGIN
+# (das gegen eine Liste prueft) braucht WebAuthn genau EINEN Wert, der zur
+# tatsaechlich ausliefernden Origin passt. env.dev wird aber sowohl lokal
+# (localhost:5173, ueber .claude/launch.json) als auch remote deployt
+# (https://dev.immofuchs.info) genutzt - ein einzelner wrangler.toml-Wert
+# koennte immer nur fuer einen der beiden Faelle stimmen. Deshalb: lokal
+# kommt der Wert aus worker/.dev.vars (localhost), remote aus einem Secret
+# (`wrangler secret put WEBAUTHN_RP_ID/WEBAUTHN_ORIGIN --env dev`, Wert
+# "dev.immofuchs.info"/"https://dev.immofuchs.info") - .dev.vars gewinnt
+# lokal automatisch gegenueber [env.dev.vars], das Secret gewinnt remote,
+# weil hier gar kein Wert mehr definiert ist.
 WEBAUTHN_RP_NAME = "ImmoFuchs (Dev)"
-WEBAUTHN_ORIGIN = "http://localhost:5173"
 OBJECTS_SOFT_CAP = "500"
 FINN_FREE_DAILY_LIMIT = "5"
 FINN_PRO_DAILY_LIMIT = "50"
