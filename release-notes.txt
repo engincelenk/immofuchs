@@ -1,3 +1,78 @@
+## 2026-08-04 (1.6.5)
+
+### Fix: Dev-Worker auf Custom Domain umgezogen — Login-Session wird jetzt vom Frontend erkannt
+
+**Kontext**
+- 1.6.3 dokumentierte den Befund, dass kein Login-Weg auf `dev.immofuchs.info`
+  zu einer erkannten Session führt (`SameSite=Lax`-Cookie zwischen Frontend
+  und `*.workers.dev`-Worker kommt nie an) und dass eine Cloudflare Custom
+  Domain daran scheiterte, weil die Zone `immofuchs.info` nicht bei Cloudflare
+  verwaltet war.
+- Nutzerentscheidung 2026-08-04: DNS-Zone zu Cloudflare umgezogen
+  (Nameserver-Wechsel, Bestandsaufnahme der Records vor dem Wechsel geprüft) —
+  live verifiziert (`nslookup` zeigt `jacob.ns.cloudflare.com`/
+  `bingo.ns.cloudflare.com`, `dev.immofuchs.info` und `immofuchs.info` liefern
+  weiterhin `200` wie vorher, IONOS-Hosting unverändert).
+
+**Fix**
+- Cloudflare Custom Domain `api-dev.immofuchs.info` für `immofuchs-assistant-dev`
+  angelegt (`worker/wrangler.toml`, `[[env.dev.routes]]` mit `zone_name`) —
+  `workers_dev = true` bewusst zusätzlich aktiv gelassen, nicht ersetzt, bis
+  der komplette Flow verifiziert ist.
+- `APP_BASE_URL` für den Dev-Worker auf `https://dev.immofuchs.info` gesetzt
+  (`worker/wrangler.toml`, war der kleinere Nebenbefund aus 1.6.3 — ohne
+  diesen Wert landete man nach Login auf der nackten Worker-URL).
+- `.github/workflows/deploy-dev.yml`: `VITE_ASSISTANT_URL` von
+  `https://immofuchs-assistant-dev.engincelenk.workers.dev/api/assistant` auf
+  `https://api-dev.immofuchs.info/api/assistant` umgestellt — Frontend und
+  Worker liegen jetzt unter derselben registrierbaren Domain
+  (`immofuchs.info`), `SameSite=Lax` funktioniert damit wie vorgesehen.
+
+**Betroffene Dateien:** `worker/wrangler.toml`, `.github/workflows/deploy-dev.yml`.
+
+## 2026-08-04 (1.6.4)
+
+### Wireframes: Registrierung via E-Mail + Passwort ergänzt (nur Dokumentation)
+
+**Was wurde geändert**
+- `docs/wireframes-kommerzialisierung-2026-07-31.html`, Abschnitt 14.1
+  (Authentifizierung) um 8 neue Wireframe-Karten erweitert:
+  1. Registrierung via E-Mail + Passwort (Stärke-Meter, AGB-Checkbox)
+  2. Bestätigungs-E-Mail gesendet (Double-Opt-In, 60-Sek.-Cooldown)
+  3. E-Mail bestätigt → Willkommen
+  4. Login via E-Mail + Passwort
+  5. Passwort vergessen — Reset anfordern
+  6. Neues Passwort setzen
+  7. E-Mail bereits registriert (Edge Case)
+  8. Fehlerzustände: Link abgelaufen · falsches Passwort · Rate-Limit
+- TOC-Zähler 14.1 von 9 auf 17 erhöht, Legende um Badge `PASSWORT (NEU)`
+  ergänzt, Sektions-Untertitel 14.1 neu gefasst (trennt jetzt passwortlose
+  Karten 1–8 von den Passwort-Karten 9–16).
+- Neue CSS-Klassen im Wireframe-Baukasten: `.badge.pw`, `.pw-meter`,
+  `.pw-hint`, `.check`, `.input.err`, `.field-err`.
+
+**Warum**
+- Nutzerentscheidung vom 04.08.2026: klassische E-Mail-+-Passwort-
+  Registrierung soll als zusätzliche Option abgebildet werden, um sie vor der
+  Umsetzung visuell bewerten zu können.
+
+**Betroffene Dateien**
+- `docs/wireframes-kommerzialisierung-2026-07-31.html`
+- `release-notes.txt`
+
+**Breaking Changes**
+- Keine. Reines Planungsdokument, keine Änderung an App-Code, Build oder
+  Deployment.
+
+**Offener Punkt / Risiko**
+- Die Wireframes weichen jetzt bewusst von `docs/kommerzialisierung-spec.md`
+  §4.4 ab, die das System ausdrücklich als passwortlos definiert. Die Spec ist
+  nachzuziehen, sobald die Richtung endgültig bestätigt ist. Zusätzlicher
+  Backend-Scope (Argon2id-Hashing, Reset-Token-Tabelle, Brute-Force-Staffelung)
+  ist noch nicht spezifiziert.
+
+---
+
 ## 2026-08-04 (1.6.3)
 
 ### Befund: Login auf dev.immofuchs.info erzeugt keine erkannte Session (Sprint-0-Vorlauf-Schritt bestätigt nötig)

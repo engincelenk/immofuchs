@@ -143,20 +143,31 @@ new_sqlite_classes = ["SessionRateLimiter"]
 [env.dev]
 name = "immofuchs-assistant-dev"
 
-# Custom Domain (Spec 5.1, S0-1, z.B. api-dev.immofuchs.info) wuerde das
-# SameSite=Lax-Cookie-Problem loesen (Frontend und Worker auf komplett
-# unterschiedlichen Domains -> Cookie kommt beim Frontend nie an, verifiziert
-# 2026-08-04: Login gegen den Worker erfolgreich, /api/v1/me vom Frontend aus
-# liefert dennoch 401) - aber die Cloudflare-API lehnt das aktuell ab:
-# "The zone \"immofuchs.info\" does not exist on your account" (code 10083).
-# Die Domain ist nicht als Zone bei Cloudflare verwaltet (DNS laeuft ueber
-# IONOS, siehe deploy-dev.yml). Ohne Zonen-Umzug zu Cloudflare (Nameserver-
-# Aenderung, betrifft die gesamte Domain inkl. E-Mail) ist eine Cloudflare
-# Custom Domain hier nicht moeglich - bewusste Nutzerentscheidung noetig,
-# nicht automatisiert. Bis dahin bleibt es bei *.workers.dev.
+# Custom Domain (Spec 5.1, S0-1) loest das SameSite=Lax-Cookie-Problem:
+# Frontend (dev.immofuchs.info) und Worker lagen vorher auf komplett
+# unterschiedlichen Domains, das Session-Cookie kam beim Frontend nie an
+# (verifiziert 2026-08-04). Nutzerentscheidung 2026-08-04: DNS-Zone
+# immofuchs.info zu Cloudflare umgezogen (Nameserver-Wechsel), damit ist
+# api-dev.immofuchs.info als Custom Domain fuer diesen Worker moeglich.
+# workers_dev bewusst weiterhin aktiv (statt nur custom_domain-Route), bis
+# das Frontend (deploy-dev.yml, VITE_ASSISTANT_URL) umgestellt UND der
+# komplette Login-Flow gegen die neue Domain verifiziert ist - sonst waere
+# bei einem Fehler in der Custom-Domain-Konfiguration der Worker fuer alle
+# Aufrufer unerreichbar, nicht nur fuer den Login-Testfall.
+workers_dev = true
+
+[[env.dev.routes]]
+pattern = "api-dev.immofuchs.info"
+custom_domain = true
+zone_name = "immofuchs.info"
+
 [env.dev.vars]
 ASSISTANT_ENABLED = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info"
+# Ohne diesen Wert faellt frontendBase() (routes/auth.ts) auf die Origin des
+# eingehenden Requests zurueck - nach Login landet man dann auf der nackten
+# Worker-Domain statt zurueck im Frontend (Befund 2026-08-04, 1.6.3).
+APP_BASE_URL = "https://dev.immofuchs.info"
 # WEBAUTHN_RP_ID/ORIGIN bewusst NICHT hier als [vars] - anders als ALLOWED_ORIGIN
 # (das gegen eine Liste prueft) braucht WebAuthn genau EINEN Wert, der zur
 # tatsaechlich ausliefernden Origin passt. env.dev wird aber sowohl lokal
