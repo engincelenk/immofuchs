@@ -29,13 +29,13 @@ const MAX_VERLAUF_EINTRAEGE = 6; // letzte 3 Frage/Antwort-Paare, siehe Konzept 
 // das als generischen "Kurzer Aussetzer"-Fehler, obwohl der Server sauber
 // geantwortet hatte. 2500 laesst auch bei ungewoehnlich langen Antworten
 // Luft (Reserve zur reinen Token->Zeichen-Hochrechnung von ~350*6).
-const MAX_VERLAUF_TEXT_LEN = 2500;
+export const MAX_VERLAUF_TEXT_LEN = 2500;
 const MAX_VERGLEICHSOBJEKTE = 5;
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9-]{8,64}$/;
 
 type ValidationResult = { ok: true; data: AssistantRequest } | { ok: false; error: string };
 
-export function validateRequest(body: unknown): ValidationResult {
+export function validateRequest(body: unknown, maxVerlaufTextLen: number = MAX_VERLAUF_TEXT_LEN): ValidationResult {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return { ok: false, error: "invalid_body" };
   }
@@ -65,7 +65,7 @@ export function validateRequest(body: unknown): ValidationResult {
     return { ok: false, error: "invalid_session_id" };
   }
 
-  const verlaufResult = validateVerlauf(b.verlauf);
+  const verlaufResult = validateVerlauf(b.verlauf, maxVerlaufTextLen);
   if (!verlaufResult.ok) return verlaufResult;
 
   let vergleichsObjekte: VergleichsObjekt[] | undefined;
@@ -91,6 +91,7 @@ export function validateRequest(body: unknown): ValidationResult {
 
 function validateVerlauf(
   value: unknown,
+  maxVerlaufTextLen: number,
 ): { ok: true; data: VerlaufEintrag[] } | { ok: false; error: string } {
   if (value === undefined) return { ok: true, data: [] };
   if (!Array.isArray(value) || value.length > MAX_VERLAUF_EINTRAEGE) {
@@ -102,7 +103,7 @@ function validateVerlauf(
     const e = entry as Record<string, unknown>;
     if (e.rolle !== "user" && e.rolle !== "assistant")
       return { ok: false, error: "invalid_verlauf" };
-    if (typeof e.text !== "string" || e.text.length === 0 || e.text.length > MAX_VERLAUF_TEXT_LEN) {
+    if (typeof e.text !== "string" || e.text.length === 0 || e.text.length > maxVerlaufTextLen) {
       return { ok: false, error: "invalid_verlauf" };
     }
     out.push({ rolle: e.rolle, text: e.text });

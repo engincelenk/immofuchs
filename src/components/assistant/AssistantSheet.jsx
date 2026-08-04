@@ -53,6 +53,8 @@ export function AssistantSheet({
     exposeFehler,
     chatFehlerTechnisch,
     markiereExposeErledigt,
+    recordConsent,
+    giveConsentAndRetry,
   } = useAssistant();
   const inputRef = useRef(null);
   const sheetRef = useRef(null);
@@ -283,6 +285,11 @@ export function AssistantSheet({
       localStorage.setItem(CONSENT_KEY, "1");
     } catch {}
     setConsentOffen(false);
+    // Zusaetzlich serverseitig hinterlegen (Spec 3.2/S5-7, Guideline
+    // 5.1.2(i)) - der bisherige rein lokale Flag deckte nur das
+    // Upload-Antippen ab, nicht den eigentlichen Worker-Aufruf. Fire-and-
+    // forget: der Datei-Dialog soll nicht auf das Netzwerk warten.
+    recordConsent();
     fileRef.current?.click();
   };
 
@@ -457,6 +464,19 @@ export function AssistantSheet({
               )}
               {status === "disabled" && (
                 <ChatBubble role="system" text={exposeFehler ? xt[exposeFehler] : t.disabled} />
+              )}
+              {/* KI-Consent-Gate (Spec 3.2, S5-7): der Worker hat den Chat-
+                  oder Exposé-Aufruf mit 412 abgelehnt, bevor ein Kontingent
+                  verbraucht wurde - gleiche Bubble wie beim Upload-Consent,
+                  bestaetigen loest den urspruenglichen Versuch automatisch
+                  erneut aus. */}
+              {status === "consent" && (
+                <div className="if-exp-consent" role="dialog" aria-label={xt.attachAria}>
+                  <span>{xt.consentText}</span>
+                  <button type="button" onClick={giveConsentAndRetry}>
+                    {xt.consentOk}
+                  </button>
+                </div>
               )}
             </div>
             <div className="if-asst-suggested">

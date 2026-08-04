@@ -1,7 +1,7 @@
 {
   "name": "Immofuchs – Immobilienrechner",
   "short_name": "Immofuchs",
-  "description": "Rendite, Kredit, Mieterhöhung und Sanierung berechnen. Kostenlos, offline, ohne Anmeldung.",
+  "description": "Rendite, Kredit, Mieterhöhung und Sanierung berechnen. Jeden Rechner einmal kostenlos mit vollständigem Ergebnis testen, offline, ohne Anmeldung. Unbegrenzte Nutzung mit ImmoFuchs Pro.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

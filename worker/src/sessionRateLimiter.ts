@@ -35,4 +35,26 @@ export class SessionRateLimiter extends DurableObject<Env> {
     stored.count = Math.max(0, stored.count - 1);
     await this.ctx.storage.put("state", stored);
   }
+
+  // Rollierendes Zeitfenster statt fixem UTC-Tag - gebraucht fuer Auth-
+  // Rate-Limits mit "pro Stunde" statt "pro Tag" (Magic-Link-Versand,
+  // Spec 4.13: 5/Std./E-Mail). Eigener Storage-Key ("window"), damit dieselbe
+  // DO-Instanz nicht mit dem taeglichen "state"-Key kollidiert, falls ein Name
+  // je fuer beides genutzt wuerde (aktuell nicht der Fall, aber isoliert
+  // sicherer).
+  async checkAndIncrementWindow(
+    limit: number,
+    windowMs: number,
+  ): Promise<{ allowed: boolean; remaining: number }> {
+    const now = Date.now();
+    const stored = await this.ctx.storage.get<{ count: number; windowStart: number }>("window");
+    const state = stored && now - stored.windowStart < windowMs ? stored : { count: 0, windowStart: now };
+
+    if (state.count >= limit) {
+      return { allowed: false, remaining: 0 };
+    }
+    state.count += 1;
+    await this.ctx.storage.put("window", state);
+    return { allowed: true, remaining: limit - state.count };
+  }
 }

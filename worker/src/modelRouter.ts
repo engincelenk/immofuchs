@@ -21,26 +21,42 @@ const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
 // geroutet. `lang` bleibt Parameter, weil callGemini/callWorkersAI ihn nicht
 // brauchen, aber die Funktionssignatur von index.ts unveraendert bleiben soll.
 
+// maxTokens optional ueberschreibbar (Sprint 5, S5-4): der einzige Pro-
+// Unterschied auf Modellebene ist mehr Antwortlaenge (350->700), nicht ein
+// anderes Modell (Stufe 1, 4.18.3) - modelRouter-Logik selbst bleibt sonst
+// unangetastet (Stabilitaetsregel).
 export async function callModel(
   env: Env,
   _lang: Lang,
   systemPrompt: string,
   userPayload: string,
+  maxTokens: number = MAX_TOKENS,
 ): Promise<string> {
   try {
     // callGemini bricht via eigenem AbortController nach MODEL_TIMEOUT_MS ab
     // und cancelt dabei den fetch - deshalb hier kein zusaetzliches withTimeout.
-    return await callGemini(env, systemPrompt, userPayload);
+    return await callGemini(env, systemPrompt, userPayload, maxTokens);
   } catch (err) {
     // Fallback auf Workers AI (Llama), z.B. wenn Gemini-Kontingent erschoepft ist
     // (429) - schwaechere Antwortqualitaet, aber besser als ein harter Fehler.
     // env.AI.run kennt keinen Cancel, daher hier der withTimeout-Wrapper.
-    console.error(
-      "gemini_call_failed_fallback_workers_ai",
-      err instanceof Error ? err.message : "unknown_error",
-    );
-    return withTimeout(callWorkersAI(env, systemPrompt, userPayload), MODEL_TIMEOUT_MS);
+    logFallbackAlert("gemini_call_failed_fallback_workers_ai", err);
+    return withTimeout(callWorkersAI(env, systemPrompt, userPayload, maxTokens), MODEL_TIMEOUT_MS);
   }
+}
+
+// S0-3: sichtbare Fallback-Alarmierung statt reinem console.error - der Fall
+// vom 01.06.2026 (stiller Fallback auf das schwaechere Llama-Modell ueber
+// Wochen unbemerkt) soll sich nicht wiederholen. Bewusst additiv, keine
+// Aenderung an der Modell-Auswahl-Logik selbst (4.18.1a, Nutzerentscheidung
+// 03.08.: kein vorgezogener Modellwechsel). Ohne eigene Alerting-Infrastruktur
+// ist ein strukturiertes, klar suchbares Log-Prefix die pragmatische Umsetzung -
+// ein echter Alert-Webhook kann spaeter ergaenzt werden, ohne Aufrufer anzufassen.
+function logFallbackAlert(event: string, err: unknown): void {
+  console.error(
+    `[FALLBACK_ALERT] ${event}`,
+    JSON.stringify({ event, message: err instanceof Error ? err.message : "unknown_error", ts: Date.now() }),
+  );
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -59,13 +75,18 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-async function callWorkersAI(env: Env, systemPrompt: string, userPayload: string): Promise<string> {
+async function callWorkersAI(
+  env: Env,
+  systemPrompt: string,
+  userPayload: string,
+  maxTokens: number,
+): Promise<string> {
   const result = await env.AI.run(WORKERS_AI_MODEL, {
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPayload },
     ],
-    max_tokens: MAX_TOKENS,
+    max_tokens: maxTokens,
     temperature: TEMPERATURE,
   });
 
@@ -110,10 +131,7 @@ export async function callVisionModel(
   try {
     return await callGeminiVision(env, systemPrompt, dateien);
   } catch (err) {
-    console.error(
-      "gemini_vision_failed_fallback_workers_ai",
-      err instanceof Error ? err.message : "unknown_error",
-    );
+    logFallbackAlert("gemini_vision_failed_fallback_workers_ai", err);
     return withTimeout(
       callWorkersAiVision(env, systemPrompt, schema, dateien),
       VISION_TIMEOUT_MS,
@@ -247,7 +265,12 @@ export async function callGeminiVision(
   return text;
 }
 
-async function callGemini(env: Env, systemPrompt: string, userPayload: string): Promise<string> {
+async function callGemini(
+  env: Env,
+  systemPrompt: string,
+  userPayload: string,
+  maxTokens: number,
+): Promise<string> {
   if (!env.GEMINI_API_KEY) {
     throw new Error("gemini_api_key_missing");
   }
@@ -272,7 +295,7 @@ async function callGemini(env: Env, systemPrompt: string, userPayload: string): 
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: userPayload }] }],
-          generationConfig: { maxOutputTokens: MAX_TOKENS, temperature: TEMPERATURE },
+          generationConfig: { maxOutputTokens: maxTokens, temperature: TEMPERATURE },
         }),
         signal: controller.signal,
       },

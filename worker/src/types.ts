@@ -196,4 +196,47 @@ export interface Env {
   EXPOSE_GEMINI_MODEL?: string;
   // Workers-AI-Modell, das einspringt, wenn Gemini scheitert.
   EXPOSE_VISION_FALLBACK_MODEL?: string;
+
+  // ═══ Kommerzialisierung (2026-08, Sprints 0-5b) ═══
+  DB: D1Database;
+
+  // Auth/Session (4.5, 10.0 Bearer-Token-Vorbereitung fuer Capacitor)
+  SESSION_SIGNING_SECRET?: string; // HMAC-Key fuer den Entitlement-TTL-Cache im Cookie (4.9)
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  APPLE_CLIENT_ID?: string; // Services-ID, z.B. "info.immofuchs.web"
+  APPLE_TEAM_ID?: string;
+  APPLE_KEY_ID?: string;
+  APPLE_PRIVATE_KEY?: string; // PKCS8, ES256 - fuer den JWT-Client-Secret-Flow (4.5)
+  WEBAUTHN_RP_ID: string;
+  WEBAUTHN_RP_NAME: string;
+  WEBAUTHN_ORIGIN: string;
+  RESEND_API_KEY?: string;
+  MAGIC_LINK_FROM_EMAIL?: string; // z.B. "ImmoFuchs <login@immofuchs.info>"
+  APP_BASE_URL?: string; // fuer Magic-Link-/OAuth-Redirect-Ziele, z.B. "https://immofuchs.info"
+
+  // Paddle (4.1, 4.6)
+  PADDLE_API_KEY?: string;
+  PADDLE_WEBHOOK_SECRET?: string;
+  PADDLE_ENV?: string; // "sandbox" | "production"
+  PADDLE_PRICE_ID_MONTHLY?: string;
+  PADDLE_PRICE_ID_YEARLY?: string;
+
+  // Feature-Gating (4.0a, 4.18, 4.9)
+  OBJECTS_SOFT_CAP?: string;
+  FINN_FREE_DAILY_LIMIT?: string;
+  FINN_PRO_DAILY_LIMIT?: string;
+  FINN_FREE_MAX_TOKENS?: string;
+  FINN_PRO_MAX_TOKENS?: string;
+  FINN_FREE_GLOBAL_CUTOFF_RATIO?: string;
+
+  // ═══ Native Push (Phase D, S7-1) — zweiter Notification-Kanal neben E-Mail ═══
+  // Ohne diese Werte bleibt Push ein No-Op (kein Crash) - siehe push.ts.
+  FIREBASE_PROJECT_ID?: string;
+  FIREBASE_SERVICE_ACCOUNT_JSON?: string; // komplettes Service-Account-JSON als String
+  APNS_KEY_ID?: string;
+  APNS_TEAM_ID?: string;
+  APNS_PRIVATE_KEY?: string; // PKCS8, ES256
+  APNS_BUNDLE_ID?: string;
+  APNS_ENV?: string; // "sandbox" | "production"
 }

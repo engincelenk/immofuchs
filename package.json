@@ -1,6 +1,6 @@
 {
   "name": "immofuchs",
-  "version": "1.5.2",
+  "version": "1.6.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,7 +16,13 @@
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@simplewebauthn/browser": "^11.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/preferences": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/haptics": "^7.0.0",
+    "@capacitor/push-notifications": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

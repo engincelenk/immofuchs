@@ -3023,7 +3023,7 @@ export const TL = {
     navHow: "So funktioniert's",
     navZinsen: "Bauzinsen",
     subShort:
-      "Kostenlose Rechner für Kapitalanleger und Vermieter in Deutschland — Rendite, Finanzierung, Mietrecht, Sanierung. Sofort, in Echtzeit, ohne Anmeldung.",
+      "Rechner für Kapitalanleger und Vermieter in Deutschland — Rendite, Finanzierung, Mietrecht, Sanierung. Jeden Rechner einmal kostenlos mit vollständigem Ergebnis testen, sofort, ohne Anmeldung. Unbegrenzte Nutzung mit ImmoFuchs Pro.",
     heroCtaPrimary: "Jetzt rechnen",
     heroCtaSecondary: "Wie funktioniert's?",
     heroBadgeLive: "Live-Daten",

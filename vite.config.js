@@ -23,8 +23,19 @@ function swVersionPlugin() {
 
 export default defineConfig({
   plugins: [react(), swVersionPlugin()],
+  server: {
+    // Dev-only: /api/* same-origin zum lokalen Worker (localhost:8787)
+    // proxied, damit credentials:"include"-Requests ohne CORS-Config
+    // funktionieren. Betrifft nur `vite dev`, kein Einfluss auf `vite build`.
+    proxy: {
+      "/api": "http://localhost:8787",
+    },
+  },
   build: {
     outDir: "dist",
     sourcemap: false,
+  },
+  test: {
+    exclude: ["**/node_modules/**", "**/dist/**"],
   },
 });

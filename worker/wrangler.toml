@@ -3,6 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2026-07-19"
 compatibility_flags = ["nodejs_compat"]
 
+# Verlängerungs-Erinnerung (Spec 4.11, S4-4), taeglich 06:00 UTC - der
+# scheduled()-Handler filtert selbst auf die 7-Tage-Vorlauffrist, der Cron
+# muss also nicht exakt an einem bestimmten Tag treffen.
+[triggers]
+crons = ["0 6 * * *"]
+
 # Nicht-geheime Konfiguration. ASSISTANT_ENABLED ist der Kill-Switch aus
 # Konzept 2.8 - fuer "Umschalten ohne Redeploy" ueber das Cloudflare-Dashboard
 # (Workers & Pages -> immofuchs-assistant -> Settings -> Variables) aendern,
@@ -62,10 +68,50 @@ EXPOSE_GLOBAL_DAILY_LIMIT = "150"
 # Extraktionsqualitaet als zu schwach erweist.
 # EXPOSE_GEMINI_MODEL = "gemini-2.0-flash"
 
+# ═══ Kommerzialisierung (2026-08-03, Sprints 0-5b) ═══
+# WEBAUTHN_RP_ID/ORIGIN muessen zur tatsaechlich ausgeliefernden Domain passen,
+# sonst lehnt der Browser die Passkey-Ceremony ab. WEBAUTHN_RP_ID ist die reine
+# Domain ohne Schema/Port (z.B. "immofuchs.info"), WEBAUTHN_ORIGIN die volle
+# Origin inkl. Schema (z.B. "https://immofuchs.info").
+WEBAUTHN_RP_ID = "localhost"
+WEBAUTHN_RP_NAME = "ImmoFuchs"
+WEBAUTHN_ORIGIN = "http://localhost:5173"
+# Kostenloser Exposé-Scan / Konto-Kauf: freiwillige 14-Tage-Geld-zurueck-Frist
+# und 3-Tage-Dunning-Kulanzfrist sind Code-Konstanten (siehe subscriptions.ts),
+# nicht hier - reine Geschaeftslogik, kein Infrastruktur-Flag.
+# Soft-Cap gegen Objekt-Flut (4.9): 500 ist eine Produktentscheidung, kein
+# Sicherheitslimit - ueber das Dashboard ohne Redeploy anpassbar.
+OBJECTS_SOFT_CAP = "500"
+# Free-vs-Pro (4.0a/4.18.3, Sprint 5): Vorschlag 5/Tag fuer Free, vor Sprint-5-
+# Start final zu bestaetigen (siehe docs/kommerzialisierung-spec.md 4.0b).
+FINN_FREE_DAILY_LIMIT = "5"
+FINN_PRO_DAILY_LIMIT = "50"
+FINN_FREE_MAX_TOKENS = "350"
+FINN_PRO_MAX_TOKENS = "700"
+# Pro-Reservierung im globalen Kontingent (4.18.4/S5-5): ab diesem Anteil von
+# GLOBAL_DAILY_LIMIT werden nur noch Pro-Anfragen bedient.
+FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
+
 # Workers AI Binding (Llama 3.3, primaerer Pfad fuer DE/EN) - kein API-Key noetig,
 # nur ueber das Cloudflare-Konto freigeschaltet.
 [ai]
 binding = "AI"
+
+# ═══ D1 (Kommerzialisierung) ═══
+# ACHTUNG (Platzhalter, siehe docs/kommerzialisierung-setup.md): database_id
+# ist noch nicht real - vor dem ersten Deploy je Umgebung ausfuehren:
+#   npx wrangler d1 create immofuchs-prod
+#   npx wrangler d1 create immofuchs-qa --env qa
+#   npx wrangler d1 create immofuchs-dev --env dev
+# und die zurueckgegebene database_id hier eintragen. Migrationen danach je
+# Umgebung separat anwenden (npm run db:migrate:<env> in worker/), NIE eine
+# Migration direkt gegen prod, ohne sie vorher gegen dev verifiziert zu haben
+# (Definition of Done, Abschnitt 11 der Spec).
+[[d1_databases]]
+binding = "DB"
+database_name = "immofuchs-prod"
+database_id = "REPLACE_WITH_PROD_D1_DATABASE_ID"
+migrations_dir = "migrations"
 
 # Durable Object fuer den Session-Rate-Limit-Zaehler (ersetzt die urspruengliche
 # KV-Loesung - KV war "eventually consistent" und hat das Tageslimit beim
@@ -97,6 +143,15 @@ name = "immofuchs-assistant-dev"
 [env.dev.vars]
 ASSISTANT_ENABLED = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info"
+WEBAUTHN_RP_ID = "localhost"
+WEBAUTHN_RP_NAME = "ImmoFuchs (Dev)"
+WEBAUTHN_ORIGIN = "http://localhost:5173"
+OBJECTS_SOFT_CAP = "500"
+FINN_FREE_DAILY_LIMIT = "5"
+FINN_PRO_DAILY_LIMIT = "50"
+FINN_FREE_MAX_TOKENS = "350"
+FINN_PRO_MAX_TOKENS = "700"
+FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
 # Gleiche Kalibrierung wie oben im Top-Level-[vars]-Block (siehe Kommentar
 # dort) - dev hat einen eigenen GEMINI_API_KEY/eigenes Projekt, damit ein
 # eigenes 1.000/Tag-Kontingent, aber teilt sich den kontoweiten Workers-AI-
@@ -113,10 +168,64 @@ EXPOSE_GLOBAL_DAILY_LIMIT = "150"
 [env.dev.ai]
 binding = "AI"
 
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "immofuchs-dev"
+database_id = "bc9794e1-2722-438e-95a3-06637ae4361a"
+migrations_dir = "migrations"
+
 [[env.dev.durable_objects.bindings]]
 name = "RATE_LIMITER_DO"
 class_name = "SessionRateLimiter"
 
 [[env.dev.migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionRateLimiter"]
+
+# ═══ QA-Umgebung (neu, Kommerzialisierung 2026-08) ═══
+# Bisher teilten sich QA und Prod EINEN physischen Worker (siehe deploy-qa.yml,
+# das bewusst auf die Prod-Worker-URL zeigte) - fuer Zahlungen/Konten braucht
+# QA aber eine eigene D1-Datenbank und einen eigenen Paddle-Sandbox-Kontext,
+# sonst wuerden QA-Tests echte Prod-Nutzerdaten/-Abos beruehren. Deshalb ab
+# jetzt ein eigener, von Prod komplett unabhaengiger Worker, analog zu
+# [env.dev]. Frontend-CI (deploy-qa.yml) muss VITE_ASSISTANT_URL entsprechend
+# auf "immofuchs-assistant-qa" umstellen - siehe kommerzialisierung-setup.md.
+[env.qa]
+name = "immofuchs-assistant-qa"
+
+[env.qa.vars]
+ASSISTANT_ENABLED = "true"
+ALLOWED_ORIGIN = "http://localhost:5173,https://qa.immofuchs.info"
+WEBAUTHN_RP_ID = "qa.immofuchs.info"
+WEBAUTHN_RP_NAME = "ImmoFuchs (QA)"
+WEBAUTHN_ORIGIN = "https://qa.immofuchs.info"
+OBJECTS_SOFT_CAP = "500"
+FINN_FREE_DAILY_LIMIT = "5"
+FINN_PRO_DAILY_LIMIT = "50"
+FINN_FREE_MAX_TOKENS = "350"
+FINN_PRO_MAX_TOKENS = "700"
+FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
+DAILY_REQUEST_LIMIT = "50"
+IP_DAILY_LIMIT = "100"
+GLOBAL_DAILY_LIMIT = "800"
+EXPOSE_EXTRACT_ENABLED = "true"
+EXPOSE_DAILY_LIMIT = "8"
+EXPOSE_IP_DAILY_LIMIT = "20"
+EXPOSE_GLOBAL_DAILY_LIMIT = "150"
+
+[env.qa.ai]
+binding = "AI"
+
+[[env.qa.d1_databases]]
+binding = "DB"
+database_name = "immofuchs-qa"
+database_id = "REPLACE_WITH_QA_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[env.qa.durable_objects.bindings]]
+name = "RATE_LIMITER_DO"
+class_name = "SessionRateLimiter"
+
+[[env.qa.migrations]]
 tag = "v1"
 new_sqlite_classes = ["SessionRateLimiter"]

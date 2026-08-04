@@ -1,0 +1,55 @@
+import { useState } from "react";
+import { useApp } from "../../context/AppContext.jsx";
+import { useAccountCtx } from "../../context/AccountContext.jsx";
+import { ACCOUNT_T } from "../../i18n/account.js";
+import { LoginModal } from "./LoginModal.jsx";
+import { AccountPanel } from "./AccountPanel.jsx";
+
+// Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
+// NICHT in Statusleiste.jsx). Label "Pro" mit Kroenchen-Icon, Fuchs-Orange.
+// Pro-Nutzer landen direkt in "Mein Konto", alle anderen im Login-/
+// Vergleichs-Flow.
+export function ProHeaderButton() {
+  const { lang } = useApp();
+  const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
+  const account = useAccountCtx();
+  const [open, setOpen] = useState(false);
+
+  if (!account || account.loading) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          padding: "7px 11px",
+          border: "1px solid var(--ca-bd)",
+          borderRadius: 8,
+          // Weiss statt --ca-bg (S2-5): --ca-dk auf --ca-bg landet bei ~4.28:1
+          // Kontrast, knapp unter der WCAG-AA-Grenze (4.5:1) fuer diese
+          // Schriftgroesse. Auf Weiss liegt --ca-dk bei ~4.76:1 - Branding
+          // bleibt ueber Rahmenfarbe + Kroenchen-Icon erhalten.
+          background: "var(--cc)",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          fontSize: 13,
+          fontWeight: 700,
+          color: "var(--ca-dk)",
+          minHeight: 38,
+        }}
+      >
+        <span aria-hidden="true">👑</span>
+        <span>{t.proButton}</span>
+      </button>
+      {open &&
+        (account.isPro ? (
+          <AccountPanel onClose={() => setOpen(false)} />
+        ) : (
+          <LoginModal onClose={() => setOpen(false)} />
+        ))}
+    </>
+  );
+}

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { MARKET_RATES } from "./data.js";
 import { berechneNichtUml } from "./utils/rendite.js";
-import { Ctx } from "./context/AppContext.jsx";
+import { AppProviders } from "./context/AppProviders.jsx";
 import { T } from "./i18n/translations.js";
 import { TIPS } from "./i18n/tips.js";
 import { LangSel } from "./components/ui/LangSel.jsx";
@@ -15,6 +15,10 @@ import { Landing } from "./pages/Landing.jsx";
 import { Statusleiste } from "./components/shell/Statusleiste.jsx";
 import { useSavedObjects, Merkliste } from "./components/shell/Merkliste.jsx";
 import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
+import { ProHeaderButton } from "./components/account/ProHeaderButton.jsx";
+import { CalculatorTrialGate } from "./components/account/CalculatorTrialGate.jsx";
+import { DashboardStartTab, DashboardObjekteTab } from "./components/dashboard/DashboardTabs.jsx";
+import { hideSplashScreen, tabSwitchHaptic } from "./utils/nativeInit.js";
 
 const IC = {
   haupt: (a) => (
@@ -225,6 +229,11 @@ export default function App() {
       window.removeEventListener("offline", dn);
     };
   }, []);
+  // Native Huelle (Spec S6-3): Splashscreen erst ausblenden, sobald die App
+  // tatsaechlich gemountet ist - ausserhalb von Capacitor folgenlos.
+  useEffect(() => {
+    hideSplashScreen();
+  }, []);
   useEffect(() => {
     if (typeof window.gtag === "function") {
       window.gtag("event", "tab_view", { tab_id: tab, tab_name: TAB_LABELS[tab] || tab });
@@ -327,7 +336,14 @@ export default function App() {
     setData((p) => (p.nichtUml === neu ? p : { ...p, nichtUml: neu }));
   }, [data.flaeche]);
 
-  const { savedList, saveObj, delObj, loadObj: loadObjRaw } = useSavedObjects(setData);
+  const {
+    savedList,
+    saveObj,
+    delObj,
+    loadObj: loadObjRaw,
+    isPro: isProSavedObjects,
+    freeLimit: savedObjectsFreeLimit,
+  } = useSavedObjects(setData);
   // Ein gespeichertes Objekt ist ein Snapshot: sein nichtUml wurde damals
   // bewusst so gespeichert und darf beim Laden nicht ueberschrieben werden.
   const loadObj = useCallback(
@@ -346,6 +362,17 @@ export default function App() {
     { id: "steuer6", l: t.steuer6, ic: IC.steuer6 },
     { id: "vfe", l: t.vfe, ic: IC.vfe },
     { id: "saved", l: t.merkliste, ic: IC.saved },
+    // Dashboard-Tabs (Spec 4.17, 5.3): additiv, nur fuer eingeloggte
+    // Pro-Nutzer sichtbar - Free sieht weiterhin genau die 7 Tabs oben
+    // unveraendert. isProSavedObjects kommt aus useSavedObjects() (siehe
+    // dort: Cross-cutting Pro-Signal, da App() selbst ausserhalb von
+    // AccountProvider laeuft).
+    ...(isProSavedObjects
+      ? [
+          { id: "dash-start", l: "Start", ic: (a) => <span style={{ fontSize: 20 }}>{a ? "🏠" : "🏠"}</span> },
+          { id: "dash-objekte", l: "Objekte", ic: (a) => <span style={{ fontSize: 20 }}>{a ? "📋" : "📋"}</span> },
+        ]
+      : []),
   ];
 
   const startApp = (startTab, opts) => {
@@ -371,8 +398,8 @@ export default function App() {
     );
 
   return (
-    <Ctx.Provider
-      value={{
+    <AppProviders
+      ctxValue={{
         d: data,
         set,
         mietQuelleRef,
@@ -384,6 +411,8 @@ export default function App() {
         saveObj,
         delObj,
         loadObj,
+        isProSavedObjects,
+        savedObjectsFreeLimit,
         autoExpose,
         clearAutoExpose: () => setAutoExpose(false),
         setTabExt: (id) => {
@@ -492,18 +521,47 @@ export default function App() {
                 <span style={{ color: "var(--ct)", fontWeight: 700 }}>.info</span>
               </div>
             </button>
-            <LangSel lang={lang} setLang={setLang} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <ProHeaderButton />
+              <LangSel lang={lang} setLang={setLang} />
+            </div>
           </div>
         </div>
         <div className="content">
           <Statusleiste />
-          {tab === "haupt" && <Haupt />}
-          {tab === "kredit" && <Kredit />}
-          {tab === "miete" && <Miete />}
-          {tab === "sanier" && <Sanier />}
-          {tab === "steuer6" && <SteuerTrick />}
-          {tab === "vfe" && <Vorfaelligkeit />}
+          {tab === "haupt" && (
+            <CalculatorTrialGate rechnerKey="renditerechner">
+              <Haupt />
+            </CalculatorTrialGate>
+          )}
+          {tab === "kredit" && (
+            <CalculatorTrialGate rechnerKey="finanzierung">
+              <Kredit />
+            </CalculatorTrialGate>
+          )}
+          {tab === "miete" && (
+            <CalculatorTrialGate rechnerKey="miete">
+              <Miete />
+            </CalculatorTrialGate>
+          )}
+          {tab === "sanier" && (
+            <CalculatorTrialGate rechnerKey="sanierung">
+              <Sanier />
+            </CalculatorTrialGate>
+          )}
+          {tab === "steuer6" && (
+            <CalculatorTrialGate rechnerKey="steuertrick">
+              <SteuerTrick />
+            </CalculatorTrialGate>
+          )}
+          {tab === "vfe" && (
+            <CalculatorTrialGate rechnerKey="vorfaelligkeit">
+              <Vorfaelligkeit />
+            </CalculatorTrialGate>
+          )}
           {tab === "saved" && <Merkliste />}
+          {tab === "dash-start" && <DashboardStartTab onGoToRechner={() => setTab("haupt")} />}
+          {tab === "dash-objekte" && <DashboardObjekteTab />}
           <div
             style={{
               marginTop: 32,
@@ -579,6 +637,7 @@ export default function App() {
               key={tb.id}
               className="tbtn"
               onClick={() => {
+                tabSwitchHaptic();
                 setTab(tb.id);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
@@ -590,6 +649,6 @@ export default function App() {
         </div>
       </div>
       {!isOnline && <OfflineBanner bottom={"calc(72px + env(safe-area-inset-bottom))"} />}
-    </Ctx.Provider>
+    </AppProviders>
   );
 }

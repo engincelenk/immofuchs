@@ -2,3 +2,46 @@
 # Nur fuer lokale Entwicklung - echte Deploy-Secrets kommen ueber `wrangler secret put`.
 
 GEMINI_API_KEY=dein-lokaler-test-key
+
+# ═══ Kommerzialisierung (2026-08, Sprints 0-5b) ═══
+# Platzhalter-Setup: ohne diese Werte funktionieren OAuth/Magic-Link/Paddle
+# nicht wirklich, aber der Worker startet und laeuft (kein Crash) - Endpunkte
+# antworten mit *_not_configured-Fehlern statt echten Ergebnissen. Siehe
+# docs/kommerzialisierung-setup.md fuer den vollstaendigen Einrichtungsweg.
+
+# Session/Entitlement-Cache (4.9) - beliebiger langer Zufallsstring, pro Umgebung anders.
+SESSION_SIGNING_SECRET=dein-lokaler-hmac-secret
+
+# Google OAuth (V-3) - Google Cloud Console > APIs & Services > Credentials.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Sign in with Apple (V-2) - Apple Developer Program > Certificates, Identifiers & Profiles.
+APPLE_CLIENT_ID=
+APPLE_TEAM_ID=
+APPLE_KEY_ID=
+APPLE_PRIVATE_KEY=
+
+# E-Mail-Magic-Link (V-5) - Resend-Konto, https://resend.com/api-keys.
+RESEND_API_KEY=
+MAGIC_LINK_FROM_EMAIL=ImmoFuchs <login@immofuchs.info>
+APP_BASE_URL=http://localhost:5173
+
+# Paddle (V-1) - Paddle-Sandbox-Konto, https://sandbox-vendors.paddle.com.
+PADDLE_API_KEY=
+PADDLE_WEBHOOK_SECRET=
+PADDLE_ENV=sandbox
+PADDLE_PRICE_ID_MONTHLY=
+PADDLE_PRICE_ID_YEARLY=
+
+# ═══ Nativer Push (Phase D, S7-1) ═══
+# Ohne diese Werte bleibt Push ein stilles No-Op (worker/src/push.ts) - siehe
+# docs/kommerzialisierung-setup.md fuer die Einrichtung (Firebase-Projekt,
+# APNs-Auth-Key).
+FIREBASE_PROJECT_ID=
+FIREBASE_SERVICE_ACCOUNT_JSON=
+APNS_KEY_ID=
+APNS_TEAM_ID=
+APNS_PRIVATE_KEY=
+APNS_BUNDLE_ID=info.immofuchs.app
+APNS_ENV=sandbox

@@ -1,0 +1,206 @@
+// Auth-Routen (Spec 4.4, 4.5): Google/Apple-OAuth, E-Mail-Magic-Link,
+// Passkey/WebAuthn, Session-Ende. Erst-Login = Registrierung (kein separater
+// Screen) - die db.find*-Helfer legen bei Bedarf einen neuen Nutzer an.
+import { Hono } from "hono";
+import type { Env } from "../types";
+import { buildGoogleAuthUrl, exchangeGoogleCode } from "../auth/google";
+import { buildAppleAuthUrl, exchangeAppleCode } from "../auth/apple";
+import { requestMagicLink, verifyMagicLink } from "../auth/magicLink";
+import {
+  finishPasskeyLogin,
+  finishPasskeyRegistration,
+  startPasskeyLogin,
+  startPasskeyRegistration,
+} from "../auth/passkey";
+import { login, logout, extractSessionId, buildClearSessionCookie } from "../auth/session";
+import { deleteAllSessionsForUser, findOrCreateUserForOAuth } from "../db";
+import { requireAuth } from "../middleware";
+
+const OAUTH_STATE_COOKIE = "if_oauth_state";
+
+export const authRoutes = new Hono<{ Bindings: Env }>();
+
+function frontendBase(env: Env, req: Request): string {
+  // APP_BASE_URL ist optional (Platzhalter-Setup, siehe kommerzialisierung-setup.md) -
+  // ohne Konfiguration faellt der Worker auf die Origin des eingehenden Requests
+  // zurueck (funktioniert lokal/dev, wo Frontend und der Redirect vom selben
+  // Host aus angestossen werden).
+  if (env.APP_BASE_URL) return env.APP_BASE_URL;
+  return new URL(req.url).origin;
+}
+
+function workerCallbackUrl(req: Request, path: string): string {
+  return new URL(path, new URL(req.url).origin).toString();
+}
+
+function randomState(): string {
+  return crypto.randomUUID();
+}
+
+// ═══ Google ═══
+
+authRoutes.get("/google/start", (c) => {
+  const state = randomState();
+  const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/google/callback");
+  const url = buildGoogleAuthUrl(c.env, redirectUri, state);
+  c.header(
+    "Set-Cookie",
+    `${OAUTH_STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+  );
+  return c.redirect(url, 302);
+});
+
+authRoutes.get("/google/callback", async (c) => {
+  const code = c.req.query("code");
+  const state = c.req.query("state");
+  const cookieState = readCookie(c.req.raw, OAUTH_STATE_COOKIE);
+  const base = frontendBase(c.env, c.req.raw);
+  if (!code || !state || !cookieState || state !== cookieState) {
+    return c.redirect(`${base}/?login_error=oauth_state_mismatch`, 302);
+  }
+  try {
+    const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/google/callback");
+    const identity = await exchangeGoogleCode(c.env, code, redirectUri);
+    const user = await findOrCreateUserForOAuth(c.env.DB, "google", identity.providerUserId, identity.email);
+    const { cookie } = await login(c.env, user.id, c.req.header("User-Agent") || null);
+    c.header("Set-Cookie", cookie, { append: true });
+    return c.redirect(`${base}/?login_success=1`, 302);
+  } catch (err) {
+    console.error("google_oauth_callback_failed", err instanceof Error ? err.message : "unknown");
+    return c.redirect(`${base}/?login_error=oauth_failed`, 302);
+  }
+});
+
+// ═══ Apple ═══
+// response_mode=form_post - Apple postet an den Callback, kein GET-Query.
+
+authRoutes.get("/apple/start", (c) => {
+  const state = randomState();
+  const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/apple/callback");
+  const url = buildAppleAuthUrl(c.env, redirectUri, state);
+  c.header(
+    "Set-Cookie",
+    `${OAUTH_STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+  );
+  return c.redirect(url, 302);
+});
+
+authRoutes.post("/apple/callback", async (c) => {
+  const body = await c.req.parseBody();
+  const code = typeof body.code === "string" ? body.code : undefined;
+  const state = typeof body.state === "string" ? body.state : undefined;
+  const cookieState = readCookie(c.req.raw, OAUTH_STATE_COOKIE);
+  const base = frontendBase(c.env, c.req.raw);
+  if (!code || !state || !cookieState || state !== cookieState) {
+    return c.redirect(`${base}/?login_error=oauth_state_mismatch`, 302);
+  }
+  try {
+    const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/apple/callback");
+    const identity = await exchangeAppleCode(c.env, code, redirectUri);
+    const user = await findOrCreateUserForOAuth(c.env.DB, "apple", identity.providerUserId, identity.email);
+    const { cookie } = await login(c.env, user.id, c.req.header("User-Agent") || null);
+    c.header("Set-Cookie", cookie, { append: true });
+    return c.redirect(`${base}/?login_success=1`, 302);
+  } catch (err) {
+    console.error("apple_oauth_callback_failed", err instanceof Error ? err.message : "unknown");
+    return c.redirect(`${base}/?login_error=oauth_failed`, 302);
+  }
+});
+
+// ═══ E-Mail Magic-Link ═══
+
+authRoutes.post("/magic-link/request", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const email = body && typeof body.email === "string" ? body.email : "";
+  const result = await requestMagicLink(c.env, email);
+  if (!result.ok && result.error === "invalid_email") return c.json({ error: "invalid_email" }, 400);
+  if (!result.ok && result.error === "rate_limited") return c.json({ error: "rate_limited" }, 429);
+  // Immer dieselbe Erfolgsmeldung, unabhaengig von Konto-Existenz (4.3/4.13).
+  return c.json({ ok: true });
+});
+
+authRoutes.get("/magic-link/verify", async (c) => {
+  const token = c.req.query("token") || "";
+  const base = frontendBase(c.env, c.req.raw);
+  const result = await verifyMagicLink(c.env, token);
+  if (!result.ok) return c.redirect(`${base}/?login_error=magic_link_invalid`, 302);
+  const { cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);
+  c.header("Set-Cookie", cookie, { append: true });
+  return c.redirect(`${base}/?login_success=1`, 302);
+});
+
+// ═══ Passkey ═══
+
+authRoutes.post("/passkey/register/options", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const email = body && typeof body.email === "string" ? body.email : "";
+  if (!email) return c.json({ error: "invalid_email" }, 400);
+  const options = await startPasskeyRegistration(c.env, email);
+  return c.json({ options });
+});
+
+authRoutes.post("/passkey/register/verify", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body.email !== "string" || !body.response) {
+    return c.json({ error: "invalid_body" }, 400);
+  }
+  const result = await finishPasskeyRegistration(
+    c.env,
+    body.email,
+    body.response,
+    typeof body.deviceLabel === "string" ? body.deviceLabel : null,
+  );
+  if (!result.ok) return c.json({ error: result.error }, 400);
+  const { session, cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);
+  c.header("Set-Cookie", cookie, { append: true });
+  // Token zusaetzlich im Body (10.0, S1-4/S6-2): Passkey ist der einzige
+  // Login-Weg, der ohne Browser-Redirect auskommt - native Clients (Capacitor,
+  // Phase D) speichern ihn in Secure Storage statt eines Cookies, das auf der
+  // lokalen Capacitor-Origin nicht verlaesslich funktioniert. Web-Clients
+  // ignorieren dieses Feld einfach (Cookie reicht dort).
+  return c.json({ ok: true, token: session.id });
+});
+
+authRoutes.post("/passkey/login/options", async (c) => {
+  const flowId = crypto.randomUUID();
+  const options = await startPasskeyLogin(c.env, flowId);
+  return c.json({ flowId, options });
+});
+
+authRoutes.post("/passkey/login/verify", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body.flowId !== "string" || !body.response) {
+    return c.json({ error: "invalid_body" }, 400);
+  }
+  const result = await finishPasskeyLogin(c.env, body.flowId, body.response);
+  if (!result.ok) return c.json({ error: result.error }, 400);
+  const { session, cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);
+  c.header("Set-Cookie", cookie, { append: true });
+  return c.json({ ok: true, token: session.id });
+});
+
+// ═══ Logout ═══
+
+authRoutes.post("/logout", async (c) => {
+  const sessionId = extractSessionId(c.req.raw);
+  if (sessionId) await logout(c.env, sessionId);
+  c.header("Set-Cookie", buildClearSessionCookie(), { append: true });
+  return c.json({ ok: true });
+});
+
+authRoutes.post("/logout-all", requireAuth, async (c) => {
+  await deleteAllSessionsForUser(c.env.DB, c.var.userId);
+  c.header("Set-Cookie", buildClearSessionCookie(), { append: true });
+  return c.json({ ok: true });
+});
+
+function readCookie(request: Request, name: string): string | null {
+  const header = request.headers.get("Cookie");
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const idx = part.indexOf("=");
+    if (idx === -1) continue;
+    if (part.slice(0, idx).trim() === name) return part.slice(idx + 1).trim();
+  }
+  return null;
+}

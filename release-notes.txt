@@ -1,3 +1,227 @@
+## 2026-08-04 (1.6.1)
+
+### Chore: Kommerzialisierung (Sprints 0-5b) committed, Phase-D/E-Vorbereitung wieder zurückgenommen
+
+**Kontext**
+- Der komplette, bereits in 1.55.97 beschriebene Kommerzialisierungs-Umfang
+  (Konten, Paddle-Zahlung, Free/Pro-Gating, D1-Objekt-Verwaltung/Dashboard)
+  lag seit mehreren Sessions unkommittiert im Arbeitsverzeichnis. In dieser
+  Session gegen `docs/kommerzialisierung-spec.md` v7 abgeglichen und lokal
+  end-to-end verifiziert: `npm test` (276/276), Worker-`vitest` (40/40),
+  `tsc --noEmit` sauber, plus manuelle Browser-Tests (echter Magic-Link-
+  Login über lokale D1, simulierte Pro-Subscription) für Login-Modal,
+  Free-vs-Pro-Vergleichsseite, 1×-Rechner-Trial-Sperre, Merkliste-3er-Limit,
+  Free→Pro-Objekt-Migration, Dashboard (Start/Objekte), Datenexport und
+  vollständige Kontolöschung (Kaskade in `deleteUserCompletely()` bestätigt).
+- **Erneute Nutzerentscheidung dieser Session:** Die in 1.55.98/1.55.99 auf
+  Wunsch vorgezogene Phase-D/E-Vorbereitung (`mobile/` Capacitor-Projekt,
+  `.github/workflows/mobile-{ios,android}.yml`, `e2e/`-Playwright-Tests,
+  `playwright.config.js`) widerspricht der eigentlich gültigen Prozess-
+  entscheidung (Spec 10.0: Kommerzialisierung und Store-Rollout bewusst
+  getrennt, Phase D/E erst nach Abschluss von Sprint 5b). Auf erneute
+  Rückfrage entschieden: entfernt, keine Verlust — das Capacitor-Projekt
+  lässt sich laut Spec Abschnitt 7/8 in Minuten per `npx cap add` neu
+  generieren, sobald Phase D/E tatsächlich beginnt. `package.json`
+  (`test:e2e`-Skript, `@playwright/test`-Dependency) und `vite.config.js`
+  (`e2e/**`-Testausschluss) entsprechend bereinigt.
+- **Neuer Befund beim Verifizieren, noch offen:** `deleteUserCompletely()`
+  (`worker/src/db.ts`) löscht `sessions`, `oauth_identities`,
+  `passkey_credentials`, `subscriptions`, `objects`, `email_change_requests`,
+  `users` — nicht aber `push_tokens` (Migration 0010, hat `user_id`-Spalte).
+  Nach Kontolöschung bliebe ein verwaister Push-Token stehen, im Widerspruch
+  zum „Alle Kontodaten werden endgültig gelöscht"-Versprechen. Gemeinsam mit
+  den in der Gap-Analyse (`docs/konzept-gap-analyse-2026-08-03.md`) bereits
+  dokumentierten Punkten G-5, G-7, G-11 als offene Folgearbeit vorgemerkt,
+  nicht Teil dieses Commits.
+
+**Betroffene Dateien:** `package.json`, `worker/wrangler.toml`, `worker/src/**`
+(Auth/Paddle/Entitlement/Objects, siehe 1.55.97 für Details), `src/components/account/`,
+`src/components/dashboard/`, `src/context/`, diverse `src/hooks/`/`src/utils/`,
+`src/i18n/account.js`. Entfernt: `mobile/`, `e2e/`, `playwright.config.js`,
+`.github/workflows/mobile-{ios,android}.yml`.
+
+## 2026-08-03 (1.6.0)
+
+### Fix: Lokale Dev-Umgebung (localhost) + irreführende Login-Fehlermeldung
+
+- **Lokale Dev-Umgebung lief nicht sauber**: `.env` zeigte auf den remote
+  Dev-Worker, dessen CORS-Antwort `Access-Control-Allow-Origin` für
+  `localhost:5173` fehlte — jeder `credentials:'include'`-Call (Account-
+  Refresh, Login, Merkliste-Sync) scheiterte lokal mit `TypeError: Failed to
+  fetch`. Fix: `vite.config.js` proxied `/api/*` im Dev-Modus zum lokalen
+  Worker (`localhost:8787`, per `wrangler dev`) — same-origin, kein CORS
+  mehr nötig. `.env` zeigt jetzt auf die relative URL `/api/assistant`.
+  `.claude/launch.json` um eine `immofuchs-worker`-Konfiguration ergänzt,
+  damit der Worker künftig zusammen mit dem Frontend startet.
+- **Echter Bug in `LoginModal.jsx`**: Die `ErrorBanner`-Fehler-Map kannte
+  den Code `invalid_email` nicht (den `useAccount.js` bei jedem
+  fehlgeschlagenen Magic-Link-Request liefert, egal ob wegen ungültiger
+  E-Mail, Serverfehler oder fehlender Konfiguration) — Nutzer sahen
+  stattdessen die irreführende generische Meldung „Anmeldung abgebrochen
+  oder fehlgeschlagen.". Neuer i18n-Key `loginErrorInvalidEmail` in allen
+  5 Sprachen (`src/i18n/account.js`) + Verdrahtung in `ErrorBanner`.
+- Calculator-Trial-Sperre (`useCalculatorTrial.js`/`CalculatorTrialGate.jsx`)
+  geprüft: pro-Rechner-Tracking funktioniert korrekt, kein Bug gefunden.
+
+## 2026-08-03 (1.55.99)
+
+### Chore: Restliche Sprint-0/2/5/6/8-Lücken geschlossen (Versionsquelle, Copy, A11y, Playwright)
+
+**S0-4 (PWA-Härtung)**
+- `package.json` Version 1.5.2→1.6.0, `index.html` JSON-LD `softwareVersion`
+  auf denselben Wert + `dateModified` aktualisiert — beide Quellen zeigten
+  vorher unterschiedliche Nummern.
+- Maskable-Icon-Safe-Zone geprüft (`public/icon-512.png`): Befund + Fix-
+  Empfehlung in `docs/pwa-haertung-s0-4.md` — Icon selbst nicht verändert
+  (Design-Asset, CLAUDE.md-Stabilitätsregel).
+- Manuelle Lighthouse-PWA-Checkliste dokumentiert (Live-API war in dieser
+  Session per Rate-Limit blockiert).
+
+**S5-6 (Marketing-Copy)**
+- `TL.de.subShort` (Landing-Hero-Text) nennt jetzt den Trial-Charakter
+  ("Jeden Rechner einmal kostenlos... Unbegrenzte Nutzung mit ImmoFuchs
+  Pro"), analog zu `manifest.json` aus der vorherigen Runde.
+- Cookie-Banner bewusst NICHT angefasst — enthält DSGVO-relevante Aussagen
+  ("kein Server empfängt Ihre Daten"), die mit echten Pro-Nutzern nicht mehr
+  vollständig stimmen; gehört zur Rechtsprüfung V-7, nicht zu KI-Textarbeit.
+
+**S2-5 (Accessibility-Audit)**
+- Kontrastberechnung ergab: `--ca` auf Weiß liegt bei ~3,44:1, klar unter
+  WCAG-AA (4,5:1) — in den NEUEN Konto-Komponenten (`LoginModal.jsx`,
+  `AccountPanel.jsx`, `ProHeaderButton.jsx`, `ObjektDetail.jsx`) auf
+  `--ca-dk`/`--ct` umgestellt. App-weite Vorkommen (30+ Stellen, alle
+  Bestandscode) bewusst nicht angefasst (Design-Token-Regel).
+- Echter Fokus-Trap ergänzt (`src/hooks/useFocusTrap.js`, in `LoginModal`
+  und `AccountPanel` eingebunden) — vorher nur Escape + initialer Fokus,
+  trotz gegenteiligem Code-Kommentar.
+- Details: `docs/accessibility-audit-s2-5.md`.
+
+**S6-5/S8-5 (Playwright-Smoke-Tests)**
+- `playwright.config.js` + `e2e/smoke.spec.js`, 4 Tests, gegen echten
+  Dev-Server verifiziert (12/12 grün über mehrere Wiederholungen).
+- **Echter Befund dabei**: "Jetzt rechnen" existiert zweimal auf der
+  Landing-Seite (Kopfzeile + Hero) und scrollt beide Male nur zur
+  Rechner-Auswahl — erst ein Klick auf eine der sechs Rechner-Karten startet
+  die App (`onStart(...)`). Kein Bug, aber undokumentiertes Verhalten, das
+  auch die manuelle Browser-Testsession zu Beginn dieser Kommerzialisierungs-
+  Runde fälschlich als "Klick funktioniert nicht" interpretiert hatte.
+- `vite.config.js` bekommt `test.exclude` für `e2e/**`, sonst kollidiert
+  Vitests Standard-Glob mit den Playwright-Spec-Dateien.
+
+**Betroffene Dateien:** siehe Umfang oben.
+
+## 2026-08-03 (1.55.98)
+
+### Feature: Native-App-Vorbereitung (Phase D/E) — Capacitor-Scaffold, Push, Fastlane, Store-Entwürfe
+
+**Kontext**
+- Auf Nutzerwunsch: so viel wie technisch möglich für Phase D/E (native App,
+  ursprünglich ausgeschlossen) vorbereitet, trotz harter Blocker in dieser
+  Umgebung (Windows, kein Xcode/Android SDK, keine echten Apple-/Google-
+  Entwicklerkonten). Diese Blocker bleiben bestehen — siehe
+  `docs/kommerzialisierung-setup.md` Abschnitt 10/11 für die manuellen
+  Schritte auf einem Mac.
+
+**Capacitor (`mobile/`)**
+- `mobile/package.json` + `capacitor.config.ts` (webDir zeigt auf `../dist`,
+  kein zweiter UI-Codebase, Spec Abschnitt 7 ADR).
+- Android- UND iOS-Plattform per `npx cap add android|ios` real generiert
+  (nicht von Hand geschrieben) — `mobile/android/`, `mobile/ios/`. iOS
+  ungetestet (CocoaPods/Xcode fehlen hier), Android ungetestet (kein SDK).
+
+**Worker (`worker/src/`)**
+- Bearer-Token jetzt auch im Response-Body der Passkey-Login/Register-Routen
+  (`routes/auth.ts`) — Grundlage für nativen Secure-Storage (10.0, S1-4/S6-2).
+- Neues `push.ts`: FCM HTTP v1 (Android, Service-Account-OAuth2) + APNs
+  HTTP/2 (iOS, ES256-JWT) — vollständig implementiert, aber ungetestet ohne
+  echte Firebase-/Apple-Push-Credentials. Migration 0010 (`push_tokens`),
+  neue Route `/api/v1/devices/push-token`. `notifications.ts` dockt Push als
+  zweiten Kanal neben E-Mail an (10.0).
+
+**Frontend (`src/`)**
+- `utils/nativeAuth.js` (Bearer-Token-Speicherung via `@capacitor/preferences`),
+  `utils/apiBase.js` bekommt `apiFetch()`-Wrapper (haengt den Header nativ an,
+  web bleibt beim Cookie) — alle bestehenden `/api/v1/*`-Aufrufe umgestellt.
+  `utils/nativeInit.js` (Splashscreen/Haptics), `utils/nativePush.js`
+  (Push-Registrierung nach Login).
+
+**CI/Fastlane/Doku**
+- `mobile/fastlane/{Fastfile,Appfile}`, `.github/workflows/mobile-{ios,android}.yml`
+  (manuell ausgelöst, brauchen echte Secrets).
+- `public/.well-known/assetlinks.json` (Platzhalter-Fingerprint),
+  `docs/app-store-privacy-declarations.md`, `docs/app-store-listing-draft.md`,
+  `docs/zinssatz-widget-spec.md` + Widget-Quellcode
+  (`mobile/widget-source/{ios,android}/`, ungetestet).
+
+**Betroffene Dateien:** siehe Umfang oben.
+
+## 2026-08-03 (1.55.97)
+
+### Feature: Kommerzialisierung — Konten, Zahlung, Feature-Gating, Objekt-Verwaltung (Sprints 0-5b)
+
+**Kontext**
+- Umsetzung von `docs/kommerzialisierung-spec.md`, Phasen A-C (Sprints 0, 1,
+  2, 3, 4, 5, 5b) — Login, Paddle-Zahlung, Free/Pro-Gating, D1-Objekt-Sync.
+  Phase D/E (native App, Capacitor, App-Store) bewusst nicht Teil dieser
+  Runde (Nutzerentscheidung 2026-08-03).
+- Läuft überall gegen Platzhalter-Credentials — echte Konten (Paddle,
+  Google, Apple, Resend) und der Domain-Umzug auf `api.immofuchs.info` sind
+  manuelle Schritte, siehe `docs/kommerzialisierung-setup.md`.
+
+**Worker (`worker/src/`)**
+- D1-Schema + Migrationen 0001-0009 (`users`, `oauth_identities`,
+  `passkey_credentials`, `magic_links`, `sessions`, `subscriptions`,
+  `processed_webhook_events`, `objects`, `assistant_consent`,
+  `expose_trial_used`, `email_change_requests`).
+- Neue Module: `auth/{google,apple,magicLink,passkey,session}.ts`,
+  `entitlement.ts`, `consent.ts`, `db.ts`, `email.ts`,
+  `paddle/{client,checkout,webhook}.ts`, `notifications.ts`, `scheduled.ts`.
+- Router auf Hono migriert (`index.ts`), `/api/assistant` und
+  `/api/expose-extract` bleiben unversioniert und logikgleich eingehängt.
+  Neue Routen unter `/api/v1/{auth,billing,account,objects,consent}`, `/api/v1/me`.
+- `/api/assistant`/`/api/expose-extract` bekommen einen vorgeschalteten
+  Entitlement-/Consent-Check: Free 5/Tag vs. Pro 50/Tag, Pro-`MAX_TOKENS`
+  350→700 (inkl. mitwachsendem `MAX_VERLAUF_TEXT_LEN`), Pro-Reservierung im
+  globalen Rate-Limit (Free wird ab 70 % abgewiesen), KI-Consent-Gate (412
+  `consent_required`), 1x-Exposé-Trial-Gate für anonyme Free-Nutzer.
+- Sichtbare Fallback-Alarmierung (`[FALLBACK_ALERT]`-Log-Präfix) statt
+  reinem `console.error`, falls Gemini in den Workers-AI-Fallback fällt.
+- `wrangler.toml`: neuer `[env.qa]`-Block (QA bekam bisher keinen eigenen
+  Worker, teilte sich Prod), D1-Bindings für alle drei Umgebungen
+  (Platzhalter-`database_id`), täglicher Cron-Trigger für
+  Verlängerungs-Erinnerungen.
+- Tests: `entitlement.test.ts`, `routes/objects.test.ts`,
+  `paddle/webhook.test.ts` (Signaturprüfung + Idempotenz).
+
+**Frontend (`src/`)**
+- `AccountContext`/`useAccount.js`, `AppProviders.jsx`-Wrapper (additiv um
+  den bestehenden `Ctx`).
+- Neue Komponenten `components/account/{LoginModal,PlanSelect,AccountPanel,
+  CancelFlow,ProHeaderButton,CalculatorTrialGate}.jsx` — "Pro"-Button in der
+  Logo-Kopfzeile neben `LangSel`.
+- `useCalculatorTrial.js`: 1x-Trial-Sperre für alle 6 Rechner, gesetzt beim
+  Verlassen des Rechner-Tabs (rein clientseitig, keine Grenzkosten).
+- `Merkliste.jsx`: Free bleibt bei 3 Objekten/localStorage (vorher 50),
+  Pro synchronisiert über `/api/v1/objects` inkl. einmaligem
+  Free→Pro-Import nach Kauf (Duplikatschutz über clientseitige uuid).
+- Neue Dashboard-Ansichten `components/dashboard/{Start,ObjektListe,
+  ObjektDetail}.jsx`, zusätzliche Tabs "Start"/"Objekte" nur für Pro-Nutzer.
+- Exposé-Scan legt für Pro automatisch ein Objekt an (vereinfachter
+  Brutto-Rendite-BANDS-Score, `utils/autoSaveExposeObject.js`).
+- KI-Consent-Gate im Chat/Exposé-Sheet (`AssistantSheet.jsx`): bestehende
+  Upload-Consent-Bubble hinterlegt zusätzlich serverseitigen Consent, ein
+  neuer `status:"consent"`-Zweig fängt einen 412 vom Chat ab und wiederholt
+  den Versuch nach Bestätigung automatisch.
+- CSP (`index.html`) um Google Identity Services, Sign in with Apple JS und
+  Paddle.js erweitert; Paddle.js selbst lädt erst bei der Plan-Auswahl
+  (`utils/paddleLoader.js`), nicht global.
+- Alle `fetch()`-Aufrufe an den Worker (inkl. der zwei bestehenden in
+  `useAssistant.js`) senden jetzt `credentials: "include"`.
+- Neue i18n-Datei `i18n/account.js` (5 Sprachen) + Vollständigkeits-Test.
+
+**Betroffene Dateien:** siehe Umfang oben — vollständige Liste über
+`git diff` nachvollziehbar, zu groß für eine Aufzählung hier.
+
 ## 2026-08-03 (1.55.96)
 
 ### Fix: Finn zeigte generischen Fehler nach der 2. Chat-Frage (Dev-Worker)

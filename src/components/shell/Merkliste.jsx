@@ -2,44 +2,205 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
+import { ACCOUNT_T } from "../../i18n/account.js";
 import { LANG_LOCALE } from "../../utils/helpers.js";
 import { FinnBubble } from "../assistant/FinnBubble.jsx";
 import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_FIELDS, tabZuRechner } from "../../utils/assistantContext.js";
+import { apiFetch } from "../../utils/apiBase.js";
+import { LoginModal } from "../account/LoginModal.jsx";
 
 const MAX_COMPARE = 5;
+// Free-Limit (Spec 4.0a): 3 Objekte, lokal, kein Sync - Pro: unbegrenzt,
+// serverseitig. War frueher pauschal 50 fuer alle Nutzer (Vor-Kommerzialisierung).
+const FREE_OBJECT_LIMIT = 3;
+const LOCAL_STORAGE_KEY = "if_saved_v1";
+const PRO_MIRROR_KEY = "if_saved_pro_mirror_v1"; // Offline-Spiegelung (4.17)
 
+function readLocalList() {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+function writeLocalList(list) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    /* Storage evtl. blockiert/voll - kein Blocker fuer die Anzeige selbst */
+  }
+}
+
+// Server-Objekt (D1-Schema, 4.2/4.17) <-> lokale Merkliste-Form
+// {id,name,date,tab,data}. Das D1-Schema hat bewusst kein eigenes "tab"-Feld
+// (1:1 aus der Spec uebernommen) - wird deshalb als Teil von input_data
+// mitgefuehrt statt das Schema eigenmaechtig zu erweitern.
+function toServerPayload(local) {
+  const kaufpreis = Number(local.data?.kaufpreis);
+  const wohnflaeche = Number(local.data?.wohnflaeche ?? local.data?.flaeche);
+  return {
+    id: local.id,
+    title: local.name,
+    plz: local.data?.plz || null,
+    ort: local.data?.ort || null,
+    kaufpreis: Number.isFinite(kaufpreis) ? kaufpreis : null,
+    wohnflaeche: Number.isFinite(wohnflaeche) ? wohnflaeche : null,
+    score: null,
+    scoreLabel: null,
+    inputData: { tab: local.tab, ...local.data },
+    resultData: {},
+    source: "manuell",
+  };
+}
+
+function fromServerObject(server, locale) {
+  const { tab, ...data } = server.inputData || {};
+  return {
+    id: server.id,
+    name: server.title || "Objekt",
+    date: new Date(server.updatedAt).toLocaleDateString(locale),
+    tab: tab || "haupt",
+    data,
+  };
+}
+
+// Haelt Login-/Pro-Status, ruft /api/v1/me (Spec 5.3) - strukturell wie
+// useAssistant/useFinnBubble. Ein einziger Provider (AccountContext.jsx)
+// haelt genau eine Instanz, damit nicht jede Komponente ihren eigenen
+// /api/v1/me-Request ausloest.
 export function useSavedObjects(setData) {
-  const [savedList, setSavedList] = useState(() => {
+  // Cross-cutting Pro-Signal (siehe useAccount.js, broadcastIsPro): dieser
+  // Hook wird in App.jsx VOR AppProviders/AccountProvider aufgerufen, ein
+  // useAccountCtx()-Read waere hier immer null. Custom-Event + Cache-Flag
+  // umgehen das, ohne App.jsx grossflaechig umzubauen - die eigentliche
+  // Rechtepruefung bleibt ohnehin serverseitig (4.9).
+  const [isPro, setIsPro] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("if_saved_v1") || "[]");
+      return localStorage.getItem("if_ispro_cache") === "1";
     } catch {
-      return [];
+      return false;
     }
   });
-  const saveObj = useCallback((name, data, tab) => {
-    const obj = {
-      id: Date.now().toString(),
-      name: name.trim() || "Objekt",
-      date: new Date().toLocaleDateString("de-DE"),
-      tab,
-      data: { ...data },
-    };
-    setSavedList((prev) => {
-      const next = [obj, ...prev].slice(0, 50);
-      localStorage.setItem("if_saved_v1", JSON.stringify(next));
-      return next;
-    });
+  useEffect(() => {
+    const handler = (e) => setIsPro(Boolean(e.detail));
+    window.addEventListener("if:ispro-changed", handler);
+    return () => window.removeEventListener("if:ispro-changed", handler);
   }, []);
-  const delObj = useCallback((id) => {
-    setSavedList((prev) => {
-      const next = prev.filter((o) => o.id !== id);
-      localStorage.setItem("if_saved_v1", JSON.stringify(next));
-      return next;
-    });
+
+  const [savedList, setSavedList] = useState(() => (isPro ? [] : readLocalList()));
+  const migratedRef = useRef(false);
+
+  const refreshFromServer = useCallback(async () => {
+    try {
+      const res = await apiFetch("/objects");
+      if (!res.ok) return;
+      const { objects } = await res.json();
+      const mapped = objects.map((o) => fromServerObject(o));
+      setSavedList(mapped);
+      try {
+        localStorage.setItem(PRO_MIRROR_KEY, JSON.stringify(mapped));
+      } catch {
+        /* Spiegelung optional */
+      }
+    } catch {
+      // Offline (4.17): Leseansicht faellt auf den zuletzt erfolgreichen Stand zurueck.
+      try {
+        const cached = JSON.parse(localStorage.getItem(PRO_MIRROR_KEY) || "null");
+        if (cached) setSavedList(cached);
+      } catch {
+        /* kein Cache vorhanden */
+      }
+    }
   }, []);
+
+  // Free->Pro-Migration (S5b-2, IMP-06): einmalig direkt nach dem Kippen auf
+  // isPro=true. Server quittiert mit der Anzahl importierter Objekte; der
+  // lokale Stand wird ERST NACH bestaetigtem Import geloescht, nie vorher -
+  // sonst wuerde ein Netzwerkfehler die einzigen Free-Objekte des Nutzers
+  // vernichten.
+  useEffect(() => {
+    if (!isPro) {
+      migratedRef.current = false;
+      return;
+    }
+    if (migratedRef.current) return;
+    migratedRef.current = true;
+    (async () => {
+      const localList = readLocalList();
+      if (localList.length > 0) {
+        try {
+          const res = await apiFetch("/objects/import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ objects: localList.map(toServerPayload) }),
+          });
+          if (res.ok) writeLocalList([]);
+        } catch (e) {
+          console.error("[merkliste] Free->Pro-Import fehlgeschlagen, lokaler Stand bleibt erhalten:", e);
+        }
+      }
+      await refreshFromServer();
+    })();
+  }, [isPro, refreshFromServer]);
+
+  useEffect(() => {
+    if (isPro) refreshFromServer();
+  }, [isPro, refreshFromServer]);
+
+  const saveObj = useCallback(
+    async (name, data, tab) => {
+      const obj = {
+        id: crypto.randomUUID(),
+        name: name.trim() || "Objekt",
+        date: new Date().toLocaleDateString("de-DE"),
+        tab,
+        data: { ...data },
+      };
+      if (isPro) {
+        try {
+          await apiFetch("/objects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(toServerPayload(obj)),
+          });
+        } catch (e) {
+          console.error("[merkliste] Speichern fehlgeschlagen:", e);
+        }
+        await refreshFromServer();
+        return;
+      }
+      setSavedList((prev) => {
+        const next = [obj, ...prev].slice(0, FREE_OBJECT_LIMIT);
+        writeLocalList(next);
+        return next;
+      });
+    },
+    [isPro, refreshFromServer],
+  );
+
+  const delObj = useCallback(
+    async (id) => {
+      if (isPro) {
+        try {
+          await apiFetch(`/objects/${id}`, { method: "DELETE" });
+        } catch (e) {
+          console.error("[merkliste] Loeschen fehlgeschlagen:", e);
+        }
+        await refreshFromServer();
+        return;
+      }
+      setSavedList((prev) => {
+        const next = prev.filter((o) => o.id !== id);
+        writeLocalList(next);
+        return next;
+      });
+    },
+    [isPro, refreshFromServer],
+  );
+
   const loadObj = useCallback(
     (obj, setTab) => {
       setData(obj.data);
@@ -47,7 +208,8 @@ export function useSavedObjects(setData) {
     },
     [setData],
   );
-  return { savedList, saveObj, delObj, loadObj };
+
+  return { savedList, saveObj, delObj, loadObj, isPro, freeLimit: FREE_OBJECT_LIMIT };
 }
 
 export function SaveModal({ onClose, onSave, defaultName, lang }) {
@@ -139,11 +301,16 @@ export function SaveModal({ onClose, onSave, defaultName, lang }) {
 }
 
 export function SaveBtn({ tab }) {
-  const { d, saveObj, lang } = useApp();
+  const { d, saveObj, lang, savedList, isProSavedObjects, savedObjectsFreeLimit } = useApp();
   const t = T[lang] || T.de;
+  const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const [open, setOpen] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const hasData = d.kaufpreis || d.vergleichsmiete;
   if (!hasData) return null;
+  // Free-Limit erreicht (Spec 4.0a): ab dem 4. Objekt Upgrade-Hinweis statt
+  // stillschweigendem Verdraengen des aeltesten Eintrags.
+  const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
   // Strasse und Hausnummer voranstellen, sobald sie bekannt sind (aus dem
   // Expose oder von Hand): zwei Wohnungen in derselben Stadt sind sonst beide
   // nur "Ingersheim · 199.000 €" und in der Merkliste nicht auseinanderzuhalten.
@@ -157,7 +324,7 @@ export function SaveBtn({ tab }) {
     <>
       <button
         className="no-print"
-        onClick={() => setOpen(true)}
+        onClick={() => (limitReached ? setShowUpgrade(true) : setOpen(true))}
         style={{
           width: "100%",
           padding: "12px",
@@ -188,8 +355,9 @@ export function SaveBtn({ tab }) {
         >
           <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
         </svg>
-        {t.saveBtnLabel || "Speichern"}
+        {limitReached ? `👑 ${at.trialLockedCta}` : t.saveBtnLabel || "Speichern"}
       </button>
+      {showUpgrade && <LoginModal onClose={() => setShowUpgrade(false)} />}
       {open && (
         <SaveModal
           lang={lang}
@@ -206,11 +374,14 @@ export function SaveBtn({ tab }) {
 }
 
 export function Merkliste() {
-  const { savedList, delObj, loadObj, setTabExt, lang } = useApp();
+  const { savedList, delObj, loadObj, setTabExt, lang, isProSavedObjects, savedObjectsFreeLimit } = useApp();
   const t = T[lang] || T.de;
   const locale = LANG_LOCALE[lang] || "de-DE";
   const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
+  const acct = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const [confirmDel, setConfirmDel] = useState(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
   const [compareIds, setCompareIds] = useState([]);
   const [compareSheetOpen, setCompareSheetOpen] = useState(false);
   // Die Sprechblase verspricht "ich vergleiche" - damit das eingeloest wird,
@@ -284,11 +455,36 @@ export function Merkliste() {
   return (
     <div style={{ padding: "16px 16px 100px" }}>
       <div style={{ fontSize: 13, color: "var(--ch)", marginBottom: 12, fontWeight: 500 }}>
-        {savedList.length}{" "}
+        {savedList.length}
+        {!isProSavedObjects ? `/${savedObjectsFreeLimit}` : ""}{" "}
         {savedList.length === 1
           ? t.countSingular || "Objekt gespeichert"
           : t.countPlural || "Objekte gespeichert"}
       </div>
+      {limitReached && (
+        <button
+          onClick={() => setShowUpgrade(true)}
+          className="no-print"
+          style={{
+            display: "block",
+            width: "100%",
+            textAlign: "left",
+            padding: "10px 14px",
+            marginBottom: 14,
+            borderRadius: 10,
+            border: "1px solid var(--ca-bd)",
+            background: "var(--ca-bg)",
+            color: "var(--ca-dk)",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          👑 {acct.trialLockedBody}
+        </button>
+      )}
+      {showUpgrade && <LoginModal onClose={() => setShowUpgrade(false)} />}
       {savedList.map((obj) => {
         const kp = fmt(obj.data.kaufpreis);
         const miete = fmt(obj.data.kaltmiete);

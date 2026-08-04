@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef } from "react";
 import { bereiteDateienVor } from "../utils/exposeUpload.js";
 import { analysiereExpose } from "../utils/finnAnalyse.js";
+import { autoSaveExposeObject } from "../utils/autoSaveExposeObject.js";
+import { apiFetch } from "../utils/apiBase.js";
+import { nativeAuthHeaders } from "../utils/nativeAuth.js";
 
 const SESSION_KEY = "if_assistant_session"; // Naming-Konvention wie if_landed in App.jsx
 const MAX_HISTORY_TURNS = 3; // letzte 3 Frage/Antwort-Paare, Kostenbegrenzung (Konzept 2.6)
@@ -46,6 +49,11 @@ export function useAssistant() {
   const [chatFehlerTechnisch, setChatFehlerTechnisch] = useState(false);
   const sessionId = useRef(getSessionId());
   const lastAttemptRef = useRef(null);
+  // KI-Consent vor der ersten Finn-Nutzung (Spec 3.2, S5-7): der Worker lehnt
+  // einen Chat-/Exposé-Aufruf ohne vorherigen Consent mit 412 ab, BEVOR ein
+  // Kontingent verbraucht wird. Der letzte Exposé-Versuch wird hier separat
+  // gemerkt (anders als beim Chat gibt es dafuer noch keinen Retry-Pfad).
+  const lastExposeAttemptRef = useRef(null);
 
   const send = useCallback(
     async (frage, rechner, kontext, lang, verlaufSource, vergleichsObjekte) => {
@@ -70,9 +78,14 @@ export function useAssistant() {
       try {
         const res = await fetch(import.meta.env.VITE_ASSISTANT_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          headers: { "Content-Type": "application/json", ...(await nativeAuthHeaders()) },
           body: JSON.stringify(body),
         });
+        if (res.status === 412) {
+          setStatus("consent");
+          return;
+        }
         if (res.status === 429) {
           setStatus("limit");
           return;
@@ -152,6 +165,7 @@ export function useAssistant() {
   // hier bewusst keinen Feld-fuer-Feld-Fortschritt, weil die Antwort als ein
   // Stueck kommt - alles andere waere vorgetaeuschter Fortschritt.
   const extrahiereExpose = useCallback(async (bilder, pdf, lang) => {
+    lastExposeAttemptRef.current = { bilder, pdf, lang };
     // Die Fehlertexte des Uploads sind eigene: "Für heute war's das mit
     // Fragen" waere hier schlicht falsch, es ging um ein Exposé.
     if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -191,7 +205,8 @@ export function useAssistant() {
     try {
       const res = await fetch(exposeUrl(), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...(await nativeAuthHeaders()) },
         body: JSON.stringify({
           images: vorbereitet.images,
           pdf: vorbereitet.pdf ?? undefined,
@@ -199,6 +214,10 @@ export function useAssistant() {
           sessionId: sessionId.current,
         }),
       });
+      if (res.status === 412) {
+        setStatus("consent");
+        return;
+      }
       if (res.status === 429) {
         setExposeFehler("fehlerLimit");
         setStatus("limit");
@@ -241,6 +260,11 @@ export function useAssistant() {
         { role: "expose", ergebnis, analyse, erledigt: false, anzahl: 0 },
       ]);
       setStatus("idle");
+      lastExposeAttemptRef.current = null;
+      // Fuer Pro-Nutzer erzeugt derselbe Scan automatisch ein Objekt in der
+      // Merkliste (Spec 4.8/4.17, S5b-3) - fire-and-forget, blockiert die
+      // Chat-Anzeige nicht und scheitert im Fehlerfall still.
+      autoSaveExposeObject(ergebnis);
     } catch (err) {
       console.error("expose_extract_request_failed", "network_or_parse_error", err);
       setExposeFehler("fehlerDienst");
@@ -257,6 +281,33 @@ export function useAssistant() {
       ),
     );
   }, []);
+
+  // KI-Consent (Spec 3.2, S5-7): einmalig serverseitig hinterlegen (Worker
+  // lehnt sonst mit 412 ab, bevor ein Kontingent verbraucht wird). Getrennt
+  // von recordConsent(): giveConsentAndRetry() wird nach einem tatsaechlichen
+  // 412 aufgerufen und stoesst danach automatisch den urspruenglich
+  // blockierten Chat- oder Exposé-Versuch erneut an.
+  const recordConsent = useCallback(async () => {
+    try {
+      await apiFetch("/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: sessionId.current }),
+      });
+    } catch (e) {
+      console.error("consent_request_failed", e);
+    }
+  }, []);
+
+  const giveConsentAndRetry = useCallback(async () => {
+    await recordConsent();
+    if (lastExposeAttemptRef.current) {
+      const { bilder, pdf, lang } = lastExposeAttemptRef.current;
+      extrahiereExpose(bilder, pdf, lang);
+      return;
+    }
+    retry();
+  }, [recordConsent, extrahiereExpose, retry]);
 
   // "Chat neustart" (Nutzerwunsch 2026-07-22, Vodafone-TOBi-Vorbild) - leert
   // den Verlauf lokal, der Worker selbst ist ohnehin zustandslos (siehe
@@ -281,5 +332,8 @@ export function useAssistant() {
     exposeFehler,
     chatFehlerTechnisch,
     markiereExposeErledigt,
+    recordConsent,
+    giveConsentAndRetry,
+    sessionId: sessionId.current,
   };
 }

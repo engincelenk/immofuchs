@@ -7,3 +7,16 @@ CLAUDE.md
 .tmp.driveupload/
 .env
 docs/
+
+# Capacitor native projects (mobile/, Spec Abschnitt 7/8) - maschinenspezifische
+# SDK-Pfade und Build-Artefakte, nie einchecken.
+mobile/android/local.properties
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/ios/App/Pods/
+mobile/ios/App/build/
+mobile/ios/DerivedData/
+
+# Playwright (S6-5/S8-5)
+/playwright-report/
+/test-results/
