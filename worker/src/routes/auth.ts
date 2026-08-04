@@ -12,6 +12,15 @@ import {
   startPasskeyLogin,
   startPasskeyRegistration,
 } from "../auth/passkey";
+import {
+  loginWithPassword,
+  registerWithPassword,
+  requestLinkPassword,
+  requestPasswordReset,
+  resendVerification,
+  resetPassword,
+  verifyEmailToken,
+} from "../auth/passwordAuth";
 import { login, logout, extractSessionId, buildClearSessionCookie } from "../auth/session";
 import { deleteAllSessionsForUser, findOrCreateUserForOAuth } from "../db";
 import { requireAuth } from "../middleware";
@@ -127,6 +136,86 @@ authRoutes.get("/magic-link/verify", async (c) => {
   const { cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);
   c.header("Set-Cookie", cookie, { append: true });
   return c.redirect(`${base}/?login_success=1`, 302);
+});
+
+// ═══ E-Mail + Passwort (Ergaenzung 04.08., Spec v8 4.4/4.5/4.13) ═══
+// Fuenfter Login-Weg. Reihenfolge im Modal bewusst nachrangig (4.3, IMP-14) -
+// die vier passwortlosen Wege bleiben unveraendert die primaeren Buttons.
+
+authRoutes.post("/register", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const email = body && typeof body.email === "string" ? body.email : "";
+  const password = body && typeof body.password === "string" ? body.password : "";
+  const acceptedTerms = Boolean(body && body.acceptedTerms === true);
+  const result = await registerWithPassword(c.env, email, password, acceptedTerms);
+  if (!result.ok) {
+    if (result.error === "rate_limited") return c.json({ error: result.error }, 429);
+    if (result.error === "email_taken") return c.json({ error: result.error, providers: result.providers }, 409);
+    return c.json({ error: result.error }, 400);
+  }
+  return c.json({ ok: true });
+});
+
+authRoutes.post("/link-password/request", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const email = body && typeof body.email === "string" ? body.email : "";
+  const password = body && typeof body.password === "string" ? body.password : "";
+  const result = await requestLinkPassword(c.env, email, password);
+  if (!result.ok) {
+    if (result.error === "rate_limited") return c.json({ error: result.error }, 429);
+    return c.json({ error: result.error }, 400);
+  }
+  return c.json({ ok: true });
+});
+
+authRoutes.get("/verify-email", async (c) => {
+  const token = c.req.query("token") || "";
+  const base = frontendBase(c.env, c.req.raw);
+  const result = await verifyEmailToken(c.env, token);
+  if (!result.ok) return c.redirect(`${base}/?login_error=verify_invalid`, 302);
+  const { cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);
+  c.header("Set-Cookie", cookie, { append: true });
+  return c.redirect(`${base}/?login_success=1`, 302);
+});
+
+authRoutes.post("/resend-verification", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const email = body && typeof body.email === "string" ? body.email : "";
+  const result = await resendVerification(c.env, email);
+  if (!result.ok) return c.json({ error: result.error }, 429);
+  return c.json({ ok: true });
+});
+
+authRoutes.post("/login", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const email = body && typeof body.email === "string" ? body.email : "";
+  const password = body && typeof body.password === "string" ? body.password : "";
+  const result = await loginWithPassword(c.env, c.req.raw, email, password);
+  if (!result.ok) {
+    if (result.error === "locked") return c.json({ error: result.error, retryAfterSeconds: result.retryAfterSeconds }, 423);
+    if (result.error === "email_not_verified") return c.json({ error: result.error }, 403);
+    return c.json({ error: result.error, warn: result.warn }, 401);
+  }
+  const { cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);
+  c.header("Set-Cookie", cookie, { append: true });
+  return c.json({ ok: true });
+});
+
+authRoutes.post("/password-reset/request", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const email = body && typeof body.email === "string" ? body.email : "";
+  await requestPasswordReset(c.env, email);
+  // Immer {ok:true} (4.13, neutrale Antwort) - unabhaengig von Konto-Existenz.
+  return c.json({ ok: true });
+});
+
+authRoutes.post("/password-reset/confirm", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const token = body && typeof body.token === "string" ? body.token : "";
+  const newPassword = body && typeof body.newPassword === "string" ? body.newPassword : "";
+  const result = await resetPassword(c.env, token, newPassword);
+  if (!result.ok) return c.json({ error: result.error }, 400);
+  return c.json({ ok: true });
 });
 
 // ═══ Passkey ═══

@@ -5,6 +5,7 @@
 import type { Env } from "../types";
 import { createMagicLink, consumeMagicLink, getUserByEmail, createUser } from "../db";
 import { sendEmail } from "../email";
+import { hashToken } from "./password";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HOUR_MS = 60 * 60 * 1000;
@@ -30,7 +31,8 @@ export async function requestMagicLink(
     return { ok: false, error: "rate_limited" };
   }
 
-  const token = await createMagicLink(env.DB, normalized);
+  const token = crypto.randomUUID();
+  await createMagicLink(env.DB, normalized, await hashToken(token));
   const link = `${env.APP_BASE_URL || "https://immofuchs.info"}/auth/magic-link?token=${token}`;
   await sendEmail(
     env,
@@ -48,7 +50,7 @@ export type VerifyMagicLinkResult =
   | { ok: false; error: "invalid_or_expired" };
 
 export async function verifyMagicLink(env: Env, token: string): Promise<VerifyMagicLinkResult> {
-  const email = await consumeMagicLink(env.DB, token);
+  const email = await consumeMagicLink(env.DB, await hashToken(token));
   if (!email) return { ok: false, error: "invalid_or_expired" };
 
   const existing = await getUserByEmail(env.DB, email);

@@ -9,6 +9,11 @@ export interface UserRow {
   role: string;
   created_at: number;
   last_login_at: number | null;
+  // Passwort-Weg (Ergaenzung 04.08., Migration 0011): NULL = Konto hat kein
+  // Passwort (reines OAuth/Passkey/Magic-Link-Konto).
+  password_hash: string | null;
+  password_set_at: number | null;
+  email_verified_at: number | null;
 }
 
 export interface SessionRow {
@@ -78,7 +83,16 @@ export async function createUser(db: Env["DB"], email: string): Promise<UserRow>
     .prepare("INSERT INTO users (id, email, role, created_at, last_login_at) VALUES (?, ?, 'customer', ?, ?)")
     .bind(id, email, now, now)
     .run();
-  return { id, email, role: "customer", created_at: now, last_login_at: now };
+  return {
+    id,
+    email,
+    role: "customer",
+    created_at: now,
+    last_login_at: now,
+    password_hash: null,
+    password_set_at: null,
+    email_verified_at: null,
+  };
 }
 
 export async function touchUserLogin(db: Env["DB"], userId: string): Promise<void> {
@@ -153,28 +167,170 @@ export async function findOrCreateUserForOAuth(
   return user;
 }
 
+// ═══ E-Mail + Passwort (Ergaenzung 04.08., Migration 0011) ═══
+
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 Stunden
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 60 Minuten
+
+// Erster Weg im Projekt mit eigenem Registrierungs-Screen (4.4) - legt den
+// Nutzer sofort mit password_hash an, email_verified_at bleibt NULL bis zum
+// Double-Opt-In (siehe consumeEmailVerificationToken).
+export async function createUserWithPassword(
+  db: Env["DB"],
+  email: string,
+  passwordHash: string,
+): Promise<UserRow> {
+  const id = newId();
+  const now = Date.now();
+  await db
+    .prepare(
+      `INSERT INTO users (id, email, role, created_at, last_login_at, password_hash, password_set_at, email_verified_at)
+       VALUES (?, ?, 'customer', ?, NULL, ?, ?, NULL)`,
+    )
+    .bind(id, email, now, passwordHash, now)
+    .run();
+  return {
+    id,
+    email,
+    role: "customer",
+    created_at: now,
+    last_login_at: null,
+    password_hash: passwordHash,
+    password_set_at: now,
+    email_verified_at: null,
+  };
+}
+
+export async function setUserPasswordHash(db: Env["DB"], userId: string, passwordHash: string): Promise<void> {
+  await db
+    .prepare("UPDATE users SET password_hash = ?, password_set_at = ? WHERE id = ?")
+    .bind(passwordHash, Date.now(), userId)
+    .run();
+}
+
+// Token wird nur gehasht abgelegt (4.5, 4.13, §13 Punkt 17) - Aufrufer
+// uebergibt bereits hashToken(rawToken). pendingPasswordHash ist gesetzt,
+// wenn dieser Token ein bestehendes OAuth-/Passkey-Konto mit einem Passwort
+// verknuepft (Wireframe-Karte 16 "Stattdessen Passwort setzen"), sonst NULL
+// (reine Registrierungs-Bestaetigung).
+export async function createEmailVerificationToken(
+  db: Env["DB"],
+  userId: string,
+  tokenHash: string,
+  pendingPasswordHash: string | null,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO email_verification_tokens (token_hash, user_id, pending_password_hash, expires_at, used_at, created_at)
+       VALUES (?, ?, ?, ?, NULL, ?)`,
+    )
+    .bind(tokenHash, userId, pendingPasswordHash, Date.now() + EMAIL_VERIFICATION_TTL_MS, Date.now())
+    .run();
+}
+
+export async function consumeEmailVerificationToken(
+  db: Env["DB"],
+  tokenHash: string,
+): Promise<{ userId: string; pendingPasswordHash: string | null } | null> {
+  const row = await db
+    .prepare(
+      "SELECT user_id, pending_password_hash, expires_at, used_at FROM email_verification_tokens WHERE token_hash = ?",
+    )
+    .bind(tokenHash)
+    .first<{ user_id: string; pending_password_hash: string | null; expires_at: number; used_at: number | null }>();
+  if (!row || row.used_at !== null || row.expires_at < Date.now()) return null;
+  await db
+    .prepare("UPDATE email_verification_tokens SET used_at = ? WHERE token_hash = ?")
+    .bind(Date.now(), tokenHash)
+    .run();
+  return { userId: row.user_id, pendingPasswordHash: row.pending_password_hash };
+}
+
+export async function markEmailVerified(db: Env["DB"], userId: string): Promise<void> {
+  await db.prepare("UPDATE users SET email_verified_at = ? WHERE id = ?").bind(Date.now(), userId).run();
+}
+
+export async function createPasswordResetToken(db: Env["DB"], userId: string, tokenHash: string): Promise<void> {
+  await db
+    .prepare(
+      "INSERT INTO password_reset_tokens (token_hash, user_id, expires_at, used_at, created_at) VALUES (?, ?, ?, NULL, ?)",
+    )
+    .bind(tokenHash, userId, Date.now() + PASSWORD_RESET_TTL_MS, Date.now())
+    .run();
+}
+
+export async function consumePasswordResetToken(db: Env["DB"], tokenHash: string): Promise<string | null> {
+  const row = await db
+    .prepare("SELECT user_id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = ?")
+    .bind(tokenHash)
+    .first<{ user_id: string; expires_at: number; used_at: number | null }>();
+  if (!row || row.used_at !== null || row.expires_at < Date.now()) return null;
+  await db
+    .prepare("UPDATE password_reset_tokens SET used_at = ? WHERE token_hash = ?")
+    .bind(Date.now(), tokenHash)
+    .run();
+  return row.user_id;
+}
+
+// Gestaffelter Brute-Force-Schutz (4.13): Warnung ab Versuch 3, Sperre 15
+// Min. ab Versuch 5 - gezaehlt pro Konto UND pro IP (siehe passwordAuth.ts).
+export async function recordLoginAttempt(
+  db: Env["DB"],
+  email: string,
+  ipHash: string,
+  success: boolean,
+): Promise<void> {
+  await db
+    .prepare("INSERT INTO login_attempts (id, email, ip_hash, success, attempted_at) VALUES (?, ?, ?, ?, ?)")
+    .bind(newId(), email, ipHash, success ? 1 : 0, Date.now())
+    .run();
+}
+
+export async function countRecentFailedAttempts(
+  db: Env["DB"],
+  column: "email" | "ip_hash",
+  value: string,
+  sinceMs: number,
+): Promise<number> {
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) as n FROM login_attempts WHERE ${column} = ? AND success = 0 AND attempted_at > ?`,
+    )
+    .bind(value, Date.now() - sinceMs)
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+// Datenminimierung (4.13): Zeilen aelter als 24 Std. loeschen - vom
+// bestehenden Renewal-Reminder-Cron mitgezogen (siehe scheduled.ts).
+export async function cleanupOldLoginAttempts(db: Env["DB"], olderThanMs: number): Promise<void> {
+  await db.prepare("DELETE FROM login_attempts WHERE attempted_at < ?").bind(Date.now() - olderThanMs).run();
+}
+
 // ═══ Magic Link ═══
 
-export async function createMagicLink(db: Env["DB"], email: string): Promise<string> {
-  const token = newId();
+// tokenHash statt Klartext-Token (§13 Punkt 17, analog zu den Passwort-Weg-
+// Tokens, siehe auth/magicLink.ts): ein DB-Leak gibt damit keinen gueltigen
+// Login-Link her. Die Spalte heisst weiterhin "token", enthaelt aber den Hash.
+export async function createMagicLink(db: Env["DB"], email: string, tokenHash: string): Promise<void> {
   await db
     .prepare("INSERT INTO magic_links (token, email, expires_at, used_at) VALUES (?, ?, ?, NULL)")
-    .bind(token, email, Date.now() + MAGIC_LINK_TTL_MS)
+    .bind(tokenHash, email, Date.now() + MAGIC_LINK_TTL_MS)
     .run();
-  return token;
 }
 
 // Gibt die E-Mail zurueck und markiert den Token als benutzt - Aufrufer prueft
 // selbst, ob ein Nutzer mit dieser E-Mail existiert oder neu angelegt wird.
-export async function consumeMagicLink(db: Env["DB"], token: string): Promise<string | null> {
+// Erwartet bereits den gehashten Token (Aufrufer hasht den Klartext-Token).
+export async function consumeMagicLink(db: Env["DB"], tokenHash: string): Promise<string | null> {
   const row = await db
     .prepare("SELECT email, expires_at, used_at FROM magic_links WHERE token = ?")
-    .bind(token)
+    .bind(tokenHash)
     .first<{ email: string; expires_at: number; used_at: number | null }>();
   if (!row) return null;
   if (row.used_at !== null) return null; // bereits verwendet
   if (row.expires_at < Date.now()) return null; // abgelaufen
-  await db.prepare("UPDATE magic_links SET used_at = ? WHERE token = ?").bind(Date.now(), token).run();
+  await db.prepare("UPDATE magic_links SET used_at = ? WHERE token = ?").bind(Date.now(), tokenHash).run();
   return row.email;
 }
 
@@ -523,6 +679,8 @@ export async function deleteUserCompletely(db: Env["DB"], userId: string): Promi
     db.prepare("DELETE FROM passkey_credentials WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM subscriptions WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM objects WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM password_reset_tokens WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM email_change_requests WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM users WHERE id = ?").bind(userId),
   ]);

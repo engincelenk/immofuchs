@@ -10,6 +10,12 @@ export function useAccount() {
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null); // Rohantwort von /api/v1/me, oder null (nicht eingeloggt)
   const [error, setError] = useState(null);
+  // Passwort-Reset-Token aus dem Reset-Link (?reset_token=..., Ergaenzung
+  // 04.08.) - anders als die uebrigen Auth-Redirects (login_success/-error)
+  // braucht dieser Weg eine Nutzereingabe (neues Passwort), kann also nicht
+  // rein serverseitig per GET-Redirect abgeschlossen werden. Bleibt im State,
+  // bis LoginModal ihn beim Reset-Submit verbraucht.
+  const [resetToken, setResetToken] = useState(null);
   const didHandleRedirectRef = useRef(false);
 
   // Cross-cutting Pro-Signal fuer useSavedObjects (Merkliste.jsx): dieser Hook
@@ -76,6 +82,12 @@ export function useAccount() {
       if (loginError) setError(`login_error_${loginError}`);
       if (emailChangeError) setError(`email_change_error_${emailChangeError}`);
     }
+    const tokenFromLink = url.searchParams.get("reset_token");
+    if (tokenFromLink) {
+      url.searchParams.delete("reset_token");
+      window.history.replaceState({}, "", url.toString());
+      setResetToken(tokenFromLink);
+    }
     refresh();
   }, [refresh]);
 
@@ -100,6 +112,95 @@ export function useAccount() {
     if (res.status === 429) return { ok: false, error: "rate_limited" };
     if (!res.ok) return { ok: false, error: "invalid_email" };
     return { ok: true };
+  }, []);
+
+  // E-Mail + Passwort (Ergaenzung 04.08., fuenfter Login-/Registrierungsweg,
+  // Spec 4.4). Registrierung legt das Konto sofort mit password_hash an,
+  // email_verified_at bleibt bis zum Klick auf den Bestaetigungslink NULL -
+  // kein automatisches refresh()/Login hier, das passiert erst nach der
+  // Bestaetigung (Worker setzt dabei direkt den Session-Cookie und leitet mit
+  // login_success=1 zurueck, siehe redirect-Handling oben).
+  const registerWithPassword = useCallback(async (email, password, acceptedTerms) => {
+    const res = await apiFetch("/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, acceptedTerms }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) return { ok: true };
+    if (res.status === 409) return { ok: false, error: "email_taken", providers: body.providers || [] };
+    if (res.status === 429) return { ok: false, error: "rate_limited" };
+    return { ok: false, error: body.error || "invalid" };
+  }, []);
+
+  const resendVerification = useCallback(async (email) => {
+    const res = await apiFetch("/auth/resend-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (res.status === 429) return { ok: false, error: "rate_limited" };
+    return { ok: true };
+  }, []);
+
+  const loginWithPassword = useCallback(
+    async (email, password) => {
+      const res = await apiFetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await refresh();
+        return { ok: true };
+      }
+      if (res.status === 423) return { ok: false, error: "locked", retryAfterSeconds: body.retryAfterSeconds };
+      if (res.status === 403) return { ok: false, error: "email_not_verified" };
+      return { ok: false, error: body.error || "invalid_credentials", warn: Boolean(body.warn) };
+    },
+    [refresh],
+  );
+
+  // "Stattdessen Passwort setzen" (Wireframe-Karte 16) - verknuepft ein
+  // Passwort mit einem bestehenden OAuth-/Passkey-Konto, erst wirksam nach
+  // Bestaetigung per E-Mail-Link (analog zur Registrierung).
+  const requestLinkPassword = useCallback(async (email, password) => {
+    const res = await apiFetch("/auth/link-password/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.status === 429) return { ok: false, error: "rate_limited" };
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: body.error || "invalid" };
+    }
+    return { ok: true };
+  }, []);
+
+  const requestPasswordReset = useCallback(async (email) => {
+    await apiFetch("/auth/password-reset/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    // Immer {ok:true} (4.13, neutrale Antwort unabhaengig von Konto-Existenz).
+    return { ok: true };
+  }, []);
+
+  const confirmPasswordReset = useCallback(async (token, newPassword) => {
+    const res = await apiFetch("/auth/password-reset/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, newPassword }),
+    });
+    if (res.ok) {
+      setResetToken(null);
+      return { ok: true };
+    }
+    const body = await res.json().catch(() => ({}));
+    return { ok: false, error: body.error || "invalid_or_expired" };
   }, []);
 
   // Passkey ist aktuell der einzige Login-Weg ohne Browser-Redirect - der
@@ -242,10 +343,17 @@ export function useAccount() {
     isLoggedIn: Boolean(me),
     isPro: Boolean(me?.isPro),
     error,
+    resetToken,
     refresh,
     startGoogleLogin,
     startAppleLogin,
     requestMagicLink,
+    registerWithPassword,
+    resendVerification,
+    loginWithPassword,
+    requestLinkPassword,
+    requestPasswordReset,
+    confirmPasswordReset,
     passkeyLogin,
     passkeyRegister,
     logout,

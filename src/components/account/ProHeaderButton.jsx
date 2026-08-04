@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
@@ -14,6 +14,13 @@ export function ProHeaderButton() {
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
   const [open, setOpen] = useState(false);
+
+  // Passwort-Reset-Link (?reset_token=..., Ergaenzung 04.08.) muss die Maske
+  // von selbst oeffnen - anders als bei OAuth/Magic-Link gibt es hier keinen
+  // Weg, den Screen ohne Nutzereingabe (neues Passwort) abzuschliessen.
+  useEffect(() => {
+    if (account?.resetToken) setOpen(true);
+  }, [account?.resetToken]);
 
   if (!account || account.loading) return null;
 

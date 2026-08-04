@@ -1,3 +1,63 @@
+## 2026-08-04 (1.6.7)
+
+### Feature: E-Mail + Passwort als fünfter Login-/Registrierungsweg (Spec v8, §4.2–4.5, §4.13, §4.14)
+
+**Kontext**
+- `docs/kommerzialisierung-spec.md` (v8) und die zugehörigen Wireframes
+  (`docs/wireframes-kommerzialisierung-2026-07-31.html`, Abschnitt 14.1,
+  Karten 10–17) wurden am 04.08. um den Passwort-Weg erweitert. Bisher gab es
+  nur die vier passwortlosen Wege (Google, Apple, Magic-Link, Passkey) im
+  Code. Nutzer-Entscheidung: PBKDF2-HMAC-SHA-256 über die native
+  WebCrypto-API statt Argon2id-WASM (IMP-12) — Argon2id läuft in der
+  Workers-Runtime nicht nativ und riskiert das 128-MB-/CPU-Limit.
+
+**Neu**
+- Migration `0011_password_auth.sql`: `password_hash`/`password_set_at`/
+  `email_verified_at` auf `users`, neue Tabellen `email_verification_tokens`,
+  `password_reset_tokens`, `login_attempts`.
+- `worker/src/auth/password.ts`: PBKDF2-Hashing (600.000 Iterationen,
+  konstante Laufzeit beim Vergleich), HIBP-k-Anonymity-Leak-Check
+  (best-effort), Token-/IP-Hashing.
+- `worker/src/auth/passwordAuth.ts`: Registrierung mit Double-Opt-In,
+  E-Mail-Bestätigung (setzt sofort eine Session, kein zweiter Login nötig),
+  „Bestätigung erneut senden" (60-Sek.-Cooldown, 5/Std.), Login mit
+  gestaffeltem Brute-Force-Schutz (Warnung ab Versuch 3, Sperre 15 Min. ab
+  Versuch 5, gezählt pro Konto UND pro IP), Passwort-Reset (neutrale Antwort,
+  invalidiert alle Sessions), „Stattdessen Passwort setzen" zum Verknüpfen
+  eines bestehenden OAuth-/Passkey-Kontos mit einem Passwort.
+- Neue Routen unter `/api/v1/auth/`: `register`, `verify-email`,
+  `resend-verification`, `login`, `password-reset/request`,
+  `password-reset/confirm`, `link-password/request`.
+- `worker/src/scheduled.ts`: bestehender Renewal-Reminder-Cron räumt jetzt
+  zusätzlich `login_attempts`-Zeilen älter als 24 Std. ab (Datenminimierung).
+- Konsistenz-Fix (Spec §13, Punkt 17): `magic_links.token` wird jetzt wie die
+  neuen Passwort-Weg-Tokens nur als SHA-256-Hash abgelegt, nicht mehr im
+  Klartext.
+- Frontend (`LoginModal.jsx`): Login-Formular um Passwortfeld (mit
+  Sichtbarkeits-Toggle) erweitert, neue Schritte „Konto erstellen",
+  „Bestätigung gesendet", „Passwort vergessen", „Neues Passwort setzen" sowie
+  der „E-Mail bereits registriert"-Zustand mit benanntem bestehendem Weg.
+  Neue i18n-Texte in allen 5 Sprachen (`src/i18n/account.js`).
+
+**Bewusst offen / abweichend von der Spec (siehe Chat-Zusammenfassung)**
+- Kein dediziertes „Willkommen"-Landingpage-Bild (Wireframe-Karte 12) — folgt
+  stattdessen dem bestehenden Muster (Redirect mit `login_success=1`, Modal
+  zeigt automatisch die Plan-Auswahl), analog zu OAuth/Magic-Link.
+- AGB-Seite (`/agb.html`) existiert noch nicht — Checkbox verlinkt bereits
+  dorthin, die Seite selbst ist laut Spec (§13, Punkt 10) ein separater,
+  rechtlich zu prüfender Schritt.
+- IMP-12 (Hash-Verfahren) und IMP-13 (Sprint-2-Kapazität) sind laut Spec
+  „vor Sprint 2 zu messen/entscheiden" — hier per Nutzer-Entscheidung direkt
+  mit PBKDF2 und vollem Umfang umgesetzt, ohne die dort vorgesehene
+  Latenzmessung auf dem Paid-Plan.
+
+**Betroffene Dateien:** `worker/migrations/0011_password_auth.sql`,
+`worker/src/auth/password.ts` (neu), `worker/src/auth/passwordAuth.ts` (neu),
+`worker/src/auth/magicLink.ts`, `worker/src/db.ts`, `worker/src/routes/auth.ts`,
+`worker/src/scheduled.ts`, `src/hooks/useAccount.js`,
+`src/components/account/LoginModal.jsx`, `src/components/account/ProHeaderButton.jsx`,
+`src/i18n/account.js`, `package.json`, `index.html`.
+
 ## 2026-08-04 (1.6.6)
 
 ### Fix: CSP connect-src blockierte die neue Custom Domain api-dev.immofuchs.info
