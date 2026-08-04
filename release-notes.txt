@@ -1,3 +1,56 @@
+## 2026-08-04 (1.6.3)
+
+### Befund: Login auf dev.immofuchs.info erzeugt keine erkannte Session (Sprint-0-Vorlauf-Schritt bestätigt nötig)
+
+**Problem, live verifiziert**
+- Google-Login funktioniert nach Eintragen der Redirect-URI in der Google
+  Cloud Console (`https://immofuchs-assistant-dev.engincelenk.workers.dev/api/v1/auth/google/callback`)
+  jetzt bis zum Google-eigenen Anmeldebildschirm.
+- Danach bleibt die Session aber unsichtbar fürs Frontend: Test per
+  Magic-Link-Token (direkt aus der Remote-D1 gelesen, kein Login-Versuch mit
+  echten Zugangsdaten) zeigt, dass der Worker das Session-Cookie korrekt
+  setzt — aber auf seiner **eigenen** Domain
+  (`immofuchs-assistant-dev.engincelenk.workers.dev`), nicht auf
+  `dev.immofuchs.info`. Ein anschließender `fetch('/api/v1/me', {credentials:
+  'include'})` **von** `dev.immofuchs.info` **aus** liefert `401
+  not_authenticated` — das Cookie kommt nie an.
+- Ursache: `SameSite=Lax`-Cookies werden bei funktionsübergreifenden
+  `fetch()`/XHR-Aufrufen zwischen unterschiedlichen Domains nicht
+  mitgeschickt (nur bei Top-Level-Navigation). Genau das beschreibt Spec
+  Abschnitt 5.1 als „kritischen Vorlauf-Schritt" (S0-1, Worker-Domain-Umzug
+  auf `api.immofuchs.info`) — der Schritt wurde bisher übersprungen.
+- Kleinerer Nebenbefund dabei: `APP_BASE_URL` ist für den Dev-Worker nicht
+  gesetzt, Nutzer landen nach Login auf der nackten Worker-URL statt zurück
+  auf `dev.immofuchs.info` (unabhängig vom Cookie-Problem).
+
+**Versuchter Fix, fehlgeschlagen (nachvollziehbar dokumentiert statt versteckt)**
+- Cloudflare Custom Domain `api-dev.immofuchs.info` für den Dev-Worker
+  versucht (`[[env.dev.routes]]` in `wrangler.toml`) — Cloudflare-API lehnt
+  mit `"The zone \"immofuchs.info\" does not exist on your account"` (code
+  10083) ab. Die Domain ist nicht als Zone bei Cloudflare verwaltet (DNS läuft
+  über IONOS, siehe `deploy-dev.yml`). Ein Zonen-Umzug zu Cloudflare
+  (Nameserver-Änderung, betrifft die gesamte Domain inkl. E-Mail) ist eine
+  bewusste Nutzerentscheidung, die hier nicht automatisiert getroffen wurde.
+- **Zwischenzeitlicher Fehler dabei selbst gefunden und sofort behoben:**
+  Das Setzen von `routes` in `wrangler.toml` deaktiviert automatisch die
+  bis dahin produktiv genutzte `*.workers.dev`-URL (Wrangler-Standardverhalten)
+  — kurzzeitig war dadurch der komplette Dev-Worker unerreichbar (404). Sofort
+  mit `workers_dev = true` explizit wieder aktiviert und redeployt, bevor die
+  fehlgeschlagene Custom-Domain-Konfiguration komplett zurückgenommen wurde.
+  `wrangler.toml` ist jetzt wieder im Ausgangszustand (nur `*.workers.dev`),
+  mit Kommentar zur Begründung/zum nächsten Schritt.
+
+**Konsequenz:** Kein Login-Weg (Google, Magic-Link, Passkey) führt auf dem
+aktuellen `dev.immofuchs.info`-Aufbau zu einer erkannten Session — unabhängig
+von Secrets/Redirect-URIs. Das ist kein Bug im Kommerzialisierungs-Code
+selbst, sondern eine offene externe Infrastruktur-Entscheidung (Sprint 0,
+V-Bahn). Frontend/Worker/Tests bleiben unverändert funktionsfähig
+(276+40 Tests grün, `tsc` sauber) — betroffen ist ausschließlich der
+Login-Zustand auf der deployten Dev-Domain.
+
+**Betroffene Dateien:** `worker/wrangler.toml` (Custom-Domain-Versuch
+dokumentiert und zurückgenommen, kein funktionaler Unterschied zu 1.6.2).
+
 ## 2026-08-04 (1.6.2)
 
 ### Fix: WEBAUTHN_RP_ID/WEBAUTHN_ORIGIN zeigten in Dev und Prod fälschlich auf localhost
