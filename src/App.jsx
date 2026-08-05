@@ -635,6 +635,18 @@ export default function App() {
               Datenschutz
             </a>
             <span style={{ opacity: 0.4 }}>·</span>
+            <a
+              href="/agb.html"
+              style={{
+                color: "var(--ca)",
+                fontSize: 10,
+                fontFamily: "inherit",
+                textDecoration: "none",
+              }}
+            >
+              AGB
+            </a>
+            <span style={{ opacity: 0.4 }}>·</span>
             <button
               onClick={() => window.ccReopen?.()}
               style={{

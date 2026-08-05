@@ -2,10 +2,19 @@
 // Entscheidung 04.08.: PBKDF2-HMAC-SHA-256 ueber die native WebCrypto-API
 // statt Argon2id-WASM - Argon2id laeuft in der Workers-Runtime nicht nativ,
 // nur als WASM-Build, der gegen das 128-MB-/CPU-Limit pro Request arbeitet.
-// PBKDF2 ist nativ und damit ohne Timeout-Risiko, schwaecher gegen
-// GPU-Angriffe als Argon2id - Kompromiss, kein Idealzustand (IMP-12 bleibt
-// als beobachteter Punkt bestehen, bis das auf dem Paid-Plan gemessen wurde).
-const PBKDF2_ITERATIONS = 600_000; // Groessenordnung nach aktueller OWASP-Empfehlung
+//
+// KORREKTUR 05.08. (Live-Befund, IMP-12): Der urspruengliche Wert 600_000
+// (OWASP-Empfehlung) ist in der Workers-Runtime NICHT nutzbar - sie deckelt
+// PBKDF2 hart und wirft:
+//   "Pbkdf2 failed: iteration counts above 100000 are not supported"
+// Jede Registrierung lief dadurch in einen 500er, es wurde nie ein Konto
+// angelegt. 100_000 ist damit das Plattform-Maximum, nicht der Wunschwert -
+// bewusst unterhalb der OWASP-Empfehlung, weil hoeher schlicht nicht geht.
+// Abgefedert durch: Salt pro Nutzer, Leak-Abgleich (HIBP) bei der Vergabe,
+// gestaffelter Brute-Force-Schutz (4.13) und Rate-Limits auf allen
+// Auth-Endpunkten. Die Iterationszahl steht im Hash selbst (s.u.), eine
+// spaetere Erhoehung entwertet bestehende Hashes also nicht.
+const PBKDF2_ITERATIONS = 100_000; // Workers-Maximum (nicht OWASP-600k, s.o.)
 const SALT_BYTES = 16;
 const KEY_LENGTH_BITS = 256;
 

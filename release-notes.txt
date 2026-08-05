@@ -1,3 +1,85 @@
+## 2026-08-05 (1.6.9)
+
+### Fix: Registrierung war komplett kaputt (PBKDF2-Limit), Mailversand, Passkey-Anlage, AGB
+
+**Kritischer Bugfix — Registrierung schlug immer fehl**
+- Symptom: „Konto erstellen" endete in „Anmeldung abgebrochen oder fehlgeschlagen",
+  danach meldete der Login „E-Mail oder Passwort stimmt nicht" und sperrte nach
+  5 Versuchen. In der Datenbank existierte kein einziges Konto.
+- Ursache (per `wrangler tail` verifiziert, nicht vermutet): die
+  Workers-Runtime deckelt PBKDF2 hart und wirft
+  `Pbkdf2 failed: iteration counts above 100000 are not supported (requested 600000)`.
+  Der in 1.6.7 gesetzte OWASP-Wert 600.000 ist dort schlicht nicht ausführbar,
+  `hashPassword` starb bei jedem Aufruf -> HTTP 500 -> kein Konto angelegt.
+  Der Login war danach fachlich korrekt: das Konto gab es wirklich nicht.
+- Fix: `PBKDF2_ITERATIONS = 100_000` (Plattform-Maximum). Bewusst unterhalb der
+  OWASP-Empfehlung, weil höher auf Workers nicht möglich ist — abgefedert durch
+  Salt pro Nutzer, HIBP-Leak-Abgleich, gestaffelten Brute-Force-Schutz und
+  Rate-Limits. Die Iterationszahl steht im Hash selbst, eine spätere Erhöhung
+  entwertet bestehende Hashes nicht.
+- Das ist genau IMP-12, den die Spec zum Messen vor Sprint 2 vorgesehen hatte;
+  der Wert war stattdessen geraten worden.
+- Live verifiziert nach dem Fix: Registrierung 200, Bestätigungslink 302 ->
+  `login_success=1`, Passwort-Login 200, falsches Passwort 401
+  (`invalid_credentials`), Reset-Anforderung 200.
+
+**Mailversand ohne Resend-Key**
+- `RESEND_API_KEY` ist auf dev nicht gesetzt; `sendEmail` warf dadurch und legte
+  Registrierung, Magic-Link und Passwort-Reset zusätzlich lahm.
+- `email.ts`: fehlt der Key, wird der enthaltene Link jetzt ins Worker-Log
+  geschrieben (`wrangler tail --env dev`) statt zu werfen — damit ist der Flow
+  ohne externen Mail-Anbieter testbar. In Produktion MUSS der Key gesetzt sein;
+  der Zweig loggt bewusst als `console.error`, damit er dort auffällt.
+- `passwordAuth.ts`: ein Versandfehler lässt das bereits angelegte Konto nicht
+  mehr „verwaisen" (vorher 500 trotz existierendem Konto, zweiter Versuch nur
+  noch „email_taken" ohne Ausweg). Jetzt landet der Nutzer auf dem
+  Bestätigungs-Screen mit funktionierendem „Erneut senden".
+
+**Passkey**
+- Die Passkey-*Anlage* fehlte komplett in der Oberfläche: `passkeyRegister`
+  existierte im Hook, wurde aber von keinem Button aufgerufen. Dadurch gab es nie
+  einen Passkey, und „Mit Passkey anmelden" endete auf iOS im QR-/Fremdgeräte-
+  Dialog, weil der Authenticator lokal nichts fand.
+- Neu: Button „Mit Face ID / PIN einrichten" im Registrierungs-Screen, plus
+  erklärender Hinweis unter beiden Passkey-Buttons („Face ID, Fingerabdruck oder
+  Geräte-PIN — kein Passwort nötig"), weil der Begriff „Passkey" allein nicht
+  selbsterklärend ist.
+- `WEBAUTHN_RP_ID`/`WEBAUTHN_ORIGIN` als dev-Secrets auf `dev.immofuchs.info`
+  bzw. `https://dev.immofuchs.info` gesetzt (standen auf Prod-Werten, wodurch die
+  Origin-Prüfung auf dev fehlgeschlagen wäre). Es existierten noch keine
+  Passkeys, der Wechsel entwertet also nichts.
+
+**AGB**
+- `public/agb.html` neu erstellt und im App-Footer sowie in Impressum und
+  Datenschutzerklärung verlinkt (die Registrierungs-Checkbox verwies bereits
+  dorthin und lief bis jetzt ins Leere).
+- **Ausdrücklich als interner Entwurf gekennzeichnet und nicht anwaltlich
+  geprüft** — enthält einen entsprechenden Warnhinweis am Seitenanfang. Vor dem
+  Start des Bezahlangebots ist eine fachkundige Prüfung zwingend (Spec §13.10).
+  Enthält u. a. den „keine Anlage-/Steuer-/Rechtsberatung"-Haftungsausschluss,
+  Paddle als Merchant of Record, §312k-Kündigung und die 14-Tage-Kulanz.
+
+**Aufräumung**
+- Test-/Probekonten und alle `login_attempts` auf dev entfernt (die 5 Fehlversuche
+  aus dem Bugreport hatten das Konto tatsächlich gesperrt).
+
+**Weiterhin offen — externe Konfiguration**
+- `RESEND_API_KEY` setzen (oder auf Cloudflare Email umstellen), sonst kommen
+  Bestätigungs-, Magic-Link- und Reset-Mails nur ins Log.
+- Google: `https://api-dev.immofuchs.info/api/v1/auth/google/callback` als
+  Authorized Redirect URI eintragen (`redirect_uri_mismatch`).
+- Apple: Login kann nicht funktionieren — die Secrets `APPLE_CLIENT_ID`,
+  `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` sind gar nicht gesetzt
+  (korrigiert die frühere Annahme, es liege nur an der Redirect-URI).
+- Impressum sagt weiterhin „keine Produkte oder Dienstleistungen verkauft" —
+  muss vor dem Pro-Start angepasst werden (Spec §13.11).
+
+**Betroffene Dateien:** `worker/src/auth/password.ts`,
+`worker/src/auth/passwordAuth.ts`, `worker/src/email.ts`,
+`src/components/account/LoginModal.jsx`, `src/i18n/account.js`, `src/App.jsx`,
+`public/agb.html` (neu), `public/impressum.html`, `public/datenschutz.html`,
+`package.json`, `index.html`.
+
 ## 2026-08-05 (1.6.8)
 
 ### Fix: Header-Ueberlauf, Login-Modal-Zentrierung, echtes Google-/Apple-Branding

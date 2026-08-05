@@ -110,6 +110,28 @@ export function LoginModal({ onClose }) {
     // Erfolg: der isLoggedIn-Effekt oben springt automatisch zu "plan".
   }
 
+  // Passkey ANLEGEN (Ergaenzung 05.08.): fehlte bislang komplett in der
+  // Oberflaeche - `passkeyRegister` existierte im Hook, wurde aber von keinem
+  // Button aufgerufen. Dadurch gab es nie einen Passkey, und "Mit Passkey
+  // anmelden" endete auf iOS im Fremdgeraete-/QR-Dialog, weil der
+  // Authenticator lokal nichts fand (Bugreport 05.08.).
+  async function handlePasskeyRegister() {
+    if (!regEmail) {
+      setInlineError("invalid_email");
+      return;
+    }
+    setBusy("passkey-register");
+    setInlineError(null);
+    setEmailTakenProviders(null);
+    try {
+      await account.passkeyRegister(regEmail);
+    } catch {
+      setInlineError("passkey");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function handleRegisterSubmit(e) {
     e.preventDefault();
     setBusy("register");
@@ -293,13 +315,18 @@ export function LoginModal({ onClose }) {
               )}
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {supportsPasskey && (
-                  <button
-                    onClick={handlePasskeyLogin}
-                    disabled={busy === "passkey"}
-                    style={secondaryBtnStyle}
-                  >
-                    🔑 {t.loginPasskey}
-                  </button>
+                  <div>
+                    <button
+                      onClick={handlePasskeyLogin}
+                      disabled={busy === "passkey"}
+                      style={secondaryBtnStyle}
+                    >
+                      🔑 {t.loginPasskey}
+                    </button>
+                    {/* Erklaerung direkt am Button (05.08.): "Passkey" allein sagt
+                        Nutzern nichts - der konkrete Begriff Face ID/PIN schon. */}
+                    <p style={{ fontSize: 10.5, color: "var(--ch)", margin: "6px 0 0" }}>{t.loginPasskeyHint}</p>
+                  </div>
                 )}
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={account.startGoogleLogin} style={{ ...secondaryBtnStyle, flex: 1 }}>
@@ -465,6 +492,24 @@ export function LoginModal({ onClose }) {
                   {t.registerSubmit}
                 </button>
               </form>
+              {supportsPasskey && (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0" }}>
+                    <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
+                    <span style={{ fontSize: 11, color: "var(--ch)" }}>{t.registerOrFaster}</span>
+                    <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePasskeyRegister}
+                    disabled={busy === "passkey-register"}
+                    style={secondaryBtnStyle}
+                  >
+                    🔑 {t.registerPasskeyCta}
+                  </button>
+                  <p style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 6 }}>{t.loginPasskeyHint}</p>
+                </>
+              )}
               <div style={{ textAlign: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--cb)" }}>
                 <button
                   type="button"

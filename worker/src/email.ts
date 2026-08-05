@@ -12,11 +12,20 @@ export async function sendEmail(
   html: string,
 ): Promise<void> {
   if (!env.RESEND_API_KEY) {
-    // Kein Wurf in Produktion gedacht, aber vor Sprint-1-Go-Live (Platzhalter-
-    // Credentials, siehe kommerzialisierung-setup.md) soll das nicht den
-    // ganzen Request-Handler crashen - Aufrufer entscheidet, wie kritisch das ist.
-    console.error("resend_api_key_missing", "email_not_sent");
-    throw new Error("email_not_configured");
+    // Dev-Notbehelf (05.08.): Ohne RESEND_API_KEY warf diese Funktion, was den
+    // kompletten Auth-Flow lahmlegte - Registrierung, Magic-Link und
+    // Passwort-Reset endeten in einem 500er, obwohl die eigentliche Logik lief.
+    // Statt zu werfen wird der enthaltene Link jetzt ins Worker-Log geschrieben
+    // (`wrangler tail --env dev`), damit der Flow ohne externen Mail-Anbieter
+    // testbar ist.
+    //
+    // Bewusste Abwaegung: In Produktion MUSS RESEND_API_KEY gesetzt sein - dann
+    // wird dieser Zweig nie erreicht. Faellt der Wert dort doch einmal weg,
+    // sieht der Nutzer faelschlich "E-Mail gesendet"; deshalb console.error
+    // (nicht warn), damit es im Log als Fehler auffaellt statt still zu bleiben.
+    const link = html.match(/https?:\/\/[^\s"'<>]+/)?.[0] ?? "(kein Link im Text)";
+    console.error("resend_api_key_missing", "email_not_sent", to, subject, "LINK:", link);
+    return;
   }
   const res = await fetch(RESEND_API_URL, {
     method: "POST",

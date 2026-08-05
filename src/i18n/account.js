@@ -114,6 +114,9 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "Dieser Link ist abgelaufen oder ungültig.",
     newPasswordSuccessTitle: "Passwort gespeichert",
     newPasswordSuccessCta: "Jetzt anmelden",
+    loginPasskeyHint: "Face ID, Fingerabdruck oder Geräte-PIN — kein Passwort nötig.",
+    registerOrFaster: "oder schneller",
+    registerPasskeyCta: "Mit Face ID / PIN einrichten",
   },
   en: {
     proButton: "Pro",
@@ -227,6 +230,9 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "This link has expired or is invalid.",
     newPasswordSuccessTitle: "Password saved",
     newPasswordSuccessCta: "Sign in now",
+    loginPasskeyHint: "Face ID, fingerprint or device PIN — no password needed.",
+    registerOrFaster: "or faster",
+    registerPasskeyCta: "Set up with Face ID / PIN",
   },
   tr: {
     proButton: "Pro",
@@ -340,6 +346,9 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "Bu bağlantının süresi dolmuş veya geçersiz.",
     newPasswordSuccessTitle: "Şifre kaydedildi",
     newPasswordSuccessCta: "Şimdi giriş yap",
+    loginPasskeyHint: "Face ID, parmak izi veya cihaz PIN'i — şifre gerekmez.",
+    registerOrFaster: "veya daha hızlı",
+    registerPasskeyCta: "Face ID / PIN ile kur",
   },
   zh: {
     proButton: "Pro",
@@ -452,6 +461,9 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "此链接已过期或无效。",
     newPasswordSuccessTitle: "密码已保存",
     newPasswordSuccessCta: "立即登录",
+    loginPasskeyHint: "面容 ID、指纹或设备 PIN——无需密码。",
+    registerOrFaster: "或更快捷",
+    registerPasskeyCta: "使用面容 ID / PIN 设置",
   },
   hi: {
     proButton: "Pro",
@@ -565,5 +577,8 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "यह लिंक समाप्त हो गया है या अमान्य है।",
     newPasswordSuccessTitle: "पासवर्ड सहेजा गया",
     newPasswordSuccessCta: "अभी साइन इन करें",
+    loginPasskeyHint: "फेस ID, फ़िंगरप्रिंट या डिवाइस PIN — पासवर्ड की ज़रूरत नहीं।",
+    registerOrFaster: "या तेज़ तरीका",
+    registerPasskeyCta: "फेस ID / PIN से सेट करें",
   },
 };

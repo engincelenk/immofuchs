@@ -91,15 +91,25 @@ export async function registerWithPassword(
 
   const rawToken = crypto.randomUUID();
   await createEmailVerificationToken(env.DB, user.id, await hashToken(rawToken), null);
-  await sendEmail(
-    env,
-    email,
-    "Bestätige deine E-Mail-Adresse bei ImmoFuchs",
-    `<p>Willkommen bei ImmoFuchs! Bestätige deine E-Mail-Adresse mit einem Klick (24 Stunden gültig):</p>
-     <p><a href="${verifyLink(env, rawToken)}">${verifyLink(env, rawToken)}</a></p>
-     ${leaked ? "<p>Hinweis: Das gewählte Passwort taucht in bekannten Datenlecks auf. Wir empfehlen dir, es nach der Bestätigung zu ändern.</p>" : ""}
-     <p>Falls du dich nicht bei ImmoFuchs registriert hast, kannst du diese E-Mail ignorieren.</p>`,
-  );
+  // Versandfehler darf das bereits angelegte Konto nicht "verwaisen" lassen
+  // (Befund 05.08.): vorher schlug ein Fehler hier bis zum Router durch, der
+  // Nutzer bekam einen 500er - das Konto existierte aber schon, sodass ein
+  // zweiter Versuch nur noch "email_taken" ergab, ohne Weg zur Bestaetigung.
+  // Jetzt: Fehler protokollieren, {ok:true} zurueckgeben - der Nutzer landet
+  // auf dem Bestaetigungs-Screen und kann "Erneut senden" nutzen.
+  try {
+    await sendEmail(
+      env,
+      email,
+      "Bestätige deine E-Mail-Adresse bei ImmoFuchs",
+      `<p>Willkommen bei ImmoFuchs! Bestätige deine E-Mail-Adresse mit einem Klick (24 Stunden gültig):</p>
+       <p><a href="${verifyLink(env, rawToken)}">${verifyLink(env, rawToken)}</a></p>
+       ${leaked ? "<p>Hinweis: Das gewählte Passwort taucht in bekannten Datenlecks auf. Wir empfehlen dir, es nach der Bestätigung zu ändern.</p>" : ""}
+       <p>Falls du dich nicht bei ImmoFuchs registriert hast, kannst du diese E-Mail ignorieren.</p>`,
+    );
+  } catch (err) {
+    console.error("verification_email_failed", err instanceof Error ? err.message : "unknown");
+  }
   return { ok: true };
 }
 
