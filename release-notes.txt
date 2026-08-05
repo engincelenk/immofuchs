@@ -1,3 +1,52 @@
+## 2026-08-05 (1.6.13)
+
+### Fix: irreführende Adblocker-Meldung + fehlende Login-Bestätigung
+
+**Kontext (Bugreport nach erfolgreichem Google-Login)**
+- Nach der Rückkehr von Google landete man wortlos in der Plan-Auswahl — ohne
+  jede Bestätigung, ob und als wer man angemeldet ist.
+- „Weiter zur Zahlung" zeigte „Lässt sich dein Adblocker kurz pausieren?",
+  obwohl der Adblocker unbeteiligt war.
+
+**Ursache der falschen Meldung**
+- `POST /billing/checkout` antwortet mit **502 `paddle_not_configured`** (per
+  Worker-Log verifiziert) — Paddle ist noch nicht eingerichtet, Paddle.js wird
+  also nie geladen.
+- `PlanSelect.jsx` zeigte im `catch` pauschal den Adblocker-Text, unabhängig
+  von der Ursache. Wireframe-Karte 14 unterscheidet dagegen ausdrücklich drei
+  Zustände (Skript blockiert / Zahlung abgelehnt / Netzwerkabbruch); die waren
+  zu einem zusammengefasst.
+
+**Fix**
+- `useAccount.startCheckout` wirft bei Server-Fehlern jetzt
+  `checkout_unavailable` statt `checkout_failed`; Fehler aus `paddleLoader.js`
+  behalten ihr `paddle_script_*`-Präfix.
+- `PlanSelect.jsx` zeigt den Adblocker-Hinweis nur noch bei
+  `paddle_script_*`, sonst den neuen Text „Die Zahlung ist derzeit nicht
+  verfügbar."
+- Neue Login-Bestätigung über der Plan-Auswahl: „Angemeldet als <E-Mail>" mit
+  Abmelde-Möglichkeit.
+- Bewusst die **E-Mail statt eines Namens**: der Worker fordert bei Google nur
+  `openid email` an, ein Name wird gar nicht erhoben. Für eine namentliche
+  Begrüßung müsste der `profile`-Scope ergänzt werden — das wäre mehr
+  Datenerhebung als bisher und widerspräche der Datensparsamkeit in Spec und
+  Datenschutzerklärung. Entscheidung bewusst gegen den Namen.
+- Neue i18n-Schlüssel `planCheckoutUnavailable`, `loggedInAs`, `logout` in
+  allen 5 Sprachen (116 Schlüssel, Parität geprüft).
+
+**Nicht behoben, weil kein Code-Problem**
+- Der Checkout bleibt funktionslos, bis Paddle eingerichtet ist: Secrets
+  enthalten Platzhalter, und `VITE_PADDLE_CLIENT_TOKEN` fehlt im Frontend-Build
+  (steht nur in `.env.example`). Die Spec führt das als IMP-01 — die
+  Verkäufer-Verifizierung bei Paddle dauert Tage bis Wochen.
+
+**Nebenbefund: Google-Login funktioniert**
+- Nach Eintragen der Redirect-URI ist `provider: google` mit dem Konto
+  verknüpft; Google liefert statt der Fehlerseite die Anmeldeseite aus.
+
+**Betroffene Dateien:** `src/components/account/PlanSelect.jsx`,
+`src/hooks/useAccount.js`, `src/i18n/account.js`, `package.json`, `index.html`.
+
 ## 2026-08-05 (1.6.12)
 
 ### Fix: Bestätigungs- und Magic-Link zeigten auf die falsche Domain (404)

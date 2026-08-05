@@ -7,14 +7,22 @@ export function PlanSelect({ t, account, onClose }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
+  // Fehlerursachen auseinanderhalten (Wireframe-Karte 14, Bugreport 05.08.):
+  // vorher zeigte JEDER Fehlschlag den Adblocker-Hinweis - auch wenn der
+  // Server mit 502 antwortete und Paddle.js gar nicht erst geladen wurde.
+  // Das schickte den Nutzer auf die falsche Faehrte ("liegt an meinem
+  // Browser"), obwohl die Zahlung schlicht noch nicht freigeschaltet ist.
   async function handleContinue() {
     setBusy(true);
     setError(null);
     try {
       await account.startCheckout(plan);
       onClose();
-    } catch {
-      setError(t.planCheckoutBlocked);
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "";
+      // Nur wenn das Paddle-Skript wirklich clientseitig scheiterte, ist der
+      // Adblocker-Hinweis die richtige Erklaerung (paddleLoader.js).
+      setError(code.startsWith("paddle_script") ? t.planCheckoutBlocked : t.planCheckoutUnavailable);
     } finally {
       setBusy(false);
     }
@@ -22,6 +30,48 @@ export function PlanSelect({ t, account, onClose }) {
 
   return (
     <div>
+      {/* Login-Bestaetigung (Bugreport 05.08.): nach OAuth-Rueckkehr landete
+          man wortlos in der Plan-Auswahl - ohne Hinweis, ob und als wer man
+          angemeldet ist. Bewusst die E-Mail statt eines Namens: der Worker
+          fordert bei Google nur `openid email` an, ein Name wird gar nicht
+          erhoben (Datensparsamkeit, Spec 4.5/Datenschutzerklaerung). */}
+      {account?.me?.email && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            background: "#E3F1E6",
+            border: "1px solid #2F9E52",
+            borderRadius: 8,
+            padding: "8px 12px",
+            fontSize: 12,
+            color: "#1E6B34",
+            marginBottom: 14,
+          }}
+        >
+          <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+            ✓ {t.loggedInAs} <strong>{account.me.email}</strong>
+          </span>
+          <button
+            onClick={account.logout}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              fontSize: 11.5,
+              color: "#1E6B34",
+              textDecoration: "underline",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              flexShrink: 0,
+            }}
+          >
+            {t.logout}
+          </button>
+        </div>
+      )}
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>{t.planTitle}</div>
       {error && (
         <div

@@ -273,7 +273,15 @@ export function useAccount() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan }),
     });
-    if (!res.ok) throw new Error("checkout_failed");
+    if (!res.ok) {
+      // Unterscheidbar machen (Bugreport 05.08.): vorher warf jeder Fehlerpfad
+      // dieselbe Meldung, und die Oberflaeche zeigte pauschal den
+      // Adblocker-Hinweis - auch dann, wenn der Server mit 502
+      // `paddle_not_configured` antwortete und Paddle.js nie geladen wurde.
+      // "checkout_unavailable" heisst: serverseitig nicht moeglich (Paddle
+      // nicht eingerichtet oder API-Fehler), NICHT clientseitig blockiert.
+      throw new Error("checkout_unavailable");
+    }
     const { transactionId } = await res.json();
     const { loadPaddle } = await import("../utils/paddleLoader.js");
     const Paddle = await loadPaddle();
