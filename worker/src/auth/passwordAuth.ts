@@ -47,9 +47,16 @@ async function rateLimited(env: Env, key: string, limit: number): Promise<boolea
   return !rl.allowed;
 }
 
-function verifyLink(env: Env, token: string): string {
-  const base = env.APP_BASE_URL || "https://immofuchs.info";
-  return `${base}/api/v1/auth/verify-email?token=${token}`;
+// KORREKTUR 05.08.: zeigte vorher auf APP_BASE_URL - das ist die FRONTEND-
+// Origin (dev.immofuchs.info), der Endpunkt /api/v1/auth/verify-email liegt
+// aber im Worker (api-dev.immofuchs.info). Ergebnis war ein "Not Found" beim
+// Klick auf den Bestaetigungslink. Der Worker-Origin kommt jetzt vom
+// eingehenden Request, genau wie es routes/account.ts fuer den
+// E-Mail-Wechsel bereits richtig macht.
+// Gegenstueck: der Reset-Link (requestPasswordReset) zeigt bewusst weiter aufs
+// Frontend - dort braucht es eine Eingabemaske, keinen Worker-Endpunkt.
+function verifyLink(workerOrigin: string, token: string): string {
+  return `${workerOrigin}/api/v1/auth/verify-email?token=${token}`;
 }
 
 // ═══ Registrierung ═══
@@ -61,6 +68,7 @@ export type RegisterResult =
 
 export async function registerWithPassword(
   env: Env,
+  workerOrigin: string,
   emailRaw: string,
   password: string,
   acceptedTerms: boolean,
@@ -103,7 +111,7 @@ export async function registerWithPassword(
       email,
       "Bestätige deine E-Mail-Adresse bei ImmoFuchs",
       `<p>Willkommen bei ImmoFuchs! Bestätige deine E-Mail-Adresse mit einem Klick (24 Stunden gültig):</p>
-       <p><a href="${verifyLink(env, rawToken)}">${verifyLink(env, rawToken)}</a></p>
+       <p><a href="${verifyLink(workerOrigin, rawToken)}">${verifyLink(workerOrigin, rawToken)}</a></p>
        ${leaked ? "<p>Hinweis: Das gewählte Passwort taucht in bekannten Datenlecks auf. Wir empfehlen dir, es nach der Bestätigung zu ändern.</p>" : ""}
        <p>Falls du dich nicht bei ImmoFuchs registriert hast, kannst du diese E-Mail ignorieren.</p>`,
     );
@@ -122,6 +130,7 @@ export type LinkPasswordResult = { ok: true } | { ok: false; error: "invalid_ema
 
 export async function requestLinkPassword(
   env: Env,
+  workerOrigin: string,
   emailRaw: string,
   password: string,
 ): Promise<LinkPasswordResult> {
@@ -147,7 +156,7 @@ export async function requestLinkPassword(
     email,
     "Bestätige dein neues Passwort bei ImmoFuchs",
     `<p>Du hast angefragt, ein Passwort mit deinem bestehenden ImmoFuchs-Konto zu verknüpfen. Bestätige das mit einem Klick (24 Stunden gültig):</p>
-     <p><a href="${verifyLink(env, rawToken)}">${verifyLink(env, rawToken)}</a></p>
+     <p><a href="${verifyLink(workerOrigin, rawToken)}">${verifyLink(workerOrigin, rawToken)}</a></p>
      <p>Falls du das nicht warst, kannst du diese E-Mail ignorieren - dein Konto bleibt unverändert.</p>`,
   );
   return { ok: true };
@@ -170,7 +179,11 @@ export async function verifyEmailToken(env: Env, token: string): Promise<VerifyE
 
 export type ResendResult = { ok: true } | { ok: false; error: "rate_limited" };
 
-export async function resendVerification(env: Env, emailRaw: string): Promise<ResendResult> {
+export async function resendVerification(
+  env: Env,
+  workerOrigin: string,
+  emailRaw: string,
+): Promise<ResendResult> {
   const email = normalizeEmail(emailRaw);
   if (!isValidEmail(email)) return { ok: true }; // keine Enumeration ueber Syntaxfehler hinaus noetig
   if (await rateLimited(env, `verify-resend:${email}`, RESEND_HOURLY_LIMIT)) {
@@ -185,7 +198,7 @@ export async function resendVerification(env: Env, emailRaw: string): Promise<Re
       email,
       "Dein neuer Bestätigungslink für ImmoFuchs",
       `<p>Hier ist dein neuer Bestätigungslink (24 Stunden gültig):</p>
-       <p><a href="${verifyLink(env, rawToken)}">${verifyLink(env, rawToken)}</a></p>`,
+       <p><a href="${verifyLink(workerOrigin, rawToken)}">${verifyLink(workerOrigin, rawToken)}</a></p>`,
     );
   }
   return { ok: true };

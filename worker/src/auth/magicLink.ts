@@ -18,6 +18,7 @@ export type RequestMagicLinkResult = { ok: true } | { ok: false; error: "invalid
 // existiert - der Unterschied entscheidet sich erst beim Klick auf den Link.
 export async function requestMagicLink(
   env: Env,
+  workerOrigin: string,
   email: string,
 ): Promise<RequestMagicLinkResult> {
   const normalized = email.trim().toLowerCase();
@@ -33,7 +34,14 @@ export async function requestMagicLink(
 
   const token = crypto.randomUUID();
   await createMagicLink(env.DB, normalized, await hashToken(token));
-  const link = `${env.APP_BASE_URL || "https://immofuchs.info"}/auth/magic-link?token=${token}`;
+  // KORREKTUR 05.08.: zeigte vorher auf `${APP_BASE_URL}/auth/magic-link` -
+  // also eine FRONTEND-Adresse, die es dort nie gab (kein Router-Eintrag, die
+  // SPA kennt den Pfad nicht). Jeder Magic-Link waere im "Not Found" gelandet,
+  // genau wie der Bestaetigungslink. Der verifizierende Endpunkt liegt im
+  // Worker und heisst /api/v1/auth/magic-link/verify - dorthin zeigt der Link
+  // jetzt direkt, der Worker leitet nach erfolgreichem Login aufs Frontend
+  // zurueck (siehe routes/auth.ts).
+  const link = `${workerOrigin}/api/v1/auth/magic-link/verify?token=${token}`;
   await sendEmail(
     env,
     normalized,

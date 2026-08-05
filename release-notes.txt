@@ -1,3 +1,46 @@
+## 2026-08-05 (1.6.12)
+
+### Fix: Bestätigungs- und Magic-Link zeigten auf die falsche Domain (404)
+
+**Symptom**
+- Die Bestätigungsmail kam an, der Klick auf den Link landete aber auf
+  „Not Found" (`dev.immofuchs.info`).
+
+**Ursache**
+- `verifyLink()` in `passwordAuth.ts` baute den Link aus `APP_BASE_URL`. Das ist
+  die **Frontend**-Origin (`dev.immofuchs.info`); der Endpunkt
+  `/api/v1/auth/verify-email` liegt aber im **Worker**
+  (`api-dev.immofuchs.info`). Das Frontend kennt diesen Pfad nicht -> 404 vom
+  Webhosting.
+- Derselbe Fehler steckte im Magic-Link (`magicLink.ts`): er zeigte auf
+  `${APP_BASE_URL}/auth/magic-link`, einen Pfad, den die SPA überhaupt nie
+  hatte (kein Router-Eintrag). Jeder Magic-Link wäre ebenfalls im 404 gelandet
+  — war bis dahin unentdeckt, weil ohne Mailversand nie jemand darauf geklickt
+  hat.
+- `routes/account.ts` machte es beim E-Mail-Wechsel bereits richtig
+  (`new URL(c.req.url).origin`) — daran orientiert sich der Fix.
+
+**Fix**
+- Neuer Helfer `workerOrigin(req)` in `routes/auth.ts`; die Origin wird an
+  `registerWithPassword`, `requestLinkPassword`, `resendVerification` und
+  `requestMagicLink` durchgereicht.
+- Magic-Link zeigt jetzt direkt auf `/api/v1/auth/magic-link/verify` im Worker,
+  der nach erfolgreichem Login aufs Frontend zurückleitet.
+- Bewusst **nicht** geändert: der Passwort-Reset-Link zeigt weiterhin aufs
+  Frontend (`/?reset_token=...`) — dort braucht es eine Eingabemaske für das
+  neue Passwort, keinen Worker-Endpunkt.
+
+**Verifiziert**
+- `dev.immofuchs.info/api/v1/auth/verify-email?token=test` -> **404**
+  (der fehlerhafte Stand)
+- `api-dev.immofuchs.info/api/v1/auth/verify-email?token=test` -> **302** mit
+  Rückleitung auf `dev.immofuchs.info/?login_error=verify_invalid`
+  (`verify_invalid` nur wegen des Dummy-Tokens — der Pfad greift)
+
+**Betroffene Dateien:** `worker/src/auth/passwordAuth.ts`,
+`worker/src/auth/magicLink.ts`, `worker/src/routes/auth.ts`, `package.json`,
+`index.html`.
+
 ## 2026-08-05 (1.6.11)
 
 ### E-Mail-Versand scharf geschaltet — Resend über Subdomain send.immofuchs.info

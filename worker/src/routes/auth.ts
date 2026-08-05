@@ -38,6 +38,12 @@ function frontendBase(env: Env, req: Request): string {
   return new URL(req.url).origin;
 }
 
+// Origin des Worker selbst (api-dev.immofuchs.info), NICHT die Frontend-Origin
+// aus APP_BASE_URL - Links auf Worker-Endpunkte muessen hierhin zeigen.
+function workerOrigin(req: Request): string {
+  return new URL(req.url).origin;
+}
+
 function workerCallbackUrl(req: Request, path: string): string {
   return new URL(path, new URL(req.url).origin).toString();
 }
@@ -121,7 +127,7 @@ authRoutes.post("/apple/callback", async (c) => {
 authRoutes.post("/magic-link/request", async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = body && typeof body.email === "string" ? body.email : "";
-  const result = await requestMagicLink(c.env, email);
+  const result = await requestMagicLink(c.env, workerOrigin(c.req.raw), email);
   if (!result.ok && result.error === "invalid_email") return c.json({ error: "invalid_email" }, 400);
   if (!result.ok && result.error === "rate_limited") return c.json({ error: "rate_limited" }, 429);
   // Immer dieselbe Erfolgsmeldung, unabhaengig von Konto-Existenz (4.3/4.13).
@@ -147,7 +153,7 @@ authRoutes.post("/register", async (c) => {
   const email = body && typeof body.email === "string" ? body.email : "";
   const password = body && typeof body.password === "string" ? body.password : "";
   const acceptedTerms = Boolean(body && body.acceptedTerms === true);
-  const result = await registerWithPassword(c.env, email, password, acceptedTerms);
+  const result = await registerWithPassword(c.env, workerOrigin(c.req.raw), email, password, acceptedTerms);
   if (!result.ok) {
     if (result.error === "rate_limited") return c.json({ error: result.error }, 429);
     if (result.error === "email_taken") return c.json({ error: result.error, providers: result.providers }, 409);
@@ -160,7 +166,7 @@ authRoutes.post("/link-password/request", async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = body && typeof body.email === "string" ? body.email : "";
   const password = body && typeof body.password === "string" ? body.password : "";
-  const result = await requestLinkPassword(c.env, email, password);
+  const result = await requestLinkPassword(c.env, workerOrigin(c.req.raw), email, password);
   if (!result.ok) {
     if (result.error === "rate_limited") return c.json({ error: result.error }, 429);
     return c.json({ error: result.error }, 400);
@@ -181,7 +187,7 @@ authRoutes.get("/verify-email", async (c) => {
 authRoutes.post("/resend-verification", async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = body && typeof body.email === "string" ? body.email : "";
-  const result = await resendVerification(c.env, email);
+  const result = await resendVerification(c.env, workerOrigin(c.req.raw), email);
   if (!result.ok) return c.json({ error: result.error }, 429);
   return c.json({ ok: true });
 });
