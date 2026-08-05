@@ -199,6 +199,17 @@ EXPOSE_DAILY_LIMIT = "8"
 EXPOSE_IP_DAILY_LIMIT = "20"
 EXPOSE_GLOBAL_DAILY_LIMIT = "150"
 
+# Cloudflare Email Sending (Ergaenzung 05.08.) - erst einkommentieren, NACHDEM
+# die Domain freigeschaltet ist:
+#   npx wrangler email sending enable immofuchs.info
+#   npx wrangler email sending dns get immofuchs.info   # SPF/DKIM pruefen
+# Reihenfolge ist wichtig: Ist das Binding gesetzt, aber die Domain nicht
+# freigeschaltet, schlaegt jeder Versand hart fehl (siehe email.ts) - dann
+# waeren Registrierung und Magic-Link wieder blockiert. Ohne Binding greift
+# stattdessen Resend bzw. der Log-Fallback.
+# [[env.dev.send_email]]
+# name = "EMAIL"
+
 [env.dev.ai]
 binding = "AI"
 

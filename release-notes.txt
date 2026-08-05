@@ -1,3 +1,48 @@
+## 2026-08-05 (1.6.10)
+
+### E-Mail-Versand anbieterunabhängig — Cloudflare Email Sending als erste Wahl
+
+**Kontext**
+- Der Log-Fallback aus 1.6.9 war ausdrücklich nur ein Testbehelf. Für den echten
+  Betrieb muss ein Anbieter konfiguriert sein, sonst kommt keine Bestätigungs-,
+  Magic-Link- oder Reset-Mail beim Nutzer an.
+- Produktstatus geprüft (developers.cloudflare.com/email-service, Stand
+  05.08.2026): Cloudflare Email Sending ist **Beta**, nennt „magic links, email
+  verification" aber ausdrücklich als vorgesehenen Anwendungsfall und läuft auf
+  dem Workers-Paid-Plan (vorhanden, da Durable Objects genutzt werden).
+
+**Umbau**
+- `email.ts` unterstützt jetzt zwei austauschbare Wege mit identischer Signatur
+  nach außen — ein Wechsel ist damit eine Konfigurations-, keine Code-Frage:
+  1. **Cloudflare Email Sending** über das `EMAIL`-Binding, falls konfiguriert:
+     kein API-Key (Binding statt Secret), kein zweiter Anbieter, SPF/DKIM
+     verwaltet Cloudflare.
+  2. **Resend**, falls `RESEND_API_KEY` gesetzt ist.
+  3. Keiner von beiden: Link ins Worker-Log (unveränderter Testbehelf).
+- Kein stiller Rückfall von Cloudflare auf Resend bei einem echten Sendefehler —
+  ist das Binding gesetzt, ist es der gewählte Weg und ein Fehler wird sichtbar
+  gemacht. Nur wenn zusätzlich Resend konfiguriert ist, wird dort weiterversucht.
+- Jede Mail geht jetzt als HTML **und** Plain Text raus (manche Clients zeigen
+  nur Text, verbessert außerdem die Spam-Bewertung).
+
+**Bewusst noch nicht aktiviert**
+- Das `send_email`-Binding liegt in `wrangler.toml` **auskommentiert** bereit.
+  Grund: Ist das Binding gesetzt, die Domain aber noch nicht freigeschaltet,
+  schlägt jeder Versand hart fehl — Registrierung und Magic-Link wären damit
+  wieder blockiert. Erst freischalten, dann einkommentieren.
+- `npx wrangler email sending enable immofuchs.info` schlägt derzeit mit
+  `Unauthorized [code: 2036]` fehl: dem wrangler-OAuth-Token fehlt die
+  Email-Berechtigung. Das lässt sich nur interaktiv lösen (erneutes
+  `wrangler login`) oder im Dashboard unter Compute & AI > Email Service.
+
+**Verifiziert**
+- Registrierung nach dem Umbau weiterhin HTTP 200; Fallback-Zweig protokolliert
+  den Link korrekt unter `email_provider_missing`. Testkonten anschließend
+  wieder entfernt.
+
+**Betroffene Dateien:** `worker/src/email.ts`, `worker/src/types.ts`,
+`worker/wrangler.toml`, `package.json`, `index.html`.
+
 ## 2026-08-05 (1.6.9)
 
 ### Fix: Registrierung war komplett kaputt (PBKDF2-Limit), Mailversand, Passkey-Anlage, AGB

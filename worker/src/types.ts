@@ -213,6 +213,20 @@ export interface Env {
   WEBAUTHN_ORIGIN: string;
   RESEND_API_KEY?: string;
   MAGIC_LINK_FROM_EMAIL?: string; // z.B. "ImmoFuchs <login@immofuchs.info>"
+  // Cloudflare Email Sending (Ergaenzung 05.08.): Binding statt API-Key.
+  // Optional, damit der Worker auch ohne konfiguriertes Binding laeuft (dann
+  // greift Resend bzw. der Log-Fallback, siehe email.ts). Struktureller Typ
+  // statt Import aus @cloudflare/workers-types: das Binding ist noch Beta, die
+  // Typdefinition dort wechselt schneller als der hier genutzte Ausschnitt.
+  EMAIL?: {
+    send(message: {
+      to: string | string[];
+      from: { email: string; name?: string };
+      subject: string;
+      html?: string;
+      text?: string;
+    }): Promise<unknown>;
+  };
   APP_BASE_URL?: string; // fuer Magic-Link-/OAuth-Redirect-Ziele, z.B. "https://immofuchs.info"
 
   // Paddle (4.1, 4.6)
