@@ -439,6 +439,21 @@ export default function App() {
       .hdr{position:fixed;top:0;left:0;right:0;z-index:50;padding:10px 16px;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);display:flex;justify-content:space-between;align-items:center;height:78px;padding-top:calc(10px + env(safe-area-inset-top))}
       .hdr{height:calc(78px + env(safe-area-inset-top))}
       .hdr-inner{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;width:100%}
+      /* Header-Ueberlauf-Fix (Bugreport 2026-08-05): Logo+Wortmarke, Pro-Button
+         und Sprachauswahl passten auf 375-390px Standardhandys nicht mehr in
+         eine Zeile - die Sprachauswahl lief ohne Wrap/Shrink rechts aus dem
+         sichtbaren Bereich. Mobile-first kompakt, ab 480px die volle Groesse
+         (gleiches Muster wie .mob-toggle/.if-row weiter unten). */
+      .hdr-brand-btn{gap:8px!important;min-width:0}
+      .hdr-logo-img{width:38px!important;height:38px!important}
+      .hdr-wordmark{font-size:17px!important}
+      .lang-label{display:none!important}
+      @media(min-width:480px){
+        .hdr-brand-btn{gap:14px!important}
+        .hdr-logo-img{width:54px!important;height:54px!important}
+        .hdr-wordmark{font-size:24px!important}
+        .lang-label{display:inline!important}
+      }
       .tbar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--cc);border-top:1px solid var(--cb);padding:6px 0 calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:center}
       .tbtn{flex:1;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border:none;background:none;cursor:pointer;min-height:48px}
       .tbtn span{font-size:11px;font-weight:600;letter-spacing:.3px}
@@ -492,6 +507,7 @@ export default function App() {
             <button
               onClick={goHome}
               title="Zur Startseite"
+              className="hdr-brand-btn"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -501,27 +517,31 @@ export default function App() {
                 cursor: "pointer",
                 padding: 0,
                 fontFamily: "inherit",
+                minWidth: 0,
               }}
             >
               <img
                 src="/icon-192.png"
                 alt="Immofuchs"
+                className="hdr-logo-img"
                 style={{ width: 54, height: 54, objectFit: "contain", flexShrink: 0 }}
               />
               <div
+                className="hdr-wordmark"
                 style={{
                   fontSize: 24,
                   fontWeight: 800,
                   letterSpacing: -0.5,
                   lineHeight: 1,
                   color: "var(--ct)",
+                  whiteSpace: "nowrap",
                 }}
               >
                 immo<span style={{ color: "var(--ca)" }}>fuchs</span>
                 <span style={{ color: "var(--ct)", fontWeight: 700 }}>.info</span>
               </div>
             </button>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
               <ProHeaderButton />
               <LangSel lang={lang} setLang={setLang} />
             </div>

@@ -1,3 +1,44 @@
+## 2026-08-05 (1.6.8)
+
+### Fix: Header-Ueberlauf, Login-Modal-Zentrierung, echtes Google-/Apple-Branding
+
+**Kontext**
+- Bugreport per Screenshot (mobil, ~375-390px Breite): Sprachauswahl im Header
+  vom neuen Pro-Button ins Off-Screen gedraengt; Login-Maske wirkte "viel zu
+  hoch" und nicht mittig; Google-/Apple-Buttons ohne echtes Logo statt der von
+  den OAuth-Nutzungsrichtlinien verlangten offiziellen Marken-Assets.
+
+**Fix**
+- `src/App.jsx`: Logo, Wortmarke und Sprachauswahl-Label jetzt mobile-first
+  kompakt (38px Logo, 17px Wortmarke, Sprachlabel ausgeblendet), volle Groesse
+  ab 480px per Media Query wiederhergestellt (`.hdr-brand-btn`,
+  `.hdr-logo-img`, `.hdr-wordmark`, `.lang-label`, analog zum bestehenden
+  `.mob-toggle`/`.if-row`-Muster).
+- `src/components/account/LoginModal.jsx`, `AccountPanel.jsx`: beide Modals
+  werden jetzt per `ReactDOM.createPortal` direkt an `document.body` gehaengt.
+  Root Cause der Zentrierungs-/Hoehen-Bugs: `.hdr` hat `backdrop-filter`, was
+  laut CSS-Spec einen eigenen Containing Block fuer `position:fixed`-Kinder
+  erzeugt - ohne Portal war das Modal ein DOM-Kind von `ProHeaderButton` ->
+  `.hdr` und bezog sein `inset:0` auf die 78px hohe Header-Leiste statt den
+  Viewport.
+- `src/components/account/LoginModal.jsx`: echtes vierfarbiges Google-„G"-Logo
+  (offizielles SVG) statt fettem Buchstaben; Apple-Button jetzt im offiziellen
+  Schwarz-Stil mit weissem Apple-Logo statt reinem Textbutton.
+
+**Weiterhin offen — externe Konfiguration, nicht per Code loesbar**
+- Google-Login schlug mit `Fehler 400: redirect_uri_mismatch` fehl: die
+  Google-Cloud-Console-OAuth-Client-Konfiguration listet vermutlich noch die
+  alte `*.workers.dev`-Callback-URL statt der neuen Custom-Domain seit dem
+  Domain-Umzug (Commit `e125e99`). Muss manuell ergaenzt werden:
+  `https://api-dev.immofuchs.info/api/v1/auth/google/callback`.
+- Apple-Login vermutlich derselbe Grund auf Apple-Seite (Sign-in-with-Apple-
+  Services-ID: Domains + Return URLs) - `api-dev.immofuchs.info` bzw.
+  `https://api-dev.immofuchs.info/api/v1/auth/apple/callback` ergaenzen.
+
+**Betroffene Dateien:** `src/App.jsx`, `src/components/account/LoginModal.jsx`,
+`src/components/account/AccountPanel.jsx`, `src/components/ui/LangSel.jsx`,
+`package.json`, `index.html`.
+
 ## 2026-08-04 (1.6.7)
 
 ### Feature: E-Mail + Passwort als fünfter Login-/Registrierungsweg (Spec v8, §4.2–4.5, §4.13, §4.14)

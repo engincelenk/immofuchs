@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
@@ -127,7 +128,11 @@ function Shell({ t, onClose, children, trapKey }) {
   // aendert (z.B. Wechsel zur Kuendigungs-Ansicht).
   useFocusTrap(dialogRef, onClose, [trapKey]);
 
-  return (
+  // Portal an document.body (Bugreport 2026-08-05, siehe LoginModal.jsx) -
+  // ohne das haengt dieses "position:fixed"-Element als DOM-Kind der
+  // ProHeaderButton -> .hdr, deren backdrop-filter einen eigenen Containing
+  // Block erzeugt und die Zentrierung/Hoehe kaputt macht.
+  return createPortal(
     <div
       role="presentation"
       onClick={onClose}
@@ -178,7 +183,8 @@ function Shell({ t, onClose, children, trapKey }) {
         </div>
         <div style={{ padding: 20 }}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

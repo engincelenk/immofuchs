@@ -35,7 +35,9 @@ export function LangSel({ lang, setLang }) {
         }}
       >
         <span style={{ fontSize: 20, lineHeight: 1 }}>{cur.flag}</span>
-        <span style={{ fontSize: 12, color: "var(--ch)" }}>{cur.label}</span>
+        <span className="lang-label" style={{ fontSize: 12, color: "var(--ch)" }}>
+          {cur.label}
+        </span>
         <span style={{ fontSize: 9, color: "var(--ch)", marginLeft: 1 }}>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
