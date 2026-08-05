@@ -1,3 +1,53 @@
+## 2026-08-06 (1.6.14)
+
+### Paddle-Sandbox-Checkout auf dev vollständig scharf — Ende-zu-Ende verifiziert
+
+**Ausgangslage**
+- Nutzer hatte Paddle-Sandbox-Konto, API-Key, Webhook-Secret und zwei Preise
+  bereits real angelegt — die Werte lagen aber nur in `worker/.dev.vars`
+  (lokal, nie hochgeladen) statt als Live-Secrets. `PADDLE_PRICE_ID_MONTHLY`/
+  `_YEARLY` waren dadurch selbst lokal noch leer. Live schlug jeder Checkout
+  mit `paddle_not_configured` fehl (per `wrangler tail` über vier Versuche
+  binnen einer Minute verifiziert — kein Propagations-Effekt).
+
+**Reihenfolge der Funde und Fixes**
+1. `PADDLE_API_KEY`/`PADDLE_WEBHOOK_SECRET` aus `.dev.vars` gelesen und live
+   per `wrangler secret put --env dev` gesetzt. `PADDLE_ENV=sandbox` als
+   Klartext-Variable in `wrangler.toml` ergänzt (nicht sensibel).
+2. Danach neuer Fehler: Paddle-API antwortete mit 400
+   (`items.0: Must validate one and only one schema`) — die Preis-IDs waren
+   leer/falsch. `checkout.ts` loggte bis dahin nur den HTTP-Status, nicht
+   Paddles Fehlertext — dauerhaft nachgeschärft
+   (`console.error(..., JSON.stringify(result.data).slice(0,300))`), damit
+   künftige Paddle-Fehler nicht erneut erraten werden müssen.
+3. Mit dem vorhandenen Sandbox-API-Key direkt `GET /prices` bei Paddle
+   abgefragt statt zu raten — zwei echte Preise gefunden (9,99 €/Monat,
+   79 €/Jahr, IDs beginnend `pri_...`). Beide live und in `.dev.vars` gesetzt.
+4. Danach dritter, selbsterklärender Paddle-Fehler:
+   `transaction_default_checkout_url_not_set` — laut Paddle-Doku
+   ausschließlich im Dashboard lösbar (kein API-Endpunkt), unter
+   sandbox-vendors.paddle.com/checkout-settings vom Nutzer gesetzt.
+5. `VITE_PADDLE_CLIENT_TOKEN` (Paddle-Client-Token, laut Paddle nicht geheim -
+   läuft im Browser) vom Nutzer erhalten, in `.github/workflows/deploy-dev.yml`
+   und lokaler `.env` als Klartext ergänzt (gleiche Behandlung wie das
+   bestehende `VITE_ASSISTANT_URL`, keine GitHub-Secret nötig).
+
+**Verifiziert (Ende-zu-Ende, echte Paddle-Sandbox-API, kein Mock)**
+- `POST /api/v1/billing/checkout` → HTTP 200, echte `transactionId`
+  (`txn_...`).
+- Paddle sendet daraufhin selbstständig zwei Webhook-Callbacks an den Worker,
+  beide mit 200 beantwortet; `processed_webhook_events` zählt 2 Einträge
+  (Signaturprüfung + Idempotenz laufen also gegen echten Paddle-Traffic).
+- `subscriptions` bleibt bei 0 — korrekt, da nur die Transaktion erzeugt,
+  nie über das Overlay tatsächlich bezahlt wurde.
+
+**Betroffene Dateien:** `worker/wrangler.toml`, `worker/.dev.vars` (lokal,
+nicht eingecheckt), `worker/src/paddle/checkout.ts`,
+`.github/workflows/deploy-dev.yml`, `.env` (lokal, nicht eingecheckt),
+`package.json`, `index.html`. Live-Secrets `PADDLE_API_KEY`,
+`PADDLE_WEBHOOK_SECRET`, `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_YEARLY`
+auf dev gesetzt.
+
 ## 2026-08-05 (1.6.13)
 
 ### Fix: irreführende Adblocker-Meldung + fehlende Login-Bestätigung

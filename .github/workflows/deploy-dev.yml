@@ -29,6 +29,12 @@ jobs:
           # Session-Cookie (SameSite=Lax) zwischen Frontend und Worker
           # ueberhaupt ankommt (beide jetzt "same-site" unter immofuchs.info).
           VITE_ASSISTANT_URL: https://api-dev.immofuchs.info/api/assistant
+          # Paddle-Client-Token (Ergaenzung 06.08., Spec 4.6): laeuft im Browser,
+          # ist von Paddle selbst als nicht-geheim eingestuft (client-side token,
+          # landet ohnehin im ausgelieferten Bundle) - deshalb wie
+          # VITE_ASSISTANT_URL oben als Klartext statt als GitHub-Secret.
+          VITE_PADDLE_CLIENT_TOKEN: test_e412470bb9a7d8288b3e29fe71b
+          VITE_PADDLE_ENV: sandbox
         run: |
           npm ci
           npm run build

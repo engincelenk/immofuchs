@@ -168,6 +168,7 @@ ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info"
 # eingehenden Requests zurueck - nach Login landet man dann auf der nackten
 # Worker-Domain statt zurueck im Frontend (Befund 2026-08-04, 1.6.3).
 APP_BASE_URL = "https://dev.immofuchs.info"
+PADDLE_ENV = "sandbox"
 # Absender fuer alle Auth-Mails (Ergaenzung 05.08.). Bewusst die Subdomain
 # send.immofuchs.info: sie ist bei Resend als eigene Sending-Domain registriert
 # (DKIM/SPF/MX liegen dort), waehrend die Wurzeldomain unveraendert auf IONOS

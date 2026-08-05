@@ -32,7 +32,10 @@ export async function createCheckoutTransaction(
     },
   });
   if (!result.ok) {
-    console.error("paddle_create_transaction_failed", result.status);
+    // Detailtext mitloggen (Befund 05.08.): vorher stand nur der HTTP-Status im
+    // Log, ohne Paddles eigentliche Fehlermeldung ("price not found" vs.
+    // "invalid request" vs. ...) - das machte jede Diagnose zum Raten.
+    console.error("paddle_create_transaction_failed", result.status, JSON.stringify(result.data).slice(0, 300));
     throw new Error(`paddle_create_transaction_failed_${result.status}`);
   }
   const data = result.data as { data?: { id?: string } };
