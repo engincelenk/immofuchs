@@ -168,6 +168,13 @@ ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info"
 # eingehenden Requests zurueck - nach Login landet man dann auf der nackten
 # Worker-Domain statt zurueck im Frontend (Befund 2026-08-04, 1.6.3).
 APP_BASE_URL = "https://dev.immofuchs.info"
+# Absender fuer alle Auth-Mails (Ergaenzung 05.08.). Bewusst die Subdomain
+# send.immofuchs.info: sie ist bei Resend als eigene Sending-Domain registriert
+# (DKIM/SPF/MX liegen dort), waehrend die Wurzeldomain unveraendert auf IONOS
+# zeigt - ein zweiter SPF-Record an der Wurzel haette den bestehenden
+# IONOS-Versand ungueltig gemacht (nur ein SPF-Record je Domain zulaessig).
+# Kein Secret, weil nicht vertraulich - der Wert steht in jeder gesendeten Mail.
+MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
 # WEBAUTHN_RP_ID/ORIGIN bewusst NICHT hier als [vars] - anders als ALLOWED_ORIGIN
 # (das gegen eine Liste prueft) braucht WebAuthn genau EINEN Wert, der zur
 # tatsaechlich ausliefernden Origin passt. env.dev wird aber sowohl lokal

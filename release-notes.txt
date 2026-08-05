@@ -1,3 +1,52 @@
+## 2026-08-05 (1.6.11)
+
+### E-Mail-Versand scharf geschaltet — Resend über Subdomain send.immofuchs.info
+
+**Warum Resend statt Cloudflare**
+- Cloudflare Email Sending scheidet vorerst aus: setzt den Workers-Paid-Plan
+  voraus (Dashboard-Befund), dieses Konto läuft auf Workers Free. Der
+  vorbereitete Binding-Pfad aus 1.6.10 bleibt auskommentiert bestehen und ist
+  ohne Codeänderung aktivierbar, falls später umgestellt wird.
+- Resend kostenloser Tarif: 3.000 Mails/Monat, 100/Tag, 1 Domain — für
+  Registrierung, Magic-Link und Reset in dieser Phase ausreichend. Die
+  100/Tag-Grenze wird vor einem größeren Pro-Launch zum Thema.
+
+**Konfiguration**
+- `RESEND_API_KEY` als dev-Secret gesetzt (vom Betreiber selbst, nie im Repo
+  oder Verlauf).
+- Neue Variable `MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"`
+  in `[env.dev.vars]`. Kein Secret, da nicht vertraulich — der Wert steht in
+  jeder gesendeten Mail. Vorher griff nur der Default `login@immofuchs.info`,
+  der nicht mehr zur Sending-Domain gepasst hätte.
+
+**Warum eine Subdomain (wichtig für spätere Änderungen)**
+- `immofuchs.info` hat MX auf IONOS und einen bestehenden SPF-Record
+  (`v=spf1 include:_spf-eu.ionos.com ~all`). Eine Domain darf nur **einen**
+  SPF-Record haben — ein zweiter an der Wurzel hätte SPF insgesamt ungültig
+  gemacht und die Zustellbarkeit der bestehenden IONOS-Mails beschädigt.
+- Deshalb ist `send.immofuchs.info` als eigene Sending-Domain bei Resend
+  registriert. Verifizierte Records (per DNS geprüft):
+  DKIM `resend._domainkey.send.immofuchs.info`,
+  SPF `send.send.immofuchs.info` -> `v=spf1 include:amazonses.com ~all`,
+  MX `send.send.immofuchs.info` -> `feedback-smtp.eu-west-1.amazonses.com`.
+  Das doppelte `send.send` ist korrekt: Resend setzt sein eigenes `send`-Präfix
+  nochmals unter die registrierte Domain. Region eu-west-1 (Irland).
+- Wurzel-SPF nach dem Setup unverändert nachgeprüft.
+
+**Verifiziert**
+- Registrierung gegen eine echte Adresse: HTTP 200, im Worker-Log **keine**
+  Fehlerzeile mehr (vorher `email_provider_missing` bzw. `resend_send_failed`) —
+  der Resend-Zweig greift. Konto in D1 angelegt, `email_verified_at` offen,
+  ein Verifizierungs-Token ausgestellt.
+
+**Weiterhin offen**
+- qa/prod haben weder `RESEND_API_KEY` noch `MAGIC_LINK_FROM_EMAIL` — dort
+  greift bis zur Einrichtung weiterhin der Log-Fallback.
+- Google-Redirect-URI und Apple-Secrets unverändert offen (siehe 1.6.9).
+
+**Betroffene Dateien:** `worker/wrangler.toml`, `release-notes.txt`,
+`package.json`, `index.html`.
+
 ## 2026-08-05 (1.6.10)
 
 ### E-Mail-Versand anbieterunabhängig — Cloudflare Email Sending als erste Wahl
@@ -7,9 +56,16 @@
   Betrieb muss ein Anbieter konfiguriert sein, sonst kommt keine Bestätigungs-,
   Magic-Link- oder Reset-Mail beim Nutzer an.
 - Produktstatus geprüft (developers.cloudflare.com/email-service, Stand
-  05.08.2026): Cloudflare Email Sending ist **Beta**, nennt „magic links, email
-  verification" aber ausdrücklich als vorgesehenen Anwendungsfall und läuft auf
-  dem Workers-Paid-Plan (vorhanden, da Durable Objects genutzt werden).
+  05.08.2026): Cloudflare Email Sending ist **Beta** und nennt „magic links,
+  email verification" ausdrücklich als vorgesehenen Anwendungsfall.
+- **Korrigiert 05.08. (Befund im Dashboard):** Email Sending setzt den
+  **Workers-Paid-Plan** voraus, den dieses Konto nicht hat. Die frühere Annahme
+  „Paid-Plan vorhanden, weil Durable Objects genutzt werden" war falsch — DOs
+  laufen inzwischen auch im Free-Plan. Das erklärt die HTTP 401 (`code 2036`)
+  auf *allen* Email-Sending-Endpunkten bei gültigem Token mit
+  `email_sending (write)`; Email *Routing* antwortete parallel mit 200.
+  Cloudflare Email Sending ist damit vorerst nicht nutzbar — der Resend-Pfad
+  (unten) bleibt der aktive Weg.
 
 **Umbau**
 - `email.ts` unterstützt jetzt zwei austauschbare Wege mit identischer Signatur
