@@ -1,3 +1,70 @@
+## 2026-08-06 (1.6.16)
+
+### Checkout-Assistent (Phase 1): LoginModal/PlanSelect durch vollflaechigen
+### Schritt-Wizard ersetzt
+
+**Ausgangslage**
+- Nutzer-Vorgabe: kompletter Bestellprozess + "Mein Konto" ueberarbeiten,
+  angelehnt an eine Screenshot-Vorlage (Schritt-Fortschrittsleiste,
+  Karten-Radiobuttons, Zusammenfassungs-Block, Erfolgsscreen), aber in
+  ImmoFuchs-Tokens statt Navy/Weiss. Nach Brainstorming (siehe
+  docs/superpowers/specs/2026-08-06-checkout-und-konto-ueberarbeitung-design.md)
+  in 4 Phasen aufgeteilt; dies ist Phase 1.
+
+**Umsetzung (12 Tasks, subagent-driven mit Zwei-Stufen-Review je Task)**
+- Neuer Ordner `src/components/checkout/`: `wizardSteps.js` (reine,
+  TDD-getestete Schritt-Sequenz-Logik: Preise -> Konto -> [E-Mail
+  bestaetigen] -> Zahlungsmethode -> Willkommen, mit/ohne
+  Bestaetigungsschritt je nach Login-Weg), `StepHeader.jsx`,
+  `PricingStep.jsx`, `AccountStep.jsx`, `VerifyEmailStep.jsx`,
+  `PasswordResetFlow.jsx`, `PaymentStep.jsx`, `WelcomeStep.jsx`,
+  `CheckoutWizard.jsx` (Container), `checkoutStyles.js`/
+  `CheckoutShared.jsx` (geteilte Styles/Kleinkomponenten).
+- `LoginModal.jsx` und `PlanSelect.jsx` geloescht, alle vier Aufrufstellen
+  (`ProHeaderButton.jsx`, `AccountPanel.jsx`, `Merkliste.jsx` x2,
+  `CalculatorTrialGate.jsx`) auf `CheckoutWizard` umgehaengt.
+- `paddleLoader.js`: neues `onPaddleCheckoutEvent`-Pub/Sub, `startCheckout`
+  navigiert nach erfolgreicher Zahlung nicht mehr per `successUrl` weg -
+  der Wizard bleibt offen und zeigt jetzt den neuen `WelcomeStep`.
+- 23 neue i18n-Schluessel in allen 5 Sprachen (`src/i18n/account.js`).
+
+**Waehrend der Umsetzung gefundene und behobene Probleme** (aus den
+Code-Reviews je Task, nicht Teil des urspruenglichen Plans):
+- Fehlerhafter Paddle-Event-Listener haette andere Listener blockieren
+  koennen - Fehlerbehandlung pro Listener ergaenzt.
+- OAuth-Fehleranzeige (`?login_error=...` nach Google/Apple-Redirect) fehlte
+  in der migrierten `AccountStep`-Komponente - wiederhergestellt.
+- `CheckoutWizard`: `account.refresh()` fehlte nach Zahlungsabschluss -
+  `isPro` waere sonst bis zum naechsten manuellen Reload faelschlich
+  `false` geblieben.
+- `CheckoutWizard`: bereits eingeloggte Free-Nutzer sahen kurz den
+  Preise-Schritt aufblitzen, bevor die Weiterleitung zur Zahlung griff -
+  Anfangszustand beruecksichtigt jetzt den Login-Status sofort.
+- Plan-Auswahl (`PlanOption`) hatte keine ARIA-Radiogroup-Semantik (Karten
+  wirken visuell wie Radiobuttons, waren es fuer Screenreader aber nicht) -
+  ergaenzt, jetzt da nur noch eine Kopie existiert (vorher zwei, in
+  `LoginModal.jsx`/`PlanSelect.jsx` dupliziert).
+- `WelcomeStep` zeigte im (aktuell inaktiven, erst mit Phase 3 lebendigen)
+  Trial-Zweig immer den Jahrespreis, unabhaengig vom tatsaechlich gewaehlten
+  Plan - korrigiert, bevor es relevant wird.
+
+**Verifiziert:** Frontend `npx vitest run` 18/18 Dateien, 281/281 Tests
+gruen. Worker `npx tsc --noEmit` fehlerfrei, `npx vitest run` 4/4 Dateien,
+40/40 Tests gruen. `npx eslint` ueber alle geaenderten Dateien fehlerfrei.
+Interaktive Browser-Verifikation der Landing-Page->App-Uebergang in der
+Preview-Automatisierung weiterhin nicht moeglich (Tool meldet "Browser
+pane is not displayed, so the page is not compositing frames" -
+bestehende Einschraenkung dieser Umgebung, betrifft unveraendertes
+Landing.jsx/App.jsx, nicht diesen Feature-Code). Empfehlung: manuell auf
+localhost durchklicken (Free-Registrierung -> Bezahlschritt -> Willkommen).
+
+**Betroffene Dateien:** 9 neue Dateien unter `src/components/checkout/`,
+`src/utils/paddleLoader.js`, `src/hooks/useAccount.js`,
+`src/i18n/account.js`, `src/components/account/ProHeaderButton.jsx`,
+`src/components/account/AccountPanel.jsx`, `src/components/shell/Merkliste.jsx`,
+`src/components/account/CalculatorTrialGate.jsx`. Geloescht:
+`src/components/account/LoginModal.jsx`, `src/components/account/PlanSelect.jsx`.
+
 ## 2026-08-06 (1.6.15)
 
 ### Gap-Abgleich Wireframes vs. Ist-Stand: "Mein Konto" fuer Free-Nutzer + Dunning-Mail
