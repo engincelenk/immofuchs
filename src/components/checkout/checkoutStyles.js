@@ -91,3 +91,13 @@ export const errorBannerStyle = {
   color: "var(--ca-dk)",
   marginBottom: 12,
 };
+
+// Zusammenfassungs-Karte (Bestelluebersicht/Willkommen) - Extrakt, da
+// PaymentStep und WelcomeStep dieselbe Karten-Optik dupliziert hatten
+// (Befund finaler Review, 2026-08-06).
+export const cardStyle = {
+  background: "var(--cc)",
+  border: "1px solid var(--cb)",
+  borderRadius: 10,
+  padding: 14,
+};

@@ -1,3 +1,5 @@
+import { cardStyle, primaryBtnStyle } from "./checkoutStyles.js";
+
 // Erfolgsscreen (Vorbild: Screenshot-Konfetti-Screen, Farbe --ca statt
 // Navy). Trial-Zweig ist bereits vorbereitet fuer Phase 3 (echter
 // Paddle-Trial) - bis dahin ist subscription.status nie "trialing", der
@@ -31,7 +33,7 @@ export function WelcomeStep({ t, account, onDone }) {
           : t.welcomeSubtitle}
       </p>
 
-      <div style={{ background: "var(--cc)", border: "1px solid var(--cb)", borderRadius: 10, padding: 14, margin: "18px 0", textAlign: "left" }}>
+      <div style={{ ...cardStyle, margin: "18px 0", textAlign: "left" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0" }}>
           <span style={{ color: "var(--ch)" }}>{t.accountPlan}</span>
           <span style={{ fontWeight: 700 }}>ImmoFuchs Pro</span>
@@ -51,10 +53,7 @@ export function WelcomeStep({ t, account, onDone }) {
         <TimelineItem icon="⏰" title={t.welcomeNextStep3} body={t.welcomeNextStep3Body} />
       </div>
 
-      <button
-        onClick={onDone}
-        style={{ width: "100%", padding: 14, fontSize: 15, fontWeight: 700, background: "var(--ca)", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}
-      >
+      <button onClick={onDone} style={primaryBtnStyle}>
         {t.welcomeCtaDashboard}
       </button>
     </div>

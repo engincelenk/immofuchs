@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { primaryBtnStyle } from "./checkoutStyles.js";
+import { cardStyle, errorBannerStyle, primaryBtnStyle } from "./checkoutStyles.js";
 
 // Bestellübersicht + Zahlungsauslöser (Vorbild: Screenshot Review-/Payment-
 // Screens). Reagiert auf Paddles checkout.completed-Event (siehe
@@ -24,6 +24,12 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
     return () => {
       cancelled = true;
       unsubscribe();
+      // Falls der Wizard geschlossen wird, waehrend Paddles Overlay noch
+      // offen ist (Klick auf X kurz nach "Zahlung starten", bevor das
+      // Overlay tatsaechlich erschienen ist) - sonst liefe eine dort
+      // trotzdem abgeschlossene Zahlung ins Leere, ohne dass die App
+      // reagiert (Befund finaler Review, 2026-08-06).
+      window.Paddle?.Checkout?.close?.();
     };
   }, [onCompleted]);
 
@@ -75,7 +81,7 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
         </div>
       )}
 
-      <div style={{ background: "var(--cc)", border: "1px solid var(--cb)", borderRadius: 10, padding: 14, marginBottom: 14 }}>
+      <div style={{ ...cardStyle, marginBottom: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
           <span style={{ fontSize: 12, color: "var(--ch)" }}>{t.accountPlan}</span>
           {onEditPlan && (
@@ -90,11 +96,7 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
         <div style={{ fontSize: 11, color: "var(--ch)", marginTop: 6 }}>{t.paymentTrialNotice.replace("{price}", planPrice)}</div>
       </div>
 
-      {error && (
-        <div style={{ background: "#fff1e8", border: "1px solid #f5cba9", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "var(--ca-dk)", marginBottom: 12 }}>
-          {error}
-        </div>
-      )}
+      {error && <div style={errorBannerStyle}>{error}</div>}
 
       <button onClick={handleContinue} disabled={busy} style={primaryBtnStyle}>
         {t.planContinue} →
