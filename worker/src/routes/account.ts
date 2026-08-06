@@ -13,7 +13,10 @@ import {
   updateUserEmail,
   getUserByEmail,
   deleteUserCompletely,
+  deleteOtherSessionsForUser,
+  setUserPasswordHash,
 } from "../db";
+import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/password";
 import { sendEmail } from "../email";
 import { dispatchNotification } from "../notifications";
 import { cancelImmediately } from "../paddle/checkout";
@@ -93,6 +96,52 @@ accountRoutes.get("/account/email/confirm", async (c) => {
   if (!result) return c.redirect(`${base}/?email_change_error=invalid_or_expired`, 302);
   await updateUserEmail(c.env.DB, result.userId, result.newEmail);
   return c.redirect(`${base}/?email_change_success=1`, 302);
+});
+
+// Passwort aendern bzw. erstmalig setzen (Phase 2, 4.10/4.13). Zwei Faelle:
+//  - Konto MIT password_hash: currentPassword ist Pflicht und muss stimmen -
+//    sonst koennte ein fremdes, offen stehendes Geraet das Konto uebernehmen.
+//  - Konto OHNE password_hash (reines OAuth-/Passkey-/Magic-Link-Konto): kein
+//    currentPassword noetig, der Nutzer hat sich ueber eine gueltige Session
+//    bereits authentifiziert. Das ist NICHT dasselbe wie die unbeaufsichtigte
+//    "Stattdessen Passwort setzen"-Verknuepfung per E-Mail (passwordAuth.ts),
+//    die es ohne Session gibt und deshalb Double-Opt-In braucht.
+accountRoutes.post("/account/password", requireAuth, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const currentPassword = body && typeof body.currentPassword === "string" ? body.currentPassword : null;
+  const newPassword = body && typeof body.newPassword === "string" ? body.newPassword : "";
+
+  // Gleiche Laengen-Regel wie Registrierung und Reset (auth/password.ts,
+  // BSI-/NIST-Linie: min. 10 Zeichen, keine Zeichenklassen-Pflicht).
+  if (!isValidPasswordLength(newPassword)) return c.json({ error: "invalid_password" }, 400);
+
+  const existingHash = c.var.user.password_hash;
+  if (existingHash) {
+    if (!currentPassword) return c.json({ error: "current_password_required" }, 400);
+    if (!(await verifyPassword(currentPassword, existingHash))) {
+      return c.json({ error: "invalid_credentials" }, 401);
+    }
+  }
+
+  await setUserPasswordHash(c.env.DB, c.var.userId, await hashPassword(newPassword));
+  // Session-Invalidierung ist Pflicht, nicht optional (4.13) - aber ohne das
+  // Geraet abzumelden, an dem der Nutzer die Aenderung gerade vorgenommen hat.
+  await deleteOtherSessionsForUser(c.env.DB, c.var.userId, c.var.sessionId);
+
+  try {
+    await dispatchNotification(c.env, {
+      event: "password_changed",
+      recipientEmail: c.var.user.email,
+      recipientUserId: c.var.userId,
+      payload: {},
+    });
+  } catch (err) {
+    // Sicherheitshinweis ist wichtig, aber kein Blocker fuer die bereits
+    // erfolgte Aenderung - sonst haette der Nutzer ein neues Passwort und
+    // trotzdem eine Fehlermeldung vor sich.
+    console.error("password_changed_notice_failed", err instanceof Error ? err.message : "unknown");
+  }
+  return c.json({ ok: true });
 });
 
 accountRoutes.get("/account/export", requireAuth, async (c) => {

@@ -12,7 +12,9 @@ export type NotificationEvent =
   | "cancellation_confirmed"
   | "reactivation_confirmed"
   | "account_deleted"
-  | "payment_failed";
+  | "payment_failed"
+  | "password_changed"
+  | "trial_ending";
 
 export interface NotificationIntent {
   event: NotificationEvent;
@@ -51,6 +53,13 @@ function renderPush(intent: NotificationIntent): { title: string; body: string }
       return { title: "Konto gelöscht", body: "Dein ImmoFuchs-Konto wurde gelöscht." };
     case "payment_failed":
       return { title: "Zahlung fehlgeschlagen", body: `Pro bleibt noch bis ${intent.payload.graceEndsDate} aktiv.` };
+    case "password_changed":
+      return { title: "Passwort geändert", body: "Warst du das nicht? Bitte sofort zurücksetzen." };
+    case "trial_ending":
+      return {
+        title: "Deine Testphase endet bald",
+        body: `Am ${intent.payload.periodEndDate} werden ${intent.payload.amount} abgebucht.`,
+      };
   }
 }
 
@@ -91,6 +100,28 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
         subject: "Deine Zahlung ist fehlgeschlagen",
         html: `<p>Die Abbuchung für dein ImmoFuchs-Pro-Abo ist fehlgeschlagen. Paddle versucht es automatisch erneut.</p>
                <p>Bis ${graceEndsDate} bleibt Pro trotzdem aktiv. Bitte aktualisiere in der Zwischenzeit deine Zahlungsmethode im Konto-Bereich.</p>`,
+      };
+    }
+    // Sicherheitshinweis, kein Marketing (4.13): geht immer raus, auch wenn der
+    // Nutzer die Aenderung selbst ausgeloest hat - genau das macht ihn zum
+    // Warnsignal, falls es jemand anderes war.
+    // Vorwarnung vor der ersten Abbuchung nach dem 7-Tage-Trial (Phase 3):
+    // der Nutzer hat die Zahlungsmethode beim Trial-Start hinterlegt, die
+    // Belastung kaeme sonst unangekuendigt.
+    case "trial_ending": {
+      const datum = String(intent.payload.periodEndDate ?? "");
+      const betrag = String(intent.payload.amount ?? "");
+      return {
+        subject: "Deine ImmoFuchs-Testphase endet in 2 Tagen",
+        html: `<p>Deine kostenlose Testphase endet am ${datum}. Danach werden ${betrag} abgebucht und dein Pro-Zugang laeuft normal weiter.</p>
+               <p>Wenn du nicht weitermachen moechtest, kannst du bis dahin jederzeit im Konto-Bereich kuendigen - es entstehen dann keine Kosten.</p>`,
+      };
+    }
+    case "password_changed": {
+      return {
+        subject: "Dein ImmoFuchs-Passwort wurde geändert",
+        html: `<p>Dein Passwort wurde soeben geändert. Alle anderen Geräte wurden zur Sicherheit abgemeldet.</p>
+               <p>Warst du das nicht? Setze dein Passwort umgehend über "Passwort vergessen" zurück und kontaktiere unseren Support.</p>`,
       };
     }
   }

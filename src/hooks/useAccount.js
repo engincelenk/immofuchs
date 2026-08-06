@@ -321,6 +321,48 @@ export function useAccount() {
     await refresh();
   }, [refresh]);
 
+  // Tarifwechsel monatlich <-> jaehrlich (Phase 2). Der neue Plan landet
+  // NICHT synchron in D1 - Paddle bestaetigt den Wechsel per
+  // subscription.updated-Webhook (siehe routes/billing.ts), der die einzige
+  // Schreibquelle bleibt. Deshalb derselbe Doppel-Refresh wie nach dem
+  // Checkout: einer sofort, einer verzoegert, falls der Webhook noch laeuft.
+  const changePlan = useCallback(
+    async (plan) => {
+      const res = await apiFetch("/billing/change-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return { ok: false, error: body.error || "change_plan_failed" };
+      }
+      await refresh();
+      setTimeout(() => refresh(), 1500);
+      return { ok: true };
+    },
+    [refresh],
+  );
+
+  // Rechnungen kommen direkt von Paddle (Merchant of Record) - bewusst kein
+  // State im Hook, die Liste ist nur solange relevant, wie der
+  // Rechnungs-Bereich offen ist.
+  const listInvoices = useCallback(async () => {
+    const res = await apiFetch("/billing/invoices");
+    if (!res.ok) throw new Error("invoices_failed");
+    const { invoices } = await res.json();
+    return invoices || [];
+  }, []);
+
+  // Die PDF-URL ist kurzlebig und signiert, wird deshalb bei jedem Klick
+  // frisch geholt statt mit der Liste zwischengespeichert.
+  const openInvoicePdf = useCallback(async (transactionId) => {
+    const res = await apiFetch(`/billing/invoices/${encodeURIComponent(transactionId)}/pdf`);
+    if (!res.ok) throw new Error("invoice_pdf_failed");
+    const { url } = await res.json();
+    window.open(url, "_blank");
+  }, []);
+
   const changeEmail = useCallback(async (newEmail) => {
     const res = await apiFetch("/account/email", {
       method: "POST",
@@ -328,6 +370,31 @@ export function useAccount() {
       body: JSON.stringify({ newEmail }),
     });
     return res.ok;
+  }, []);
+
+  // Passwort aendern bzw. erstmalig setzen (Phase 2, 4.13). currentPassword
+  // ist nur Pflicht, wenn das Konto bereits eines hat - reine OAuth-/Passkey-
+  // Konten setzen ihr erstes Passwort ohne. Welcher Fall vorliegt, verraet
+  // /me nicht, deshalb entscheidet der Server: "current_password_required"
+  // ist die Aufforderung an die Oberflaeche, das Feld nachzureichen.
+  const changePassword = useCallback(async (newPassword, currentPassword) => {
+    const res = await apiFetch("/account/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(currentPassword ? { currentPassword, newPassword } : { newPassword }),
+    });
+    if (res.ok) return { ok: true };
+    const body = await res.json().catch(() => ({}));
+    return { ok: false, error: body.error || "password_change_failed" };
+  }, []);
+
+  // Aktive Sitzungen (nur Anzeige) - einzelne Geraete lassen sich serverseitig
+  // nicht gezielt abmelden, dafuer gibt es weiterhin nur logoutAllDevices.
+  const listDevices = useCallback(async () => {
+    const res = await apiFetch("/account/devices");
+    if (!res.ok) throw new Error("devices_failed");
+    const { sessions } = await res.json();
+    return sessions || [];
   }, []);
 
   const exportData = useCallback(() => {
@@ -370,7 +437,12 @@ export function useAccount() {
     cancelSubscription,
     reactivateSubscription,
     refundSubscription,
+    changePlan,
+    listInvoices,
+    openInvoicePdf,
     changeEmail,
+    changePassword,
+    listDevices,
     exportData,
     deleteAccount,
     apiBase,

@@ -15,6 +15,7 @@ function sub(overrides: Partial<SubscriptionRow>): SubscriptionRow {
     first_purchase_at: Date.now() - 1000,
     past_due_since: null,
     renewal_reminder_sent_at: null,
+    trial_reminder_sent_at: null,
     latest_transaction_id: null,
     updated_at: Date.now(),
     ...overrides,
@@ -34,6 +35,14 @@ describe("computeIsPro", () => {
 
   it("active nach Periodenende ist NICHT Pro (Webhook haette aktualisieren muessen)", () => {
     expect(computeIsPro(sub({ status: "active", current_period_end: now - 1000 }), now)).toBe(false);
+  });
+
+  it("trialing innerhalb der Trial-Periode ist Pro (Phase 3)", () => {
+    expect(computeIsPro(sub({ status: "trialing", current_period_end: now + 1000 }), now)).toBe(true);
+  });
+
+  it("trialing nach Ablauf der Trial-Periode ist NICHT Pro", () => {
+    expect(computeIsPro(sub({ status: "trialing", current_period_end: now - 1000 }), now)).toBe(false);
   });
 
   it("cancel_scheduled bleibt Pro bis zum Periodenende", () => {

@@ -28,7 +28,9 @@ export interface SessionRow {
 export interface SubscriptionRow {
   id: string;
   user_id: string;
-  status: "active" | "past_due" | "cancel_scheduled" | "canceled";
+  // 'trialing' seit Phase 3 (Migration 0012) - eigener Status, rechtlich
+  // gleichwertig zu 'active' (siehe entitlement.ts, computeIsPro).
+  status: "active" | "trialing" | "past_due" | "cancel_scheduled" | "canceled";
   plan: "monthly" | "yearly";
   paddle_customer_id: string;
   paddle_subscription_id: string;
@@ -37,6 +39,9 @@ export interface SubscriptionRow {
   first_purchase_at: number;
   past_due_since: number | null;
   renewal_reminder_sent_at: number | null;
+  // Getrennt von renewal_reminder_sent_at (Migration 0012): sonst wuerde die
+  // Trial-Erinnerung die spaetere Jahres-Erinnerung desselben Abos blockieren.
+  trial_reminder_sent_at: number | null;
   latest_transaction_id: string | null;
   updated_at: number;
 }
@@ -384,6 +389,23 @@ export async function deleteAllSessionsForUser(db: Env["DB"], userId: string): P
   await db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();
 }
 
+// Gegenstueck zu deleteAllSessionsForUser fuer die Passwort-AENDERUNG durch
+// den eingeloggten Nutzer selbst (Phase 2, POST /account/password): die
+// Session-Invalidierung ist auch hier Pflicht (4.13), aber das Geraet, an dem
+// die Aenderung gerade stattgefunden hat, darf nicht mitabgemeldet werden -
+// im Unterschied zum Reset per Token (passwordAuth.ts, resetPassword), wo es
+// keine vertrauenswuerdige "aktuelle" Session gibt.
+export async function deleteOtherSessionsForUser(
+  db: Env["DB"],
+  userId: string,
+  keepSessionId: string,
+): Promise<void> {
+  await db
+    .prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?")
+    .bind(userId, keepSessionId)
+    .run();
+}
+
 export async function deleteSession(db: Env["DB"], sessionId: string): Promise<void> {
   await db.prepare("DELETE FROM sessions WHERE id = ?").bind(sessionId).run();
 }
@@ -397,9 +419,22 @@ export async function getActiveSubscription(
   return db
     .prepare(
       `SELECT * FROM subscriptions WHERE user_id = ?
-       AND status IN ('active', 'past_due', 'cancel_scheduled')
+       AND status IN ('active', 'trialing', 'past_due', 'cancel_scheduled')
        ORDER BY updated_at DESC LIMIT 1`,
     )
+    .bind(userId)
+    .first<SubscriptionRow>();
+}
+
+// Fuer die Rechnungsuebersicht (Phase 4): hier zaehlt NICHT der aktive
+// Status, sondern nur, ob es ueberhaupt jemals eine paddle_customer_id gab -
+// wer gekuendigt hat, muss seine alten Rechnungen weiterhin abrufen koennen.
+export async function getLatestSubscriptionForUser(
+  db: Env["DB"],
+  userId: string,
+): Promise<SubscriptionRow | null> {
+  return db
+    .prepare("SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1")
     .bind(userId)
     .first<SubscriptionRow>();
 }
@@ -430,6 +465,38 @@ export async function listSubscriptionsDueForRenewalReminder(
 export async function markRenewalReminderSent(db: Env["DB"], subscriptionId: string): Promise<void> {
   await db
     .prepare("UPDATE subscriptions SET renewal_reminder_sent_at = ? WHERE id = ?")
+    .bind(Date.now(), subscriptionId)
+    .run();
+}
+
+// Trial-Erinnerung (Phase 3): der Nutzer hat beim Trial-Start eine
+// Zahlungsmethode hinterlegt und wird nach 7 Tagen automatisch belastet -
+// ohne Vorwarnung waere das eine unangenehme Ueberraschung. Bewusst kuerzeres
+// Fenster als beim Jahresabo (2 statt 7 Tage): bei einem 7-Tage-Trial wuerde
+// ein 7-Tage-Vorlauf die Mail sofort beim Trial-Start ausloesen, direkt nach
+// dem Willkommens-Screen, der dasselbe bereits sagt.
+export async function listTrialsEndingSoon(
+  db: Env["DB"],
+  withinMs: number,
+): Promise<(SubscriptionRow & { email: string })[]> {
+  const now = Date.now();
+  const rows = await db
+    .prepare(
+      `SELECT subscriptions.*, users.email as email FROM subscriptions
+       JOIN users ON users.id = subscriptions.user_id
+       WHERE subscriptions.status = 'trialing'
+         AND subscriptions.cancel_at_period_end = 0
+         AND subscriptions.trial_reminder_sent_at IS NULL
+         AND subscriptions.current_period_end BETWEEN ? AND ?`,
+    )
+    .bind(now, now + withinMs)
+    .all<SubscriptionRow & { email: string }>();
+  return rows.results;
+}
+
+export async function markTrialReminderSent(db: Env["DB"], subscriptionId: string): Promise<void> {
+  await db
+    .prepare("UPDATE subscriptions SET trial_reminder_sent_at = ? WHERE id = ?")
     .bind(Date.now(), subscriptionId)
     .run();
 }

@@ -405,6 +405,11 @@ export default function App() {
         mietQuelleRef,
         t,
         lang,
+        // setLang gehoert seit dem "Mein Konto"-Umbau (Phase 2) in den
+        // Kontext: die Sprachumschaltung gibt es jetzt zusaetzlich zum
+        // Kopfzeilen-Menue auch im Profil-Bereich, der als Portal ausserhalb
+        // der Kopfzeile haengt und die Prop nicht durchgereicht bekommt.
+        setLang,
         zinsen,
         tip: (k) => (TIPS[lang] || TIPS.de)[k],
         savedList,

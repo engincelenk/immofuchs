@@ -55,8 +55,13 @@ interface PaddleWebhookBody {
   data: Record<string, unknown>;
 }
 
-function statusFromPaddle(paddleStatus: unknown): "active" | "past_due" | "canceled" | null {
-  if (paddleStatus === "active" || paddleStatus === "trialing") return "active";
+// 'trialing' ist seit Phase 3 ein eigener Status und faellt NICHT mehr in
+// 'active' zusammen (Migration 0012): der 7-Tage-Trial soll in Konto-Ansicht
+// und Auswertung von einem bezahlten Abo unterscheidbar sein. Fuer die
+// Rechtepruefung bleibt er gleichwertig (siehe entitlement.ts, computeIsPro).
+function statusFromPaddle(paddleStatus: unknown): "active" | "trialing" | "past_due" | "canceled" | null {
+  if (paddleStatus === "active") return "active";
+  if (paddleStatus === "trialing") return "trialing";
   if (paddleStatus === "past_due") return "past_due";
   if (paddleStatus === "canceled" || paddleStatus === "paused") return "canceled";
   return null;

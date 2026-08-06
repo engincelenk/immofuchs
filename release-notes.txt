@@ -1,3 +1,77 @@
+## 2026-08-06 (1.7.0)
+
+### Kommerzialisierung Phasen 2-4: "Mein Konto"-Umbau, echter 7-Tage-Trial,
+### eigene Rechnungsliste
+
+Abschluss der in
+docs/superpowers/specs/2026-08-06-checkout-und-konto-ueberarbeitung-design.md
+geplanten Ueberarbeitung. Phase 1 (Checkout-Assistent) siehe 1.6.16.
+
+**Phase 2 - "Mein Konto" als vollflaechiger Bereich mit 8 Unterbereichen**
+- Das bisherige kleine `AccountPanel`-Modal (eine einzige scrollende Liste)
+  ist ersetzt durch `MyAccount.jsx` + `src/components/account/sections/`:
+  Profil, Abonnement, Rechnungen, Zahlungsmethoden, Gespeicherte
+  Berechnungen, Sicherheit, Datenschutz, Support. Desktop mit Seitenleiste,
+  mobil mit scrollendem Reiter-Streifen. Optik folgt dem Checkout-Wizard aus
+  Phase 1, damit beide Vollbild-Flaechen zusammengehoerig wirken.
+- Bestehende Funktionen unveraendert uebernommen: E-Mail aendern, Kuendigung,
+  Reaktivierung, 14-Tage-Erstattung, alle Geraete abmelden, Datenexport
+  (Art. 20), Kontoloeschung (Art. 17), Paddle-Portal-Verweise.
+- NEU: Passwort aendern (`POST /account/password`) - fuer reine OAuth-/
+  Passkey-Konten auch erstmaliges Setzen ohne altes Passwort, da die
+  bestehende Session bereits der Nachweis ist. Meldet alle ANDEREN Geraete
+  ab (das eigene bleibt angemeldet) und verschickt eine
+  Sicherheits-Benachrichtigung.
+- NEU: Tarifwechsel monatlich <-> jaehrlich
+  (`POST /billing/change-plan`, Paddle-Proration).
+- NEU: Liste der aktiven Sitzungen (nur Anzeige) im Sicherheits-Bereich.
+- NEU: FAQ/Kontakt-Bereich (statisch, kein Backend).
+
+**Phase 3 - echter 7-Tage-Pro-Trial**
+- `trialing` ist jetzt ein eigenstaendiger Subscription-Status statt wie
+  bisher in `active` zusammenzufallen. Fuer die Rechtepruefung bleibt er
+  gleichwertig: ein Trial-Nutzer IST ein Pro-Nutzer (`computeIsPro`).
+- Migration `0012_trialing_status.sql`: der partielle UNIQUE-Index aus 0003
+  deckte nur `status = 'active'` ab - ohne Erweiterung koennte ein Nutzer
+  zwei Pro-gewaehrende Zeilen halten.
+- NEU (nicht im urspruenglichen Plan): Trial-Erinnerung 2 Tage vor Ablauf.
+  Der Nutzer hinterlegt beim Trial-Start eine Zahlungsmethode und wird nach
+  7 Tagen automatisch belastet - ohne Vorwarnung waere das eine unangenehme
+  Ueberraschung. Bewusst 2 statt 7 Tage Vorlauf: bei einem 7-Tage-Trial
+  wuerde ein 7-Tage-Vorlauf die Mail sofort beim Trial-Start ausloesen.
+  Eigene Spalte `trial_reminder_sent_at`, damit die Trial-Erinnerung nicht
+  die spaetere Jahres-Verlaengerungserinnerung desselben Abos blockiert.
+- OFFEN: die Trial-Periode selbst muss noch an den beiden Paddle-Preisen
+  konfiguriert werden (Dashboard bzw. `PATCH /prices/{id}` mit
+  `trial_period: {interval:"day", frequency:7}`), zuerst in der Sandbox.
+  Bis dahin liefert Paddle nie `trialing` und der Code bleibt folgenlos.
+
+**Phase 4 - eigene Rechnungsliste**
+- `GET /billing/invoices` spiegelt die Paddle-Transaktionen des Kunden,
+  `GET /billing/invoices/:id/pdf` liefert Paddles kurzlebige, signierte
+  PDF-URL. Paddle bleibt Merchant of Record und Rechnungsaussteller - wir
+  spiegeln nur die Ansicht, es gibt weiterhin kein eigenes Rechnungsarchiv.
+- Sicherheitspruefung: die angefragte Transaktions-ID wird gegen die
+  Transaktionsliste des eingeloggten Nutzers geprueft, bevor eine URL
+  herausgegeben wird (403 statt Vertrauen auf den Pfadparameter).
+- Rechnungen werden ueber die zuletzt angelegte Subscription geladen, nicht
+  nur ueber eine aktive - sonst waeren nach einer Kuendigung alle
+  bisherigen Rechnungen unerreichbar.
+- Zahlungsmethoden bleiben wie entschieden ausschliesslich im Paddle-Portal
+  (PCI-Grenze).
+
+**Verifiziert:** Frontend `npx vitest run` 18/18 Dateien, 283/283 Tests
+gruen, `npx vite build` fehlerfrei, `npx eslint src/` 0 Fehler (8
+vorbestehende Warnungen in unbeteiligten Dateien). Worker
+`npx tsc --noEmit` fehlerfrei, `npx vitest run` 4/4 Dateien, 42/42 Tests
+gruen. Interaktive Browser-Verifikation weiterhin nicht moeglich (die
+Vorschau-Automatisierung rendert in dieser Umgebung keine Frames) -
+manuelles Durchklicken auf dev wird empfohlen.
+
+**Migration nicht ausgefuehrt:** `0012_trialing_status.sql` liegt bereit,
+wurde aber gegen keine Datenbank angewandt. Vor der Nutzung des
+Trial-Status auf dev einspielen.
+
 ## 2026-08-06 (1.6.16)
 
 ### Checkout-Assistent (Phase 1): LoginModal/PlanSelect durch vollflaechigen

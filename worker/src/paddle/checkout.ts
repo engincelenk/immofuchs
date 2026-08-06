@@ -77,6 +77,32 @@ export async function revokeScheduledCancellation(
   if (!result.ok) throw new Error(`paddle_reactivate_failed_${result.status}`);
 }
 
+// Tarifwechsel monatlich <-> jaehrlich (Phase 2). Paddle rechnet die
+// Restlaufzeit des alten Tarifs sofort anteilig ab und stellt die Differenz
+// direkt in Rechnung ("prorated_immediately") - der Nutzer bekommt den neuen
+// Tarif also unmittelbar, nicht erst zum Periodenende. Der D1-Datensatz wird
+// hier BEWUSST NICHT angefasst: Paddle schickt im Anschluss ein
+// subscription.updated-Webhook, das der bestehende Handler bereits verarbeitet
+// und das plan/current_period_end konsistent nachzieht (gleiche Begruendung
+// wie beim Checkout-Flow, 4.6 - der Webhook ist die einzige Schreibquelle).
+export async function changeSubscriptionPlan(
+  env: Env,
+  paddleSubscriptionId: string,
+  plan: Plan,
+): Promise<void> {
+  const result = await paddleFetch(env, `/subscriptions/${paddleSubscriptionId}`, {
+    method: "PATCH",
+    body: {
+      items: [{ price_id: priceIdFor(env, plan), quantity: 1 }],
+      proration_billing_mode: "prorated_immediately",
+    },
+  });
+  if (!result.ok) {
+    console.error("paddle_change_plan_failed", result.status, JSON.stringify(result.data).slice(0, 300));
+    throw new Error(`paddle_change_plan_failed_${result.status}`);
+  }
+}
+
 // Customer-Portal-Session (4.6/4.7/4.10): Paddle uebernimmt Rechnungsuebersicht
 // und Zahlungsmethoden-Aenderung selbst - kein Eigenbau. Die Session-URL ist
 // kurzlebig, daher bei jedem Klick frisch angefordert statt zwischengespeichert.
@@ -106,4 +132,66 @@ export async function refundLatestTransaction(env: Env, transactionId: string): 
     },
   });
   if (!result.ok) throw new Error(`paddle_refund_failed_${result.status}`);
+}
+
+// ═══ Rechnungen (Phase 4) ═══
+// Paddle ist Merchant of Record - die Rechnungen liegen dort, nicht in D1
+// (4.10). Statt sie zu spiegeln (Steuer-/Adressdaten, die wir nach 4.13
+// bewusst nicht vorhalten wollen), werden sie bei jedem Aufruf frisch geholt.
+
+export interface PaddleInvoice {
+  id: string;
+  billedAt: string | null;
+  // Betrag bleibt exakt so, wie Paddle ihn liefert: String in der kleinsten
+  // Waehrungseinheit (Cent). Bewusst KEINE Waehrungsrechnung im Worker -
+  // Rundung/Formatierung passiert im Frontend anhand von `currency`, damit es
+  // hier keine zweite, abweichende Wahrheit zum Paddle-Beleg gibt.
+  amount: string;
+  currency: string;
+  status: string;
+}
+
+export async function listTransactions(
+  env: Env,
+  paddleCustomerId: string,
+): Promise<PaddleInvoice[]> {
+  const result = await paddleFetch(
+    env,
+    `/transactions?customer_id=${encodeURIComponent(paddleCustomerId)}&status=billed,completed&order_by=billed_at[DESC]&per_page=50`,
+    { method: "GET" },
+  );
+  if (!result.ok) {
+    console.error("paddle_list_transactions_failed", result.status, JSON.stringify(result.data).slice(0, 300));
+    throw new Error(`paddle_list_transactions_failed_${result.status}`);
+  }
+  const data = result.data as {
+    data?: {
+      id?: string;
+      billed_at?: string | null;
+      currency_code?: string;
+      status?: string;
+      details?: { totals?: { total?: string } };
+    }[];
+  };
+  return (data.data ?? [])
+    .filter((tx) => Boolean(tx.id))
+    .map((tx) => ({
+      id: String(tx.id),
+      billedAt: tx.billed_at ?? null,
+      amount: tx.details?.totals?.total ?? "0",
+      currency: tx.currency_code ?? "EUR",
+      status: tx.status ?? "unknown",
+    }));
+}
+
+// Die zurueckgegebene URL ist kurzlebig und signiert (analog zur
+// Portal-Session, s.o.) - daher bei jedem Klick frisch angefordert statt
+// gespeichert.
+export async function getInvoicePdfUrl(env: Env, transactionId: string): Promise<string> {
+  const result = await paddleFetch(env, `/transactions/${transactionId}/invoice`, { method: "GET" });
+  if (!result.ok) throw new Error(`paddle_invoice_pdf_failed_${result.status}`);
+  const data = result.data as { data?: { url?: string } };
+  const url = data.data?.url;
+  if (!url) throw new Error("paddle_invoice_url_missing");
+  return url;
 }

@@ -20,7 +20,10 @@ export function hasRole(user: Pick<UserRow, "role">, role: Role): boolean {
 // D1-Mock (Sprint 3, S3-4 AK: entitlement.test.ts).
 export function computeIsPro(sub: SubscriptionRow | null, now: number): boolean {
   if (!sub) return false;
-  if (sub.status === "active" || sub.status === "cancel_scheduled") {
+  // 'trialing' zaehlt hier bewusst exakt wie 'active' (Phase 3, Migration
+  // 0012): ein Trial-Nutzer IST ein Pro-Nutzer, der Unterschied ist rein
+  // darstellend/auswertend, nie eine Rechtefrage.
+  if (sub.status === "active" || sub.status === "trialing" || sub.status === "cancel_scheduled") {
     return sub.current_period_end > now;
   }
   if (sub.status === "past_due") {

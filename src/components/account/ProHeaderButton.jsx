@@ -3,7 +3,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
-import { AccountPanel } from "./AccountPanel.jsx";
+import { MyAccount } from "./MyAccount.jsx";
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
 // NICHT in Statusleiste.jsx). Label "Pro" mit Kroenchen-Icon, Fuchs-Orange.
@@ -58,7 +58,7 @@ export function ProHeaderButton() {
       </button>
       {open &&
         (account.isLoggedIn ? (
-          <AccountPanel onClose={() => setOpen(false)} />
+          <MyAccount onClose={() => setOpen(false)} />
         ) : (
           <CheckoutWizard onClose={() => setOpen(false)} />
         ))}

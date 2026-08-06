@@ -3,9 +3,9 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
-import { createCheckoutTransaction, cancelAtPeriodEnd, cancelImmediately, revokeScheduledCancellation, refundLatestTransaction, createPortalSession } from "../paddle/checkout";
+import { createCheckoutTransaction, cancelAtPeriodEnd, cancelImmediately, revokeScheduledCancellation, refundLatestTransaction, createPortalSession, changeSubscriptionPlan, listTransactions, getInvoicePdfUrl } from "../paddle/checkout";
 import { handlePaddleWebhook, verifyPaddleSignature } from "../paddle/webhook";
-import { getActiveSubscription } from "../db";
+import { getActiveSubscription, getLatestSubscriptionForUser } from "../db";
 import { dispatchNotification } from "../notifications";
 
 export const billingRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
@@ -100,6 +100,69 @@ billingRoutes.post("/reactivate", requireAuth, requireCsrfOrigin, async (c) => {
   } catch (err) {
     console.error("billing_reactivate_failed", err instanceof Error ? err.message : "unknown");
     return c.json({ error: "reactivate_failed" }, 502);
+  }
+});
+
+// Tarifwechsel monatlich <-> jaehrlich (Phase 2). Der neue Tarif wird NICHT
+// hier nach D1 geschrieben - Paddle sendet ein subscription.updated-Webhook,
+// das der bestehende Handler verarbeitet und das die Zeile aktualisiert
+// (gleiche Begruendung wie beim Checkout: der Webhook ist die einzige
+// Schreibquelle fuer Plan/Periode, sonst gaebe es zwei Wahrheiten).
+billingRoutes.post("/change-plan", requireAuth, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const plan = body?.plan === "yearly" ? "yearly" : body?.plan === "monthly" ? "monthly" : null;
+  if (!plan) return c.json({ error: "invalid_plan" }, 400);
+
+  const sub = await getActiveSubscription(c.env.DB, c.var.userId);
+  if (!sub) return c.json({ error: "no_active_subscription" }, 404);
+  if (sub.plan === plan) return c.json({ error: "already_on_plan" }, 400);
+
+  try {
+    await changeSubscriptionPlan(c.env, sub.paddle_subscription_id, plan);
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error("billing_change_plan_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "change_plan_failed" }, 502);
+  }
+});
+
+// ═══ Rechnungen (Phase 4) ═══
+// Quelle ist die Paddle-API, nicht D1 - Paddle ist Merchant of Record und
+// haelt die rechtlich massgeblichen Belege (4.10).
+
+billingRoutes.get("/invoices", requireAuth, async (c) => {
+  // Ohne Subscription hat der Nutzer schlicht keine Rechnungen - das ist der
+  // Normalfall fuer Free-Nutzer und kein Fehler, daher 200 mit leerer Liste.
+  const sub = await getLatestSubscriptionForUser(c.env.DB, c.var.userId);
+  if (!sub || !sub.paddle_customer_id) return c.json({ invoices: [] });
+  try {
+    const invoices = await listTransactions(c.env, sub.paddle_customer_id);
+    return c.json({ invoices });
+  } catch (err) {
+    console.error("billing_invoices_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "invoices_failed" }, 502);
+  }
+});
+
+billingRoutes.get("/invoices/:transactionId/pdf", requireAuth, async (c) => {
+  const transactionId = c.req.param("transactionId");
+  const sub = await getLatestSubscriptionForUser(c.env.DB, c.var.userId);
+  if (!sub || !sub.paddle_customer_id) return c.json({ error: "not_your_transaction" }, 403);
+  try {
+    // Sicherheitskern dieses Endpunkts: die transaction_id aus dem Pfad wird
+    // NIE ungeprueft an Paddle weitergereicht. Sonst koennte jeder
+    // eingeloggte Nutzer mit einer geratenen/abgeschauten ID die Rechnung
+    // eines fremden Kunden ziehen (IDOR) - Paddle selbst kennt unsere
+    // Nutzer-Zuordnung nicht und wuerde die URL bereitwillig ausstellen.
+    const invoices = await listTransactions(c.env, sub.paddle_customer_id);
+    if (!invoices.some((inv) => inv.id === transactionId)) {
+      return c.json({ error: "not_your_transaction" }, 403);
+    }
+    const url = await getInvoicePdfUrl(c.env, transactionId);
+    return c.json({ url });
+  } catch (err) {
+    console.error("billing_invoice_pdf_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "invoice_pdf_failed" }, 502);
   }
 });
 
