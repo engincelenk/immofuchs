@@ -26,7 +26,9 @@ export function WelcomeStep({ t, account, onDone }) {
       </div>
       <div style={{ fontSize: 18, fontWeight: 800 }}>{t.welcomeTitle}</div>
       <p style={{ fontSize: 13, color: "var(--ch)", marginTop: 8, maxWidth: 340, marginLeft: "auto", marginRight: "auto" }}>
-        {isTrial ? t.welcomeSubtitleTrial.replace("{price}", t.planYearlyPrice) : t.welcomeSubtitle}
+        {isTrial
+          ? t.welcomeSubtitleTrial.replace("{price}", subscription.plan === "monthly" ? t.planMonthlyPrice : t.planYearlyPrice)
+          : t.welcomeSubtitle}
       </p>
 
       <div style={{ background: "var(--cc)", border: "1px solid var(--cb)", borderRadius: 10, padding: 14, margin: "18px 0", textAlign: "left" }}>
