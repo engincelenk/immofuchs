@@ -74,6 +74,9 @@ export function MyAccount({ onClose }) {
           fontFamily: "'DM Sans', sans-serif",
         }}
       >
+        {/* paddingTop mit safe-area-inset (Bugreport 06.08.): ohne das lag die
+            Kopfzeile auf iOS unter der Statusleiste - Uhrzeit und Titel
+            ueberlappten sich. Gleiche Behandlung wie .hdr in App.jsx. */}
         <div
           style={{
             display: "flex",
@@ -81,6 +84,7 @@ export function MyAccount({ onClose }) {
             justifyContent: "space-between",
             gap: 12,
             padding: "14px 20px",
+            paddingTop: "calc(14px + env(safe-area-inset-top))",
           }}
         >
           <div style={{ minWidth: 0 }}>

@@ -1,3 +1,47 @@
+## 2026-08-06 (1.7.1)
+
+### Fix: 4 Befunde aus dem ersten Geraetetest (iPhone, dev)
+
+**1. "Weiter zur Zahlung" fror die App ein (Blocker)**
+- Ursache: `useAccount()` gibt bei jedem Render ein NEUES Objekt zurueck (das
+  Rueckgabeobjekt ist nicht memoisiert). Dadurch wechselte auch
+  `onCompleted` in `CheckoutWizard` staendig die Identitaet, der
+  `useEffect` in `PaymentStep` lief bei jedem Render neu - und dessen
+  Cleanup rief `Paddle.Checkout.close()` auf, mitten im Oeffnen des
+  Overlays. Zurueck blieb Paddles Hintergrund-Layer ohne Inhalt, der die
+  ganze Seite blockierte.
+- Der ausloesende `close()`-Aufruf im Cleanup stammt aus dem finalen Review
+  zu Phase 1 (1.6.16, "Paddle-Overlay schliesst beim Wizard-Abbruch") - er
+  war richtig gedacht, aber an eine instabile Dependency gekoppelt.
+- Fix: `onCompleted` liegt jetzt in einer Ref, der Effekt hat eine leere
+  Dependency-Liste. Der Cleanup laeuft damit nur noch beim echten Verlassen
+  des Zahlungsschritts, das Overlay bleibt waehrend der Zahlung offen.
+
+**2. Kein Zurueck-Knopf im Checkout**
+- Der Wizard kannte nur vorwaerts oder abbrechen (X).
+- Fix: Zurueck-Knopf in der Kopfzeile bei den Schritten "Konto" und
+  "Zahlung". Bewusst NICHT bei "Bestaetigen" (Registrierung ist dort schon
+  passiert), nicht bei "Fertig" (Kauf abgeschlossen) und nicht in der
+  Upgrade-Variante (startet direkt bei der Zahlung). Das Ziel ist explizit
+  gesetzt statt `stepIndex - 1`, sonst waere man aus der Zahlung heraus auf
+  dem bereits erledigten Bestaetigungs-Schritt gelandet.
+
+**3. Ueberlappende Layer am oberen Bildschirmrand**
+- Checkout-Wizard und "Mein Konto" sind `position:fixed; inset:0` und lagen
+  damit auf iOS unter der Statusleiste - Uhrzeit und Logo ueberlappten.
+- Fix: `paddingTop: calc(14px + env(safe-area-inset-top))` in beiden
+  Kopfzeilen, analog zur bestehenden `.hdr`-Regel in `App.jsx`.
+
+**4. "Keine Rechnung vorhanden"**
+- Kein Fehler: der Testnutzer war durch Befund 1 nie Pro geworden, hatte
+  also tatsaechlich keine Rechnung. Der Endpunkt liefert fuer Free-Nutzer
+  korrekt eine leere Liste, die Oberflaeche zeigt dafuer einen eigenen
+  Leerzustand. Der Screenshot traf den Ladezustand - nach Fix 1 und einem
+  echten Kauf ist das erneut zu pruefen.
+
+**Verifiziert:** 283/283 Tests gruen, `npx eslint` fehlerfrei,
+`npx vite build` fehlerfrei. Die Zahlung selbst bleibt manuell zu testen.
+
 ## 2026-08-06 (1.7.0)
 
 ### Kommerzialisierung Phasen 2-4: "Mein Konto"-Umbau, echter 7-Tage-Trial,

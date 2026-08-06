@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cardStyle, errorBannerStyle, primaryBtnStyle } from "./checkoutStyles.js";
 
 // Bestellübersicht + Zahlungsauslöser (Vorbild: Screenshot Review-/Payment-
@@ -9,6 +9,17 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
+  // onCompleted ueber eine Ref statt als Effect-Dependency (Bugreport 06.08.,
+  // "Weiter zur Zahlung friert die App ein"): das account-Objekt aus
+  // useAccount() ist nicht memoisiert und wechselt bei JEDEM Render die
+  // Identitaet. Dadurch wechselte auch onCompleted staendig, der Effekt lief
+  // neu - und sein Cleanup rief mitten im Oeffnen Paddle.Checkout.close()
+  // auf. Uebrig blieb Paddles Overlay-Hintergrund ohne Inhalt, der die
+  // ganze Seite blockierte. Mit leerer Dependency-Liste laeuft der Cleanup
+  // nur noch beim echten Unmount, die Ref haelt den Callback trotzdem aktuell.
+  const onCompletedRef = useRef(onCompleted);
+  onCompletedRef.current = onCompleted;
+
   useEffect(() => {
     let unsubscribe = () => {};
     let cancelled = false;
@@ -17,21 +28,19 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
       unsubscribe = onPaddleCheckoutEvent((data) => {
         if (data?.name === "checkout.completed") {
           window.Paddle?.Checkout?.close?.();
-          onCompleted();
+          onCompletedRef.current();
         }
       });
     });
     return () => {
       cancelled = true;
       unsubscribe();
-      // Falls der Wizard geschlossen wird, waehrend Paddles Overlay noch
-      // offen ist (Klick auf X kurz nach "Zahlung starten", bevor das
-      // Overlay tatsaechlich erschienen ist) - sonst liefe eine dort
-      // trotzdem abgeschlossene Zahlung ins Leere, ohne dass die App
-      // reagiert (Befund finaler Review, 2026-08-06).
+      // Nur beim echten Verlassen des Zahlungsschritts: sonst bliebe Paddles
+      // Overlay offen, waehrend darunter schon der Willkommens-Screen oder
+      // die geschlossene App steht.
       window.Paddle?.Checkout?.close?.();
     };
-  }, [onCompleted]);
+  }, []);
 
   async function handleContinue() {
     setBusy(true);

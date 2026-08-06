@@ -86,6 +86,19 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing" }) {
   );
   const handleForgotPassword = useCallback(() => setPasswordReset({ initialStep: "request" }), []);
   const handleEditPlan = useCallback(() => goToStep("pricing"), [goToStep]);
+
+  // Zurueck-Navigation (Bugreport 06.08.: "Kein Button zurueck"). Bewusst
+  // nicht ueberall: aus "verify" heraus waere die Registrierung bereits
+  // passiert, und nach "welcome" ist der Kauf abgeschlossen - ein Zurueck
+  // wuerde dort einen Zustand vorspiegeln, den es nicht mehr gibt. Fuer die
+  // upgrade-Variante entfaellt es ganz, da sie direkt bei der Zahlung startet.
+  // Ziel explizit statt stepIndex-1: sonst landete man aus der Zahlung heraus
+  // auf dem Bestaetigungs-Schritt, der zu dem Zeitpunkt laengst erledigt ist.
+  const backTarget = currentKey === "account" ? "pricing" : currentKey === "payment" ? "account" : null;
+  const canGoBack = !passwordReset && backTarget !== null && steps.some((s) => s.key === backTarget);
+  const goBack = useCallback(() => {
+    if (backTarget) goToStep(backTarget);
+  }, [backTarget, goToStep]);
   // Account-Refresh nach Zahlung (Code-Review Task 9): ohne das bliebe
   // account.isPro faelschlich false, bis zum naechsten manuellen Reload.
   // Zweiter, verzoegerter Refresh im Hintergrund faengt den Fall ab, dass
@@ -147,14 +160,46 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing" }) {
         ref={dialogRef}
         style={{ maxWidth: 460, margin: "0 auto", minHeight: "100%", display: "flex", flexDirection: "column" }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" }}>
-          <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-            🦊 ImmoFuchs <span style={{ color: "var(--ca-dk)" }}>Pro</span>
-          </div>
+        {/* paddingTop mit safe-area-inset (Bugreport 06.08.): ohne das liegt
+            die Kopfzeile auf iOS unter der Statusleiste, Uhrzeit und Logo
+            ueberlappten sich. Gleiche Behandlung wie .hdr in App.jsx. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            padding: "14px 20px",
+            paddingTop: "calc(14px + env(safe-area-inset-top))",
+          }}
+        >
+          {canGoBack ? (
+            <button
+              onClick={goBack}
+              aria-label={t.wizardBack}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--ca-dk)",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                flexShrink: 0,
+              }}
+            >
+              ← {t.wizardBack}
+            </button>
+          ) : (
+            <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+              🦊 ImmoFuchs <span style={{ color: "var(--ca-dk)" }}>Pro</span>
+            </div>
+          )}
           <button
             onClick={onClose}
             aria-label={t.close}
-            style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--ch)", lineHeight: 1 }}
+            style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--ch)", lineHeight: 1, flexShrink: 0 }}
           >
             ✕
           </button>
