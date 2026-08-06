@@ -37,7 +37,16 @@ export function loadPaddle() {
         window.Paddle.Initialize({
           token: PADDLE_CLIENT_TOKEN,
           eventCallback: (data) => {
-            for (const cb of listeners) cb(data);
+            for (const cb of listeners) {
+              try {
+                cb(data);
+              } catch (err) {
+                // Ein fehlerhafter Listener darf die Zustellung an die
+                // uebrigen Abonnenten nicht blockieren und die Exception
+                // nicht zurueck in Paddle.js' eigenen Aufruf propagieren.
+                console.error("paddleLoader: listener threw", err);
+              }
+            }
           },
         });
       }
