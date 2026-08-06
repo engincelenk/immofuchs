@@ -17,12 +17,15 @@ import { WelcomeStep } from "./WelcomeStep.jsx";
 // bisherige kleine LoginModal/PlanSelect-Paar. `entryPoint="payment"`
 // (Upgrade eines bereits eingeloggten Free-Nutzers) startet direkt bei der
 // Zahlung, alles andere durchlaeuft die volle Neukunden-Sequenz.
-export function CheckoutWizard({ onClose, entryPoint = "pricing" }) {
+// `initialPlan` kommt aus der nach einem OAuth-Redirect wiederhergestellten
+// Kaufabsicht (useAccount.js): Google/Apple verlassen die Seite komplett,
+// wodurch die im Preise-Schritt getroffene Wahl sonst verloren waere und der
+// Nutzer sie nach der Rueckkehr erneut treffen muesste.
+export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = null }) {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
   const dialogRef = useRef(null);
-  const supportsPasskey = typeof window !== "undefined" && Boolean(window.PublicKeyCredential);
 
   // Anfangs-Variante beruecksichtigt bereits den aktuellen Login-Status
   // (Code-Review Task 9): sonst wuerde ein bereits eingeloggter Free-Nutzer
@@ -39,7 +42,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing" }) {
   const [stepIndex, setStepIndex] = useState(() =>
     initialVariant === "new-customer" ? 0 : getWizardSteps(initialVariant).indexOf("payment"),
   );
-  const [plan, setPlan] = useState("yearly");
+  const [plan, setPlan] = useState(initialPlan || "yearly");
   const [verifyEmail, setVerifyEmail] = useState(null);
   const [passwordReset, setPasswordReset] = useState(
     account?.resetToken ? { initialStep: "reset" } : null,
@@ -76,7 +79,16 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing" }) {
     },
     [steps],
   );
-  const handlePricingContinue = useCallback(() => goToStep("account"), [goToStep]);
+  // Login-Status pruefen statt hart auf "account" zu springen (Bugreport
+  // 06.08.): wer ueber "ändern" aus der Zahlung zurueck in die Planauswahl
+  // geht, ist bereits angemeldet - der Auto-Advance-Effekt oben greift dann
+  // nicht nach, weil sich weder isLoggedIn noch variant geaendert haben. Ohne
+  // diese Pruefung landete ein eingeloggter Nutzer wieder auf der
+  // Login-Maske, obwohl die Fortschrittsleiste "Konto ✓" anzeigt.
+  const handlePricingContinue = useCallback(
+    () => goToStep(account?.isLoggedIn ? "payment" : "account"),
+    [goToStep, account?.isLoggedIn],
+  );
   const handleVerificationSent = useCallback(
     (email) => {
       setVerifyEmail(email);
@@ -127,7 +139,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing" }) {
       <AccountStep
         t={t}
         account={account}
-        supportsPasskey={supportsPasskey}
+        plan={plan}
         onVerificationSent={handleVerificationSent}
         onForgotPassword={handleForgotPassword}
       />

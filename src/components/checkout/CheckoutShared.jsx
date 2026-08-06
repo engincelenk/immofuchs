@@ -6,10 +6,11 @@ export function ErrorBanner({ t, code }) {
   const map = {
     oauth_state_mismatch: t.loginErrorOauth,
     oauth_failed: t.loginErrorOauth,
-    magic_link_invalid: t.loginErrorMagicLink,
     rate_limited: t.loginErrorRateLimited,
-    passkey: t.loginErrorPasskey,
-    invalid_email: t.loginErrorInvalidEmail,
+    // Kommt nur noch aus der Registrierung (ungueltige Adresse oder fehlende
+    // Zustimmung). Zeigte vorher den Magic-Link-Text "Login-Link konnte nicht
+    // gesendet werden ...", der dort nie gepasst hat.
+    invalid_email: t.registerErrorInvalidEmail,
     invalid_credentials: t.loginErrorInvalidCredentials,
     locked: t.loginErrorLocked,
     email_not_verified: t.loginErrorEmailNotVerified,

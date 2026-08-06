@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { MyAccount } from "./MyAccount.jsx";
+import { LoginSuccessToast } from "./LoginSuccessToast.jsx";
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
 // NICHT in Statusleiste.jsx). Label "Pro" mit Kroenchen-Icon, Fuchs-Orange.
@@ -14,25 +15,58 @@ import { MyAccount } from "./MyAccount.jsx";
 // geknuepft (Bugreport 06.08.): Free-Nutzer hatten dadurch ueberhaupt keinen
 // Zugang zu "Mein Konto" und landeten stattdessen zwangsweise in der
 // Plan-Auswahl.
+//
+// Diese Komponente ist zusaetzlich der Ort, an dem Rueckkehrer aus einem
+// Redirect abgefangen werden: sie haengt fest in der Kopfzeile (App.jsx) und
+// ist damit unabhaengig davon montiert, von welchem Einstiegspunkt aus der
+// Nutzer den Wizard urspruenglich geoeffnet hatte.
 export function ProHeaderButton() {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
-  const [open, setOpen] = useState(false);
+  // Was geoeffnet ist, wird beim Oeffnen einmal festgelegt und NICHT bei jedem
+  // Render neu aus isLoggedIn abgeleitet (Befund 06.08.): vorher entschied ein
+  // Ternaer im Render darueber, wodurch die Anmeldung mitten im Kauf die
+  // Flaeche unter dem Nutzer austauschte - aus dem Checkout-Wizard wurde
+  // schlagartig "Mein Konto", der begonnene Kauf war weg. Ein Ablauf darf
+  // nicht dadurch enden, dass sein Zwischenziel (Login) erreicht wurde.
+  const [openMode, setOpenMode] = useState(null); // null | "checkout" | "account"
 
   // Passwort-Reset-Link (?reset_token=..., Ergaenzung 04.08.) muss die Maske
-  // von selbst oeffnen - anders als bei OAuth/Magic-Link gibt es hier keinen
-  // Weg, den Screen ohne Nutzereingabe (neues Passwort) abzuschliessen.
+  // von selbst oeffnen - anders als bei OAuth gibt es hier keinen Weg, den
+  // Screen ohne Nutzereingabe (neues Passwort) abzuschliessen.
   useEffect(() => {
-    if (account?.resetToken) setOpen(true);
+    if (account?.resetToken) setOpenMode("checkout");
   }, [account?.resetToken]);
+
+  // Wiederaufnahme nach Google-/Apple-Login (Bugreport 06.08.): der Nutzer
+  // hatte den Kauf begonnen, wurde zum Anbieter geschickt und landete
+  // anschliessend wieder auf dem Ausgangsbildschirm - ohne Bestaetigung und
+  // ohne seine Planauswahl. Jetzt oeffnet sich der Wizard direkt beim
+  // Zahlungsschritt weiter, dessen Kopf bereits "✓ Angemeldet als ..." zeigt.
+  // Bewusst nur fuer Free-Nutzer: wer bereits Pro ist, hat nichts zu kaufen
+  // und bekommt nur die Bestaetigungs-Einblendung.
+  const resumesCheckout = Boolean(account?.pendingCheckout) && account?.isLoggedIn && !account?.isPro;
+  const { dismissLoginSuccess } = account || {};
+  useEffect(() => {
+    if (!resumesCheckout) return;
+    setOpenMode("checkout");
+    // Der Zahlungsschritt bestaetigt die Anmeldung selbst - eine zusaetzliche
+    // Einblendung darueber waere doppelt.
+    dismissLoginSuccess?.();
+  }, [resumesCheckout, dismissLoginSuccess]);
+
+  const handleClose = useCallback(() => {
+    setOpenMode(null);
+    account?.clearPendingCheckout?.();
+  }, [account]);
 
   if (!account || account.loading) return null;
 
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => setOpenMode(account.isLoggedIn ? "account" : "checkout")}
         style={{
           display: "flex",
           alignItems: "center",
@@ -56,11 +90,23 @@ export function ProHeaderButton() {
         <span aria-hidden="true">👑</span>
         <span>{t.proButton}</span>
       </button>
-      {open &&
-        (account.isLoggedIn ? (
-          <MyAccount onClose={() => setOpen(false)} />
+      {account.loginSuccess && (
+        <LoginSuccessToast
+          t={t}
+          email={account.me?.email}
+          onDone={account.dismissLoginSuccess}
+        />
+      )}
+      {openMode === "account" && <MyAccount onClose={handleClose} />}
+      {openMode === "checkout" &&
+        (resumesCheckout ? (
+          <CheckoutWizard
+            onClose={handleClose}
+            entryPoint="payment"
+            initialPlan={account.pendingCheckout?.plan}
+          />
         ) : (
-          <CheckoutWizard onClose={() => setOpen(false)} />
+          <CheckoutWizard onClose={handleClose} />
         ))}
     </>
   );

@@ -4,14 +4,26 @@ import { linkBtnStyle, primaryBtnStyle, secondaryBtnStyle, appleBtnStyle, textIn
 
 // Login/Registrierung als eigener Wizard-Schritt. `onVerificationSent` wird
 // nur beim Passwort-Registrierungspfad aufgerufen (einziger Weg mit
-// Double-Opt-In) - alle anderen Login-/Registrierungswege loggen den Nutzer
-// direkt ein, das beobachtet CheckoutWizard selbst ueber account.isLoggedIn.
-// `onForgotPassword` oeffnet den separaten PasswordResetFlow (kein eigener
-// Wizard-Schritt, siehe Spec 5.1).
-export function AccountStep({ t, account, supportsPasskey, onVerificationSent, onForgotPassword }) {
-  const [mode, setMode] = useState("login"); // "login" | "register" | "magic-sent"
+// Double-Opt-In) - Google/Apple loggen den Nutzer direkt ein, das beobachtet
+// CheckoutWizard selbst ueber account.isLoggedIn. `onForgotPassword` oeffnet
+// den separaten PasswordResetFlow (kein eigener Wizard-Schritt, siehe Spec 5.1).
+//
+// Reduktion auf drei Wege (06.08.2026, Nutzerentscheidung): Passkey und
+// E-Mail-Magic-Link sind aus der Oberflaeche entfernt. Passkey war redundant -
+// das Passwortfeld traegt autoComplete="current-password", worauf iOS/Android/
+// Windows von sich aus Face ID/Touch ID/Hello ueber den Passwort-Manager
+// anbieten; der separate Knopf verkaufte dieselbe Funktion ein zweites Mal.
+// Der Magic-Link war ein zweiter Mail-Kanal mit eigener Zustellbarkeits- und
+// Spam-Fehlerquelle, ohne eigenen Job neben "Passwort vergessen". Die
+// Worker-Routen (/auth/passkey/*, /auth/magic-link/*) bleiben bewusst
+// bestehen - ein reines UI-Aufraeumen, jederzeit reversibel.
+//
+// `plan` wird nur durchgereicht, um ihn vor dem OAuth-Redirect zu merken:
+// Google/Apple verlassen die Seite komplett, wodurch der Wizard-State
+// verloren geht (siehe useAccount.js/startGoogleLogin).
+export function AccountStep({ t, account, plan, onVerificationSent, onForgotPassword }) {
+  const [mode, setMode] = useState("login"); // "login" | "register"
   const [email, setEmail] = useState("");
-  const [sentTo, setSentTo] = useState(null);
   const [busy, setBusy] = useState(null);
   const [inlineError, setInlineError] = useState(null);
   const [loginPassword, setLoginPassword] = useState("");
@@ -29,32 +41,6 @@ export function AccountStep({ t, account, supportsPasskey, onVerificationSent, o
     }
   }, [account?.error]);
 
-  async function handleMagicLink(e) {
-    e?.preventDefault();
-    setBusy("email");
-    setInlineError(null);
-    const result = await account.requestMagicLink(email);
-    setBusy(null);
-    if (!result.ok) {
-      setInlineError(result.error);
-      return;
-    }
-    setSentTo(email);
-    setMode("magic-sent");
-  }
-
-  async function handlePasskeyLogin() {
-    setBusy("passkey");
-    setInlineError(null);
-    try {
-      await account.passkeyLogin();
-    } catch {
-      setInlineError("passkey");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function handlePasswordLogin(e) {
     e.preventDefault();
     setBusy("login-password");
@@ -67,23 +53,6 @@ export function AccountStep({ t, account, supportsPasskey, onVerificationSent, o
       setLoginWarn(Boolean(result.warn));
     }
     // Erfolg: CheckoutWizard beobachtet account.isLoggedIn selbst.
-  }
-
-  async function handlePasskeyRegister() {
-    if (!regEmail) {
-      setInlineError("invalid_email");
-      return;
-    }
-    setBusy("passkey-register");
-    setInlineError(null);
-    setEmailTakenProviders(null);
-    try {
-      await account.passkeyRegister(regEmail);
-    } catch {
-      setInlineError("passkey");
-    } finally {
-      setBusy(null);
-    }
   }
 
   async function handleRegisterSubmit(e) {
@@ -117,21 +86,6 @@ export function AccountStep({ t, account, supportsPasskey, onVerificationSent, o
     onVerificationSent(regEmail);
   }
 
-  if (mode === "magic-sent") {
-    return (
-      <div style={{ textAlign: "center", padding: "20px 0" }}>
-        <div style={{ fontSize: 32, marginBottom: 12 }}>📩</div>
-        <div style={{ fontSize: 14, fontWeight: 700 }}>
-          {t.loginEmailSent} {sentTo}
-        </div>
-        <p style={{ fontSize: 12, color: "var(--ch)", marginTop: 8 }}>{t.loginEmailSentHint}</p>
-        <button onClick={() => setMode("login")} style={{ ...secondaryBtnStyle, marginTop: 16 }}>
-          {t.loginEmailOther}
-        </button>
-      </div>
-    );
-  }
-
   if (mode === "register") {
     return (
       <div>
@@ -145,12 +99,12 @@ export function AccountStep({ t, account, supportsPasskey, onVerificationSent, o
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
               {emailTakenProviders.includes("google") && (
-                <button type="button" onClick={account.startGoogleLogin} style={secondaryBtnStyle}>
+                <button type="button" onClick={() => account.startGoogleLogin(plan)} style={secondaryBtnStyle}>
                   <GoogleIcon /> {t.loginGoogle}
                 </button>
               )}
               {emailTakenProviders.includes("apple") && (
-                <button type="button" onClick={account.startAppleLogin} style={appleBtnStyle}>
+                <button type="button" onClick={() => account.startAppleLogin(plan)} style={appleBtnStyle}>
                   <AppleIcon /> {t.loginApple}
                 </button>
               )}
@@ -168,6 +122,9 @@ export function AccountStep({ t, account, supportsPasskey, onVerificationSent, o
                   {t.loginSubmit}
                 </button>
               )}
+              {/* Auch der Weg zurueck fuer reine Passkey-Konten (Provider-Liste
+                  kann "passkey" enthalten): ohne Passkey-Knopf im UI ist das
+                  Setzen eines Passworts deren Anmeldeweg. */}
               {!emailTakenProviders.includes("password") && (
                 <button type="button" onClick={handleLinkPassword} disabled={busy === "link-password"} style={secondaryBtnStyle}>
                   {t.registerErrorEmailTakenLinkCta}
@@ -221,19 +178,6 @@ export function AccountStep({ t, account, supportsPasskey, onVerificationSent, o
             {t.registerSubmit}
           </button>
         </form>
-        {supportsPasskey && (
-          <>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0" }}>
-              <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
-              <span style={{ fontSize: 11, color: "var(--ch)" }}>{t.registerOrFaster}</span>
-              <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
-            </div>
-            <button type="button" onClick={handlePasskeyRegister} disabled={busy === "passkey-register"} style={secondaryBtnStyle}>
-              🔑 {t.registerPasskeyCta}
-            </button>
-            <p style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 6 }}>{t.loginPasskeyHint}</p>
-          </>
-        )}
         <div style={{ textAlign: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--cb)" }}>
           <button
             type="button"
@@ -273,23 +217,13 @@ export function AccountStep({ t, account, supportsPasskey, onVerificationSent, o
           {t.loginResendVerification}
         </button>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {supportsPasskey && (
-          <div>
-            <button onClick={handlePasskeyLogin} disabled={busy === "passkey"} style={secondaryBtnStyle}>
-              🔑 {t.loginPasskey}
-            </button>
-            <p style={{ fontSize: 10.5, color: "var(--ch)", margin: "6px 0 0" }}>{t.loginPasskeyHint}</p>
-          </div>
-        )}
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={account.startGoogleLogin} style={{ ...secondaryBtnStyle, flex: 1 }}>
-            <GoogleIcon /> {t.loginGoogle}
-          </button>
-          <button onClick={account.startAppleLogin} style={{ ...appleBtnStyle, flex: 1 }}>
-            <AppleIcon /> {t.loginApple}
-          </button>
-        </div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <button onClick={() => account.startGoogleLogin(plan)} style={{ ...secondaryBtnStyle, flex: 1 }}>
+          <GoogleIcon /> {t.loginGoogle}
+        </button>
+        <button onClick={() => account.startAppleLogin(plan)} style={{ ...appleBtnStyle, flex: 1 }}>
+          <AppleIcon /> {t.loginApple}
+        </button>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
         <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
@@ -319,15 +253,11 @@ export function AccountStep({ t, account, supportsPasskey, onVerificationSent, o
           {t.loginSubmit}
         </button>
       </form>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+      <div style={{ marginTop: 8 }}>
         <button type="button" onClick={onForgotPassword} style={linkBtnStyle}>
           {t.loginForgotPassword}
         </button>
-        <button type="button" onClick={handleMagicLink} disabled={busy === "email"} style={linkBtnStyle}>
-          {t.loginWithoutPassword}
-        </button>
       </div>
-      <p style={{ fontSize: 11, color: "var(--ch)", marginTop: 8 }}>{t.loginEmailHint}</p>
       <div style={{ textAlign: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--cb)" }}>
         <button
           type="button"

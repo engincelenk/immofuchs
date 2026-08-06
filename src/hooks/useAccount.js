@@ -2,6 +2,42 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiBase, apiV1, apiFetch } from "../utils/apiBase.js";
 import { storeNativeToken, clearNativeToken } from "../utils/nativeAuth.js";
 
+// Kaufabsicht ueber den OAuth-Redirect hinweg (Bugreport 06.08.): Google und
+// Apple verlassen die Seite komplett, wodurch der komplette Wizard-State
+// stirbt - er haengt an lokalem useState in ProHeaderButton/
+// CalculatorTrialGate/Merkliste. Nach der Rueckkehr sah der Nutzer deshalb
+// wieder exakt den Ausgangsbildschirm (z.B. den gesperrten Rechner), ohne
+// jeden Hinweis, dass die Anmeldung geklappt hat, und ohne seine
+// Planauswahl. sessionStorage statt localStorage: die Absicht gilt nur fuer
+// diesen einen Tab-Besuch und darf einen spaeteren Besuch nicht beeinflussen.
+const CHECKOUT_INTENT_KEY = "if_checkout_intent";
+
+function rememberCheckoutIntent(plan) {
+  try {
+    // Die OAuth-Knoepfe haengen teils direkt an onClick, bekommen also ein
+    // Event statt eines Plans - deshalb hier pruefen statt blind speichern.
+    sessionStorage.setItem(
+      CHECKOUT_INTENT_KEY,
+      JSON.stringify({ plan: typeof plan === "string" ? plan : null }),
+    );
+  } catch {
+    /* Storage evtl. blockiert - dann entfaellt nur die Wiederaufnahme */
+  }
+}
+
+// Einmalig lesen UND loeschen: die Absicht darf sich nur ein einziges Mal
+// einloesen, sonst oeffnete ein spaeterer Reload den Wizard erneut.
+function takeCheckoutIntent() {
+  try {
+    const raw = sessionStorage.getItem(CHECKOUT_INTENT_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(CHECKOUT_INTENT_KEY);
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 // Haelt Login-/Pro-Status, ruft /api/v1/me (Spec 5.3) - strukturell wie
 // useAssistant/useFinnBubble. Ein einziger Provider (AccountContext.jsx)
 // haelt genau eine Instanz, damit nicht jede Komponente ihren eigenen
@@ -16,6 +52,13 @@ export function useAccount() {
   // rein serverseitig per GET-Redirect abgeschlossen werden. Bleibt im State,
   // bis LoginModal ihn beim Reset-Submit verbraucht.
   const [resetToken, setResetToken] = useState(null);
+  // Erfolgreicher Login war bisher das einzige Redirect-Ergebnis ohne jede
+  // Rueckmeldung: login_success=1 wurde gelesen, aus der URL entfernt und
+  // verworfen (nur login_error erzeugte einen sichtbaren Zustand). Beides
+  // wird jetzt nach aussen gereicht - loginSuccess fuer die Bestaetigung,
+  // pendingCheckout fuer die Wiederaufnahme des Kaufs.
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState(null);
   const didHandleRedirectRef = useRef(false);
 
   // Cross-cutting Pro-Signal fuer useSavedObjects (Merkliste.jsx): dieser Hook
@@ -75,12 +118,21 @@ export function useAccount() {
     if (hasAuthParam) {
       const loginError = url.searchParams.get("login_error");
       const emailChangeError = url.searchParams.get("email_change_error");
+      const loggedIn = url.searchParams.has("login_success");
       for (const k of ["login_success", "login_error", "email_change_success", "email_change_error"]) {
         url.searchParams.delete(k);
       }
       window.history.replaceState({}, "", url.toString());
       if (loginError) setError(`login_error_${loginError}`);
       if (emailChangeError) setError(`email_change_error_${emailChangeError}`);
+      if (loggedIn) {
+        setLoginSuccess(true);
+        setPendingCheckout(takeCheckoutIntent());
+      } else {
+        // Abgebrochene/fehlgeschlagene Anmeldung: die gemerkte Absicht muss
+        // weg, sonst spraenge der Wizard beim naechsten Login unerwartet auf.
+        takeCheckoutIntent();
+      }
     }
     const tokenFromLink = url.searchParams.get("reset_token");
     if (tokenFromLink) {
@@ -95,11 +147,13 @@ export function useAccount() {
   // Edge", akzeptiert) - kein Bearer-Token-Pfad dafuer in dieser Runde, siehe
   // routes/auth.ts. Fuer eine native Huelle (Phase D) braeuchte das eigene
   // native Sign-in-Plugins statt des Web-OAuth-Redirects.
-  const startGoogleLogin = useCallback(() => {
+  const startGoogleLogin = useCallback((plan) => {
+    rememberCheckoutIntent(plan);
     window.location.href = apiV1("/auth/google/start");
   }, []);
 
-  const startAppleLogin = useCallback(() => {
+  const startAppleLogin = useCallback((plan) => {
+    rememberCheckoutIntent(plan);
     window.location.href = apiV1("/auth/apple/start");
   }, []);
 
@@ -250,6 +304,11 @@ export function useAccount() {
     },
     [refresh],
   );
+
+  const dismissLoginSuccess = useCallback(() => setLoginSuccess(false), []);
+  // Wird aufgerufen, sobald die wiederaufgenommene Kaufabsicht eingeloest
+  // (Wizard geoeffnet) oder verworfen wurde (Wizard geschlossen).
+  const clearPendingCheckout = useCallback(() => setPendingCheckout(null), []);
 
   const logout = useCallback(async () => {
     await apiFetch("/auth/logout", { method: "POST" });
@@ -418,6 +477,10 @@ export function useAccount() {
     isPro: Boolean(me?.isPro),
     error,
     resetToken,
+    loginSuccess,
+    dismissLoginSuccess,
+    pendingCheckout,
+    clearPendingCheckout,
     refresh,
     startGoogleLogin,
     startAppleLogin,

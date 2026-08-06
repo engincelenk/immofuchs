@@ -1,3 +1,62 @@
+## 2026-08-06 (1.7.2)
+
+### UX: Login-Wege reduziert + drei Flow-Brueche im Checkout behoben
+
+**1. Passkey und E-Mail-Magic-Link aus der Oberflaeche entfernt**
+- Statt fuenf paralleler Login-Wege jetzt drei: Google, Apple, E-Mail+Passwort.
+- Passkey war redundant: das Passwortfeld traegt `autoComplete="current-password"`,
+  worauf iOS/Android/Windows von sich aus Face ID, Touch ID bzw. Hello ueber den
+  Passwort-Manager anbieten. Der separate Knopf verkaufte dieselbe Funktion ein
+  zweites Mal - mit eigener Fehlerquelle ("Passkey nicht verfuegbar").
+- Der Magic-Link war ein zweiter Mail-Kanal mit eigener Zustellbarkeits- und
+  Spam-Fehlerquelle, ohne eigenen Job neben "Passwort vergessen".
+- Entfernt wurden nur die UI-Elemente und 12 i18n-Schluessel je Sprache
+  (5 Sprachen, 60 Zeilen). Die Worker-Routen `/auth/passkey/*` und
+  `/auth/magic-link/*` sowie die Hook-Methoden bleiben unangetastet: Sie sind
+  die einzige Quelle fuer den nativen Bearer-Token (`storeNativeToken`,
+  Capacitor-Pfad, Spec 10.0), und der Rueckbau bleibt so jederzeit moeglich.
+- Kein Lockout-Risiko: prod- und qa-D1 sind noch Platzhalter
+  (`REPLACE_WITH_*_D1_DATABASE_ID`), es gibt keine produktiven Konten. Reine
+  Passkey-Konten aus dev erreichen ihr Konto weiterhin ueber
+  "Stattdessen Passwort setzen" im Registrierungspfad.
+
+**2. "aendern" bei der Planauswahl warf eingeloggte Nutzer auf die Login-Maske**
+- Ablauf: Zahlung -> "aendern" -> Preise -> "Weiter" landete auf dem
+  Konto-Schritt, obwohl die Fortschrittsleiste "Konto ✓" anzeigte.
+- Ursache: `handlePricingContinue` sprang fest auf `"account"`. Der
+  Auto-Advance-Effekt greift dort nicht nach, weil er nur bei einem Wechsel von
+  `isLoggedIn`/`variant` feuert - beide waren unveraendert.
+- Fix: Der Sprung prueft jetzt den Login-Status und geht bei angemeldeten
+  Nutzern direkt zur Zahlung, mit dem neu gewaehlten Plan.
+
+**3. Nach Google-/Apple-Login gab es keinerlei Rueckmeldung**
+- OAuth ist ein vollstaendiger Seiten-Redirect, wodurch der Wizard-State stirbt
+  (lokaler `useState` in ProHeaderButton/CalculatorTrialGate/Merkliste).
+  `login_success=1` wurde gelesen, aus der URL entfernt und verworfen - nur
+  `login_error` erzeugte einen sichtbaren Zustand. Der Nutzer landete wieder auf
+  dem Ausgangsbildschirm (z.B. dem gesperrten Rechner), ohne Hinweis auf den
+  Erfolg und ohne seine Planauswahl.
+- Fix: Die Kaufabsicht inkl. Plan wird vor dem Redirect in `sessionStorage`
+  gemerkt und nach der Rueckkehr genau einmal eingeloest - der Wizard oeffnet
+  sich direkt beim Zahlungsschritt weiter, dessen Kopf bereits
+  "✓ Angemeldet als ..." zeigt.
+- Bewusst KEIN eigener Bestaetigungs-Screen: ein Zwischenschritt mit
+  "Weiter"-Knopf waere eine Sackgasse mit zusaetzlichem Klick. Wer ausserhalb
+  eines Kaufs zurueckkommt (z.B. ueber den Bestaetigungslink aus der
+  Registrierungsmail), sieht stattdessen eine selbstschliessende Einblendung
+  (neu: `LoginSuccessToast.jsx`, 4 Sekunden, `role="status"`).
+
+**4. Anmeldung mitten im Kauf tauschte die Flaeche gegen "Mein Konto"**
+- Beim Header-Einstieg entschied ein Ternaer im Render (`account.isLoggedIn ?
+  MyAccount : CheckoutWizard`) bei JEDEM Render neu. Sobald der Login im
+  Wizard gelang, wurde daraus schlagartig "Mein Konto" - der begonnene Kauf
+  war weg.
+- Fix: Was geoeffnet ist, wird beim Oeffnen einmal als `openMode` festgelegt.
+  Ein Ablauf endet nicht mehr dadurch, dass sein Zwischenziel erreicht wurde.
+
+Nebenbefund (nicht geaendert): `paymentTrialNotice` erzeugt beim Monatsplan
+"danach 9,99 €/Mon.." - doppelter Punkt, weil der Preis selbst auf "." endet.
+
 ## 2026-08-06 (1.7.1)
 
 ### Fix: 4 Befunde aus dem ersten Geraetetest (iPhone, dev)
