@@ -11,7 +11,8 @@ export type NotificationEvent =
   | "renewal_reminder"
   | "cancellation_confirmed"
   | "reactivation_confirmed"
-  | "account_deleted";
+  | "account_deleted"
+  | "payment_failed";
 
 export interface NotificationIntent {
   event: NotificationEvent;
@@ -48,6 +49,8 @@ function renderPush(intent: NotificationIntent): { title: string; body: string }
       return { title: "Kündigung zurückgenommen", body: "Dein Abo läuft wie gewohnt weiter." };
     case "account_deleted":
       return { title: "Konto gelöscht", body: "Dein ImmoFuchs-Konto wurde gelöscht." };
+    case "payment_failed":
+      return { title: "Zahlung fehlgeschlagen", body: `Pro bleibt noch bis ${intent.payload.graceEndsDate} aktiv.` };
   }
 }
 
@@ -80,6 +83,14 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       return {
         subject: "Dein ImmoFuchs-Konto wurde gelöscht",
         html: `<p>Dein Konto und alle zugehörigen Daten wurden gelöscht. Ein aktives Abo wurde sofort beendet.</p>`,
+      };
+    }
+    case "payment_failed": {
+      const graceEndsDate = String(intent.payload.graceEndsDate ?? "");
+      return {
+        subject: "Deine Zahlung ist fehlgeschlagen",
+        html: `<p>Die Abbuchung für dein ImmoFuchs-Pro-Abo ist fehlgeschlagen. Paddle versucht es automatisch erneut.</p>
+               <p>Bis ${graceEndsDate} bleibt Pro trotzdem aktiv. Bitte aktualisiere in der Zwischenzeit deine Zahlungsmethode im Konto-Bereich.</p>`,
       };
     }
   }

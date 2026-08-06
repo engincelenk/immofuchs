@@ -11,15 +11,18 @@ import {
 } from "../../utils/accountEntitlement.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { CancelFlow } from "./CancelFlow.jsx";
+import { PlanSelect } from "./PlanSelect.jsx";
 
 // "Mein Konto" (Spec 4.10) - Kontostatus, Plan, Kuendigung/Reaktivierung,
 // Rueckerstattung, Geraete abmelden, Datenexport (Art. 20), Konto loeschen
-// (Art. 17).
+// (Art. 17). Erreichbar fuer jeden eingeloggten Nutzer, nicht nur Pro (siehe
+// ProHeaderButton.jsx) - Free-Nutzer sehen hier statt der Billing-Zeilen
+// einen Upgrade-Einstieg.
 export function AccountPanel({ onClose }) {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
-  const [view, setView] = useState("overview"); // "overview" | "cancel"
+  const [view, setView] = useState("overview"); // "overview" | "cancel" | "upgrade"
   const [changingEmail, setChangingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [busy, setBusy] = useState(null);
@@ -50,6 +53,14 @@ export function AccountPanel({ onClose }) {
     return (
       <Shell t={t} onClose={onClose} trapKey={view}>
         <CancelFlow t={t} account={account} onDone={() => setView("overview")} />
+      </Shell>
+    );
+  }
+
+  if (view === "upgrade") {
+    return (
+      <Shell t={t} onClose={onClose} trapKey={view}>
+        <PlanSelect t={t} account={account} onClose={onClose} />
       </Shell>
     );
   }
@@ -97,6 +108,9 @@ export function AccountPanel({ onClose }) {
         <>
           <Row label={t.accountPlan}>ImmoFuchs Pro – {formatPlanLabel(subscription)}</Row>
           <Row label={t.accountNextCharge}>{formatPeriodEndDate(subscription)}</Row>
+          {subscription.status === "past_due" && (
+            <div style={pastDueBannerStyle}>{t.accountPastDueBanner}</div>
+          )}
           <ActionButton onClick={account.openBillingPortal}>{t.accountInvoices}</ActionButton>
           <ActionButton onClick={account.openBillingPortal}>{t.accountPaymentMethod}</ActionButton>
           {subscription.status === "cancel_scheduled" ? (
@@ -108,7 +122,12 @@ export function AccountPanel({ onClose }) {
             <ActionButton onClick={account.refundSubscription}>{t.accountRefund}</ActionButton>
           )}
         </>
-      ) : null}
+      ) : (
+        <>
+          <Row label={t.accountPlan}>{t.accountPlanFree}</Row>
+          <ActionButton onClick={() => setView("upgrade")}>{t.accountUpgradeCta}</ActionButton>
+        </>
+      )}
 
       <div style={{ height: 1, background: "var(--cb)", margin: "14px 0" }} />
 
@@ -220,6 +239,17 @@ function ActionButton({ onClick, children, danger, disabled }) {
     </button>
   );
 }
+
+const pastDueBannerStyle = {
+  background: "#FDEBD3",
+  border: "1px solid var(--ca)",
+  color: "var(--ca-dk)",
+  borderRadius: 8,
+  padding: "8px 12px",
+  fontSize: 12,
+  fontWeight: 600,
+  margin: "4px 0 8px",
+};
 
 const linkBtnStyle = {
   background: "none",

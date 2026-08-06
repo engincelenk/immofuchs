@@ -3,7 +3,9 @@
 // liefert Events "at least once" - ein doppelt geliefertes Event darf nichts
 // mehr aendern, siehe worker/src/paddle/webhook.test.ts).
 import type { Env } from "../types";
-import { isWebhookEventProcessed, markWebhookEventProcessed, newId } from "../db";
+import { getUserById, isWebhookEventProcessed, markWebhookEventProcessed, newId } from "../db";
+import { dispatchNotification } from "../notifications";
+import { PAST_DUE_GRACE_MS } from "../entitlement";
 
 // "ts=1700000000;h1=<hex-hmac>" - siehe Paddle-Doku "Verify webhook signature".
 function parseSignatureHeader(header: string): { ts: string; h1: string } | null {
@@ -140,6 +142,21 @@ async function upsertSubscriptionFromPaddle(env: Env, data: Record<string, unkno
         existing.id,
       )
       .run();
+
+    // Dunning-Mail (Wireframe 14.3 "Zahlung schlaegt fehl") nur beim
+    // UEBERGANG in past_due, nicht bei jedem erneuten Webhook mit demselben
+    // Status - sonst wuerde jede Paddle-Zustellung eine neue Mail ausloesen.
+    if (status === "past_due" && existing.status !== "past_due") {
+      const user = await getUserById(env.DB, userId);
+      if (user) {
+        await dispatchNotification(env, {
+          event: "payment_failed",
+          recipientEmail: user.email,
+          recipientUserId: userId,
+          payload: { graceEndsDate: new Date(now + PAST_DUE_GRACE_MS).toLocaleDateString("de-DE") },
+        });
+      }
+    }
   } else {
     await env.DB.prepare(
       `INSERT INTO subscriptions

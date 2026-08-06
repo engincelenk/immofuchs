@@ -1,3 +1,53 @@
+## 2026-08-06 (1.6.15)
+
+### Gap-Abgleich Wireframes vs. Ist-Stand: "Mein Konto" fuer Free-Nutzer + Dunning-Mail
+
+**Ausgangslage**
+- Abgleich von `docs/wireframes-kommerzialisierung-2026-07-31.html` (37
+  Use Cases, 14.1-14.6) gegen den aktuellen Code ergab: nahezu alles ist
+  bereits gebaut (alle 5 Login-Wege, Session-Handling, Paddle-Flow,
+  Free/Pro-Gating, Webhooks/Cron). Zwei echte Luecken gefunden.
+
+**Fund 1: "Mein Konto" fuer Free-Nutzer unerreichbar**
+- `ProHeaderButton.jsx` oeffnete `AccountPanel` ("Mein Konto" - E-Mail
+  aendern, Datenexport Art. 20, Kontoloeschung Art. 17, alle Geraete
+  abmelden) nur fuer `account.isPro`. Ein eingeloggter Free-Nutzer landete
+  stattdessen immer im `LoginModal`, das ihn sofort zur Plan-Auswahl
+  weiterleitete - kein Zugriff auf die eigenen Kontodaten moeglich, obwohl
+  Wireframe 14.2 "Mein Konto" ausdruecklich als Anlaufstelle fuer ALLE
+  eingeloggten Nutzer vorsieht.
+- Fix: Routing auf `account.isLoggedIn` umgestellt. `AccountPanel` zeigt
+  fuer Free-Nutzer (kein `subscription`-Objekt) jetzt "Free" + einen
+  "Auf Pro upgraden"-Button (neue "upgrade"-Ansicht, rendert die bestehende
+  `PlanSelect`-Komponente) statt der Billing-Zeilen.
+
+**Fund 2: Dunning - keine Benachrichtigung bei fehlgeschlagener Zahlung**
+- Webhook setzte `status='past_due'` und `past_due_since` korrekt, Pro
+  wurde nach der 3-Tage-Kulanz korrekt entzogen (`entitlement.ts`) - aber
+  weder E-Mail noch UI-Hinweis informierten den Nutzer ueber den
+  Zahlungsausfall (Wireframe-Karte "Zahlung schlaegt fehl").
+- Fix: neuer `payment_failed`-Notification-Typ (`notifications.ts`),
+  ausgeloest in `webhook.ts` exakt beim UEBERGANG in `past_due` (nicht bei
+  jeder erneuten Webhook-Zustellung mit gleichbleibendem Status). Neuer
+  `notice-banner.warn` in `AccountPanel`, sichtbar bei
+  `subscription.status === 'past_due'`.
+
+**Betroffene Dateien:** `src/components/account/ProHeaderButton.jsx`,
+`src/components/account/AccountPanel.jsx`, `src/i18n/account.js` (4 neue
+Keys x 5 Sprachen), `worker/src/notifications.ts`,
+`worker/src/paddle/webhook.ts`.
+
+**Verifiziert:** `tsc --noEmit` (Worker) fehlerfrei, kompletter Worker-
+Testlauf 40/40 gruen, kompletter Frontend-Testlauf 276/276 gruen
+(inkl. i18n-Vollstaendigkeit). Interaktive Browser-Verifikation im
+localhost-Dev-Setup NICHT abgeschlossen: der "Jetzt rechnen"-Einstieg auf
+der Landing-Page liess sich in der Preview-Automatisierung nicht ausloesen
+(Klick registrierte nicht, auch nicht per direktem DOM-`.click()`) - wirkt
+wie eine Eigenart der Preview-Umgebung, nicht am Code liegend, aber nicht
+abschliessend geklaert. Empfehlung: manuell auf localhost nachtesten (Free-
+Login -> "Pro"-Button -> "Mein Konto" sollte jetzt Kontodaten statt
+Plan-Auswahl zeigen).
+
 ## 2026-08-06 (1.6.14)
 
 ### Paddle-Sandbox-Checkout auf dev vollständig scharf — Ende-zu-Ende verifiziert

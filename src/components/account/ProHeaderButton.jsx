@@ -7,8 +7,13 @@ import { AccountPanel } from "./AccountPanel.jsx";
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
 // NICHT in Statusleiste.jsx). Label "Pro" mit Kroenchen-Icon, Fuchs-Orange.
-// Pro-Nutzer landen direkt in "Mein Konto", alle anderen im Login-/
-// Vergleichs-Flow.
+// Jeder eingeloggte Nutzer (Free UND Pro) landet in "Mein Konto" (Wireframe
+// 14.2: zentrale Anlaufstelle fuer E-Mail-Aenderung, Datenexport,
+// Kontoloeschung - keine Pro-exklusiven Aktionen). Nur nicht eingeloggte
+// Nutzer sehen den Login-/Vergleichs-Flow. Vorher faelschlich an isPro
+// geknuepft (Bugreport 06.08.): Free-Nutzer hatten dadurch ueberhaupt keinen
+// Zugang zu "Mein Konto" und landeten stattdessen zwangsweise in der
+// Plan-Auswahl.
 export function ProHeaderButton() {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
@@ -52,7 +57,7 @@ export function ProHeaderButton() {
         <span>{t.proButton}</span>
       </button>
       {open &&
-        (account.isPro ? (
+        (account.isLoggedIn ? (
           <AccountPanel onClose={() => setOpen(false)} />
         ) : (
           <LoginModal onClose={() => setOpen(false)} />
