@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ErrorBanner, GoogleIcon, AppleIcon, PasswordField } from "./CheckoutShared.jsx";
 import { linkBtnStyle, primaryBtnStyle, secondaryBtnStyle, appleBtnStyle, textInputStyle, warnBannerStyle } from "./checkoutStyles.js";
 
@@ -22,6 +22,12 @@ export function AccountStep({ t, account, supportsPasskey, onVerificationSent, o
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [emailTakenProviders, setEmailTakenProviders] = useState(null);
+
+  useEffect(() => {
+    if (account?.error?.startsWith("login_error_")) {
+      setInlineError(account.error.replace("login_error_", ""));
+    }
+  }, [account?.error]);
 
   async function handleMagicLink(e) {
     e?.preventDefault();
