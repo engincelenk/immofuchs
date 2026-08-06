@@ -23,7 +23,7 @@ export function PricingStep({ t, plan, setPlan, onContinue }) {
         🦊 {t.pricingTrialBadge}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
+      <div role="radiogroup" aria-label={t.planTitle} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
         <PlanOption
           selected={plan === "monthly"}
           onClick={() => setPlan("monthly")}
@@ -63,6 +63,9 @@ export function PricingStep({ t, plan, setPlan, onContinue }) {
 function PlanOption({ selected, onClick, label, price, badge }) {
   return (
     <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
       onClick={onClick}
       style={{
         display: "flex",
