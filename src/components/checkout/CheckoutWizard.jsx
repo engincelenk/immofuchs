@@ -24,8 +24,21 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing" }) {
   const dialogRef = useRef(null);
   const supportsPasskey = typeof window !== "undefined" && Boolean(window.PublicKeyCredential);
 
-  const [variant, setVariant] = useState(entryPoint === "payment" ? "upgrade" : "new-customer");
-  const [stepIndex, setStepIndex] = useState(0);
+  // Anfangs-Variante beruecksichtigt bereits den aktuellen Login-Status
+  // (Code-Review Task 9): sonst wuerde ein bereits eingeloggter Free-Nutzer
+  // (z.B. via entryPoint="pricing" ohne expliziten Upgrade-Kontext) fuer
+  // einen Frame PricingStep sehen, bevor der Auto-Advance-Effekt unten
+  // greift.
+  const initialVariant =
+    entryPoint === "payment"
+      ? "upgrade"
+      : account?.isLoggedIn && !account?.isPro
+        ? "new-customer-no-verify"
+        : "new-customer";
+  const [variant, setVariant] = useState(initialVariant);
+  const [stepIndex, setStepIndex] = useState(() =>
+    initialVariant === "new-customer" ? 0 : getWizardSteps(initialVariant).indexOf("payment"),
+  );
   const [plan, setPlan] = useState("yearly");
   const [verifyEmail, setVerifyEmail] = useState(null);
   const [passwordReset, setPasswordReset] = useState(
@@ -73,7 +86,16 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing" }) {
   );
   const handleForgotPassword = useCallback(() => setPasswordReset({ initialStep: "request" }), []);
   const handleEditPlan = useCallback(() => goToStep("pricing"), [goToStep]);
-  const handlePaymentCompleted = useCallback(() => goToStep("welcome"), [goToStep]);
+  // Account-Refresh nach Zahlung (Code-Review Task 9): ohne das bliebe
+  // account.isPro faelschlich false, bis zum naechsten manuellen Reload.
+  // Zweiter, verzoegerter Refresh im Hintergrund faengt den Fall ab, dass
+  // der Paddle-Webhook bei checkout.completed noch nicht durchgelaufen ist -
+  // blockiert den Wechsel zu WelcomeStep aber nicht.
+  const handlePaymentCompleted = useCallback(async () => {
+    await account.refresh();
+    setTimeout(() => account.refresh(), 1500);
+    goToStep("welcome");
+  }, [account, goToStep]);
 
   let content;
   if (passwordReset) {
