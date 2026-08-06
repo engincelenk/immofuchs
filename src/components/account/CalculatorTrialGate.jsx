@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useCalculatorTrial } from "../../hooks/useCalculatorTrial.js";
 import { ACCOUNT_T } from "../../i18n/account.js";
-import { LoginModal } from "./LoginModal.jsx";
+import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 
 // Wrapper auf Tab-Ebene (App.jsx) statt Aenderungen in den sechs Rechner-
 // Komponenten selbst (Spec 4.0a/S5-1, Stabilitaetsregel) - kein einziger
@@ -58,7 +58,7 @@ export function CalculatorTrialGate({ rechnerKey, children }) {
         >
           👑 {t.trialLockedCta}
         </button>
-        {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+        {showLogin && <CheckoutWizard onClose={() => setShowLogin(false)} />}
       </div>
     );
   }

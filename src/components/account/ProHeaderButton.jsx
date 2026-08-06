@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
-import { LoginModal } from "./LoginModal.jsx";
+import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { AccountPanel } from "./AccountPanel.jsx";
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
@@ -60,7 +60,7 @@ export function ProHeaderButton() {
         (account.isLoggedIn ? (
           <AccountPanel onClose={() => setOpen(false)} />
         ) : (
-          <LoginModal onClose={() => setOpen(false)} />
+          <CheckoutWizard onClose={() => setOpen(false)} />
         ))}
     </>
   );

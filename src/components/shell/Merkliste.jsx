@@ -10,7 +10,7 @@ import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_FIELDS, tabZuRechner } from "../../utils/assistantContext.js";
 import { apiFetch } from "../../utils/apiBase.js";
-import { LoginModal } from "../account/LoginModal.jsx";
+import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 
 const MAX_COMPARE = 5;
 // Free-Limit (Spec 4.0a): 3 Objekte, lokal, kein Sync - Pro: unbegrenzt,
@@ -357,7 +357,7 @@ export function SaveBtn({ tab }) {
         </svg>
         {limitReached ? `👑 ${at.trialLockedCta}` : t.saveBtnLabel || "Speichern"}
       </button>
-      {showUpgrade && <LoginModal onClose={() => setShowUpgrade(false)} />}
+      {showUpgrade && <CheckoutWizard onClose={() => setShowUpgrade(false)} />}
       {open && (
         <SaveModal
           lang={lang}
@@ -484,7 +484,7 @@ export function Merkliste() {
           👑 {acct.trialLockedBody}
         </button>
       )}
-      {showUpgrade && <LoginModal onClose={() => setShowUpgrade(false)} />}
+      {showUpgrade && <CheckoutWizard onClose={() => setShowUpgrade(false)} />}
       {savedList.map((obj) => {
         const kp = fmt(obj.data.kaufpreis);
         const miete = fmt(obj.data.kaltmiete);

@@ -11,7 +11,7 @@ import {
 } from "../../utils/accountEntitlement.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { CancelFlow } from "./CancelFlow.jsx";
-import { PlanSelect } from "./PlanSelect.jsx";
+import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 
 // "Mein Konto" (Spec 4.10) - Kontostatus, Plan, Kuendigung/Reaktivierung,
 // Rueckerstattung, Geraete abmelden, Datenexport (Art. 20), Konto loeschen
@@ -58,11 +58,7 @@ export function AccountPanel({ onClose }) {
   }
 
   if (view === "upgrade") {
-    return (
-      <Shell t={t} onClose={onClose} trapKey={view}>
-        <PlanSelect t={t} account={account} onClose={onClose} />
-      </Shell>
-    );
+    return <CheckoutWizard onClose={onClose} entryPoint="payment" />;
   }
 
   return (
