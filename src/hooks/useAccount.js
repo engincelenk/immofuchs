@@ -285,12 +285,11 @@ export function useAccount() {
     const { transactionId } = await res.json();
     const { loadPaddle } = await import("../utils/paddleLoader.js");
     const Paddle = await loadPaddle();
-    Paddle.Checkout.open({
-      transactionId,
-      settings: {
-        successUrl: `${window.location.origin}/?login_success=1`,
-      },
-    });
+    // Kein successUrl mehr (Ergaenzung Phase 1 Checkout-Wizard): der Wizard
+    // bleibt jetzt offen und reagiert selbst auf das checkout.completed-Event
+    // (siehe paddleLoader.js/onPaddleCheckoutEvent), damit der neue
+    // WelcomeStep sichtbar wird statt eines Seiten-Neuladens.
+    Paddle.Checkout.open({ transactionId });
   }, []);
 
   const openBillingPortal = useCallback(async () => {

@@ -7,6 +7,17 @@ let paddlePromise = null;
 const PADDLE_CLIENT_TOKEN = import.meta.env.VITE_PADDLE_CLIENT_TOKEN || "";
 const PADDLE_ENV = import.meta.env.VITE_PADDLE_ENV || "sandbox";
 
+// Paddle.js v2 kennt nur einen einzigen, bei Initialize() global registrierten
+// eventCallback - kein Callback pro Checkout.open()-Aufruf. Dieses Pub/Sub
+// faechert das eine globale Event an beliebig viele Abonnenten auf (Checkout-
+// Wizard-Instanz), ohne dass Initialize mehrfach aufgerufen werden muss.
+const listeners = new Set();
+
+export function onPaddleCheckoutEvent(callback) {
+  listeners.add(callback);
+  return () => listeners.delete(callback);
+}
+
 export function loadPaddle() {
   if (paddlePromise) return paddlePromise;
   paddlePromise = new Promise((resolve, reject) => {
@@ -22,7 +33,14 @@ export function loadPaddle() {
         return;
       }
       if (PADDLE_ENV === "sandbox") window.Paddle.Environment.set("sandbox");
-      if (PADDLE_CLIENT_TOKEN) window.Paddle.Initialize({ token: PADDLE_CLIENT_TOKEN });
+      if (PADDLE_CLIENT_TOKEN) {
+        window.Paddle.Initialize({
+          token: PADDLE_CLIENT_TOKEN,
+          eventCallback: (data) => {
+            for (const cb of listeners) cb(data);
+          },
+        });
+      }
       resolve(window.Paddle);
     };
     script.onerror = () => {
