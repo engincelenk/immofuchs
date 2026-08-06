@@ -3,13 +3,14 @@
 // Navy/Weiss: aktiver/erledigter Schritt in --ca, kuenftige Schritte als
 // --cb-Outline. `steps` ist bereits die uebersetzte Liste aus
 // CheckoutWizard ({key, label}), diese Komponente kennt kein i18n selbst.
-export function StepHeader({ steps, currentIndex }) {
+export function StepHeader({ steps, currentIndex, ariaLabel }) {
   return (
     <div
       role="progressbar"
       aria-valuenow={currentIndex + 1}
       aria-valuemin={1}
       aria-valuemax={steps.length}
+      aria-label={ariaLabel}
       style={{ display: "flex", alignItems: "flex-start", padding: "16px 20px 8px", gap: 0 }}
     >
       {steps.map((step, i) => (
