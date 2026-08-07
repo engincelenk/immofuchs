@@ -12,14 +12,14 @@ import {
   consumeEmailChangeRequest,
   updateUserEmail,
   getUserByEmail,
-  deleteUserCompletely,
   deleteOtherSessionsForUser,
   setUserPasswordHash,
+  setMarketingEmailsEnabled,
 } from "../db";
 import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/password";
 import { sendEmail } from "../email";
 import { dispatchNotification } from "../notifications";
-import { cancelImmediately } from "../paddle/checkout";
+import { deleteAccountCompletely } from "../accountDeletion";
 import { buildClearSessionCookie, extractSessionId, logout } from "../auth/session";
 
 export const accountRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
@@ -34,6 +34,9 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     id: c.var.user.id,
     email: c.var.user.email,
     role: c.var.user.role,
+    emailVerified: Boolean(c.var.user.email_verified_at),
+    hasUsedTrial: Boolean(c.var.user.trial_used_at),
+    marketingEmailsEnabled: Boolean(c.var.user.marketing_emails_enabled),
     linkedProviders: providers,
     isPro,
     subscription: sub
@@ -86,6 +89,19 @@ accountRoutes.post("/account/email", requireAuth, requireCsrfOrigin, async (c) =
      <p>Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren - deine bisherige
      Adresse bleibt unveraendert. <a href="${base}">Zurück zu ImmoFuchs</a></p>`,
   );
+  // Sicherheitshinweis an die ALTE Adresse (Spec-v3.0 Kap. 5) - unabhaengig
+  // vom Bestaetigungslink an die neue, damit ein Account-Takeover-Versuch dem
+  // urspruenglichen Kontoinhaber nicht unbemerkt bleibt.
+  try {
+    await dispatchNotification(c.env, {
+      event: "email_change_requested",
+      recipientEmail: c.var.user.email,
+      recipientUserId: c.var.userId,
+      payload: { newEmail },
+    });
+  } catch (err) {
+    console.error("email_change_requested_notice_failed", err instanceof Error ? err.message : "unknown");
+  }
   return c.json({ ok: true });
 });
 
@@ -144,6 +160,16 @@ accountRoutes.post("/account/password", requireAuth, requireCsrfOrigin, async (c
   return c.json({ ok: true });
 });
 
+// Kap. 4.7 (Spec-v3.0): einziger abschaltbarer Mail-Kanal - Aenderungen
+// greifen sofort (kein "Speichern"-Button), analog zu anderen Toggle-
+// Einstellungen laut Spec-Hinweis.
+accountRoutes.post("/account/notifications", requireAuth, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const marketingEmailsEnabled = Boolean(body?.marketingEmailsEnabled);
+  await setMarketingEmailsEnabled(c.env.DB, c.var.userId, marketingEmailsEnabled);
+  return c.json({ ok: true });
+});
+
 accountRoutes.get("/account/export", requireAuth, async (c) => {
   const [providers, sub, sessions] = await Promise.all([
     listLinkedProviders(c.env.DB, c.var.userId),
@@ -176,29 +202,34 @@ accountRoutes.get("/account/export", requireAuth, async (c) => {
   });
 });
 
+// D2 (Spec-v3.0 Kap. 4.5): Loeschung ist unwiderruflich, daher Sicherheits-
+// nachweis Pflicht. Passwort-Konten bestaetigen hier direkt mit currentPassword;
+// reine OAuth-/Passkey-Konten haben keins und muessen stattdessen ueber
+// /auth/delete-reauth/{google,apple} eine frische Anmeldung durchlaufen (siehe
+// routes/auth.ts) - dieser Endpunkt liefert ihnen dafuer nur den 428-Hinweis.
 accountRoutes.post("/account/delete", requireAuth, requireCsrfOrigin, async (c) => {
-  const sub = await getActiveSubscription(c.env.DB, c.var.userId);
-  if (sub && sub.status !== "canceled") {
-    // "Löschen" ist ein expliziter Endgültigkeits-Wunsch - sofortige
-    // Kündigung, nicht zum Periodenende (4.10, im Unterschied zu 4.11).
-    try {
-      await cancelImmediately(c.env, sub.paddle_subscription_id);
-    } catch (err) {
-      console.error("account_delete_paddle_cancel_failed", err instanceof Error ? err.message : "unknown");
-      return c.json({ error: "cancel_failed_try_again" }, 502);
+  const existingHash = c.var.user.password_hash;
+  if (existingHash) {
+    const body = await c.req.json().catch(() => null);
+    const currentPassword = body && typeof body.currentPassword === "string" ? body.currentPassword : "";
+    if (!currentPassword) return c.json({ error: "current_password_required" }, 400);
+    if (!(await verifyPassword(currentPassword, existingHash))) {
+      return c.json({ error: "invalid_credentials" }, 401);
     }
+  } else {
+    // Kein Passwort auf diesem Konto - Bestaetigung muss ueber den
+    // OAuth-Re-Auth-Weg laufen, nicht ueber diesen Endpunkt.
+    return c.json({ error: "reauth_required" }, 428);
   }
-  const email = c.var.user.email;
-  await deleteUserCompletely(c.env.DB, c.var.userId);
+
+  try {
+    await deleteAccountCompletely(c.env, c.var.userId, c.var.user.email);
+  } catch {
+    return c.json({ error: "cancel_failed_try_again" }, 502);
+  }
 
   const sessionId = extractSessionId(c.req.raw);
   if (sessionId) await logout(c.env, sessionId);
   c.header("Set-Cookie", buildClearSessionCookie(), { append: true });
-
-  try {
-    await dispatchNotification(c.env, { event: "account_deleted", recipientEmail: email, payload: {} });
-  } catch {
-    // Bestaetigungsmail ist Kulanz, kein Blocker fuer die eigentliche Loeschung.
-  }
   return c.json({ ok: true });
 });

@@ -116,7 +116,9 @@ export function AbonnementSection({ t, account, onUpgrade }) {
           {canChangePlan && (
             <div style={blockCardStyle}>
               <div style={blockTitleStyle}>{t.aboChangePlanTitle}</div>
-              <p style={blockHintStyle}>{t.aboChangePlanHint}</p>
+              <p style={blockHintStyle}>
+                {t.aboChangePlanHint.replace("{date}", formatPeriodEndDate(subscription) || "")}
+              </p>
               <button onClick={handleChangePlan} disabled={busy === "plan"} style={actionBtnStyle}>
                 {t.aboChangePlanCta
                   .replace("{plan}", targetPlan === "monthly" ? t.planMonthly : t.planYearly)

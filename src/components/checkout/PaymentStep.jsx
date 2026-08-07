@@ -8,6 +8,12 @@ import { cardStyle, errorBannerStyle, primaryBtnStyle } from "./checkoutStyles.j
 export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
+  // Pflicht-Checkbox (Spec-v3.0 Kap. 3.2/6, § 312j BGB Buttonloesung +
+  // Widerrufsrecht bei digitalen Leistungen): ohne diese Zustimmung darf die
+  // Ausfuehrung nicht vor Ablauf der Widerrufsfrist beginnen.
+  const [withdrawalAccepted, setWithdrawalAccepted] = useState(false);
 
   // onCompleted ueber eine Ref statt als Effect-Dependency (Bugreport 06.08.,
   // "Weiter zur Zahlung friert die App ein"): das account-Objekt aus
@@ -43,13 +49,18 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
   }, []);
 
   async function handleContinue() {
+    if (!withdrawalAccepted) return;
     setBusy(true);
     setError(null);
     try {
       await account.startCheckout(plan);
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
-      setError(code.startsWith("paddle_script") ? t.planCheckoutBlocked : t.planCheckoutUnavailable);
+      if (code === "email_not_verified") {
+        setError("email_not_verified");
+      } else {
+        setError(code.startsWith("paddle_script") ? t.planCheckoutBlocked : t.planCheckoutUnavailable);
+      }
     } finally {
       setBusy(false);
     }
@@ -102,12 +113,54 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
         <div style={{ fontSize: 15, fontWeight: 700 }}>
           ImmoFuchs Pro – {planLabel} ({planPrice})
         </div>
-        <div style={{ fontSize: 11, color: "var(--ch)", marginTop: 6 }}>{t.paymentTrialNotice.replace("{price}", planPrice)}</div>
+        <div style={{ fontSize: 11, color: "var(--ch)", marginTop: 6 }}>
+          {account?.me?.hasUsedTrial ? t.paymentNoTrialNotice.replace("{price}", planPrice) : t.paymentTrialNotice.replace("{price}", planPrice)}
+        </div>
       </div>
 
-      {error && <div style={errorBannerStyle}>{error}</div>}
+      {error === "email_not_verified" ? (
+        <div style={errorBannerStyle}>
+          {t.loginErrorEmailNotVerified}
+          <div style={{ marginTop: 8 }}>
+            {resendDone ? (
+              t.verifySentBody.replace("{email}", account?.me?.email || "")
+            ) : (
+              <button
+                type="button"
+                onClick={async () => {
+                  setResendBusy(true);
+                  await account.resendVerification(account?.me?.email || "");
+                  setResendBusy(false);
+                  setResendDone(true);
+                }}
+                disabled={resendBusy}
+                style={{ background: "none", border: "none", padding: 0, fontSize: 12, color: "inherit", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}
+              >
+                {t.loginResendVerification}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        error && <div style={errorBannerStyle}>{error}</div>
+      )}
 
-      <button onClick={handleContinue} disabled={busy} style={primaryBtnStyle}>
+      <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 11.5, color: "var(--ct)", marginBottom: 12 }}>
+        <input
+          type="checkbox"
+          required
+          checked={withdrawalAccepted}
+          onChange={(e) => setWithdrawalAccepted(e.target.checked)}
+          style={{ marginTop: 2 }}
+        />
+        <span>{t.paymentWithdrawalConsent}</span>
+      </label>
+
+      <button
+        onClick={handleContinue}
+        disabled={busy || error === "email_not_verified" || !withdrawalAccepted}
+        style={primaryBtnStyle}
+      >
         {t.planContinue} →
       </button>
       <p style={{ fontSize: 10.5, color: "var(--ch)", textAlign: "center", marginTop: 10 }}>{t.paymentSecureNotice}</p>

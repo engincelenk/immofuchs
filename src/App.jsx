@@ -555,32 +555,32 @@ export default function App() {
         <div className="content">
           <Statusleiste />
           {tab === "haupt" && (
-            <CalculatorTrialGate rechnerKey="renditerechner">
+            <CalculatorTrialGate>
               <Haupt />
             </CalculatorTrialGate>
           )}
           {tab === "kredit" && (
-            <CalculatorTrialGate rechnerKey="finanzierung">
+            <CalculatorTrialGate>
               <Kredit />
             </CalculatorTrialGate>
           )}
           {tab === "miete" && (
-            <CalculatorTrialGate rechnerKey="miete">
+            <CalculatorTrialGate>
               <Miete />
             </CalculatorTrialGate>
           )}
           {tab === "sanier" && (
-            <CalculatorTrialGate rechnerKey="sanierung">
+            <CalculatorTrialGate>
               <Sanier />
             </CalculatorTrialGate>
           )}
           {tab === "steuer6" && (
-            <CalculatorTrialGate rechnerKey="steuertrick">
+            <CalculatorTrialGate>
               <SteuerTrick />
             </CalculatorTrialGate>
           )}
           {tab === "vfe" && (
-            <CalculatorTrialGate rechnerKey="vorfaelligkeit">
+            <CalculatorTrialGate>
               <Vorfaelligkeit />
             </CalculatorTrialGate>
           )}

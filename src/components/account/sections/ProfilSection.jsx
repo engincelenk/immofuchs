@@ -126,7 +126,22 @@ export function ProfilSection({ t, account, lang, setLang }) {
         </div>
       </div>
 
-      <PasswordBlock t={t} account={account} />
+      {linkedProviders.includes("password") ? (
+        <PasswordBlock t={t} account={account} />
+      ) : (
+        // PR3 (Spec-v3.0 Kap. 4.3): kein Passwort-Formular fuer Konten, die
+        // nur ueber Google/Apple/Passkey angelegt wurden - Kap. 0.1 schliesst
+        // ein nachtraegliches Verknuepfen aus.
+        <div style={blockCardStyle}>
+          <div style={blockTitleStyle}>{t.profilPasswordSocialOnlyTitle}</div>
+          <p style={blockHintStyle}>
+            {t.profilPasswordSocialOnlyHint.replace(
+              "{provider}",
+              linkedProviders.map(linkedProviderLabel).join(" / "),
+            )}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

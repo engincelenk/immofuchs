@@ -77,14 +77,21 @@ export async function revokeScheduledCancellation(
   if (!result.ok) throw new Error(`paddle_reactivate_failed_${result.status}`);
 }
 
-// Tarifwechsel monatlich <-> jaehrlich (Phase 2). Paddle rechnet die
-// Restlaufzeit des alten Tarifs sofort anteilig ab und stellt die Differenz
-// direkt in Rechnung ("prorated_immediately") - der Nutzer bekommt den neuen
-// Tarif also unmittelbar, nicht erst zum Periodenende. Der D1-Datensatz wird
-// hier BEWUSST NICHT angefasst: Paddle schickt im Anschluss ein
-// subscription.updated-Webhook, das der bestehende Handler bereits verarbeitet
-// und das plan/current_period_end konsistent nachzieht (gleiche Begruendung
-// wie beim Checkout-Flow, 4.6 - der Webhook ist die einzige Schreibquelle).
+// Tarifwechsel monatlich <-> jaehrlich (Spec-v3.0 Grundannahme 0.8/Kap. 4.2:
+// "final entschieden - Wechsel erst zum Ende der aktuellen Abrechnungsperiode,
+// keine sofortige Umstellung, keine Proration"). "prorated_next_billing_period"
+// stellt sicher, dass HEUTE nichts abgebucht/anteilig verrechnet wird - die
+// Differenz landet erst auf der naechsten reguraeren Rechnung, statt wie zuvor
+// mit "prorated_immediately" sofort separat berechnet zu werden.
+// Einschraenkung (ehrlich benannt, nicht live gegen Paddle-Sandbox verifiziert):
+// ob Paddle bei diesem Modus den Tarif-Wechsel selbst (welcher Preis in
+// `items` steht) ebenfalls erst zur naechsten Periode vollzieht oder nur die
+// BILLING dorthin verschiebt, war aus der Doku allein nicht zweifelsfrei zu
+// klaeren - vor Produktivbetrieb mit einem echten Sandbox-Tarifwechsel
+// gegenpruefen. Der D1-Datensatz wird hier BEWUSST NICHT angefasst: Paddle
+// schickt im Anschluss ein subscription.updated-Webhook, das der bestehende
+// Handler bereits verarbeitet und das plan/current_period_end konsistent
+// nachzieht (gleiche Begruendung wie beim Checkout-Flow).
 export async function changeSubscriptionPlan(
   env: Env,
   paddleSubscriptionId: string,
@@ -94,7 +101,7 @@ export async function changeSubscriptionPlan(
     method: "PATCH",
     body: {
       items: [{ price_id: priceIdFor(env, plan), quantity: 1 }],
-      proration_billing_mode: "prorated_immediately",
+      proration_billing_mode: "prorated_next_billing_period",
     },
   });
   if (!result.ok) {

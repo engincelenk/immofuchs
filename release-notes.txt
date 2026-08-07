@@ -1,3 +1,102 @@
+## 2026-08-07 (1.7.3)
+
+### Feat/Fix: Login- & Payment-Flows an docs/immofuchs-login-payment-flows.md (v3.0) angeglichen
+
+Nutzerentscheidung 07.08.: `docs/immofuchs-login-payment-flows.md` (v3.0) gilt
+ab sofort als verbindliche Spec fuer Auth/Payment/Mein-Konto, nicht mehr die
+bisherige interne `docs/kommerzialisierung-spec.md` (v8) - die beiden
+widersprachen sich an mehreren Grundsatzentscheidungen (Konto-Verknuepfung,
+Gast-Zugang, Anzahl Login-Wege, Tarifwechsel-Timing). Diese Version bringt
+den Code auf v3.0, mit Ausnahme der explizit zurueckgestellten/ausgelassenen
+Punkte (s.u.).
+
+**A. Login-Methoden strikt getrennt (Kap. 0.1/2.2/2.4/2.5/4.3)**
+- OAuth-Login verknuepft eine bereits mit anderer Methode registrierte E-Mail
+  nicht mehr automatisch - eigenstaendiger Fehlerfall (E1) mit Hinweis auf die
+  richtige Methode statt stiller Zusammenlegung.
+- `/auth/link-password/request` ("Passwort verknuepfen") entfernt, inkl.
+  zugehoeriger UI in der Registrierung.
+- Login mit Passwort auf einem reinen OAuth-Konto zeigt jetzt die spezifische
+  L3-Meldung ("Dieses Konto wurde mit Google/Apple erstellt...") statt der
+  generischen Fehlermeldung.
+- Passwort-Reset-Anfrage fuer ein Social-Only-Konto verschickt neu eine
+  Hinweis-Mail auf die richtige Methode (P4) statt gar keine Reaktion.
+- "Passwort aendern" wird in Profil nur noch bei Konten mit Passwort gezeigt (PR3).
+
+**B. Konto-Pflicht fuer alle Rechner (Kap. 0.2/3.0)**
+- Der anonyme "1x pro Geraet voll nutzbar"-Testlauf (`useCalculatorTrial.js`)
+  ist entfernt - jeder der 6 Rechner verlangt vorher ein Konto, kein
+  Gast-Zugang mehr. Landing-Page war bereits reine Vorschau (keine Aenderung
+  noetig).
+
+**C. Guards vor Trial/Kauf (Kap. 3.0/3.1a/T1)**
+- `/billing/checkout` verlangt jetzt eine bestaetigte E-Mail (403
+  `email_not_verified`), PaymentStep zeigt dafuer einen Blocker mit
+  "Verifizierungsmail erneut senden".
+- Neue Spalte `users.trial_used_at` (Migration 0013) + Webhook-Hook: sobald
+  Paddle `trialing` meldet, gilt das Trial fuer dieses Konto dauerhaft als
+  verbraucht. `/account/me` liefert `hasUsedTrial`, Pricing-/Payment-Step
+  blenden den Trial-Hinweis dann aus.
+  ⚠️ Einschraenkung: das verhindert nur die Trial-*Anzeige*, nicht zwingend
+  eine erneute Trial-*Gewaehrung* durch Paddle selbst - das haengt von der
+  Preis-/Trial-Konfiguration in Paddle ab und wurde nicht gegen die Sandbox
+  verifiziert.
+
+**D. Widerrufs-Pflicht-Checkbox im Checkout (Kap. 3.2/6, §312j BGB)**
+- PaymentStep verlangt vor "Weiter zur Zahlung" jetzt eine Pflicht-Checkbox
+  ("Ich stimme zu, dass die Ausfuehrung vor Ablauf der Widerrufsfrist
+  beginnt..."), die vorher komplett fehlte, obwohl die AGB sie bereits
+  voraussetzte.
+
+**E. Tarifwechsel auf Periodenende (Grundannahme 0.8/Kap. 4.2)**
+- `changeSubscriptionPlan` nutzt jetzt `prorated_next_billing_period` statt
+  `prorated_immediately` - keine sofortige anteilige Abbuchung mehr beim
+  Tarifwechsel. UI-Text zeigt das konkrete Wirksamkeitsdatum.
+  ⚠️ Nicht live gegen eine Paddle-Sandbox verifiziert, ob der Tarif-Wechsel
+  selbst (nicht nur die Abrechnung) ebenfalls erst zur naechsten Periode
+  vollzogen wird.
+
+**F. Sicherheits-/Compliance-Fixes**
+- Konto-Loeschung verlangt jetzt einen echten Nachweis statt eines nackten
+  `window.confirm()`: Passwort-Konten bestaetigen mit `currentPassword`
+  (`/account/delete`), reine OAuth-Konten muessen einen frischen
+  Google/Apple-Login durchlaufen (`/auth/delete-reauth/{google,apple}`, neue
+  Cookie-basierte Re-Auth-Pruefung in routes/auth.ts).
+- E-Mail-Wechsel benachrichtigt jetzt zusaetzlich die ALTE Adresse
+  (`email_change_requested`) - vorher blieb ein Account-Takeover-Versuch fuer
+  den urspruenglichen Kontoinhaber unbemerkt.
+- Einzel-Geraet-"Abmelden" in Mein Konto -> Sicherheit ergaenzt (bisher nur
+  "Alle Geraete abmelden").
+- Neuer Benachrichtigungs-Toggle (Mein Konto -> Datenschutz): "Produkt-News
+  per E-Mail" ist abschaltbar (Migration 0014, Default aus); alle
+  transaktionalen Mails (Zahlungsfehler, Kuendigung, Trial-Ende etc.) bleiben
+  Pflicht und sind davon unberuehrt.
+
+**Bewusst zurueckgestellt/ausgelassen (spaetere Runde):** Mein-Konto-Struktur
+bleibt bei 8 statt 6 Bereichen (Navigation nicht zerschlagen, siehe
+Begruendung im Chat); QA-/Prod-D1-Datenbank-IDs; Audit-Log; D3
+(Chargeback-Blockade der Loeschung); Grace-Period 3->7 Tage; Idempotency/
+Rate-Limiting auf allen `/billing/*`-Endpunkten; Willkommens-Mail;
+Geo-Preis-Check; feinere R8/R9-Unterscheidung (Link abgelaufen vs. verwendet);
+K3-/M3-Info-Mails.
+
+**Neue Migrationen:** `0013_trial_used.sql`, `0014_marketing_emails.sql`
+(noch auf keiner Umgebung angewendet - vor Deploy `wrangler d1 migrations
+apply` nicht vergessen).
+
+**Betroffene Dateien (Auswahl):** worker/src/db.ts, worker/src/routes/auth.ts,
+worker/src/routes/account.ts, worker/src/routes/billing.ts,
+worker/src/auth/passwordAuth.ts, worker/src/paddle/checkout.ts,
+worker/src/paddle/webhook.ts, worker/src/notifications.ts,
+worker/src/accountDeletion.ts (neu), worker/migrations/0013+0014,
+src/hooks/useCalculatorTrial.js, src/hooks/useAccount.js,
+src/components/account/CalculatorTrialGate.jsx,
+src/components/account/sections/DatenschutzSection.jsx,
+src/components/account/sections/SicherheitSection.jsx,
+src/components/account/sections/ProfilSection.jsx,
+src/components/checkout/AccountStep.jsx, src/components/checkout/PaymentStep.jsx,
+src/components/checkout/PricingStep.jsx, src/i18n/account.js, package.json.
+
 ## 2026-08-06 (1.7.2)
 
 ### UX: Login-Wege reduziert + drei Flow-Brueche im Checkout behoben

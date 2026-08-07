@@ -14,6 +14,13 @@ export interface UserRow {
   password_hash: string | null;
   password_set_at: number | null;
   email_verified_at: number | null;
+  // T1 (Spec-v3.0 Kap. 3.1a): einmal gesetzt, nie zurueckgesetzt - persistiert
+  // "hatte schon mal ein Trial", auch nachdem eine Subscription-Zeile von
+  // 'trialing' auf 'active'/'canceled' gewechselt ist (Migration 0013).
+  trial_used_at: number | null;
+  // Kap. 4.7 (Migration 0014): einziger abschaltbarer Mail-Kanal, alle
+  // anderen (Zahlungsfehler, Kuendigung, Trial-Ende, ...) sind Pflicht.
+  marketing_emails_enabled: number;
 }
 
 export interface SessionRow {
@@ -97,6 +104,8 @@ export async function createUser(db: Env["DB"], email: string): Promise<UserRow>
     password_hash: null,
     password_set_at: null,
     email_verified_at: null,
+    trial_used_at: null,
+    marketing_emails_enabled: 0,
   };
 }
 
@@ -144,32 +153,43 @@ export async function listLinkedProviders(db: Env["DB"], userId: string): Promis
     .bind(userId)
     .first();
   if (hasPasskey) providers.push("passkey");
+  const hasPassword = await db
+    .prepare("SELECT 1 FROM users WHERE id = ? AND password_hash IS NOT NULL")
+    .bind(userId)
+    .first();
+  if (hasPassword) providers.push("password");
   return providers;
 }
 
-// Registrierung/Login via Google/Apple: Erst-Login legt users+oauth_identities
-// an (das *ist* die Registrierung, 4.4). Verknuepfung ueber verifizierte
-// E-Mail, falls derselbe Nutzer spaeter mit einem zweiten Provider kommt.
+export type OAuthLoginResult =
+  | { ok: true; user: UserRow }
+  | { ok: false; error: "email_taken_other_method"; providers: string[] };
+
+// Login via Google/Apple: Erst-Login legt users+oauth_identities an (das *ist*
+// die Registrierung, Spec-v3.0 Kap. 2.2). Anders als frueher KEINE
+// automatische Verknuepfung mehr, falls dieselbe E-Mail bereits ueber eine
+// andere Methode registriert ist (Kap. 0.1: Login-Methoden sind strikt
+// getrennt und nachtraeglich nicht verknuepfbar) - das ist dann ein
+// eigenstaendiger Fehlerfall (E1), kein Zusammenlegen der Konten.
 export async function findOrCreateUserForOAuth(
   db: Env["DB"],
   provider: string,
   providerUserId: string,
   email: string,
-): Promise<UserRow> {
+): Promise<OAuthLoginResult> {
   const existing = await findUserByOAuth(db, provider, providerUserId);
   if (existing) {
     await touchUserLogin(db, existing.id);
-    return existing;
+    return { ok: true, user: existing };
   }
   const byEmail = await getUserByEmail(db, email);
   if (byEmail) {
-    await linkOAuthIdentity(db, byEmail.id, provider, providerUserId);
-    await touchUserLogin(db, byEmail.id);
-    return byEmail;
+    const providers = await listLinkedProviders(db, byEmail.id);
+    return { ok: false, error: "email_taken_other_method", providers };
   }
   const user = await createUser(db, email);
   await linkOAuthIdentity(db, user.id, provider, providerUserId);
-  return user;
+  return { ok: true, user };
 }
 
 // ═══ E-Mail + Passwort (Ergaenzung 04.08., Migration 0011) ═══
@@ -203,6 +223,8 @@ export async function createUserWithPassword(
     password_hash: passwordHash,
     password_set_at: now,
     email_verified_at: null,
+    trial_used_at: null,
+    marketing_emails_enabled: 0,
   };
 }
 
@@ -210,6 +232,22 @@ export async function setUserPasswordHash(db: Env["DB"], userId: string, passwor
   await db
     .prepare("UPDATE users SET password_hash = ?, password_set_at = ? WHERE id = ?")
     .bind(passwordHash, Date.now(), userId)
+    .run();
+}
+
+// T1 (Spec-v3.0 Kap. 3.1a) - idempotent: einmal gesetzt, bleibt es stehen.
+export async function markTrialUsedForUser(db: Env["DB"], userId: string): Promise<void> {
+  await db
+    .prepare("UPDATE users SET trial_used_at = ? WHERE id = ? AND trial_used_at IS NULL")
+    .bind(Date.now(), userId)
+    .run();
+}
+
+// Kap. 4.7 (Migration 0014).
+export async function setMarketingEmailsEnabled(db: Env["DB"], userId: string, enabled: boolean): Promise<void> {
+  await db
+    .prepare("UPDATE users SET marketing_emails_enabled = ? WHERE id = ?")
+    .bind(enabled ? 1 : 0, userId)
     .run();
 }
 

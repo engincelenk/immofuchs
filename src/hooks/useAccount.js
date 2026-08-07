@@ -46,6 +46,10 @@ export function useAccount() {
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null); // Rohantwort von /api/v1/me, oder null (nicht eingeloggt)
   const [error, setError] = useState(null);
+  // E1 (Spec-v3.0 Kap. 2.2): OAuth-Callback lehnt bei bereits anders
+  // registrierter E-Mail ab statt zu verknuepfen (Kap. 0.1) und haengt die
+  // bekannten Methoden als ?providers=... an den Redirect an.
+  const [oauthEmailTakenProviders, setOauthEmailTakenProviders] = useState(null);
   // Passwort-Reset-Token aus dem Reset-Link (?reset_token=..., Ergaenzung
   // 04.08.) - anders als die uebrigen Auth-Redirects (login_success/-error)
   // braucht dieser Weg eine Nutzereingabe (neues Passwort), kann also nicht
@@ -59,6 +63,10 @@ export function useAccount() {
   // pendingCheckout fuer die Wiederaufnahme des Kaufs.
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [pendingCheckout, setPendingCheckout] = useState(null);
+  // D2 (Spec-v3.0 Kap. 4.5): OAuth-Re-Auth-Loeschung schliesst mit einem
+  // eigenen Redirect-Flag ab (kein login_success, da keine neue Session
+  // entsteht) - siehe routes/auth.ts, /delete-reauth/{provider}/callback.
+  const [accountDeleted, setAccountDeleted] = useState(false);
   const didHandleRedirectRef = useRef(false);
 
   // Cross-cutting Pro-Signal fuer useSavedObjects (Merkliste.jsx): dieser Hook
@@ -114,18 +122,28 @@ export function useAccount() {
       "login_error",
       "email_change_success",
       "email_change_error",
+      "account_deleted",
     ].some((k) => url.searchParams.has(k));
     if (hasAuthParam) {
       const loginError = url.searchParams.get("login_error");
+      const providersParam = url.searchParams.get("providers");
       const emailChangeError = url.searchParams.get("email_change_error");
       const loggedIn = url.searchParams.has("login_success");
-      for (const k of ["login_success", "login_error", "email_change_success", "email_change_error"]) {
+      const deleted = url.searchParams.has("account_deleted");
+      for (const k of ["login_success", "login_error", "email_change_success", "email_change_error", "providers", "account_deleted"]) {
         url.searchParams.delete(k);
       }
       window.history.replaceState({}, "", url.toString());
+      if (loginError === "oauth_email_taken") {
+        setOauthEmailTakenProviders(providersParam ? providersParam.split(",").filter(Boolean) : []);
+      }
       if (loginError) setError(`login_error_${loginError}`);
       if (emailChangeError) setError(`email_change_error_${emailChangeError}`);
-      if (loggedIn) {
+      if (deleted) {
+        setAccountDeleted(true);
+        setMe(null);
+        broadcastIsPro(false);
+      } else if (loggedIn) {
         setLoginSuccess(true);
         setPendingCheckout(takeCheckoutIntent());
       } else {
@@ -141,7 +159,7 @@ export function useAccount() {
       setResetToken(tokenFromLink);
     }
     refresh();
-  }, [refresh]);
+  }, [refresh, broadcastIsPro]);
 
   // Google/Apple bleiben Browser-Redirect-Flows (10.0: "PWA-weites Rough
   // Edge", akzeptiert) - kein Bearer-Token-Pfad dafuer in dieser Runde, siehe
@@ -211,27 +229,16 @@ export function useAccount() {
       }
       if (res.status === 423) return { ok: false, error: "locked", retryAfterSeconds: body.retryAfterSeconds };
       if (res.status === 403) return { ok: false, error: "email_not_verified" };
+      // L3 (Spec-v3.0 Kap. 2.4): Konto existiert, wurde aber ueber Google/
+      // Apple/Passkey angelegt - kein "Passwort verknuepfen"-Angebot mehr
+      // (Kap. 0.1), nur der Hinweis auf die richtige Methode.
+      if (res.status === 401 && body.error === "oauth_only") {
+        return { ok: false, error: "oauth_only", providers: body.providers || [] };
+      }
       return { ok: false, error: body.error || "invalid_credentials", warn: Boolean(body.warn) };
     },
     [refresh],
   );
-
-  // "Stattdessen Passwort setzen" (Wireframe-Karte 16) - verknuepft ein
-  // Passwort mit einem bestehenden OAuth-/Passkey-Konto, erst wirksam nach
-  // Bestaetigung per E-Mail-Link (analog zur Registrierung).
-  const requestLinkPassword = useCallback(async (email, password) => {
-    const res = await apiFetch("/auth/link-password/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    if (res.status === 429) return { ok: false, error: "rate_limited" };
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      return { ok: false, error: body.error || "invalid" };
-    }
-    return { ok: true };
-  }, []);
 
   const requestPasswordReset = useCallback(async (email) => {
     await apiFetch("/auth/password-reset/request", {
@@ -306,6 +313,7 @@ export function useAccount() {
   );
 
   const dismissLoginSuccess = useCallback(() => setLoginSuccess(false), []);
+  const dismissAccountDeleted = useCallback(() => setAccountDeleted(false), []);
   // Wird aufgerufen, sobald die wiederaufgenommene Kaufabsicht eingeloest
   // (Wizard geoeffnet) oder verworfen wurde (Wizard geschlossen).
   const clearPendingCheckout = useCallback(() => setPendingCheckout(null), []);
@@ -333,6 +341,13 @@ export function useAccount() {
       body: JSON.stringify({ plan }),
     });
     if (!res.ok) {
+      // Guard Kap. 3.0 (Spec-v3.0): eigener Fehlercode, damit PaymentStep
+      // statt der generischen Fehlermeldung den Verifizierungs-Blocker mit
+      // "erneut senden"-Button zeigen kann.
+      if (res.status === 403) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === "email_not_verified") throw new Error("email_not_verified");
+      }
       // Unterscheidbar machen (Bugreport 05.08.): vorher warf jeder Fehlerpfad
       // dieselbe Meldung, und die Oberflaeche zeigte pauschal den
       // Adblocker-Hinweis - auch dann, wenn der Server mit 502
@@ -456,19 +471,48 @@ export function useAccount() {
     return sessions || [];
   }, []);
 
+  const setMarketingEmailsEnabled = useCallback(async (enabled) => {
+    const res = await apiFetch("/account/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ marketingEmailsEnabled: enabled }),
+    });
+    if (res.ok) await refresh();
+    return { ok: res.ok };
+  }, [refresh]);
+
   const exportData = useCallback(() => {
     // Direkter Download-Link statt fetch+Blob - der Browser uebernimmt den
     // Dateinamen aus Content-Disposition, kein zusaetzlicher Code noetig.
     window.open(apiV1("/account/export"), "_blank");
   }, []);
 
-  const deleteAccount = useCallback(async () => {
-    const res = await apiFetch("/account/delete", { method: "POST" });
-    if (!res.ok) throw new Error("delete_failed");
-    await clearNativeToken();
-    setMe(null);
-    broadcastIsPro(false);
+  // D2 (Spec-v3.0 Kap. 4.5): Passwort-Konten bestaetigen hier direkt,
+  // OAuth-Konten muessen stattdessen ueber startDeleteReauth(provider) einen
+  // frischen Google/Apple-Login durchlaufen (siehe unten).
+  const deleteAccount = useCallback(async (currentPassword) => {
+    const res = await apiFetch("/account/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(currentPassword ? { currentPassword } : {}),
+    });
+    if (res.ok) {
+      await clearNativeToken();
+      setMe(null);
+      broadcastIsPro(false);
+      return { ok: true };
+    }
+    const body = await res.json().catch(() => ({}));
+    return { ok: false, error: body.error || "delete_failed" };
   }, [broadcastIsPro]);
+
+  // Fuehrt zur Google/Apple-Anmeldung, kehrt aber NICHT als Login zurueck,
+  // sondern loescht bei Erfolg das Konto (siehe routes/auth.ts,
+  // /delete-reauth/{provider}) - vollstaendiger Seitenwechsel wie beim
+  // regulaeren OAuth-Login.
+  const startDeleteReauth = useCallback((provider) => {
+    window.location.href = apiV1(`/auth/delete-reauth/${provider}`);
+  }, []);
 
   return {
     loading,
@@ -476,9 +520,12 @@ export function useAccount() {
     isLoggedIn: Boolean(me),
     isPro: Boolean(me?.isPro),
     error,
+    oauthEmailTakenProviders,
     resetToken,
     loginSuccess,
+    accountDeleted,
     dismissLoginSuccess,
+    dismissAccountDeleted,
     pendingCheckout,
     clearPendingCheckout,
     refresh,
@@ -488,7 +535,6 @@ export function useAccount() {
     registerWithPassword,
     resendVerification,
     loginWithPassword,
-    requestLinkPassword,
     requestPasswordReset,
     confirmPasswordReset,
     passkeyLogin,
@@ -506,8 +552,10 @@ export function useAccount() {
     changeEmail,
     changePassword,
     listDevices,
+    setMarketingEmailsEnabled,
     exportData,
     deleteAccount,
+    startDeleteReauth,
     apiBase,
   };
 }

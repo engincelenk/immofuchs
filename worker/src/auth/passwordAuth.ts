@@ -121,57 +121,18 @@ export async function registerWithPassword(
   return { ok: true };
 }
 
-// ═══ "Stattdessen Passwort setzen" — Passwort mit bestehendem Konto verknuepfen ═══
-// Wireframe-Karte 16: Gegenstueck zur automatischen OAuth-Konten-Verknuepfung
-// (Karte 7). Setzt password_hash erst nach Bestaetigung per E-Mail-Link, nie
-// direkt beim Formular-Submit - sonst koennte jeder per erratener E-Mail ein
-// Passwort auf ein fremdes Konto legen.
-export type LinkPasswordResult = { ok: true } | { ok: false; error: "invalid_email" | "invalid_password" | "rate_limited" };
-
-export async function requestLinkPassword(
-  env: Env,
-  workerOrigin: string,
-  emailRaw: string,
-  password: string,
-): Promise<LinkPasswordResult> {
-  const email = normalizeEmail(emailRaw);
-  if (!isValidEmail(email)) return { ok: false, error: "invalid_email" };
-  if (!isValidPasswordLength(password)) return { ok: false, error: "invalid_password" };
-  if (await rateLimited(env, `link-password:${email}`, REGISTER_HOURLY_LIMIT)) {
-    return { ok: false, error: "rate_limited" };
-  }
-
-  const existing = await getUserByEmail(env.DB, email);
-  // Immer {ok:true}, wenn Konto nicht existiert oder bereits ein Passwort hat
-  // (Enumeration hier unnoetig - der Nutzer sieht diesen Screen erst NACH
-  // einem "email_taken" aus registerWithPassword, kennt die Existenz also
-  // bereits).
-  if (!existing || existing.password_hash) return { ok: true };
-
-  const passwordHash = await hashPassword(password);
-  const rawToken = crypto.randomUUID();
-  await createEmailVerificationToken(env.DB, existing.id, await hashToken(rawToken), passwordHash);
-  await sendEmail(
-    env,
-    email,
-    "Bestätige dein neues Passwort bei ImmoFuchs",
-    `<p>Du hast angefragt, ein Passwort mit deinem bestehenden ImmoFuchs-Konto zu verknüpfen. Bestätige das mit einem Klick (24 Stunden gültig):</p>
-     <p><a href="${verifyLink(workerOrigin, rawToken)}">${verifyLink(workerOrigin, rawToken)}</a></p>
-     <p>Falls du das nicht warst, kannst du diese E-Mail ignorieren - dein Konto bleibt unverändert.</p>`,
-  );
-  return { ok: true };
-}
-
 // ═══ E-Mail-Bestätigung (Double-Opt-In) ═══
+// Kein "Passwort nachtraeglich verknuepfen" mehr (Spec-v3.0 Kap. 0.1: Login-
+// Methoden sind strikt getrennt und nicht nachtraeglich verknuepfbar) - ein
+// Registrierungsversuch mit bereits ueber Google/Apple/Passkey belegter
+// E-Mail ist ein reiner Fehlerfall (siehe registerWithPassword/E1/L3), kein
+// Angebot, das bestehende Konto per Passwort zu ergaenzen.
 
 export type VerifyEmailResult = { ok: true; userId: string } | { ok: false };
 
 export async function verifyEmailToken(env: Env, token: string): Promise<VerifyEmailResult> {
   const result = await consumeEmailVerificationToken(env.DB, await hashToken(token));
   if (!result) return { ok: false };
-  if (result.pendingPasswordHash) {
-    await setUserPasswordHash(env.DB, result.userId, result.pendingPasswordHash);
-  }
   await markEmailVerified(env.DB, result.userId);
   await touchUserLogin(env.DB, result.userId);
   return { ok: true, userId: result.userId };
@@ -210,7 +171,8 @@ export type LoginResult =
   | { ok: true; userId: string }
   | { ok: false; error: "invalid_credentials"; warn: boolean }
   | { ok: false; error: "email_not_verified" }
-  | { ok: false; error: "locked"; retryAfterSeconds: number };
+  | { ok: false; error: "locked"; retryAfterSeconds: number }
+  | { ok: false; error: "oauth_only"; providers: string[] };
 
 // Gestaffelter Brute-Force-Schutz (4.13): gezaehlt pro Konto UND pro IP -
 // nur pro Konto laedt zu Password-Spraying ueber viele Adressen ein, nur pro
@@ -229,9 +191,19 @@ export async function loginWithPassword(env: Env, req: Request, emailRaw: string
   }
 
   const user = await getUserByEmail(env.DB, email);
+
+  if (user && !user.password_hash) {
+    // Konto existiert, wurde aber ueber Google/Apple/Passkey angelegt und hat
+    // nie ein Passwort bekommen - eigenstaendiger Fehlerfall (L3, Kap. 0.1),
+    // keine automatische Verknuepfung. Zaehlt bewusst nicht als Fehlversuch:
+    // die eingegebenen Zugangsdaten sind nicht falsch, nur die falsche Methode.
+    const providers = await listLinkedProviders(env.DB, user.id);
+    return { ok: false, error: "oauth_only", providers };
+  }
+
   const valid = user?.password_hash ? await verifyPassword(password, user.password_hash) : false;
 
-  if (!user || !user.password_hash || !valid) {
+  if (!user || !valid) {
     await recordLoginAttempt(env.DB, email, ipHash, false);
     // Fehlermeldung nie "Passwort falsch" (4.13) - der Aufrufer zeigt immer
     // "E-Mail oder Passwort stimmt nicht", egal welcher der beiden Faelle es war.
@@ -277,8 +249,31 @@ export async function requestPasswordReset(env: Env, emailRaw: string): Promise<
        <p><a href="${link}">${link}</a></p>
        <p>Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren - dein Passwort bleibt unverändert.</p>`,
     );
+  } else if (user) {
+    // P4 (Spec-v3.0 Kap. 2.5): Konto existiert, hat aber nie ein Passwort
+    // bekommen (Google/Apple/Passkey) - statt eines Reset-Links (den es dafuer
+    // nicht geben kann, Kap. 0.1) bekommt der Nutzer den Hinweis auf seine
+    // urspruengliche Anmeldemethode. Nach aussen bleibt die Antwort trotzdem
+    // immer {ok:true} (keine Enumeration).
+    const providers = await listLinkedProviders(env.DB, user.id);
+    const label = providers.map(providerDisplayName).join(" bzw. ") || "einer anderen Methode";
+    await sendEmail(
+      env,
+      email,
+      "Passwort zurücksetzen bei ImmoFuchs",
+      `<p>Für dein ImmoFuchs-Konto wurde ein Passwort-Reset angefragt. Dieses Konto wurde mit ${label} erstellt und hat kein Passwort.</p>
+       <p>Bitte melde dich über diese Anmeldemethode an.</p>
+       <p>Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>`,
+    );
   }
   return { ok: true };
+}
+
+function providerDisplayName(provider: string): string {
+  if (provider === "google") return "Google";
+  if (provider === "apple") return "Apple";
+  if (provider === "passkey") return "Passkey";
+  return provider;
 }
 
 export type ResetPasswordResult = { ok: true } | { ok: false; error: "invalid_or_expired" | "invalid_password" };

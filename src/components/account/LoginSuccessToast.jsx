@@ -15,7 +15,7 @@ import { createPortal } from "react-dom";
 // Zahlungsschritt die Bestaetigung (siehe ProHeaderButton).
 const AUTO_DISMISS_MS = 4000;
 
-export function LoginSuccessToast({ t, email, onDone }) {
+export function LoginSuccessToast({ t, email, message, onDone }) {
   useEffect(() => {
     const timer = setTimeout(() => onDone?.(), AUTO_DISMISS_MS);
     return () => clearTimeout(timer);
@@ -58,7 +58,7 @@ export function LoginSuccessToast({ t, email, onDone }) {
     >
       <span aria-hidden="true">✓</span>
       <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
-        {email ? `${t.loggedInAs} ${email}` : t.loginSuccessGeneric}
+        {message || (email ? `${t.loggedInAs} ${email}` : t.loginSuccessGeneric)}
       </span>
     </div>,
     document.body,

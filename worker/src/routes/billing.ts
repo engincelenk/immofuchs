@@ -13,6 +13,9 @@ export const billingRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
 const REFUND_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 billingRoutes.post("/checkout", requireAuth, requireCsrfOrigin, async (c) => {
+  // Guard (Spec-v3.0 Kap. 3.0): Zahlungs-/Trial-Start ist erst nach
+  // bestaetigter E-Mail erlaubt (Betrugspraevention, Rechnungsstellung).
+  if (!c.var.user.email_verified_at) return c.json({ error: "email_not_verified" }, 403);
   const body = await c.req.json().catch(() => null);
   const plan = body?.plan === "yearly" ? "yearly" : body?.plan === "monthly" ? "monthly" : null;
   if (!plan) return c.json({ error: "invalid_plan" }, 400);

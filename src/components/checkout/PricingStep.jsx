@@ -1,27 +1,32 @@
 import { primaryBtnStyle } from "./checkoutStyles.js";
 
-export function PricingStep({ t, plan, setPlan, onContinue }) {
+export function PricingStep({ t, plan, setPlan, onContinue, account }) {
   const features = [t.compareRowRechnerPro, t.compareRowExposePro, t.compareRowFinnPro, t.compareRowMerklistePro];
   const labels = [t.compareRowRechner, t.compareRowExpose, t.compareRowFinn, t.compareRowMerkliste];
+  // T1 (Spec-v3.0 Kap. 3.0/3.1a): wer das Trial schon einmal hatte, sieht
+  // keinen Trial-Hinweis mehr, sondern direkt den regulaeren Preis.
+  const hasUsedTrial = Boolean(account?.me?.hasUsedTrial);
 
   return (
     <div>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{t.planTitle}</div>
-      <div
-        style={{
-          display: "inline-block",
-          background: "#FCE9DC",
-          border: "1px solid var(--ca)",
-          color: "var(--ca-dk)",
-          borderRadius: 20,
-          padding: "4px 10px",
-          fontSize: 11,
-          fontWeight: 700,
-          marginBottom: 16,
-        }}
-      >
-        🦊 {t.pricingTrialBadge}
-      </div>
+      {!hasUsedTrial && (
+        <div
+          style={{
+            display: "inline-block",
+            background: "#FCE9DC",
+            border: "1px solid var(--ca)",
+            color: "var(--ca-dk)",
+            borderRadius: 20,
+            padding: "4px 10px",
+            fontSize: 11,
+            fontWeight: 700,
+            marginBottom: 16,
+          }}
+        >
+          🦊 {t.pricingTrialBadge}
+        </div>
+      )}
 
       <div role="radiogroup" aria-label={t.planTitle} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
         <PlanOption

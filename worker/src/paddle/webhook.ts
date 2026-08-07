@@ -3,7 +3,7 @@
 // liefert Events "at least once" - ein doppelt geliefertes Event darf nichts
 // mehr aendern, siehe worker/src/paddle/webhook.test.ts).
 import type { Env } from "../types";
-import { getUserById, isWebhookEventProcessed, markWebhookEventProcessed, newId } from "../db";
+import { getUserById, isWebhookEventProcessed, markTrialUsedForUser, markWebhookEventProcessed, newId } from "../db";
 import { dispatchNotification } from "../notifications";
 import { PAST_DUE_GRACE_MS } from "../entitlement";
 
@@ -119,6 +119,13 @@ async function upsertSubscriptionFromPaddle(env: Env, data: Record<string, unkno
   if (!paddleSubscriptionId || !status || !plan) {
     console.error("paddle_webhook_incomplete_subscription_data");
     return;
+  }
+
+  // T1 (Spec-v3.0 Kap. 3.1a): sobald Paddle den Trial-Status meldet, gilt das
+  // Trial fuer dieses Konto dauerhaft als verbraucht - unabhaengig davon, ob
+  // die Subscription-Zeile spaeter auf 'active'/'canceled' wechselt.
+  if (status === "trialing") {
+    await markTrialUsedForUser(env.DB, userId);
   }
 
   const existing = await env.DB.prepare("SELECT * FROM subscriptions WHERE paddle_subscription_id = ?")

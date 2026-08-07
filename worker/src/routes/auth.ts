@@ -15,7 +15,6 @@ import {
 import {
   loginWithPassword,
   registerWithPassword,
-  requestLinkPassword,
   requestPasswordReset,
   resendVerification,
   resetPassword,
@@ -23,11 +22,16 @@ import {
 } from "../auth/passwordAuth";
 import { login, logout, extractSessionId, buildClearSessionCookie } from "../auth/session";
 import { deleteAllSessionsForUser, findOrCreateUserForOAuth } from "../db";
-import { requireAuth } from "../middleware";
+import { deleteAccountCompletely } from "../accountDeletion";
+import { requireAuth, type AuthVars } from "../middleware";
 
 const OAUTH_STATE_COOKIE = "if_oauth_state";
+// D2 (Spec-v3.0 Kap. 4.5): einmalig, kurzlebig, HttpOnly - der Nachweis, dass
+// diese OAuth-Runde eine Konto-Loeschung autorisiert statt eines normalen
+// Logins. Enthaelt die userId der Session, die die Loeschung angestossen hat.
+const DELETE_REAUTH_COOKIE = "if_delete_reauth";
 
-export const authRoutes = new Hono<{ Bindings: Env }>();
+export const authRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
 
 function frontendBase(env: Env, req: Request): string {
   // APP_BASE_URL ist optional (Platzhalter-Setup, siehe kommerzialisierung-setup.md) -
@@ -65,19 +69,69 @@ authRoutes.get("/google/start", (c) => {
   return c.redirect(url, 302);
 });
 
+// D2 (Spec-v3.0 Kap. 4.5): Konto-Loeschung fuer Google-Konten ohne Passwort -
+// derselbe OAuth-Roundtrip wie /google/start, aber requireAuth-geschuetzt und
+// mit zusaetzlichem Cookie, das die callback-Route auf "loeschen statt
+// einloggen" umschaltet (siehe /google/callback).
+authRoutes.get("/delete-reauth/google", requireAuth, (c) => {
+  const state = randomState();
+  const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/google/callback");
+  const url = buildGoogleAuthUrl(c.env, redirectUri, state);
+  c.header("Set-Cookie", `${OAUTH_STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`, {
+    append: true,
+  });
+  c.header(
+    "Set-Cookie",
+    `${DELETE_REAUTH_COOKIE}=${c.var.userId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+    { append: true },
+  );
+  return c.redirect(url, 302);
+});
+
 authRoutes.get("/google/callback", async (c) => {
   const code = c.req.query("code");
   const state = c.req.query("state");
   const cookieState = readCookie(c.req.raw, OAUTH_STATE_COOKIE);
   const base = frontendBase(c.env, c.req.raw);
+  // Einmalig lesen: unabhaengig vom Ausgang darf dieser Cookie kein zweites
+  // Mal etwas autorisieren.
+  const deleteReauthUserId = readCookie(c.req.raw, DELETE_REAUTH_COOKIE);
+  if (deleteReauthUserId) {
+    c.header("Set-Cookie", `${DELETE_REAUTH_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`, {
+      append: true,
+    });
+  }
   if (!code || !state || !cookieState || state !== cookieState) {
     return c.redirect(`${base}/?login_error=oauth_state_mismatch`, 302);
   }
   try {
     const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/google/callback");
     const identity = await exchangeGoogleCode(c.env, code, redirectUri);
-    const user = await findOrCreateUserForOAuth(c.env.DB, "google", identity.providerUserId, identity.email);
-    const { cookie } = await login(c.env, user.id, c.req.header("User-Agent") || null);
+    const result = await findOrCreateUserForOAuth(c.env.DB, "google", identity.providerUserId, identity.email);
+
+    if (deleteReauthUserId) {
+      // D2: nur loeschen, wenn die frisch bestaetigte Google-Identitaet
+      // tatsaechlich zu dem Konto gehoert, das die Loeschung angestossen hat -
+      // sonst koennte ein zweites, ebenfalls bei Google eingeloggtes Konto
+      // (falscher Tab/falsches Profil) ein fremdes Konto loeschen.
+      if (!result.ok || result.user.id !== deleteReauthUserId) {
+        return c.redirect(`${base}/?login_error=delete_reauth_failed`, 302);
+      }
+      try {
+        await deleteAccountCompletely(c.env, result.user.id, result.user.email);
+      } catch {
+        return c.redirect(`${base}/?login_error=delete_reauth_failed`, 302);
+      }
+      const sessionId = extractSessionId(c.req.raw);
+      if (sessionId) await logout(c.env, sessionId);
+      c.header("Set-Cookie", buildClearSessionCookie(), { append: true });
+      return c.redirect(`${base}/?account_deleted=1`, 302);
+    }
+
+    if (!result.ok) {
+      return c.redirect(`${base}/?login_error=oauth_email_taken&providers=${encodeURIComponent(result.providers.join(","))}`, 302);
+    }
+    const { cookie } = await login(c.env, result.user.id, c.req.header("User-Agent") || null);
     c.header("Set-Cookie", cookie, { append: true });
     return c.redirect(`${base}/?login_success=1`, 302);
   } catch (err) {
@@ -100,20 +154,61 @@ authRoutes.get("/apple/start", (c) => {
   return c.redirect(url, 302);
 });
 
+// D2 (Spec-v3.0 Kap. 4.5) - analog zu /delete-reauth/google.
+authRoutes.get("/delete-reauth/apple", requireAuth, (c) => {
+  const state = randomState();
+  const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/apple/callback");
+  const url = buildAppleAuthUrl(c.env, redirectUri, state);
+  c.header("Set-Cookie", `${OAUTH_STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`, {
+    append: true,
+  });
+  c.header(
+    "Set-Cookie",
+    `${DELETE_REAUTH_COOKIE}=${c.var.userId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+    { append: true },
+  );
+  return c.redirect(url, 302);
+});
+
 authRoutes.post("/apple/callback", async (c) => {
   const body = await c.req.parseBody();
   const code = typeof body.code === "string" ? body.code : undefined;
   const state = typeof body.state === "string" ? body.state : undefined;
   const cookieState = readCookie(c.req.raw, OAUTH_STATE_COOKIE);
   const base = frontendBase(c.env, c.req.raw);
+  const deleteReauthUserId = readCookie(c.req.raw, DELETE_REAUTH_COOKIE);
+  if (deleteReauthUserId) {
+    c.header("Set-Cookie", `${DELETE_REAUTH_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`, {
+      append: true,
+    });
+  }
   if (!code || !state || !cookieState || state !== cookieState) {
     return c.redirect(`${base}/?login_error=oauth_state_mismatch`, 302);
   }
   try {
     const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/apple/callback");
     const identity = await exchangeAppleCode(c.env, code, redirectUri);
-    const user = await findOrCreateUserForOAuth(c.env.DB, "apple", identity.providerUserId, identity.email);
-    const { cookie } = await login(c.env, user.id, c.req.header("User-Agent") || null);
+    const result = await findOrCreateUserForOAuth(c.env.DB, "apple", identity.providerUserId, identity.email);
+
+    if (deleteReauthUserId) {
+      if (!result.ok || result.user.id !== deleteReauthUserId) {
+        return c.redirect(`${base}/?login_error=delete_reauth_failed`, 302);
+      }
+      try {
+        await deleteAccountCompletely(c.env, result.user.id, result.user.email);
+      } catch {
+        return c.redirect(`${base}/?login_error=delete_reauth_failed`, 302);
+      }
+      const sessionId = extractSessionId(c.req.raw);
+      if (sessionId) await logout(c.env, sessionId);
+      c.header("Set-Cookie", buildClearSessionCookie(), { append: true });
+      return c.redirect(`${base}/?account_deleted=1`, 302);
+    }
+
+    if (!result.ok) {
+      return c.redirect(`${base}/?login_error=oauth_email_taken&providers=${encodeURIComponent(result.providers.join(","))}`, 302);
+    }
+    const { cookie } = await login(c.env, result.user.id, c.req.header("User-Agent") || null);
     c.header("Set-Cookie", cookie, { append: true });
     return c.redirect(`${base}/?login_success=1`, 302);
   } catch (err) {
@@ -162,18 +257,6 @@ authRoutes.post("/register", async (c) => {
   return c.json({ ok: true });
 });
 
-authRoutes.post("/link-password/request", async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const email = body && typeof body.email === "string" ? body.email : "";
-  const password = body && typeof body.password === "string" ? body.password : "";
-  const result = await requestLinkPassword(c.env, workerOrigin(c.req.raw), email, password);
-  if (!result.ok) {
-    if (result.error === "rate_limited") return c.json({ error: result.error }, 429);
-    return c.json({ error: result.error }, 400);
-  }
-  return c.json({ ok: true });
-});
-
 authRoutes.get("/verify-email", async (c) => {
   const token = c.req.query("token") || "";
   const base = frontendBase(c.env, c.req.raw);
@@ -200,6 +283,7 @@ authRoutes.post("/login", async (c) => {
   if (!result.ok) {
     if (result.error === "locked") return c.json({ error: result.error, retryAfterSeconds: result.retryAfterSeconds }, 423);
     if (result.error === "email_not_verified") return c.json({ error: result.error }, 403);
+    if (result.error === "oauth_only") return c.json({ error: result.error, providers: result.providers }, 401);
     return c.json({ error: result.error, warn: result.warn }, 401);
   }
   const { cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);

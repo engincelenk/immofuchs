@@ -34,6 +34,7 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [emailTakenProviders, setEmailTakenProviders] = useState(null);
+  const [oauthOnlyProviders, setOauthOnlyProviders] = useState(null);
 
   useEffect(() => {
     if (account?.error?.startsWith("login_error_")) {
@@ -46,11 +47,13 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
     setBusy("login-password");
     setInlineError(null);
     setLoginWarn(false);
+    setOauthOnlyProviders(null);
     const result = await account.loginWithPassword(email, loginPassword);
     setBusy(null);
     if (!result.ok) {
       setInlineError(result.error);
       setLoginWarn(Boolean(result.warn));
+      if (result.error === "oauth_only") setOauthOnlyProviders(result.providers);
     }
     // Erfolg: CheckoutWizard beobachtet account.isLoggedIn selbst.
   }
@@ -70,19 +73,6 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
       setInlineError(result.error);
       return;
     }
-    onVerificationSent(regEmail);
-  }
-
-  async function handleLinkPassword() {
-    setBusy("link-password");
-    setInlineError(null);
-    const result = await account.requestLinkPassword(regEmail, regPassword);
-    setBusy(null);
-    if (!result.ok) {
-      setInlineError(result.error);
-      return;
-    }
-    setEmailTakenProviders(null);
     onVerificationSent(regEmail);
   }
 
@@ -120,14 +110,6 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
                   style={secondaryBtnStyle}
                 >
                   {t.loginSubmit}
-                </button>
-              )}
-              {/* Auch der Weg zurueck fuer reine Passkey-Konten (Provider-Liste
-                  kann "passkey" enthalten): ohne Passkey-Knopf im UI ist das
-                  Setzen eines Passworts deren Anmeldeweg. */}
-              {!emailTakenProviders.includes("password") && (
-                <button type="button" onClick={handleLinkPassword} disabled={busy === "link-password"} style={secondaryBtnStyle}>
-                  {t.registerErrorEmailTakenLinkCta}
                 </button>
               )}
             </div>
@@ -199,23 +181,34 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
   return (
     <div>
       <p style={{ fontSize: 13, color: "var(--ch)", marginBottom: 16 }}>{t.loginSubtitle}</p>
-      {inlineError && <ErrorBanner t={t} code={inlineError} />}
-      {inlineError === "invalid_credentials" && loginWarn && (
-        <div style={{ ...warnBannerStyle, marginTop: -6, marginBottom: 12 }}>{t.loginErrorWarnAttempts}</div>
-      )}
-      {inlineError === "email_not_verified" && (
-        <button
-          type="button"
-          onClick={async () => {
-            setBusy("resend-login");
-            await account.resendVerification(email);
-            setBusy(null);
-          }}
-          disabled={busy === "resend-login"}
-          style={{ ...linkBtnStyle, display: "block", marginTop: -6, marginBottom: 12 }}
-        >
-          {t.loginResendVerification}
-        </button>
+      {(inlineError === "oauth_email_taken" || inlineError === "oauth_only") ? (
+        <OAuthOnlyBanner
+          t={t}
+          plan={plan}
+          account={account}
+          providers={inlineError === "oauth_email_taken" ? account.oauthEmailTakenProviders : oauthOnlyProviders}
+        />
+      ) : (
+        <>
+          {inlineError && <ErrorBanner t={t} code={inlineError} />}
+          {inlineError === "invalid_credentials" && loginWarn && (
+            <div style={{ ...warnBannerStyle, marginTop: -6, marginBottom: 12 }}>{t.loginErrorWarnAttempts}</div>
+          )}
+          {inlineError === "email_not_verified" && (
+            <button
+              type="button"
+              onClick={async () => {
+                setBusy("resend-login");
+                await account.resendVerification(email);
+                setBusy(null);
+              }}
+              disabled={busy === "resend-login"}
+              style={{ ...linkBtnStyle, display: "block", marginTop: -6, marginBottom: 12 }}
+            >
+              {t.loginResendVerification}
+            </button>
+          )}
+        </>
       )}
       <div style={{ display: "flex", gap: 10 }}>
         <button onClick={() => account.startGoogleLogin(plan)} style={{ ...secondaryBtnStyle, flex: 1 }}>
@@ -279,4 +272,29 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
 const PROVIDER_LABELS = { google: "Google", apple: "Apple", passkey: "Passkey" };
 function providerLabel(t, provider) {
   return provider === "password" ? t.providerPasswordLabel : PROVIDER_LABELS[provider] || provider;
+}
+
+// E1/L3 (Spec-v3.0 Kap. 0.1): Konto existiert bereits ueber Google/Apple/
+// Passkey - statt einer Verknuepfung gibt es nur den Hinweis auf die
+// richtige Methode plus die passenden Login-Knoepfe.
+function OAuthOnlyBanner({ t, plan, account, providers }) {
+  const list = providers || [];
+  const label = list.map((p) => providerLabel(t, p)).join(" bzw. ") || t.loginErrorOauth;
+  return (
+    <div style={{ ...warnBannerStyle, marginBottom: 12 }}>
+      {t.loginErrorOauthOnly.replace("{provider}", label)}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+        {list.includes("google") && (
+          <button type="button" onClick={() => account.startGoogleLogin(plan)} style={secondaryBtnStyle}>
+            <GoogleIcon /> {t.loginGoogle}
+          </button>
+        )}
+        {list.includes("apple") && (
+          <button type="button" onClick={() => account.startAppleLogin(plan)} style={appleBtnStyle}>
+            <AppleIcon /> {t.loginApple}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }

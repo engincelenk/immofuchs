@@ -97,6 +97,13 @@ export function ProHeaderButton() {
           onDone={account.dismissLoginSuccess}
         />
       )}
+      {account.accountDeleted && (
+        <LoginSuccessToast
+          t={t}
+          message={t.accountDeletedToast}
+          onDone={account.dismissAccountDeleted}
+        />
+      )}
       {openMode === "account" && <MyAccount onClose={handleClose} />}
       {openMode === "checkout" &&
         (resumesCheckout ? (

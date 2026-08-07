@@ -39,6 +39,11 @@ export function SicherheitSection({ t, account, lang, onClose }) {
   // Nach dem Rundumschlag ist auch diese Sitzung tot - der Kontobereich wird
   // deshalb sofort geschlossen, statt den Nutzer vor einer Maske sitzen zu
   // lassen, die keine Daten mehr laden kann.
+  async function handleLogout() {
+    await account.logout();
+    onClose();
+  }
+
   async function handleLogoutAll() {
     await account.logoutAllDevices();
     onClose();
@@ -100,6 +105,14 @@ export function SicherheitSection({ t, account, lang, onClose }) {
             </div>
           </div>
         ))}
+      </div>
+
+      <div style={blockCardStyle}>
+        <div style={blockTitleStyle}>{t.logout}</div>
+        <p style={blockHintStyle}>{t.sicherheitLogoutHint}</p>
+        <button onClick={handleLogout} style={actionBtnStyle}>
+          {t.logout}
+        </button>
       </div>
 
       <div style={blockCardStyle}>

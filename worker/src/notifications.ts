@@ -14,6 +14,7 @@ export type NotificationEvent =
   | "account_deleted"
   | "payment_failed"
   | "password_changed"
+  | "email_change_requested"
   | "trial_ending";
 
 export interface NotificationIntent {
@@ -55,6 +56,8 @@ function renderPush(intent: NotificationIntent): { title: string; body: string }
       return { title: "Zahlung fehlgeschlagen", body: `Pro bleibt noch bis ${intent.payload.graceEndsDate} aktiv.` };
     case "password_changed":
       return { title: "Passwort geändert", body: "Warst du das nicht? Bitte sofort zurücksetzen." };
+    case "email_change_requested":
+      return { title: "E-Mail-Änderung angefragt", body: `Wechsel zu ${intent.payload.newEmail} angefragt.` };
     case "trial_ending":
       return {
         title: "Deine Testphase endet bald",
@@ -122,6 +125,19 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
         subject: "Dein ImmoFuchs-Passwort wurde geändert",
         html: `<p>Dein Passwort wurde soeben geändert. Alle anderen Geräte wurden zur Sicherheit abgemeldet.</p>
                <p>Warst du das nicht? Setze dein Passwort umgehend über "Passwort vergessen" zurück und kontaktiere unseren Support.</p>`,
+      };
+    }
+    // PR-Ergaenzung (Spec-v3.0 Kap. 5): Sicherheitshinweis an die ALTE
+    // Adresse, bevor die neue bestaetigt ist - sonst bliebe ein Account-
+    // Takeover per E-Mail-Wechsel fuer den urspruenglichen Kontoinhaber
+    // unbemerkt. Geht an die alte Adresse, waehrend der Bestaetigungslink an
+    // die neue geht (siehe routes/account.ts).
+    case "email_change_requested": {
+      const newEmail = String(intent.payload.newEmail ?? "");
+      return {
+        subject: "E-Mail-Änderung für dein ImmoFuchs-Konto angefragt",
+        html: `<p>Für dein ImmoFuchs-Konto wurde ein Wechsel zur Adresse <strong>${newEmail}</strong> angefragt. Wirksam wird das erst, wenn der Bestätigungslink in dieser neuen Adresse angeklickt wird.</p>
+               <p>Warst du das nicht? Dann kannst du diese E-Mail ignorieren - deine Adresse bleibt unverändert. Kontaktiere bei Verdacht auf Missbrauch bitte unseren Support.</p>`,
       };
     }
   }

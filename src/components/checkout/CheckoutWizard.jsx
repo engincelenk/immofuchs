@@ -133,7 +133,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
       />
     );
   } else if (currentKey === "pricing") {
-    content = <PricingStep t={t} plan={plan} setPlan={setPlan} onContinue={handlePricingContinue} />;
+    content = <PricingStep t={t} plan={plan} setPlan={setPlan} onContinue={handlePricingContinue} account={account} />;
   } else if (currentKey === "account") {
     content = (
       <AccountStep

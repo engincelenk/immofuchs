@@ -19,6 +19,8 @@ export function ErrorBanner({ t, code }) {
     password_mismatch: t.newPasswordMismatch,
     invalid_or_expired: t.newPasswordErrorInvalidToken,
     verify_invalid: t.verifyErrorInvalid,
+    oauth_email_taken: t.loginErrorOauthOnly.replace("{provider}", ""),
+    oauth_only: t.loginErrorOauthOnly.replace("{provider}", ""),
   };
   return <div style={errorBannerStyle}>{map[code] || t.loginErrorOauth}</div>;
 }
