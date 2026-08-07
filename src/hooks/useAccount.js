@@ -318,18 +318,40 @@ export function useAccount() {
   // (Wizard geoeffnet) oder verworfen wurde (Wizard geschlossen).
   const clearPendingCheckout = useCallback(() => setPendingCheckout(null), []);
 
+  // Bugreport 07.08. ("Abmelden nicht möglich"): ohne try/catch bricht diese
+  // Funktion bei JEDEM Netzwerkfehler (Timeout, kurzer Offline-Moment, CORS)
+  // komplett ab, BEVOR setMe(null) ueberhaupt laeuft - der Klick auf
+  // "Abmelden" wirkte dann nach aussen wie gar nicht angekommen, ohne
+  // jegliche Fehlermeldung. Der lokale Logout (setMe(null)) laeuft jetzt in
+  // jedem Fall, der Server-Call ist Best-Effort - der Nutzer sieht sich
+  // sofort abgemeldet, auch wenn die Session serverseitig erst mit der
+  // naechsten Anfrage oder durch Ablauf endet.
   const logout = useCallback(async () => {
-    await apiFetch("/auth/logout", { method: "POST" });
-    await clearNativeToken();
+    let ok = true;
+    try {
+      await apiFetch("/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.error("[account] logout fehlgeschlagen:", err);
+      ok = false;
+    }
+    await clearNativeToken().catch(() => {});
     setMe(null);
     broadcastIsPro(false);
+    return { ok };
   }, [broadcastIsPro]);
 
   const logoutAllDevices = useCallback(async () => {
-    await apiFetch("/auth/logout-all", { method: "POST" });
-    await clearNativeToken();
+    let ok = true;
+    try {
+      await apiFetch("/auth/logout-all", { method: "POST" });
+    } catch (err) {
+      console.error("[account] logout-all fehlgeschlagen:", err);
+      ok = false;
+    }
+    await clearNativeToken().catch(() => {});
     setMe(null);
     broadcastIsPro(false);
+    return { ok };
   }, [broadcastIsPro]);
 
   // Paddle-Checkout (4.6): erzeugt server-seitig eine Transaktion, oeffnet sie

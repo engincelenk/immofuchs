@@ -1,3 +1,25 @@
+## 2026-08-07 (1.7.6)
+
+### Fix: "Abmelden nicht möglich" — Logout ohne Fehlerbehandlung
+
+**Problem (Bugreport):** `account.logout()`/`logoutAllDevices()` hatten
+kein try/catch um den `/auth/logout`-Aufruf. Schlug der Netzwerk-Request aus
+irgendeinem Grund fehl (Timeout, kurzer Offline-Moment, CORS-Eigenheit),
+brach die Funktion VOR `setMe(null)` komplett ab - der Klick auf "Abmelden"
+wirkte dann so, als würde nichts passieren, ohne jede Fehlermeldung. Live
+reproduzierbar bestätigt (Server-seitiger Logout funktionierte in einem
+direkten Test einwandfrei, das Fehlerbild entsteht nur im Fehlerfall des
+Netzwerk-Calls).
+
+**Fix:** Der Server-Aufruf ist jetzt Best-Effort (try/catch, Fehler wird
+geloggt) - der lokale Logout (`setMe(null)`, Pro-Status zurücksetzen) läuft
+IMMER, unabhängig vom Ausgang des Netzwerk-Calls. Der Nutzer sieht sich
+sofort abgemeldet; eine noch aktive Server-Session läuft in diesem
+Randfall spätestens mit Ablauf aus. Mit simuliertem Netzwerkfehler
+(gepatchtes `fetch`) getestet und verifiziert.
+
+**Betroffene Dateien:** src/hooks/useAccount.js
+
 ## 2026-08-07 (1.7.5)
 
 ### Fix: Bestätigungslink/Passwort-Reset-Link landete auf der Startseite ohne Rückmeldung
