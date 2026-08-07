@@ -1,3 +1,34 @@
+## 2026-08-07 (1.7.4)
+
+### Refactor: "Mein Konto" auf 6 Bereiche konsolidiert (Kap. 4.1, v3.0)
+
+Nutzerentscheidung 07.08. (Nachtrag zu 1.7.3): die zunaechst zurueckgestellte
+Angleichung der Mein-Konto-Struktur von 8 auf die in der Spec vorgesehenen 6
+Bereiche (Profil / Abonnement / Zahlungen / Einstellungen / Support / Konto)
+wurde doch noch umgesetzt. Keine Funktion ging dabei verloren - nur
+umsortiert:
+
+- **Zahlungen** = bisheriges "Zahlungsmethoden" + "Rechnungen" in einem Tab
+  (neue Datei `ZahlungenSection.jsx`, ersetzt beide alten Sections).
+- **Einstellungen** = bisheriges "Datenschutz" + Sprache (vorher in Profil)
+  + neu: Links zu Impressum/Datenschutzerklärung/AGB (`EinstellungenSection.jsx`,
+  ersetzt `DatenschutzSection.jsx`).
+- **Konto** = bisheriges "Sicherheit" (Sitzungen, Logout, Alle-Geräte-abmelden)
+  + "Gespeicherte Berechnungen" (vorher eigener Tab) + Konto-löschen (vorher
+  in Datenschutz) - die Spec sieht fuer Sitzungen/Merkliste keinen eigenen
+  Bereich vor, die Funktionalität sollte aber nicht verloren gehen
+  (`KontoSection.jsx`, ersetzt `SicherheitSection.jsx` + `GespeicherteSection.jsx`).
+- Profil verliert die Sprachauswahl (jetzt in Einstellungen), behält
+  E-Mail/Login-Methode/Passwort.
+
+**Betroffene Dateien:** src/components/account/MyAccount.jsx,
+src/components/account/sections/ZahlungenSection.jsx (neu),
+src/components/account/sections/EinstellungenSection.jsx (neu),
+src/components/account/sections/KontoSection.jsx (neu),
+src/components/account/sections/ProfilSection.jsx, src/i18n/account.js.
+Entfernt: ZahlungsmethodenSection.jsx, RechnungenSection.jsx,
+GespeicherteSection.jsx, SicherheitSection.jsx, DatenschutzSection.jsx.
+
 ## 2026-08-07 (1.7.3)
 
 ### Feat/Fix: Login- & Payment-Flows an docs/immofuchs-login-payment-flows.md (v3.0) angeglichen

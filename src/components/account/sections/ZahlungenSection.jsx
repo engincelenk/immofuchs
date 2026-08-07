@@ -2,44 +2,65 @@ import { useCallback, useEffect, useState } from "react";
 import { LANG_LOCALE } from "../../../utils/helpers.js";
 import { errorBannerStyle } from "../../checkout/checkoutStyles.js";
 import {
+  actionBtnStyle,
   blockCardStyle,
+  blockHintStyle,
+  blockTitleStyle,
   emptyStateStyle,
   inlineLinkBtnStyle,
   sectionIntroStyle,
   sectionTitleStyle,
 } from "../accountStyles.js";
 
-// Bereich 3: Belege. Quelle ist Paddle (Merchant of Record), nicht die eigene
-// Datenbank - deshalb wird die Liste bei jedem Oeffnen frisch geholt statt
-// zwischengespeichert, und die PDF-URL erst beim Klick (sie ist signiert und
-// kurzlebig).
-export function RechnungenSection({ t, account, lang }) {
+// Spec-v3.0 Kap. 4.1/4.6: "Zahlungen" fasst Zahlungsmethode und Rechnungen in
+// einem Bereich zusammen (vorher zwei separate Tabs: ZahlungsmethodenSection +
+// RechnungenSection, hier zusammengefuehrt). Beide Datenquellen bleiben
+// unveraendert bei Paddle (Merchant of Record) - wir speichern selbst weder
+// Kartendaten noch Rechnungsadressen.
+export function ZahlungenSection({ t, account, lang }) {
   const locale = LANG_LOCALE[lang] || "de-DE";
+  const hasSubscription = Boolean(account.me.subscription);
+
+  const [portalBusy, setPortalBusy] = useState(false);
+  const [portalError, setPortalError] = useState(false);
+
+  async function handleOpenPortal() {
+    setPortalBusy(true);
+    setPortalError(false);
+    try {
+      await account.openBillingPortal();
+    } catch {
+      setPortalError(true);
+    } finally {
+      setPortalBusy(false);
+    }
+  }
+
   const [invoices, setInvoices] = useState(null); // null = laedt noch
-  const [error, setError] = useState(null);
+  const [invoiceError, setInvoiceError] = useState(null);
 
   // Bewusst die einzelne Methode als Abhaengigkeit statt des ganzen
   // account-Objekts: dessen Identitaet wechselt bei jedem /me-Refresh, was
   // die Liste ohne Anlass neu laden wuerde.
   const { listInvoices } = account;
-  const load = useCallback(async () => {
+  const loadInvoices = useCallback(async () => {
     try {
       setInvoices(await listInvoices());
     } catch {
-      setError("list");
+      setInvoiceError("list");
     }
   }, [listInvoices]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadInvoices();
+  }, [loadInvoices]);
 
   async function handlePdf(id) {
-    setError(null);
+    setInvoiceError(null);
     try {
       await account.openInvoicePdf(id);
     } catch {
-      setError("pdf");
+      setInvoiceError("pdf");
     }
   }
 
@@ -66,14 +87,29 @@ export function RechnungenSection({ t, account, lang }) {
 
   return (
     <div>
-      <h2 style={sectionTitleStyle}>{t.navRechnungen}</h2>
-      <p style={sectionIntroStyle}>{t.rechnungenIntro}</p>
+      <h2 style={sectionTitleStyle}>{t.navZahlung}</h2>
+      <p style={sectionIntroStyle}>{t.zahlungBody}</p>
 
-      {error === "list" && <div style={errorBannerStyle}>{t.rechnungenError}</div>}
-      {error === "pdf" && <div style={errorBannerStyle}>{t.rechnungenPdfError}</div>}
+      {portalError && <div style={errorBannerStyle}>{t.zahlungError}</div>}
 
       <div style={blockCardStyle}>
-        {invoices === null && !error && <div style={emptyStateStyle}>{t.commonLoading}</div>}
+        {hasSubscription ? (
+          <button onClick={handleOpenPortal} disabled={portalBusy} style={actionBtnStyle}>
+            {t.zahlungCta} ↗
+          </button>
+        ) : (
+          <p style={{ ...blockHintStyle, margin: 0 }}>{t.zahlungFreeHint}</p>
+        )}
+      </div>
+
+      <div style={blockCardStyle}>
+        <div style={blockTitleStyle}>{t.navRechnungen}</div>
+        <p style={blockHintStyle}>{t.rechnungenIntro}</p>
+
+        {invoiceError === "list" && <div style={errorBannerStyle}>{t.rechnungenError}</div>}
+        {invoiceError === "pdf" && <div style={errorBannerStyle}>{t.rechnungenPdfError}</div>}
+
+        {invoices === null && !invoiceError && <div style={emptyStateStyle}>{t.commonLoading}</div>}
         {invoices !== null && invoices.length === 0 && (
           <div style={emptyStateStyle}>{t.rechnungenEmpty}</div>
         )}

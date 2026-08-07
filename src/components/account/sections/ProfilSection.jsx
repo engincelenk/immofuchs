@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { LANGS } from "../../../i18n/translations.js";
 import { linkedProviderLabel } from "../../../utils/accountEntitlement.js";
 import { errorBannerStyle, primaryBtnStyle, textInputStyle } from "../../checkout/checkoutStyles.js";
 import { PasswordField } from "../../checkout/CheckoutShared.jsx";
@@ -20,7 +19,7 @@ import {
 // E-Mail-Wechsel ist unveraendert aus dem alten AccountPanel uebernommen
 // (Double-Opt-In: der Server verschickt nur einen Bestaetigungslink, die
 // Adresse wechselt erst nach dem Klick).
-export function ProfilSection({ t, account, lang, setLang }) {
+export function ProfilSection({ t, account }) {
   const { email, linkedProviders } = account.me;
   const [changingEmail, setChangingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -89,40 +88,6 @@ export function ProfilSection({ t, account, lang, setLang }) {
         <div style={labelValueRowStyle}>
           <span style={labelStyle}>{t.accountLinkedProviders}</span>
           <span style={valueStyle}>{linkedProviders.map(linkedProviderLabel).join(", ")}</span>
-        </div>
-      </div>
-
-      <div style={blockCardStyle}>
-        <div style={blockTitleStyle}>{t.profilLanguageTitle}</div>
-        <p style={blockHintStyle}>{t.profilLanguageHint}</p>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {LANGS.map((l) => (
-            <button
-              key={l.v}
-              onClick={() => setLang(l.v)}
-              aria-current={l.v === lang ? "true" : undefined}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 12px",
-                borderRadius: 10,
-                border: `1px solid ${l.v === lang ? "var(--ca)" : "var(--cb)"}`,
-                background: l.v === lang ? "var(--ca-bg)" : "var(--ci)",
-                color: l.v === lang ? "var(--ca-dk)" : "var(--ct)",
-                fontSize: 13,
-                fontWeight: l.v === lang ? 700 : 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                minHeight: 40,
-              }}
-            >
-              <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>
-                {l.flag}
-              </span>
-              <span>{l.label}</span>
-            </button>
-          ))}
         </div>
       </div>
 

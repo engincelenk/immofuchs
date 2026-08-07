@@ -8,11 +8,9 @@ import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { ProfilSection } from "./sections/ProfilSection.jsx";
 import { AbonnementSection } from "./sections/AbonnementSection.jsx";
-import { RechnungenSection } from "./sections/RechnungenSection.jsx";
-import { ZahlungsmethodenSection } from "./sections/ZahlungsmethodenSection.jsx";
-import { GespeicherteSection } from "./sections/GespeicherteSection.jsx";
-import { SicherheitSection } from "./sections/SicherheitSection.jsx";
-import { DatenschutzSection } from "./sections/DatenschutzSection.jsx";
+import { ZahlungenSection } from "./sections/ZahlungenSection.jsx";
+import { EinstellungenSection } from "./sections/EinstellungenSection.jsx";
+import { KontoSection } from "./sections/KontoSection.jsx";
 import { SupportSection } from "./sections/SupportSection.jsx";
 
 // "Mein Konto" als vollflaechiger Bereich (Phase 2) - loest das bisherige
@@ -20,15 +18,20 @@ import { SupportSection } from "./sections/SupportSection.jsx";
 // scrollende Liste untereinander hingen. Optik und Portal-Aufbau folgen
 // bewusst dem Checkout-Wizard aus Phase 1, damit beide Vollbild-Flaechen als
 // dieselbe Anwendung wahrgenommen werden.
+//
+// 6 Bereiche statt vormals 8 (Spec-v3.0 Kap. 4.1, Nutzerentscheidung 07.08.):
+// Rechnungen ist jetzt Teil von "Zahlungen", Sprache Teil von
+// "Einstellungen" (vorher "Datenschutz"), Sitzungen/Gespeicherte
+// Berechnungen/Konto-Loeschung sind in "Konto" gebuendelt (Spec sieht dafuer
+// keinen eigenen Bereich vor, die Funktionalitaet sollte aber nicht
+// verloren gehen).
 const SECTIONS = [
   { key: "profil", labelKey: "navProfil", icon: "👤", Component: ProfilSection },
   { key: "abo", labelKey: "navAbonnement", icon: "👑", Component: AbonnementSection },
-  { key: "rechnungen", labelKey: "navRechnungen", icon: "🧾", Component: RechnungenSection },
-  { key: "zahlung", labelKey: "navZahlung", icon: "💳", Component: ZahlungsmethodenSection },
-  { key: "gespeichert", labelKey: "navGespeichert", icon: "🔖", Component: GespeicherteSection },
-  { key: "sicherheit", labelKey: "navSicherheit", icon: "🔒", Component: SicherheitSection },
-  { key: "datenschutz", labelKey: "navDatenschutz", icon: "🛡", Component: DatenschutzSection },
+  { key: "zahlung", labelKey: "navZahlung", icon: "💳", Component: ZahlungenSection },
+  { key: "einstellungen", labelKey: "navDatenschutz", icon: "⚙️", Component: EinstellungenSection },
   { key: "support", labelKey: "navSupport", icon: "💬", Component: SupportSection },
+  { key: "konto", labelKey: "navSicherheit", icon: "🔒", Component: KontoSection },
 ];
 
 export function MyAccount({ onClose }) {
