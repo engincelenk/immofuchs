@@ -4,14 +4,22 @@ import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
+import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { getWizardSteps, STEP_LABEL_KEYS } from "./wizardSteps.js";
 import { StepHeader } from "./StepHeader.jsx";
+import { OrderSummary } from "./OrderSummary.jsx";
 import { PricingStep } from "./PricingStep.jsx";
 import { AccountStep } from "./AccountStep.jsx";
 import { VerifyEmailStep } from "./VerifyEmailStep.jsx";
 import { PasswordResetFlow } from "./PasswordResetFlow.jsx";
 import { PaymentStep } from "./PaymentStep.jsx";
 import { WelcomeStep } from "./WelcomeStep.jsx";
+
+// Ab dieser Breite bekommt der Wizard eine zweite Spalte mit der
+// Bestelluebersicht (siehe showSummary unten) - derselbe Breakpoint wie
+// useIsDesktop, damit Assistent und Checkout an derselben Kante umschalten.
+const WIDE_DIALOG_WIDTH = 900;
+const NARROW_DIALOG_WIDTH = 460;
 
 // Vollflaechiger Checkout-Assistent (Spec-Abschnitt 5) - ersetzt das
 // bisherige kleine LoginModal/PlanSelect-Paar. `entryPoint="payment"`
@@ -25,6 +33,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
+  const isDesktop = useIsDesktop();
   const dialogRef = useRef(null);
 
   // Anfangs-Variante beruecksichtigt bereits den aktuellen Login-Status
@@ -58,6 +67,13 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     [variant, t],
   );
   const currentKey = steps[stepIndex]?.key;
+  // Zweispalten-Ansicht nur dort, wo eine Bestelluebersicht sinnvollen
+  // Zusatzkontext liefert (Nutzerwunsch 07.08.: Browser/Mobile sollen
+  // dieselbe Kaufstrecke zeigen statt zwei unterschiedliche "Staende").
+  // "verify"/"welcome"/Passwort-Reset bleiben bewusst schmal und zentriert -
+  // dort gibt es nichts, das eine zweite Spalte fuellen wuerde.
+  const showSummary =
+    isDesktop && !passwordReset && (currentKey === "pricing" || currentKey === "account" || currentKey === "payment");
 
   // Sobald ein eingeloggter Free-Nutzer erkannt wird (egal ueber welchen der
   // fuenf Login-/Registrierungswege), direkt zur Zahlung springen - "verify"
@@ -122,6 +138,8 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     goToStep("welcome");
   }, [account, goToStep]);
 
+  const editPlanHandler = variant === "upgrade" ? null : handleEditPlan;
+
   let content;
   if (passwordReset) {
     content = (
@@ -133,7 +151,16 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
       />
     );
   } else if (currentKey === "pricing") {
-    content = <PricingStep t={t} plan={plan} setPlan={setPlan} onContinue={handlePricingContinue} account={account} />;
+    content = (
+      <PricingStep
+        t={t}
+        plan={plan}
+        setPlan={setPlan}
+        onContinue={handlePricingContinue}
+        account={account}
+        hideFeatures={showSummary}
+      />
+    );
   } else if (currentKey === "account") {
     content = (
       <AccountStep
@@ -152,8 +179,9 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         t={t}
         account={account}
         plan={plan}
-        onEditPlan={variant === "upgrade" ? null : handleEditPlan}
+        onEditPlan={editPlanHandler}
         onCompleted={handlePaymentCompleted}
+        hideSummary={showSummary}
       />
     );
   } else if (currentKey === "welcome") {
@@ -170,7 +198,13 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         aria-modal="true"
         aria-label={t.loginTitle}
         ref={dialogRef}
-        style={{ maxWidth: 460, margin: "0 auto", minHeight: "100%", display: "flex", flexDirection: "column" }}
+        style={{
+          maxWidth: showSummary ? WIDE_DIALOG_WIDTH : NARROW_DIALOG_WIDTH,
+          margin: "0 auto",
+          minHeight: "100%",
+          display: "flex",
+          flexDirection: "column",
+        }}
       >
         {/* paddingTop mit safe-area-inset (Bugreport 06.08.): ohne das liegt
             die Kopfzeile auf iOS unter der Statusleiste, Uhrzeit und Logo
@@ -217,7 +251,31 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
           </button>
         </div>
         {!passwordReset && <StepHeader steps={steps} currentIndex={stepIndex} ariaLabel={steps[stepIndex]?.label} />}
-        <div style={{ padding: "20px", flex: 1 }}>{content}</div>
+        <div
+          style={{
+            display: "flex",
+            gap: 28,
+            alignItems: "flex-start",
+            justifyContent: showSummary ? "center" : "stretch",
+            padding: "20px",
+            flex: 1,
+          }}
+        >
+          {showSummary && (
+            <div style={{ flex: "0 0 280px" }}>
+              <OrderSummary
+                t={t}
+                plan={plan}
+                account={account}
+                showTrialNotice={currentKey === "payment"}
+                onEditPlan={currentKey === "payment" ? editPlanHandler : null}
+              />
+            </div>
+          )}
+          <div style={{ flex: showSummary ? "1 1 460px" : 1, maxWidth: showSummary ? 460 : "none", minWidth: 0 }}>
+            {content}
+          </div>
+        </div>
       </div>
     </div>,
     document.body,

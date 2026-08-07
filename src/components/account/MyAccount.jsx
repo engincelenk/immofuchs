@@ -190,7 +190,9 @@ function NavItem({ label, icon, active, isDesktop, onClick }) {
         gap: 8,
         padding: isDesktop ? "10px 12px" : "9px 12px",
         borderRadius: 10,
-        border: isDesktop ? "none" : `1px solid ${active ? "var(--ca)" : "var(--cb)"}`,
+        border: isDesktop
+          ? `1px solid ${active ? "var(--ca)" : "transparent"}`
+          : `1px solid ${active ? "var(--ca)" : "var(--cb)"}`,
         background: active ? "var(--ca-bg)" : isDesktop ? "transparent" : "var(--cc)",
         // --ca-dk statt --ca: auf --ca-bg liegt --ca unter der WCAG-AA-Grenze
         // fuer diese Schriftgroesse (S2-5).

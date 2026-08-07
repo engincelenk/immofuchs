@@ -94,16 +94,30 @@ export function ZahlungenSection({ t, account, lang }) {
 
       <div style={blockCardStyle}>
         {hasSubscription ? (
-          <button onClick={handleOpenPortal} disabled={portalBusy} style={actionBtnStyle}>
-            {t.zahlungCta} ↗
+          <button
+            onClick={handleOpenPortal}
+            disabled={portalBusy}
+            style={{ ...actionBtnStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span aria-hidden="true">💳</span>
+              {t.zahlungCta}
+            </span>
+            <span aria-hidden="true" style={{ color: "var(--ch)" }}>↗</span>
           </button>
         ) : (
-          <p style={{ ...blockHintStyle, margin: 0 }}>{t.zahlungFreeHint}</p>
+          <p style={{ ...blockHintStyle, margin: 0, display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <span aria-hidden="true">💳</span>
+            <span>{t.zahlungFreeHint}</span>
+          </p>
         )}
       </div>
 
       <div style={blockCardStyle}>
-        <div style={blockTitleStyle}>{t.navRechnungen}</div>
+        <div style={{ ...blockTitleStyle, display: "flex", alignItems: "center", gap: 8 }}>
+          <span aria-hidden="true">🧾</span>
+          {t.navRechnungen}
+        </div>
         <p style={blockHintStyle}>{t.rechnungenIntro}</p>
 
         {invoiceError === "list" && <div style={errorBannerStyle}>{t.rechnungenError}</div>}

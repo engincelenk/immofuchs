@@ -1,3 +1,32 @@
+## 2026-08-07 (1.7.7)
+
+### UX: Checkout-Assistent und Zahlungen auf Desktop und Mobile vereinheitlicht
+
+**Anlass (Nutzerfeedback):** Der Checkout-Assistent (Preise/Konto/Zahlung)
+war auf JEDER Bildschirmgröße eine feste 460px-Spalte - auf dem Desktop
+hing er dadurch als schmales Fenster mit viel Leerraum drumherum in der
+Mitte, statt die verfügbare Breite sinnvoll zu nutzen (Vorbild: mehrere
+Dribbble-Checkout-Referenzen mit Bestellübersicht neben dem Formular).
+
+**Fix:** Ab 1024px (bestehender `useIsDesktop`-Breakpoint) zeigt der
+Checkout-Assistent bei den Schritten Preise/Konto/Zahlung jetzt eine
+Zweispalten-Ansicht: links eine neue, persistente `OrderSummary`-Karte
+(Plan, Preis, Feature-Liste, bei der Zahlung zusätzlich Trial-Hinweis und
+"ändern"-Link), rechts der aktive Schritt. Um Dopplungen zu vermeiden,
+blendet `PricingStep` seine eigene Feature-Liste und `PaymentStep` seine
+Bestellkarte in diesem Fall aus (`hideFeatures`/`hideSummary`). Auf Mobile
+bleibt exakt die bisherige, gestapelte Einspalten-Ansicht - Inhalte und
+Funktionen sind auf beiden Größen identisch, nur die Anordnung ändert sich.
+Zusätzlich: "Zahlungsmethode"-Knopf und Rechnungen-Titel in "Mein Konto →
+Zahlungen" haben Icon-Akzente bekommen, die Desktop-Navigation dort markiert
+den aktiven Bereich jetzt zusätzlich mit einem Rahmen (bisher nur Mobile).
+
+**Betroffene Dateien:** src/components/checkout/OrderSummary.jsx (neu),
+src/components/checkout/CheckoutWizard.jsx, src/components/checkout/
+PricingStep.jsx, src/components/checkout/PaymentStep.jsx,
+src/components/account/sections/ZahlungenSection.jsx,
+src/components/account/MyAccount.jsx
+
 ## 2026-08-07 (1.7.6)
 
 ### Fix: "Abmelden nicht möglich" — Logout ohne Fehlerbehandlung

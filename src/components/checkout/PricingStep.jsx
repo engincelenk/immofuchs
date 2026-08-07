@@ -1,6 +1,6 @@
 import { primaryBtnStyle } from "./checkoutStyles.js";
 
-export function PricingStep({ t, plan, setPlan, onContinue, account }) {
+export function PricingStep({ t, plan, setPlan, onContinue, account, hideFeatures }) {
   const features = [t.compareRowRechnerPro, t.compareRowExposePro, t.compareRowFinnPro, t.compareRowMerklistePro];
   const labels = [t.compareRowRechner, t.compareRowExpose, t.compareRowFinn, t.compareRowMerkliste];
   // T1 (Spec-v3.0 Kap. 3.0/3.1a): wer das Trial schon einmal hatte, sieht
@@ -44,19 +44,25 @@ export function PricingStep({ t, plan, setPlan, onContinue, account }) {
         />
       </div>
 
-      <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ch)", marginBottom: 8 }}>
-        {t.pricingFeaturesTitle}
-      </div>
-      <ul style={{ listStyle: "none", padding: 0, margin: "0 0 20px", display: "flex", flexDirection: "column", gap: 6 }}>
-        {features.map((feature, i) => (
-          <li key={labels[i]} style={{ display: "flex", gap: 8, fontSize: 12.5, color: "var(--ct)" }}>
-            <span style={{ color: "var(--ca)" }}>✓</span>
-            <span>
-              <strong>{labels[i]}:</strong> {feature}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {/* Bei aktiver Desktop-Sidebar (CheckoutWizard) zeigt OrderSummary
+          dieselbe Liste bereits an - hier waere sie doppelt zu sehen. */}
+      {!hideFeatures && (
+        <>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ch)", marginBottom: 8 }}>
+            {t.pricingFeaturesTitle}
+          </div>
+          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 20px", display: "flex", flexDirection: "column", gap: 6 }}>
+            {features.map((feature, i) => (
+              <li key={labels[i]} style={{ display: "flex", gap: 8, fontSize: 12.5, color: "var(--ct)" }}>
+                <span style={{ color: "var(--ca)" }}>✓</span>
+                <span>
+                  <strong>{labels[i]}:</strong> {feature}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <button onClick={onContinue} style={primaryBtnStyle}>
         {t.pricingContinue} →

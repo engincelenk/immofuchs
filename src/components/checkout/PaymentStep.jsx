@@ -5,7 +5,7 @@ import { cardStyle, errorBannerStyle, primaryBtnStyle } from "./checkoutStyles.j
 // Screens). Reagiert auf Paddles checkout.completed-Event (siehe
 // paddleLoader.js/onPaddleCheckoutEvent) statt sich nach dem Oeffnen des
 // Overlays sofort zu schliessen - erst so wird WelcomeStep erreichbar.
-export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
+export function PaymentStep({ t, account, plan, onEditPlan, onCompleted, hideSummary }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [resendBusy, setResendBusy] = useState(false);
@@ -71,7 +71,9 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
 
   return (
     <div>
-      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>{t.paymentReviewTitle}</div>
+      {/* Bei aktiver Desktop-Sidebar (CheckoutWizard) zeigt OrderSummary
+          Titel+Karte bereits an - hier waeren sie doppelt zu sehen. */}
+      {!hideSummary && <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>{t.paymentReviewTitle}</div>}
 
       {account?.me?.email && (
         <div
@@ -101,22 +103,24 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted }) {
         </div>
       )}
 
-      <div style={{ ...cardStyle, marginBottom: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-          <span style={{ fontSize: 12, color: "var(--ch)" }}>{t.accountPlan}</span>
-          {onEditPlan && (
-            <button onClick={onEditPlan} style={{ background: "none", border: "none", padding: 0, fontSize: 11.5, color: "var(--ca-dk)", cursor: "pointer", fontFamily: "inherit" }}>
-              {t.accountChange}
-            </button>
-          )}
+      {!hideSummary && (
+        <div style={{ ...cardStyle, marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <span style={{ fontSize: 12, color: "var(--ch)" }}>{t.accountPlan}</span>
+            {onEditPlan && (
+              <button onClick={onEditPlan} style={{ background: "none", border: "none", padding: 0, fontSize: 11.5, color: "var(--ca-dk)", cursor: "pointer", fontFamily: "inherit" }}>
+                {t.accountChange}
+              </button>
+            )}
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>
+            ImmoFuchs Pro – {planLabel} ({planPrice})
+          </div>
+          <div style={{ fontSize: 11, color: "var(--ch)", marginTop: 6 }}>
+            {account?.me?.hasUsedTrial ? t.paymentNoTrialNotice.replace("{price}", planPrice) : t.paymentTrialNotice.replace("{price}", planPrice)}
+          </div>
         </div>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>
-          ImmoFuchs Pro – {planLabel} ({planPrice})
-        </div>
-        <div style={{ fontSize: 11, color: "var(--ch)", marginTop: 6 }}>
-          {account?.me?.hasUsedTrial ? t.paymentNoTrialNotice.replace("{price}", planPrice) : t.paymentTrialNotice.replace("{price}", planPrice)}
-        </div>
-      </div>
+      )}
 
       {error === "email_not_verified" ? (
         <div style={errorBannerStyle}>
