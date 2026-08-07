@@ -1,3 +1,36 @@
+## 2026-08-07 (1.7.5)
+
+### Fix: Bestätigungslink/Passwort-Reset-Link landete auf der Startseite ohne Rückmeldung
+
+**Problem (Bugreport, live auf dev.immofuchs.info):** Ein Klick auf den
+E-Mail-Bestätigungslink (oder Passwort-Reset-Link) öffnet fast immer einen
+NEUEN Browser-Tab - dessen `sessionStorage` ist leer, das `if_landed`-Flag,
+das App.jsx entscheiden lässt ob die Marketing-Landingpage oder der
+eingeloggte App-Shell gezeigt wird, war dadurch nie gesetzt. Der Login war
+serverseitig erfolgreich (Redirect mit `?login_success=1`), aber der Nutzer
+landete auf der normalen Startseite - und da `LoginSuccessToast` nur
+INNERHALB des App-Shells (über `ProHeaderButton`) gerendert wird, gab es
+dort auch gar keine Erfolgsmeldung. Der Login war unsichtbar erfolgreich.
+
+**Fix:** `App.jsx` prüft beim ersten Rendern jetzt zusätzlich, ob einer der
+Auth-Redirect-Parameter in der URL steht (`login_success`, `login_error`,
+`account_deleted`, `email_change_success`, `email_change_error`,
+`reset_token`) und startet in diesem Fall direkt im App-Shell statt auf der
+Landingpage (Spec-v3.0 Kap. 2.6: Login landet immer auf dem Dashboard).
+
+**Betroffene Dateien:** src/App.jsx
+
+### Test-Zugang für Pro-Features angelegt (dev.immofuchs.info)
+
+Account `testpro@immofuchs.info` direkt in der Remote-D1 (immofuchs-dev) mit
+verifizierter E-Mail und einer manuell eingefügten `active`-Subscription
+(bis 2101, Plan "yearly") ausgestattet - keine Registrierung über Paddle
+nötig, `isPro` liefert serverseitig `true`. Zahlungsmethode-Portal/Kündigen/
+Tarifwechsel/Rechnungen funktionieren damit NICHT (paddle_customer_id ist ein
+Platzhalter, echte Paddle-API-Calls dagegen schlagen fehl) - alle anderen
+Pro-Funktionen (Rechner unbegrenzt, Merkliste-Sync, Finn-Pro-Limits,
+Abonnement-Anzeige) sind nutzbar.
+
 ## 2026-08-07 (1.7.4)
 
 ### Refactor: "Mein Konto" auf 6 Bereiche konsolidiert (Kap. 4.1, v3.0)

@@ -204,10 +204,40 @@ const FONT_CSS =
   "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');";
 const ROOT_TOKENS_CSS =
   ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9}";
+// Bugreport 07.08.: Ein Bestaetigungslink aus der Registrierungs-E-Mail (oder
+// ein Passwort-Reset-Link) oeffnet fast immer einen NEUEN Tab - dessen
+// sessionStorage ist leer, "if_landed" also nie gesetzt. Der Nutzer landete
+// dadurch auf der Marketing-Landingpage statt im eingeloggten App-Shell, und
+// da LoginSuccessToast (ueber ProHeaderButton) nur INNERHALB des App-Shells
+// gerendert wird, gab es dort auch keinerlei "erfolgreich"-Rueckmeldung -
+// der Login war zwar passiert, aber unsichtbar. Jeder dieser
+// Redirect-Parameter bedeutet "der Nutzer kommt gerade aus einem
+// Auth-Flow zurueck" und soll deshalb direkt den App-Shell zeigen (Spec-v3.0
+// Kap. 2.6: Login landet immer auf dem Dashboard, nie zurueck auf S1).
+function hasAuthRedirectParam() {
+  const params = new URLSearchParams(window.location.search);
+  return [
+    "login_success",
+    "login_error",
+    "account_deleted",
+    "email_change_success",
+    "email_change_error",
+    "reset_token",
+  ].some((k) => params.has(k));
+}
+
 export default function App() {
   const [tab, setTab] = useState("haupt");
   const [lang, setLang] = useState("de");
-  const [landed, setLanded] = useState(() => sessionStorage.getItem("if_landed") === "1");
+  const [landed, setLanded] = useState(() => {
+    if (sessionStorage.getItem("if_landed") === "1") return true;
+    if (!hasAuthRedirectParam()) return false;
+    // Persistieren, damit ein spaeterer Reload im selben Tab (der Parameter
+    // ist dann laengst aus der URL entfernt) nicht doch wieder auf der
+    // Landingpage landet.
+    sessionStorage.setItem("if_landed", "1");
+    return true;
+  });
   // Deep-Link "Exposé hochladen" vom Hero-Spotlight auf der Startseite: wird
   // beim Wechsel in den Renditerechner einmal an AssistantWidget/AssistantSheet
   // durchgereicht, die daraus denselben Weg wie ein manueller Klick auf 📎
