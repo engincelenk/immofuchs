@@ -22,7 +22,7 @@ ASSISTANT_ENABLED = "true"
 # Punkt). Das allein schaltet noch nichts "live" - dafuer muss das Frontend
 # tatsaechlich dorthin deployt werden, siehe Go-Live-Gate im Sprint-Plan
 # (DSGVO/AVV) fuer echte Nutzerdaten.
-ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info,https://qa.immofuchs.info,https://immofuchs.info"
+ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://dev.immofuchs.info,https://qa.immofuchs.info,https://immofuchs.info,https://admin.immofuchs.info"
 # ═══ Limits 2026-08-03: auf das Maximum kalibriert, das die kostenlosen
 # Kontingente von Gemini und Workers AI tatsaechlich hergeben (siehe
 # release-notes.txt) - NICHT einfach hochgesetzt. Dieser Worker bedient
@@ -163,7 +163,7 @@ zone_name = "immofuchs.info"
 
 [env.dev.vars]
 ASSISTANT_ENABLED = "true"
-ALLOWED_ORIGIN = "http://localhost:5173,https://dev.immofuchs.info"
+ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://dev.immofuchs.info,https://admin-dev.immofuchs.info"
 # Ohne diesen Wert faellt frontendBase() (routes/auth.ts) auf die Origin des
 # eingehenden Requests zurueck - nach Login landet man dann auf der nackten
 # Worker-Domain statt zurueck im Frontend (Befund 2026-08-04, 1.6.3).
@@ -248,7 +248,7 @@ name = "immofuchs-assistant-qa"
 
 [env.qa.vars]
 ASSISTANT_ENABLED = "true"
-ALLOWED_ORIGIN = "http://localhost:5173,https://qa.immofuchs.info"
+ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://qa.immofuchs.info,https://admin-qa.immofuchs.info"
 WEBAUTHN_RP_ID = "qa.immofuchs.info"
 WEBAUTHN_RP_NAME = "ImmoFuchs (QA)"
 WEBAUTHN_ORIGIN = "https://qa.immofuchs.info"
