@@ -8,5 +8,5 @@ import { useAccountCtx } from "../context/AccountContext.jsx";
 // Nutzung erlaubt war.
 export function useCalculatorTrial() {
   const account = useAccountCtx();
-  return { isLocked: !account?.isLoggedIn };
+  return { isLocked: account?.loading === false && !account?.isLoggedIn, loading: account?.loading };
 }

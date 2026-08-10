@@ -1,3 +1,52 @@
+## 2026-08-08 (Doku, Update 2)
+
+### Doku: "Neue Phase"-Dokument umsetzungsfertig gemacht (kein Code geändert)
+
+**Was:** Alle 7 offenen Punkte aus Abschnitt 7.6 des konsolidierten Dokuments
+wurden geklärt (neuer Abschnitt 8 "Entscheidungen & Umsetzungsfertige
+Spezifikation"). Grundlage: gezielte Untersuchung der bestehenden Codebasis
+(App.jsx, useAccount.js, Merkliste.jsx, ObjektListe.jsx, alle 6 Rechner,
+MyAccount.jsx) plus eine Entscheidung des Auftraggebers zum Access-
+Management-Rollenmodell (3-Rollen-Modell ADMIN/TEST_USER/CUSTOMER gewählt).
+Konkrete Ergebnisse u. a.: Root-Cause-Analyse der 4 gemeldeten Bugs (3 davon
+Backend-/Paddle-seitig, 1 echter Frontend-Bug mit fertiger Fix-Spezifikation
+in useCalculatorTrial.js/CalculatorTrialGate.jsx), rechnerspezifische
+Kennzahlen-Definition fuer "Meine Berechnungen" inkl. zweier offengelegter
+technischer Voraussetzungen (fehlende Ergebnis-Persistenz, fehlender
+Speicherpfad bei SteuerTrick/Vorfaelligkeit), konkrete Ziel-Navigation
+(Merkliste/Start/Objekte zu einem Tab vereint, 7 statt 9 Tabs fuer Pro),
+Klarstellung dass Rechnungserstellung groesstenteils bereits wie gefordert
+ueber Paddle als Merchant of Record laeuft.
+
+**Warum:** Dokument sollte laut Auftrag "umsetzungsfertig" werden, damit
+einzelne Umsetzungsschritte direkt beauftragt werden koennen.
+
+**Betroffene Dateien:** docs/neue-phase/Neue-Phase-Konsolidiert.md
+(Abschnitt 8 ergaenzt, Abschnitte 5/7.6 mit Verweisen versehen)
+
+## 2026-08-08 (Doku)
+
+### Doku: Anforderungen "Neue Phase" konsolidiert (kein Code geändert)
+
+**Was:** Alle Dateien aus docs/neue-phase/ (verbesserungen.txt, access
+management_bestandteil des admin panels.txt, sowie die PDFs Standard-Flow
+Anmeldung App, Konto Tab Professionalisierung, Rechnungserstellung und
+Versand, Access Management ImmoFuchs, Backend Admin Panel Konzept)
+vollständig in ein einziges Markdown-Dokument zusammengeführt. Zusätzlich
+kritische Prüfung der Punkte durch die Skills frontend-dev, ux-designer,
+fullstack-dev und web-mobile-ui-experte (Abschnitt 7), u. a. mit Hinweis auf
+den Widerspruch zwischen dem 2-Rollen- und dem 3-Rollen-Access-Management-
+Modell in den Quellen sowie Abgleich mit dem tatsächlichen Ist-Stack
+(React + Vite, JS, kein Tailwind/Next.js/Router-Package, aber bereits
+@simplewebauthn/browser und @capacitor/*).
+
+**Warum:** Grundlage für die weitere Planung/Freigabe der "neuen Phase"
+(Login-Flow, Mein-Konto-Neustrukturierung, Rechnungsautomatisierung,
+Access Management, Admin Panel). Reines Konzeptdokument, keine
+Implementierung, keine Architekturentscheidung getroffen.
+
+**Betroffene Dateien:** docs/neue-phase/Neue-Phase-Konsolidiert.md (neu)
+
 ## 2026-08-07 (1.7.7)
 
 ### UX: Checkout-Assistent und Zahlungen auf Desktop und Mobile vereinheitlicht

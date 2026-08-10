@@ -12,8 +12,12 @@ import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 export function CalculatorTrialGate({ children }) {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
-  const { isLocked } = useCalculatorTrial();
+  const { isLocked, loading } = useCalculatorTrial();
   const [showLogin, setShowLogin] = useState(false);
+
+  if (loading) {
+    return null;
+  }
 
   if (isLocked) {
     return (
