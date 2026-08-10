@@ -1,11 +1,12 @@
+// worker/src/routes/admin.ts
 // Nutzerverwaltung fuer das Admin Panel (Paket 7, Etappe 1 "Grundgeruest").
 // Rein lesend - siehe docs/superpowers/specs/2026-08-10-admin-panel-grundgeruest-design.md.
-//
-// Bewusst NOCH ohne Hono-Router/Imports aus middleware.ts oder db.ts an
-// dieser Stelle - diese Funktion hat keine Abhaengigkeiten und soll isoliert
-// testbar sein, bevor requireAdmin (Task 3) und listUsersForAdmin (Task 2)
-// existieren. Der Router mit den echten Routen kommt in Task 4 dazu, wenn
-// alle Abhaengigkeiten vorhanden sind.
+import { Hono } from "hono";
+import type { Env } from "../types";
+import { requireAuth, requireAdmin, type AuthVars } from "../middleware";
+import { getUserById, getActiveSubscription, listUsersForAdmin } from "../db";
+
+const PAGE_SIZE = 20;
 
 // LIKE-Wildcards (%/_) im Nutzer-Suchbegriff sind sonst ungewollte Platzhalter
 // (z.B. wuerde die Suche nach "max_50" auch "maxX50" treffen) - deshalb hier
@@ -19,3 +20,40 @@ export function parseAdminUsersQuery(query: URLSearchParams): { search: string; 
   const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
   return { search, page };
 }
+
+export const adminRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
+
+adminRoutes.get("/users", requireAuth, requireAdmin, async (c) => {
+  const { search, page } = parseAdminUsersQuery(new URL(c.req.url).searchParams);
+  const { users, total } = await listUsersForAdmin(c.env.DB, search, page, PAGE_SIZE);
+  return c.json({
+    users: users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      createdAt: u.created_at,
+      lastLoginAt: u.last_login_at,
+    })),
+    total,
+    page,
+    pageSize: PAGE_SIZE,
+  });
+});
+
+adminRoutes.get("/users/:id", requireAuth, requireAdmin, async (c) => {
+  const id = c.req.param("id");
+  const user = await getUserById(c.env.DB, id);
+  if (!user) return c.json({ error: "not_found" }, 404);
+  const sub = await getActiveSubscription(c.env.DB, id);
+  return c.json({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    createdAt: user.created_at,
+    lastLoginAt: user.last_login_at,
+    emailVerified: Boolean(user.email_verified_at),
+    subscription: sub
+      ? { plan: sub.plan, status: sub.status, currentPeriodEnd: sub.current_period_end }
+      : null,
+  });
+});
