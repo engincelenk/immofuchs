@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Internes Tool, nicht fuer Suchmaschinen bestimmt. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    <!-- Enger als die Kunden-App (index.html): kein Google/Paddle/Analytics
+         noetig, nur die eigenen Worker-Origins fuer den API-Zugriff. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://immofuchs-assistant.engincelenk.workers.dev https://immofuchs-assistant-dev.engincelenk.workers.dev https://immofuchs-assistant-qa.engincelenk.workers.dev https://api.immofuchs.info https://api-dev.immofuchs.info; base-uri 'self'; form-action 'self';"
+    />
+    <title>ImmoFuchs Admin</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
