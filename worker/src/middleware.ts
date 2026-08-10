@@ -4,7 +4,7 @@
 import { createMiddleware } from "hono/factory";
 import type { Env } from "./types";
 import { authenticate, checkCsrfOrigin } from "./auth/session";
-import { getEntitlement } from "./entitlement";
+import { getEntitlement, hasPermission } from "./entitlement";
 import type { UserRow } from "./db";
 import { getUserById } from "./db";
 
@@ -41,6 +41,18 @@ export const requirePro = createMiddleware<{ Bindings: Env; Variables: Entitleme
     if (result.setCookie) c.header("Set-Cookie", result.setCookie, { append: true });
     if (!result.isPro) return c.json({ error: "pro_required" }, 402);
     c.set("isPro", true);
+    await next();
+  },
+);
+
+// Admin Panel (Paket 7): baut auf requireAuth auf (c.var.user muss gesetzt
+// sein), 403 falls die Rolle nicht die Permission "user.manage" hat. Bewusst
+// permission-basiert statt "if role === 'admin'" (Neue-Phase-Konsolidiert.md
+// Abschnitt 8.2, verbindliche technische Vorgabe) - eine spaetere eigene
+// SUPPORT-Rolle mit Teilrechten waere damit additiv, kein Rewrite dieser Middleware.
+export const requireAdmin = createMiddleware<{ Bindings: Env; Variables: AuthVars }>(
+  async (c, next) => {
+    if (!hasPermission(c.var.user, "user.manage")) return c.json({ error: "forbidden" }, 403);
     await next();
   },
 );
