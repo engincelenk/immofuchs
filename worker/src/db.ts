@@ -772,6 +772,43 @@ export async function updateUserEmail(db: Env["DB"], userId: string, newEmail: s
   await db.prepare("UPDATE users SET email = ? WHERE id = ?").bind(newEmail, userId).run();
 }
 
+// ═══ Admin Panel — Nutzerverwaltung (Paket 7, Etappe 1, rein lesend) ═══
+
+export interface AdminUserSummary {
+  id: string;
+  email: string;
+  role: string;
+  created_at: number;
+  last_login_at: number | null;
+}
+
+// ESCAPE '\' passend zum Escaping in routes/admin.ts (parseAdminUsersQuery) -
+// ohne ESCAPE-Klausel wuerden % und _ im Suchbegriff als SQL-LIKE-Wildcards
+// statt als Literalzeichen interpretiert.
+export async function listUsersForAdmin(
+  db: Env["DB"],
+  search: string,
+  page: number,
+  pageSize: number,
+): Promise<{ users: AdminUserSummary[]; total: number }> {
+  const like = `%${search}%`;
+  const offset = (page - 1) * pageSize;
+  const [rows, countRow] = await Promise.all([
+    db
+      .prepare(
+        `SELECT id, email, role, created_at, last_login_at FROM users
+         WHERE email LIKE ? ESCAPE '\\' ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      )
+      .bind(like, pageSize, offset)
+      .all<AdminUserSummary>(),
+    db
+      .prepare(`SELECT COUNT(*) as n FROM users WHERE email LIKE ? ESCAPE '\\'`)
+      .bind(like)
+      .first<{ n: number }>(),
+  ]);
+  return { users: rows.results, total: countRow?.n ?? 0 };
+}
+
 // ═══ Art. 17 — Konto vollständig löschen ═══
 // Reihenfolge wichtig: erst abhängige Zeilen, dann users selbst (D1/SQLite
 // erzwingt hier keine FK-Kaskade). Paddle-Kündigung passiert VOR diesem
