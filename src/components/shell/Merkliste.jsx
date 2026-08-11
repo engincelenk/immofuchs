@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
@@ -11,8 +11,40 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_FIELDS, tabZuRechner } from "../../utils/assistantContext.js";
 import { apiFetch } from "../../utils/apiBase.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
+import { ObjektDetail } from "../dashboard/ObjektDetail.jsx";
+import { scoreBadgeColor, scoreBadgeText } from "../dashboard/dashboardUtils.js";
+import { computeRendite } from "../../utils/rendite.js";
+import { buildMP } from "../../utils/mietprognose.js";
+import { computeKreditVorschau } from "../../utils/kreditKennzahlen.js";
+import { isK15 } from "../../data/plzData.js";
 
 const MAX_COMPARE = 5;
+// Gueltige Rechner-Tab-Ids (spiegelt tabLabel/tabColor unten) - als Konstante
+// statt aus dem pro-Render neu erzeugten tabLabel-Objekt abgeleitet, damit
+// useMemo-Deps sauber bleiben (tabLabel haette bei jedem Render eine neue
+// Objektidentitaet).
+const RECHNER_TABS = ["haupt", "kredit", "miete", "sanier"];
+// Vereinfachte Bild-Logik (Konzept-Dok 8.3g, Nutzerentscheidung 2026-08-10):
+// der Exposé-Scan extrahiert aktuell kein Bild (siehe autoSaveExposeObject.js),
+// echte Fotos koennen also weder fuer Exposé- noch fuer manuell angelegte
+// Objekte gezeigt werden. Stattdessen ein rechnerspezifisches Icon als
+// Platzhalter statt eines beliebigen Standardbilds fuer alle - macht die
+// Kartenvorschau trotzdem auf den ersten Blick unterscheidbar.
+const RECHNER_ICON = { haupt: "📈", kredit: "🏦", miete: "🏘️", sanier: "🔨" };
+const searchChipStyle = {
+  height: 38,
+  padding: "0 12px",
+  borderRadius: 10,
+  border: "1px solid var(--cb)",
+  background: "var(--ci)",
+  color: "var(--ct)",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  whiteSpace: "nowrap",
+};
+const searchChipActiveStyle = { ...searchChipStyle, background: "var(--ca)", color: "#fff", borderColor: "var(--ca)" };
 // Free-Limit (Spec 4.0a): 3 Objekte, lokal, kein Sync - Pro: unbegrenzt,
 // serverseitig. War frueher pauschal 50 fuer alle Nutzer (Vor-Kommerzialisierung).
 const FREE_OBJECT_LIMIT = 3;
@@ -56,6 +88,12 @@ function toServerPayload(local) {
   };
 }
 
+// Bis 2026-08 wurden score/scoreLabel/source/plz/ort/kaufpreis/wohnflaeche/
+// updatedAt hier verworfen (galten als "nur fuer Start/ObjektListe" -
+// getrennter Hook useProObjects). Seit der Navigations-Zusammenfuehrung
+// (Konzept-Dok 8.5a) ist dies die einzige Objektquelle fuer Free+Pro, daher
+// muessen diese Felder erhalten bleiben (u. a. fuer Score-Badge und
+// ObjektDetail nach Exposé-Scan-Auto-Save, siehe autoSaveExposeObject.js).
 function fromServerObject(server, locale) {
   const { tab, ...data } = server.inputData || {};
   return {
@@ -64,6 +102,15 @@ function fromServerObject(server, locale) {
     date: new Date(server.updatedAt).toLocaleDateString(locale),
     tab: tab || "haupt",
     data,
+    plz: server.plz ?? null,
+    ort: server.ort ?? null,
+    kaufpreis: server.kaufpreis ?? null,
+    wohnflaeche: server.wohnflaeche ?? null,
+    score: server.score ?? null,
+    scoreLabel: server.scoreLabel ?? null,
+    source: server.source ?? null,
+    updatedAt: server.updatedAt ?? null,
+    inputData: server.inputData || null,
   };
 }
 
@@ -373,6 +420,82 @@ export function SaveBtn({ tab }) {
   );
 }
 
+// Rechnerspezifische Kennzahlen fuer die Kartenvorschau (Konzept-Dok 8.3).
+// Variante (b): die Kennzahlen werden aus den gespeicherten Rohdaten
+// (inputData) mit denselben Rechenkernen wie in den Rechnern selbst neu
+// berechnet, statt sie zusaetzlich zu persistieren (resultData bleibt leer,
+// wie im Bestand) - bleibt so automatisch konsistent mit der aktuellen
+// Berechnungslogik, ohne Datenmigration bestehender Objekte.
+// Rueckgabe: Array von {label, value[, color]} oder null, wenn fuer diesen
+// Rechner-Typ/diese Daten nichts Sinnvolles berechenbar ist (Aufrufer faellt
+// dann auf die generische Kaufpreis/Miete/EK-Vorschau zurueck).
+function rechnerKennzahlen(tab, inputData, t, locale) {
+  const fmtNum = (v) => (Number.isFinite(v) ? Math.round(v).toLocaleString(locale) : null);
+  const fmtPct = (v) => `${(+v).toFixed(1).replace(".", ",")} %`;
+
+  if (tab === "haupt") {
+    const kp = +inputData.kaufpreis || 0;
+    if (kp <= 0) return null;
+    const R = computeRendite(inputData, t);
+    const rk = R.rk;
+    const rkColor = rk < 25 ? "#22c55e" : rk < 50 ? "#f59e0b" : rk < 75 ? "#ef4444" : "#b91c1c";
+    const rkLabel = rk < 25 ? t.niedrig : rk < 50 ? t.mittel : t.hoch;
+    return [
+      { label: t.kaufpreis || "Kaufpreis", value: `${fmtNum(kp)} €` },
+      { label: "Nettorendite", value: fmtPct(R.nR) },
+      { label: "Cashflow/Mon.", value: `${R.cf2 >= 0 ? "+" : ""}${fmtNum(R.cf2)} €` },
+      { label: "Risiko", value: rkLabel, color: rkColor },
+    ];
+  }
+
+  if (tab === "kredit") {
+    const R = computeKreditVorschau(inputData);
+    if (!R) return null;
+    return [
+      { label: "Darlehen", value: `${fmtNum(R.da)} €` },
+      { label: "Monatl. Rate", value: `${fmtNum(R.ann)} €` },
+      { label: "Beleihung", value: fmtPct(R.bel) },
+      { label: "Restschuld n. ZB", value: `${fmtNum(R.rZB)} €` },
+    ];
+  }
+
+  if (tab === "miete") {
+    const mi = +inputData.kaltmiete || 0;
+    if (mi <= 0) return null;
+    const qm = +inputData.flaeche || 1,
+      vQ = +inputData.vergleichsmiete || 0,
+      jahre = +inputData.mietJahre || 10;
+    const k15 = isK15(inputData.ort) || inputData.bundesland === "BE" || inputData.bundesland === "HH";
+    const kP = k15 ? 15 : 20;
+    const mt = buildMP(mi, qm, vQ, kP, inputData.letzteErhDatum, +inputData.letzteErhMiete || 0, jahre, k15, t);
+    const nx = mt.rows[0];
+    const items = [{ label: t.kaltmiete || "Kaltmiete", value: `${fmtNum(mi)} €/Mon.` }];
+    if (nx) {
+      items.push(
+        { label: "Nächste Erhöhung", value: nx.datum instanceof Date ? nx.datum.toLocaleDateString(locale) : "—" },
+        { label: "Neue Miete", value: `${fmtNum(nx.neueMiete)} €/Mon.` },
+        { label: "Erhöhung", value: nx.mE > 0 ? `+${fmtPct(nx.mP)}` : "—" },
+      );
+    }
+    return items;
+  }
+
+  if (tab === "sanier") {
+    // Foerderung/Amortisation brauchen den lokalen `s`-State aus Sanier.jsx
+    // (Heizkosten/Strompreis/Anbau-Typ/iSFP/PV-kWp), der beim Speichern NICHT
+    // mitpersistiert wird - laesst sich beim Laden also nicht rekonstruieren.
+    // Bewusst nur die tatsaechlich gespeicherten Rohwerte zeigen statt
+    // Kennzahlen vorzutaeuschen (Nutzerentscheidung 2026-08-10).
+    const items = [];
+    const fl = +inputData.sanFl || +inputData.flaeche || 0;
+    if (fl > 0) items.push({ label: "Wohnfläche", value: `${fmtNum(fl)} m²` });
+    if (inputData.baujahr) items.push({ label: "Baujahr", value: String(inputData.baujahr) });
+    return items.length ? items : null;
+  }
+
+  return null;
+}
+
 export function Merkliste() {
   const { savedList, delObj, loadObj, setTabExt, lang, isProSavedObjects, savedObjectsFreeLimit } = useApp();
   const t = T[lang] || T.de;
@@ -381,6 +504,19 @@ export function Merkliste() {
   const acct = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const [confirmDel, setConfirmDel] = useState(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  // Zusammengefuehrter Tab (Konzept-Dok Abschnitt 8.5a, 2026-08): ersetzt die
+  // vormals getrennten Tabs "Merkliste" (Free+Pro, manuell gespeichert) sowie
+  // "Start"/"Objekte" (Pro-only, u. a. automatisch per Exposé-Scan angelegte
+  // Objekte mit Score, siehe autoSaveExposeObject.js). detailObj oeffnet die
+  // bisherige ObjektDetail-Ansicht statt eines eigenen Tabs.
+  const [detailObj, setDetailObj] = useState(null);
+  const [query, setQuery] = useState("");
+  const [onlyGut, setOnlyGut] = useState(false);
+  const [sortByScore, setSortByScore] = useState(false);
+  // Filter nach Rechnertyp (Konzept-Dok 8.3, "Sortiermoeglichkeit nach
+  // Rechner") - "alle" statt null, damit der Vergleich in filtered() ohne
+  // Sonderfall auskommt.
+  const [rechnerFilter, setRechnerFilter] = useState("alle");
   const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
   const [compareIds, setCompareIds] = useState([]);
   const [compareSheetOpen, setCompareSheetOpen] = useState(false);
@@ -428,6 +564,52 @@ export function Merkliste() {
     return { name: o.name, tab: rechner, felder };
   });
   const compareRechner = tabZuRechner(compareObjs[0]?.tab);
+
+  // Score existiert nur fuer Objekte aus dem Exposé-Scan-Auto-Save (Pro) -
+  // Suchleiste bleibt immer sichtbar, Score-Filter/-Sortierung nur wenn es
+  // ueberhaupt Objekte mit Score gibt (sonst ein Filter, der nie etwas
+  // findet - vgl. Projektregel "keine halbfertigen Zustaende").
+  const hasScores = savedList.some((o) => o.score != null);
+  // Filterleiste nach Rechnertyp nur zeigen, wenn ueberhaupt mehr als eine
+  // Rechnerart gespeichert ist - sonst ein Filter ohne Wirkung (gleiche
+  // Projektregel wie bei hasScores oben).
+  const rechnerTypesPresent = useMemo(
+    () => [...new Set(savedList.map((o) => o.tab))].filter((tab) => RECHNER_TABS.includes(tab)),
+    [savedList],
+  );
+  const filtered = useMemo(() => {
+    let list = savedList;
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      list = list.filter((o) => o.name.toLowerCase().includes(q) || (o.ort || "").toLowerCase().includes(q));
+    }
+    if (rechnerFilter !== "alle") list = list.filter((o) => o.tab === rechnerFilter);
+    if (onlyGut) list = list.filter((o) => o.scoreLabel === "gut");
+    if (sortByScore) list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    return list;
+  }, [savedList, query, rechnerFilter, onlyGut, sortByScore]);
+
+  // Detailansicht (ehemals eigener Pro-Tab "Objekte") - ObjektDetail erwartet
+  // die rohe Server-Objektform; fuer Free-Objekte (kein Server-Datensatz)
+  // wird sie hier aus dem lokalen {id,name,date,tab,data}-Snapshot nachgebaut.
+  function openDetail(obj) {
+    setDetailObj({
+      id: obj.id,
+      title: obj.name,
+      date: obj.date,
+      plz: obj.plz ?? obj.data?.plz ?? null,
+      ort: obj.ort ?? obj.data?.ort ?? null,
+      score: obj.score ?? null,
+      scoreLabel: obj.scoreLabel ?? null,
+      kaufpreis: obj.kaufpreis ?? obj.data?.kaufpreis ?? null,
+      wohnflaeche: obj.wohnflaeche ?? obj.data?.wohnflaeche ?? obj.data?.flaeche ?? null,
+      source: obj.source || "manuell",
+      updatedAt: obj.updatedAt || null,
+      inputData: obj.inputData || { tab: obj.tab, ...obj.data },
+    });
+  }
+  if (detailObj) return <ObjektDetail objekt={detailObj} onBack={() => setDetailObj(null)} />;
+
   if (!savedList.length)
     return (
       <div style={{ padding: "60px 20px", textAlign: "center" }}>
@@ -450,6 +632,30 @@ export function Merkliste() {
         <div style={{ fontSize: 14, color: "var(--ch)", lineHeight: 1.5 }}>
           {t.emptyHint || 'Berechne ein Objekt und tippe auf „Speichern", um es hier zu sichern.'}
         </div>
+        {isProSavedObjects && (
+          <button
+            onClick={() => setTabExt("haupt")}
+            className="no-print"
+            style={{
+              display: "inline-block",
+              textAlign: "left",
+              padding: 16,
+              marginTop: 20,
+              borderRadius: 12,
+              border: "1.5px dashed var(--ca)",
+              background: "var(--ca-bg)",
+              color: "var(--ca-dk)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              maxWidth: 320,
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 700 }}>📎 Neues Exposé importieren</div>
+            <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>
+              Foto aufnehmen oder Datei hochladen — über den Finn-Assistenten in jedem Rechner
+            </div>
+          </button>
+        )}
       </div>
     );
   return (
@@ -461,6 +667,54 @@ export function Merkliste() {
           ? t.countSingular || "Objekt gespeichert"
           : t.countPlural || "Objekte gespeichert"}
       </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Suche nach Name oder Ort…"
+          style={{
+            flex: "1 1 160px",
+            height: 38,
+            padding: "0 12px",
+            fontSize: 14,
+            border: "1px solid var(--cb)",
+            borderRadius: 10,
+            background: "var(--ci)",
+            color: "var(--ct)",
+            fontFamily: "inherit",
+            boxSizing: "border-box",
+          }}
+        />
+        {hasScores && (
+          <>
+            <button onClick={() => setOnlyGut((v) => !v)} style={onlyGut ? searchChipActiveStyle : searchChipStyle}>
+              Score „Gut"
+            </button>
+            <button onClick={() => setSortByScore((v) => !v)} style={searchChipStyle}>
+              Sortierung: {sortByScore ? "Score" : "Neueste"}
+            </button>
+          </>
+        )}
+      </div>
+      {rechnerTypesPresent.length > 1 && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <button
+            onClick={() => setRechnerFilter("alle")}
+            style={rechnerFilter === "alle" ? searchChipActiveStyle : searchChipStyle}
+          >
+            Alle Rechner
+          </button>
+          {rechnerTypesPresent.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setRechnerFilter(tab)}
+              style={rechnerFilter === tab ? searchChipActiveStyle : searchChipStyle}
+            >
+              {tabLabel[tab]}
+            </button>
+          ))}
+        </div>
+      )}
       {limitReached && (
         <button
           onClick={() => setShowUpgrade(true)}
@@ -485,10 +739,25 @@ export function Merkliste() {
         </button>
       )}
       {showUpgrade && <CheckoutWizard onClose={() => setShowUpgrade(false)} />}
-      {savedList.map((obj) => {
-        const kp = fmt(obj.data.kaufpreis);
+      {filtered.length === 0 && (
+        <div style={{ textAlign: "center", padding: "32px 20px", color: "var(--ch)", fontSize: 13 }}>
+          Keine Objekte gefunden.
+        </div>
+      )}
+      {filtered.map((obj) => {
+        const kp = fmt(obj.kaufpreis ?? obj.data.kaufpreis);
         const miete = fmt(obj.data.kaltmiete);
         const ek = fmt(obj.data.eigenkapital);
+        const inputData = obj.inputData || { tab: obj.tab, ...obj.data };
+        // Rechnerspezifische Kennzahlen (Konzept-Dok 8.3) statt der
+        // generischen Kaufpreis/Miete/EK-Vorschau, wo berechenbar - Fallback
+        // auf die generische Vorschau darunter, wenn null (z. B. Sanierung
+        // ohne gespeicherte Wohnflaeche/Baujahr, oder unbekannter Tab).
+        const kennzahlen = rechnerKennzahlen(obj.tab, inputData, t, locale);
+        // Exposé-Scan-Auto-Save legt Objekte nur mit {tab,quelle} an (siehe
+        // autoSaveExposeObject.js) - fuer diese gibt es nichts Sinnvolles zum
+        // "Laden" in den Rechner, nur die Detailansicht (Tap auf die Karte).
+        const loadable = Object.keys(inputData).length > 2;
         return (
           <div
             key={obj.id}
@@ -501,45 +770,84 @@ export function Merkliste() {
             }}
           >
             <div
+              role="button"
+              tabIndex={0}
+              onClick={() => openDetail(obj)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") openDetail(obj);
+              }}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "flex-start",
                 marginBottom: 10,
+                cursor: "pointer",
               }}
             >
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", gap: 10, flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontWeight: 700,
-                    fontSize: 15,
-                    color: "var(--ct)",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: `${tabColor[obj.tab] || "#888"}1a`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 19,
+                    flexShrink: 0,
                   }}
                 >
-                  {obj.name}
+                  {RECHNER_ICON[obj.tab] || "🏠"}
                 </div>
-                <div style={{ fontSize: 12, color: "var(--ch)", marginTop: 2 }}>{obj.date}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 15,
+                      color: "var(--ct)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {obj.name}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--ch)", marginTop: 2 }}>{obj.date}</div>
+                </div>
               </div>
-              <span
-                style={{
-                  background: tabColor[obj.tab] || "#888",
-                  color: "#fff",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: "3px 9px",
-                  borderRadius: 20,
-                  marginLeft: 10,
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                }}
-              >
-                {tabLabel[obj.tab] || obj.tab}
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 10, flexShrink: 0 }}>
+                {obj.score != null && (
+                  <span
+                    style={{
+                      background: scoreBadgeColor(obj.scoreLabel),
+                      color: "#fff",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "3px 9px",
+                      borderRadius: 20,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {scoreBadgeText(obj.scoreLabel)}
+                  </span>
+                )}
+                <span
+                  style={{
+                    background: tabColor[obj.tab] || "#888",
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "3px 9px",
+                    borderRadius: 20,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {tabLabel[obj.tab] || obj.tab}
+                </span>
+              </div>
             </div>
-            {(kp || miete || ek) && (
+            {kennzahlen ? (
               <div
                 style={{
                   display: "flex",
@@ -549,48 +857,70 @@ export function Merkliste() {
                   fontSize: 13,
                 }}
               >
-                {kp && (
-                  <span>
-                    <span style={{ color: "var(--ch)" }}>{t.kaufpreis || "Kaufpreis"} </span>
-                    <span style={{ fontWeight: 600, color: "var(--ct)" }}>{kp} €</span>
+                {kennzahlen.map((k, ki) => (
+                  <span key={ki}>
+                    <span style={{ color: "var(--ch)" }}>{k.label} </span>
+                    <span style={{ fontWeight: 600, color: k.color || "var(--ct)" }}>{k.value}</span>
                   </span>
-                )}
-                {miete && (
-                  <span>
-                    <span style={{ color: "var(--ch)" }}>{t.kaltmiete || "Miete"} </span>
-                    <span style={{ fontWeight: 600, color: "var(--ct)" }}>{miete} €/Mo.</span>
-                  </span>
-                )}
-                {ek && (
-                  <span>
-                    <span style={{ color: "var(--ch)" }}>{t.eigenkapital || "EK"} </span>
-                    <span style={{ fontWeight: 600, color: "var(--ct)" }}>{ek} €</span>
-                  </span>
-                )}
+                ))}
               </div>
+            ) : (
+              (kp || miete || ek) && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    marginBottom: 12,
+                    fontSize: 13,
+                  }}
+                >
+                  {kp && (
+                    <span>
+                      <span style={{ color: "var(--ch)" }}>{t.kaufpreis || "Kaufpreis"} </span>
+                      <span style={{ fontWeight: 600, color: "var(--ct)" }}>{kp} €</span>
+                    </span>
+                  )}
+                  {miete && (
+                    <span>
+                      <span style={{ color: "var(--ch)" }}>{t.kaltmiete || "Miete"} </span>
+                      <span style={{ fontWeight: 600, color: "var(--ct)" }}>{miete} €/Mo.</span>
+                    </span>
+                  )}
+                  {ek && (
+                    <span>
+                      <span style={{ color: "var(--ch)" }}>{t.eigenkapital || "EK"} </span>
+                      <span style={{ fontWeight: 600, color: "var(--ct)" }}>{ek} €</span>
+                    </span>
+                  )}
+                </div>
+              )
             )}
             <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => loadObj(obj, setTabExt)}
-                style={{
-                  flex: 1,
-                  height: 38,
-                  borderRadius: 10,
-                  border: "1.5px solid var(--ca)",
-                  background: "transparent",
-                  color: "var(--ca)",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                {t.loadBtn || "↩ Laden"}
-              </button>
+              {loadable && (
+                <button
+                  onClick={() => loadObj(obj, setTabExt)}
+                  style={{
+                    flex: 1,
+                    height: 38,
+                    borderRadius: 10,
+                    border: "1.5px solid var(--ca)",
+                    background: "transparent",
+                    color: "var(--ca)",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t.loadBtn || "↩ Laden"}
+                </button>
+              )}
               <button
                 onClick={() => setConfirmDel(obj.id)}
                 style={{
                   height: 38,
-                  width: 38,
+                  width: loadable ? 38 : undefined,
+                  flex: loadable ? undefined : 1,
                   borderRadius: 10,
                   border: "1.5px solid var(--cb)",
                   background: "transparent",

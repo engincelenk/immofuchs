@@ -190,6 +190,25 @@ async function upsertSubscriptionFromPaddle(env: Env, data: Record<string, unkno
         now,
       )
       .run();
+
+    // Konzept-Dok "Rechnungserstellung und Versand" Abschnitt 1: nur bei
+    // 'active' (echte, sofortige Zahlung) - nicht bei 'trialing', da dort noch
+    // nichts abgebucht wurde und "Zahlung erfolgreich" falsch waere.
+    if (status === "active") {
+      const user = await getUserById(env.DB, userId);
+      if (user) {
+        await dispatchNotification(env, {
+          event: "payment_succeeded",
+          recipientEmail: user.email,
+          recipientUserId: userId,
+          payload: {
+            plan,
+            amount: plan === "monthly" ? "9,99 €" : "79 €",
+            periodEndDate: new Date(periodEnd).toLocaleDateString("de-DE"),
+          },
+        });
+      }
+    }
   }
 }
 

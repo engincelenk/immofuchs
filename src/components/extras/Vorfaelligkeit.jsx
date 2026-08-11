@@ -8,6 +8,7 @@ import { ExportPDF } from "../export/ExportPDF.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
+import { SaveBtn } from "../shell/Merkliste.jsx";
 
 export function Vorfaelligkeit() {
   const { d, set, t, lang } = useApp();
@@ -688,6 +689,7 @@ export function Vorfaelligkeit() {
               >
                 {vt.disclaimer}
               </div>
+              <SaveBtn tab="vfe" />
               <ExportPDF title={t.vfeFull || t.vfe} />
             </>
           )}

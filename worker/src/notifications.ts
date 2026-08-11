@@ -13,6 +13,7 @@ export type NotificationEvent =
   | "reactivation_confirmed"
   | "account_deleted"
   | "payment_failed"
+  | "payment_succeeded"
   | "password_changed"
   | "email_change_requested"
   | "trial_ending";
@@ -54,6 +55,8 @@ function renderPush(intent: NotificationIntent): { title: string; body: string }
       return { title: "Konto gelöscht", body: "Dein ImmoFuchs-Konto wurde gelöscht." };
     case "payment_failed":
       return { title: "Zahlung fehlgeschlagen", body: `Pro bleibt noch bis ${intent.payload.graceEndsDate} aktiv.` };
+    case "payment_succeeded":
+      return { title: "Willkommen bei ImmoFuchs Pro", body: "Dein Abo ist jetzt aktiv." };
     case "password_changed":
       return { title: "Passwort geändert", body: "Warst du das nicht? Bitte sofort zurücksetzen." };
     case "email_change_requested":
@@ -103,6 +106,27 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
         subject: "Deine Zahlung ist fehlgeschlagen",
         html: `<p>Die Abbuchung für dein ImmoFuchs-Pro-Abo ist fehlgeschlagen. Paddle versucht es automatisch erneut.</p>
                <p>Bis ${graceEndsDate} bleibt Pro trotzdem aktiv. Bitte aktualisiere in der Zwischenzeit deine Zahlungsmethode im Konto-Bereich.</p>`,
+      };
+    }
+    // Konzept-Dok "Rechnungserstellung und Versand" Abschnitt 1 ("Zahlung
+    // erfolgreich"): ergaenzt eine bisher fehlende Bestaetigung beim
+    // erstmaligen Kauf (siehe paddle/webhook.ts, subscription.created ohne
+    // bestehenden DB-Eintrag). Kein Duplikat zu Paddles eigenem
+    // Zahlungsbeleg - Paddle ist Merchant of Record und verschickt die
+    // rechtliche Rechnung/Quittung selbst; das hier ist eine zusaetzliche
+    // Produkt-/Willkommens-Mail.
+    case "payment_succeeded": {
+      const plan = intent.payload.plan === "monthly" ? "monatlich" : "jährlich";
+      const amount = String(intent.payload.amount ?? "");
+      const periodEndDate = String(intent.payload.periodEndDate ?? "");
+      return {
+        subject: "Willkommen bei ImmoFuchs Pro",
+        html: `<p>Deine Zahlung war erfolgreich - dein ImmoFuchs-Pro-Abo ist jetzt aktiv.</p>
+               <p>Abo: ImmoFuchs Pro<br>
+               Abrechnung: ${plan}<br>
+               Betrag: ${amount}<br>
+               Nächste Verlängerung: ${periodEndDate}</p>
+               <p>Deine Rechnung dazu erhältst du separat direkt von Paddle, unserem Zahlungsdienstleister. Im Konto-Bereich unter "Zahlungen" findest du sie jederzeit wieder.</p>`,
       };
     }
     // Sicherheitshinweis, kein Marketing (4.13): geht immer raus, auch wenn der

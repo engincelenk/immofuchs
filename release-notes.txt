@@ -1,3 +1,543 @@
+## 2026-08-11 (1.7.22)
+
+### Neue Phase, Paket 6: Admin Panel Etappe 2
+
+**Anlass:** docs/neue-phase/Backend Admin Panel Konzept.pdf + access
+management_bestandteil des admin panels.txt - sechstes und letztes Thema
+der neuen Phase. Setzt auf Etappe 1 (Login, Nutzerliste/-detail) auf.
+
+**Scope-Entscheidung:** Die PDF beschreibt 17 Bereiche, die eigene
+MVP-Liste (Abschnitt 17) grenzt auf 8 Pflichtbereiche ein. Nur Dashboard,
+Nutzerverwaltung und Audit Log sind ohne neue Datenmodelle umsetzbar - die
+übrigen 5 MVP-Punkte (Abo-/Zahlungsverwaltung, Gutscheine, Feature Flags,
+Immobiliendaten-Status, Systemeinstellungen) brauchen jeweils eigene
+Tabellen/APIs und bleiben bewusst eigene, später freizugebende Etappen.
+
+**Neu:**
+- **Migration 0017:** Tabelle `admin_audit_log` - protokolliert jede
+  schreibende Admin-Aktion (aktuell: Sperren/Entsperren aus Paket 5, wächst
+  additiv mit weiteren Aktionen in späteren Etappen).
+- **Backend:** `GET /admin/dashboard` (Nutzer gesamt, aktive Abos,
+  Trial-Nutzer, MRR, Kündigungen diesen Monat - aus users/subscriptions
+  berechnet, keine neue Infrastruktur), `GET /admin/audit-log` (paginiert).
+  `POST /admin/users/:id/status` schreibt jetzt zusätzlich einen
+  Audit-Log-Eintrag.
+- **Admin-Oberfläche:** neuer Dashboard-Tab (jetzt Startansicht statt
+  Nutzerliste), Sperren/Entsperren-Button in der Nutzer-Detailansicht (mit
+  Bestätigungsdialog - "alle Sitzungen werden sofort beendet"), Status-Spalte
+  (Aktiv/Gesperrt) in Nutzerliste und -Detailansicht, "Sicherheit & Audit
+  Log"-Tab mit paginierter Log-Ansicht.
+
+**Bewusst nicht enthalten** (eigene Datenmodelle nötig, spätere Etappen):
+Abo-/Zahlungsverwaltung im Admin-Panel, Gutscheinverwaltung,
+Feature-Flag-Verwaltung, KI-Management, Immobiliendaten-Status,
+Marketing/Kommunikationsverwaltung, Systemeinstellungen.
+
+**Getestet:** Worker-Typecheck clean, 52/52 Worker-Tests grün, 4/4
+Admin-Tests grün, Admin-Produktions-Build erfolgreich.
+
+**Betroffene Dateien:** worker/migrations/0017_admin_audit_log.sql (neu),
+worker/src/db.ts, worker/src/routes/admin.ts, admin/src/api.js,
+admin/src/AdminShell.jsx, admin/src/UsersView.jsx,
+admin/src/UserDetailView.jsx, admin/src/DashboardView.jsx (neu),
+admin/src/AuditLogView.jsx (neu), package.json
+
+## 2026-08-11 (1.7.21)
+
+### Neue Phase, Paket 5: Access Management
+
+**Anlass:** docs/neue-phase/Access Management ImmoFuchs.pdf - fünftes von
+sechs Themen der neuen Phase.
+
+**Befund:** Das 3-Rollen-Modell (ADMIN/TEST_USER/CUSTOMER) samt granularer
+Permission-Strings war bereits exakt nach PDF-Vorgabe umgesetzt
+(worker/src/entitlement.ts) und die bestehenden Admin-Routen prüften
+bereits korrekt per `hasPermission()`, nicht per hartem Rollenvergleich.
+Echte Lücke: PDF-Abschnitt 5 verlangt explizit die Trennung von Rolle und
+Account-Status (ACTIVE/SUSPENDED/DELETED) - dafür gab es keine
+Datengrundlage.
+
+**Geändert:**
+- **Migration 0016:** neue Spalte `users.account_status`
+  (ACTIVE/SUSPENDED/DELETED, Default ACTIVE). `DELETED` wird aktuell nie
+  gesetzt - der bestehende Konto-Löschen-Flow ist Hard Delete, keine
+  Soft-Delete-Markierung.
+- **`requireAuth`-Middleware:** gesperrte Konten (SUSPENDED) werden wie
+  "nicht angemeldet" behandelt (401) - konsistent mit dem Login-Standard-
+  Flow aus Paket 2, kein separater Fehlerfall im Frontend nötig.
+- **Neue Admin-Route `POST /api/v1/admin/users/:id/status`:** Sperren setzt
+  zusätzlich alle Sessions des Kontos zurück (sonst bliebe eine laufende
+  Sitzung bis zum nächsten Seitenaufruf gültig). Ein Admin kann sich nicht
+  selbst sperren. Rein Backend - die Bedienoberfläche dafür ist Teil von
+  Paket 6 (Admin Panel).
+
+**Bewusst nicht enthalten** (echte Infrastruktur-/Organisationsaufgaben,
+kein Code): TEST_USER-Testkonten anlegen, Funktions-E-Mail-Postfächer
+(admin@/support@/rechnung@/datenschutz@) einrichten, MFA für Admins, Audit
+Log.
+
+**Getestet:** Worker-Typecheck clean, 52/52 Worker-Tests grün.
+
+**Betroffene Dateien:** worker/migrations/0016_account_status.sql (neu),
+worker/src/db.ts, worker/src/middleware.ts, worker/src/routes/admin.ts,
+package.json
+
+## 2026-08-11 (1.7.20)
+
+### Bugfix: Landingpage-Inhaltsbreiten vereinheitlicht
+
+**Anlass:** Nutzer-Screenshot-Vergleich zeigte, dass nach dem Header-Fix
+(1.7.19) die Content-Abschnitte der Landingpage (Hero, "So funktioniert's",
+Datenabschnitt, USP, Footer) noch andere maxWidth/Padding-Werte als
+App.jsx `.content` hatten (1280/1100px statt 1400px, fixes statt
+responsives Padding) - gleiches Root-Cause-Muster wie beim Header (Padding
+auf dem vollen `<section>` statt auf der zentrierten Box).
+
+**Fix:** Neue wiederverwendbare Klasse `.lp-container` (identisches
+Box-Modell wie `.content`: max-width:1400px, Padding 14/28/40px je
+Breakpoint INNERHALB der zentrierten Box) angewendet auf: "So
+funktioniert's", Datenabschnitt, USP-Abschnitt, Footer.
+
+**Bewusst NICHT geändert:** Hero-Abschnitt und Rechner-Karten-Abschnitt
+("Wählen Sie Ihren Rechner") bleiben bei maxWidth:1280 - beide enthalten
+`objectFit:cover`-Bildboxen mit fester Höhe; eine breitere Spalte würde die
+Bildausschnitte anders zuschneiden. Auf Nutzerwunsch ausgespart, bis das
+visuell geprüft ist. Der Zinsen-Ticker-Abschnitt (maxWidth:860) bleibt
+ebenfalls unverändert - bewusst schmales Lese-Layout, kein Bezug zum
+Ausrichtungs-Bug.
+
+**Getestet:** ESLint clean, 297/297 Tests grün, Build erfolgreich.
+
+**Betroffene Dateien:** src/pages/Landing.jsx, package.json
+
+## 2026-08-10 (1.7.19)
+
+### Bugfix: Landingpage-Header schmaler als Rechner-Header
+
+**Anlass:** Nutzer-Screenshot-Vergleich zeigte, dass der seitliche Abstand
+im Header auf der Landingpage auf breiten Screens größer war als bei den
+Rechnern - Landing.jsx nutzte `maxWidth:1280` + fixes 24px-Padding,
+App.jsx `.hdr-inner` dagegen `maxWidth:1400` + responsives 14/28/40px.
+
+**Fix:** Landingpage-Header auf dieselbe `maxWidth:1400` + dieselben
+Padding-Breakpoints (14px Basis, 28px ab 700px, 40px ab 1100px) wie
+`.hdr-inner` umgestellt (neue Klasse `.lp-hdr-inner`).
+
+**Betroffene Dateien:** src/pages/Landing.jsx, package.json
+
+## 2026-08-10 (1.7.18)
+
+### Bugfix: Header/Content-Ausrichtung auf breiten Screens
+
+**Anlass:** Nutzer-Screenshot-Vergleich zeigte, dass Logo/Kopfzeilen-Buttons
+auf den Rechner-Seiten nicht mit der Content-Kante darunter fluchten
+(Landingpage war bereits korrekt).
+
+**Root Cause:** `.hdr` ist volle Viewport-Breite; ihr horizontales Padding
+wirkte VOR dem `max-width:1400px`-Zentrieren von `.hdr-inner`. `.content`
+dagegen traegt ihr Padding INNERHALB derselben 1400px-Box, die zentriert
+wird. Ab Viewport-Breiten >1400px+Padding (z. B. 1920px) driften beide
+dadurch um die Padding-Differenz auseinander - eine frühere Korrektur
+(1.7.15) hatte nur die Padding-WERTE angeglichen, nicht das Box-Modell.
+
+**Fix:** Horizontales Padding von `.hdr` auf `.hdr-inner` verschoben -
+identisches Box-Modell wie `.content` (Padding innerhalb der zentrierten
+1400px-Box).
+
+**Betroffene Dateien:** src/App.jsx, package.json
+
+### Neue Phase, Paket 4: Bezahlen (Rechnungserstellung und Versand)
+
+**Anlass:** docs/neue-phase/Rechnungserstellung und Versand.pdf - viertes
+von sechs Themen der neuen Phase.
+
+**Befund:** Der PDF-Standardflow war größtenteils schon korrekt umgesetzt -
+Rechnungen kommen live von Paddle (Merchant of Record), kein "Rechnung
+erstellen"-Button im Konto. Die drei gemeldeten Bugs (Tarifwechsel-Fehler,
+Paddle-Portal öffnet nicht, Rechnungen laden nicht) sind root-cause-mäßig
+bestätigt Backend-/Paddle-seitig (Webhook-Konfiguration, Customer-Portal-
+Feature, fehlende customerId) - nicht im Frontend-Repo behebbar.
+
+**Geändert:**
+- **Rechnungsstatus-Spalte ergänzt:** Paddle liefert `status`
+  (`billed`/`completed`) bereits seit längerem in der API-Antwort
+  ([checkout.ts:190](worker/src/paddle/checkout.ts:190)), wurde im Frontend
+  nur nie angezeigt. Jetzt als Badge in der Rechnungsliste ("Bezahlt" /
+  "Ausstehend" - nicht pauschal "Bezahlt" für jeden Eintrag, das wäre
+  falsch).
+- **Neuer E-Mail-Trigger `payment_succeeded`:** Bislang gab es keine
+  "Zahlung erfolgreich/Abo aktiv"-Bestätigung beim Erstkauf (nur
+  Verlängerungs-Erinnerung, Zahlung fehlgeschlagen, Trial-Ende existierten).
+  Ausgelöst im Paddle-Webhook bei `subscription.created` mit Status
+  `active` (nicht bei `trialing`, da dort noch nichts abgebucht wurde). Kein
+  Duplikat zu Paddles eigenem Zahlungsbeleg - zusätzliche Produkt-/
+  Willkommens-Mail.
+- **E-Mail-Trigger-Katalog dokumentiert:** vollständige Liste aller 16
+  Trigger (15 bestehende + der neue) mit Beispiel-Templates und
+  Platzhaltern unter `docs/neue-phase/email-trigger-katalog.md`. Dabei eine
+  Lücke identifiziert: das Opt-in-Flag "Produkt-News per E-Mail" existiert
+  bereits, hat aber noch keinen tatsächlichen Versandmechanismus - eigener,
+  separat zu beauftragender Task.
+
+**Bewusst nicht enthalten:** Behebung der 3 Paddle-/Backend-Bugs (außerhalb
+dieses Repos), Aufbau eines Marketing-E-Mail-Versands (nur Lücke
+dokumentiert).
+
+**Getestet:** ESLint clean, Worker-Typecheck clean, 297/297 Frontend- +
+52/52 Worker-Tests grün, Produktions-Build erfolgreich.
+
+**Betroffene Dateien:** worker/src/paddle/webhook.ts,
+worker/src/notifications.ts,
+src/components/account/sections/ZahlungenSection.jsx, src/i18n/account.js,
+docs/neue-phase/email-trigger-katalog.md (neu), package.json
+
+## 2026-08-10 (1.7.17)
+
+### Neue Phase, Paket 3: Mein Konto (Konto Tab Professionalisierung)
+
+**Anlass:** docs/neue-phase/Konto Tab Professionalisierung.pdf - drittes von
+sechs Themen der neuen Phase.
+
+**Befund:** Die zentrale Forderung der PDF (Informationsarchitektur
+bereinigen: 6 klare Bereiche, "Konto" → "Konto & Sicherheit", "Nächste
+Verlängerung" statt "Nächste Abbuchung", "Erstattung anfragen" statt "Geld
+zurück"-Hauptbutton, FAQ als Akkordeon) war bereits umgesetzt. Zwei echte
+Lücken blieben:
+
+**Geändert:**
+- **Namensfeld** (Full-Stack): DB-Migration 0015 (`users.name`, nullable),
+  `/api/v1/me` liefert `name` mit, neuer Endpunkt `POST /account/name`
+  (direktes Update, kein Double-Opt-In wie bei E-Mail - Name ist kein
+  sicherheitskritisches Feld). Registrierungsformular (Passwort-Weg) fragt
+  Name jetzt als Pflichtfeld ab (`POST /auth/register` erweitert,
+  `registerWithPassword()` validiert `invalid_name`). Google-/Apple-/
+  Passkey-Konten legen weiterhin ohne Namen an (kein eigenes Formular dort) -
+  nachtragbar über die neue Namenskarte in ProfilSection.jsx.
+- **Sprachauswahl ohne Länderflaggen:** LangSel.jsx zeigt jetzt ein
+  neutrales Globus-Symbol statt Flaggen-Emoji, Dropdown-Liste zeigt volle
+  Sprachnamen ("Deutsch", "English", ...) statt Flagge+Kürzel - Flaggen
+  stehen für Länder, nicht für Sprachen (bekannter i18n-UX-Fehler,
+  PDF-Abschnitt 7 bzw. 3.6). `flag`-Feld aus `LANGS` in translations.js
+  entfernt (nirgends mehr referenziert).
+
+**Bewusst nicht geändert:** Mobile-Navigationsmuster für "Mein Konto" bleibt
+horizontal scrollender Tab-Streifen (PDF empfiehlt "Liste mit Pfeil → eigene
+Unterseite") - Konsistenz mit der App-weiten Haupt-Tab-Leiste, die in Paket 1
+auf dasselbe Muster umgestellt wurde, hat Vorrang vor 1:1-PDF-Befolgung.
+
+**Getestet:** ESLint clean, Worker-Typecheck clean, 297/297 Frontend- +
+52/52 Worker-Tests grün, Produktions-Build erfolgreich. Browser-Verifikation
+auf Nutzerwunsch zurückgestellt.
+
+**Betroffene Dateien:** worker/migrations/0015_user_name.sql (neu),
+worker/src/db.ts, worker/src/auth/passwordAuth.ts,
+worker/src/routes/auth.ts, worker/src/routes/account.ts,
+src/hooks/useAccount.js, src/components/checkout/AccountStep.jsx,
+src/components/checkout/CheckoutShared.jsx,
+src/components/account/sections/ProfilSection.jsx,
+src/components/ui/LangSel.jsx, src/i18n/account.js,
+src/i18n/translations.js, package.json
+
+## 2026-08-10 (1.7.16)
+
+### Neue Phase, Paket 2: Login (Standard-Flow Anmeldung)
+
+**Anlass:** docs/neue-phase/Standard-Flow Anmeldung App.pdf - zweites von
+sechs Themen der neuen Phase.
+
+**Befund:** Der PDF-Flow war größtenteils schon umgesetzt oder durch eine
+spätere Produktentscheidung überholt (Race-Condition-Bug "Anmeldung
+erforderlich blitzt kurz auf" bereits gefixt, Session-Terminierung/401-
+Handling/Logout-All bereits in useAccount.js abgedeckt, Face ID/Passkey
+bereits über WebAuthn vorhanden). Echte Lücke: "Anmelden" war auf der
+Landingpage nicht sichtbar, weil AccountProvider (Login-Status) bisher nur
+innerhalb des "landed"-Zustands (nach Klick auf "Jetzt rechnen") gerendert
+wurde - die Landingpage kannte den Login-Status schlicht nicht.
+
+**Geändert:**
+- AccountProvider aus src/context/AppProviders.jsx entfernt und stattdessen
+  in src/main.jsx eine Ebene über App() gelegt - umschließt jetzt Landing UND
+  Hauptbereich, bleibt beim Wechsel zwischen beiden gemountet (kein Re-Mount,
+  kein doppelter /api/v1/me-Request beim "Landen"). Nebeneffekt: die
+  Session-Prüfung läuft jetzt schon beim App-Start, nicht erst nach Klick in
+  einen Rechner - wie in der PDF beschrieben.
+- Landingpage-Header (Desktop-Nav + Mobile-Drawer): neuer Button "Anmelden"
+  (nicht eingeloggt) bzw. "Mein Konto" (eingeloggt) - öffnet den bestehenden
+  CheckoutWizard- bzw. MyAccount-Flow, kein neuer Auth-Mechanismus.
+
+**Bewusst nicht enthalten:** kein neuer Login-Mechanismus, keine Änderung an
+Session-Terminierung/401-Handling (bereits korrekt).
+
+**Getestet:** ESLint clean, 297/297 Vitest-Tests grün, Produktions-Build
+(`npm run build`) erfolgreich, keine zirkulären Imports. Browser-Verifikation
+auf Nutzerwunsch zurückgestellt.
+
+**Betroffene Dateien:** src/main.jsx, src/context/AppProviders.jsx,
+src/pages/Landing.jsx, package.json
+
+## 2026-08-10 (1.7.15)
+
+### Neue Phase, Paket 1: Generelle Verbesserungen
+
+**Anlass:** docs/neue-phase/verbesserungen.txt Abschnitt "Generelle
+Verbesserungen" - erstes von sechs Themen der neuen Phase, Schritt-für-
+Schritt-Umsetzung wie mit Auftraggeber abgestimmt.
+
+**Neu / geändert:**
+- Datenstand-Leiste ("Datenstand: [Monat Jahr]") bei allen Rechnern entfernt
+  (Statusleiste.jsx entfernt, war zuvor über jedem Rechner sichtbar).
+- Landingpage-Hero: die vier Trust-Badges ("100% kostenlos", "In 1 Minute
+  startklar", "Aktuelle Marktdaten", "KI-Assistent inklusive") durch eine
+  dynamische Anzeige "Aktuelle Marktdaten · Stand: [Monat Jahr]" ersetzt -
+  berechnet zur Laufzeit, nicht hartkodiert.
+- Bauzinsen-Automatisierung repariert (Root Cause: scripts/monthly_update.py
+  schrieb nie public/zinsen.json, das aber die Landingpage zur Laufzeit lädt
+  - dadurch war das Datum seit Mai 2026 eingefroren; zusätzlich zeigte ein
+  Pfad-Bug auf das nicht mehr existierende ratesTip in App.jsx statt auf
+  src/i18n/translations.js). Beides gefixt, Workflow-git-add angepasst,
+  aktuelle Werte (August 2026, recherchiert von Dr. Klein/Interhyp/Finanztip/
+  Bundesbank) einmalig manuell in data.js/zinsen.json/translations.js
+  eingepflegt. PFANDBRIEF.zins bewusst NICHT verändert (Bundesbank-API in
+  dieser Umgebung nicht erreichbar) - bleibt offener Punkt für den nächsten
+  automatisierten Lauf.
+- "So funktioniert's": neuer Schritt "Anmelden & Abo wählen" als Schritt 1
+  ergänzt (Konto ist seit Spec-v3.0 für jede Rechner-Nutzung Pflicht) -
+  Karten verkleinert und auf ein responsives 4-Spalten-Grid (.how-steps-grid)
+  umgestellt, damit alle 4 Schritte ab Tablet-Breite in einer Zeile stehen.
+- Merkliste-Kartenvorschau: rechnerspezifische Kennzahlen statt generischem
+  Kaufpreis/Miete/EK für Rendite- (Nettorendite, Cashflow, Risiko-Ampel),
+  Kredit- (Darlehen, Rate, Beleihung, Restschuld) und Mieterhöhungsrechner
+  (nächste Erhöhung, neue Miete, %); neuer Rechenkern
+  src/utils/kreditKennzahlen.js (bewusst reduzierte Kopie, nicht der volle
+  Finanzierung.jsx-Kern). Sanierungsrechner zeigt nur die tatsächlich
+  gespeicherten Rohwerte (Wohnfläche/Baujahr) - Förderung/Amortisation lassen
+  sich nicht rekonstruieren, da der dafür nötige lokale State in Sanier.jsx
+  nicht mitgespeichert wird (Nutzerentscheidung 2026-08-10, siehe
+  Konzept-Dok 8.3).
+- Merkliste: Filter-Chips nach Rechnertyp (nur sichtbar, wenn mehr als eine
+  Rechnerart gespeichert ist).
+- Merkliste: rechnerspezifisches Icon pro Karte (📈/🏦/🏘️/🔨) statt keiner
+  Bildlogik - echte Exposé-Fotos sind aktuell nicht speicherbar
+  (autoSaveExposeObject.js extrahiert kein Bild), daher vereinfachte Lösung
+  statt Vortäuschung.
+
+**Bewusst nicht enthalten:** "So funktioniert's" war zunächst offen und
+wurde per Nutzer-Feedback nachträglich ergänzt; Bild-Upload/-Extraktion beim
+Exposé-Scan (separater, größerer Backend-Task); volle Sanierungsrechner-
+Kennzahlen in der Merkliste (bräuchten zusätzliche Persistenz in Sanier.jsx).
+
+**Getestet:** ESLint clean, 297/297 Vitest-Tests grün (src + worker).
+Browser-Verifikation auf Nutzerwunsch zurückgestellt (erfolgt nach
+Abschluss der gesamten "Neue Phase"-Umsetzung).
+
+**Betroffene Dateien:** src/App.jsx, src/pages/Landing.jsx,
+src/components/shell/Statusleiste.jsx (gelöscht),
+src/components/shell/Merkliste.jsx, src/utils/kreditKennzahlen.js (neu),
+src/data.js, public/zinsen.json, src/i18n/translations.js,
+scripts/monthly_update.py, .github/workflows/monthly-update.yml,
+package.json
+
+## 2026-08-10 (1.7.14)
+
+### Admin Panel Etappe 1: Grundgerüst (Login, Shell, Nutzeransicht)
+
+**Anlass:** Konzept-Dok Abschnitt 8.9 Punkt 7 ("Neue Phase", Paket 7 von 7,
+"Admin Panel") - erste, kleinstmögliche Etappe: End-to-End-Durchstich statt
+des vollen 8-Bereiche-MVP direkt. Access-Management-Fundament aus Paket 5
+(worker/src/entitlement.ts, hasPermission()/ROLE_PERMISSIONS) wurde damit
+zum ersten Mal tatsächlich benutzt - vorher gab es nichts, das es schützte.
+
+**Neu:**
+- Separates Vite-Projekt admin/ (eigenes Bundle, eigene Design-Token-Kopie,
+  Port 5174) - Login-Screen, App-Shell mit Sidebar (11 Bereiche aus
+  Abschnitt 6.16, nur "Nutzer" aktiv, Rest sichtbare "bald"-Platzhalter),
+  Nutzerliste mit Suche/Pagination, Nutzer-Detailansicht - alles rein
+  lesend.
+- worker/src/routes/admin.ts (neu): GET /api/v1/admin/users,
+  GET /api/v1/admin/users/:id, geschützt durch neue requireAdmin-Middleware
+  (worker/src/middleware.ts) - prüft die Permission "user.manage", nicht den
+  Rollennamen direkt (verbindliche technische Vorgabe aus Abschnitt 8.2).
+- worker/src/db.ts: listUsersForAdmin() (LIKE-Suche mit korrektem
+  Wildcard-Escaping über parseAdminUsersQuery()).
+- worker/wrangler.toml: ALLOWED_ORIGIN um die künftigen Admin-Subdomains
+  ergänzt (rein deklarativ, noch keine echten DNS-Einträge).
+
+**Bewusst nicht enthalten** (spätere, einzeln freizugebende Etappen):
+Sperren/Löschen/Rollenvergabe, Audit Log, Dashboard, Abo-/
+Zahlungsverwaltung, Gutscheine, Feature Flags, Immobiliendaten-Management,
+Systemeinstellungen. Erster Admin-Account muss einmalig manuell per
+`wrangler d1 execute ... UPDATE users SET role='admin'` gesetzt werden -
+keine UI dafür in dieser Etappe.
+
+**Getestet:** worker (52/52 Tests, typecheck clean), admin (4/4 Tests),
+End-to-End manuell auf localhost (Login, Zugriffsverweigerung für
+Nicht-Admins, Nutzerliste/-suche/-detail, Session-Persistenz nach Reload).
+
+**Betroffene Dateien:** admin/ (neu, komplettes Vite-Projekt),
+worker/src/routes/admin.ts (neu), worker/src/routes/admin.test.ts (neu),
+worker/src/db.ts, worker/src/middleware.ts, worker/src/index.ts,
+worker/wrangler.toml
+
+## 2026-08-10 (1.7.13)
+
+### §6-Steuerrechner und Vorfälligkeitsrechner jetzt speicherbar
+
+**Anlass:** Konzept-Dok Abschnitt 8.3 Punkt 2 ("Neue Phase", Paket 6 von 7) -
+diese zwei Rechner hatten als einzige keinen Speichern-Button und konnten
+nicht in "Meine Objekte" (Paket 2) erscheinen. Vorfaelligkeit.jsx haengte
+entgegen der urspruenglichen Doku-Annahme bereits vollstaendig am globalen
+d/set-State (nur der SaveBtn fehlte); SteuerTrick.jsx fuehrte dagegen echten
+lokalen useState (ls/gst/grd), der zuerst in d migriert werden musste.
+
+**Fix:**
+- Vorfaelligkeit.jsx: <SaveBtn tab="vfe" /> ergaenzt (keine State-Aenderung
+  noetig).
+- SteuerTrick.jsx: ls/gst/grd von lokalem useState auf d.steuer6Ls/
+  d.steuer6Gst/d.steuer6Grd umgestellt (App.jsx createDefaults() erweitert),
+  <SaveBtn tab="steuer6" /> ergaenzt.
+- assistantContext.js: TAB_TO_RECHNER um vfe->vorfaelligkeit und
+  steuer6->steuertrick ergaenzt (vfe fehlte als echter Bug, war vorher nur
+  folgenlos, weil vfe mangels SaveBtn nie in der Vergleichsliste auftauchen
+  konnte), ASSISTANT_FIELDS.steuertrick neu - sonst waere die
+  Vergleichsfunktion (Merkliste) fuer beide neuen Rechner leer/falsch
+  befuellt gewesen. worker/src/validator.ts akzeptierte "steuertrick"/
+  "vorfaelligkeit" als rechner-Wert bereits, keine Backend-Aenderung noetig.
+- assistantContext.test.js an die jetzt 6 (statt 4) speicherbaren Rechner
+  angepasst.
+
+**Betroffene Dateien:** src/components/extras/Vorfaelligkeit.jsx,
+src/components/extras/SteuerTrick.jsx, src/App.jsx,
+src/utils/assistantContext.js, src/utils/assistantContext.test.js
+
+## 2026-08-10 (1.7.12)
+
+### Backend: Fundament fuer Access Management (Permission-Modell)
+
+**Anlass:** Konzept-Dok Abschnitt 8.2 ("Neue Phase", Paket 5 von 7,
+Teilumfang "nur Fundament"). worker/src/entitlement.ts hatte bereits ein
+rudimentaeres 2-Rollen-Modell (role-Spalte 'customer'/'admin', hasRole()),
+aber nirgends tatsaechlich genutzt (keine Admin-Routen). Das Dokument legt
+verbindlich ein 3-Rollen-Modell (ADMIN/TEST_USER/CUSTOMER) fest, dessen
+Rechtepruefungen auf granularen Permission-Strings statt Rollennamen-
+Vergleichen basieren sollen.
+
+**Umsetzung (bewusst nur das Fundament, keine Admin-Routen/UI - dafuer gibt
+es noch nichts zu schuetzen, das ist Paket 7):**
+- Role-Typ um "test_user" erweitert (role-Spalte ist eine reine TEXT-Spalte
+  ohne CHECK-Constraint, Migration 0001 - keine Schema-Migration noetig).
+- Neuer Permission-Typ (10 Strings 1:1 aus Dok 5.2 Punkt 9) und
+  ROLE_PERMISSIONS-Zuordnung je Rolle.
+- Neue Funktion hasPermission(user, permission) fuer kuenftige Admin-Routen.
+- 4 neue Tests in entitlement.test.ts, bestehendes hasRole() unveraendert
+  gelassen (weiterhin gueltig fuer reine Rollenanzeige, z. B. /api/v1/me).
+
+**Betroffene Dateien:** worker/src/entitlement.ts,
+worker/src/entitlement.test.ts
+
+## 2026-08-10 (1.7.11)
+
+### Fix: Kopfzeile fluchtete nicht mit dem Inhalt darunter
+
+**Anlass (Nutzerfeedback mit Screenshot-Vergleich):** Logo links und
+Sprachauswahl/Pro-Button rechts in der App-Shell-Kopfzeile (.hdr) sassen auf
+breiteren Screens nicht an derselben horizontalen Position wie der Inhalt
+darunter (.content). Ursache: .hdr hatte ein fixes horizontales Padding von
+16px auf allen Bildschirmgroessen, waehrend .content responsiv von 14px
+(Mobile) auf 28px (ab 700px) und 40px (ab 1100px) waechst.
+
+**Fix:** .hdr-Padding an dieselben Breakpoints wie .content angeglichen
+(14px / 28px / 40px). Verifiziert bei 375px und 1280px Breite: Logo-Kante
+und Content-Kante liegen jetzt exakt uebereinander. Feste Kopfzeilenhoehe
+(78px, noetig fuer Safe-Area/Tab-Bar-Layout) und der rechte Inhalt
+(Pro-Button/Sprachwahl vs. Landingpage-Nav/CTA) blieben bewusst unveraendert
+- das war nicht Teil des gemeldeten Problems.
+
+**Betroffene Dateien:** src/App.jsx
+
+## 2026-08-10 (1.7.10)
+
+### Konto: 6 IA-Luecken aus dem Konzept-Dok geschlossen (Abschnitt 3)
+
+**Anlass:** Konzept-Dok Abschnitt 3 ("Neue Phase", Paket 4 von 7) - die
+6-Bereiche-Struktur, Zahlungen+Rechnungen-Zusammenfuehrung und die
+Loeschen-Bestaetigung waren schon umgesetzt (vorheriger Commit
+"Mein-Konto auf 6 Bereiche konsolidiert"). Sechs konkrete, im Code
+verifizierte Luecken blieben:
+
+**Fix (alle 5 Sprachen DE/EN/TR/ZH/HI):**
+1. "Konto" -> "Konto & Sicherheit" umbenannt (navSicherheit).
+2. Anzeigebug behoben: `linkedProviderLabel("password")` gab bislang den
+   rohen, unuebersetzten String "password" zurueck ("Angemeldet über
+   password"). Nutzt jetzt t.providerPasswordLabel ("Passwort"), Label
+   "Angemeldet über" -> "Anmeldeverfahren".
+3. "Nächste Abbuchung" -> "Nächste Verlängerung" (semantisch klarer bei
+   vorgemerktem Wechsel/Kündigung, wie im Dok begründet).
+4. "Geld zurück"-Button (gleichgewichtig neben Kündigen/Reaktivieren)
+   entschärft zu zurückhaltendem Link "Erstattung anfragen" - vermeidet den
+   Eindruck einer automatischen Sofort-Erstattung.
+5. Sprachauswahl in Einstellungen: Flaggen+Laendercode (🇩🇪 DE) ersetzt durch
+   reinen Sprachnamen (Deutsch/English/Türkçe/中文/हिन्दी) - Flaggen stehen
+   fuer Laender, nicht Sprachen. Kopfzeilen-Sprachwahl (LangSel.jsx) bewusst
+   unveraendert (Platz dort knapp).
+6. "Alle Geräte abmelden" war eine 1-Klick-Aktion ohne Sicherheitsabfrage -
+   hat jetzt denselben Bestätigen/Abbrechen-Schritt wie "Konto löschen".
+
+**Betroffene Dateien:** src/i18n/account.js, src/i18n/translations.js
+(LANGS: neues `full`-Feld), src/utils/accountEntitlement.js
+(linkedProviderLabel-Signatur), src/components/account/sections/
+ProfilSection.jsx, KontoSection.jsx, AbonnementSection.jsx,
+EinstellungenSection.jsx
+
+## 2026-08-10 (1.7.9)
+
+### Mobile: Tab-Leiste scrollt jetzt statt sich zusammenzuquetschen
+
+**Anlass:** Konzept-Dok Abschnitt 8.5b ("Neue Phase", Paket 3 von 7) bzw.
+Bugreport "Tabs auf Mobile zu dicht nebeneinander" (Abschnitt 1.3). .tbar
+nutzte bislang flex:1 ohne Scroll - bei 7 Tabs auf schmalen Screens (z. B.
+375px) wurden die Buttons auf ~53px zusammengequetscht.
+
+**Fix:** .tbar ist jetzt horizontal scrollbar (overflow-x:auto,
+scroll-snap-type:x proximity, Scrollbar optisch ausgeblendet). .tbtn hat
+eine feste Mindestbreite (64px) statt sich beliebig zu verengen. Der aktive
+Tab wird bei jedem Tab-Wechsel automatisch per scrollIntoView in den
+sichtbaren Bereich gescrollt (neuer tbarRef + useEffect). Bewusst keine
+Umstellung auf ein Dropdown-Menue (bleibt laut Dokument Phase-2-Option,
+falls Scrollen allein nicht ausreicht) - reine CSS-/Scroll-Anpassung an der
+bestehenden Tab-Leiste.
+
+**Betroffene Dateien:** src/App.jsx
+
+## 2026-08-10 (1.7.8)
+
+### Navigation: Merkliste/Start/Objekte zu einem Tab zusammengefuehrt
+
+**Anlass:** Konzept-Dok Abschnitt 8.5a ("Neue Phase", Paket 2 von 7) - Free-
+und Pro-Nutzer sahen bislang unterschiedlich viele Top-Level-Tabs (7 vs. 9),
+weil die drei inhaltlich verwandten Tabs "Merkliste" (Free+Pro, manuell
+gespeicherte Objekte), "Start" und "Objekte" (beide Pro-only, u. a.
+automatisch per Exposé-Scan angelegte Objekte mit Score) getrennt liefen -
+inkl. zweier paralleler Daten-Hooks (useSavedObjects/useProObjects), die
+beide denselben Endpunkt /objects unabhaengig voneinander luden.
+
+**Fix:** "Start" und "Objekte" (dash-start/dash-objekte) entfallen als
+eigene Tabs - Free und Pro sehen jetzt einheitlich 7 Top-Level-Tabs. Die
+bisherige Merkliste-Ansicht (src/components/shell/Merkliste.jsx) uebernimmt
+zusaetzlich: Score-Badge + Suche/Filter/Sortierung (vormals nur in
+ObjektListe.jsx/Start.jsx), Tap auf eine Karte oeffnet die bestehende
+ObjektDetail-Ansicht (inkl. "Im Rechner öffnen" bei Objekten mit vollen
+Eingabedaten). Der bisherige direkte "Laden"-Button bleibt nur bei Objekten
+mit ausreichend Eingabedaten sichtbar (Exposé-Scan-Stub-Objekte haben nur
+{tab, quelle} und koennen nicht sinnvoll geladen werden). useProObjects.js
+sowie die nun ungenutzten Start.jsx/ObjektListe.jsx/DashboardTabs.jsx wurden
+entfernt - useSavedObjects ist jetzt die einzige Datenquelle.
+
+**Betroffene Dateien:** src/App.jsx, src/components/shell/Merkliste.jsx,
+src/components/dashboard/ObjektDetail.jsx (Datums-Fallback fuer
+Free-Objekte ohne updatedAt); geloescht: src/components/dashboard/Start.jsx,
+src/components/dashboard/ObjektListe.jsx,
+src/components/dashboard/DashboardTabs.jsx, src/hooks/useProObjects.js
+
 ## 2026-08-08 (Doku, Update 2)
 
 ### Doku: "Neue Phase"-Dokument umsetzungsfertig gemacht (kein Code geändert)

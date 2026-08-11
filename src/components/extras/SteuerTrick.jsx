@@ -1,18 +1,22 @@
-import { useState, useContext } from "react";
-import { Ctx } from "../../context/AppContext.jsx";
+import { useApp } from "../../context/AppContext.jsx";
 import { STEUER_T } from "../../i18n/steuerTrick.js";
 import { T } from "../../i18n/translations.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { Tip } from "../ui/Tip.jsx";
+import { SaveBtn } from "../shell/Merkliste.jsx";
 
 export function SteuerTrick() {
-  const { lang } = useContext(Ctx);
+  // Vormals eigener lokaler useState (ls/gst/grd), nicht Teil von `d` -
+  // dadurch hatte dieser Rechner keine Speicherfunktion (Konzept-Dok 8.3
+  // Punkt 2). Jetzt wie die anderen 5 Rechner ueber d/set gefuehrt, damit
+  // SaveBtn/Merkliste greifen.
+  const { lang, d, set } = useApp();
   const st = STEUER_T[lang] || STEUER_T.de;
-  const [ls, setLs] = useState("50000");
-  const [gst, setGst] = useState("42");
-  const [grd, setGrd] = useState("100000");
+  const ls = d.steuer6Ls ?? "50000";
+  const gst = d.steuer6Gst ?? "42";
+  const grd = d.steuer6Grd ?? "100000";
   const lohnsteuer = parseFloat(ls) || 0;
   const grenzSatz = parseFloat(String(gst).replace(",", ".")) || 0;
   const grundstueck = parseFloat(grd) || 0;
@@ -94,7 +98,7 @@ export function SteuerTrick() {
                 <input
                   type="number"
                   value={ls}
-                  onChange={(e) => setLs(e.target.value)}
+                  onChange={(e) => set("steuer6Ls", e.target.value)}
                   style={inp}
                 />
                 <span
@@ -121,7 +125,7 @@ export function SteuerTrick() {
                 <input
                   type="number"
                   value={gst}
-                  onChange={(e) => setGst(e.target.value)}
+                  onChange={(e) => set("steuer6Gst", e.target.value)}
                   min="0"
                   max="60"
                   step="0.01"
@@ -151,7 +155,7 @@ export function SteuerTrick() {
                 <input
                   type="number"
                   value={grd}
-                  onChange={(e) => setGrd(e.target.value)}
+                  onChange={(e) => set("steuer6Grd", e.target.value)}
                   style={inp}
                 />
                 <span
@@ -394,11 +398,14 @@ export function SteuerTrick() {
               >
                 {st.disclaimer}
               </div>
+              <SaveBtn tab="steuer6" />
               <ExportPDF title={(T[lang] || T.de).steuer6Full || (T[lang] || T.de).steuer6} />
 
               {/* ═══ KI-ASSISTENT (Phase 3, Sprint 5 — Konzept Abschnitt 5) ═══ */}
-              {/* SteuerTrick fuehrt echten lokalen useState (ls/gst/grd), nicht Teil von `d` -
-              Kontext wird deshalb direkt gebaut statt ueber buildAssistantContext(). */}
+              {/* Kontext wird direkt gebaut statt ueber buildAssistantContext(),
+              da dessen Feldliste (ASSISTANT_FIELDS) auf die anderen Rechner
+              zugeschnitten ist und lohnsteuer/grenzsteuersatzProzent/... nicht
+              kennt - waere eine eigene Erweiterung, kein reiner Lesezugriff. */}
               {(() => {
                 const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
                 const suggested = [at.steuerSuggested1, at.steuerSuggested2, at.steuerSuggested3];

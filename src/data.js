@@ -9,37 +9,37 @@
 // Intervall: monatlich
 // Quellen: Dr. Klein, Interhyp, Finanztip, Vergleich.de, Bundesbank
 export const MARKET_RATES = {
-  stand: "Mai 2026",
-  avg: 3.8,
-  top: 3.52,
+  stand: "August 2026",
+  avg: 3.81,
+  top: 3.69,
   rows: [
     {
       source: "Dr. Klein Topzins (10J)",
-      rate: "3,52 % Sollzins",
+      rate: "3,69 % Sollzins",
       ref: "Dr. Klein",
       url: "https://www.drklein.de/aktuelle-bauzinsen.html",
     },
     {
       source: "Interhyp Durchschnitt (10J)",
-      rate: "ca. 3,90 %",
+      rate: "ca. 3,81 %",
       ref: "Interhyp",
       url: "https://www.interhyp.de/zinsen/",
     },
     {
       source: "Finanztip",
-      rate: "3,9 – 4,4 % (effektiv)",
+      rate: "3,69 – 4,32 % (effektiv)",
       ref: "Finanztip",
       url: "https://www.finanztip.de/baufinanzierung/hypothekenzinsen/",
     },
     {
       source: "Vergleich.de",
-      rate: "3,75 – 4,10 %",
+      rate: "3,70 – 4,15 %",
       ref: "Vergleich.de",
       url: "https://www.vergleich.de/baufinanzierung.html",
     },
     {
       source: "Bundesanleihe 10J (Referenz)",
-      rate: "3,08 % (04.05.2026)",
+      rate: "3,16 % (10.08.2026)",
       ref: "Deutsche Bundesbank",
       url: "https://www.bundesbank.de",
     },

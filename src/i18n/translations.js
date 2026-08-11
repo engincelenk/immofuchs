@@ -2925,6 +2925,9 @@ export const TL = {
       "Kaufpreis, Miete, Zinssatz — vorausgefüllt aus Ihrem Exposé oder mit realistischen Startwerten, alles editierbar.",
     step3H: "Sofort Ergebnisse",
     step3P: "Alle Ergebnisse updaten in Echtzeit. Kein Warten, keine Kosten.",
+    step4H: "Anmelden & Abo wählen",
+    step4P:
+      "Kostenloses Konto erstellen und den passenden Tarif wählen — danach stehen dir alle Rechner uneingeschränkt zur Verfügung.",
     fullTitle: "Renditerechner",
     fullBadge: "Rendite",
     fullDesc:
@@ -2999,7 +3002,7 @@ export const TL = {
     dse: "Datenschutz",
     ratesCompact: "Bauzinsen Ø",
     ratesTip:
-      "Marktindikation für 10 Jahre Zinsbindung. Quellen: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank. Stand Mai 2026.",
+      "Marktindikation für 10 Jahre Zinsbindung. Quellen: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank. Stand August 2026.",
     ratesShort: "Topzins",
     ratesShort3: "BBank 10J",
     tagFull: "Kostenlos · Mit Konto · Aktuell",
@@ -3019,7 +3022,7 @@ export const TL = {
     trust3P: "Kostenloses Konto in einer Minute — danach sofort rechnen.",
     trust4H: "Aktuelle Daten",
     trust4P: "Bauzinsen monatlich aktualisiert, alle Werte aus offiziellen Quellen.",
-    howShort: "In 3 Schritten zum Ergebnis",
+    howShort: "In 4 Schritten zum Ergebnis",
     navHow: "So funktioniert's",
     navZinsen: "Bauzinsen",
     subShort:
@@ -3137,6 +3140,8 @@ export const TL = {
       "Purchase price, rent, interest rate — pre-filled from your listing or with realistic starting values, all editable.",
     step3H: "Instant results",
     step3P: "All results update in real time. No waiting, no cost.",
+    step4H: "Sign up & choose a plan",
+    step4P: "Create a free account and pick the plan that fits — then every calculator is fully unlocked.",
     fullTitle: "Yield Calculator",
     fullBadge: "Yield",
     fullDesc:
@@ -3211,7 +3216,7 @@ export const TL = {
     dse: "Privacy",
     ratesCompact: "Avg. mortgage rate",
     ratesTip:
-      "Market indication for 10-year fixed periods. Sources: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank. As of May 2026.",
+      "Market indication for 10-year fixed periods. Sources: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank. As of August 2026.",
     ratesShort: "Top rate",
     ratesShort3: "BBank 10Y",
     tagFull: "Free · Free account · Live data",
@@ -3231,7 +3236,7 @@ export const TL = {
     trust3P: "Free account in a minute — then start calculating right away.",
     trust4H: "Up-to-date data",
     trust4P: "Mortgage rates updated monthly, all values from official sources.",
-    howShort: "3 steps to your result",
+    howShort: "4 steps to your result",
     navHow: "How it works",
     navZinsen: "Mortgage rates",
     subShort:
@@ -3348,6 +3353,8 @@ export const TL = {
       "Alım fiyatı, kira, faiz — ilanınızdan veya gerçekçi başlangıç değerleriyle önceden doldurulur, hepsi düzenlenebilir.",
     step3H: "Anında sonuçlar",
     step3P: "Tüm sonuçlar gerçek zamanlı güncellenir. Bekleme veya maliyet yoktur.",
+    step4H: "Kaydolun ve plan seçin",
+    step4P: "Ücretsiz bir hesap oluşturun ve size uygun planı seçin — ardından tüm hesaplayıcılara sınırsız erişebilirsiniz.",
     fullTitle: "Getiri Hesaplayıcı",
     fullBadge: "Getiri",
     fullDesc:
@@ -3420,7 +3427,7 @@ export const TL = {
     dse: "Gizlilik",
     ratesCompact: "Ort. ipotek faizi",
     ratesTip:
-      "10 yıllık sabit faiz dönemi piyasa göstergesi. Kaynaklar: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank. Mayıs 2026.",
+      "10 yıllık sabit faiz dönemi piyasa göstergesi. Kaynaklar: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank. Ağustos 2026.",
     ratesShort: "En iyi",
     ratesShort3: "BBank 10Y",
     tagFull: "Ücretsiz · Ücretsiz hesap · Güncel",
@@ -3440,7 +3447,7 @@ export const TL = {
     trust3P: "Bir dakikada ücretsiz hesap oluştur — hemen hesaplamaya başla.",
     trust4H: "Güncel veriler",
     trust4P: "İpotek faizleri aylık güncellenir, resmi kaynaklardan.",
-    howShort: "3 adımda sonuç",
+    howShort: "4 adımda sonuç",
     navHow: "Nasıl çalışır",
     navZinsen: "İpotek faizleri",
     subShort: "Almanya'daki yatırımcılar ve ev sahipleri için ücretsiz hesaplayıcılar.",
@@ -3552,6 +3559,8 @@ export const TL = {
     step2P: "购买价格、租金、利率 — 从房源资料自动填入,或使用真实的初始值,均可编辑。",
     step3H: "即时结果",
     step3P: "所有结果实时更新。无需等待或付费。",
+    step4H: "注册并选择套餐",
+    step4P: "创建免费账户并选择适合的套餐 — 之后即可无限制使用所有计算器。",
     fullTitle: "收益计算器",
     fullBadge: "收益",
     fullDesc: "最全面的计算器：收益、现金流、税收优惠、租赁法和风险分析。",
@@ -3619,7 +3628,7 @@ export const TL = {
     dse: "隐私",
     ratesCompact: "平均抵押利率",
     ratesTip:
-      "10年固定利率期间市场指示。来源：Dr. Klein、Vergleich.de、Finanztip、Finanzfacts、Interhyp、德国联邦银行。2026 年 4 月。",
+      "10年固定利率期间市场指示。来源：Dr. Klein、Vergleich.de、Finanztip、Finanzfacts、Interhyp、德国联邦银行。2026 年 8 月。",
     ratesShort: "最优",
     ratesShort3: "联邦债券 10年",
     tagFull: "免费 · 免费账户 · 实时",
@@ -3639,7 +3648,7 @@ export const TL = {
     trust3P: "一分钟注册免费账户——之后立即开始计算。",
     trust4H: "最新数据",
     trust4P: "贷款利率每月更新，所有数据来自官方来源。",
-    howShort: "3 步获得结果",
+    howShort: "4 步获得结果",
     navHow: "工作原理",
     navZinsen: "抵押利率",
     subShort: "为德国投资者和房东提供免费计算器——回报、融资、租赁法、装修。注册免费账户即可立即开始。搭配 ImmoFuchs Pro 可无限使用。",
@@ -3750,6 +3759,8 @@ export const TL = {
       "खरीद मूल्य, किराया, ब्याज — आपके एक्सपोज़े से या यथार्थवादी शुरुआती मानों से पूर्व-भरे, सभी संपादन योग्य।",
     step3H: "तुरंत परिणाम",
     step3P: "सभी परिणाम रीयल-टाइम में अपडेट होते हैं। प्रतीक्षा या लागत नहीं।",
+    step4H: "साइन अप करें और प्लान चुनें",
+    step4P: "एक मुफ़्त खाता बनाएं और उपयुक्त प्लान चुनें — इसके बाद सभी कैलकुलेटर पूरी तरह से उपलब्ध हो जाते हैं।",
     fullTitle: "रिटर्न कैलकुलेटर",
     fullBadge: "रिटर्न",
     fullDesc: "सबसे व्यापक कैलकुलेटर: रिटर्न, नकदी प्रवाह, कर लाभ, किराया कानून और जोखिम विश्लेषण।",
@@ -3818,7 +3829,7 @@ export const TL = {
     dse: "गोपनीयता",
     ratesCompact: "औसत होम लोन दर",
     ratesTip:
-      "10 वर्ष निश्चित दर अवधि बाज़ार संकेत। स्रोत: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank। मई 2026।",
+      "10 वर्ष निश्चित दर अवधि बाज़ार संकेत। स्रोत: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank। अगस्त 2026।",
     ratesShort: "सर्वोत्तम",
     ratesShort3: "BBank 10Y",
     tagFull: "मुफ्त · मुफ़्त खाता · वर्तमान",
@@ -3838,7 +3849,7 @@ export const TL = {
     trust3P: "एक मिनट में मुफ़्त खाता बनाएं — फिर तुरंत गणना शुरू करें।",
     trust4H: "अद्यतन डेटा",
     trust4P: "होम लोन दरें मासिक अपडेट, सभी मूल्य आधिकारिक स्रोतों से।",
-    howShort: "3 चरणों में परिणाम",
+    howShort: "4 चरणों में परिणाम",
     navHow: "यह कैसे काम करता है",
     navZinsen: "बंधक दरें",
     subShort: "जर्मनी में निवेशकों और मकान मालिकों के लिए मुफ्त कैलकुलेटर। मुफ़्त खाते के साथ तुरंत शुरू करें। ImmoFuchs Pro के साथ असीमित उपयोग।",
@@ -3909,10 +3920,17 @@ export const TL = {
   },
 };
 
+// "full" ist der jeweilige Sprachname in der Sprache selbst (nicht der Name
+// des Landes) - fuer die Sprachauswahl in "Mein Konto" (Konzept-Dok 3.6/7.2):
+// Flaggen stehen fuer Laender, nicht fuer Sprachen (Tuerkisch != nur Tuerkei,
+// Englisch hat keine eindeutige Flagge). LangSel.jsx (Kopfzeile) bleibt bei
+// flag+label - dort ist der Platz knapp, das ist ein bewusst anderer Fall.
+// "flag"-Feld entfernt (Konzept-Dok 3.6/7.2/7.5, 2026-08-10): Flaggen sind
+// kein zuverlaessiges Symbol fuer Sprachen (siehe LangSel.jsx-Kommentar).
 export const LANGS = [
-  { v: "de", flag: "🇩🇪", label: "DE" },
-  { v: "en", flag: "🇬🇧", label: "EN" },
-  { v: "tr", flag: "🇹🇷", label: "TR" },
-  { v: "zh", flag: "🇨🇳", label: "ZH" },
-  { v: "hi", flag: "🇮🇳", label: "HI" },
+  { v: "de", label: "DE", full: "Deutsch" },
+  { v: "en", label: "EN", full: "English" },
+  { v: "tr", label: "TR", full: "Türkçe" },
+  { v: "zh", label: "ZH", full: "中文" },
+  { v: "hi", label: "HI", full: "हिन्दी" },
 ];

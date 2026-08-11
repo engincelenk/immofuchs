@@ -34,7 +34,15 @@ export function LangSel({ lang, setLang }) {
           minHeight: 38,
         }}
       >
-        <span style={{ fontSize: 20, lineHeight: 1 }}>{cur.flag}</span>
+        {/* Kein Flaggen-Icon mehr (Konzept-Dok 3.6/7.2/7.5, 2026-08-10):
+            Flaggen stehen fuer Laender, nicht fuer Sprachen (Englisch hat
+            keine eindeutige Flagge, Tuerkisch/Chinesisch/Hindi werden auch
+            ausserhalb "ihres" Landes gesprochen) - bekannter UX-/
+            Internationalisierungs-Fehler. Neutrales Globus-Symbol statt
+            Landesflagge. */}
+        <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>
+          🌐
+        </span>
         <span className="lang-label" style={{ fontSize: 12, color: "var(--ch)" }}>
           {cur.label}
         </span>
@@ -52,7 +60,7 @@ export function LangSel({ lang, setLang }) {
             boxShadow: "0 8px 24px rgba(0,0,0,.1)",
             zIndex: 200,
             overflow: "hidden",
-            minWidth: 90,
+            minWidth: 140,
           }}
         >
           {LANGS.map((l) => (
@@ -63,9 +71,7 @@ export function LangSel({ lang, setLang }) {
                 setOpen(false);
               }}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
+                display: "block",
                 padding: "9px 14px",
                 width: "100%",
                 border: "none",
@@ -79,8 +85,7 @@ export function LangSel({ lang, setLang }) {
                 textAlign: "left",
               }}
             >
-              <span style={{ fontSize: 18, lineHeight: 1 }}>{l.flag}</span>
-              <span>{l.label}</span>
+              {l.full}
             </button>
           ))}
         </div>

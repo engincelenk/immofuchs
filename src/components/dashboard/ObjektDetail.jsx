@@ -50,7 +50,10 @@ export function ObjektDetail({ objekt, onBack }) {
           )}
           {objekt.wohnflaeche != null && <Metric label="Wohnfläche" value={`${objekt.wohnflaeche} m²`} />}
           <Metric label="Quelle" value={objekt.source === "expose-scan" ? "Exposé-Scan" : "Manuell"} />
-          <Metric label="Zuletzt geprüft" value={new Date(objekt.updatedAt).toLocaleDateString("de-DE")} />
+          <Metric
+            label="Zuletzt geprüft"
+            value={objekt.updatedAt ? new Date(objekt.updatedAt).toLocaleDateString("de-DE") : objekt.date || "—"}
+          />
         </div>
         {hasFullInput && (
           <button onClick={openInCalculator} style={primaryBtnStyle}>

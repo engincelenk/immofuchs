@@ -35,9 +35,6 @@ export function EinstellungenSection({ t, account, lang, setLang }) {
               onClick={() => setLang(l.v)}
               aria-current={l.v === lang ? "true" : undefined}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
                 padding: "8px 12px",
                 borderRadius: 10,
                 border: `1px solid ${l.v === lang ? "var(--ca)" : "var(--cb)"}`,
@@ -50,10 +47,7 @@ export function EinstellungenSection({ t, account, lang, setLang }) {
                 minHeight: 40,
               }}
             >
-              <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>
-                {l.flag}
-              </span>
-              <span>{l.label}</span>
+              {l.full}
             </button>
           ))}
         </div>

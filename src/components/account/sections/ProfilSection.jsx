@@ -20,11 +20,34 @@ import {
 // (Double-Opt-In: der Server verschickt nur einen Bestaetigungslink, die
 // Adresse wechselt erst nach dem Klick).
 export function ProfilSection({ t, account }) {
-  const { email, linkedProviders } = account.me;
+  const { email, name, linkedProviders } = account.me;
   const [changingEmail, setChangingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  // Konzept-Dok 1.6/3.3/8.8: Name ist bei Google-/Apple-/Passkey-Konten
+  // anfangs leer (kein eigenes Registrierungsformular dort) - hier
+  // nachtraeglich ergaenz-/aenderbar, direkt ohne Double-Opt-In (anders als
+  // E-Mail), da kein sicherheitskritisches Feld.
+  const [changingName, setChangingName] = useState(false);
+  const [newName, setNewName] = useState(name || "");
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
+  const [nameError, setNameError] = useState(null);
+
+  async function handleNameSubmit(e) {
+    e.preventDefault();
+    setNameBusy(true);
+    setNameError(null);
+    const result = await account.changeName(newName);
+    setNameBusy(false);
+    if (result.ok) {
+      setChangingName(false);
+      setNameSaved(true);
+    } else {
+      setNameError(result.error);
+    }
+  }
 
   async function handleEmailSubmit(e) {
     e.preventDefault();
@@ -87,8 +110,57 @@ export function ProfilSection({ t, account }) {
         )}
         <div style={labelValueRowStyle}>
           <span style={labelStyle}>{t.accountLinkedProviders}</span>
-          <span style={valueStyle}>{linkedProviders.map(linkedProviderLabel).join(", ")}</span>
+          <span style={valueStyle}>{linkedProviders.map((p) => linkedProviderLabel(p, t)).join(", ")}</span>
         </div>
+      </div>
+
+      <div style={blockCardStyle}>
+        {nameSaved && <div style={successBannerStyle}>{t.profilNameSuccess}</div>}
+        {changingName ? (
+          <form onSubmit={handleNameSubmit}>
+            <div style={blockTitleStyle}>{t.accountName}</div>
+            {nameError && <div style={errorBannerStyle}>{t.registerErrorInvalidName}</div>}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                type="text"
+                required
+                maxLength={100}
+                autoComplete="name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder={t.registerNamePlaceholder}
+                style={{ ...textInputStyle, flex: "1 1 200px", width: "auto" }}
+              />
+              <button
+                type="submit"
+                disabled={nameBusy}
+                style={{ ...primaryBtnStyle, width: "auto", padding: "11px 18px", fontSize: 13.5 }}
+              >
+                {t.accountChange}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChangingName(false);
+                  setNewName(name || "");
+                }}
+                style={inlineLinkBtnStyle}
+              >
+                {t.commonCancel}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div style={labelValueRowStyle}>
+            <span style={labelStyle}>{t.accountName}</span>
+            <span style={{ ...valueStyle, display: "flex", alignItems: "center", gap: 10 }}>
+              {name || "—"}
+              <button onClick={() => setChangingName(true)} style={inlineLinkBtnStyle}>
+                {t.accountChange}
+              </button>
+            </span>
+          </div>
+        )}
       </div>
 
       {linkedProviders.includes("password") ? (
@@ -102,7 +174,7 @@ export function ProfilSection({ t, account }) {
           <p style={blockHintStyle}>
             {t.profilPasswordSocialOnlyHint.replace(
               "{provider}",
-              linkedProviders.map(linkedProviderLabel).join(" / "),
+              linkedProviders.map((p) => linkedProviderLabel(p, t)).join(" / "),
             )}
           </p>
         </div>

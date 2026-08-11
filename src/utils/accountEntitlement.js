@@ -27,7 +27,11 @@ export function isWithinRefundWindow(subscription, now = Date.now()) {
   return now - subscription.firstPurchaseAt <= FOURTEEN_DAYS_MS;
 }
 
-export function linkedProviderLabel(provider) {
+// "password" ist der einzige Provider-Wert, der kein Eigenname ist und daher
+// eine Uebersetzung braucht (t.providerPasswordLabel) - ohne t faellt die
+// Funktion auf den rohen Wert zurueck (Kontext-Doku 8-Umsetzung: verhindert,
+// dass Aufrufstellen ohne t brechen).
+export function linkedProviderLabel(provider, t) {
   switch (provider) {
     case "google":
       return "Google";
@@ -35,6 +39,8 @@ export function linkedProviderLabel(provider) {
       return "Apple";
     case "passkey":
       return "Passkey";
+    case "password":
+      return t?.providerPasswordLabel || provider;
     default:
       return provider;
   }

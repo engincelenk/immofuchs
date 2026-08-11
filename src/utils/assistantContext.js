@@ -1,10 +1,11 @@
 // Baut das schlanke Kontext-JSON pro Rechner fuer den KI-Assistenten
 // (Datensparsamkeit, siehe docs/plans/2026-07-19-ki-assistent-konzept.md 1.3/4.4).
-// Deckt Phase 1+2 ab (alle Rechner, die am globalen `d`-Context haengen —
-// reines Feld-Mapping). Vorfaelligkeit haengt trotz vfe*-Praefix ebenfalls an
-// `d` (kein separater React-State), deshalb hier mit drin. Steuertrick nutzt
-// echten lokalen useState (ls/gst/grd) und baut seinen Kontext direkt in
-// SteuerTrick.jsx, ohne diese Helper-Funktion.
+// Deckt alle 6 Rechner ab, die inzwischen am globalen `d`-Context haengen.
+// SteuerTrick.jsx baut den Assistenten-Kontext weiterhin direkt selbst (nicht
+// ueber diese Helper-Funktion) - der Worker-Kontext-Schluessel dort
+// (lohnsteuer, grenzsteuersatzProzent, ...) unterscheidet sich bewusst von
+// den Feldnamen in `d` (steuer6Ls/steuer6Gst/steuer6Grd), waere also ohnehin
+// keine 1:1-Zuordnung.
 // Uebersetzt die UI-Tab-Id (so speichert die Merkliste, siehe SaveBtn-Aufrufe
 // in den Rechnern) auf den rechner-Wert, den der Worker akzeptiert
 // (worker/src/validator.ts, RECHNER_VALUES). Beide Namensraeume sind
@@ -18,14 +19,16 @@
 // wuerde die bestehenden Eintraege nicht heilen und zusaetzlich ein zweites
 // Format in Umlauf bringen.
 //
-// steuer6/vfe fehlen bewusst: beide Rechner haben keinen SaveBtn, koennen also
-// nicht in der Merkliste landen - und fuer "steuertrick" gibt es unten auch
-// keine ASSISTANT_FIELDS, die Zuordnung waere also ohnehin wirkungslos.
+// steuer6/vfe (Konzept-Dok 8.3 Punkt 2): beide Rechner haben inzwischen einen
+// SaveBtn (vorher nicht, siehe Git-Historie) und koennen daher in der
+// Merkliste/Vergleichsfunktion landen - Zuordnung ergaenzt.
 export const TAB_TO_RECHNER = {
   haupt: "renditerechner",
   kredit: "finanzierung",
   miete: "miete",
   sanier: "sanierung",
+  vfe: "vorfaelligkeit",
+  steuer6: "steuertrick",
 };
 
 // Fallback bewusst auf einen GUELTIGEN Wert statt auf den Rohwert: ein
@@ -61,6 +64,7 @@ export const ASSISTANT_FIELDS = {
     "vfeWiederanlagezins",
     "vfeBearbeitungsentgelt",
   ],
+  steuertrick: ["steuer6Ls", "steuer6Gst", "steuer6Grd"],
 };
 
 export function buildAssistantContext(rechner, d, kennzahlen) {

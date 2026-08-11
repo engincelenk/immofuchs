@@ -11,6 +11,7 @@ import {
   blockCardStyle,
   blockHintStyle,
   blockTitleStyle,
+  inlineLinkBtnStyle,
   labelStyle,
   labelValueRowStyle,
   sectionIntroStyle,
@@ -147,10 +148,15 @@ export function AbonnementSection({ t, account, onUpgrade }) {
                 </button>
               )}
               {isWithinRefundWindow(subscription) && (
+                // Bewusst kein gleichgewichtiger Hauptbutton neben Kuendigen/
+                // Reaktivieren (Konzept-Dok 3.4/3.16): "Geld zurueck" als
+                // eigener Button wirkte wie eine automatische Sofort-
+                // erstattung. Ein zurueckhaltender Link vermeidet das
+                // Missverstaendnis, ohne die Funktion zu verstecken.
                 <button
                   onClick={() => run("refund", account.refundSubscription)}
                   disabled={busy === "refund"}
-                  style={actionBtnStyle}
+                  style={{ ...inlineLinkBtnStyle, marginTop: 4, alignSelf: "flex-start" }}
                 >
                   {t.accountRefund}
                 </button>

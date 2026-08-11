@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeIsPro, hasRole, PAST_DUE_GRACE_MS } from "./entitlement";
+import { computeIsPro, hasPermission, hasRole, PAST_DUE_GRACE_MS } from "./entitlement";
 import type { SubscriptionRow } from "./db";
 
 function sub(overrides: Partial<SubscriptionRow>): SubscriptionRow {
@@ -81,5 +81,30 @@ describe("hasRole", () => {
   it("'admin' verlangt exakt die Rolle", () => {
     expect(hasRole({ role: "admin" }, "admin")).toBe(true);
     expect(hasRole({ role: "customer" }, "admin")).toBe(false);
+  });
+});
+
+describe("hasPermission (Konzept-Dok 8.2, 3-Rollen-Modell)", () => {
+  it("admin hat nur die im Dok gelisteten Admin-Permissions, keine Customer-Permissions", () => {
+    expect(hasPermission({ role: "admin" }, "user.manage")).toBe(true);
+    expect(hasPermission({ role: "admin" }, "security.manage")).toBe(true);
+    expect(hasPermission({ role: "admin" }, "calculator.use")).toBe(false);
+  });
+
+  it("test_user hat nur test.access", () => {
+    expect(hasPermission({ role: "test_user" }, "test.access")).toBe(true);
+    expect(hasPermission({ role: "test_user" }, "calculator.use")).toBe(false);
+  });
+
+  it("customer hat Produktfunktionen, keine Admin-Rechte", () => {
+    expect(hasPermission({ role: "customer" }, "calculator.use")).toBe(true);
+    expect(hasPermission({ role: "customer" }, "ai.use")).toBe(true);
+    expect(hasPermission({ role: "customer" }, "profile.manage")).toBe(true);
+    expect(hasPermission({ role: "customer" }, "invoice.read")).toBe(true);
+    expect(hasPermission({ role: "customer" }, "user.manage")).toBe(false);
+  });
+
+  it("unbekannte/leere Rolle hat sicherheitshalber keine Permissions", () => {
+    expect(hasPermission({ role: "unknown_role" }, "calculator.use")).toBe(false);
   });
 });

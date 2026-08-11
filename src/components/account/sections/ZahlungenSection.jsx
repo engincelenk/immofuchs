@@ -85,6 +85,17 @@ export function ZahlungenSection({ t, account, lang }) {
     return new Date(invoice.billedAt).toLocaleDateString(locale);
   }
 
+  // "completed" = bezahlt/verarbeitet, "billed" = Rechnung gestellt aber noch
+  // nicht beglichen (z.B. Banküberweisung). Die Liste vom Backend enthaelt
+  // laut Paddle-Query ohnehin nur diese beiden Werte (checkout.ts:167) - PDF
+  // Konzept-Dok 4.3 wollte "Bezahlt" als Status, das gilt aber nicht pauschal
+  // fuer jeden Eintrag.
+  function statusLabel(invoice) {
+    if (invoice.status === "completed") return { text: t.rechnungenStatusCompleted, color: "#22c55e" };
+    if (invoice.status === "billed") return { text: t.rechnungenStatusBilled, color: "#f59e0b" };
+    return null;
+  }
+
   return (
     <div>
       <h2 style={sectionTitleStyle}>{t.navZahlung}</h2>
@@ -127,33 +138,53 @@ export function ZahlungenSection({ t, account, lang }) {
         {invoices !== null && invoices.length === 0 && (
           <div style={emptyStateStyle}>{t.rechnungenEmpty}</div>
         )}
-        {(invoices || []).map((invoice, i) => (
-          <div
-            key={invoice.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              padding: "10px 0",
-              borderTop: i === 0 ? "none" : "1px solid var(--cb)",
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ct)" }}>
-                {formatDate(invoice)}
-              </div>
-              <div style={{ fontSize: 11.5, color: "var(--ch)" }}>{formatAmount(invoice)}</div>
-            </div>
-            <button
-              onClick={() => handlePdf(invoice.id)}
-              aria-label={t.rechnungenPdfAria.replace("{date}", formatDate(invoice))}
-              style={{ ...inlineLinkBtnStyle, fontSize: 12.5, flexShrink: 0 }}
+        {(invoices || []).map((invoice, i) => {
+          const status = statusLabel(invoice);
+          return (
+            <div
+              key={invoice.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                padding: "10px 0",
+                borderTop: i === 0 ? "none" : "1px solid var(--cb)",
+              }}
             >
-              {t.rechnungenPdf} ↗
-            </button>
-          </div>
-        ))}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ct)" }}>
+                  {formatDate(invoice)}
+                </div>
+                <div style={{ fontSize: 11.5, color: "var(--ch)" }}>{formatAmount(invoice)}</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                {status && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#fff",
+                      background: status.color,
+                      padding: "3px 9px",
+                      borderRadius: 20,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {status.text}
+                  </span>
+                )}
+                <button
+                  onClick={() => handlePdf(invoice.id)}
+                  aria-label={t.rechnungenPdfAria.replace("{date}", formatDate(invoice))}
+                  style={{ ...inlineLinkBtnStyle, fontSize: 12.5, flexShrink: 0 }}
+                >
+                  {t.rechnungenPdf} ↗
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -13,12 +13,14 @@ import { ASSISTANT_FIELDS, TAB_TO_RECHNER, tabZuRechner } from "./assistantConte
 // dieser Test: er laesst den ECHTEN Worker-Validator gegen die ECHTE Payload
 // laufen, die Merkliste.jsx baut.
 //
-// Die tabs hier sind die SaveBtn-Aufrufe der vier speicherbaren Rechner:
+// Die tabs hier sind die SaveBtn-Aufrufe der sechs speicherbaren Rechner:
 //   Renditerechner.jsx  <SaveBtn tab="haupt" />
 //   Finanzierung.jsx    <SaveBtn tab="kredit" />
 //   Miete.jsx           <SaveBtn tab="miete" />
 //   Sanier.jsx          <SaveBtn tab="sanier" />
-const SPEICHERBARE_TABS = ["haupt", "kredit", "miete", "sanier"];
+//   SteuerTrick.jsx     <SaveBtn tab="steuer6" /> (Konzept-Dok 8.3 Punkt 2)
+//   Vorfaelligkeit.jsx  <SaveBtn tab="vfe" />      (Konzept-Dok 8.3 Punkt 2)
+const SPEICHERBARE_TABS = ["haupt", "kredit", "miete", "sanier", "steuer6", "vfe"];
 
 // Spiegelt exakt den Aufbau aus Merkliste.jsx (vergleichsObjekte +
 // compareRechner). Aendert sich dort die Form, muss sie hier mitwandern -
@@ -58,6 +60,19 @@ const beispielDaten = {
   mietJahre: "10",
   baujahr: "1981",
   sanFl: "60",
+  steuer6Ls: "50000",
+  steuer6Gst: "42",
+  steuer6Grd: "100000",
+  vfeAuszahlung: "2019-03-01",
+  vfeSollzinsbindungsEnde: "2029-03-01",
+  vfeRestschuld: "240000",
+  vfeRestschuldDatum: "2026-08-01",
+  vfeSollzinssatz: "1.85",
+  vfeMonatsRate: "1200",
+  vfeAbloeseTermin: "2026-09-01",
+  vfeSondertilgung: "0",
+  vfeWiederanlagezins: "2.1",
+  vfeBearbeitungsentgelt: "0",
 };
 
 const objekt = (tab, i = 0) => ({ name: "Objekt " + i, tab, data: beispielDaten });
@@ -71,7 +86,9 @@ describe("tabZuRechner", () => {
 
   it("faellt bei unbekannter Tab-Id auf einen GUELTIGEN Wert zurueck", () => {
     // Kein Durchreichen des Rohwerts: das lief frueher wieder in den 400er.
-    for (const unbekannt of ["landing", "saved", "steuer6", "vfe", undefined, ""]) {
+    // "steuer6"/"vfe" sind seit Konzept-Dok 8.3 Punkt 2 KEINE unbekannten Tabs
+    // mehr (siehe SPEICHERBARE_TABS oben) - hier nur noch echte Unbekannte.
+    for (const unbekannt of ["landing", "saved", undefined, ""]) {
       const res = validateRequest(baueVergleichsPayload([objekt(unbekannt, 0), objekt(unbekannt, 1)]));
       expect(res.ok, String(unbekannt)).toBe(true);
     }
@@ -87,7 +104,11 @@ describe("Objektvergleich gegen den echten Worker-Validator", () => {
   });
 
   it("akzeptiert gemischte Rechnertypen", () => {
-    const res = validateRequest(baueVergleichsPayload(SPEICHERBARE_TABS.map(objekt)));
+    // Auf 5 gekappt: MAX_VERGLEICHSOBJEKTE im Worker (validator.ts) und
+    // MAX_COMPARE in Merkliste.jsx erlauben ohnehin nie mehr als 5
+    // gleichzeitig - mit allen 6 speicherbaren Rechnern waere das Szenario
+    // ueber die UI gar nicht erreichbar.
+    const res = validateRequest(baueVergleichsPayload(SPEICHERBARE_TABS.slice(0, 5).map(objekt)));
     expect(res.ok).toBe(true);
   });
 

@@ -192,11 +192,11 @@ export function useAccount() {
   // kein automatisches refresh()/Login hier, das passiert erst nach der
   // Bestaetigung (Worker setzt dabei direkt den Session-Cookie und leitet mit
   // login_success=1 zurueck, siehe redirect-Handling oben).
-  const registerWithPassword = useCallback(async (email, password, acceptedTerms) => {
+  const registerWithPassword = useCallback(async (email, password, acceptedTerms, name) => {
     const res = await apiFetch("/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, acceptedTerms }),
+      body: JSON.stringify({ email, password, acceptedTerms, name }),
     });
     const body = await res.json().catch(() => ({}));
     if (res.ok) return { ok: true };
@@ -468,6 +468,22 @@ export function useAccount() {
     return res.ok;
   }, []);
 
+  // Direkt statt Double-Opt-In wie changeEmail: Name ist kein
+  // sicherheitskritisches Feld (Konzept-Dok 1.6/3.3/8.8).
+  const changeName = useCallback(async (newName) => {
+    const res = await apiFetch("/account/name", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName }),
+    });
+    if (res.ok) {
+      refresh();
+      return { ok: true };
+    }
+    const body = await res.json().catch(() => ({}));
+    return { ok: false, error: body.error || "invalid_name" };
+  }, [refresh]);
+
   // Passwort aendern bzw. erstmalig setzen (Phase 2, 4.13). currentPassword
   // ist nur Pflicht, wenn das Konto bereits eines hat - reine OAuth-/Passkey-
   // Konten setzen ihr erstes Passwort ohne. Welcher Fall vorliegt, verraet
@@ -572,6 +588,7 @@ export function useAccount() {
     listInvoices,
     openInvoicePdf,
     changeEmail,
+    changeName,
     changePassword,
     listDevices,
     setMarketingEmailsEnabled,

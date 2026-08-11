@@ -64,6 +64,7 @@ export default function UsersView() {
                 <th style={{ padding: 10, fontSize: 12, color: "var(--ch)" }}>Registriert</th>
                 <th style={{ padding: 10, fontSize: 12, color: "var(--ch)" }}>Letzter Login</th>
                 <th style={{ padding: 10, fontSize: 12, color: "var(--ch)" }}>Rolle</th>
+                <th style={{ padding: 10, fontSize: 12, color: "var(--ch)" }}>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -75,11 +76,25 @@ export default function UsersView() {
                     {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString("de-DE") : "–"}
                   </td>
                   <td style={{ padding: 10, fontSize: 14 }}>{u.role}</td>
+                  <td style={{ padding: 10, fontSize: 14 }}>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        color: "#fff",
+                        background: u.accountStatus === "SUSPENDED" ? "#c0392b" : "#22c55e",
+                      }}
+                    >
+                      {u.accountStatus === "SUSPENDED" ? "Gesperrt" : "Aktiv"}
+                    </span>
+                  </td>
                 </tr>
               ))}
               {result.users.length === 0 && (
                 <tr>
-                  <td colSpan={4} style={{ padding: 20, textAlign: "center", color: "var(--ch)" }}>
+                  <td colSpan={5} style={{ padding: 20, textAlign: "center", color: "var(--ch)" }}>
                     Keine Nutzer gefunden.
                   </td>
                 </tr>

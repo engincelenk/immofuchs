@@ -22,6 +22,13 @@ export const requireAuth = createMiddleware<{ Bindings: Env; Variables: AuthVars
     if (!ctx) return c.json({ error: "not_authenticated" }, 401);
     const user = await getUserById(c.env.DB, ctx.session.user_id);
     if (!user) return c.json({ error: "not_authenticated" }, 401);
+    // Access Management (Konzept-Dok Abschnitt 2/5, Migration 0016): ein
+    // gesperrtes Konto behandelt sich wie "nicht angemeldet", nicht wie ein
+    // eigener Fehlerfall - konsistent mit dem Login-Standard-Flow (Abschnitt
+    // 2.2 der Neue-Phase-Doku: 401 -> Session wird invalidiert, Anmeldung
+    // erforderlich), statt eines separaten "account_suspended"-Sonderpfads,
+    // der im Frontend extra behandelt werden muesste.
+    if (user.account_status === "SUSPENDED") return c.json({ error: "not_authenticated" }, 401);
     c.set("userId", user.id);
     c.set("user", user);
     c.set("sessionId", ctx.session.id);

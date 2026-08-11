@@ -12,12 +12,10 @@ import Sanier from "./components/calculators/Sanier.jsx";
 import { SteuerTrick } from "./components/extras/SteuerTrick.jsx";
 import { Vorfaelligkeit } from "./components/extras/Vorfaelligkeit.jsx";
 import { Landing } from "./pages/Landing.jsx";
-import { Statusleiste } from "./components/shell/Statusleiste.jsx";
 import { useSavedObjects, Merkliste } from "./components/shell/Merkliste.jsx";
 import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
 import { ProHeaderButton } from "./components/account/ProHeaderButton.jsx";
 import { CalculatorTrialGate } from "./components/account/CalculatorTrialGate.jsx";
-import { DashboardStartTab, DashboardObjekteTab } from "./components/dashboard/DashboardTabs.jsx";
 import { hideSplashScreen, tabSwitchHaptic } from "./utils/nativeInit.js";
 
 const IC = {
@@ -195,6 +193,12 @@ function createDefaults() {
     // schaetzt der Sanierungsrechner den Kennwert weiter aus dem Baujahr.
     sanIstVerbrauch: "",
     immLeer: "nein",
+    // Steueroptimierung §6 (Konzept-Dok 8.3 Punkt 2): vormals eigener lokaler
+    // useState in SteuerTrick.jsx, jetzt Teil von `d`, damit SaveBtn/Merkliste
+    // greifen. Werte 1:1 aus den bisherigen useState-Defaults uebernommen.
+    steuer6Ls: "50000",
+    steuer6Gst: "42",
+    steuer6Grd: "100000",
   };
 }
 
@@ -228,6 +232,14 @@ function hasAuthRedirectParam() {
 
 export default function App() {
   const [tab, setTab] = useState("haupt");
+  // Aktiven Tab in der scrollbaren .tbar sichtbar halten (Konzept 8.5b) -
+  // sonst verschwindet er bei vielen Tabs auf schmalen Screens seitlich aus
+  // dem sichtbaren Bereich, sobald der Nutzer selbst gescrollt hat.
+  const tbarRef = useRef(null);
+  useEffect(() => {
+    const btn = tbarRef.current?.querySelector(`[data-tab-id="${tab}"]`);
+    btn?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [tab]);
   const [lang, setLang] = useState("de");
   const [landed, setLanded] = useState(() => {
     if (sessionStorage.getItem("if_landed") === "1") return true;
@@ -392,17 +404,10 @@ export default function App() {
     { id: "steuer6", l: t.steuer6, ic: IC.steuer6 },
     { id: "vfe", l: t.vfe, ic: IC.vfe },
     { id: "saved", l: t.merkliste, ic: IC.saved },
-    // Dashboard-Tabs (Spec 4.17, 5.3): additiv, nur fuer eingeloggte
-    // Pro-Nutzer sichtbar - Free sieht weiterhin genau die 7 Tabs oben
-    // unveraendert. isProSavedObjects kommt aus useSavedObjects() (siehe
-    // dort: Cross-cutting Pro-Signal, da App() selbst ausserhalb von
-    // AccountProvider laeuft).
-    ...(isProSavedObjects
-      ? [
-          { id: "dash-start", l: "Start", ic: (a) => <span style={{ fontSize: 20 }}>{a ? "🏠" : "🏠"}</span> },
-          { id: "dash-objekte", l: "Objekte", ic: (a) => <span style={{ fontSize: 20 }}>{a ? "📋" : "📋"}</span> },
-        ]
-      : []),
+    // Navigations-Zusammenfuehrung (Konzept-Dok 8.5a, 2026-08): die vormals
+    // zusaetzlichen Pro-Tabs "Start"/"Objekte" sind in der obigen
+    // "saved"-Ansicht aufgegangen (Merkliste.jsx) - Free und Pro sehen jetzt
+    // einheitlich 7 statt 7/9 Top-Level-Tabs.
   ];
 
   const startApp = (startTab, opts) => {
@@ -471,9 +476,19 @@ export default function App() {
          erzeugt aber keinen Scroll-Container. Die hidden-Zeile davor ist die
          Rueckfallebene fuer Safari < 16. Nicht zu hidden zurueckdrehen. */
       .shell{max-width:1400px;margin:0 auto;padding:calc(78px + env(safe-area-inset-top)) 0 calc(72px + env(safe-area-inset-bottom));min-height:100dvh;overflow-x:hidden;overflow-x:clip;overflow-y:visible;position:relative;width:100%}
-      .hdr{position:fixed;top:0;left:0;right:0;z-index:50;padding:10px 16px;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);display:flex;justify-content:space-between;align-items:center;height:78px;padding-top:calc(10px + env(safe-area-inset-top))}
+      /* Horizontales Padding synchron mit .content (Bugreport 2026-08-10:
+         Logo/Sprachauswahl fluchten auf breiten Screens - z.B. 1920px - noch
+         immer nicht mit der Content-Kante darunter, obwohl .hdr und .content
+         denselben Padding-Wert hatten). Root Cause: .hdr ist volle
+         Viewport-Breite, ihr Padding wirkt VOR dem max-width:1400px-Zentrieren
+         von .hdr-inner - waehrend .content ihr Padding INNERHALB derselben
+         1400px-Box traegt, die zentriert wird. Ab >1400px+Padding driften
+         beide dadurch um die Padding-Differenz auseinander. Fix: Padding liegt
+         jetzt auf .hdr-inner selbst (gleiches Box-Modell wie .content), .hdr
+         traegt nur noch vertikales Padding. */
+      .hdr{position:fixed;top:0;left:0;right:0;z-index:50;padding:10px 0;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);display:flex;justify-content:space-between;align-items:center;height:78px;padding-top:calc(10px + env(safe-area-inset-top))}
       .hdr{height:calc(78px + env(safe-area-inset-top))}
-      .hdr-inner{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;width:100%}
+      .hdr-inner{max-width:1400px;margin:0 auto;padding:0 14px;display:flex;justify-content:space-between;align-items:center;width:100%;box-sizing:border-box}
       /* Header-Ueberlauf-Fix (Bugreport 2026-08-05): Logo+Wortmarke, Pro-Button
          und Sprachauswahl passten auf 375-390px Standardhandys nicht mehr in
          eine Zeile - die Sprachauswahl lief ohne Wrap/Shrink rechts aus dem
@@ -489,8 +504,14 @@ export default function App() {
         .hdr-wordmark{font-size:24px!important}
         .lang-label{display:inline!important}
       }
-      .tbar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--cc);border-top:1px solid var(--cb);padding:6px 0 calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:center}
-      .tbtn{flex:1;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border:none;background:none;cursor:pointer;min-height:48px}
+      /* Scrollbare Tab-Leiste (Konzept 8.5b, Bugreport "Tabs auf Mobile zu
+         dicht"): frueher flex:1 auf .tbtn, dadurch quetschten sich 7 Tabs auf
+         schmalen Screens zusammen. Jetzt feste Tab-Breite + horizontales
+         Scrollen mit Snap statt eines neuen Dropdown-Musters - pragmatischer
+         erster Schritt laut Dokument, Dropdown bleibt Phase-2-Option. */
+      .tbar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--cc);border-top:1px solid var(--cb);padding:6px 0 calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:flex-start;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
+      .tbar::-webkit-scrollbar{display:none}
+      .tbtn{flex:0 0 auto;min-width:64px;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border:none;background:none;cursor:pointer;min-height:48px;scroll-snap-align:center}
       .tbtn span{font-size:11px;font-weight:600;letter-spacing:.3px}
       .content{padding:14px 14px;max-width:1400px;margin:0 auto;width:100%;overflow-x:hidden;overflow-x:clip;overflow-y:visible}
       .ls{font-size:14px;padding:8px 10px;border:1px solid var(--cb);border-radius:8px;background:var(--ci);color:var(--ct);cursor:pointer;font-family:inherit;min-height:38px}
@@ -515,11 +536,13 @@ export default function App() {
         .inp-pane,.res-pane{display:block!important}
         .res-pane{position:sticky;top:94px;max-width:100%;overflow-x:hidden}
         .content{padding:24px 28px}
+        .hdr-inner{padding-left:28px;padding-right:28px}
         .tbar{max-width:640px;margin:0 auto;left:0;right:0;border-radius:16px 16px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.05)}
       }
       @media(min-width:1100px){
         .split{grid-template-columns:1fr 1.25fr;gap:32px}
         .content{padding:28px 40px}
+        .hdr-inner{padding-left:40px;padding-right:40px}
       }
       @media(max-width:699px){
         .inp-pane,.res-pane{display:none}
@@ -583,7 +606,6 @@ export default function App() {
           </div>
         </div>
         <div className="content">
-          <Statusleiste />
           {tab === "haupt" && (
             <CalculatorTrialGate>
               <Haupt />
@@ -615,8 +637,6 @@ export default function App() {
             </CalculatorTrialGate>
           )}
           {tab === "saved" && <Merkliste />}
-          {tab === "dash-start" && <DashboardStartTab onGoToRechner={() => setTab("haupt")} />}
-          {tab === "dash-objekte" && <DashboardObjekteTab />}
           <div
             style={{
               marginTop: 32,
@@ -698,10 +718,11 @@ export default function App() {
             </button>
           </div>
         </div>
-        <div className="tbar">
+        <div className="tbar" ref={tbarRef}>
           {tabs.map((tb) => (
             <button
               key={tb.id}
+              data-tab-id={tb.id}
               className="tbtn"
               onClick={() => {
                 tabSwitchHaptic();

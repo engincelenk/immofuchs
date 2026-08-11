@@ -41,3 +41,21 @@ export function fetchUsers(query, page) {
 export function fetchUserDetail(id) {
   return apiFetch(`/admin/users/${encodeURIComponent(id)}`);
 }
+
+export function fetchDashboard() {
+  return apiFetch("/admin/dashboard");
+}
+
+export function setUserStatus(id, status) {
+  return apiFetch(`/admin/users/${encodeURIComponent(id)}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function fetchAuditLog(page) {
+  const params = new URLSearchParams();
+  if (page) params.set("page", String(page));
+  const qs = params.toString();
+  return apiFetch(`/admin/audit-log${qs ? `?${qs}` : ""}`);
+}

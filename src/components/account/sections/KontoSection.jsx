@@ -30,6 +30,7 @@ export function KontoSection({ t, account, lang, onClose }) {
 
   const [sessions, setSessions] = useState(null); // null = laedt noch
   const [sessionsError, setSessionsError] = useState(false);
+  const [logoutAllConfirming, setLogoutAllConfirming] = useState(false);
 
   // Bewusst die einzelne Methode als Abhaengigkeit statt des ganzen
   // account-Objekts: dessen Identitaet wechselt bei jedem /me-Refresh, was
@@ -172,9 +173,30 @@ export function KontoSection({ t, account, lang, onClose }) {
       <div style={blockCardStyle}>
         <div style={blockTitleStyle}>{t.accountLogoutAll}</div>
         <p style={blockHintStyle}>{t.sicherheitLogoutAllHint}</p>
-        <button onClick={handleLogoutAll} style={actionBtnStyle}>
-          {t.accountLogoutAll}
-        </button>
+        {!logoutAllConfirming ? (
+          <button onClick={() => setLogoutAllConfirming(true)} style={actionBtnStyle}>
+            {t.accountLogoutAll}
+          </button>
+        ) : (
+          // Konzept-Dok 3.11: destruktive Wirkung (alle Sitzungen inkl. der
+          // eigenen enden sofort) verdient dieselbe Bestaetigung wie
+          // "Konto loeschen" weiter unten, statt einer 1-Klick-Aktion.
+          <div>
+            <div style={{ ...warnBannerStyle, marginBottom: 12 }}>{t.sicherheitLogoutAllHint}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={handleLogoutAll} style={dangerBtnStyle}>
+                {t.accountLogoutAll}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLogoutAllConfirming(false)}
+                style={inlineLinkBtnStyle}
+              >
+                {t.commonCancel}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={blockCardStyle}>
@@ -239,7 +261,7 @@ export function KontoSection({ t, account, lang, onClose }) {
                     onClick={() => account.startDeleteReauth(provider)}
                     style={dangerBtnStyle}
                   >
-                    {t.datenschutzDeleteReauthCta.replace("{provider}", linkedProviderLabel(provider))}
+                    {t.datenschutzDeleteReauthCta.replace("{provider}", linkedProviderLabel(provider, t))}
                   </button>
                 ))}
               </div>

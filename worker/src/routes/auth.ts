@@ -248,7 +248,8 @@ authRoutes.post("/register", async (c) => {
   const email = body && typeof body.email === "string" ? body.email : "";
   const password = body && typeof body.password === "string" ? body.password : "";
   const acceptedTerms = Boolean(body && body.acceptedTerms === true);
-  const result = await registerWithPassword(c.env, workerOrigin(c.req.raw), email, password, acceptedTerms);
+  const name = body && typeof body.name === "string" ? body.name : "";
+  const result = await registerWithPassword(c.env, workerOrigin(c.req.raw), email, password, acceptedTerms, name);
   if (!result.ok) {
     if (result.error === "rate_limited") return c.json({ error: result.error }, 429);
     if (result.error === "email_taken") return c.json({ error: result.error, providers: result.providers }, 409);

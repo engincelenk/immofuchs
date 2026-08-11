@@ -29,6 +29,7 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginWarn, setLoginWarn] = useState(false);
+  const [regName, setRegName] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
@@ -63,7 +64,7 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
     setBusy("register");
     setInlineError(null);
     setEmailTakenProviders(null);
-    const result = await account.registerWithPassword(regEmail, regPassword, acceptedTerms);
+    const result = await account.registerWithPassword(regEmail, regPassword, acceptedTerms, regName);
     setBusy(null);
     if (!result.ok) {
       if (result.error === "email_taken") {
@@ -116,6 +117,20 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
           </div>
         )}
         <form onSubmit={handleRegisterSubmit} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* Konzept-Dok 1.6/3.3/8.8: Name wird ab jetzt bei der Registrierung
+              abgefragt (wichtig fuer die Rechnungserstellung). Nur hier, nicht
+              bei Google/Apple - die legen das Konto ohne eigenes Formular an,
+              der Name laesst sich dort spaeter im Profil ergaenzen. */}
+          <input
+            type="text"
+            required
+            maxLength={100}
+            value={regName}
+            onChange={(e) => setRegName(e.target.value)}
+            placeholder={t.registerNamePlaceholder}
+            autoComplete="name"
+            style={textInputStyle}
+          />
           <input
             type="email"
             required

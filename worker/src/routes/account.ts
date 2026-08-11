@@ -11,6 +11,7 @@ import {
   createEmailChangeRequest,
   consumeEmailChangeRequest,
   updateUserEmail,
+  updateUserName,
   getUserByEmail,
   deleteOtherSessionsForUser,
   setUserPasswordHash,
@@ -33,6 +34,7 @@ accountRoutes.get("/me", requireAuth, async (c) => {
   return c.json({
     id: c.var.user.id,
     email: c.var.user.email,
+    name: c.var.user.name,
     role: c.var.user.role,
     emailVerified: Boolean(c.var.user.email_verified_at),
     hasUsedTrial: Boolean(c.var.user.trial_used_at),
@@ -112,6 +114,18 @@ accountRoutes.get("/account/email/confirm", async (c) => {
   if (!result) return c.redirect(`${base}/?email_change_error=invalid_or_expired`, 302);
   await updateUserEmail(c.env.DB, result.userId, result.newEmail);
   return c.redirect(`${base}/?email_change_success=1`, 302);
+});
+
+// Namensaenderung (Konzept-Dok 1.6/3.3/8.8, 2026-08-10): anders als bei der
+// E-Mail direkt ohne Double-Opt-In - der Name ist kein sicherheitskritisches
+// Feld, eine gueltige Session genuegt (analog /account/password fuer bereits
+// eingeloggte Nutzer).
+accountRoutes.post("/account/name", requireAuth, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const name = body && typeof body.name === "string" ? body.name.trim() : "";
+  if (!name || name.length > 100) return c.json({ error: "invalid_name" }, 400);
+  await updateUserName(c.env.DB, c.var.userId, name);
+  return c.json({ ok: true });
 });
 
 // Passwort aendern bzw. erstmalig setzen (Phase 2, 4.10/4.13). Zwei Faelle:

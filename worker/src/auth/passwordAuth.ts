@@ -63,8 +63,13 @@ function verifyLink(workerOrigin: string, token: string): string {
 
 export type RegisterResult =
   | { ok: true }
-  | { ok: false; error: "invalid_email" | "invalid_password" | "rate_limited" }
+  | { ok: false; error: "invalid_email" | "invalid_password" | "invalid_name" | "rate_limited" }
   | { ok: false; error: "email_taken"; providers: string[] };
+
+// Obergrenze rein zum Schutz vor Missbrauch (z. B. ganze Saetze als "Name") -
+// keine inhaltliche Validierung des Namens selbst (Projektregel: keine
+// Annahmen ueber gueltige Namensformate treffen).
+const MAX_NAME_LENGTH = 100;
 
 export async function registerWithPassword(
   env: Env,
@@ -72,10 +77,13 @@ export async function registerWithPassword(
   emailRaw: string,
   password: string,
   acceptedTerms: boolean,
+  nameRaw: string,
 ): Promise<RegisterResult> {
   const email = normalizeEmail(emailRaw);
+  const name = nameRaw.trim();
   if (!isValidEmail(email) || !acceptedTerms) return { ok: false, error: "invalid_email" };
   if (!isValidPasswordLength(password)) return { ok: false, error: "invalid_password" };
+  if (!name || name.length > MAX_NAME_LENGTH) return { ok: false, error: "invalid_name" };
 
   if (await rateLimited(env, `register:${email}`, REGISTER_HOURLY_LIMIT)) {
     return { ok: false, error: "rate_limited" };
@@ -95,7 +103,7 @@ export async function registerWithPassword(
   // die Registrierung nicht, s. isPasswordLeaked.
   const leaked = await isPasswordLeaked(password);
   const passwordHash = await hashPassword(password);
-  const user = await createUserWithPassword(env.DB, email, passwordHash);
+  const user = await createUserWithPassword(env.DB, email, passwordHash, name);
 
   const rawToken = crypto.randomUUID();
   await createEmailVerificationToken(env.DB, user.id, await hashToken(rawToken), null);

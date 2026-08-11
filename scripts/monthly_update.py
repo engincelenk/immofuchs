@@ -2,7 +2,8 @@
 """
 ImmoFuchs Monthly Data Update
 Runs on the 1st of each month via GitHub Actions.
-Updates src/data.js (Bauzinsen, Energie) and src/App.jsx (ratesTip strings).
+Updates src/data.js (Bauzinsen, Energie), src/i18n/translations.js
+(ratesTip strings) und public/zinsen.json (Live-Datenquelle der Landingpage).
 """
 
 import os, json, re, sys
@@ -12,9 +13,18 @@ import anthropic
 import requests
 
 # ── Paths ──────────────────────────────────────────────────────────────────
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_JS   = os.path.join(REPO_ROOT, "src", "data.js")
-APP_JSX   = os.path.join(REPO_ROOT, "src", "App.jsx")
+REPO_ROOT     = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_JS       = os.path.join(REPO_ROOT, "src", "data.js")
+# Bugfix (Konzept-Dok 1.1, 2026-08-10): ratesTip lag frueher in App.jsx, ist
+# seit einem i18n-Refactor aber nach src/i18n/translations.js umgezogen - der
+# alte APP_JSX-Pfad traf dort nie mehr, das Update lief seither jeden Monat
+# stillschweigend ins Leere ("pattern not found — skipped").
+TRANSLATIONS_JS = os.path.join(REPO_ROOT, "src", "i18n", "translations.js")
+# Bugfix: public/zinsen.json wurde von diesem Skript bisher NIE geschrieben,
+# obwohl es die primaere Datenquelle ist, die die Landingpage zur Laufzeit
+# per fetch("/zinsen.json") laedt (data.js dient dort nur als Fallback) -
+# das war die Hauptursache fuer das seit Mai 2026 eingefrorene Datum.
+ZINSEN_JSON   = os.path.join(REPO_ROOT, "public", "zinsen.json")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; ImmoFuchsBot/1.0; +https://immofuchs.info)"
@@ -297,10 +307,10 @@ Regeln:
     else:
         print("  data.js — keine Änderungen")
 
-    # ── 5. Update App.jsx ratesTip (5 languages) ──────────────────────────
-    print("\nUpdating ratesTip in App.jsx...")
-    app_content = open(APP_JSX, encoding="utf-8").read()
-    app_changed = []
+    # ── 5. Update ratesTip in src/i18n/translations.js (5 languages) ───────
+    print("\nUpdating ratesTip in translations.js...")
+    i18n_content = open(TRANSLATIONS_JS, encoding="utf-8").read()
+    i18n_changed = []
 
     tip_replacements = [
         # Pattern to find current value         # New value
@@ -312,27 +322,75 @@ Regeln:
     ]
 
     for pattern, new_val, lang in tip_replacements:
-        matches = list(re.finditer(pattern, app_content))
+        matches = list(re.finditer(pattern, i18n_content))
         if len(matches) == 1:
             old = matches[0].group(0)
             if old != new_val:
-                app_content = app_content[:matches[0].start()] + new_val + app_content[matches[0].end():]
-                app_changed.append(f"  ratesTip[{lang}]: {old} → {new_val}")
+                i18n_content = i18n_content[:matches[0].start()] + new_val + i18n_content[matches[0].end():]
+                i18n_changed.append(f"  ratesTip[{lang}]: {old} → {new_val}")
         elif len(matches) == 0:
             print(f"  ⚠ ratesTip[{lang}]: pattern not found — skipped")
         else:
             print(f"  ⚠ ratesTip[{lang}]: {len(matches)} matches — skipped (safety)")
 
-    if app_content != open(APP_JSX, encoding="utf-8").read():
-        open(APP_JSX, "w", encoding="utf-8").write(app_content)
-        print(f"✓ App.jsx — {len(app_changed)} Änderungen:")
-        for c in app_changed:
+    if i18n_content != open(TRANSLATIONS_JS, encoding="utf-8").read():
+        open(TRANSLATIONS_JS, "w", encoding="utf-8").write(i18n_content)
+        print(f"✓ translations.js — {len(i18n_changed)} Änderungen:")
+        for c in i18n_changed:
             print(c)
     else:
-        print("  App.jsx — keine Änderungen")
+        print("  translations.js — keine Änderungen")
+
+    # ── 6. Update public/zinsen.json (Live-Quelle der Landingpage) ────────
+    # War bisher komplett ausgespart - genau das liess das dort angezeigte
+    # Datum seit Mai 2026 einfrieren, obwohl dieses Skript monatlich lief.
+    print("\nUpdating public/zinsen.json...")
+    zinsen = json.loads(open(ZINSEN_JSON, encoding="utf-8").read())
+    zinsen_changed = []
+
+    new_zinsen_stand = f"{year}-{now.month:02d}"
+    if zinsen.get("stand") != new_zinsen_stand:
+        zinsen_changed.append(f"  stand: {zinsen.get('stand')} → {new_zinsen_stand}")
+        zinsen["stand"] = new_zinsen_stand
+    zinsen["hinweis"] = (
+        "Alle Werte monatlich automatisiert aktualisiert (scripts/monthly_update.py). "
+        f"Bundesbank-API fuer Bundesanleihe-Livewert deaktiviert (CORS), daher Community-/Presse-Quellen. "
+        f"Stand: {MONTH_DE[m_idx]} {year}."
+    )
+
+    # bundesanleihe_10j: gleicher Bundesbank-API-Call wie PFANDBRIEF.zins oben -
+    # kein zweiter Wert erfinden, nur uebernehmen wenn der Fetch geklappt hat.
+    if pfandbrief_zins:
+        if zinsen.get("bundesanleihe_10j") != pfandbrief_zins:
+            zinsen_changed.append(
+                f"  bundesanleihe_10j: {zinsen.get('bundesanleihe_10j')} → {pfandbrief_zins}"
+            )
+            zinsen["bundesanleihe_10j"] = pfandbrief_zins
+
+    # quellen[].wert an MARKET_RATES.rows koppeln (gleiche 5 Quellen, gleiche
+    # Reihenfolge wie row_sources oben) - vermeidet eine zweite, unabhaengige
+    # Zahlenquelle, die wieder auseinanderlaufen kann.
+    quelle_updates = {
+        "Dr. Klein Topzins (10J)": mr.get("top"),
+        "Interhyp Durchschnitt (10J)": mr.get("avg"),
+    }
+    for q in zinsen.get("quellen", []):
+        for name, new_wert in quelle_updates.items():
+            if q.get("name", "").startswith(name.split(" (")[0]) and isinstance(new_wert, (int, float)):
+                if q.get("wert") != new_wert:
+                    zinsen_changed.append(f"  quellen[{q['name']}].wert: {q.get('wert')} → {new_wert}")
+                    q["wert"] = new_wert
+
+    if zinsen_changed:
+        open(ZINSEN_JSON, "w", encoding="utf-8").write(json.dumps(zinsen, indent=2, ensure_ascii=False) + "\n")
+        print(f"✓ zinsen.json — {len(zinsen_changed)} Änderungen:")
+        for c in zinsen_changed:
+            print(c)
+    else:
+        print("  zinsen.json — keine Änderungen")
 
     # ── Summary ────────────────────────────────────────────────────────────
-    total = len(changes) + len(app_changed)
+    total = len(changes) + len(i18n_changed) + len(zinsen_changed)
     print(f"\n=== Abgeschlossen — {total} Änderungen gesamt ===")
     if updates.get("KFW_CHANGED"):
         print("⚠ KfW: Programmänderung erkannt — manuelle Prüfung empfohlen!")

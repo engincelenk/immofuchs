@@ -20,3 +20,4 @@ mobile/ios/DerivedData/
 # Playwright (S6-5/S8-5)
 /playwright-report/
 /test-results/
+__pycache__/

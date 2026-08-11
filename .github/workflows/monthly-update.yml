@@ -65,7 +65,7 @@ jobs:
         run: |
           git config --global user.name "ImmoFuchs Bot"
           git config --global user.email "bot@immofuchs.info"
-          git add src/data.js src/App.jsx
+          git add src/data.js src/i18n/translations.js public/zinsen.json
           if git diff --staged --quiet; then
             echo "Keine Änderungen — kein Commit nötig"
           else

@@ -1,12 +1,19 @@
 // admin/src/AdminShell.jsx
 import { useState } from "react";
 import UsersView from "./UsersView.jsx";
+import DashboardView from "./DashboardView.jsx";
+import AuditLogView from "./AuditLogView.jsx";
 
-// 11 Bereiche aus Neue-Phase-Konsolidiert.md Abschnitt 6.16 - nur "Nutzer"
-// ist in dieser Etappe funktionsfaehig, alle anderen sind sichtbare, aber
-// deaktivierte Platzhalter (macht das Zielbild des vollstaendigen Admin
-// Panels erkennbar, siehe Spec-Dokument Abschnitt 5).
+// 12 Bereiche aus Neue-Phase-Konsolidiert.md Abschnitt 6.16 (+ Dashboard) -
+// "Dashboard", "Nutzer" und "Sicherheit & Audit Log" sind ab Etappe 2
+// funktionsfaehig, der Rest bleibt sichtbarer, aber deaktivierter
+// Platzhalter (macht das Zielbild des vollstaendigen Admin Panels erkennbar,
+// siehe Backend Admin Panel Konzept Abschnitt 16/17 - die dort noch
+// fehlenden MVP-Pflichtpunkte Abo-/Gutschein-/Feature-Verwaltung usw.
+// brauchen jeweils eigene Datenmodelle und sind eigene, spaeter freizugebende
+// Etappen).
 const NAV_ITEMS = [
+  { key: "dashboard", label: "Dashboard", enabled: true },
   { key: "users", label: "Nutzer", enabled: true },
   { key: "subscriptions", label: "Abos & Payments", enabled: false },
   { key: "coupons", label: "Gutscheine", enabled: false },
@@ -16,12 +23,12 @@ const NAV_ITEMS = [
   { key: "marketing", label: "Marketing", enabled: false },
   { key: "communication", label: "Kommunikation", enabled: false },
   { key: "support", label: "Support", enabled: false },
-  { key: "security", label: "Sicherheit & Audit Log", enabled: false },
+  { key: "security", label: "Sicherheit & Audit Log", enabled: true },
   { key: "settings", label: "Einstellungen", enabled: false },
 ];
 
 export default function AdminShell({ me }) {
-  const [activeKey, setActiveKey] = useState("users");
+  const [activeKey, setActiveKey] = useState("dashboard");
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -56,7 +63,11 @@ export default function AdminShell({ me }) {
           {me?.email}
         </div>
       </aside>
-      <main style={{ flex: 1, padding: 32, minWidth: 0 }}>{activeKey === "users" && <UsersView />}</main>
+      <main style={{ flex: 1, padding: 32, minWidth: 0 }}>
+        {activeKey === "dashboard" && <DashboardView />}
+        {activeKey === "users" && <UsersView />}
+        {activeKey === "security" && <AuditLogView />}
+      </main>
     </div>
   );
 }

@@ -9,11 +9,56 @@ export const PAST_DUE_GRACE_MS = 3 * 24 * 60 * 60 * 1000; // 3 Tage Kulanzfrist 
 const ENTITLEMENT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 Minuten (4.9 Performance-Trade-off)
 const ENTITLEMENT_COOKIE = "if_entitlement";
 
-export type Role = "customer" | "admin";
+export type Role = "customer" | "admin" | "test_user";
 
 export function hasRole(user: Pick<UserRow, "role">, role: Role): boolean {
   if (role === "customer") return true; // jeder authentifizierte Nutzer ist mindestens 'customer'
   return user.role === role;
+}
+
+// Access-Management-Fundament (Konzept-Dok "Neue Phase" Abschnitt 8.2,
+// 3-Rollen-Modell ADMIN/TEST_USER/CUSTOMER, verbindlich entschieden
+// 2026-08-08). Rollennamen bleiben in der DB klein geschrieben
+// ('customer'/'admin'/'test_user'), wie bisher schon fuer 'customer'/'admin'
+// in Migration 0001 - das Dokument beschreibt die Rollen konzeptionell in
+// Grossschreibung, keine erzwungene DB-Konvention. `role` ist eine reine
+// TEXT-Spalte ohne CHECK-Constraint (Migration 0001), daher ist fuer den
+// neuen Wert 'test_user' KEINE Schema-Migration noetig.
+//
+// Wichtig (Dok 7.1/8.2, technische Vorgabe des Auftraggebers): kuenftige
+// Rechtepruefungen im Code sollen auf diesen granularen Permission-Strings
+// basieren, NICHT auf direkten Rollennamen-Vergleichen (`if role === 'admin'`)
+// - macht eine spaetere Aufteilung in weitere Rollen (z. B. eigene SUPPORT-,
+// FINANCE-Rolle) additiv statt eines Rewrites. Diese Datei liefert das
+// Fundament (Typen + Zuordnung); tatsaechliche Admin-Routen, die
+// hasPermission() aufrufen, sind Teil von Paket 7 (Admin Panel) und noch
+// nicht Teil dieser Aenderung - es gibt aktuell nichts zu schuetzen.
+export type Permission =
+  | "user.manage"
+  | "subscription.manage"
+  | "invoice.manage"
+  | "product.manage"
+  | "security.manage"
+  | "test.access"
+  | "calculator.use"
+  | "ai.use"
+  | "profile.manage"
+  | "invoice.read";
+
+// 1:1 aus Dok 5.2 Punkt 9 uebernommen - bewusst keine Vererbung zwischen den
+// Rollen ergaenzt, die im Dokument nicht explizit steht (Projektregel: keine
+// Annahmen/Spekulationen). Falls ADMIN spaeter auch CUSTOMER-Rechte braucht,
+// ist das eine eigene, zu klaerende Entscheidung.
+export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
+  admin: ["user.manage", "subscription.manage", "invoice.manage", "product.manage", "security.manage"],
+  test_user: ["test.access"],
+  customer: ["calculator.use", "ai.use", "profile.manage", "invoice.read"],
+};
+
+export function hasPermission(user: Pick<UserRow, "role">, permission: Permission): boolean {
+  const role = user.role as Role;
+  const permissions = ROLE_PERMISSIONS[role];
+  return permissions ? permissions.includes(permission) : false;
 }
 
 // Reine Entscheidungsfunktion, kein D1-Zugriff - so isoliert testbar ohne

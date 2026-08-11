@@ -6,7 +6,16 @@ import type { Env } from "./types";
 export interface UserRow {
   id: string;
   email: string;
+  // Migration 0015 (Konzept-Dok 1.6/3.3/8.8): nullable, da nur der Passwort-
+  // Registrierungs-Screen ein Namensfeld hat - OAuth/Passkey/Magic-Link legen
+  // Konten ohne Name an, nachtraeglich im Profil ergaenzbar.
+  name: string | null;
   role: string;
+  // Migration 0016 (Konzept-Dok "Access Management" Abschnitt 5): getrennt
+  // von role - role definiert Berechtigungen, account_status den
+  // Kontozustand. 'DELETED' wird aktuell nie gesetzt (Hard Delete statt
+  // Soft Delete, siehe accountDeletion.ts).
+  account_status: "ACTIVE" | "SUSPENDED" | "DELETED";
   created_at: number;
   last_login_at: number | null;
   // Passwort-Weg (Ergaenzung 04.08., Migration 0011): NULL = Konto hat kein
@@ -98,7 +107,9 @@ export async function createUser(db: Env["DB"], email: string): Promise<UserRow>
   return {
     id,
     email,
+    name: null,
     role: "customer",
+    account_status: "ACTIVE",
     created_at: now,
     last_login_at: now,
     password_hash: null,
@@ -204,20 +215,23 @@ export async function createUserWithPassword(
   db: Env["DB"],
   email: string,
   passwordHash: string,
+  name: string,
 ): Promise<UserRow> {
   const id = newId();
   const now = Date.now();
   await db
     .prepare(
-      `INSERT INTO users (id, email, role, created_at, last_login_at, password_hash, password_set_at, email_verified_at)
-       VALUES (?, ?, 'customer', ?, NULL, ?, ?, NULL)`,
+      `INSERT INTO users (id, email, name, role, created_at, last_login_at, password_hash, password_set_at, email_verified_at)
+       VALUES (?, ?, ?, 'customer', ?, NULL, ?, ?, NULL)`,
     )
-    .bind(id, email, now, passwordHash, now)
+    .bind(id, email, name, now, passwordHash, now)
     .run();
   return {
     id,
     email,
+    name,
     role: "customer",
+    account_status: "ACTIVE",
     created_at: now,
     last_login_at: null,
     password_hash: passwordHash,
@@ -226,6 +240,24 @@ export async function createUserWithPassword(
     trial_used_at: null,
     marketing_emails_enabled: 0,
   };
+}
+
+// Direktes Update, kein Double-Opt-In (anders als updateUserEmail): der Name
+// ist kein sicherheitskritisches Feld, eine gueltige Session genuegt.
+export async function updateUserName(db: Env["DB"], userId: string, name: string): Promise<void> {
+  await db.prepare("UPDATE users SET name = ? WHERE id = ?").bind(name, userId).run();
+}
+
+// Access Management (Konzept-Dok Abschnitt 2, "Benutzer sperren/entsperren").
+// Setzt NUR account_status - loescht bewusst keine Sessions hier, das macht
+// der Aufrufer explizit (siehe routes/admin.ts), damit diese reine
+// Statusaenderung testbar bleibt, ohne Session-Nebenwirkungen mitzutesten.
+export async function setUserAccountStatus(
+  db: Env["DB"],
+  userId: string,
+  status: "ACTIVE" | "SUSPENDED",
+): Promise<void> {
+  await db.prepare("UPDATE users SET account_status = ? WHERE id = ?").bind(status, userId).run();
 }
 
 export async function setUserPasswordHash(db: Env["DB"], userId: string, passwordHash: string): Promise<void> {
@@ -778,6 +810,7 @@ export interface AdminUserSummary {
   id: string;
   email: string;
   role: string;
+  account_status: "ACTIVE" | "SUSPENDED" | "DELETED";
   created_at: number;
   last_login_at: number | null;
 }
@@ -796,7 +829,7 @@ export async function listUsersForAdmin(
   const [rows, countRow] = await Promise.all([
     db
       .prepare(
-        `SELECT id, email, role, created_at, last_login_at FROM users
+        `SELECT id, email, role, account_status, created_at, last_login_at FROM users
          WHERE email LIKE ? ESCAPE '\\' ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       )
       .bind(like, pageSize, offset)
@@ -807,6 +840,123 @@ export async function listUsersForAdmin(
       .first<{ n: number }>(),
   ]);
   return { users: rows.results, total: countRow?.n ?? 0 };
+}
+
+// ═══ Admin Panel — Dashboard (Paket 6, MVP-Pflicht #1) ═══
+// Deckt exakt das "Beispiel" aus dem Konzept-Dok Abschnitt 3 ab (Nutzer
+// gesamt, Aktive Abos, Trial Nutzer, MRR, Kuendigungen Monat) - nicht die
+// volle Kennzahlenliste (neue Registrierungen heute/Woche, ARR, Conversion
+// Rate, Churn Rate, CLV, Systemstatus). Diese brauchen zusaetzliche
+// Zeitreihen-/Kohorten-Logik bzw. externe Statuschecks und sind bewusst
+// spaeteren Etappen vorbehalten.
+export interface AdminDashboardStats {
+  totalUsers: number;
+  activeSubscriptions: number;
+  trialUsers: number;
+  mrr: number;
+  cancellationsThisMonth: number;
+}
+
+// Gleiche Preise wie im Renewal-/Trial-Ending-Mailing (scheduled.ts) - EINE
+// Quelle fuer diese beiden Werte waere sauberer, aber eine Konstanten-Datei
+// nur dafuer ist fuer zwei Zahlen an zwei Stellen keine Verbesserung wert
+// (Projektregel: keine Abstraktion ohne echten Bedarf).
+const MONTHLY_PRICE_EUR = 9.99;
+const YEARLY_PRICE_EUR = 79;
+
+export async function getAdminDashboardStats(db: Env["DB"]): Promise<AdminDashboardStats> {
+  const monthStart = (() => {
+    const now = new Date();
+    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+  })();
+
+  const [totalUsersRow, planRows, trialRow, cancelRow] = await Promise.all([
+    db.prepare("SELECT COUNT(*) as n FROM users").first<{ n: number }>(),
+    db
+      .prepare(
+        `SELECT plan, COUNT(*) as n FROM subscriptions WHERE status IN ('active','cancel_scheduled') GROUP BY plan`,
+      )
+      .all<{ plan: string; n: number }>(),
+    db.prepare(`SELECT COUNT(*) as n FROM subscriptions WHERE status = 'trialing'`).first<{ n: number }>(),
+    db
+      .prepare(
+        `SELECT COUNT(*) as n FROM subscriptions WHERE status IN ('cancel_scheduled','canceled') AND updated_at >= ?`,
+      )
+      .bind(monthStart)
+      .first<{ n: number }>(),
+  ]);
+
+  let activeSubscriptions = 0;
+  let mrr = 0;
+  for (const row of planRows.results) {
+    activeSubscriptions += row.n;
+    mrr += row.plan === "monthly" ? row.n * MONTHLY_PRICE_EUR : row.n * (YEARLY_PRICE_EUR / 12);
+  }
+
+  return {
+    totalUsers: totalUsersRow?.n ?? 0,
+    activeSubscriptions,
+    trialUsers: trialRow?.n ?? 0,
+    mrr: Math.round(mrr * 100) / 100,
+    cancellationsThisMonth: cancelRow?.n ?? 0,
+  };
+}
+
+// ═══ Admin Panel — Audit Log (Paket 6, MVP-Pflicht #7) ═══
+export interface AdminAuditLogEntry {
+  id: string;
+  admin_user_id: string;
+  admin_email: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  details: string | null;
+  created_at: number;
+}
+
+export async function logAdminAction(
+  db: Env["DB"],
+  entry: {
+    adminUserId: string;
+    adminEmail: string;
+    action: string;
+    targetType: string;
+    targetId: string;
+    details?: Record<string, unknown>;
+  },
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO admin_audit_log (id, admin_user_id, admin_email, action, target_type, target_id, details, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      newId(),
+      entry.adminUserId,
+      entry.adminEmail,
+      entry.action,
+      entry.targetType,
+      entry.targetId,
+      entry.details ? JSON.stringify(entry.details) : null,
+      Date.now(),
+    )
+    .run();
+}
+
+export async function listAdminAuditLog(
+  db: Env["DB"],
+  page: number,
+  pageSize: number,
+): Promise<{ entries: AdminAuditLogEntry[]; total: number }> {
+  const offset = (page - 1) * pageSize;
+  const [rows, countRow] = await Promise.all([
+    db
+      .prepare("SELECT * FROM admin_audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?")
+      .bind(pageSize, offset)
+      .all<AdminAuditLogEntry>(),
+    db.prepare("SELECT COUNT(*) as n FROM admin_audit_log").first<{ n: number }>(),
+  ]);
+  return { entries: rows.results, total: countRow?.n ?? 0 };
 }
 
 // ═══ Art. 17 — Konto vollständig löschen ═══

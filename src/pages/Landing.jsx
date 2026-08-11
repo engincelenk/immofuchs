@@ -5,6 +5,10 @@ import { LANG_LOCALE } from "../utils/helpers.js";
 import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
 import { LandingMascot } from "../components/assistant/LandingMascot.jsx";
+import { useAccountCtx } from "../context/AccountContext.jsx";
+import { ACCOUNT_T } from "../i18n/account.js";
+import { CheckoutWizard } from "../components/checkout/CheckoutWizard.jsx";
+import { MyAccount } from "../components/account/MyAccount.jsx";
 
 const navLink = {
   background: "none",
@@ -28,8 +32,15 @@ const navLinkMobile = {
 
 export function Landing({ onStart, zinsen, lang, setLang }) {
   const l = TL[lang] || TL.de;
+  const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const zB = zinsen?.bundesanleihe_10j;
   const [navOpen, setNavOpen] = useState(false);
+  // Login-Standard-Flow (Konzept-Dok Abschnitt 2/1.5): "Anmelden" ist bereits
+  // auf der Landingpage sichtbar, statt erst beim Klick in einen Rechner.
+  // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
+  // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
+  const account = useAccountCtx();
+  const [openMode, setOpenMode] = useState(null); // null | "checkout" | "account"
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
@@ -70,10 +81,17 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         }}
       >
         <div
+          className="lp-hdr-inner"
           style={{
-            maxWidth: 1280,
+            // Nutzer-Feedback 2026-08-10: maxWidth/Padding jetzt identisch zu
+            // .hdr-inner in App.jsx (dort 1400px + 14/28/40px je Breakpoint) -
+            // vorher 1280px + fix 24px, dadurch war der seitliche Abstand auf
+            // der Landingpage auf breiten Screens sichtbar groesser als bei
+            // den Rechnern. Horizontales Padding kommt jetzt aus der
+            // .lp-hdr-inner-Regel unten (responsiv), hier nur noch vertikal.
+            maxWidth: 1400,
             margin: "0 auto",
-            padding: "14px 24px",
+            padding: "14px 0",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -132,8 +150,27 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             </button>
           </nav>
 
-          {/* Right side: lang + CTA */}
+          {/* Right side: Anmelden/Mein Konto + lang + CTA */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {account && !account.loading && (
+              <button
+                onClick={() => setOpenMode(account.isLoggedIn ? "account" : "checkout")}
+                style={{
+                  padding: "9px 14px",
+                  background: "transparent",
+                  color: "var(--ct)",
+                  border: "1px solid var(--cb)",
+                  borderRadius: 10,
+                  fontSize: 13.5,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
+              </button>
+            )}
             <LangSel lang={lang} setLang={setLang} />
             <button
               onClick={() => scrollTo("rechner")}
@@ -199,9 +236,22 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             <button onClick={() => scrollTo("zinsen")} style={navLinkMobile}>
               {l.navZinsen}
             </button>
+            {account && !account.loading && (
+              <button
+                onClick={() => {
+                  setNavOpen(false);
+                  setOpenMode(account.isLoggedIn ? "account" : "checkout");
+                }}
+                style={navLinkMobile}
+              >
+                {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
+              </button>
+            )}
           </div>
         )}
       </header>
+      {openMode === "checkout" && <CheckoutWizard onClose={() => setOpenMode(null)} />}
+      {openMode === "account" && <MyAccount onClose={() => setOpenMode(null)} />}
 
       {/* ═══════════ HERO ═══════════ */}
       <section
@@ -293,7 +343,13 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               </button>
             </div>
 
-            {/* Trust elements */}
+            {/* Trust element: Datenstand statt statischer Marketing-Badges
+                (Konzept-Dok 1.1) - ersetzt die vier alten Badges "100%
+                kostenlos"/"In 1 Minute startklar"/"Aktuelle Marktdaten"/
+                "KI-Assistent inklusive". Monat/Jahr wird wie zuvor in der
+                jetzt entfernten Statusleiste dynamisch berechnet, nicht
+                hartkodiert - sonst entsteht exakt das Datumsproblem, das
+                Anlass fuer diese Aenderung war. */}
             <div
               style={{
                 display: "flex",
@@ -303,60 +359,31 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 color: "var(--ch)",
               }}
             >
-              {[
-                { ic: "✓", t: l.trust1 },
-                { ic: "✓", t: l.trust2 },
-                { ic: "✓", t: l.trust4 },
-              ].map((tr, i) => (
-                <div key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  <span
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: "50%",
-                      background: "#22c55e",
-                      color: "#fff",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {tr.ic}
-                  </span>
-                  <span style={{ fontWeight: 500, color: "var(--cl)" }}>{tr.t}</span>
-                </div>
-              ))}
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "var(--ca-bg)",
-                  border: "1px solid var(--ca-bd)",
-                  borderRadius: 20,
-                  padding: "2px 10px 2px 2px",
-                }}
-              >
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <span
                   style={{
                     width: 18,
                     height: 18,
                     borderRadius: "50%",
-                    background: "var(--ca)",
+                    background: "#22c55e",
                     color: "#fff",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 10,
+                    fontSize: 11,
+                    fontWeight: 700,
                     flexShrink: 0,
                   }}
                 >
-                  💬
+                  ✓
                 </span>
-                <span style={{ fontWeight: 600, color: "var(--ca)" }}>{l.trustAi}</span>
+                <span style={{ fontWeight: 500, color: "var(--cl)" }}>
+                  {l.trust4} · {l.ratesStand}:{" "}
+                  {new Date().toLocaleDateString(LANG_LOCALE[lang] || "de-DE", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
               </div>
             </div>
           </div>
@@ -777,13 +804,13 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       <section
         id="funktioniert"
         style={{
-          padding: "clamp(40px,5vw,72px) 24px",
+          padding: "clamp(40px,5vw,72px) 0",
           background: "var(--cc)",
           borderTop: "1px solid var(--cb)",
           borderBottom: "1px solid var(--cb)",
         }}
       >
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div className="lp-container">
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <div
               style={{
@@ -810,24 +837,25 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               {l.howShort}
             </h2>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))",
-              gap: 24,
-            }}
-          >
+          <div className="how-steps-grid">
             {[
-              { n: "1", icon: "📍", t: l.step1H, d: l.step1P },
-              { n: "2", icon: "📊", t: l.step2H, d: l.step2P },
-              { n: "3", icon: "💡", t: l.step3H, d: l.step3P },
+              // Reihenfolge korrigiert (Nutzer-Feedback 2026-08-10): Anmelden
+              // & Abo waehlen ist chronologisch der ERSTE Schritt, nicht der
+              // letzte - Spec-v3.0 verlangt ein Konto vor jeder
+              // Rechner-Nutzung. Die i18n-Schluessel heissen weiterhin
+              // step1..4 in der urspruenglichen Reihenfolge, hier nur die
+              // Anzeigereihenfolge/-nummer (s.n) angepasst.
+              { n: "1", icon: "🦊", t: l.step4H, d: l.step4P },
+              { n: "2", icon: "📍", t: l.step1H, d: l.step1P },
+              { n: "3", icon: "📊", t: l.step2H, d: l.step2P },
+              { n: "4", icon: "💡", t: l.step3H, d: l.step3P },
             ].map((s, i) => (
               <div
                 key={i}
                 style={{
                   background: "var(--bg)",
                   borderRadius: 14,
-                  padding: "28px 24px",
+                  padding: "18px 16px",
                   border: "1px solid var(--cb)",
                   position: "relative",
                   transition: "transform .2s, box-shadow .2s",
@@ -841,40 +869,41 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                   e.currentTarget.style.boxShadow = "";
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                   <div
                     style={{
-                      width: 42,
-                      height: 42,
+                      width: 34,
+                      height: 34,
                       background: "var(--ca-bg)",
-                      borderRadius: 10,
+                      borderRadius: 9,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 22,
+                      fontSize: 18,
                       border: "1px solid var(--ca-bd)",
+                      flexShrink: 0,
                     }}
                   >
                     {s.icon}
                   </div>
                   <div
-                    style={{ fontSize: 13, fontWeight: 700, color: "var(--ca)", letterSpacing: 1 }}
+                    style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ca)", letterSpacing: 0.8 }}
                   >
                     STEP {s.n}
                   </div>
                 </div>
                 <h3
                   style={{
-                    fontSize: 18,
+                    fontSize: 15.5,
                     fontWeight: 700,
                     color: "var(--ct)",
-                    margin: "0 0 8px",
-                    letterSpacing: -0.2,
+                    margin: "0 0 6px",
+                    letterSpacing: -0.1,
                   }}
                 >
                   {s.t}
                 </h3>
-                <p style={{ fontSize: 14, color: "var(--ch)", lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5, margin: 0 }}>
                   {s.d}
                 </p>
               </div>
@@ -1169,10 +1198,10 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         style={{
           background: "var(--bg)",
           borderTop: "1px solid var(--cb)",
-          padding: "clamp(40px,5vw,72px) 24px",
+          padding: "clamp(40px,5vw,72px) 0",
         }}
       >
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div className="lp-container">
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <div
               style={{
@@ -1306,10 +1335,10 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           background: "var(--cc)",
           borderTop: "1px solid var(--cb)",
           borderBottom: "1px solid var(--cb)",
-          padding: "clamp(40px,5vw,72px) 24px",
+          padding: "clamp(40px,5vw,72px) 0",
         }}
       >
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div className="lp-container">
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <div
               style={{
@@ -1436,11 +1465,11 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         style={{
           marginTop: "auto",
           borderTop: "1px solid var(--cb)",
-          padding: "32px 24px 28px",
+          padding: "32px 0 28px",
           background: "var(--cc)",
         }}
       >
-        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <div className="lp-container">
           <div
             style={{
               display: "flex",
@@ -1511,6 +1540,21 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
 
       {/* Responsive nav styles */}
       <style>{`
+      /* Gleiche Breakpoints wie .hdr-inner in App.jsx (Nutzer-Feedback
+         2026-08-10, Ausrichtungs-Bugfix). */
+      .lp-hdr-inner{padding-left:14px;padding-right:14px}
+      @media(min-width:700px){.lp-hdr-inner{padding-left:28px;padding-right:28px}}
+      @media(min-width:1100px){.lp-hdr-inner{padding-left:40px;padding-right:40px}}
+      /* Wiederverwendbar fuer reine Text-/Icon-Abschnitte ohne Bilder
+         (Nutzer-Feedback 2026-08-11): gleiches Box-Modell wie .content in
+         App.jsx (max-width:1400px, Padding INNERHALB der zentrierten Box,
+         14/28/40px je Breakpoint). Bewusst NICHT auf Hero- und
+         Rechner-Karten-Abschnitt angewendet - dort wuerden die
+         objectFit:cover-Bildboxen bei einer breiteren Spalte anders
+         zugeschnitten wirken. */
+      .lp-container{max-width:1400px;margin:0 auto;padding:0 14px;box-sizing:border-box}
+      @media(min-width:700px){.lp-container{padding-left:28px;padding-right:28px}}
+      @media(min-width:1100px){.lp-container{padding-left:40px;padding-right:40px}}
       .hero-upload-spot{transition:border-color .2s,box-shadow .2s}
       .hero-upload-spot:hover{border-color:var(--ca);box-shadow:0 8px 28px rgba(232,96,10,.14)}
       .hero-upload-grid{grid-template-columns:1fr}
@@ -1523,6 +1567,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .calc-cards-support>*{width:100%;min-width:0;box-sizing:border-box}
       @media(min-width:640px){.calc-cards-support{grid-template-columns:repeat(3,1fr)}}
       @media(min-width:900px){.calc-cards-support{grid-template-columns:repeat(5,1fr)}}
+      .how-steps-grid{display:grid;grid-template-columns:1fr;gap:14px}
+      @media(min-width:560px){.how-steps-grid{grid-template-columns:repeat(2,1fr)}}
+      @media(min-width:860px){.how-steps-grid{grid-template-columns:repeat(4,1fr)}}
       @media(max-width:880px){
         .lp-nav{display:none!important}
         .lp-burger{display:inline-flex!important}
