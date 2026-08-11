@@ -1,13 +1,12 @@
-// admin/src/AuditLogView.jsx
 import { useEffect, useState } from "react";
-import { fetchAuditLog } from "./api";
+import { fetchAuditLog } from "./adminApi.js";
 
 const ACTION_LABELS = {
   "user.suspend": "Nutzer gesperrt",
   "user.unsuspend": "Nutzer entsperrt",
 };
 
-export default function AuditLogView() {
+export function AdminAuditLogView() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -31,15 +30,14 @@ export default function AuditLogView() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, marginTop: 0, marginBottom: 8 }}>Audit Log</h1>
-      <p style={{ fontSize: 13, color: "var(--ch)", marginTop: 0, marginBottom: 20 }}>
-        Protokolliert jede schreibende Admin-Aktion. Aktuell nur Sperren/Entsperren - wächst mit,
-        sobald weitere Aktionen dazukommen.
+      <p style={{ fontSize: 12.5, color: "var(--ch)", marginTop: 0, marginBottom: 16 }}>
+        Protokolliert jede schreibende Admin-Aktion. Aktuell nur Sperren/Entsperren - wächst mit, sobald weitere
+        Aktionen dazukommen.
       </p>
-      {error && <div style={{ color: "#c0392b" }}>{error}</div>}
-      {!data && !error && <div style={{ color: "var(--ch)" }}>Lade...</div>}
+      {error && <div style={{ color: "#c0392b", fontSize: 13 }}>{error}</div>}
+      {!data && !error && <div style={{ color: "var(--ch)", fontSize: 13 }}>Wird geladen …</div>}
       {data && data.entries.length === 0 && (
-        <div style={{ color: "var(--ch)" }}>Noch keine Einträge.</div>
+        <div style={{ color: "var(--ch)", fontSize: 13 }}>Noch keine Einträge.</div>
       )}
       {data && data.entries.length > 0 && (
         <>
@@ -58,14 +56,14 @@ export default function AuditLogView() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>
                     {ACTION_LABELS[entry.action] || entry.action}
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--ch)" }}>
+                  <div style={{ fontSize: 11.5, color: "var(--ch)" }}>
                     {entry.adminEmail} · {entry.targetType} {entry.details?.targetEmail || entry.targetId}
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: "var(--ch)", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 11.5, color: "var(--ch)", whiteSpace: "nowrap" }}>
                   {new Date(entry.createdAt).toLocaleString("de-DE")}
                 </div>
               </div>
@@ -96,5 +94,6 @@ const pagerBtnStyle = {
   border: "1px solid var(--cb)",
   borderRadius: 8,
   background: "var(--cc)",
+  color: "var(--ct)",
   cursor: "pointer",
 };

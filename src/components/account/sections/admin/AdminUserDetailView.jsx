@@ -1,8 +1,7 @@
-// admin/src/UserDetailView.jsx
 import { useEffect, useState, useCallback } from "react";
-import { fetchUserDetail, setUserStatus } from "./api";
+import { fetchUserDetail, setUserStatus } from "./adminApi.js";
 
-export default function UserDetailView({ userId, onBack }) {
+export function AdminUserDetailView({ userId, onBack }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,16 +44,16 @@ export default function UserDetailView({ userId, onBack }) {
     <div>
       <button
         onClick={onBack}
-        style={{ marginBottom: 16, background: "none", border: "none", color: "var(--ca)", cursor: "pointer", fontSize: 14, padding: 0 }}
+        style={{ marginBottom: 16, background: "none", border: "none", color: "var(--ca-dk)", cursor: "pointer", fontSize: 13, fontWeight: 700, padding: 0 }}
       >
         ← Zurück zur Nutzerliste
       </button>
-      {loading && <div style={{ color: "var(--ch)" }}>Lade...</div>}
-      {error && <div style={{ color: "#c0392b" }}>{error}</div>}
+      {loading && <div style={{ color: "var(--ch)", fontSize: 13 }}>Wird geladen …</div>}
+      {error && <div style={{ color: "#c0392b", fontSize: 13 }}>{error}</div>}
       {detail && (
-        <div style={{ background: "var(--cc)", border: "1px solid var(--cb)", borderRadius: 12, padding: 24, maxWidth: 480 }}>
-          <h1 style={{ fontSize: 18, marginTop: 0 }}>{detail.email}</h1>
-          <dl style={{ fontSize: 14 }}>
+        <div style={{ background: "var(--cc)", border: "1px solid var(--cb)", borderRadius: 12, padding: 20 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 800, marginTop: 0 }}>{detail.email}</h3>
+          <dl style={{ fontSize: 13 }}>
             <dt style={{ color: "var(--ch)", marginTop: 12 }}>Status</dt>
             <dd style={{ margin: 0 }}>
               <span
@@ -104,7 +103,7 @@ export default function UserDetailView({ userId, onBack }) {
               )
             ) : (
               <div>
-                <p style={{ fontSize: 13, color: "var(--ch)", marginTop: 0 }}>
+                <p style={{ fontSize: 12.5, color: "var(--ch)", marginTop: 0 }}>
                   Konto wirklich sperren? Alle aktiven Sitzungen dieses Nutzers werden sofort beendet.
                 </p>
                 <div style={{ display: "flex", gap: 8 }}>

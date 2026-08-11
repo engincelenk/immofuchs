@@ -112,11 +112,17 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             // .hdr-inner in App.jsx (dort 1400px + 14/28/40px je Breakpoint) -
             // vorher 1280px + fix 24px, dadurch war der seitliche Abstand auf
             // der Landingpage auf breiten Screens sichtbar groesser als bei
-            // den Rechnern. Horizontales Padding kommt jetzt aus der
-            // .lp-hdr-inner-Regel unten (responsiv), hier nur noch vertikal.
+            // den Rechnern. Horizontales Padding kommt aus der
+            // .lp-hdr-inner-Regel unten (responsiv) - hier NUR vertikal per
+            // paddingTop/Bottom (Bugreport 2026-08-11: die vorherige
+            // padding:"14px 0"-Kurzschreibweise setzte links/rechts explizit
+            // auf 0 und ueberschrieb damit die Klassenregel, da Inline-Styles
+            // jede externe/embedded CSS-Regel schlagen - Logo/Menue sassen
+            // dadurch buendig am Rand statt eingerueckt wie der uebrige Inhalt).
             maxWidth: 1400,
             margin: "0 auto",
-            padding: "14px 0",
+            paddingTop: 14,
+            paddingBottom: 14,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",

@@ -12,6 +12,7 @@ import { ZahlungenSection } from "./sections/ZahlungenSection.jsx";
 import { EinstellungenSection } from "./sections/EinstellungenSection.jsx";
 import { KontoSection } from "./sections/KontoSection.jsx";
 import { SupportSection } from "./sections/SupportSection.jsx";
+import { AdminSection } from "./sections/AdminSection.jsx";
 
 // "Mein Konto" als vollflaechiger Bereich (Phase 2) - loest das bisherige
 // kleine AccountPanel-Modal ab, in dem alle Kontofunktionen als eine einzige
@@ -32,6 +33,9 @@ const SECTIONS = [
   { key: "einstellungen", labelKey: "navDatenschutz", icon: "⚙️", Component: EinstellungenSection },
   { key: "support", labelKey: "navSupport", icon: "💬", Component: SupportSection },
   { key: "konto", labelKey: "navSicherheit", icon: "🔒", Component: KontoSection },
+  // Nur fuer role==='admin' (Filter unten in MyAccount()) - ersetzt die
+  // vormals eigenstaendige admin/-App (Nutzer-Entscheidung 2026-08-11).
+  { key: "admin", labelKey: "navAdmin", icon: "🛠️", Component: AdminSection, roleRequired: "admin" },
 ];
 
 export function MyAccount({ onClose }) {
@@ -55,7 +59,8 @@ export function MyAccount({ onClose }) {
 
   if (!account?.me) return null;
   if (showUpgrade) return <CheckoutWizard onClose={onClose} entryPoint="payment" />;
-  const active = SECTIONS.find((s) => s.key === activeKey) || SECTIONS[0];
+  const visibleSections = SECTIONS.filter((s) => !s.roleRequired || s.roleRequired === account.me.role);
+  const active = visibleSections.find((s) => s.key === activeKey) || visibleSections[0];
   const ActiveSection = active.Component;
 
   return createPortal(
@@ -147,7 +152,7 @@ export function MyAccount({ onClose }) {
                   }
             }
           >
-            {SECTIONS.map((s) => (
+            {visibleSections.map((s) => (
               <NavItem
                 key={s.key}
                 label={t[s.labelKey]}

@@ -1,3 +1,60 @@
+## 2026-08-11 (1.7.26)
+
+### Feature: Admin-Bereich vollständig in die Kunden-App integriert
+
+**Anlass:** Nutzer-Feedback - der Admin-Zugang sollte über den normalen
+App-Login laufen statt über eine separate App mit eigenem Login-Screen.
+
+**Vorher:** `admin/` war ein eigenständiges Vite-Projekt (eigener
+Login-Screen, eigener Port 5174, kein Deployment) - ein Admin-Konto musste
+sich dort zusätzlich zum normalen Konto separat anmelden.
+
+**Jetzt:** Ein neuer Bereich "Admin" in "Mein Konto"
+([src/components/account/sections/AdminSection.jsx](src/components/account/sections/AdminSection.jsx)),
+sichtbar ausschließlich für Konten mit `role === 'admin'` (Feld kommt schon
+aus der bestehenden `/api/v1/me`-Antwort). Darin dieselben drei Bereiche wie
+vorher - Dashboard, Nutzer(-verwaltung inkl. Sperren/Entsperren), Sicherheit
+& Audit-Log - jetzt als Unternavigation statt als Sidebar. Kein neuer
+Backend-Code nötig, die `/api/v1/admin/*`-Routen liefen bereits im selben
+Worker wie die Kunden-App. Das separate `admin/`-Verzeichnis (App,
+Login-Screen, Vite-Config, Launch-Config-Eintrag) wurde vollständig entfernt.
+
+**Verifiziert (lokal, End-to-End im Browser):** Login mit Admin-Testkonto
+über den normalen App-Login → "Mein Konto" zeigt den Admin-Tab → Dashboard
+lädt echte Kennzahlen, Nutzerliste + Detailansicht laden echte Daten,
+Sperren/Entsperren-Aktion vollständig durchgetestet (inkl. Rückgängigmachen)
+und im Audit-Log sichtbar. `npm test`: alle 293 Projekttests grün, inkl.
+i18n-Vollständigkeitstest für den neuen `navAdmin`-Schlüssel in allen 5
+Sprachen.
+
+## 2026-08-11 (1.7.25)
+
+### Bugfix: Header/Content-Ausrichtung auf der Landingpage weiterhin verschoben
+
+**Anlass:** Nutzer-Feedback - nach dem vorherigen Ausrichtungs-Fix (1.7.15)
+sah es auf der Landingpage immer noch falsch aus.
+
+**Root Cause:** Der Inline-Style von `.lp-hdr-inner`
+([src/pages/Landing.jsx](src/pages/Landing.jsx)) setzte
+`padding: "14px 0"` - diese Kurzschreibweise setzt auch `padding-left`/
+`padding-right` explizit auf `0`. Inline-Styles gewinnen in der CSS-Kaskade
+immer gegen externe/embedded Stylesheet-Regeln, unabhängig von deren
+Spezifität - dadurch hob der Rest-Wert das horizontale Padding aus der
+`.lp-hdr-inner`-Klassenregel (14/28/40px je Breakpoint) vollständig auf.
+Logo und Menü im Header saßen dadurch bündig am Bildschirmrand (0px),
+während der gesamte übrige Seiteninhalt (`.lp-container`) um 14-40px
+eingerückt war. Die Klassenregel selbst war korrekt - deshalb war der Fehler
+per Messung der Container-Boxen (identische max-width/margin) nicht
+sichtbar, nur an den tatsächlich sichtbaren Inhalten (Logo vs. Fließtext).
+
+**Fix:** Inline-Style setzt jetzt nur noch `paddingTop`/`paddingBottom`
+(vertikal), horizontales Padding kommt ausschließlich aus der
+`.lp-hdr-inner`-Klassenregel.
+
+**Verifiziert (lokal, Browser-Messung der tatsächlichen Element-Positionen):**
+Logo und Hero-Überschrift auf identischem `left`-Wert bei 375px (Mobile),
+1440px (Desktop) und beim Übergang Landingpage → Rechner-Seite.
+
 ## 2026-08-11 (1.7.24)
 
 ### Bugfix: Absturz bei "Anmelden"/"Mein Konto" auf der Landingpage
