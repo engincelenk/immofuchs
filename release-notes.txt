@@ -1,3 +1,43 @@
+## 2026-08-11 (1.7.29)
+
+### UX: Mobile Reiterleiste in "Mein Konto" - Scroll-Hinweis statt Ratespiel
+
+**Anlass:** Nutzer-Screenshots (iPhone) - die Reiterleiste in "Mein Konto"
+(Profil/Abonnement/Zahlungen/Einstellungen/Support/Konto & Sicherheit,
+für Admins zusätzlich "Admin") überragt auf 375px-Breite deutlich den
+Bildschirm, ohne jeden Hinweis, dass rechts noch mehr folgt - wirkte wie
+abgeschnittene, kaputte Navigation statt einer absichtlich scrollbaren Leiste.
+
+**Fix (`src/components/account/MyAccount.jsx`):** Verlaufskanten links/
+rechts, die nur einblenden, wenn dort tatsächlich noch etwas zu scrollen
+ist (dieselbe Konvention wie scrollende Listen in iOS Mail/Nachrichten) -
+Status wird per Scroll-/Resize-Listener auf der Leiste selbst ermittelt.
+Zusätzlich `scroll-snap-type: x proximity` auf der Leiste, damit sich die
+Reiter beim Scrollen sauber einrasten statt an beliebiger Stelle stehen zu
+bleiben. Betrifft ausschließlich die mobile Ansicht - die
+Desktop-Vertikalliste ist unverändert.
+
+**Randbefund beim Bauen:** scroll-snap-type liess die Leiste beim ersten
+Laden automatisch um genau den linken Innenabstand (20px) einrasten - ohne
+Anpassung hätte das die linke Verlaufskante fälschlich sofort gezeigt,
+obwohl der Nutzer noch gar nicht gescrollt hatte. Schwellenwert entsprechend
+auf 24px statt 4px angehoben.
+
+**Zum gemeldeten Header-Problem:** Konnte nicht reproduziert werden - Header
+(Landingpage `.lp-hdr-inner` und App-Shell `.hdr-inner`) wurde bei 320px,
+375px und 390px sowohl lokal als auch auf dev.immofuchs.info ohne
+horizontales Overflow/Clipping gemessen (`document.body.scrollWidth ===
+window.innerWidth` in allen Fällen). Möglicherweise ein geräte-/
+Safari-spezifischer Effekt (z. B. Dynamic-Island-Bereich, PWA-Standalone-
+Modus), der sich mit den verfügbaren Tools nicht nachstellen liess - bei
+Gelegenheit mit einem konkreten Screenshot des Problems selbst (nicht nur
+des Ergebnisses) nachfassen.
+
+**Verifiziert:** Live im Browser bei 375px (7 Reiter, Admin-Konto, größter
+Fall) - Kante erscheint/verschwindet korrekt beim Scrollen an beide Enden,
+alle Reiter weiterhin klickbar. Desktop-Ansicht (1280px, frischer Ladevorgang)
+unverändert. `npm test` grün, Build erfolgreich.
+
 ## 2026-08-11 (1.7.28)
 
 ### Bugfix: "Anmelden" öffnete den Kauf-Flow statt einer reinen Anmeldung

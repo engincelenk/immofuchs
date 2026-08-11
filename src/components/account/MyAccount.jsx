@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
@@ -50,12 +50,45 @@ export function MyAccount({ onClose }) {
   // zwei gleichzeitig aktive Traps wuerden sich beim Tabben gegenseitig
   // ueberschreiben. Deshalb ersetzt der Wizard diesen Bereich komplett.
   const [showUpgrade, setShowUpgrade] = useState(false);
+  // Mobile-Reiterleiste (Nutzer-Feedback 2026-08-11, Screenshot: Nutzer
+  // musste erraten, dass rechts noch Reiter folgen - kein Hinweis auf
+  // scrollbaren Inhalt). Verlaufskanten blenden nur ein, wenn dort
+  // tatsaechlich noch etwas zu scrollen ist - dieselbe iOS-Konvention wie
+  // scrollende Listen in Mail/Nachrichten.
+  const navScrollRef = useRef(null);
+  const [navEdges, setNavEdges] = useState({ atStart: true, atEnd: true });
+  // Schwelle 24px statt 4px: scroll-snap-type "x proximity" auf dem ersten/
+  // letzten Reiter rastet beim Laden leicht ein (settelt exakt auf den
+  // 20px-Innenabstand der Leiste) - ohne den groesseren Puffer wuerde das
+  // faelschlich schon "hier geht noch was" anzeigen, obwohl der Nutzer noch
+  // gar nicht gescrollt hat.
+  const updateNavEdges = useCallback(() => {
+    const el = navScrollRef.current;
+    if (!el) return;
+    setNavEdges({
+      atStart: el.scrollLeft <= 24,
+      atEnd: el.scrollLeft + el.clientWidth >= el.scrollWidth - 24,
+    });
+  }, []);
 
   // Bewusst OHNE deps: der Fokus-Trap ermittelt die fokussierbaren Elemente
   // bei jedem Tastendruck neu, ein Bereichswechsel braucht also keinen
   // Neuaufbau. Mit deps wuerde der Fokus nach jedem Klick in der Navigation
   // auf den Schliessen-Knopf zurueckspringen.
   useFocusTrap(dialogRef, onClose);
+
+  useEffect(() => {
+    if (isDesktop) return;
+    const el = navScrollRef.current;
+    if (!el) return;
+    updateNavEdges();
+    el.addEventListener("scroll", updateNavEdges, { passive: true });
+    window.addEventListener("resize", updateNavEdges);
+    return () => {
+      el.removeEventListener("scroll", updateNavEdges);
+      window.removeEventListener("resize", updateNavEdges);
+    };
+  }, [isDesktop, updateNavEdges]);
 
   if (!account?.me) return null;
   if (showUpgrade) return <CheckoutWizard onClose={onClose} entryPoint="payment" />;
@@ -138,31 +171,55 @@ export function MyAccount({ onClose }) {
             flex: 1,
           }}
         >
-          <nav
-            aria-label={t.accountNavAria}
-            style={
-              isDesktop
-                ? { flex: "0 0 210px", display: "flex", flexDirection: "column", gap: 2 }
-                : {
-                    display: "flex",
-                    gap: 6,
-                    overflowX: "auto",
-                    padding: "0 20px 12px",
-                    borderBottom: "1px solid var(--cb)",
-                  }
-            }
-          >
-            {visibleSections.map((s) => (
-              <NavItem
-                key={s.key}
-                label={t[s.labelKey]}
-                icon={s.icon}
-                active={s.key === activeKey}
-                isDesktop={isDesktop}
-                onClick={() => setActiveKey(s.key)}
-              />
-            ))}
-          </nav>
+          {isDesktop ? (
+            <nav
+              aria-label={t.accountNavAria}
+              style={{ flex: "0 0 210px", display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              {visibleSections.map((s) => (
+                <NavItem
+                  key={s.key}
+                  label={t[s.labelKey]}
+                  icon={s.icon}
+                  active={s.key === activeKey}
+                  isDesktop
+                  onClick={() => setActiveKey(s.key)}
+                />
+              ))}
+            </nav>
+          ) : (
+            <div style={{ position: "relative" }}>
+              <nav
+                ref={navScrollRef}
+                aria-label={t.accountNavAria}
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  overflowX: "auto",
+                  padding: "0 20px 12px",
+                  borderBottom: "1px solid var(--cb)",
+                  scrollSnapType: "x proximity",
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                {visibleSections.map((s) => (
+                  <NavItem
+                    key={s.key}
+                    label={t[s.labelKey]}
+                    icon={s.icon}
+                    active={s.key === activeKey}
+                    isDesktop={false}
+                    onClick={() => setActiveKey(s.key)}
+                  />
+                ))}
+              </nav>
+              {/* Verlaufskanten (nur wenn dort tatsaechlich noch etwas
+                  folgt) - machen den Reiter-Streifen als scrollbar
+                  erkennbar, statt hart am Bildschirmrand abzuschneiden. */}
+              {!navEdges.atStart && <NavScrollFade side="left" />}
+              {!navEdges.atEnd && <NavScrollFade side="right" />}
+            </div>
+          )}
 
           <div style={{ flex: 1, minWidth: 0, padding: isDesktop ? "0" : "20px 20px 0" }}>
             <ActiveSection
@@ -210,10 +267,31 @@ function NavItem({ label, icon, active, isDesktop, onClick }) {
         whiteSpace: "nowrap",
         flexShrink: 0,
         minHeight: 40,
+        scrollSnapAlign: isDesktop ? undefined : "start",
       }}
     >
       <span aria-hidden="true">{icon}</span>
       <span>{label}</span>
     </button>
+  );
+}
+
+// Blendet nur die letzten ~28px der Reiterleiste zum Hintergrund aus
+// (var(--bg), derselbe Ton wie der Vollbild-Hintergrund von MyAccount) -
+// signalisiert "hier geht's weiter", ohne einen Reiter selbst zu verdecken.
+function NavScrollFade({ side }) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        top: 0,
+        bottom: 12,
+        [side]: 0,
+        width: 28,
+        pointerEvents: "none",
+        background: `linear-gradient(to ${side === "left" ? "right" : "left"}, var(--bg), transparent)`,
+      }}
+    />
   );
 }
