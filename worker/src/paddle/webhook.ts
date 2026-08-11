@@ -203,7 +203,7 @@ async function upsertSubscriptionFromPaddle(env: Env, data: Record<string, unkno
           recipientUserId: userId,
           payload: {
             plan,
-            amount: plan === "monthly" ? "9,99 €" : "79 €",
+            amount: plan === "monthly" ? "4,99 €" : "49,99 €",
             periodEndDate: new Date(periodEnd).toLocaleDateString("de-DE"),
           },
         });

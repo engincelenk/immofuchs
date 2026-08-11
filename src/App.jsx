@@ -607,32 +607,32 @@ export default function App() {
         </div>
         <div className="content">
           {tab === "haupt" && (
-            <CalculatorTrialGate>
+            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
               <Haupt />
             </CalculatorTrialGate>
           )}
           {tab === "kredit" && (
-            <CalculatorTrialGate>
+            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
               <Kredit />
             </CalculatorTrialGate>
           )}
           {tab === "miete" && (
-            <CalculatorTrialGate>
+            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
               <Miete />
             </CalculatorTrialGate>
           )}
           {tab === "sanier" && (
-            <CalculatorTrialGate>
+            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
               <Sanier />
             </CalculatorTrialGate>
           )}
           {tab === "steuer6" && (
-            <CalculatorTrialGate>
+            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
               <SteuerTrick />
             </CalculatorTrialGate>
           )}
           {tab === "vfe" && (
-            <CalculatorTrialGate>
+            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
               <Vorfaelligkeit />
             </CalculatorTrialGate>
           )}

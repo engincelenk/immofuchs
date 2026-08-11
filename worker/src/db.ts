@@ -30,6 +30,10 @@ export interface UserRow {
   // Kap. 4.7 (Migration 0014): einziger abschaltbarer Mail-Kanal, alle
   // anderen (Zahlungsfehler, Kuendigung, Trial-Ende, ...) sind Pflicht.
   marketing_emails_enabled: number;
+  // Neuer Login-/Test-Flow (Migration 0018): kostenloser Ersttest aller 6
+  // Rechner kombiniert, einmal gesetzt nie zurueckgesetzt - unabhaengig von
+  // trial_used_at (das ist der bezahlte 7-Tage-Paddle-Trial).
+  calculator_trial_used_at: number | null;
 }
 
 export interface SessionRow {
@@ -117,6 +121,7 @@ export async function createUser(db: Env["DB"], email: string): Promise<UserRow>
     email_verified_at: null,
     trial_used_at: null,
     marketing_emails_enabled: 0,
+    calculator_trial_used_at: null,
   };
 }
 
@@ -239,6 +244,7 @@ export async function createUserWithPassword(
     email_verified_at: null,
     trial_used_at: null,
     marketing_emails_enabled: 0,
+    calculator_trial_used_at: null,
   };
 }
 
@@ -271,6 +277,16 @@ export async function setUserPasswordHash(db: Env["DB"], userId: string, passwor
 export async function markTrialUsedForUser(db: Env["DB"], userId: string): Promise<void> {
   await db
     .prepare("UPDATE users SET trial_used_at = ? WHERE id = ? AND trial_used_at IS NULL")
+    .bind(Date.now(), userId)
+    .run();
+}
+
+// Neuer Login-/Test-Flow (Migration 0018) - idempotent wie markTrialUsedForUser:
+// erster Rechner mit gueltigem Ergebnis verbraucht den kombinierten Ersttest,
+// jeder weitere Aufruf ist folgenlos (WHERE ... IS NULL greift nur einmal).
+export async function markCalculatorTrialUsedForUser(db: Env["DB"], userId: string): Promise<void> {
+  await db
+    .prepare("UPDATE users SET calculator_trial_used_at = ? WHERE id = ? AND calculator_trial_used_at IS NULL")
     .bind(Date.now(), userId)
     .run();
 }
@@ -861,8 +877,8 @@ export interface AdminDashboardStats {
 // Quelle fuer diese beiden Werte waere sauberer, aber eine Konstanten-Datei
 // nur dafuer ist fuer zwei Zahlen an zwei Stellen keine Verbesserung wert
 // (Projektregel: keine Abstraktion ohne echten Bedarf).
-const MONTHLY_PRICE_EUR = 9.99;
-const YEARLY_PRICE_EUR = 79;
+const MONTHLY_PRICE_EUR = 4.99;
+const YEARLY_PRICE_EUR = 49.99;
 
 export async function getAdminDashboardStats(db: Env["DB"]): Promise<AdminDashboardStats> {
   const monthStart = (() => {

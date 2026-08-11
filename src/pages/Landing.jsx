@@ -203,26 +203,33 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               </button>
             )}
             <LangSel lang={lang} setLang={setLang} />
-            <button
-              onClick={() => scrollTo("rechner")}
-              className="lp-cta"
-              style={{
-                padding: "10px 18px",
-                background: "var(--ca)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                boxShadow: "0 4px 12px rgba(232,96,10,.25)",
-                letterSpacing: 0.2,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {l.heroCtaPrimary}
-            </button>
+            {/* REQ-LP-01 (Nutzer-Konzept 2026-08-11): "Jetzt rechnen" nur fuer
+                eingeloggte Nutzer sichtbar - nicht eingeloggte sehen bereits
+                den "Anmelden"-Knopf oben, ein zweiter waere redundant. Die
+                serverseitige Durchsetzung uebernehmen ohnehin requireAuth +
+                CalculatorTrialGate, unabhaengig von dieser reinen UI-Sichtbarkeit. */}
+            {account?.isLoggedIn && (
+              <button
+                onClick={() => scrollTo("rechner")}
+                className="lp-cta"
+                style={{
+                  padding: "10px 18px",
+                  background: "var(--ca)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  boxShadow: "0 4px 12px rgba(232,96,10,.25)",
+                  letterSpacing: 0.2,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {l.heroCtaPrimary}
+              </button>
+            )}
             {/* Mobile nav toggle */}
             <button
               onClick={() => setNavOpen((o) => !o)}
@@ -345,8 +352,12 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
 
             {/* CTAs */}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
+              {/* REQ-LP-01: Hero-Primaer-CTA hat keinen zweiten "Anmelden"-Knopf
+                  in der Naehe (anders als der Header) - deshalb hier Label +
+                  Aktion tauschen statt nur auszublenden, sonst faehlt
+                  nicht eingeloggten Erstbesuchern die primaere Handlung. */}
               <button
-                onClick={() => scrollTo("rechner")}
+                onClick={() => (account?.isLoggedIn ? scrollTo("rechner") : setOpenMode("checkout"))}
                 style={{
                   padding: "14px 26px",
                   background: "var(--ca)",
@@ -364,7 +375,8 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                   gap: 8,
                 }}
               >
-                {l.heroCtaPrimary} <span style={{ fontSize: 18, marginTop: -2 }}>→</span>
+                {account?.isLoggedIn ? l.heroCtaPrimary : at.loginSubmit}{" "}
+                <span style={{ fontSize: 18, marginTop: -2 }}>→</span>
               </button>
               <button
                 onClick={() => scrollTo("funktioniert")}

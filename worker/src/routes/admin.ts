@@ -17,6 +17,7 @@ import {
   logAdminAction,
   listAdminAuditLog,
 } from "../db";
+import { listDiscounts, createDiscount, setDiscountStatus } from "../paddle/discounts";
 
 const PAGE_SIZE = 20;
 
@@ -110,6 +111,69 @@ adminRoutes.post("/users/:id/status", requireAuth, requireAdmin, requireCsrfOrig
 adminRoutes.get("/dashboard", requireAuth, requireAdmin, async (c) => {
   const stats = await getAdminDashboardStats(c.env.DB);
   return c.json(stats);
+});
+
+// Gutscheine (Stufe F, Nutzer-Konzept 2026-08-11) - Paddle bleibt einzige
+// Quelle fuer Rabattdaten, D1 speichert dazu nichts. "amount" ist bei
+// type==="percentage" ein reiner Prozentwert ("10" = 10%), bei "flat" ein
+// Betrag in der kleinsten Waehrungseinheit (Cent) - siehe Paddle-API.
+adminRoutes.get("/discounts", requireAuth, requireAdmin, async (c) => {
+  try {
+    const discounts = await listDiscounts(c.env);
+    return c.json({ discounts });
+  } catch (err) {
+    console.error("admin_list_discounts_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "discounts_failed" }, 502);
+  }
+});
+
+adminRoutes.post("/discounts", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const code = body && typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
+  const description = body && typeof body.description === "string" ? body.description.trim() : "";
+  const type = body?.type === "flat" ? "flat" : body?.type === "percentage" ? "percentage" : null;
+  const amount = body && typeof body.amount === "string" ? body.amount.trim() : "";
+  const usageLimit = Number.isInteger(body?.usageLimit) && body.usageLimit > 0 ? body.usageLimit : null;
+  if (!code || !description || !type || !amount) return c.json({ error: "invalid_discount" }, 400);
+
+  try {
+    const discount = await createDiscount(c.env, { code, description, type, amount, usageLimit });
+    await logAdminAction(c.env.DB, {
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      action: "discount.create",
+      targetType: "discount",
+      targetId: discount.id,
+      details: { code: discount.code, type: discount.type, amount: discount.amount },
+    });
+    return c.json({ discount });
+  } catch (err) {
+    console.error("admin_create_discount_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "create_discount_failed" }, 502);
+  }
+});
+
+adminRoutes.post("/discounts/:id/status", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json().catch(() => null);
+  const status = body && typeof body.status === "string" ? body.status : "";
+  if (status !== "active" && status !== "archived") return c.json({ error: "invalid_status" }, 400);
+
+  try {
+    await setDiscountStatus(c.env, id, status);
+    await logAdminAction(c.env.DB, {
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      action: status === "archived" ? "discount.deactivate" : "discount.activate",
+      targetType: "discount",
+      targetId: id,
+      details: { to: status },
+    });
+    return c.json({ ok: true, status });
+  } catch (err) {
+    console.error("admin_update_discount_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "update_discount_failed" }, 502);
+  }
 });
 
 // Audit Log (Konzept-Dok Abschnitt 13/6, MVP-Pflicht #7).

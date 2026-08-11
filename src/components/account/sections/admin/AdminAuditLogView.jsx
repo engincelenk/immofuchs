@@ -4,6 +4,9 @@ import { fetchAuditLog } from "./adminApi.js";
 const ACTION_LABELS = {
   "user.suspend": "Nutzer gesperrt",
   "user.unsuspend": "Nutzer entsperrt",
+  "discount.create": "Gutschein erstellt",
+  "discount.activate": "Gutschein aktiviert",
+  "discount.deactivate": "Gutschein deaktiviert",
 };
 
 export function AdminAuditLogView() {

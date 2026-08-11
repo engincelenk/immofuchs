@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
 import { createCheckoutTransaction, cancelAtPeriodEnd, cancelImmediately, revokeScheduledCancellation, refundLatestTransaction, createPortalSession, changeSubscriptionPlan, listTransactions, getInvoicePdfUrl } from "../paddle/checkout";
+import { findUsableDiscountByCode } from "../paddle/discounts";
 import { handlePaddleWebhook, verifyPaddleSignature } from "../paddle/webhook";
 import { getActiveSubscription, getLatestSubscriptionForUser } from "../db";
 import { dispatchNotification } from "../notifications";
@@ -19,8 +20,26 @@ billingRoutes.post("/checkout", requireAuth, requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const plan = body?.plan === "yearly" ? "yearly" : body?.plan === "monthly" ? "monthly" : null;
   if (!plan) return c.json({ error: "invalid_plan" }, 400);
+
+  // Stufe F (Gutscheine ueber Paddle Discounts, Nutzer-Konzept 2026-08-11):
+  // Code wird HIER server-seitig gegen Paddle aufgeloest, nie vom Client
+  // vertrauenswuerdig entgegengenommen - sonst koennte jeder Klient einen
+  // beliebigen discount_id-Wert mitschicken und sich selbst rabattieren.
+  const rawCode = body && typeof body.discountCode === "string" ? body.discountCode.trim() : "";
+  let discountId: string | null = null;
+  if (rawCode) {
+    try {
+      const discount = await findUsableDiscountByCode(c.env, rawCode);
+      if (!discount) return c.json({ error: "invalid_discount_code" }, 400);
+      discountId = discount.id;
+    } catch (err) {
+      console.error("billing_discount_lookup_failed", err instanceof Error ? err.message : "unknown");
+      return c.json({ error: "invalid_discount_code" }, 400);
+    }
+  }
+
   try {
-    const { transactionId } = await createCheckoutTransaction(c.env, c.var.userId, c.var.user.email, plan);
+    const { transactionId } = await createCheckoutTransaction(c.env, c.var.userId, c.var.user.email, plan, discountId);
     return c.json({ transactionId });
   } catch (err) {
     console.error("billing_checkout_failed", err instanceof Error ? err.message : "unknown");

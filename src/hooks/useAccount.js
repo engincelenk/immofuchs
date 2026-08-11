@@ -356,11 +356,13 @@ export function useAccount() {
 
   // Paddle-Checkout (4.6): erzeugt server-seitig eine Transaktion, oeffnet sie
   // per dynamisch nachgeladenem Paddle.js als Overlay (paddleLoader.js).
-  const startCheckout = useCallback(async (plan) => {
+  // discountCode optional (Stufe F, Nutzer-Konzept 2026-08-11) - wird
+  // server-seitig gegen Paddle aufgeloest, siehe routes/billing.ts.
+  const startCheckout = useCallback(async (plan, discountCode) => {
     const res = await apiFetch("/billing/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify(discountCode ? { plan, discountCode } : { plan }),
     });
     if (!res.ok) {
       // Guard Kap. 3.0 (Spec-v3.0): eigener Fehlercode, damit PaymentStep
@@ -369,6 +371,10 @@ export function useAccount() {
       if (res.status === 403) {
         const body = await res.json().catch(() => ({}));
         if (body.error === "email_not_verified") throw new Error("email_not_verified");
+      }
+      if (res.status === 400) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === "invalid_discount_code") throw new Error("invalid_discount_code");
       }
       // Unterscheidbar machen (Bugreport 05.08.): vorher warf jeder Fehlerpfad
       // dieselbe Meldung, und die Oberflaeche zeigte pauschal den
@@ -484,6 +490,21 @@ export function useAccount() {
     return { ok: false, error: body.error || "invalid_name" };
   }, [refresh]);
 
+  // Neuer Login-/Test-Flow (Stufe A/B, Nutzer-Konzept 2026-08-11): wird von
+  // CalculatorTrialGate genau einmal aufgerufen, sobald ein Rechner offen ist
+  // und Ergebnisse gezeigt hat - verbraucht den kombinierten Ersttest ueber
+  // alle 6 Rechner. Server ist idempotent (siehe markCalculatorTrialUsedForUser),
+  // der refresh() danach spiegelt den neuen Status in account.me fuer alle
+  // NEUEN Gate-Mounts, ohne die gerade laufende Session zu unterbrechen.
+  const consumeCalculatorTrial = useCallback(async () => {
+    try {
+      await apiFetch("/calculator-trial/consume", { method: "POST" });
+    } catch (err) {
+      console.error("[account] calculator-trial/consume fehlgeschlagen:", err);
+    }
+    await refresh();
+  }, [refresh]);
+
   // Passwort aendern bzw. erstmalig setzen (Phase 2, 4.13). currentPassword
   // ist nur Pflicht, wenn das Konto bereits eines hat - reine OAuth-/Passkey-
   // Konten setzen ihr erstes Passwort ohne. Welcher Fall vorliegt, verraet
@@ -557,6 +578,8 @@ export function useAccount() {
     me,
     isLoggedIn: Boolean(me),
     isPro: Boolean(me?.isPro),
+    calculatorTrialUsed: Boolean(me?.calculatorTrialUsed),
+    consumeCalculatorTrial,
     error,
     oauthEmailTakenProviders,
     resetToken,

@@ -16,6 +16,7 @@ import {
   deleteOtherSessionsForUser,
   setUserPasswordHash,
   setMarketingEmailsEnabled,
+  markCalculatorTrialUsedForUser,
 } from "../db";
 import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/password";
 import { sendEmail } from "../email";
@@ -38,6 +39,7 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     role: c.var.user.role,
     emailVerified: Boolean(c.var.user.email_verified_at),
     hasUsedTrial: Boolean(c.var.user.trial_used_at),
+    calculatorTrialUsed: Boolean(c.var.user.calculator_trial_used_at),
     marketingEmailsEnabled: Boolean(c.var.user.marketing_emails_enabled),
     linkedProviders: providers,
     isPro,
@@ -51,6 +53,19 @@ accountRoutes.get("/me", requireAuth, async (c) => {
         }
       : null,
   });
+});
+
+// Neuer Login-/Test-Flow (Stufe A, Nutzer-Konzept 2026-08-11): wird vom
+// Frontend genau einmal aufgerufen, sobald irgendein Rechner zum ersten Mal
+// ein gueltiges Ergebnis anzeigt (debounced, siehe Stufe B) - verbraucht den
+// kombinierten Ersttest ueber alle 6 Rechner hinweg. Idempotent: weitere
+// Aufrufe (z.B. bei jedem Rechner-Wechsel) aendern nichts mehr, siehe
+// markCalculatorTrialUsedForUser. Absichtlich ohne Pro-Check hier - ob der
+// Status ueberhaupt etwas sperrt, entscheidet ausschliesslich die Gate-Logik
+// im Frontend/an anderer Stelle (isPro gewinnt immer).
+accountRoutes.post("/calculator-trial/consume", requireAuth, requireCsrfOrigin, async (c) => {
+  await markCalculatorTrialUsedForUser(c.env.DB, c.var.userId);
+  return c.json({ calculatorTrialUsed: true });
 });
 
 accountRoutes.get("/account/devices", requireAuth, async (c) => {

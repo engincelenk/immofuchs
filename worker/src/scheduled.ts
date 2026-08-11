@@ -34,7 +34,7 @@ export async function handleScheduled(env: Env): Promise<void> {
         recipientUserId: sub.user_id,
         payload: {
           periodEndDate: new Date(sub.current_period_end).toLocaleDateString("de-DE"),
-          amount: "79 €",
+          amount: "49,99 €",
         },
       });
       await markRenewalReminderSent(env.DB, sub.id);
@@ -58,7 +58,7 @@ export async function handleScheduled(env: Env): Promise<void> {
         recipientUserId: sub.user_id,
         payload: {
           periodEndDate: new Date(sub.current_period_end).toLocaleDateString("de-DE"),
-          amount: sub.plan === "monthly" ? "9,99 €" : "79 €",
+          amount: sub.plan === "monthly" ? "4,99 €" : "49,99 €",
         },
       });
       await markTrialReminderSent(env.DB, sub.id);

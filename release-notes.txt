@@ -1,3 +1,88 @@
+## 2026-08-11 (1.7.27)
+
+### Feature: Neuer Login-, Test- und Buchungsflow + Preisänderung + Gutscheine
+
+**Anlass:** Nutzer-Konzept - der Kaufprozess sollte nicht mehr mit Preis-/
+Planauswahl beginnen, sondern erst Vertrauen aufbauen (Anmelden → einmal
+kostenlos ausprobieren → erst ab der zweiten Nutzung Kaufentscheidung).
+Zusätzlich: neue Preise (4,99 €/Mon., 49,99 €/Jahr statt 9,99 €/79 €) und
+eine Gutschein-Verwaltung.
+
+**Umgesetzt in sechs Stufen:**
+
+- **Stufe A (Backend-Fundament):** Neue Spalte `calculator_trial_used_at`
+  auf `users` (Migration 0018) - ein kombinierter, serverseitiger
+  Kostenlos-Test über alle 6 Rechner hinweg (nicht pro Rechner, nicht pro
+  Gerät). `/api/v1/me` liefert `calculatorTrialUsed`, neuer Endpunkt
+  `POST /api/v1/calculator-trial/consume` (idempotent) verbraucht ihn.
+  Nicht umgehbar durch Cookies löschen/Inkognito, da der Status am
+  Nutzerkonto hängt, nicht am Gerät.
+- **Stufe B/C (Rechner-Sperre + Paywall):** `useCalculatorTrial.js` löst die
+  reine Login-Sperre ab - Ergebnisse bleiben live/ohne neuen Button, der
+  Verbrauch wird 1,5s nach dem ersten sichtbaren Ergebnis im Hintergrund
+  gemeldet, OHNE die laufende Sitzung zu unterbrechen (Snapshot beim Mount,
+  nicht reaktiv). Erst der nächste Tab-Wechsel zeigt die neue
+  Verkaufs-/Upgrade-Maske ("Dein kostenloser Test ist aufgebraucht") statt
+  einer technischen Fehlermeldung, mit "ImmoFuchs Pro buchen" und "Nicht
+  jetzt" (→ Merkliste, einzig ungesperrter Bereich).
+- **Stufe D (Landingpage-CTA):** "Anmelden" sichtbar wenn nicht eingeloggt,
+  "Jetzt rechnen" nur wenn eingeloggt (REQ-LP-01) - sowohl im Header als
+  auch im Hero-Bereich (dort als Label-/Aktions-Swap, da kein zweiter
+  Anmelden-Knopf in der Nähe). Backend-seitige Durchsetzung war durch
+  requireAuth/CalculatorTrialGate ohnehin schon gegeben.
+- **Stufe E (CheckoutWizard-Reihenfolge):** Ein frischer Wizard-Start landet
+  jetzt für eingeloggte Nutzer auf der Plan-Auswahl statt stillschweigend
+  direkt bei der Zahlung mit vorausgewähltem Jahresplan zu springen - der
+  Konto-Schritt bleibt für sie übersprungen (Plan → Konto [übersprungen] →
+  Bestätigen [Teil des bestehenden Zahlungsschritts] → Zahlung → Fertig).
+  "Zurück" von der Zahlung führt für eingeloggte Nutzer korrekt zu "Plan"
+  statt zu einem nie gesehenen Login-Schritt.
+- **Stufe F (Gutscheine):** Nutzer-Entscheidung: Paddle Discounts statt
+  eigenem D1-System, damit der angezeigte Rabatt nie vom tatsächlich
+  abgerechneten Betrag abweichen kann. Neues `worker/src/paddle/discounts.ts`
+  (live gegen den Paddle-Sandbox-Account verifiziert: Liste/Erstellen/
+  Aktivieren/Deaktivieren, Code-Auflösung), neue Admin-Routen
+  `/api/v1/admin/discounts*`, neue Admin-Ansicht "Gutscheine" in "Mein
+  Konto" → "Admin". Gutscheincode-Feld im Zahlungsschritt - der Code wird
+  ausschließlich server-seitig gegen Paddle aufgelöst (discount_id), nie
+  vom Client vertrauenswürdig entgegengenommen.
+
+**Preisänderung (4,99 €/Mon., 49,99 €/Jahr statt 9,99 €/79 €):** Alle
+Anzeige-Texte (5 Sprachen), Backend-E-Mail-Texte, Admin-Dashboard-MRR und
+die AGB aktualisiert. Paddle-Preis-IDs blieben unverändert (Nutzer hat den
+Betrag direkt am bestehenden Paddle-Preisobjekt angepasst).
+
+**Wichtiger Fund (unabhängig behoben werden muss, nicht Teil dieser
+Änderung):** Beide Paddle-Preise hatten noch eine länderspezifische
+Überschreibung für Deutschland mit den ALTEN Beträgen (9,99 €/79 €) aktiv -
+da die App fast ausschließlich deutsche Kunden hat, hätte Paddle bislang
+weiter zum alten Preis abgerechnet, obwohl überall der neue Preis angezeigt
+wird. Muss im Paddle-Dashboard korrigiert werden (siehe Chat-Verlauf).
+
+**Verifiziert:** `npm test` (Frontend, 202 Tests) und Worker-Tests (52) grün,
+`tsc --noEmit` sauber, `npm run build` erfolgreich. Alle sechs Stufen
+End-to-End im Browser getestet (frische Tabs, um Vite-HMR-Altlasten
+auszuschließen): kombinierter Trial-Verbrauch, Sitzung nicht unterbrochen,
+Paywall beim nächsten Rechner-Wechsel, Landingpage-CTA-Wechsel bei
+Login/Logout, Wizard-Reihenfolge (inkl. "Zurück"), Gutschein-Rundlauf
+(erstellen → im Checkout einlösen → deaktivieren → abgelehnt) live gegen
+den echten Paddle-Sandbox-Account.
+
+**Betroffene Dateien:** `worker/migrations/0018_calculator_trial_used.sql`,
+`worker/src/db.ts`, `worker/src/routes/account.ts`, `worker/src/routes/billing.ts`,
+`worker/src/routes/admin.ts`, `worker/src/paddle/checkout.ts`,
+`worker/src/paddle/discounts.ts` (neu), `worker/src/scheduled.ts`,
+`worker/src/notifications.ts`, `worker/src/paddle/webhook.ts`,
+`src/hooks/useCalculatorTrial.js`, `src/hooks/useAccount.js`,
+`src/components/account/CalculatorTrialGate.jsx`, `src/App.jsx`,
+`src/pages/Landing.jsx`, `src/components/checkout/CheckoutWizard.jsx`,
+`src/components/checkout/PaymentStep.jsx`,
+`src/components/account/sections/admin/AdminDiscountsView.jsx` (neu),
+`src/components/account/sections/admin/adminApi.js`,
+`src/components/account/sections/AdminSection.jsx`,
+`src/components/account/sections/admin/AdminAuditLogView.jsx`,
+`src/i18n/account.js`, `public/agb.html`.
+
 ## 2026-08-11 (1.7.26)
 
 ### Feature: Admin-Bereich vollständig in die Kunden-App integriert

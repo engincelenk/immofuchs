@@ -14,6 +14,11 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted, hideSum
   // Widerrufsrecht bei digitalen Leistungen): ohne diese Zustimmung darf die
   // Ausfuehrung nicht vor Ablauf der Widerrufsfrist beginnen.
   const [withdrawalAccepted, setWithdrawalAccepted] = useState(false);
+  // Stufe F (Gutscheine ueber Paddle Discounts, Nutzer-Konzept 2026-08-11):
+  // rein optionales Feld, Validierung passiert ausschliesslich server-seitig
+  // gegen Paddle (routes/billing.ts) - hier kein Eigenbau einer
+  // Rabattberechnung.
+  const [discountCode, setDiscountCode] = useState("");
 
   // onCompleted ueber eine Ref statt als Effect-Dependency (Bugreport 06.08.,
   // "Weiter zur Zahlung friert die App ein"): das account-Objekt aus
@@ -53,11 +58,13 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted, hideSum
     setBusy(true);
     setError(null);
     try {
-      await account.startCheckout(plan);
+      await account.startCheckout(plan, discountCode.trim() || undefined);
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
       if (code === "email_not_verified") {
         setError("email_not_verified");
+      } else if (code === "invalid_discount_code") {
+        setError(t.discountCodeInvalid);
       } else {
         setError(code.startsWith("paddle_script") ? t.planCheckoutBlocked : t.planCheckoutUnavailable);
       }
@@ -148,6 +155,29 @@ export function PaymentStep({ t, account, plan, onEditPlan, onCompleted, hideSum
       ) : (
         error && <div style={errorBannerStyle}>{error}</div>
       )}
+
+      <label style={{ display: "block", fontSize: 11.5, color: "var(--ch)", marginBottom: 14 }}>
+        {t.discountCodeLabel}
+        <input
+          type="text"
+          value={discountCode}
+          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+          placeholder={t.discountCodePlaceholder}
+          style={{
+            display: "block",
+            width: "100%",
+            marginTop: 4,
+            padding: "10px 12px",
+            fontSize: 14,
+            border: "1px solid var(--cb)",
+            borderRadius: 8,
+            background: "var(--ci)",
+            color: "var(--ct)",
+            fontFamily: "inherit",
+            boxSizing: "border-box",
+          }}
+        />
+      </label>
 
       <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 11.5, color: "var(--ct)", marginBottom: 12 }}>
         <input

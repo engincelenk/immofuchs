@@ -73,7 +73,7 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
   switch (intent.event) {
     case "renewal_reminder": {
       const datum = String(intent.payload.periodEndDate ?? "");
-      const betrag = String(intent.payload.amount ?? "79 €");
+      const betrag = String(intent.payload.amount ?? "49,99 €");
       return {
         subject: "Dein ImmoFuchs-Pro-Abo verlängert sich bald",
         html: `<p>Dein Jahresabo verlängert sich am ${datum} automatisch (${betrag}).</p>

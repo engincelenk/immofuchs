@@ -48,8 +48,17 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         ? "new-customer-no-verify"
         : "new-customer";
   const [variant, setVariant] = useState(initialVariant);
+  // Stufe E (Nutzer-Konzept 2026-08-11): frischer Wizard-Start landet jetzt
+  // immer auf "pricing" (Plan waehlen), auch fuer bereits eingeloggte
+  // Nutzer - vorher sprang ein eingeloggter Free-Nutzer stillschweigend mit
+  // vorausgewaehltem Jahresplan direkt zur Zahlung. "Konto" bleibt fuer sie
+  // trotzdem uebersprungen (siehe Auto-Advance-Effekt unten, der nur beim
+  // Verlassen des Konto-Schritts greift, nicht beim initialen Mount).
+  // Einzige Ausnahme: entryPoint==="payment" (echtes Upgrade eines bereits
+  // gewaehlten Plans, z.B. Wiederaufnahme nach OAuth-Redirect) startet
+  // weiterhin direkt bei der Zahlung.
   const [stepIndex, setStepIndex] = useState(() =>
-    initialVariant === "new-customer" ? 0 : getWizardSteps(initialVariant).indexOf("payment"),
+    initialVariant === "upgrade" ? getWizardSteps(initialVariant).indexOf("payment") : 0,
   );
   const [plan, setPlan] = useState(initialPlan || "yearly");
   const [verifyEmail, setVerifyEmail] = useState(null);
@@ -75,17 +84,22 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   const showSummary =
     isDesktop && !passwordReset && (currentKey === "pricing" || currentKey === "account" || currentKey === "payment");
 
-  // Sobald ein eingeloggter Free-Nutzer erkannt wird (egal ueber welchen der
-  // fuenf Login-/Registrierungswege), direkt zur Zahlung springen - "verify"
-  // war dann entweder nie noetig (OAuth/Passkey/Passwort-Login) oder bereits
-  // erledigt (Klick auf den Bestaetigungslink oeffnet diesen Wizard ohnehin
-  // als frische Instanz neu).
+  // Sobald ein eingeloggter Free-Nutzer WAEHREND des Konto-Schritts erkannt
+  // wird (egal ueber welchen der fuenf Login-/Registrierungswege), direkt zur
+  // Zahlung springen - "verify" war dann entweder nie noetig (OAuth/Passkey/
+  // Passwort-Login) oder bereits erledigt (Klick auf den Bestaetigungslink
+  // oeffnet diesen Wizard ohnehin als frische Instanz neu). Bewusst an
+  // currentKey==="account" gebunden (Stufe E, Nutzer-Konzept 2026-08-11):
+  // sonst wuerde dieser Effekt auch beim initialen Mount eines bereits
+  // eingeloggten Nutzers feuern und die neue Plan-Auswahl (siehe stepIndex-
+  // Default oben) sofort wieder ueberspringen.
   useEffect(() => {
     if (variant === "upgrade") return;
+    if (currentKey !== "account") return;
     if (!account?.isLoggedIn || account.isPro) return;
     setVariant("new-customer-no-verify");
     setStepIndex(getWizardSteps("new-customer-no-verify").indexOf("payment"));
-  }, [account?.isLoggedIn, account?.isPro, variant]);
+  }, [account?.isLoggedIn, account?.isPro, variant, currentKey]);
 
   useFocusTrap(dialogRef, onClose, [stepIndex, passwordReset]);
 
@@ -122,7 +136,18 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // upgrade-Variante entfaellt es ganz, da sie direkt bei der Zahlung startet.
   // Ziel explizit statt stepIndex-1: sonst landete man aus der Zahlung heraus
   // auf dem Bestaetigungs-Schritt, der zu dem Zeitpunkt laengst erledigt ist.
-  const backTarget = currentKey === "account" ? "pricing" : currentKey === "payment" ? "account" : null;
+  // Stufe E: fuer bereits eingeloggte Nutzer ist "account" gar kein
+  // erreichbarer Schritt mehr (handlePricingContinue springt direkt zu
+  // "payment") - "Zurueck" muss dann ebenfalls zu "pricing" fuehren statt zu
+  // einem Login-Schritt, den dieser Nutzer nie gesehen hat.
+  const backTarget =
+    currentKey === "account"
+      ? "pricing"
+      : currentKey === "payment"
+        ? account?.isLoggedIn
+          ? "pricing"
+          : "account"
+        : null;
   const canGoBack = !passwordReset && backTarget !== null && steps.some((s) => s.key === backTarget);
   const goBack = useCallback(() => {
     if (backTarget) goToStep(backTarget);

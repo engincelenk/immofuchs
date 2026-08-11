@@ -22,15 +22,20 @@ export async function createCheckoutTransaction(
   userId: string,
   email: string,
   plan: Plan,
+  discountId?: string | null,
 ): Promise<{ transactionId: string }> {
-  const result = await paddleFetch(env, "/transactions", {
-    method: "POST",
-    body: {
-      items: [{ price_id: priceIdFor(env, plan), quantity: 1 }],
-      customer: { email },
-      custom_data: { user_id: userId },
-    },
-  });
+  const body: Record<string, unknown> = {
+    items: [{ price_id: priceIdFor(env, plan), quantity: 1 }],
+    customer: { email },
+    custom_data: { user_id: userId },
+  };
+  // Stufe F (Gutscheine ueber Paddle Discounts): discount_id statt eines
+  // rohen Codes - routes/billing.ts loest den vom Nutzer eingegebenen Code
+  // vorher ueber findUsableDiscountByCode() auf. Live gegen die
+  // Paddle-Sandbox verifiziert (2026-08-11): das Feld greift direkt bei der
+  // Transaktions-Erzeugung, kein zusaetzlicher Schritt noetig.
+  if (discountId) body.discount_id = discountId;
+  const result = await paddleFetch(env, "/transactions", { method: "POST", body });
   if (!result.ok) {
     // Detailtext mitloggen (Befund 05.08.): vorher stand nur der HTTP-Status im
     // Log, ohne Paddles eigentliche Fehlermeldung ("price not found" vs.

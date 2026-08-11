@@ -52,3 +52,18 @@ export function fetchAuditLog(page) {
   const qs = params.toString();
   return request(`/admin/audit-log${qs ? `?${qs}` : ""}`);
 }
+
+export function fetchDiscounts() {
+  return request("/admin/discounts");
+}
+
+export function createDiscount(input) {
+  return request("/admin/discounts", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function setDiscountStatus(id, status) {
+  return request(`/admin/discounts/${encodeURIComponent(id)}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status }),
+  });
+}

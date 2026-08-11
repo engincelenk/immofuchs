@@ -6,14 +6,17 @@ import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 
 // Wrapper auf Tab-Ebene (App.jsx) statt Aenderungen in den sechs Rechner-
 // Komponenten selbst - kein einziger bestehender Rechner wird angefasst.
-// Kap. 0.2/3.0 (Spec-v3.0): kein anonymer Gast-Zugang mehr - jeder
-// Erstkontakt mit einer Rechner-Funktion fuehrt zwingend zuerst durch die
-// Auth-Auswahl, unabhaengig davon, ob der Rechner vorher schon genutzt wurde.
-export function CalculatorTrialGate({ children }) {
+// Zwei Sperr-Zustaende (Stufe A/B/C, Nutzer-Konzept 2026-08-11):
+//  - isLocked: nicht eingeloggt - wie bisher, Login-/Registrierungs-CTA.
+//  - isPaywalled: eingeloggt, kombinierter Ersttest ueber alle 6 Rechner
+//    bereits verbraucht, kein Pro-Abo - neue Verkaufs-/Upgrade-Maske statt
+//    einer technischen Fehlermeldung.
+export function CalculatorTrialGate({ children, onDismiss }) {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
-  const { isLocked, loading } = useCalculatorTrial();
+  const { isLocked, isPaywalled, loading } = useCalculatorTrial();
   const [showLogin, setShowLogin] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   if (loading) {
     return null;
@@ -21,40 +24,78 @@ export function CalculatorTrialGate({ children }) {
 
   if (isLocked) {
     return (
-      <div
-        style={{
-          textAlign: "center",
-          padding: "48px 20px",
-          background: "var(--cc)",
-          borderRadius: 12,
-          border: "1px solid var(--cb)",
-        }}
-      >
-        <div style={{ fontSize: 40, marginBottom: 14 }}>🔒</div>
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{t.loginRequiredTitle}</div>
-        <p style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.6, maxWidth: 380, margin: "0 auto 20px" }}>
-          {t.loginRequiredBody}
-        </p>
-        <button
-          onClick={() => setShowLogin(true)}
-          style={{
-            padding: "12px 24px",
-            fontSize: 14,
-            fontWeight: 700,
-            background: "var(--ca)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
+      <GatePanel icon="🔒" title={t.loginRequiredTitle} body={t.loginRequiredBody}>
+        <button onClick={() => setShowLogin(true)} style={primaryBtnStyle}>
           🦊 {t.loginRequiredCta}
         </button>
         {showLogin && <CheckoutWizard onClose={() => setShowLogin(false)} />}
-      </div>
+      </GatePanel>
+    );
+  }
+
+  if (isPaywalled) {
+    return (
+      <GatePanel icon="🦊" title={t.trialLockedTitle} body={t.trialLockedBody}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+          <button onClick={() => setShowUpgrade(true)} style={primaryBtnStyle}>
+            {t.trialLockedCta}
+          </button>
+          {onDismiss && (
+            <button onClick={onDismiss} style={dismissBtnStyle}>
+              {t.trialLockedDismiss}
+            </button>
+          )}
+        </div>
+        {/* entryPoint bewusst "pricing" (Standard): eingeloggte Nutzer landen
+            dort dank Stufe E direkt auf der Plan-Auswahl, nicht auf "Konto". */}
+        {showUpgrade && <CheckoutWizard onClose={() => setShowUpgrade(false)} />}
+      </GatePanel>
     );
   }
 
   return children;
 }
+
+function GatePanel({ icon, title, body, children }) {
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "48px 20px",
+        background: "var(--cc)",
+        borderRadius: 12,
+        border: "1px solid var(--cb)",
+      }}
+    >
+      <div style={{ fontSize: 40, marginBottom: 14 }}>{icon}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{title}</div>
+      <p style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.6, maxWidth: 380, margin: "0 auto 20px" }}>
+        {body}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+const primaryBtnStyle = {
+  padding: "12px 24px",
+  fontSize: 14,
+  fontWeight: 700,
+  background: "var(--ca)",
+  color: "#fff",
+  border: "none",
+  borderRadius: 10,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+const dismissBtnStyle = {
+  padding: "8px 16px",
+  fontSize: 13,
+  fontWeight: 600,
+  background: "none",
+  color: "var(--ch)",
+  border: "none",
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
