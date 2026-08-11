@@ -6,9 +6,11 @@ import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
 import { LandingMascot } from "../components/assistant/LandingMascot.jsx";
 import { useAccountCtx } from "../context/AccountContext.jsx";
+import { Ctx } from "../context/AppContext.jsx";
 import { ACCOUNT_T } from "../i18n/account.js";
 import { CheckoutWizard } from "../components/checkout/CheckoutWizard.jsx";
 import { MyAccount } from "../components/account/MyAccount.jsx";
+import { useSavedObjects } from "../components/shell/Merkliste.jsx";
 
 const navLink = {
   background: "none",
@@ -41,6 +43,29 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
   const account = useAccountCtx();
   const [openMode, setOpenMode] = useState(null); // null | "checkout" | "account"
+
+  // Bugfix (Nutzer-Feedback 2026-08-11): CheckoutWizard/MyAccount lesen
+  // `lang` ueber useApp() aus Ctx (AppContext.jsx) - der existiert bisher
+  // nur innerhalb von AppProviders im "landed"-Zustand. Auf der Landingpage
+  // (!landed) gab es dafuer KEINEN Provider, useApp() lieferte `undefined`
+  // und das Destructuring "{ lang } = useApp()" stuerzte beim Oeffnen ab
+  // ("Cannot destructure property 'lang' of '_e(...)' as it is undefined").
+  // KontoSection (ein Tab innerhalb von MyAccount) braucht zusaetzlich
+  // savedList/isProSavedObjects/savedObjectsFreeLimit/setTabExt aus
+  // demselben Ctx - useSavedObjects() ist bewusst so gebaut, dass es auch
+  // ausserhalb von AppProviders aufgerufen werden kann (siehe Kommentar
+  // dort), liefert hier also echte, funktionierende Werte statt Dummies.
+  // setTabExt fuehrt hier in die App hinein (onStart), statt nur einen
+  // App-internen Tab zu wechseln, den es auf der Landingpage nicht gibt.
+  const { savedList, isPro: isProSavedObjects, freeLimit: savedObjectsFreeLimit } = useSavedObjects();
+  const landingCtxValue = {
+    lang,
+    setLang,
+    savedList,
+    isProSavedObjects,
+    savedObjectsFreeLimit,
+    setTabExt: (id) => onStart(id),
+  };
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
@@ -250,8 +275,12 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           </div>
         )}
       </header>
-      {openMode === "checkout" && <CheckoutWizard onClose={() => setOpenMode(null)} />}
-      {openMode === "account" && <MyAccount onClose={() => setOpenMode(null)} />}
+      {(openMode === "checkout" || openMode === "account") && (
+        <Ctx.Provider value={landingCtxValue}>
+          {openMode === "checkout" && <CheckoutWizard onClose={() => setOpenMode(null)} />}
+          {openMode === "account" && <MyAccount onClose={() => setOpenMode(null)} />}
+        </Ctx.Provider>
+      )}
 
       {/* ═══════════ HERO ═══════════ */}
       <section
@@ -1256,9 +1285,16 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           >
             {[
               {
+                // Bugfix (Nutzer-Feedback 2026-08-11): zeigte bisher immer
+                // den statischen Fallback MARKET_RATES.avg, unabhaengig vom
+                // live geladenen zinsen.json - dadurch wich der Wert vom
+                // Bauzinsen-Ticker weiter unten ab (der zinsen?.avg nutzt,
+                // den ueber alle 5 Quellen live berechneten Durchschnitt,
+                // siehe App.jsx loadZinsen()). Jetzt dieselbe Quelle/
+                // Prioritaet wie der Ticker (ratesCompact weiter unten).
                 ic: "💰",
                 label: l.dc1L,
-                val: `${MARKET_RATES.avg.toLocaleString("de-DE", { minimumFractionDigits: 2 })} %`,
+                val: `${(zinsen?.avg ?? MARKET_RATES.avg).toLocaleString("de-DE", { minimumFractionDigits: 2 })} %`,
                 sub: l.dc1S,
               },
               { ic: "📊", label: l.dc2L, val: "+2,1 %/Jahr", sub: l.dc2S },

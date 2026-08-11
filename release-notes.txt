@@ -1,3 +1,59 @@
+## 2026-08-11 (1.7.24)
+
+### Bugfix: Absturz bei "Anmelden"/"Mein Konto" auf der Landingpage
+
+**Anlass:** Nutzer-Screenshot der Browser-Konsole zeigte einen Absturz beim
+Klick auf "Anmelden" auf dem live deployten dev-Stand:
+`TypeError: Cannot destructure property 'lang' of '_e(...)' as it is
+undefined`.
+
+**Root Cause:** `CheckoutWizard` und `MyAccount` lesen `lang`/`setLang` über
+`useApp()` aus `Ctx` (AppContext.jsx). Dieser Context existierte bisher nur
+innerhalb von `AppProviders` im "landed"-Zustand der App. Seit Paket 2
+(Login-Standard-Flow) rendert Landing.jsx diese beiden Komponenten aber
+direkt auf der Landingpage (`!landed`) - dort gab es dafür **keinen**
+Provider, `useApp()` lieferte `undefined`
+(`Ctx = createContext()` ohne Default-Wert), das Destructuring stürzte ab.
+`KontoSection` (ein Tab innerhalb von `MyAccount`) brauchte zusätzlich
+`savedList`/`isProSavedObjects`/`savedObjectsFreeLimit`/`setTabExt` aus
+demselben Context.
+
+**Fix:** Landing.jsx stellt jetzt einen eigenen, minimalen
+`Ctx.Provider` für diese beiden Komponenten bereit - `lang`/`setLang` aus
+den ohnehin vorhandenen Props, `savedList`/`isProSavedObjects`/
+`savedObjectsFreeLimit` über `useSavedObjects()` (bewusst so gebaut, dass es
+auch außerhalb von `AppProviders` aufrufbar ist), `setTabExt` führt in die
+App hinein (`onStart`) statt nur einen App-internen Tab zu wechseln.
+
+**Verifiziert (lokal, End-to-End):** "Anmelden" öffnet den Checkout-
+Assistenten fehlerfrei; "Mein Konto" → "Konto & Sicherheit" (der tiefste,
+riskanteste Pfad) rendert echte Sitzungsdaten ohne Absturz; "Zur
+Merkliste" führt korrekt in die App hinein.
+
+### Bugfix: Bauzinsen-Wert in "Echte Marktdaten"-Kachel stimmte nicht
+
+**Anlass:** Nutzer-Feedback - die "Bauzinsen Ø"-Kachel im
+"Echte Marktdaten"-Abschnitt zeigte einen anderen Wert (3,81 %) als der
+Bauzinsen-Ticker weiter unten (3,85 %), obwohl beide dieselbe Kennzahl
+darstellen sollen.
+
+**Root Cause:** Die Kachel nutzte fest `MARKET_RATES.avg` (statischer
+Fallback-Wert aus data.js), während der Ticker `zinsen?.avg` nutzt - den
+live aus allen 5 Quellen in `zinsen.json` berechneten Durchschnitt (siehe
+`loadZinsen()` in App.jsx).
+
+**Fix:** Kachel nutzt jetzt dieselbe Priorität wie der Ticker
+(`zinsen?.avg ?? MARKET_RATES.avg`) - beide zeigen jetzt garantiert
+denselben Wert.
+
+**Testdaten:** Test-Konto auf dev.immofuchs.info angelegt und
+E-Mail-Verifizierung für Testzwecke direkt in der DB gesetzt (kein
+Email-Versand in dieser Umgebung nötig) - Zugangsdaten siehe Chat.
+
+**Getestet:** ESLint clean, 297/297 Tests grün, Build erfolgreich.
+
+**Betroffene Dateien:** src/pages/Landing.jsx, package.json
+
 ## 2026-08-11 (1.7.23)
 
 ### Bugfix: Hero- und Rechner-Karten-Abschnitt jetzt auch ausgerichtet
