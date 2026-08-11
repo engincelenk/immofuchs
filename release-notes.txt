@@ -1,3 +1,38 @@
+## 2026-08-11 (1.7.32)
+
+### UX: Slide-in-Menü auf der Landingpage + echtes Logo statt Fuchs-Emoji
+
+**Anlass:** Nutzer-Referenz-Screenshots (fremde App) - zwei Punkte.
+
+**1. Mobile Landingpage-Navigation als Slide-in-Schublade
+(`src/pages/Landing.jsx`):** Bisher klappte das Menü als Dropdown UNTER dem
+Header auf. Jetzt: seitlich von links einschiebende Flaeche (300px, mit
+eigenem Logo+Schließen-Kreuz im Kopf) über einem abgedunkelten Hintergrund
+(45% Schwarz), der Rest der Seite ist waehrenddessen nicht scrollbar -
+schließt per Klick auf den Hintergrund, das Kreuz, Escape oder einen
+Menüpunkt. Gleiche Inhalte wie zuvor (Rechner/So funktioniert's/Bauzinsen/
+Anmelden-oder-Mein-Konto/Sprachwahl), nur die Praesentation ist neu.
+Hinweis: Die Einschub-Animation selbst ließ sich in diesem Test-Tab nicht
+visuell verifizieren (bekannte Einschraenkung dieser Browser-Umgebung -
+CSS-Animationen laufen hier nicht sichtbar, dasselbe Problem wie bei
+Screenshots die ganze Session ueber), die Keyframe-Regel selbst wurde aber
+im Stylesheet bestaetigt und alle funktionalen Pfade (Hintergrund-Klick,
+Kreuz, Escape, Menüpunkt-Klick, Scroll-Sperre) sind live getestet.
+
+**2. Echtes Logo statt 🦊-Emoji (`src/components/ui/BrandIcon.jsx`, neu):**
+Ersetzt an sieben Stellen, an denen der Fuchs-Emoji allein als Marke stand
+(Rechner-Sperrbildschirm, "Mein Konto"-Kopfzeile, Checkout-Wizard-Kopfzeile,
+Trial-Badge, §6-Trick-Leerzustand, Passwort-zurücksetzen-Erfolg) - NICHT
+dort, wo mehrere themenfremde Emoji als zusammengehöriges Icon-Set
+auftreten (Zeitleisten mit 📧/⏰, Schritt-Listen mit 📍/📊/💡), da ein
+einzelnes Foto-Icon dort inkonsistent gewirkt hätte.
+
+**Verifiziert:** Live im Browser bei 375px (Schublade: alle Schließwege
+getestet, Body-Scroll-Sperre bestätigt) und 1280px (Desktop unverändert,
+Menü-Button bleibt versteckt). Logo-Bilder laden korrekt (`naturalWidth:
+192`, nicht defekt) an allen sieben Stellen. `npm test` (293 Tests) grün,
+Lint sauber, Build erfolgreich.
+
 ## 2026-08-11 (1.7.31)
 
 ### UX: "Mein Konto" - Bereichswahl, Name, Abmelden + Login-Maske

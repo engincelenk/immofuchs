@@ -1,4 +1,5 @@
 import { primaryBtnStyle } from "./checkoutStyles.js";
+import { BrandIcon } from "../ui/BrandIcon.jsx";
 
 export function PricingStep({ t, plan, setPlan, onContinue, account, hideFeatures }) {
   const features = [t.compareRowRechnerPro, t.compareRowExposePro, t.compareRowFinnPro, t.compareRowMerklistePro];
@@ -13,7 +14,9 @@ export function PricingStep({ t, plan, setPlan, onContinue, account, hideFeature
       {!hasUsedTrial && (
         <div
           style={{
-            display: "inline-block",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
             background: "#FCE9DC",
             border: "1px solid var(--ca)",
             color: "var(--ca-dk)",
@@ -24,7 +27,7 @@ export function PricingStep({ t, plan, setPlan, onContinue, account, hideFeature
             marginBottom: 16,
           }}
         >
-          🦊 {t.pricingTrialBadge}
+          <BrandIcon size={14} /> {t.pricingTrialBadge}
         </div>
       )}
 

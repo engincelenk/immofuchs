@@ -6,6 +6,7 @@ import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { Tip } from "../ui/Tip.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
+import { BrandIcon } from "../ui/BrandIcon.jsx";
 
 export function SteuerTrick() {
   // Vormals eigener lokaler useState (ls/gst/grd), nicht Teil von `d` -
@@ -431,7 +432,7 @@ export function SteuerTrick() {
             </>
           ) : (
             <div style={{ ...card, textAlign: "center", padding: 32 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>🦊</div>
+              <BrandIcon size={40} style={{ marginBottom: 8 }} />
               <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ct)", marginBottom: 4 }}>
                 {st.emptyTitle}
               </div>

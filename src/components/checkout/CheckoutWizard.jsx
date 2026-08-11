@@ -14,6 +14,7 @@ import { VerifyEmailStep } from "./VerifyEmailStep.jsx";
 import { PasswordResetFlow } from "./PasswordResetFlow.jsx";
 import { PaymentStep } from "./PaymentStep.jsx";
 import { WelcomeStep } from "./WelcomeStep.jsx";
+import { BrandIcon } from "../ui/BrandIcon.jsx";
 
 // Ab dieser Breite bekommt der Wizard eine zweite Spalte mit der
 // Bestelluebersicht (siehe showSummary unten) - derselbe Breakpoint wie
@@ -294,7 +295,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
               {/* "Pro" nur im Kauf-Flow (Stufe Nutzer-Konzept 2026-08-11) -
                   eine reine Anmeldung fuer den kostenlosen Test hat mit Pro
                   noch nichts zu tun. */}
-              🦊 ImmoFuchs {variant !== "login-only" && <span style={{ color: "var(--ca-dk)" }}>Pro</span>}
+              <BrandIcon size={20} /> ImmoFuchs {variant !== "login-only" && <span style={{ color: "var(--ca-dk)" }}>Pro</span>}
             </div>
           )}
           <button

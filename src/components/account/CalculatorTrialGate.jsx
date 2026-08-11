@@ -3,6 +3,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import { useCalculatorTrial } from "../../hooks/useCalculatorTrial.js";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
+import { BrandIcon } from "../ui/BrandIcon.jsx";
 
 // Wrapper auf Tab-Ebene (App.jsx) statt Aenderungen in den sechs Rechner-
 // Komponenten selbst - kein einziger bestehender Rechner wird angefasst.
@@ -26,7 +27,7 @@ export function CalculatorTrialGate({ children, onDismiss }) {
     return (
       <GatePanel icon="🔒" title={t.loginRequiredTitle} body={t.loginRequiredBody}>
         <button onClick={() => setShowLogin(true)} style={primaryBtnStyle}>
-          🦊 {t.loginRequiredCta}
+          <BrandIcon size={18} style={{ marginRight: 4, verticalAlign: "-4px" }} /> {t.loginRequiredCta}
         </button>
         {showLogin && <CheckoutWizard onClose={() => setShowLogin(false)} entryPoint="login" />}
       </GatePanel>
@@ -35,7 +36,7 @@ export function CalculatorTrialGate({ children, onDismiss }) {
 
   if (isPaywalled) {
     return (
-      <GatePanel icon="🦊" title={t.trialLockedTitle} body={t.trialLockedBody}>
+      <GatePanel icon={<BrandIcon size={40} />} title={t.trialLockedTitle} body={t.trialLockedBody}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
           <button onClick={() => setShowUpgrade(true)} style={primaryBtnStyle}>
             {t.trialLockedCta}

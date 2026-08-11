@@ -6,6 +6,7 @@ import { ACCOUNT_T } from "../../i18n/account.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
+import { BrandIcon } from "../ui/BrandIcon.jsx";
 import { ProfilSection } from "./sections/ProfilSection.jsx";
 import { AbonnementSection } from "./sections/AbonnementSection.jsx";
 import { ZahlungenSection } from "./sections/ZahlungenSection.jsx";
@@ -112,7 +113,7 @@ export function MyAccount({ onClose }) {
         >
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-              🦊 {t.accountTitle}
+              <BrandIcon size={20} /> {t.accountTitle}
             </div>
             {/* Nutzer-Feedback 2026-08-11: Name statt E-Mail als Begruessung -
                 E-Mail bleibt der eindeutige Nutzer-Anker im Profil-Bereich,

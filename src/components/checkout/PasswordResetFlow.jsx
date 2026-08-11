@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ErrorBanner } from "./CheckoutShared.jsx";
 import { PasswordField } from "./CheckoutShared.jsx";
 import { infoBannerStyle, linkBtnStyle, primaryBtnStyle, textInputStyle } from "./checkoutStyles.js";
+import { BrandIcon } from "../ui/BrandIcon.jsx";
 
 // Eigenstaendiger Ablauf ausserhalb der Kern-Fortschrittsleiste (Spec 5.1) -
 // kein Kauf-Schritt, deshalb kein Eintrag in wizardSteps.js. Aufrufbar aus
@@ -79,7 +80,7 @@ export function PasswordResetFlow({ t, account, initialStep = "request", onBack 
   if (step === "success") {
     return (
       <div style={{ textAlign: "center", padding: "20px 0" }}>
-        <div style={{ fontSize: 32, marginBottom: 12 }}>🦊</div>
+        <BrandIcon size={40} style={{ marginBottom: 12 }} />
         <div style={{ fontSize: 14, fontWeight: 700 }}>{t.newPasswordSuccessTitle}</div>
         <button onClick={onBack} style={{ ...primaryBtnStyle, marginTop: 16 }}>
           {t.newPasswordSuccessCta}
