@@ -28,7 +28,7 @@ export function CalculatorTrialGate({ children, onDismiss }) {
         <button onClick={() => setShowLogin(true)} style={primaryBtnStyle}>
           🦊 {t.loginRequiredCta}
         </button>
-        {showLogin && <CheckoutWizard onClose={() => setShowLogin(false)} />}
+        {showLogin && <CheckoutWizard onClose={() => setShowLogin(false)} entryPoint="login" />}
       </GatePanel>
     );
   }

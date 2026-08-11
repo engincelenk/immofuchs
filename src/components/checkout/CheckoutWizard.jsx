@@ -22,9 +22,15 @@ const WIDE_DIALOG_WIDTH = 900;
 const NARROW_DIALOG_WIDTH = 460;
 
 // Vollflaechiger Checkout-Assistent (Spec-Abschnitt 5) - ersetzt das
-// bisherige kleine LoginModal/PlanSelect-Paar. `entryPoint="payment"`
-// (Upgrade eines bereits eingeloggten Free-Nutzers) startet direkt bei der
-// Zahlung, alles andere durchlaeuft die volle Neukunden-Sequenz.
+// bisherige kleine LoginModal/PlanSelect-Paar.
+// entryPoint:
+//   "pricing" (Standard) - voller Kauf-Flow, startet bei der Plan-Auswahl.
+//   "payment" - Upgrade eines bereits eingeloggten Free-Nutzers, startet
+//     direkt bei der Zahlung (Plan wurde bereits gewaehlt).
+//   "login" (Stufe Nutzer-Konzept 2026-08-11) - reine Anmeldung fuer den
+//     kostenlosen Ersttest ("Anmelden" auf der Landingpage / Rechner-Sperre),
+//     OHNE Plan-/Zahlungsschritte. Schliesst sich selbst, sobald der Login
+//     klappt - die Kaufentscheidung faellt hier bewusst noch nicht.
 // `initialPlan` kommt aus der nach einem OAuth-Redirect wiederhergestellten
 // Kaufabsicht (useAccount.js): Google/Apple verlassen die Seite komplett,
 // wodurch die im Preise-Schritt getroffene Wahl sonst verloren waere und der
@@ -44,9 +50,11 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   const initialVariant =
     entryPoint === "payment"
       ? "upgrade"
-      : account?.isLoggedIn && !account?.isPro
-        ? "new-customer-no-verify"
-        : "new-customer";
+      : entryPoint === "login"
+        ? "login-only"
+        : account?.isLoggedIn && !account?.isPro
+          ? "new-customer-no-verify"
+          : "new-customer";
   const [variant, setVariant] = useState(initialVariant);
   // Stufe E (Nutzer-Konzept 2026-08-11): frischer Wizard-Start landet jetzt
   // immer auf "pricing" (Plan waehlen), auch fuer bereits eingeloggte
@@ -81,8 +89,13 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // dieselbe Kaufstrecke zeigen statt zwei unterschiedliche "Staende").
   // "verify"/"welcome"/Passwort-Reset bleiben bewusst schmal und zentriert -
   // dort gibt es nichts, das eine zweite Spalte fuellen wuerde.
+  // login-only zeigt nie eine Bestelluebersicht - es gibt an dieser Stelle
+  // weder Plan noch Preis zu bestaetigen, das waere nur verwirrend.
   const showSummary =
-    isDesktop && !passwordReset && (currentKey === "pricing" || currentKey === "account" || currentKey === "payment");
+    isDesktop &&
+    !passwordReset &&
+    variant !== "login-only" &&
+    (currentKey === "pricing" || currentKey === "account" || currentKey === "payment");
 
   // Sobald ein eingeloggter Free-Nutzer WAEHREND des Konto-Schritts erkannt
   // wird (egal ueber welchen der fuenf Login-/Registrierungswege), direkt zur
@@ -94,12 +107,25 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // eingeloggten Nutzers feuern und die neue Plan-Auswahl (siehe stepIndex-
   // Default oben) sofort wieder ueberspringen.
   useEffect(() => {
-    if (variant === "upgrade") return;
+    if (variant === "upgrade" || variant === "login-only") return;
     if (currentKey !== "account") return;
     if (!account?.isLoggedIn || account.isPro) return;
     setVariant("new-customer-no-verify");
     setStepIndex(getWizardSteps("new-customer-no-verify").indexOf("payment"));
   }, [account?.isLoggedIn, account?.isPro, variant, currentKey]);
+
+  // login-only (Stufe Nutzer-Konzept 2026-08-11): Ziel ist ausschliesslich
+  // die Anmeldung fuer den kostenlosen Ersttest, keine Kaufentscheidung -
+  // sobald der Login klappt, schliesst der Wizard einfach wieder, statt wie
+  // beim Kauf-Flow zur Zahlung zu springen. Der Nutzer landet damit wieder
+  // auf der Landingpage ("Jetzt rechnen" ist jetzt sichtbar) bzw. im
+  // Rechner, aus dem heraus der Login-Bildschirm geoeffnet wurde.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (variant !== "login-only" || !account?.isLoggedIn) return;
+    onCloseRef.current();
+  }, [variant, account?.isLoggedIn]);
 
   useFocusTrap(dialogRef, onClose, [stepIndex, passwordReset]);
 
@@ -194,6 +220,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         plan={plan}
         onVerificationSent={handleVerificationSent}
         onForgotPassword={handleForgotPassword}
+        freeEntry={variant === "login-only"}
       />
     );
   } else if (currentKey === "verify") {
@@ -264,7 +291,10 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
             </button>
           ) : (
             <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-              🦊 ImmoFuchs <span style={{ color: "var(--ca-dk)" }}>Pro</span>
+              {/* "Pro" nur im Kauf-Flow (Stufe Nutzer-Konzept 2026-08-11) -
+                  eine reine Anmeldung fuer den kostenlosen Test hat mit Pro
+                  noch nichts zu tun. */}
+              🦊 ImmoFuchs {variant !== "login-only" && <span style={{ color: "var(--ca-dk)" }}>Pro</span>}
             </div>
           )}
           <button
@@ -275,7 +305,9 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
             ✕
           </button>
         </div>
-        {!passwordReset && <StepHeader steps={steps} currentIndex={stepIndex} ariaLabel={steps[stepIndex]?.label} />}
+        {!passwordReset && variant !== "login-only" && (
+          <StepHeader steps={steps} currentIndex={stepIndex} ariaLabel={steps[stepIndex]?.label} />
+        )}
         <div
           style={{
             display: "flex",

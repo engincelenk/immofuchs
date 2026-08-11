@@ -42,7 +42,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
   // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
   const account = useAccountCtx();
-  const [openMode, setOpenMode] = useState(null); // null | "checkout" | "account"
+  const [openMode, setOpenMode] = useState(null); // null | "checkout" | "login" | "account"
 
   // Bugfix (Nutzer-Feedback 2026-08-11): CheckoutWizard/MyAccount lesen
   // `lang` ueber useApp() aus Ctx (AppContext.jsx) - der existiert bisher
@@ -185,7 +185,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {account && !account.loading && (
               <button
-                onClick={() => setOpenMode(account.isLoggedIn ? "account" : "checkout")}
+                onClick={() => setOpenMode(account.isLoggedIn ? "account" : "login")}
                 style={{
                   padding: "9px 14px",
                   background: "transparent",
@@ -278,7 +278,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               <button
                 onClick={() => {
                   setNavOpen(false);
-                  setOpenMode(account.isLoggedIn ? "account" : "checkout");
+                  setOpenMode(account.isLoggedIn ? "account" : "login");
                 }}
                 style={navLinkMobile}
               >
@@ -288,9 +288,10 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           </div>
         )}
       </header>
-      {(openMode === "checkout" || openMode === "account") && (
+      {(openMode === "checkout" || openMode === "login" || openMode === "account") && (
         <Ctx.Provider value={landingCtxValue}>
           {openMode === "checkout" && <CheckoutWizard onClose={() => setOpenMode(null)} />}
+          {openMode === "login" && <CheckoutWizard onClose={() => setOpenMode(null)} entryPoint="login" />}
           {openMode === "account" && <MyAccount onClose={() => setOpenMode(null)} />}
         </Ctx.Provider>
       )}
@@ -357,7 +358,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                   Aktion tauschen statt nur auszublenden, sonst faehlt
                   nicht eingeloggten Erstbesuchern die primaere Handlung. */}
               <button
-                onClick={() => (account?.isLoggedIn ? scrollTo("rechner") : setOpenMode("checkout"))}
+                onClick={() => (account?.isLoggedIn ? scrollTo("rechner") : setOpenMode("login"))}
                 style={{
                   padding: "14px 26px",
                   background: "var(--ca)",

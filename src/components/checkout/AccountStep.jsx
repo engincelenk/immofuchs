@@ -21,7 +21,7 @@ import { linkBtnStyle, primaryBtnStyle, secondaryBtnStyle, appleBtnStyle, textIn
 // `plan` wird nur durchgereicht, um ihn vor dem OAuth-Redirect zu merken:
 // Google/Apple verlassen die Seite komplett, wodurch der Wizard-State
 // verloren geht (siehe useAccount.js/startGoogleLogin).
-export function AccountStep({ t, account, plan, onVerificationSent, onForgotPassword }) {
+export function AccountStep({ t, account, plan, onVerificationSent, onForgotPassword, freeEntry }) {
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(null);
@@ -195,7 +195,9 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
 
   return (
     <div>
-      <p style={{ fontSize: 13, color: "var(--ch)", marginBottom: 16 }}>{t.loginSubtitle}</p>
+      <p style={{ fontSize: 13, color: "var(--ch)", marginBottom: 16 }}>
+        {freeEntry ? t.loginSubtitleFree : t.loginSubtitle}
+      </p>
       {(inlineError === "oauth_email_taken" || inlineError === "oauth_only") ? (
         <OAuthOnlyBanner
           t={t}

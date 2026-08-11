@@ -1,3 +1,36 @@
+## 2026-08-11 (1.7.28)
+
+### Bugfix: "Anmelden" öffnete den Kauf-Flow statt einer reinen Anmeldung
+
+**Anlass:** Nutzer-Feedback nach dem Test auf dev.immofuchs.info - der
+"nicht eingeloggt"-Pfad stimmte nicht mit dem Konzept überein.
+
+**Befund:** "Anmelden" (Landingpage-Header, Hero-CTA, Rechner-Sperrbildschirm)
+öffnete bisher denselben `CheckoutWizard` wie der Kauf-Flow - startete also
+bei der Plan-Auswahl ("Wähle deinen Plan", 4,99 €/49,99 €) statt direkt bei
+der Anmeldemaske, und sprang nach erfolgreichem Login automatisch zur
+Zahlung weiter. Das widerspricht dem Kernprinzip aus dem Nutzer-Konzept:
+Anmelden ist eine reine Login-Handlung für den kostenlosen Ersttest: die
+Kaufentscheidung fällt frühestens an der Paywall (zweite Nutzung), nicht
+direkt nach dem Login.
+
+**Fix:** Neuer Wizard-Modus `entryPoint="login"` (`wizardSteps.js`: eigene
+Variante `login-only` = nur "Konto"+"Bestätigen", ohne Preis-/Zahlungs-
+Schritte). Header zeigt "🦊 ImmoFuchs" ohne "Pro"-Branding, kein
+Fortschrittsbalken, kein Bestellübersicht-Sidebar. Sobald der Login klappt,
+schließt sich der Wizard selbst - der Nutzer landet wieder auf der
+Landingpage (jetzt mit "Jetzt rechnen") bzw. direkt im zuvor gesperrten
+Rechner, statt in der Zahlung. Betrifft alle drei "Anmelden"-Einstiegspunkte:
+Landingpage-Header/Hero, Rechner-Sperrbildschirm, App-interner Pro-Button.
+Eigene Subtitle-Zeile ("Melde dich an, um ImmoFuchs kostenlos auszuprobieren"
+statt "...um Pro-Funktionen freizuschalten") in allen 5 Sprachen.
+
+**Verifiziert:** Live im Browser (lokal): "Anmelden" → reine Login-Maske
+ohne Plan-Auswahl → nach Login automatischer Schluss → Landingpage zeigt
+"Jetzt rechnen". Rechner-Sperrbildschirm → "Kostenlos anmelden" → gleiche
+reine Login-Maske → nach Login direkt im Rechner (nicht in der Zahlung).
+`npm test` (293 Tests) grün, Build erfolgreich.
+
 ## 2026-08-11 (1.7.27)
 
 ### Feature: Neuer Login-, Test- und Buchungsflow + Preisänderung + Gutscheine

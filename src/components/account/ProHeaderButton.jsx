@@ -30,7 +30,7 @@ export function ProHeaderButton() {
   // Flaeche unter dem Nutzer austauschte - aus dem Checkout-Wizard wurde
   // schlagartig "Mein Konto", der begonnene Kauf war weg. Ein Ablauf darf
   // nicht dadurch enden, dass sein Zwischenziel (Login) erreicht wurde.
-  const [openMode, setOpenMode] = useState(null); // null | "checkout" | "account"
+  const [openMode, setOpenMode] = useState(null); // null | "checkout" | "login" | "account"
 
   // Passwort-Reset-Link (?reset_token=..., Ergaenzung 04.08.) muss die Maske
   // von selbst oeffnen - anders als bei OAuth gibt es hier keinen Weg, den
@@ -66,7 +66,7 @@ export function ProHeaderButton() {
   return (
     <>
       <button
-        onClick={() => setOpenMode(account.isLoggedIn ? "account" : "checkout")}
+        onClick={() => setOpenMode(account.isLoggedIn ? "account" : "login")}
         style={{
           display: "flex",
           alignItems: "center",
@@ -105,6 +105,7 @@ export function ProHeaderButton() {
         />
       )}
       {openMode === "account" && <MyAccount onClose={handleClose} />}
+      {openMode === "login" && <CheckoutWizard onClose={handleClose} entryPoint="login" />}
       {openMode === "checkout" &&
         (resumesCheckout ? (
           <CheckoutWizard
