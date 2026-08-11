@@ -255,12 +255,19 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
 
       {/* ═══════════ HERO ═══════════ */}
       <section
+        className="lp-container"
         style={{
-          maxWidth: 1280,
-          margin: "0 auto",
-          padding: "clamp(32px,6vw,80px) 16px clamp(32px,5vw,60px)",
+          // Nutzer-Feedback 2026-08-11: Hero-Kante muss mit Header/anderen
+          // Abschnitten fluchten (.lp-container liefert dasselbe
+          // max-width:1400px + responsives Padding). Vertikales Padding
+          // bleibt inline (Klasse setzt nur horizontal) - siehe .lp-container
+          // in der Style-Definition unten. Das eingebettete Bild
+          // (finn-expose-tile.webp) nutzt bereits width:100%/height:100%/
+          // objectFit:cover ueber den gesamten bisherigen Breiten-Bereich,
+          // die zusaetzlichen 120px hier aendern daran nichts Grundsaetzliches.
+          paddingTop: "clamp(32px,6vw,80px)",
+          paddingBottom: "clamp(32px,5vw,60px)",
           width: "100%",
-          boxSizing: "border-box",
         }}
       >
         <div
@@ -913,8 +920,8 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       </section>
 
       {/* ═══════════ CALCULATOR CARDS ═══════════ */}
-      <section id="rechner" style={{ padding: "clamp(40px,5vw,72px) 24px" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+      <section id="rechner" style={{ padding: "clamp(40px,5vw,72px) 0" }}>
+        <div className="lp-container">
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <div
               style={{

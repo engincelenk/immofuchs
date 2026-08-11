@@ -1,3 +1,28 @@
+## 2026-08-11 (1.7.23)
+
+### Bugfix: Hero- und Rechner-Karten-Abschnitt jetzt auch ausgerichtet
+
+**Anlass:** Nutzer-Screenshot vom live deployten dev-Stand zeigte weiterhin
+eine Differenz zwischen Header-Kante und Hero-Kante - Hero und
+"Wählen Sie Ihren Rechner" waren bei der Container-Vereinheitlichung
+(1.7.20) bewusst ausgespart worden (Sorge um Bildzuschnitt bei
+objectFit:cover-Boxen). Auf Nutzerwunsch jetzt inkludiert.
+
+**Fix:** Beide Abschnitte nutzen jetzt ebenfalls `.lp-container`
+(max-width:1400px, responsives Padding). Die eingebetteten Bilder
+(finn-expose-tile.webp, die 5 Rechner-Kartenbilder) behalten ihr
+`objectFit:cover`-Verhalten - die ~120px breitere Spalte verändert den
+Bildausschnitt nur geringfügig, im selben Rahmen wie das bestehende
+responsive Verhalten bei jeder anderen Viewport-Breite auch.
+
+**Verifiziert:** Bei 1920px Viewport liegen Header und alle 6
+Landingpage-Abschnitte (Hero, So funktioniert's, Rechner-Karten,
+Datenabschnitt, USP, Footer) jetzt exakt auf derselben Kante (253px).
+
+**Getestet:** ESLint clean, 297/297 Tests grün, Build erfolgreich.
+
+**Betroffene Dateien:** src/pages/Landing.jsx, package.json
+
 ## 2026-08-11 (1.7.22)
 
 ### Neue Phase, Paket 6: Admin Panel Etappe 2
