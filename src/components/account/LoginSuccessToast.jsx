@@ -1,12 +1,15 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
-// Kurze Bestaetigung nach einem Login, der ueber einen Seiten-Redirect
-// zurueckkommt (Google/Apple, Bestaetigungslink aus der Registrierungsmail).
-// Vorher gab es dafuer ueberhaupt keine Rueckmeldung: der Worker leitete mit
-// login_success=1 zurueck, useAccount entfernte den Parameter und verwarf ihn -
-// der Nutzer sah wieder denselben Bildschirm wie vor dem Redirect und konnte
-// nicht erkennen, ob die Anmeldung geklappt hatte (Bugreport 06.08.).
+// Kurze Bestaetigung nach jedem erfolgreichen Login - urspruenglich nur fuer
+// den Seiten-Redirect-Rueckweg gebaut (Google/Apple, Bestaetigungslink aus
+// der Registrierungsmail: der Worker leitete mit login_success=1 zurueck,
+// useAccount entfernte den Parameter und verwarf ihn, der Nutzer sah wieder
+// denselben Bildschirm wie vor dem Redirect und konnte nicht erkennen, ob die
+// Anmeldung geklappt hatte, Bugreport 06.08.). Passwort- und Passkey-Login
+// laufen ohne Redirect komplett im Wizard und loesten `loginSuccess` deshalb
+// nie aus (Luecke gefunden 2026-08-11) - jetzt setzen alle Login-Wege dieses
+// Flag, siehe useAccount.js.
 //
 // Bewusst eine selbstschliessende Einblendung statt eines eigenen
 // Bestaetigungs-Schritts: ein Screen mit "Weiter"-Knopf waere eine Sackgasse,
@@ -15,7 +18,7 @@ import { createPortal } from "react-dom";
 // Zahlungsschritt die Bestaetigung (siehe ProHeaderButton).
 const AUTO_DISMISS_MS = 4000;
 
-export function LoginSuccessToast({ t, email, message, onDone }) {
+export function LoginSuccessToast({ t, name, email, message, onDone }) {
   useEffect(() => {
     const timer = setTimeout(() => onDone?.(), AUTO_DISMISS_MS);
     return () => clearTimeout(timer);
@@ -58,7 +61,12 @@ export function LoginSuccessToast({ t, email, message, onDone }) {
     >
       <span aria-hidden="true">✓</span>
       <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
-        {message || (email ? `${t.loggedInAs} ${email}` : t.loginSuccessGeneric)}
+        {message ||
+          (name
+            ? t.welcomeGreeting.replace("{name}", name)
+            : email
+              ? `${t.loggedInAs} ${email}`
+              : t.loginSuccessGeneric)}
       </span>
     </div>,
     document.body,

@@ -1,3 +1,59 @@
+## 2026-08-11 (1.7.33)
+
+### UX: Mein-Konto-Menü als Slide-in, CTA-Redundanz reduziert, Willkommensgruß
+
+**Anlass:** Nutzer-Feedback (vier Punkte) + Konsultation des ui-designer-Agenten
+zu zwei offenen UX-Fragen.
+
+**1. Agenten-Konsultation:** Vor der Umsetzung wurde der `ui-designer`-Agent
+gefragt, ob die dreifache "Anmelden"-Anzeige auf der Landingpage (Header +
+Schublade + Hero) modern ist, und ob sich das neue Landing-Schubladen-Menü
+1:1 auf "Mein Konto" übertragen lässt. Antwort: Header+Hero-CTA sind ein
+legitimes Muster (unterschiedliche Scroll-Positionen), der dritte Eintrag in
+der Schublade ist reiner Redundanz-Ballast, da der Header-Button auf Mobile
+nie ausgeblendet wird. Für "Mein Konto" empfahl der Agent dieselbe
+Slide-in-Mechanik, aber mit Kontoidentität statt Logo im Panel-Kopf und ohne
+Sprachwahl (lebt bereits unter Einstellungen).
+
+**2. `src/pages/Landing.jsx`:** Den redundanten "Anmelden"/"Mein Konto"-Eintrag
+aus der mobilen Schublade entfernt (Header-Button + Hero-CTA bleiben).
+
+**3. `src/components/account/MyAccount.jsx`:** Mobile Bereichswahl von
+"Chevron, klappt inline auf" auf "☰-Leiste öffnet Slide-in-Panel von links"
+umgebaut - gleiche Mechanik wie Landing.jsx (Backdrop, Escape, Body-Scroll-
+Sperre, `@keyframes`), Panel-Kopf zeigt Name+E-Mail statt Marke/Logo, ✕ oben
+rechts. Escape schließt bewusst nur das Panel, nicht ganz "Mein Konto" -
+dafür ein eigener Capture-Phase-Handler mit `stopPropagation`, der den
+bubble-phasigen Handler aus `useFocusTrap` (schließt sonst den gesamten
+Bereich) unterdrückt.
+
+**4. Namentlicher Willkommensgruß:** Bugfund beim Umsetzen - Passwort- und
+Passkey-Login lösten bisher (anders als Google/Apple/Magic-Link, die über
+einen Seiten-Redirect zurückkommen) überhaupt keine Erfolgs-Rückmeldung aus,
+da `loginSuccess` nur im Redirect-Handling gesetzt wurde. Jetzt setzen
+`loginWithPassword` und `passkeyLogin` (`src/hooks/useAccount.js`) dieses
+Flag ebenfalls. `LoginSuccessToast` zeigt bei vorhandenem Namen
+"Willkommen, {Name}!" statt nur der E-Mail-Adresse. Der Toast wird jetzt
+zusätzlich auf `Landing.jsx` gerendert (bisher nur im eingeloggten
+App-Shell über `ProHeaderButton`) - der Login-über-Landing-Flow schloss den
+Wizard bisher kommentarlos, ohne jede Bestätigung.
+
+**5. `src/components/account/MyAccount.jsx` Kopfbereich:** Namenszeile von
+reinem Namen zu "Willkommen, {Name}!" erweitert (gleicher neuer i18n-Schlüssel
+`welcomeGreeting`, alle 5 Sprachen).
+
+**Verifiziert:** Live im Browser bei 375px (Landing-Schublade ohne
+Anmelden-Eintrag bestätigt; Mein-Konto-Panel öffnet/schließt korrekt über ☰,
+Backdrop-Klick, Escape-nur-Panel, Abschnittswechsel; Body-Scroll-Sperre
+greift/löst korrekt; Name+E-Mail im Panel-Kopf sichtbar; "Willkommen, Test
+Claude!" in der Kopfzeile bestätigt) und 1280px (Desktop-Seitenleiste
+unverändert, kein ☰ sichtbar). i18n-Formatierung aller 5 Sprachen geprüft.
+Der volle Passwort-Login-Rundlauf (inkl. E-Mail-Bestätigung) ließ sich mangels
+E-Mail-Postfach in dieser Umgebung nicht live durchspielen - die
+Auslöse-Logik selbst (`setLoginSuccess`) ist code-seitig verifiziert und
+nutzt exakt denselben, bereits produktiv laufenden Mechanismus wie der
+OAuth-Rückweg. `npm test` (293 Tests) grün, Lint sauber.
+
 ## 2026-08-11 (1.7.32)
 
 ### UX: Slide-in-Menü auf der Landingpage + echtes Logo statt Fuchs-Emoji

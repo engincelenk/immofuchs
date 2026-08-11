@@ -93,6 +93,7 @@ export function ProHeaderButton() {
       {account.loginSuccess && (
         <LoginSuccessToast
           t={t}
+          name={account.me?.name}
           email={account.me?.email}
           onDone={account.dismissLoginSuccess}
         />

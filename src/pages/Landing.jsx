@@ -10,6 +10,7 @@ import { Ctx } from "../context/AppContext.jsx";
 import { ACCOUNT_T } from "../i18n/account.js";
 import { CheckoutWizard } from "../components/checkout/CheckoutWizard.jsx";
 import { MyAccount } from "../components/account/MyAccount.jsx";
+import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
 import { useSavedObjects } from "../components/shell/Merkliste.jsx";
 import { BrandIcon } from "../components/ui/BrandIcon.jsx";
 
@@ -356,17 +357,13 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               <button onClick={() => scrollTo("zinsen")} style={navLinkMobile}>
                 {l.navZinsen}
               </button>
-              {account && !account.loading && (
-                <button
-                  onClick={() => {
-                    setNavOpen(false);
-                    setOpenMode(account.isLoggedIn ? "account" : "login");
-                  }}
-                  style={navLinkMobile}
-                >
-                  {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
-                </button>
-              )}
+              {/* UX-Review 2026-08-11 (ui-designer-Agent): der "Anmelden"/"Mein
+                  Konto"-Eintrag hier war der dritte Auftritt derselben Aktion
+                  (Header-Button bleibt auch mobil sichtbar - .lp-account-btn
+                  wird bei ≤880px nur verkleinert, nie ausgeblendet). Anders
+                  als Header+Hero-CTA (unterschiedliche Scroll-Positionen)
+                  brachte diese Kopie keine zusaetzliche Erreichbarkeit, nur
+                  eine weitere Animation/einen weiteren Tap fuer denselben Klick. */}
               {/* Sprachwahl zieht bei ≤880px hierher um, siehe Kommentar oben
                   bei .lp-langsel-top - Platz in der Kopfzeile reichte dort
                   nicht fuer Logo + Konto-Knopf + Sprachwahl + Menü-Button. */}
@@ -383,6 +380,20 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           {openMode === "login" && <CheckoutWizard onClose={() => setOpenMode(null)} entryPoint="login" />}
           {openMode === "account" && <MyAccount onClose={() => setOpenMode(null)} />}
         </Ctx.Provider>
+      )}
+      {/* Bugfund 2026-08-11: Passwort-/Passkey-Login ueber "Anmelden" auf
+          dieser Seite schliesst den Wizard automatisch und kehrt hierher
+          zurueck (kein Redirect wie bei Google/Apple) - ohne diesen Toast
+          gab es dafuer bislang KEINE Bestaetigung, da LoginSuccessToast
+          vorher nur ueber ProHeaderButton im eingeloggten App-Shell
+          gerendert wurde, den es auf der Landingpage gar nicht gibt. */}
+      {account?.loginSuccess && (
+        <LoginSuccessToast
+          t={at}
+          name={account.me?.name}
+          email={account.me?.email}
+          onDone={account.dismissLoginSuccess}
+        />
       )}
 
       {/* ═══════════ HERO ═══════════ */}

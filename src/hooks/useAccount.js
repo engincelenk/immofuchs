@@ -225,6 +225,11 @@ export function useAccount() {
       const body = await res.json().catch(() => ({}));
       if (res.ok) {
         await refresh();
+        // Bugfund 2026-08-11: bisher loeste NUR der Redirect-Rueckweg (OAuth/
+        // Magic-Link/E-Mail-Bestaetigung) loginSuccess aus - Passwort-Login
+        // (kein Redirect, laeuft komplett im Wizard) zeigte dadurch ueberhaupt
+        // keine Willkommens-Rueckmeldung.
+        setLoginSuccess(true);
         return { ok: true };
       }
       if (res.status === 423) return { ok: false, error: "locked", retryAfterSeconds: body.retryAfterSeconds };
@@ -282,6 +287,9 @@ export function useAccount() {
     const { token } = await verifyRes.json();
     await storeNativeToken(token);
     await refresh();
+    // Gleicher Bugfund wie bei loginWithPassword: kein Redirect, also ohne
+    // dies keine Willkommens-Rueckmeldung.
+    setLoginSuccess(true);
   }, [refresh]);
 
   const passkeyRegister = useCallback(
