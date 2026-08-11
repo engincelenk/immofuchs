@@ -146,6 +146,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             <img
               src="/icon-192.png"
               alt="Immofuchs"
+              className="lp-logo-icon"
               style={{
                 width: 52,
                 height: 52,
@@ -154,7 +155,13 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 borderRadius: 10,
               }}
             />
+            {/* Nutzer-Feedback 2026-08-11 (Screenshot): Logo+Wortmarke allein
+                nahmen bei 375px schon 234px ein (52px Icon + 23px-Text) -
+                zusammen mit Konto-Knopf + Menü-Button blieb kein Platz mehr,
+                beide rutschten unsichtbar aus dem Viewport. .lp-logo-text
+                schrumpft deshalb bei ≤880px (Regel unten). */}
             <div
+              className="lp-logo-text"
               style={{
                 fontSize: 23,
                 fontWeight: 800,
@@ -186,6 +193,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             {account && !account.loading && (
               <button
                 onClick={() => setOpenMode(account.isLoggedIn ? "account" : "login")}
+                className="lp-account-btn"
                 style={{
                   padding: "9px 14px",
                   background: "transparent",
@@ -202,7 +210,16 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
               </button>
             )}
-            <LangSel lang={lang} setLang={setLang} />
+            {/* Nutzer-Feedback 2026-08-11 (Screenshot): Sprachwahl + Menü-
+                Button ragten bei ≤880px zusammen mit Konto-Knopf + Logo
+                ueber den Viewport hinaus (kein Umbruch, keine Kuerzung) -
+                bei 375px lagen beide bereits jenseits x=375, also komplett
+                unsichtbar/unerreichbar. Fix: Sprachwahl zieht bei ≤880px in
+                die Mobile-Schublade um (siehe unten), hier nur noch auf
+                breiteren Screens sichtbar (.lp-langsel-top-Regel unten). */}
+            <div className="lp-langsel-top">
+              <LangSel lang={lang} setLang={setLang} />
+            </div>
             {/* REQ-LP-01 (Nutzer-Konzept 2026-08-11): "Jetzt rechnen" nur fuer
                 eingeloggte Nutzer sichtbar - nicht eingeloggte sehen bereits
                 den "Anmelden"-Knopf oben, ein zweiter waere redundant. Die
@@ -285,6 +302,12 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
               </button>
             )}
+            {/* Sprachwahl zieht bei ≤880px hierher um, siehe Kommentar oben
+                bei .lp-langsel-top - Platz in der Kopfzeile reichte dort
+                nicht fuer Logo + Konto-Knopf + Sprachwahl + Menü-Button. */}
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--cb)" }}>
+              <LangSel lang={lang} setLang={setLang} />
+            </div>
           </div>
         )}
       </header>
@@ -1635,6 +1658,15 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       @media(max-width:880px){
         .lp-nav{display:none!important}
         .lp-burger{display:inline-flex!important}
+        .lp-langsel-top{display:none!important}
+        .lp-logo-icon{width:36px!important;height:36px!important}
+        .lp-logo-text{font-size:16px!important}
+        .lp-account-btn{padding:8px 10px!important;font-size:12.5px!important}
+      }
+      @media(max-width:340px){
+        .lp-logo-text{font-size:14px!important}
+        .lp-hdr-inner{gap:10px!important}
+        .lp-account-btn{padding:8px 8px!important;font-size:11.5px!important}
       }
       @media(min-width:881px){
         .lp-nav-mobile{display:none!important}

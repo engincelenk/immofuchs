@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
@@ -50,45 +50,27 @@ export function MyAccount({ onClose }) {
   // zwei gleichzeitig aktive Traps wuerden sich beim Tabben gegenseitig
   // ueberschreiben. Deshalb ersetzt der Wizard diesen Bereich komplett.
   const [showUpgrade, setShowUpgrade] = useState(false);
-  // Mobile-Reiterleiste (Nutzer-Feedback 2026-08-11, Screenshot: Nutzer
-  // musste erraten, dass rechts noch Reiter folgen - kein Hinweis auf
-  // scrollbaren Inhalt). Verlaufskanten blenden nur ein, wenn dort
-  // tatsaechlich noch etwas zu scrollen ist - dieselbe iOS-Konvention wie
-  // scrollende Listen in Mail/Nachrichten.
-  const navScrollRef = useRef(null);
-  const [navEdges, setNavEdges] = useState({ atStart: true, atEnd: true });
-  // Schwelle 24px statt 4px: scroll-snap-type "x proximity" auf dem ersten/
-  // letzten Reiter rastet beim Laden leicht ein (settelt exakt auf den
-  // 20px-Innenabstand der Leiste) - ohne den groesseren Puffer wuerde das
-  // faelschlich schon "hier geht noch was" anzeigen, obwohl der Nutzer noch
-  // gar nicht gescrollt hat.
-  const updateNavEdges = useCallback(() => {
-    const el = navScrollRef.current;
-    if (!el) return;
-    setNavEdges({
-      atStart: el.scrollLeft <= 24,
-      atEnd: el.scrollLeft + el.clientWidth >= el.scrollWidth - 24,
-    });
-  }, []);
+  // Mobile-Bereichswahl (Nutzer-Feedback 2026-08-11, Screenshot: die
+  // vorherige scrollende Reiterleiste zwang zum Scrollen nach rechts, um an
+  // Einstellungen/Support/Konto/Admin zu kommen). Ersetzt durch eine
+  // zusammengeklappte "aktueller Bereich"-Zeile, die beim Antippen die volle
+  // Liste aller Bereiche darunter aufklappt - kein horizontales Scrollen
+  // mehr noetig, konstante Kopfzeilenhoehe unabhaengig von der Anzahl
+  // Bereiche (6 normal, 7 fuer Admin-Konten).
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
+
+  async function handleLogout() {
+    setLogoutBusy(true);
+    await account.logout();
+    onClose();
+  }
 
   // Bewusst OHNE deps: der Fokus-Trap ermittelt die fokussierbaren Elemente
   // bei jedem Tastendruck neu, ein Bereichswechsel braucht also keinen
   // Neuaufbau. Mit deps wuerde der Fokus nach jedem Klick in der Navigation
   // auf den Schliessen-Knopf zurueckspringen.
   useFocusTrap(dialogRef, onClose);
-
-  useEffect(() => {
-    if (isDesktop) return;
-    const el = navScrollRef.current;
-    if (!el) return;
-    updateNavEdges();
-    el.addEventListener("scroll", updateNavEdges, { passive: true });
-    window.addEventListener("resize", updateNavEdges);
-    return () => {
-      el.removeEventListener("scroll", updateNavEdges);
-      window.removeEventListener("resize", updateNavEdges);
-    };
-  }, [isDesktop, updateNavEdges]);
 
   if (!account?.me) return null;
   if (showUpgrade) return <CheckoutWizard onClose={onClose} entryPoint="payment" />;
@@ -132,6 +114,10 @@ export function MyAccount({ onClose }) {
             <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
               🦊 {t.accountTitle}
             </div>
+            {/* Nutzer-Feedback 2026-08-11: Name statt E-Mail als Begruessung -
+                E-Mail bleibt der eindeutige Nutzer-Anker im Profil-Bereich,
+                hier ist sie sekundaer und nur noch der Fallback, solange kein
+                Name hinterlegt ist (z.B. frisch per OAuth angelegte Konten). */}
             <div
               style={{
                 fontSize: 11.5,
@@ -141,24 +127,48 @@ export function MyAccount({ onClose }) {
                 whiteSpace: "nowrap",
               }}
             >
-              {account.me.email}
+              {account.me.name || account.me.email}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            aria-label={t.close}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: 20,
-              cursor: "pointer",
-              color: "var(--ch)",
-              lineHeight: 1,
-              flexShrink: 0,
-            }}
-          >
-            ✕
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            {/* Nutzer-Feedback 2026-08-11: Abmelden direkt in der Kopfzeile
+                sichtbar statt versteckt im Bereich "Konto & Sicherheit" -
+                dort bleibt der Knopf zusaetzlich bestehen (Alle-Geraete-
+                Abmelden lebt ohnehin nur dort), hier nur der haeufige Fall. */}
+            <button
+              onClick={handleLogout}
+              disabled={logoutBusy}
+              style={{
+                background: "none",
+                border: "1px solid var(--cb)",
+                borderRadius: 8,
+                padding: "6px 10px",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                color: "var(--ch)",
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {t.logout}
+            </button>
+            <button
+              onClick={onClose}
+              aria-label={t.close}
+              style={{
+                background: "none",
+                border: "none",
+                fontSize: 20,
+                cursor: "pointer",
+                color: "var(--ch)",
+                lineHeight: 1,
+                padding: "0 0 0 4px",
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div
@@ -182,42 +192,87 @@ export function MyAccount({ onClose }) {
                   label={t[s.labelKey]}
                   icon={s.icon}
                   active={s.key === activeKey}
-                  isDesktop
                   onClick={() => setActiveKey(s.key)}
                 />
               ))}
             </nav>
           ) : (
-            <div style={{ position: "relative" }}>
-              <nav
-                ref={navScrollRef}
+            <div style={{ padding: "0 20px 14px", borderBottom: "1px solid var(--cb)" }}>
+              <button
+                onClick={() => setMobileNavOpen((o) => !o)}
+                aria-expanded={mobileNavOpen}
                 aria-label={t.accountNavAria}
                 style={{
                   display: "flex",
-                  gap: 6,
-                  overflowX: "auto",
-                  padding: "0 20px 12px",
-                  borderBottom: "1px solid var(--cb)",
-                  scrollSnapType: "x proximity",
-                  WebkitOverflowScrolling: "touch",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  padding: "11px 14px",
+                  borderRadius: 10,
+                  border: "1px solid var(--cb)",
+                  background: "var(--cc)",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
                 }}
               >
-                {visibleSections.map((s) => (
-                  <NavItem
-                    key={s.key}
-                    label={t[s.labelKey]}
-                    icon={s.icon}
-                    active={s.key === activeKey}
-                    isDesktop={false}
-                    onClick={() => setActiveKey(s.key)}
-                  />
-                ))}
-              </nav>
-              {/* Verlaufskanten (nur wenn dort tatsaechlich noch etwas
-                  folgt) - machen den Reiter-Streifen als scrollbar
-                  erkennbar, statt hart am Bildschirmrand abzuschneiden. */}
-              {!navEdges.atStart && <NavScrollFade side="left" />}
-              {!navEdges.atEnd && <NavScrollFade side="right" />}
+                <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>
+                  <span aria-hidden="true">{active.icon}</span>
+                  {t[active.labelKey]}
+                </span>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--ch)",
+                    transform: mobileNavOpen ? "rotate(180deg)" : "none",
+                    transition: "transform .15s",
+                  }}
+                >
+                  ▼
+                </span>
+              </button>
+              {mobileNavOpen && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    border: "1px solid var(--cb)",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    background: "var(--cc)",
+                  }}
+                >
+                  {visibleSections.map((s, i) => (
+                    <button
+                      key={s.key}
+                      onClick={() => {
+                        setActiveKey(s.key);
+                        setMobileNavOpen(false);
+                      }}
+                      aria-current={s.key === activeKey ? "page" : undefined}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        width: "100%",
+                        padding: "11px 14px",
+                        border: "none",
+                        borderTop: i === 0 ? "none" : "1px solid var(--cb)",
+                        background: s.key === activeKey ? "var(--ca-bg)" : "transparent",
+                        color: s.key === activeKey ? "var(--ca-dk)" : "var(--ct)",
+                        fontSize: 13.5,
+                        fontWeight: s.key === activeKey ? 700 : 600,
+                        textAlign: "left",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        minHeight: 44,
+                      }}
+                    >
+                      <span aria-hidden="true">{s.icon}</span>
+                      {t[s.labelKey]}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -238,10 +293,9 @@ export function MyAccount({ onClose }) {
   );
 }
 
-// Ein einziger Knopf fuer beide Navigationsformen: auf dem Desktop eine
-// vertikale Liste, darunter ein horizontal scrollender Reiter-Streifen -
-// derselbe Zustand, nur andere Anordnung.
-function NavItem({ label, icon, active, isDesktop, onClick }) {
+// Desktop-Vertikalliste (mobil ersetzt durch die aufklappbare
+// Bereichswahl weiter oben, siehe mobileNavOpen).
+function NavItem({ label, icon, active, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -250,12 +304,10 @@ function NavItem({ label, icon, active, isDesktop, onClick }) {
         display: "flex",
         alignItems: "center",
         gap: 8,
-        padding: isDesktop ? "10px 12px" : "9px 12px",
+        padding: "10px 12px",
         borderRadius: 10,
-        border: isDesktop
-          ? `1px solid ${active ? "var(--ca)" : "transparent"}`
-          : `1px solid ${active ? "var(--ca)" : "var(--cb)"}`,
-        background: active ? "var(--ca-bg)" : isDesktop ? "transparent" : "var(--cc)",
+        border: `1px solid ${active ? "var(--ca)" : "transparent"}`,
+        background: active ? "var(--ca-bg)" : "transparent",
         // --ca-dk statt --ca: auf --ca-bg liegt --ca unter der WCAG-AA-Grenze
         // fuer diese Schriftgroesse (S2-5).
         color: active ? "var(--ca-dk)" : "var(--ct)",
@@ -265,33 +317,10 @@ function NavItem({ label, icon, active, isDesktop, onClick }) {
         fontFamily: "inherit",
         textAlign: "left",
         whiteSpace: "nowrap",
-        flexShrink: 0,
-        minHeight: 40,
-        scrollSnapAlign: isDesktop ? undefined : "start",
       }}
     >
       <span aria-hidden="true">{icon}</span>
       <span>{label}</span>
     </button>
-  );
-}
-
-// Blendet nur die letzten ~28px der Reiterleiste zum Hintergrund aus
-// (var(--bg), derselbe Ton wie der Vollbild-Hintergrund von MyAccount) -
-// signalisiert "hier geht's weiter", ohne einen Reiter selbst zu verdecken.
-function NavScrollFade({ side }) {
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        position: "absolute",
-        top: 0,
-        bottom: 12,
-        [side]: 0,
-        width: 28,
-        pointerEvents: "none",
-        background: `linear-gradient(to ${side === "left" ? "right" : "left"}, var(--bg), transparent)`,
-      }}
-    />
   );
 }

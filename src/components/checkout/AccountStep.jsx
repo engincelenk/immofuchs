@@ -227,14 +227,29 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
           )}
         </>
       )}
-      <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={() => account.startGoogleLogin(plan)} style={{ ...secondaryBtnStyle, flex: 1 }}>
+      {/* Untereinander statt nebeneinander (Nutzer-Vorgabe 2026-08-11,
+          Referenz-Screenshot): volle Breite pro Anbieter-Knopf statt
+          halbierter Breite - besser lesbar/antippbar auf Mobile, gaengiges
+          Muster bei Mehrfach-OAuth (ElevenLabs, Notion, Linear etc.). */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <button onClick={() => account.startGoogleLogin(plan)} style={secondaryBtnStyle}>
           <GoogleIcon /> {t.loginGoogle}
         </button>
-        <button onClick={() => account.startAppleLogin(plan)} style={{ ...appleBtnStyle, flex: 1 }}>
+        <button onClick={() => account.startAppleLogin(plan)} style={appleBtnStyle}>
           <AppleIcon /> {t.loginApple}
         </button>
       </div>
+      <p style={{ fontSize: 10.5, color: "var(--ch)", lineHeight: 1.6, margin: "10px 0 0" }}>
+        {t.registerTermsPrefix}{" "}
+        <a href="/agb.html" target="_blank" rel="noreferrer" style={{ color: "var(--ca-dk)" }}>
+          {t.registerTermsAgb}
+        </a>{" "}
+        {t.registerTermsAnd}{" "}
+        <a href="/datenschutz.html" target="_blank" rel="noreferrer" style={{ color: "var(--ca-dk)" }}>
+          {t.registerTermsPrivacy}
+        </a>
+        .
+      </p>
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
         <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
         <span style={{ fontSize: 11, color: "var(--ch)" }}>{t.loginOr}</span>

@@ -2,6 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { LANGS } from "../../i18n/translations.js";
 
+// Land != Sprache (Englisch hat keine eindeutige Flagge, Tuerkisch/
+// Chinesisch/Hindi werden auch ausserhalb "ihres" Landes gesprochen) - das
+// bleibt fachlich richtig. Trotzdem Nutzer-Entscheidung 2026-08-11: Flaggen
+// zurueck statt Globus-Icon, da in Sprachwaehlern (Duolingo, Google
+// Translate etc.) trotz derselben Unschaerfe verbreitete, sofort erkennbare
+// Praxis - rein visuelle Abkuerzung, kein Anspruch auf Praezision.
+const FLAGS = { de: "🇩🇪", en: "🇬🇧", tr: "🇹🇷", zh: "🇨🇳", hi: "🇮🇳" };
+
 export function LangSel({ lang, setLang }) {
   const [open, setOpen] = useState(false);
   const ref = useRef();
@@ -34,14 +42,8 @@ export function LangSel({ lang, setLang }) {
           minHeight: 38,
         }}
       >
-        {/* Kein Flaggen-Icon mehr (Konzept-Dok 3.6/7.2/7.5, 2026-08-10):
-            Flaggen stehen fuer Laender, nicht fuer Sprachen (Englisch hat
-            keine eindeutige Flagge, Tuerkisch/Chinesisch/Hindi werden auch
-            ausserhalb "ihres" Landes gesprochen) - bekannter UX-/
-            Internationalisierungs-Fehler. Neutrales Globus-Symbol statt
-            Landesflagge. */}
         <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>
-          🌐
+          {FLAGS[cur.v] || "🌐"}
         </span>
         <span className="lang-label" style={{ fontSize: 12, color: "var(--ch)" }}>
           {cur.label}
@@ -71,7 +73,9 @@ export function LangSel({ lang, setLang }) {
                 setOpen(false);
               }}
               style={{
-                display: "block",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
                 padding: "9px 14px",
                 width: "100%",
                 border: "none",
@@ -85,6 +89,7 @@ export function LangSel({ lang, setLang }) {
                 textAlign: "left",
               }}
             >
+              <span aria-hidden="true">{FLAGS[l.v] || "🌐"}</span>
               {l.full}
             </button>
           ))}

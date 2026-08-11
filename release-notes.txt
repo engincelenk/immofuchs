@@ -1,3 +1,92 @@
+## 2026-08-11 (1.7.31)
+
+### UX: "Mein Konto" - Bereichswahl, Name, Abmelden + Login-Maske
+
+**Anlass:** Nutzer-Feedback (Screenshots) - vier Punkte.
+
+**1. Mobile Bereichswahl ohne Scrollen (`src/components/account/MyAccount.jsx`):**
+Die vorherige scroll+Verlaufskanten-Lösung (Version 1.7.29) wurde verworfen -
+Nutzer-Vorgabe: "Hier sollte eine andere Lösung her damit man nicht nach
+rechts scrollen muss." Ersetzt durch eine zusammengeklappte "aktueller
+Bereich"-Zeile (Icon + Name + Pfeil), die beim Antippen die volle Liste
+aller Bereiche darunter aufklappt - iOS-Settings-Muster. Kein horizontales
+Scrollen mehr, konstante Kopfzeilenhöhe unabhängig von 6 (normal) oder 7
+(Admin-Konto) Bereichen. Ein `ui-designer`-Agent hat unabhängig dieselbe
+Lösung empfohlen (Begründung: Wrap-Grid hätte je nach Kontotyp
+unterschiedliche Zeilenzahl und wirkt unruhig) - Entwurf wurde entsprechend
+übernommen.
+
+**2. Name statt E-Mail:** Kopfzeile von "Mein Konto" zeigt jetzt
+`account.me.name`, fällt nur auf die E-Mail zurück, wenn kein Name
+hinterlegt ist (z. B. frisch per OAuth angelegte Konten ohne Namensfeld).
+
+**3. Abmelden direkt in der Kopfzeile:** Bisher nur im Bereich "Konto &
+Sicherheit" versteckt. Jetzt zusätzlich als eigener Knopf direkt neben dem
+Schließen-Kreuz, auf jedem Bildschirm sichtbar ohne Navigation. Der
+bestehende Knopf in "Konto & Sicherheit" bleibt (dort auch "Alle Geräte
+abmelden").
+
+**4. Login-Maske neu aufgebaut (`src/components/checkout/AccountStep.jsx`,
+Referenz-Screenshot ElevenLabs):** "Mit Google/Apple anmelden" jetzt
+untereinander statt nebeneinander (volle Breite pro Knopf). Rechtstext
+darunter ergänzt: "Ich akzeptiere AGB und Datenschutzerklärung." mit
+Links zu `/agb.html` und `/datenschutz.html` (beide bereits vorhanden,
+keine neuen Seiten nötig) - vorher gab es diesen Hinweis nur im separaten
+Registrierungs-Formular, nicht auf dem Anmelde-Bildschirm, obwohl auch dort
+über Google/Apple neue Konten entstehen können.
+
+**Verifiziert:** Live im Browser bei 375px und 1280px (Desktop-Seitenleiste
+unverändert) - Bereichswahl aufklappen/auswählen getestet (inkl. Admin),
+Abmelden beendet die Sitzung korrekt, Login-Maske zeigt Google/Apple
+gestapelt (Google top=133px, Apple top=187px, beide 335px breit) mit
+funktionierenden Rechtslinks. `npm test` grün, Build erfolgreich.
+
+## 2026-08-11 (1.7.30)
+
+### Bugfix: Landingpage-Header auf Mobile - Sprachwahl/Menü unerreichbar
+
+**Anlass:** Nutzer-Screenshots (iPhone, Hochformat) - Sprachwahl und
+Menü-Button fehlten im mobilen Header komplett; horizontal (Querformat/
+Desktop) waren alle Elemente sichtbar.
+
+**Befund (Root Cause, per Live-Messung der tatsächlichen Element-
+Positionen bei 375px):** Der Header ist eine `nowrap`-Flex-Zeile ohne
+jede Verkleinerung. Logo+Wortmarke allein nahmen 234px ein (52px-Icon +
+Wortmarke bei fixer 23px-Schrift), der Konto-Knopf weitere 103px - für
+Sprachwahl (83px) und Menü-Button (40px) blieb schlicht kein Platz mehr.
+Beide wurden nicht etwa ausgeblendet, sondern bei x=387-522 gerendert -
+technisch vorhanden, aber vollständig außerhalb des 375px-Viewports und
+unerreichbar. `document.body.scrollWidth` zeigte trotzdem keine
+Seiten-Überbreite (der fixierte Header trägt dazu nicht bei) - deshalb
+war das beim vorherigen Versuch, das gemeldete "Header nicht sichtbar"
+nachzustellen, nicht auffindbar.
+
+**Fix (`src/pages/Landing.jsx`):**
+- Sprachwahl zieht bei ≤880px aus der Kopfzeile in die Mobile-Schublade
+  um (dieselbe Schublade, die schon Rechner/So-funktioniert's/Bauzinsen/
+  Anmelden-Link enthält) - dort ist uneingeschränkt Platz.
+- Logo-Icon (52→36px bei ≤880px) und Wortmarke (23→16px bei ≤880px,
+  zusätzlich →14px bei ≤340px) schrumpfen responsiv statt fixer Größe.
+- Konto-Knopf ("Anmelden"/"Mein Konto") bekommt kompakteres Padding auf
+  Mobile.
+- Live vermessen bei 320px und 375px (den beiden gängigsten schmalen
+  iPhone-Breiten) - Menü-Button endet jetzt in beiden Fällen mit
+  Sicherheitsabstand innerhalb des Viewports.
+
+**Zusätzlich (Nutzer-Wunsch):** Sprachwahl zeigt wieder Landesflaggen
+statt des neutralen Globus-Icons (`src/components/ui/LangSel.jsx`) - in
+Kopfzeile, Dropdown-Liste und der neuen Position in der Mobile-Schublade.
+Die frühere Begründung dagegen (Flagge ≠ Sprache, dokumentiert im
+Konzept-Dok) bleibt fachlich richtig, wurde aber der weit verbreiteten
+Praxis in Sprachwählern (Duolingo, Google Translate etc.) und der
+expliziten Nutzer-Entscheidung untergeordnet.
+
+**Verifiziert:** Live im Browser bei 320px/375px (Landingpage) und
+1280px (Desktop, unverändert) - Sprachwahl in der Schublade voll
+funktionsfähig (DE→EN→DE getestet), Menü-Button erreichbar, App-Shell-
+Header (Rechner-Ansicht) war bereits korrekt und blieb unverändert.
+`npm test` grün, Build erfolgreich.
+
 ## 2026-08-11 (1.7.29)
 
 ### UX: Mobile Reiterleiste in "Mein Konto" - Scroll-Hinweis statt Ratespiel
