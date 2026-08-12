@@ -1,3 +1,73 @@
+## 2026-08-12 (1.7.36)
+
+### Kontomenue nach Nutzer-Entwurf: Avatar, Dropdown, Direktsprung
+
+**Anlass:** Zwei Entwurfs-Screenshots des Nutzers plus eine ASCII-Skizze.
+
+**Der eigentliche Gewinn:** Der Konto-Knopf oeffnete bisher direkt die
+Vollbildflaeche - und zwar IMMER im Bereich "Profil". Wer zu Zahlungen oder
+zum Abo wollte, brauchte danach zwei weitere Klicks. Jetzt oeffnet der Knopf
+erst ein Menue, und die Auswahl darin entscheidet, welcher Bereich aufgeht
+(`initialSection`).
+
+1. **Avatar statt Beschriftung (`AccountMenu.jsx`, neu):** Eingeloggte sehen
+   einen Kreis mit ihren Initialen (aus dem Namen, ersatzweise aus der
+   E-Mail) plus Name, Tarif-Chip und Chevron. Ausgeloggte behalten den
+   schlichten "Anmelden"-Knopf - fuer sie gibt es weder Avatar noch Bereiche.
+2. **Dropdown wie im Entwurf:** Icon + fetter Titel + graue Erklaerzeile je
+   Zeile, Trennlinie vor Support und vor Abmelden, Abmelden orange abgesetzt.
+   Schliesst per Escape, Klick daneben oder nach der Auswahl.
+3. **Verkuerztes Menue auf der Kontoseite:** Dort zeigt derselbe Avatar nur
+   Name, E-Mail und Abmelden (die ASCII-Skizze des Nutzers) - die Bereiche
+   stehen daneben schon in der Seitenleiste, eine zweite Liste waere reine
+   Wiederholung.
+4. **Linien-Icons (`accountIcons.jsx`, neu):** Sieben SVG-Icons im Strichstil
+   des Entwurfs ersetzen die Emoji 👤👑💳⚙️💬🔒🛠️ - im Menue, in der
+   Desktop-Seitenleiste und im mobilen ☰-Panel. Emoji sahen je nach
+   Betriebssystem anders aus und wirkten neben der bestehenden
+   SVG-Tab-Leiste wie ein Fremdkoerper.
+5. **Kopfzeile der Kontoseite wie Entwurfsbild 2:** links Logo mit Wortmarke
+   und Tarif-Chip, rechts der Avatar. Das ✕ bleibt - im Entwurf fehlt ein
+   Rueckweg zu den Rechnern, ohne ihn waere die Flaeche eine Sackgasse
+   (mit dem Nutzer abgestimmt).
+6. **Mobil:** Im Kopf nur der Avatar-Kreis ohne Namen (Platz), Tippen oeffnet
+   ein Sheet von unten - gleiche Bauart wie die "Alle Rechner"-Liste an der
+   Tab-Leiste - mit Name und E-Mail im Kopf.
+
+**Gemeinsame Quelle (`accountSections.js`, neu):** Reihenfolge, Beschriftung,
+Icons und Rollenfilter der Bereiche liegen jetzt an einer Stelle. Vorher nur
+in MyAccount.jsx; da das Menue dieselbe Liste zeigt, waeren zwei Kopien
+zwangslaeufig auseinandergelaufen.
+
+**Nebenbefund beim Testen:** Das Dropdown sass exakt 15px (= Breite des
+Scrollbalkens) links neben dem Avatar statt buendig darunter. Ursache:
+`window.innerWidth` schliesst den Scrollbalken ein, ein
+position:fixed-Element wird aber am Viewport OHNE Scrollbalken ausgerichtet.
+Jetzt `documentElement.clientWidth` - live nachgemessen, beide Kanten liegen
+bei 1140px.
+
+**Abgestimmte Abweichungen vom Entwurf:** Unter "Abmelden" stand dort "Von
+allen Geraeten abmelden" - der Klick meldet auf Nutzer-Entscheidung weiterhin
+nur dieses Geraet ab, die Erklaerzeile heisst deshalb "Diese Sitzung
+beenden". "Von allen Geraeten abmelden" bleibt in Konto & Sicherheit.
+
+**Entfallen:** Die Begruessungszeile "Willkommen, {Name}!" in der Kopfzeile
+der Kontoseite - der Name steht jetzt im Avatar und im Menue darunter, eine
+dritte Nennung waere Wiederholung. Der Willkommens-Toast nach dem Login
+bleibt unveraendert.
+
+**Verifiziert:** Live gemessen bei 1280px und 375px mit einem
+Admin-Testkonto (damit alle 7 Eintraege sichtbar sind). Desktop: Avatar
+"TN · Test Nutzer · Free · ▼", Dropdown mit allen 8 Zeilen inkl. Erklaerzeilen
+und 8 Icons, rechtsbuendig unter dem Avatar. Auswahl "Zahlungen" oeffnet
+"Mein Konto" direkt im Bereich Zahlungen; das verkuerzte Menue dort zeigt
+"Test Nutzer / ux3@... / Abmelden". Mobil: Avatar nur "TN" (38px), Kopfzeile
+passt (361 von 375px), Sheet faehrt von unten auf, Auswahl "Konto &
+Sicherheit" oeffnet den richtigen Bereich, das ☰-Panel bleibt daneben
+erhalten. Landingpage eingeloggt: derselbe Avatar, ☰ weiterhin vollstaendig
+sichtbar. Testkonto danach aus der lokalen Datenbank entfernt. Konsole in
+einem frischen Tab sauber, `npm test` 301 Tests gruen, Lint ohne Fehler.
+
 ## 2026-08-12 (1.7.35)
 
 ### Browser: Login-Modal, Scrollbalken, Abmelden-Position, Logo

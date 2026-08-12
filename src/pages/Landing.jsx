@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TL } from "../i18n/translations.js";
 import { MARKET_RATES } from "../data.js";
 import { LANG_LOCALE } from "../utils/helpers.js";
@@ -11,6 +11,7 @@ import { ACCOUNT_T } from "../i18n/account.js";
 import { CheckoutWizard } from "../components/checkout/CheckoutWizard.jsx";
 import { MyAccount } from "../components/account/MyAccount.jsx";
 import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
+import { AccountAvatarButton, AccountMenu } from "../components/account/AccountMenu.jsx";
 import { useSavedObjects } from "../components/shell/Merkliste.jsx";
 import { BrandIcon } from "../components/ui/BrandIcon.jsx";
 
@@ -62,6 +63,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
   const account = useAccountCtx();
   const [openMode, setOpenMode] = useState(null); // null | "checkout" | "login" | "account"
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [sectionKey, setSectionKey] = useState("profil");
+  const avatarRef = useRef(null);
 
   // Bugfix (Nutzer-Feedback 2026-08-11): CheckoutWizard/MyAccount lesen
   // `lang` ueber useApp() aus Ctx (AppContext.jsx) - der existiert bisher
@@ -209,14 +213,28 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
 
           {/* Right side: Anmelden/Mein Konto + lang + CTA */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {account && !account.loading && (
+            {/* Nutzer-Entwurf 2026-08-12: eingeloggt derselbe Avatar mit
+                Kontomenue wie im App-Shell (ProHeaderButton) - eine Aktion,
+                ein Aussehen, egal auf welcher Flaeche. Der Tarif-Chip bleibt
+                hier bewusst weg (Nutzer-Wunsch: auf der Marketing-Seite
+                nicht noetig) - zusammen mit der langen Beschriftung war er
+                die Ursache des abgeschnittenen Menue-Knopfs. */}
+            {account && !account.loading && account.isLoggedIn && (
+              <AccountAvatarButton
+                t={at}
+                me={account.me}
+                open={menuOpen}
+                onToggle={() => setMenuOpen((o) => !o)}
+                innerRef={avatarRef}
+              />
+            )}
+            {account && !account.loading && !account.isLoggedIn && (
               <button
-                onClick={() => setOpenMode(account.isLoggedIn ? "account" : "login")}
+                onClick={() => setOpenMode("login")}
                 className="lp-account-btn"
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
                   padding: "9px 14px",
                   background: "transparent",
                   color: "var(--ct)",
@@ -229,21 +247,25 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                   whiteSpace: "nowrap",
                 }}
               >
-                {/* Nutzer-Feedback 2026-08-12 (Bild 2): Der Tarif-Chip ist
-                    hier nicht noetig - die Landingpage ist die Marketing-,
-                    nicht die Arbeitsflaeche. Im App-Shell bleibt er (dort
-                    passt er auch in die Breite, siehe Screenshot 3).
-                    Zusammen mit der Kurzform unten war der Chip die Ursache
-                    dafuer, dass der Menue-Knopf rechts abgeschnitten wurde. */}
-                {account.isLoggedIn ? (
-                  <>
-                    <span className="lp-acct-full">{at.accountTitle}</span>
-                    <span className="lp-acct-short">{at.accountTitleShort}</span>
-                  </>
-                ) : (
-                  at.loginSubmit
-                )}
+                {at.loginSubmit}
               </button>
+            )}
+            {menuOpen && (
+              <AccountMenu
+                t={at}
+                me={account.me}
+                anchorRef={avatarRef}
+                onClose={() => setMenuOpen(false)}
+                onSelect={(key) => {
+                  setMenuOpen(false);
+                  setSectionKey(key);
+                  setOpenMode("account");
+                }}
+                onLogout={async () => {
+                  setMenuOpen(false);
+                  await account.logout();
+                }}
+              />
             )}
             {/* Nutzer-Feedback 2026-08-11 (Screenshot): Sprachwahl + Menü-
                 Button ragten bei ≤880px zusammen mit Konto-Knopf + Logo
@@ -424,7 +446,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               entryPoint="login"
             />
           )}
-          {openMode === "account" && <MyAccount onClose={() => setOpenMode(null)} />}
+          {openMode === "account" && <MyAccount onClose={() => setOpenMode(null)} initialSection={sectionKey} />}
         </Ctx.Provider>
       )}
       {/* Bugfund 2026-08-11: Passwort-/Passkey-Login ueber "Anmelden" auf

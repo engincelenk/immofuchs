@@ -8,6 +8,8 @@ import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
 import { PlanChip } from "./PlanChip.jsx";
+import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
+import { visibleSections } from "./accountSections.js";
 import { ProfilSection } from "./sections/ProfilSection.jsx";
 import { AbonnementSection } from "./sections/AbonnementSection.jsx";
 import { ZahlungenSection } from "./sections/ZahlungenSection.jsx";
@@ -28,25 +30,30 @@ import { AdminSection } from "./sections/AdminSection.jsx";
 // Berechnungen/Konto-Loeschung sind in "Konto" gebuendelt (Spec sieht dafuer
 // keinen eigenen Bereich vor, die Funktionalitaet sollte aber nicht
 // verloren gehen).
-const SECTIONS = [
-  { key: "profil", labelKey: "navProfil", icon: "👤", Component: ProfilSection },
-  { key: "abo", labelKey: "navAbonnement", icon: "👑", Component: AbonnementSection },
-  { key: "zahlung", labelKey: "navZahlung", icon: "💳", Component: ZahlungenSection },
-  { key: "einstellungen", labelKey: "navDatenschutz", icon: "⚙️", Component: EinstellungenSection },
-  { key: "support", labelKey: "navSupport", icon: "💬", Component: SupportSection },
-  { key: "konto", labelKey: "navSicherheit", icon: "🔒", Component: KontoSection },
-  // Nur fuer role==='admin' (Filter unten in MyAccount()) - ersetzt die
+// Reihenfolge, Beschriftung, Icons und Rollenfilter liegen seit dem
+// Nutzer-Entwurf 2026-08-12 in accountSections.js - das Kontomenue im Kopf
+// der App zeigt dieselbe Liste, eine zweite Kopie hier wuerde
+// zwangslaeufig auseinanderlaufen. Hier bleibt nur die Zuordnung
+// Bereich -> Komponente, die das Menue nicht braucht.
+const SECTION_COMPONENTS = {
+  profil: ProfilSection,
+  abo: AbonnementSection,
+  zahlung: ZahlungenSection,
+  einstellungen: EinstellungenSection,
+  support: SupportSection,
+  konto: KontoSection,
+  // Nur fuer role==='admin' (Filter in accountSections.js) - ersetzt die
   // vormals eigenstaendige admin/-App (Nutzer-Entscheidung 2026-08-11).
-  { key: "admin", labelKey: "navAdmin", icon: "🛠️", Component: AdminSection, roleRequired: "admin" },
-];
+  admin: AdminSection,
+};
 
-export function MyAccount({ onClose }) {
+export function MyAccount({ onClose, initialSection = "profil" }) {
   const { lang, setLang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
   const isDesktop = useIsDesktop();
   const dialogRef = useRef(null);
-  const [activeKey, setActiveKey] = useState("profil");
+  const [activeKey, setActiveKey] = useState(initialSection);
   // Upgrade-Einstieg fuer Free-Nutzer liegt bewusst hier und nicht im
   // Abo-Bereich: der Checkout-Wizard bringt einen eigenen Fokus-Trap mit, und
   // zwei gleichzeitig aktive Traps wuerden sich beim Tabben gegenseitig
@@ -61,6 +68,11 @@ export function MyAccount({ onClose }) {
   // Marke/Logo, keine Sprachwahl (lebt bereits unter Einstellungen).
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  // Avatar-Menue im Kopf (Nutzer-Entwurf 2026-08-12) - hier in der
+  // Kurzfassung: Name, E-Mail, Abmelden. Die Bereiche stehen daneben in der
+  // Seitenleiste bzw. im ☰-Panel, im Menue waeren sie eine Doppelung.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const avatarRef = useRef(null);
 
   // Eigener Escape-Handler mit stopPropagation in der Capture-Phase: ohne
   // das wuerde Escape sowohl diesen Handler ALS AUCH den bubble-phasigen
@@ -111,9 +123,9 @@ export function MyAccount({ onClose }) {
 
   if (!account?.me) return null;
   if (showUpgrade) return <CheckoutWizard onClose={onClose} entryPoint="payment" />;
-  const visibleSections = SECTIONS.filter((s) => !s.roleRequired || s.roleRequired === account.me.role);
-  const active = visibleSections.find((s) => s.key === activeKey) || visibleSections[0];
-  const ActiveSection = active.Component;
+  const sections = visibleSections(account.me.role);
+  const active = sections.find((s) => s.key === activeKey) || sections[0];
+  const ActiveSection = SECTION_COMPONENTS[active.key];
 
   return createPortal(
     <div
@@ -148,80 +160,34 @@ export function MyAccount({ onClose }) {
             paddingTop: "calc(14px + env(safe-area-inset-top))",
           }}
         >
-          {/* Auf dem Handy untereinander: nebeneinander blieben bei 375px nur
-              29px zwischen "Abmelden" und dem ✕ uebrig - also genau der
-              gemeldete Zu-dicht-Fehler, nur an anderer Stelle. Gestapelt
-              liegt "Abmelden" am linken Rand UND eine Zeile tiefer als das ✕. */}
-          <div
-            style={{
-              minWidth: 0,
-              display: "flex",
-              flexDirection: isDesktop ? "row" : "column",
-              alignItems: isDesktop ? "center" : "flex-start",
-              gap: isDesktop ? 14 : 8,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              {/* Nutzer-Vorgabe 2026-08-12: volles Logo (Fuchs + Wortmarke)
-                  statt nur des Icons - wie im Kopf der Landingpage. Es gibt
-                  keine fertige Wortmarken-Grafik, der Schriftzug wird wie
-                  dort aus Text zusammengesetzt. */}
-              <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <BrandIcon size={26} />
-                <span style={{ letterSpacing: -0.3, color: "var(--ct)" }}>
-                  immo<span style={{ color: "var(--ca)" }}>fuchs</span>
-                  <span style={{ fontWeight: 700 }}>.info</span>
-                </span>
-                {/* Hier mit Restlaufzeit der Testphase (anders als in der
-                    schmalen App-Kopfzeile) - beantwortet "wann wird
-                    abgebucht?" sofort, statt erst im Bereich Abonnement. */}
-                <PlanChip t={t} me={account.me} withTrialDays />
-              </div>
-              {/* Nutzer-Feedback 2026-08-11 (zweite Runde): reiner Name wirkte
-                  zu unauffaellig fuer die wiederholt gewuenschte Begruessung -
-                  jetzt als "Willkommen, {name}!"-Zeile. E-Mail bleibt Fallback,
-                  solange kein Name hinterlegt ist (z.B. frisch per OAuth
-                  angelegte Konten), dort ohne Begruessungsfloskel. */}
-              <div
-                style={{
-                  fontSize: 11.5,
-                  color: "var(--ch)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {account.me.name ? t.welcomeGreeting.replace("{name}", account.me.name) : account.me.email}
-              </div>
-            </div>
-            {/* Nutzer-Feedback 2026-08-12: "Abmelden" stand direkt neben dem
-                ✕ (Zurueck zu den Rechnern) - zwei gegensaetzliche Aktionen
-                im Abstand von wenigen Pixeln, ein Vertipper meldete einen
-                versehentlich ab. Jetzt am linken Rand derselben Kopfzeile:
-                bleibt voll sichtbar (Vorgabe vom 11.08.: nicht im
-                Untermenue verstecken), liegt aber die gesamte Header-Breite
-                vom ✕ entfernt. */}
-            <button
-              onClick={handleLogout}
-              disabled={logoutBusy}
-              style={{
-                background: "none",
-                border: "1px solid var(--cb)",
-                borderRadius: 8,
-                padding: "6px 10px",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                color: "var(--ch)",
-                fontFamily: "inherit",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              {t.logout}
-            </button>
+          {/* Kopfzeile nach Nutzer-Entwurf 2026-08-12 (Bild 2): links Logo mit
+              Wortmarke und Tarif-Chip, rechts der Avatar. "Abmelden" steckt
+              seither IM Avatar-Menue - damit ist es auch nicht mehr Nachbar
+              des ✕, was am 12.08. als zu dicht gemeldet worden war. Die
+              Begruessungszeile entfaellt: der Name steht jetzt im Avatar und
+              im Menue darunter, eine dritte Nennung waere Wiederholung. */}
+          <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <BrandIcon size={26} />
+            <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.3, color: "var(--ct)" }}>
+              immo<span style={{ color: "var(--ca)" }}>fuchs</span>
+              <span style={{ fontWeight: 700 }}>.info</span>
+            </span>
+            {/* Mit Restlaufzeit der Testphase (anders als in der schmalen
+                App-Kopfzeile) - beantwortet "wann wird abgebucht?" sofort,
+                statt erst im Bereich Abonnement. */}
+            <PlanChip t={t} me={account.me} withTrialDays />
           </div>
-          <div style={{ display: "flex", alignItems: "flex-start", flexShrink: 0, alignSelf: "flex-start" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <AccountAvatarButton
+              t={t}
+              me={account.me}
+              open={menuOpen}
+              onToggle={() => setMenuOpen((o) => !o)}
+              innerRef={avatarRef}
+            />
+            {/* Im Entwurf gibt es keinen sichtbaren Rueckweg zu den Rechnern -
+                ohne das ✕ waere diese Flaeche eine Sackgasse, deshalb bleibt
+                es (mit dem Nutzer am 12.08. so abgestimmt). */}
             <button
               onClick={onClose}
               aria-label={t.close}
@@ -239,6 +205,17 @@ export function MyAccount({ onClose }) {
             </button>
           </div>
         </div>
+        {menuOpen && (
+          <AccountMenu
+            t={t}
+            me={account.me}
+            variant="compact"
+            anchorRef={avatarRef}
+            onClose={() => setMenuOpen(false)}
+            onLogout={handleLogout}
+            logoutBusy={logoutBusy}
+          />
+        )}
 
         <div
           style={{
@@ -255,11 +232,11 @@ export function MyAccount({ onClose }) {
               aria-label={t.accountNavAria}
               style={{ flex: "0 0 210px", display: "flex", flexDirection: "column", gap: 2 }}
             >
-              {visibleSections.map((s) => (
+              {sections.map((s) => (
                 <NavItem
                   key={s.key}
                   label={t[s.labelKey]}
-                  icon={s.icon}
+                  Icon={s.Icon}
                   active={s.key === activeKey}
                   onClick={() => setActiveKey(s.key)}
                 />
@@ -382,7 +359,7 @@ export function MyAccount({ onClose }) {
                 </div>
 
                 <div style={{ padding: "10px 12px 18px", display: "flex", flexDirection: "column", gap: 2 }}>
-                  {visibleSections.map((s) => (
+                  {sections.map((s) => (
                     <button
                       key={s.key}
                       onClick={() => {
@@ -408,7 +385,7 @@ export function MyAccount({ onClose }) {
                         minHeight: 44,
                       }}
                     >
-                      <span aria-hidden="true">{s.icon}</span>
+                      <s.Icon size={18} />
                       {t[s.labelKey]}
                     </button>
                   ))}
@@ -436,7 +413,7 @@ export function MyAccount({ onClose }) {
 
 // Desktop-Vertikalliste (mobil ersetzt durch die aufklappbare
 // Bereichswahl weiter oben, siehe mobileNavOpen).
-function NavItem({ label, icon, active, onClick }) {
+function NavItem({ label, Icon, active, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -460,7 +437,7 @@ function NavItem({ label, icon, active, onClick }) {
         whiteSpace: "nowrap",
       }}
     >
-      <span aria-hidden="true">{icon}</span>
+      <Icon size={18} />
       <span>{label}</span>
     </button>
   );

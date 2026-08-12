@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { MyAccount } from "./MyAccount.jsx";
 import { LoginSuccessToast } from "./LoginSuccessToast.jsx";
-import { PlanChip } from "./PlanChip.jsx";
+import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
 // NICHT in Statusleiste.jsx). Label "Pro" mit Kroenchen-Icon, Fuchs-Orange.
@@ -32,6 +32,11 @@ export function ProHeaderButton() {
   // schlagartig "Mein Konto", der begonnene Kauf war weg. Ein Ablauf darf
   // nicht dadurch enden, dass sein Zwischenziel (Login) erreicht wurde.
   const [openMode, setOpenMode] = useState(null); // null | "checkout" | "login" | "account"
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Welcher Bereich beim Oeffnen von "Mein Konto" gezeigt wird - kommt aus
+  // dem Kontomenue (Nutzer-Entwurf 2026-08-12).
+  const [sectionKey, setSectionKey] = useState("profil");
+  const avatarRef = useRef(null);
 
   // Passwort-Reset-Link (?reset_token=..., Ergaenzung 04.08.) muss die Maske
   // von selbst oeffnen - anders als bei OAuth gibt es hier keinen Weg, den
@@ -66,54 +71,65 @@ export function ProHeaderButton() {
 
   return (
     <>
-      {/* UX-Audit 2026-08-11 (Punkt 1): Dieser Knopf hiess bisher IMMER
-          "👑 Pro" - egal ob er zum Login oder in die Kontoverwaltung fuehrte,
-          und egal ob der Nutzer Free oder Pro war. Damit beschrieb die
-          Beschriftung in keinem einzigen Zustand die tatsaechliche Aktion:
-          Ausgeloggte erwarteten hinter dem Kroenchen eine Paywall und
-          bekamen ein Login-Formular, Pro-Nutzer erwarteten etwas
-          Pro-spezifisches und bekamen die Kontoverwaltung. Zusaetzlich hiess
-          dieselbe Aktion auf der Landingpage bereits korrekt "Anmelden"/
-          "Mein Konto" (Landing.jsx) - ein und derselbe Knopf trug also je
-          nach Bildschirm zwei verschiedene Namen. Jetzt einheitlich benannt,
-          das Kroenchen ersetzt durch den echten Tarif-Status.
-          Kurzform "Konto" unter 480px: die volle Beschriftung plus Chip
-          waere auf 375px-Geraeten neben Logo und Sprachwahl wieder zu
-          breit geworden (bekannter Ueberlauf-Fehler, siehe .hdr-Regeln in
-          App.jsx). */}
-      <button
-        onClick={() => setOpenMode(account.isLoggedIn ? "account" : "login")}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "7px 11px",
-          border: `1px solid ${account.isLoggedIn ? "var(--cb)" : "var(--ca-bd)"}`,
-          borderRadius: 8,
-          // Weiss statt --ca-bg (S2-5): --ca-dk auf --ca-bg landet bei ~4.28:1
-          // Kontrast, knapp unter der WCAG-AA-Grenze (4.5:1) fuer diese
-          // Schriftgroesse. Auf Weiss liegt --ca-dk bei ~4.76:1.
-          background: "var(--cc)",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          fontSize: 13,
-          fontWeight: 700,
-          // Eingeloggt ist "Mein Konto" eine neutrale Navigation, kein
-          // Verkaufs-Ruf - Orange bleibt dem Anmelden-/Upgrade-Weg vorbehalten.
-          color: account.isLoggedIn ? "var(--ct)" : "var(--ca-dk)",
-          minHeight: 38,
-        }}
-      >
-        {account.isLoggedIn ? (
-          <>
-            <PlanChip t={t} me={account.me} />
-            <span className="acct-label-full">{t.accountTitle}</span>
-            <span className="acct-label-short">{t.accountTitleShort}</span>
-          </>
-        ) : (
-          <span>{t.loginSubmit}</span>
-        )}
-      </button>
+      {/* Nutzer-Entwurf 2026-08-12: Eingeloggte sehen den Avatar mit Namen,
+          der ein Menue oeffnet; erst die Auswahl darin fuehrt in den
+          passenden Bereich von "Mein Konto". Vorher landete jeder Klick auf
+          "Profil" - jeder andere Bereich kostete zwei zusaetzliche Klicks.
+          Ausgeloggte behalten den schlichten "Anmelden"-Knopf: fuer sie gibt
+          es weder Avatar noch Bereiche.
+          Der Tarif-Chip sitzt jetzt im Avatar-Knopf (nur Desktop) statt
+          davor - auf 375px waere er neben Logo und Sprachwahl wieder zu
+          breit (bekannter Ueberlauf-Fehler, siehe .hdr-Regeln in App.jsx). */}
+      {account.isLoggedIn ? (
+        <AccountAvatarButton
+          t={t}
+          me={account.me}
+          open={menuOpen}
+          onToggle={() => setMenuOpen((o) => !o)}
+          innerRef={avatarRef}
+          showChip
+        />
+      ) : (
+        <button
+          onClick={() => setOpenMode("login")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "7px 11px",
+            border: "1px solid var(--ca-bd)",
+            borderRadius: 8,
+            // Weiss statt --ca-bg (S2-5): --ca-dk auf --ca-bg landet bei
+            // ~4.28:1 Kontrast, knapp unter der WCAG-AA-Grenze (4.5:1) fuer
+            // diese Schriftgroesse. Auf Weiss liegt --ca-dk bei ~4.76:1.
+            background: "var(--cc)",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: 13,
+            fontWeight: 700,
+            color: "var(--ca-dk)",
+            minHeight: 38,
+          }}
+        >
+          {t.loginSubmit}
+        </button>
+      )}
+      {menuOpen && (
+        <AccountMenu
+          t={t}
+          me={account.me}
+          anchorRef={avatarRef}
+          onClose={() => setMenuOpen(false)}
+          onSelect={(key) => {
+            setMenuOpen(false);
+            setSectionKey(key);
+            setOpenMode("account");
+          }}
+          onLogout={async () => {
+            setMenuOpen(false);
+            await account.logout();
+          }}
+        />
+      )}
       {account.loginSuccess && (
         <LoginSuccessToast
           t={t}
@@ -129,7 +145,7 @@ export function ProHeaderButton() {
           onDone={account.dismissAccountDeleted}
         />
       )}
-      {openMode === "account" && <MyAccount onClose={handleClose} />}
+      {openMode === "account" && <MyAccount onClose={handleClose} initialSection={sectionKey} />}
       {openMode === "login" && <CheckoutWizard onClose={handleClose} entryPoint="login" />}
       {openMode === "checkout" &&
         (resumesCheckout ? (
