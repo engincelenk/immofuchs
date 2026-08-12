@@ -93,6 +93,32 @@ export function IconAdmin({ size }) {
   );
 }
 
+// Avatar-Symbol (Nutzer-Entwurf 2026-08-12, beide Entwurfsbilder). Ersetzt
+// die zwischenzeitlich verwendeten Initialen: zwei Grossbuchstaben in einem
+// orange umrandeten Kreis lasen sich im Kopf als Sprachcode ("EN" = English),
+// zumal die Sprachwahl daneben genau so aussieht (zweistelliges Kuerzel).
+// Dickerer Strich als bei den Menue-Icons, damit die Silhouette auch bei
+// 18px im Kreis noch deutlich bleibt.
+export function IconAvatar({ size = 18 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M4.8 20a7.2 7.2 0 0 1 14.4 0" />
+    </svg>
+  );
+}
+
 // Tuer mit hinauszeigendem Pfeil - im Entwurf orange abgesetzt.
 export function IconLogout({ size }) {
   return (

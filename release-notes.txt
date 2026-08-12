@@ -1,3 +1,89 @@
+## 2026-08-12 (1.7.37)
+
+### UX-Audit II: Begriffe getrennt, Upgrade-Pfad repariert, Konto-Kopf entschlackt
+
+**Anlass:** Nutzer-Auftrag "prüfe sämtliche Flows und Komponenten, finde
+Informations-Duplikate" plus ein Screenshot mit einer fast leeren Zeile. Der
+ui-ux-designer-Agent wurde parallel eingebunden; seine Befunde sind hier
+eingearbeitet, zwei davon nach Gegenpruefung korrigiert (siehe unten).
+
+**1. Zwei verschiedene "kostenlose Tests" hiessen gleich (schwerwiegend):**
+Die App kennt den einmaligen Rechnerlauf (`calculatorTrialUsed`) UND die
+7-taegige Paddle-Testphase (`hasUsedTrial`). Beide hiessen "Test"/"kostenlos
+testen". Der Zusammenstoss war im Ablauf eingebaut: Sperrwand "Dein
+kostenloser Test ist aufgebraucht" -> Klick auf "Pro buchen" -> naechster
+Bildschirm zeigt den Badge "7 Tage kostenlos testen". Wer das liest, glaubt,
+ihm seien 7 Tage weggenommen worden - genau im Kaufmoment.
+Der Rechnerlauf heisst jetzt durchgaengig **"Gratis-Berechnung"**,
+"Test/Testphase" bleibt ausschliesslich dem Abo vorbehalten (alle 5
+Sprachen). Die Sperrwand nennt die 7 Tage jetzt aktiv als Teil des
+Angebots ("... brauchst du ImmoFuchs Pro — inklusive 7 Tage kostenloser
+Testphase"), aus der Verwechslung wird damit ein Verkaufsargument.
+Wichtig: Das Flag hinter dem Badge wurde NICHT angefasst - der Agent hielt
+es fuer falsch verdrahtet, es ist aber korrekt; kollidiert haben nur die
+Woerter.
+
+**2. Upgrade aus "Abonnement" war doppelt kaputt (`MyAccount.jsx`):**
+- `entryPoint="payment"` sprang direkt in die Zahlung. Die Wizard-Variante
+  "upgrade" kennt gar keinen Preise-Schritt, `plan` fiel auf den Default
+  "yearly" zurueck und "Plan aendern" ist in dieser Variante abgeschaltet -
+  ein Free-Nutzer konnte den Tarif also weder sehen noch auf monatlich
+  wechseln und war stillschweigend aufs Jahresabo (49,99 €) festgelegt.
+  Das widersprach der bewussten Entscheidung aus "Stufe E"; ueber die
+  Rechner-Sperrwand und die Merkliste war es die ganze Zeit korrekt.
+- `showUpgrade` wurde nie auf false zurueckgesetzt, und der Wizard bekam
+  `onClose={onClose}` - sein ✕ schloss den gesamten Kontobereich, auch nach
+  erfolgreichem Kauf. Zurueck in "Abonnement" kam man nie.
+Beides behoben: Plan-Auswahl wie ueberall sonst, Schliessen fuehrt zurueck
+in den Abo-Bereich.
+
+**3. Zwei falsche Wegweiser im Text (alle 5 Sprachen):** `profilIntro`
+versprach "Deine Anmeldedaten **und die Sprache der App**" - die Sprache
+liegt seit dem Umbau in "Einstellungen", in ProfilSection gibt es dazu
+nichts. `supportFaq5A` schickte Nutzer zur Kontoloeschung "Unter
+**Datenschutz**" - diesen Bereich gibt es nicht mehr, die Loeschung liegt in
+"Konto & Sicherheit".
+
+**4. Leere Zeile im mobilen Konto-Kopf (Nutzer-Screenshot):** Der ☰-Knopf
+belegte eine komplette eigene Zeile, in der sonst nichts stand - Folge davon,
+dass am 12.08. der Bereichsname daraus entfernt wurde. Zusaetzlich standen
+dort ZWEI Menues uebereinander (Avatar mit Name/E-Mail/Abmelden, ☰ mit den
+Bereichen), wobei der Avatar mobil nur "Abmelden" beitrug, weil Name und
+E-Mail bereits im Kopf des ☰-Panels standen. Beides loest dieselbe
+Massnahme: Auf dem Handy oeffnet der Avatar jetzt das VOLLE Menue inklusive
+Bereiche, die ☰-Zeile und das Slide-in-Panel entfallen ersatzlos. Kopfhoehe
+von ~126px auf 66px. Auf dem Desktop unveraendert (Seitenleiste + Kurzmenue).
+
+**5. Avatar zeigt ein Personen-Symbol statt Initialen:** Ein orange
+umrandeter Kreis mit zwei Grossbuchstaben ("EN") liest sich im Kopf als
+Sprachcode - zumal die Sprachwahl daneben genau dieses Format nutzt. Das war
+eine eigenmaechtige Abweichung von den Entwurfsbildern des Nutzers, die beide
+ein Personen-Symbol zeigen; jetzt wie im Entwurf.
+
+**Zwei Agenten-Befunde nach Gegenpruefung verworfen:** (a) Der
+Bestaetigungslink aus der Registrierungsmail landet NICHT auf der
+Landingpage - `/verify-email` leitet auf `?login_success=1` um, und genau
+diesen Parameter kennt `hasAuthRedirectParam` in App.jsx. (b) Das Sheet
+"Alle Rechner" ist keine blosse Kopie der Tab-Leiste: bei 375px zeigt die
+Leiste 5 von 7 Tabs, das Sheet alle 7 untereinander mit vollen Namen.
+
+**Offen aus dem Audit (nicht in dieser Runde):** Abmelden liegt weiterhin
+zusaetzlich in "Konto & Sicherheit" (dort genuegte kuenftig "Alle Geraete
+abmelden"); die Sprachwahl existiert auf vier Flaechen; "Nicht jetzt" an der
+Sperrwand fuehrt in die fuer Free limitierte Merkliste; der Tarif-Chip fehlt
+auf Landingpage und Mobil.
+
+**Verifiziert:** Live bei 375px und 1280px mit einem Testkonto durchgespielt.
+Mobil: Gratis-Berechnungs-Hinweis mit neuem Wortlaut, Avatar ohne Text mit
+Symbol, ☰-Zeile verschwunden (Kopf 66px), Avatar-Menue enthaelt alle
+Bereiche und wechselt korrekt. Upgrade aus "Abonnement": Wizard startet bei
+"Wähle deinen Plan" mit beiden Tarifen sichtbar, ✕ fuehrt zurueck nach
+"Abonnement" statt alles zu schliessen. Desktop: Seitenleiste mit 6
+Bereichen und Kurzmenue am Avatar unveraendert. Alle geaenderten i18n-Werte
+zur Kontrolle direkt aus dem Modul gelesen. Testkonto danach aus der lokalen
+Datenbank entfernt. Konsole in einem frischen Tab sauber, `npm test` 301
+Tests gruen, Lint ohne Fehler.
+
 ## 2026-08-12 (1.7.36)
 
 ### Kontomenue nach Nutzer-Entwurf: Avatar, Dropdown, Direktsprung

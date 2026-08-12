@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
-import { IconLogout } from "./accountIcons.jsx";
-import { accountInitials, visibleSections } from "./accountSections.js";
+import { IconAvatar, IconLogout } from "./accountIcons.jsx";
+import { visibleSections } from "./accountSections.js";
 import { PlanChip } from "./PlanChip.jsx";
 
 // Kontomenue nach Nutzer-Entwurf 2026-08-12 (zwei Screenshots).
@@ -233,6 +233,10 @@ export function AccountAvatarButton({ t, me, open, onToggle, innerRef, showChip 
         minHeight: 38,
       }}
     >
+      {/* Personen-Symbol statt Initialen (Nutzer-Entwurf 2026-08-12): zwei
+          Grossbuchstaben im Kreis lasen sich im Kopf als Sprachcode - "EN"
+          wirkte wie die englische Sprachfassung, zumal die Sprachwahl
+          daneben genau dieses Format nutzt. */}
       <span
         style={{
           display: "inline-flex",
@@ -243,13 +247,10 @@ export function AccountAvatarButton({ t, me, open, onToggle, innerRef, showChip 
           borderRadius: "50%",
           background: "var(--ca-bg)",
           color: "var(--ca-dk)",
-          fontSize: 11.5,
-          fontWeight: 800,
-          letterSpacing: 0.2,
           flexShrink: 0,
         }}
       >
-        {accountInitials(me)}
+        <IconAvatar size={17} />
       </span>
       {isDesktop && (
         <>

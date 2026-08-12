@@ -59,41 +59,14 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
   // zwei gleichzeitig aktive Traps wuerden sich beim Tabben gegenseitig
   // ueberschreiben. Deshalb ersetzt der Wizard diesen Bereich komplett.
   const [showUpgrade, setShowUpgrade] = useState(false);
-  // Mobile-Bereichswahl: erst eine scrollende Reiterleiste (zwang zum
-  // Scrollen nach rechts), dann ein Chevron mit Inline-Aufklappen darunter.
-  // Nutzer-Vorgabe 2026-08-11 (dritte Runde): dasselbe ☰-Slide-in-Muster wie
-  // die neue mobile Navigation auf Landing.jsx, fuer optische Konsistenz
-  // zwischen beiden Vollbild-Bereichen. Zum Unterschied gegenueber Landing
-  // (ui-designer-Agent-Empfehlung): Panel-Kopf zeigt Kontoidentitaet statt
-  // Marke/Logo, keine Sprachwahl (lebt bereits unter Einstellungen).
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
-  // Avatar-Menue im Kopf (Nutzer-Entwurf 2026-08-12) - hier in der
-  // Kurzfassung: Name, E-Mail, Abmelden. Die Bereiche stehen daneben in der
-  // Seitenleiste bzw. im ☰-Panel, im Menue waeren sie eine Doppelung.
+  // Avatar-Menue im Kopf (Nutzer-Entwurf 2026-08-12). Auf dem Desktop die
+  // Kurzfassung (Name, E-Mail, Abmelden) - die Bereiche stehen dort dauerhaft
+  // in der Seitenleiste. Auf dem Handy die volle Fassung inklusive Bereiche,
+  // seit die separate ☰-Zeile entfallen ist (Nutzer-Screenshot 2026-08-12:
+  // eine ganze Zeile fuer einen einzelnen Knopf, daneben nur Weiss).
   const [menuOpen, setMenuOpen] = useState(false);
   const avatarRef = useRef(null);
-
-  // Eigener Escape-Handler mit stopPropagation in der Capture-Phase: ohne
-  // das wuerde Escape sowohl diesen Handler ALS AUCH den bubble-phasigen
-  // Handler aus useFocusTrap(dialogRef, onClose) unten ausloesen - letzterer
-  // schliesst das gesamte "Mein Konto", nicht nur das Nav-Panel. Capture
-  // laeuft vor Bubble, stopPropagation verhindert also, dass der
-  // Fokus-Trap-Handler das Panel-Schliessen zum Verlassen von Mein Konto
-  // eskaliert.
-  // Die Scroll-Sperre liegt bewusst NICHT mehr hier, sondern im Effekt
-  // darunter, der sie fuer die gesamte Lebensdauer dieses Bereichs haelt.
-  useEffect(() => {
-    if (!mobileNavOpen) return;
-    const handler = (e) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        setMobileNavOpen(false);
-      }
-    };
-    document.addEventListener("keydown", handler, true);
-    return () => document.removeEventListener("keydown", handler, true);
-  }, [mobileNavOpen]);
 
   // Nutzer-Feedback 2026-08-12: In "Mein Konto" waren ZWEI Scrollbalken
   // sichtbar - der dieser Flaeche (overflowY:auto auf dem fixed Overlay) und
@@ -122,7 +95,20 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
   useFocusTrap(dialogRef, onClose);
 
   if (!account?.me) return null;
-  if (showUpgrade) return <CheckoutWizard onClose={onClose} entryPoint="payment" />;
+  // Zwei Fehler auf einmal behoben (UX-Audit 2026-08-12):
+  //
+  // 1. entryPoint="payment" sprang direkt in die Zahlung. Die Variante
+  //    "upgrade" kennt gar keinen Preise-Schritt (wizardSteps.js), `plan`
+  //    fiel auf den Default "yearly" zurueck und "Plan aendern" war in dieser
+  //    Variante abgeschaltet - wer von hier kam, konnte den Tarif also weder
+  //    sehen noch auf monatlich wechseln. Ohne entryPoint startet der Wizard
+  //    bei der Plan-Auswahl (der Konto-Schritt wird fuer Eingeloggte ohnehin
+  //    uebersprungen), genau wie ueber die Rechner-Paywall und die Merkliste.
+  // 2. onClose zeigte auf onClose dieses Bereichs, das ✕ des Wizards schloss
+  //    also "Mein Konto" komplett - auch nach erfolgreichem Kauf. Und
+  //    showUpgrade wurde nie zurueckgesetzt. Jetzt fuehrt Schliessen zurueck
+  //    in den Abo-Bereich, wo dann direkt das frisch gebuchte Abo steht.
+  if (showUpgrade) return <CheckoutWizard onClose={() => setShowUpgrade(false)} />;
   const sections = visibleSections(account.me.role);
   const active = sections.find((s) => s.key === activeKey) || sections[0];
   const ActiveSection = SECTION_COMPONENTS[active.key];
@@ -132,7 +118,6 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
       role="presentation"
       style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 1000, overflowY: "auto" }}
     >
-      <style>{`@keyframes myaccount-drawer-in{from{transform:translateX(-100%)}to{transform:translateX(0)}}`}</style>
       <div
         ref={dialogRef}
         role="dialog"
@@ -205,13 +190,28 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
             </button>
           </div>
         </div>
+        {/* Nutzer-Screenshot 2026-08-12: Auf dem Handy belegte der ☰-Knopf
+            eine komplette eigene Zeile, in der sonst nichts stand (seit die
+            Bereichsbezeichnung daraus entfernt wurde) - viel Weiss fuer einen
+            44px-Knopf. Ausserdem standen dort zwei Menues uebereinander: der
+            Avatar (Name/E-Mail/Abmelden) und ☰ (Bereiche), wobei der Avatar
+            mobil nur "Abmelden" beitrug, weil Name und E-Mail bereits im Kopf
+            des ☰-Panels standen. Beides loest dieselbe Massnahme: mobil
+            oeffnet der Avatar das VOLLE Menue inklusive Bereiche, die
+            ☰-Zeile entfaellt ersatzlos. Auf dem Desktop bleibt es bei
+            Seitenleiste + Kurzmenue - dort gibt es keine Platznot und die
+            Bereiche stehen ohnehin dauerhaft sichtbar daneben. */}
         {menuOpen && (
           <AccountMenu
             t={t}
             me={account.me}
-            variant="compact"
+            variant={isDesktop ? "compact" : "full"}
             anchorRef={avatarRef}
             onClose={() => setMenuOpen(false)}
+            onSelect={(key) => {
+              setMenuOpen(false);
+              setActiveKey(key);
+            }}
             onLogout={handleLogout}
             logoutBusy={logoutBusy}
           />
@@ -242,157 +242,7 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
                 />
               ))}
             </nav>
-          ) : (
-            <div style={{ padding: "0 20px 14px", borderBottom: "1px solid var(--cb)" }}>
-              {/* Nutzer-Vorgabe 2026-08-12: nur noch die Striche, wie auf der
-                  Landingpage - ohne den Namen des aktuellen Bereichs. Der
-                  steht ohnehin als Ueberschrift direkt darunter im Inhalt,
-                  die Leiste hat ihn also doppelt gezeigt. */}
-              <button
-                onClick={() => setMobileNavOpen(true)}
-                aria-expanded={mobileNavOpen}
-                aria-label={t.accountNavAria}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 44,
-                  height: 40,
-                  padding: 0,
-                  borderRadius: 10,
-                  border: "1px solid var(--cb)",
-                  background: "var(--cc)",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                <span aria-hidden="true" style={{ fontSize: 18 }}>☰</span>
-              </button>
-            </div>
-          )}
-
-          {mobileNavOpen && !isDesktop && (
-            <>
-              <div
-                onClick={() => setMobileNavOpen(false)}
-                aria-hidden="true"
-                style={{ position: "fixed", inset: 0, background: "rgba(20,18,14,.45)", zIndex: 1010 }}
-              />
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-label={t.accountNavAria}
-                style={{
-                  position: "fixed",
-                  top: 0,
-                  bottom: 0,
-                  left: 0,
-                  width: "min(300px, 84vw)",
-                  background: "var(--cc)",
-                  zIndex: 1011,
-                  boxShadow: "6px 0 28px rgba(0,0,0,.18)",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflowY: "auto",
-                  paddingTop: "env(safe-area-inset-top)",
-                  animation: "myaccount-drawer-in .22s ease-out",
-                }}
-              >
-                {/* Panel-Kopf zeigt Kontoidentitaet statt Marke/Logo
-                    (ui-designer-Agent-Empfehlung 2026-08-11): anders als
-                    Landing.jsx wird dieses Panel innerhalb eines bereits
-                    identifizierten Kontos geoeffnet, die Marke steht schon in
-                    der Kopfzeile darueber. */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    padding: "16px 18px",
-                    borderBottom: "1px solid var(--cb)",
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 14.5,
-                        fontWeight: 800,
-                        color: "var(--ct)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {account.me.name || account.me.email}
-                    </div>
-                    {account.me.name && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "var(--ch)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {account.me.email}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setMobileNavOpen(false)}
-                    aria-label={t.close}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      fontSize: 20,
-                      color: "var(--ch)",
-                      cursor: "pointer",
-                      padding: 4,
-                      lineHeight: 1,
-                      flexShrink: 0,
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div style={{ padding: "10px 12px 18px", display: "flex", flexDirection: "column", gap: 2 }}>
-                  {sections.map((s) => (
-                    <button
-                      key={s.key}
-                      onClick={() => {
-                        setActiveKey(s.key);
-                        setMobileNavOpen(false);
-                      }}
-                      aria-current={s.key === activeKey ? "page" : undefined}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        width: "100%",
-                        padding: "11px 14px",
-                        borderRadius: 10,
-                        border: "none",
-                        background: s.key === activeKey ? "var(--ca-bg)" : "transparent",
-                        color: s.key === activeKey ? "var(--ca-dk)" : "var(--ct)",
-                        fontSize: 13.5,
-                        fontWeight: s.key === activeKey ? 700 : 600,
-                        textAlign: "left",
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        minHeight: 44,
-                      }}
-                    >
-                      <s.Icon size={18} />
-                      {t[s.labelKey]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+          ) : null}
 
           <div style={{ flex: 1, minWidth: 0, padding: isDesktop ? "0" : "20px 20px 0" }}>
             <ActiveSection

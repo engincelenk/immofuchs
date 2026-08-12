@@ -32,15 +32,3 @@ export const SECTION_META = [
 export function visibleSections(role) {
   return SECTION_META.filter((s) => !s.roleRequired || s.roleRequired === role);
 }
-
-// Initialen fuer den Avatar-Kreis: aus dem Namen, ersatzweise aus der
-// E-Mail-Adresse (frisch per OAuth angelegte Konten haben oft keinen Namen).
-export function accountInitials(me) {
-  const source = (me?.name || "").trim();
-  if (source) {
-    const parts = source.split(/\s+/).filter(Boolean);
-    const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2);
-    return letters.toUpperCase();
-  }
-  return (me?.email || "?").slice(0, 2).toUpperCase();
-}
