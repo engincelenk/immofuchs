@@ -498,11 +498,20 @@ export default function App() {
       .hdr-logo-img{width:38px!important;height:38px!important}
       .hdr-wordmark{font-size:17px!important}
       .lang-label{display:none!important}
+      /* Konto-Knopf: unter 480px die Kurzform "Konto", darueber "Mein Konto"
+         (UX-Audit 2026-08-11). Volle Beschriftung PLUS Tarif-Chip passt auf
+         375px-Geraeten sonst nicht mehr neben Logo und Sprachwahl - exakt
+         der Ueberlauf, den die Regeln direkt darueber schon einmal
+         beheben mussten. */
+      .acct-label-full{display:none}
+      .acct-label-short{display:inline}
       @media(min-width:480px){
         .hdr-brand-btn{gap:14px!important}
         .hdr-logo-img{width:54px!important;height:54px!important}
         .hdr-wordmark{font-size:24px!important}
         .lang-label{display:inline!important}
+        .acct-label-full{display:inline}
+        .acct-label-short{display:none}
       }
       /* Scrollbare Tab-Leiste (Konzept 8.5b, Bugreport "Tabs auf Mobile zu
          dicht"): frueher flex:1 auf .tbtn, dadurch quetschten sich 7 Tabs auf

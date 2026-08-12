@@ -1,3 +1,75 @@
+## 2026-08-11 (1.7.34)
+
+### UX-Audit: ehrliche Knopf-Beschriftung, Tarif-Status, Login-Ziel, Testlauf
+
+**Anlass:** Kritische UX-Durchsicht der Anmelde-, Konto- und Testlauf-Prozesse
+(auf Nutzer-Wunsch). Drei der gefundenen Punkte sind hier umgesetzt, der Rest
+(Bereichs-Umbau in "Mein Konto", Deep-Links, Abmelde-Rueckmeldung,
+Initialen-Avatar, Marken-Vereinheitlichung) steht noch aus.
+
+**1. Der Kopf-Knopf beschrieb nie, was er tut
+(`src/components/account/ProHeaderButton.jsx`):** Er hiess im App-Shell
+IMMER "👑 Pro" - unabhaengig davon, ob er zum Login oder in die
+Kontoverwaltung fuehrte, und unabhaengig davon, ob der Nutzer Free oder Pro
+war. Ausgeloggte erwarteten hinter dem Kroenchen eine Paywall und bekamen ein
+Login-Formular; Pro-Nutzer erwarteten etwas Pro-spezifisches und bekamen die
+Kontoverwaltung. Zusaetzlich hiess dieselbe Aktion auf der Landingpage
+laengst korrekt "Anmelden"/"Mein Konto" - ein und derselbe Knopf trug also je
+nach Bildschirm zwei verschiedene Namen. Jetzt einheitlich benannt; unter
+480px die Kurzform "Konto", damit der Header auf 375px-Geraeten nicht wieder
+ueberlaeuft (bekannter Fehler, siehe `.hdr`-Regeln in App.jsx).
+
+**2. Tarif-Status dauerhaft sichtbar (`src/components/account/PlanChip.jsx`,
+neu):** Ob man Free, in der Testphase oder Pro ist, stand bisher
+ausschliesslich im Bereich "Abonnement" - bei einem Freemium-Produkt die
+wichtigste Konto-Information, und sie war einen Klick tief versteckt. Neuer
+Chip (Free / Test / Pro) in beiden Kopfzeilen (Landing + App-Shell) sowie in
+der Kopfzeile von "Mein Konto", dort zusaetzlich mit Restlaufzeit
+("Testphase · noch 5 Tage") - beantwortet "wann wird abgebucht?" sofort.
+Die Ableitung liegt als testbare Utility in `accountEntitlement.js`
+(`planStatusFromMe`, `trialDaysRemaining`, 8 neue Unit-Tests). Wichtig dabei:
+waehrend `trialing` ist `isPro` bereits true - der Chip zeigt trotzdem
+"Test", sonst erfuehre der Nutzer nie von der bevorstehenden Abbuchung.
+
+**3. Login-Ziel vereinheitlicht (`src/pages/Landing.jsx`):** Das Ziel nach dem
+Login haengte von der gewaehlten Methode ab. Google/Apple verlassen die Seite
+und kommen mit `?login_success=1` zurueck, worauf App.jsx den App-Shell zeigt
+- der Nutzer landet im Rechner. Passwort/Passkey laufen ohne Redirect, der
+Wizard schloss sich nur selbst und der Nutzer stand wieder auf der
+Landingpage, wo er "Jetzt rechnen" erst suchen musste. Derselbe Vorsatz
+fuehrte also je nach Anmeldeweg woanders hin - entgegen der Vorgabe in
+App.jsx ("Login landet immer auf dem Dashboard, nie zurueck auf S1"). Beide
+Wege fuehren jetzt in den Rechner; bei Abbruch ohne Anmeldung bleibt alles
+wie gehabt.
+
+**4. Der Gratis-Testlauf ist nicht mehr unsichtbar
+(`src/hooks/useCalculatorTrial.js`, `CalculatorTrialGate.jsx`):** "1x
+kombiniert kostenlos" stand nur in der Preis-Vergleichstabelle; der Verbrauch
+passierte still 1,5 s nach dem ersten Ergebnis, und die erste Rueckmeldung
+war die Sperrwand beim NAECHSTEN Besuch. Das hat die Form eines Dark Patterns
+und verbrennt zudem Conversion, weil Nutzer den Versuch typischerweise an
+Fantasiezahlen verlieren. Neu: ein ruhiger Hinweisstreifen ueber dem Rechner
+("Das ist dein kostenloser Testlauf..."), gespeist vom neuen Flag
+`isTrialRun`. Bewusst an den eingefrorenen `capturedRef`-Wert gebunden, damit
+der Hinweis nicht verschwindet, sobald der Verbrauch im Hintergrund gemeldet
+wurde.
+
+**Verifiziert:** Alle drei Chip-Zustaende live geprueft - Free ("Free | Mein
+Konto" bzw. "Free | Konto" unter 480px), Testphase ("Test | Konto" im Header,
+"Testphase · noch 5 Tage" in Mein Konto) und ausgeloggt (nur "Anmelden", kein
+Chip). Header bei 375px ohne Ueberlauf (rechte Gruppe endet bei 361px von
+375px, `body.scrollWidth` = 375). Punkt 3 wurde diesmal vollstaendig
+end-to-end getestet: mit einem eigens angelegten Testkonto ein echter
+Passwort-Login ueber das Formular der Landingpage durchgefuehrt - der Nutzer
+landet danach im Rechner (`if_landed=1`, App-Shell gerendert) statt wie zuvor
+wieder auf der Landingpage. Das Testkonto samt Abo-Zeile wurde anschliessend
+aus der lokalen Datenbank entfernt. Konsole in einem frischen Tab sauber (nur
+der erwartete 401 von `/me` im ausgeloggten Zustand). `npm test` 301 Tests
+gruen (293 + 8 neue), Lint ohne Fehler.
+
+**Hinweis:** Der i18n-Schluessel `proButton` ("Pro") wird durch Punkt 1
+nirgends mehr verwendet und koennte bei Gelegenheit entfallen.
+
 ## 2026-08-11 (1.7.33)
 
 ### UX: Mein-Konto-Menü als Slide-in, CTA-Redundanz reduziert, Willkommensgruß

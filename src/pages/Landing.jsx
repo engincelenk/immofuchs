@@ -11,6 +11,7 @@ import { ACCOUNT_T } from "../i18n/account.js";
 import { CheckoutWizard } from "../components/checkout/CheckoutWizard.jsx";
 import { MyAccount } from "../components/account/MyAccount.jsx";
 import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
+import { PlanChip } from "../components/account/PlanChip.jsx";
 import { useSavedObjects } from "../components/shell/Merkliste.jsx";
 import { BrandIcon } from "../components/ui/BrandIcon.jsx";
 
@@ -214,6 +215,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 onClick={() => setOpenMode(account.isLoggedIn ? "account" : "login")}
                 className="lp-account-btn"
                 style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
                   padding: "9px 14px",
                   background: "transparent",
                   color: "var(--ct)",
@@ -226,6 +230,11 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                   whiteSpace: "nowrap",
                 }}
               >
+                {/* Tarif-Status auch hier dauerhaft sichtbar (UX-Audit
+                    2026-08-11) - gleiche Komponente wie im App-Shell, damit
+                    beide Kopfzeilen dieselbe Aussage in derselben Form
+                    treffen. */}
+                {account.isLoggedIn && <PlanChip t={at} me={account.me} />}
                 {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
               </button>
             )}
@@ -377,7 +386,26 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       {(openMode === "checkout" || openMode === "login" || openMode === "account") && (
         <Ctx.Provider value={landingCtxValue}>
           {openMode === "checkout" && <CheckoutWizard onClose={() => setOpenMode(null)} />}
-          {openMode === "login" && <CheckoutWizard onClose={() => setOpenMode(null)} entryPoint="login" />}
+          {/* UX-Audit 2026-08-11 (Punkt 2): Das Login-Ziel haengt bisher von
+              der gewaehlten Methode ab. Google/Apple verlassen die Seite und
+              kommen mit ?login_success=1 zurueck, worauf App.jsx
+              (hasAuthRedirectParam) direkt den App-Shell zeigt - der Nutzer
+              landet im Rechner. Passwort/Passkey laufen ohne Redirect, der
+              Wizard schliesst sich nur selbst und der Nutzer stand wieder auf
+              der Landingpage, wo er "Jetzt rechnen" erst suchen musste.
+              Derselbe Vorsatz fuehrte also je nach Anmeldeweg woanders hin,
+              entgegen der Vorgabe in App.jsx ("Login landet immer auf dem
+              Dashboard, nie zurueck auf S1"). Jetzt fuehren beide Wege in den
+              Rechner - bei Abbruch ohne Anmeldung bleibt alles wie gehabt. */}
+          {openMode === "login" && (
+            <CheckoutWizard
+              onClose={() => {
+                setOpenMode(null);
+                if (account?.isLoggedIn) onStart("haupt");
+              }}
+              entryPoint="login"
+            />
+          )}
           {openMode === "account" && <MyAccount onClose={() => setOpenMode(null)} />}
         </Ctx.Provider>
       )}

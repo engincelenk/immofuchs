@@ -5,6 +5,7 @@ import { ACCOUNT_T } from "../../i18n/account.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { MyAccount } from "./MyAccount.jsx";
 import { LoginSuccessToast } from "./LoginSuccessToast.jsx";
+import { PlanChip } from "./PlanChip.jsx";
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
 // NICHT in Statusleiste.jsx). Label "Pro" mit Kroenchen-Icon, Fuchs-Orange.
@@ -65,30 +66,53 @@ export function ProHeaderButton() {
 
   return (
     <>
+      {/* UX-Audit 2026-08-11 (Punkt 1): Dieser Knopf hiess bisher IMMER
+          "👑 Pro" - egal ob er zum Login oder in die Kontoverwaltung fuehrte,
+          und egal ob der Nutzer Free oder Pro war. Damit beschrieb die
+          Beschriftung in keinem einzigen Zustand die tatsaechliche Aktion:
+          Ausgeloggte erwarteten hinter dem Kroenchen eine Paywall und
+          bekamen ein Login-Formular, Pro-Nutzer erwarteten etwas
+          Pro-spezifisches und bekamen die Kontoverwaltung. Zusaetzlich hiess
+          dieselbe Aktion auf der Landingpage bereits korrekt "Anmelden"/
+          "Mein Konto" (Landing.jsx) - ein und derselbe Knopf trug also je
+          nach Bildschirm zwei verschiedene Namen. Jetzt einheitlich benannt,
+          das Kroenchen ersetzt durch den echten Tarif-Status.
+          Kurzform "Konto" unter 480px: die volle Beschriftung plus Chip
+          waere auf 375px-Geraeten neben Logo und Sprachwahl wieder zu
+          breit geworden (bekannter Ueberlauf-Fehler, siehe .hdr-Regeln in
+          App.jsx). */}
       <button
         onClick={() => setOpenMode(account.isLoggedIn ? "account" : "login")}
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 5,
+          gap: 6,
           padding: "7px 11px",
-          border: "1px solid var(--ca-bd)",
+          border: `1px solid ${account.isLoggedIn ? "var(--cb)" : "var(--ca-bd)"}`,
           borderRadius: 8,
           // Weiss statt --ca-bg (S2-5): --ca-dk auf --ca-bg landet bei ~4.28:1
           // Kontrast, knapp unter der WCAG-AA-Grenze (4.5:1) fuer diese
-          // Schriftgroesse. Auf Weiss liegt --ca-dk bei ~4.76:1 - Branding
-          // bleibt ueber Rahmenfarbe + Kroenchen-Icon erhalten.
+          // Schriftgroesse. Auf Weiss liegt --ca-dk bei ~4.76:1.
           background: "var(--cc)",
           cursor: "pointer",
           fontFamily: "inherit",
           fontSize: 13,
           fontWeight: 700,
-          color: "var(--ca-dk)",
+          // Eingeloggt ist "Mein Konto" eine neutrale Navigation, kein
+          // Verkaufs-Ruf - Orange bleibt dem Anmelden-/Upgrade-Weg vorbehalten.
+          color: account.isLoggedIn ? "var(--ct)" : "var(--ca-dk)",
           minHeight: 38,
         }}
       >
-        <span aria-hidden="true">👑</span>
-        <span>{t.proButton}</span>
+        {account.isLoggedIn ? (
+          <>
+            <PlanChip t={t} me={account.me} />
+            <span className="acct-label-full">{t.accountTitle}</span>
+            <span className="acct-label-short">{t.accountTitleShort}</span>
+          </>
+        ) : (
+          <span>{t.loginSubmit}</span>
+        )}
       </button>
       {account.loginSuccess && (
         <LoginSuccessToast

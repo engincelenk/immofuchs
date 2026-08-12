@@ -7,6 +7,7 @@ import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
+import { PlanChip } from "./PlanChip.jsx";
 import { ProfilSection } from "./sections/ProfilSection.jsx";
 import { AbonnementSection } from "./sections/AbonnementSection.jsx";
 import { ZahlungenSection } from "./sections/ZahlungenSection.jsx";
@@ -137,8 +138,12 @@ export function MyAccount({ onClose }) {
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <BrandIcon size={20} /> {t.accountTitle}
+              {/* Hier mit Restlaufzeit der Testphase (anders als in der
+                  schmalen App-Kopfzeile) - beantwortet "wann wird
+                  abgebucht?" sofort, statt erst im Bereich Abonnement. */}
+              <PlanChip t={t} me={account.me} withTrialDays />
             </div>
             {/* Nutzer-Feedback 2026-08-11 (zweite Runde): reiner Name wirkte
                 zu unauffaellig fuer die wiederholt gewuenschte Begruessung -

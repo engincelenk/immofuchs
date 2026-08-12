@@ -15,7 +15,7 @@ import { BrandIcon } from "../ui/BrandIcon.jsx";
 export function CalculatorTrialGate({ children, onDismiss }) {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
-  const { isLocked, isPaywalled, loading } = useCalculatorTrial();
+  const { isLocked, isPaywalled, isTrialRun, loading } = useCalculatorTrial();
   const [showLogin, setShowLogin] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
@@ -54,7 +54,38 @@ export function CalculatorTrialGate({ children, onDismiss }) {
     );
   }
 
-  return children;
+  // Hinweis WAEHREND des Testlaufs (Stufe 3 des UX-Audits 2026-08-11): sagt
+  // dem Nutzer, dass er gerade seinen einzigen Gratis-Durchlauf verwendet -
+  // vorher erfuhr er das erst durch die Sperrwand beim naechsten Besuch.
+  // Bewusst ein ruhiger Hinweisstreifen ueber dem Rechner statt eines
+  // Dialogs: der Rechner bleibt sofort benutzbar, der Hinweis draengt sich
+  // nicht in den Weg.
+  return (
+    <>
+      {isTrialRun && (
+        <div
+          role="status"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            padding: "10px 14px",
+            marginBottom: 12,
+            background: "var(--ca-bg)",
+            border: "1px solid var(--ca-bd)",
+            borderRadius: 10,
+            fontSize: 12.5,
+            lineHeight: 1.5,
+            color: "var(--ct)",
+          }}
+        >
+          <span aria-hidden="true">✨</span>
+          <span>{t.trialRunNotice}</span>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }
 
 function GatePanel({ icon, title, body, children }) {

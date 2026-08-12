@@ -45,5 +45,14 @@ export function useCalculatorTrial() {
     loading,
     isLocked: loading === false && !isLoggedIn,
     isPaywalled: loading === false && isLoggedIn && !isPro && capturedRef.current === true,
+    // UX-Audit 2026-08-11 (Punkt 3): Der Ersttest war bisher unsichtbar, bis
+    // er weg war - "1x kombiniert kostenlos" stand ausschliesslich in der
+    // Preis-Vergleichstabelle, der Verbrauch passierte still nach 1,5 s und
+    // die erste Rueckmeldung war die Sperrwand beim NAECHSTEN Besuch. Dieses
+    // Flag speist einen Hinweis, der schon waehrend des Testlaufs sagt,
+    // worum es sich handelt. Bewusst an capturedRef gebunden (nicht am
+    // Live-Status): der eingefrorene Wert gilt fuer die gesamte Sitzung, der
+    // Hinweis flackert also nicht weg, sobald der Verbrauch gemeldet wurde.
+    isTrialRun: loading === false && isLoggedIn && !isPro && capturedRef.current === false,
   };
 }
