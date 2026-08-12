@@ -11,7 +11,6 @@ import { ACCOUNT_T } from "../i18n/account.js";
 import { CheckoutWizard } from "../components/checkout/CheckoutWizard.jsx";
 import { MyAccount } from "../components/account/MyAccount.jsx";
 import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
-import { PlanChip } from "../components/account/PlanChip.jsx";
 import { useSavedObjects } from "../components/shell/Merkliste.jsx";
 import { BrandIcon } from "../components/ui/BrandIcon.jsx";
 
@@ -230,12 +229,20 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                   whiteSpace: "nowrap",
                 }}
               >
-                {/* Tarif-Status auch hier dauerhaft sichtbar (UX-Audit
-                    2026-08-11) - gleiche Komponente wie im App-Shell, damit
-                    beide Kopfzeilen dieselbe Aussage in derselben Form
-                    treffen. */}
-                {account.isLoggedIn && <PlanChip t={at} me={account.me} />}
-                {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
+                {/* Nutzer-Feedback 2026-08-12 (Bild 2): Der Tarif-Chip ist
+                    hier nicht noetig - die Landingpage ist die Marketing-,
+                    nicht die Arbeitsflaeche. Im App-Shell bleibt er (dort
+                    passt er auch in die Breite, siehe Screenshot 3).
+                    Zusammen mit der Kurzform unten war der Chip die Ursache
+                    dafuer, dass der Menue-Knopf rechts abgeschnitten wurde. */}
+                {account.isLoggedIn ? (
+                  <>
+                    <span className="lp-acct-full">{at.accountTitle}</span>
+                    <span className="lp-acct-short">{at.accountTitleShort}</span>
+                  </>
+                ) : (
+                  at.loginSubmit
+                )}
               </button>
             )}
             {/* Nutzer-Feedback 2026-08-11 (Screenshot): Sprachwahl + Menü-
@@ -366,13 +373,24 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               <button onClick={() => scrollTo("zinsen")} style={navLinkMobile}>
                 {l.navZinsen}
               </button>
-              {/* UX-Review 2026-08-11 (ui-designer-Agent): der "Anmelden"/"Mein
-                  Konto"-Eintrag hier war der dritte Auftritt derselben Aktion
-                  (Header-Button bleibt auch mobil sichtbar - .lp-account-btn
-                  wird bei ≤880px nur verkleinert, nie ausgeblendet). Anders
-                  als Header+Hero-CTA (unterschiedliche Scroll-Positionen)
-                  brachte diese Kopie keine zusaetzliche Erreichbarkeit, nur
-                  eine weitere Animation/einen weiteren Tap fuer denselben Klick. */}
+              {/* Nutzer-Vorgabe 2026-08-12: wieder aufgenommen. Am 11.08. auf
+                  Empfehlung des ui-designer-Agenten entfernt (Argument: der
+                  Header-Knopf bleibt mobil sichtbar, der Eintrag sei damit
+                  der dritte Auftritt derselben Aktion). Der Nutzer moechte
+                  ihn im Seitenmenue haben - ein vollstaendiges Menue, das
+                  eine der Hauptaktionen auslaesst, wirkt beim Aufklappen
+                  unvollstaendig. */}
+              {account && !account.loading && (
+                <button
+                  onClick={() => {
+                    setNavOpen(false);
+                    setOpenMode(account.isLoggedIn ? "account" : "login");
+                  }}
+                  style={navLinkMobile}
+                >
+                  {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
+                </button>
+              )}
               {/* Sprachwahl zieht bei ≤880px hierher um, siehe Kommentar oben
                   bei .lp-langsel-top - Platz in der Kopfzeile reichte dort
                   nicht fuer Logo + Konto-Knopf + Sprachwahl + Menü-Button. */}
@@ -1760,6 +1778,18 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .how-steps-grid{display:grid;grid-template-columns:1fr;gap:14px}
       @media(min-width:560px){.how-steps-grid{grid-template-columns:repeat(2,1fr)}}
       @media(min-width:860px){.how-steps-grid{grid-template-columns:repeat(4,1fr)}}
+      /* Bugreport 2026-08-12 (Screenshot: abgeschnittener Menue-Knopf): Nach
+         dem Login wuchs der Konto-Knopf durch Tarif-Chip + "Mein Konto" so
+         weit, dass der ☰-Knopf rechts aus dem Viewport lief. Die Kurzform
+         gab es bisher nur im App-Shell (.acct-label-* in App.jsx) - dessen
+         Style-Block wird auf der Landingpage gar nicht gerendert, die Regel
+         fehlte hier also schlicht. */
+      .lp-acct-full{display:none}
+      .lp-acct-short{display:inline}
+      @media(min-width:480px){
+        .lp-acct-full{display:inline}
+        .lp-acct-short{display:none}
+      }
       @media(max-width:880px){
         .lp-nav{display:none!important}
         .lp-burger{display:inline-flex!important}

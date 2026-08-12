@@ -1,3 +1,74 @@
+## 2026-08-12 (1.7.35)
+
+### Browser: Login-Modal, Scrollbalken, Abmelden-Position, Logo
+### Mobile: Menue-Ueberlauf behoben, Tab-Liste, schlankere Konto-Leiste
+
+**Anlass:** Nutzer-Feedback mit drei Screenshots.
+
+**Zuerst der Regressionsfehler (Screenshot 2):** Der gestern eingefuehrte
+Tarif-Chip liess den Konto-Knopf auf der Landingpage so weit wachsen, dass der
+☰-Knopf rechts aus dem Viewport lief und abgeschnitten war. Ursache: Die
+Kurzform-Regel ("Konto" statt "Mein Konto" unter 480px) hatte ich nur im
+App-Shell hinterlegt (`.acct-label-*` in App.jsx) - dessen Style-Block wird
+auf der Landingpage gar nicht gerendert, dort fehlte die Regel schlicht.
+Jetzt hat Landing.jsx eine eigene (`.lp-acct-*`), zusaetzlich entfaellt der
+Chip auf der Landingpage komplett (Nutzer-Wunsch: dort nicht noetig - im
+App-Shell bleibt er, dort passt er auch in die Breite, siehe Screenshot 3).
+Gemessen: ☰ liegt jetzt bei 321-361px von 375px, vollstaendig sichtbar.
+
+**Browser/Desktop:**
+1. **Login-Maske als Modal (`CheckoutWizard.jsx`):** Statt vollflaechiger
+   Seite jetzt eine zentrierte Karte (max. 460px bzw. 900px mit
+   Bestelluebersicht, 16px Radius, Schlagschatten) ueber abgedunkeltem
+   Hintergrund; Klick auf den Rand schliesst. Auf dem Handy bleibt es bewusst
+   vollflaechig - ein zentriertes Kaertchen verschenkt dort Platz, den die
+   Formularfelder brauchen.
+2. **Doppelter Scrollbalken (`MyAccount.jsx`, `CheckoutWizard.jsx`):** Beide
+   Flaechen sperren jetzt den Seiten-Scroll, solange sie offen sind. Vorher
+   lagen zwei Balken nebeneinander - der der Flaeche und der der Seite
+   dahinter, die weiter scrollbar blieb. Im Bereich "Konto & Sicherheit"
+   (dem vom Nutzer genannten) nachgemessen: genau ein Scrollcontainer.
+3. **"Abmelden" weg vom ✕:** Beide lagen wenige Pixel nebeneinander - ein
+   Vertipper meldete einen versehentlich ab, statt zu den Rechnern
+   zurueckzukehren. "Abmelden" steht jetzt am linken Rand der Kopfzeile
+   (Desktop: 634px Abstand zum ✕), auf dem Handy eine Zeile tiefer und ganz
+   links (234px horizontal, 29px vertikal). Bleibt damit sichtbar, wie am
+   11.08. gefordert - nur eben nicht mehr in derselben Ecke.
+4. **Volles Logo in "Mein Konto":** Fuchs + Schriftzug "immofuchs.info" wie
+   im Kopf der Landingpage. Eine fertige Wortmarken-Grafik gibt es nicht
+   (`logo-transparent.png` ist nur der Fuchs), der Schriftzug wird wie dort
+   aus Text zusammengesetzt.
+
+**Mobile:**
+5. **"Anmelden" wieder im Seitenmenue der Landingpage.** Am 11.08. auf
+   Empfehlung des ui-designer-Agenten entfernt (Argument: der Header-Knopf
+   bleibt mobil sichtbar, der Eintrag sei der dritte Auftritt derselben
+   Aktion). Nutzer-Entscheidung dagegen: ein Menue, das eine der
+   Hauptaktionen auslaesst, wirkt beim Aufklappen unvollstaendig.
+6. **Konto-Leiste nur noch ☰** (ohne Bereichsnamen), wie auf der
+   Landingpage - der Name stand ohnehin direkt darunter als Ueberschrift.
+7. **Tab-Liste (`App.jsx`, Screenshot 3):** Die Tab-Leiste ist seitlich
+   scrollbar, aber nichts zeigte das an - die hinteren Rechner blieben fuer
+   viele unentdeckt. Die Tabs bleiben unveraendert; rechts daneben steht
+   jetzt ein fest verankerter "☰ Alle"-Knopf, der alle 7 Rechner als Liste
+   oeffnet. Er scrollt bewusst nicht mit und wirft einen Schatten nach links -
+   gerade dadurch ist erkennbar, dass die Leiste unter ihm weiterlaeuft.
+   Dafuer traegt jetzt ein neuer `.tbar-wrap` die feste Positionierung,
+   `.tbar` ist nur noch der scrollbare Teil.
+
+**Verifiziert:** Live gemessen bei 375px und 1280px. Login-Modal auf dem
+Desktop als 460x540-Karte bei x=410 mit Backdrop rgba(20,18,14,.45) -
+Rand-Klick schliesst, Klick in der Karte nicht; auf dem Handy volle Breite
+ohne Radius. Genau ein Scrollcontainer in "Konto & Sicherheit", Seite
+dahinter gesperrt und nach dem Schliessen wieder freigegeben. Tab-Liste
+oeffnet alle 7 Rechner und wechselt korrekt. Seitenmenue enthaelt wieder
+"Anmelden". Ein echter Passwort-Login wurde erneut end-to-end durchgespielt
+(Testkonto danach aus der lokalen Datenbank entfernt). Konsole in einem
+frischen Tab sauber, `npm test` 301 Tests gruen, Lint ohne Fehler.
+
+**Nicht umgesetzt:** Punkt "nach login button" aus der Nutzer-Liste - auf
+Rueckfrage mit "Ignoriere" beantwortet.
+
 ## 2026-08-11 (1.7.34)
 
 ### UX-Audit: ehrliche Knopf-Beschriftung, Tarif-Status, Login-Ziel, Testlauf

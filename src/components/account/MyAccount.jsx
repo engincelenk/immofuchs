@@ -69,10 +69,10 @@ export function MyAccount({ onClose }) {
   // laeuft vor Bubble, stopPropagation verhindert also, dass der
   // Fokus-Trap-Handler das Panel-Schliessen zum Verlassen von Mein Konto
   // eskaliert.
+  // Die Scroll-Sperre liegt bewusst NICHT mehr hier, sondern im Effekt
+  // darunter, der sie fuer die gesamte Lebensdauer dieses Bereichs haelt.
   useEffect(() => {
     if (!mobileNavOpen) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const handler = (e) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -80,11 +80,22 @@ export function MyAccount({ onClose }) {
       }
     };
     document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [mobileNavOpen]);
+
+  // Nutzer-Feedback 2026-08-12: In "Mein Konto" waren ZWEI Scrollbalken
+  // sichtbar - der dieser Flaeche (overflowY:auto auf dem fixed Overlay) und
+  // zusaetzlich der der Seite dahinter, die weiterhin scrollbar blieb. Solange
+  // dieser Bereich offen ist, wird der Seiten-Scroll deshalb gesperrt; es
+  // bleibt genau ein Balken uebrig, der wie der gewohnte Browser-Scrollbalken
+  // am rechten Rand sitzt.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prevOverflow;
-      document.removeEventListener("keydown", handler, true);
     };
-  }, [mobileNavOpen]);
+  }, []);
 
   async function handleLogout() {
     setLogoutBusy(true);
@@ -137,36 +148,59 @@ export function MyAccount({ onClose }) {
             paddingTop: "calc(14px + env(safe-area-inset-top))",
           }}
         >
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <BrandIcon size={20} /> {t.accountTitle}
-              {/* Hier mit Restlaufzeit der Testphase (anders als in der
-                  schmalen App-Kopfzeile) - beantwortet "wann wird
-                  abgebucht?" sofort, statt erst im Bereich Abonnement. */}
-              <PlanChip t={t} me={account.me} withTrialDays />
+          {/* Auf dem Handy untereinander: nebeneinander blieben bei 375px nur
+              29px zwischen "Abmelden" und dem ✕ uebrig - also genau der
+              gemeldete Zu-dicht-Fehler, nur an anderer Stelle. Gestapelt
+              liegt "Abmelden" am linken Rand UND eine Zeile tiefer als das ✕. */}
+          <div
+            style={{
+              minWidth: 0,
+              display: "flex",
+              flexDirection: isDesktop ? "row" : "column",
+              alignItems: isDesktop ? "center" : "flex-start",
+              gap: isDesktop ? 14 : 8,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              {/* Nutzer-Vorgabe 2026-08-12: volles Logo (Fuchs + Wortmarke)
+                  statt nur des Icons - wie im Kopf der Landingpage. Es gibt
+                  keine fertige Wortmarken-Grafik, der Schriftzug wird wie
+                  dort aus Text zusammengesetzt. */}
+              <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <BrandIcon size={26} />
+                <span style={{ letterSpacing: -0.3, color: "var(--ct)" }}>
+                  immo<span style={{ color: "var(--ca)" }}>fuchs</span>
+                  <span style={{ fontWeight: 700 }}>.info</span>
+                </span>
+                {/* Hier mit Restlaufzeit der Testphase (anders als in der
+                    schmalen App-Kopfzeile) - beantwortet "wann wird
+                    abgebucht?" sofort, statt erst im Bereich Abonnement. */}
+                <PlanChip t={t} me={account.me} withTrialDays />
+              </div>
+              {/* Nutzer-Feedback 2026-08-11 (zweite Runde): reiner Name wirkte
+                  zu unauffaellig fuer die wiederholt gewuenschte Begruessung -
+                  jetzt als "Willkommen, {name}!"-Zeile. E-Mail bleibt Fallback,
+                  solange kein Name hinterlegt ist (z.B. frisch per OAuth
+                  angelegte Konten), dort ohne Begruessungsfloskel. */}
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: "var(--ch)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {account.me.name ? t.welcomeGreeting.replace("{name}", account.me.name) : account.me.email}
+              </div>
             </div>
-            {/* Nutzer-Feedback 2026-08-11 (zweite Runde): reiner Name wirkte
-                zu unauffaellig fuer die wiederholt gewuenschte Begruessung -
-                jetzt als "Willkommen, {name}!"-Zeile. E-Mail bleibt Fallback,
-                solange kein Name hinterlegt ist (z.B. frisch per OAuth
-                angelegte Konten), dort ohne Begruessungsfloskel. */}
-            <div
-              style={{
-                fontSize: 11.5,
-                color: "var(--ch)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {account.me.name ? t.welcomeGreeting.replace("{name}", account.me.name) : account.me.email}
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-            {/* Nutzer-Feedback 2026-08-11: Abmelden direkt in der Kopfzeile
-                sichtbar statt versteckt im Bereich "Konto & Sicherheit" -
-                dort bleibt der Knopf zusaetzlich bestehen (Alle-Geraete-
-                Abmelden lebt ohnehin nur dort), hier nur der haeufige Fall. */}
+            {/* Nutzer-Feedback 2026-08-12: "Abmelden" stand direkt neben dem
+                ✕ (Zurueck zu den Rechnern) - zwei gegensaetzliche Aktionen
+                im Abstand von wenigen Pixeln, ein Vertipper meldete einen
+                versehentlich ab. Jetzt am linken Rand derselben Kopfzeile:
+                bleibt voll sichtbar (Vorgabe vom 11.08.: nicht im
+                Untermenue verstecken), liegt aber die gesamte Header-Breite
+                vom ✕ entfernt. */}
             <button
               onClick={handleLogout}
               disabled={logoutBusy}
@@ -181,10 +215,13 @@ export function MyAccount({ onClose }) {
                 color: "var(--ch)",
                 fontFamily: "inherit",
                 whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               {t.logout}
             </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-start", flexShrink: 0, alignSelf: "flex-start" }}>
             <button
               onClick={onClose}
               aria-label={t.close}
@@ -230,6 +267,10 @@ export function MyAccount({ onClose }) {
             </nav>
           ) : (
             <div style={{ padding: "0 20px 14px", borderBottom: "1px solid var(--cb)" }}>
+              {/* Nutzer-Vorgabe 2026-08-12: nur noch die Striche, wie auf der
+                  Landingpage - ohne den Namen des aktuellen Bereichs. Der
+                  steht ohnehin als Ueberschrift direkt darunter im Inhalt,
+                  die Leiste hat ihn also doppelt gezeigt. */}
               <button
                 onClick={() => setMobileNavOpen(true)}
                 aria-expanded={mobileNavOpen}
@@ -237,9 +278,10 @@ export function MyAccount({ onClose }) {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  width: "100%",
-                  padding: "11px 14px",
+                  justifyContent: "center",
+                  width: 44,
+                  height: 40,
+                  padding: 0,
                   borderRadius: 10,
                   border: "1px solid var(--cb)",
                   background: "var(--cc)",
@@ -247,11 +289,7 @@ export function MyAccount({ onClose }) {
                   fontFamily: "inherit",
                 }}
               >
-                <span aria-hidden="true" style={{ fontSize: 16 }}>☰</span>
-                <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>
-                  <span aria-hidden="true">{active.icon}</span>
-                  {t[active.labelKey]}
-                </span>
+                <span aria-hidden="true" style={{ fontSize: 18 }}>☰</span>
               </button>
             </div>
           )}

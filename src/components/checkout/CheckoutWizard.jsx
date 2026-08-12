@@ -130,6 +130,18 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
 
   useFocusTrap(dialogRef, onClose, [stepIndex, passwordReset]);
 
+  // Seiten-Scroll sperren, solange der Wizard offen ist (Nutzer-Feedback
+  // 2026-08-12 zum selben Effekt in "Mein Konto"): sonst liegen zwei
+  // Scrollbalken nebeneinander - der dieser Flaeche und der der Seite
+  // dahinter, die ohne Sperre weiter scrollbar bleibt.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
   const goToStep = useCallback(
     (key) => {
       setStepIndex(steps.findIndex((s) => s.key === key));
@@ -244,7 +256,28 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   return createPortal(
     <div
       role="presentation"
-      style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 1000, overflowY: "auto" }}
+      onClick={(e) => {
+        // Klick auf den abgedunkelten Rand schliesst - nur auf dem Desktop,
+        // wo dieser Rand ueberhaupt existiert. e.target===currentTarget
+        // stellt sicher, dass Klicks INNERHALB der Karte nicht durchschlagen.
+        if (isDesktop && e.target === e.currentTarget) onClose();
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        overflowY: "auto",
+        // Nutzer-Vorgabe 2026-08-12: im Browser ein Modal-Fenster statt einer
+        // vollflaechigen Seite - eine reine Anmeldung ist ein Zwischenschritt,
+        // kein eigener Ort, und das Vollbild liess den Nutzer glauben, er
+        // haette die Anwendung verlassen. Auf dem Handy bleibt es bewusst
+        // vollflaechig: ein zentriertes Kaertchen mit Rand verschenkt dort
+        // Platz, den Formularfelder brauchen.
+        background: isDesktop ? "rgba(20,18,14,.45)" : "var(--bg)",
+        ...(isDesktop
+          ? { display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px" }
+          : null),
+      }}
     >
       <div
         role="dialog"
@@ -252,11 +285,21 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         aria-label={t.loginTitle}
         ref={dialogRef}
         style={{
+          width: "100%",
           maxWidth: showSummary ? WIDE_DIALOG_WIDTH : NARROW_DIALOG_WIDTH,
-          margin: "0 auto",
-          minHeight: "100%",
+          margin: isDesktop ? 0 : "0 auto",
+          minHeight: isDesktop ? 0 : "100%",
           display: "flex",
           flexDirection: "column",
+          ...(isDesktop
+            ? {
+                background: "var(--bg)",
+                borderRadius: 16,
+                boxShadow: "0 24px 60px rgba(0,0,0,.22)",
+                border: "1px solid var(--cb)",
+                overflow: "hidden",
+              }
+            : null),
         }}
       >
         {/* paddingTop mit safe-area-inset (Bugreport 06.08.): ohne das liegt

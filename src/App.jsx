@@ -257,6 +257,9 @@ export default function App() {
   // aufgerufen, damit ein spaeteres Wieder-Oeffnen des Sheets nicht erneut
   // den Datei-Dialog aufreisst.
   const [autoExpose, setAutoExpose] = useState(false);
+  // Liste aller Rechner, erreichbar ueber den festen Knopf rechts an der
+  // Tab-Leiste (Nutzer-Feedback 2026-08-12).
+  const [tabMenuOpen, setTabMenuOpen] = useState(false);
   const [zinsen, setZinsen] = useState(null); // holds the raw zinsen.json config (with live BBK)
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -518,8 +521,20 @@ export default function App() {
          schmalen Screens zusammen. Jetzt feste Tab-Breite + horizontales
          Scrollen mit Snap statt eines neuen Dropdown-Musters - pragmatischer
          erster Schritt laut Dokument, Dropdown bleibt Phase-2-Option. */
-      .tbar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--cc);border-top:1px solid var(--cb);padding:6px 0 calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:flex-start;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
+      /* .tbar-wrap traegt seit 2026-08-12 die feste Positionierung und den
+         Rahmen, .tbar selbst ist nur noch der scrollbare Teil daneben - so
+         kann der "Alle"-Knopf rechts stehenbleiben, waehrend die Tabs unter
+         ihm durchscrollen. */
+      .tbar-wrap{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--cc);border-top:1px solid var(--cb);display:flex;align-items:stretch;padding-bottom:env(safe-area-inset-bottom)}
+      .tbar{flex:1;min-width:0;padding:6px 0;display:flex;justify-content:flex-start;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
       .tbar::-webkit-scrollbar{display:none}
+      .tbar-more{flex:0 0 auto;width:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;border:none;border-left:1px solid var(--cb);background:var(--cc);cursor:pointer;font-family:inherit;
+        /* Schlagschatten nach links: macht sichtbar, dass die Tabs UNTER
+           diesem Knopf weiterlaufen - der eigentliche Hinweis darauf, dass
+           die Leiste scrollbar ist. */
+        box-shadow:-8px 0 10px -6px rgba(0,0,0,.14)}
+      .tbar-sheet{position:fixed;left:0;right:0;bottom:0;z-index:102;background:var(--cc);border-top:1px solid var(--cb);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);padding-bottom:calc(10px + env(safe-area-inset-bottom));max-height:80vh;overflow-y:auto;font-family:'DM Sans',sans-serif}
+      @media(min-width:700px){.tbar-sheet{max-width:640px;margin:0 auto}}
       .tbtn{flex:0 0 auto;min-width:64px;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border:none;background:none;cursor:pointer;min-height:48px;scroll-snap-align:center}
       .tbtn span{font-size:11px;font-weight:600;letter-spacing:.3px}
       .content{padding:14px 14px;max-width:1400px;margin:0 auto;width:100%;overflow-x:hidden;overflow-x:clip;overflow-y:visible}
@@ -546,7 +561,11 @@ export default function App() {
         .res-pane{position:sticky;top:94px;max-width:100%;overflow-x:hidden}
         .content{padding:24px 28px}
         .hdr-inner{padding-left:28px;padding-right:28px}
-        .tbar{max-width:640px;margin:0 auto;left:0;right:0;border-radius:16px 16px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.05)}
+        /* Verschoben von .tbar auf .tbar-wrap (2026-08-12): die feste
+           Positionierung und damit auch Breite/Radius/Schatten liegen jetzt
+           auf dem Wrapper, sonst waere die Leiste hier wieder ueber die
+           volle Fensterbreite gelaufen. */
+        .tbar-wrap{max-width:640px;margin:0 auto;left:0;right:0;border-radius:16px 16px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.05);overflow:hidden}
       }
       @media(min-width:1100px){
         .split{grid-template-columns:1fr 1.25fr;gap:32px}
@@ -559,7 +578,7 @@ export default function App() {
         .mob-next-btn{display:block}
       }
       @media print{
-        .tbar,.hdr,.mob-toggle,.inp-pane,.no-print{display:none!important}
+        .tbar,.tbar-wrap,.tbar-sheet,.hdr,.mob-toggle,.inp-pane,.no-print{display:none!important}
         .res-pane{display:block!important}
         .split{display:block!important}
         .shell{padding:0;max-width:100%}
@@ -727,23 +746,91 @@ export default function App() {
             </button>
           </div>
         </div>
-        <div className="tbar" ref={tbarRef}>
-          {tabs.map((tb) => (
-            <button
-              key={tb.id}
-              data-tab-id={tb.id}
-              className="tbtn"
-              onClick={() => {
-                tabSwitchHaptic();
-                setTab(tb.id);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-            >
-              {tb.ic(tab === tb.id)}
-              <span style={{ color: tab === tb.id ? "var(--ca)" : "var(--ch)" }}>{tb.l}</span>
-            </button>
-          ))}
+        {/* Nutzer-Feedback 2026-08-12 (Screenshot): Die Leiste ist seitlich
+            scrollbar, aber nichts zeigt das an - die hinteren Rechner
+            (Merkliste, Vorfaelligkeit) blieben fuer viele unentdeckt. Die
+            Tabs bleiben deshalb wie sie sind, daneben steht jetzt ein fest
+            verankerter Knopf, der ALLE Rechner als Liste oeffnet. Er scrollt
+            bewusst nicht mit: gerade dadurch ist erkennbar, dass die Leiste
+            mehr enthaelt als das, was gerade zu sehen ist. */}
+        <div className="tbar-wrap">
+          <div className="tbar" ref={tbarRef}>
+            {tabs.map((tb) => (
+              <button
+                key={tb.id}
+                data-tab-id={tb.id}
+                className="tbtn"
+                onClick={() => {
+                  tabSwitchHaptic();
+                  setTab(tb.id);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                {tb.ic(tab === tb.id)}
+                <span style={{ color: tab === tb.id ? "var(--ca)" : "var(--ch)" }}>{tb.l}</span>
+              </button>
+            ))}
+          </div>
+          <button
+            className="tbar-more"
+            onClick={() => setTabMenuOpen((o) => !o)}
+            aria-expanded={tabMenuOpen}
+            aria-label={t.alleRechner}
+          >
+            <span aria-hidden="true" style={{ fontSize: 17, lineHeight: 1 }}>☰</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ch)" }}>{t.alle}</span>
+          </button>
         </div>
+        {tabMenuOpen && (
+          <>
+            <div
+              onClick={() => setTabMenuOpen(false)}
+              aria-hidden="true"
+              style={{ position: "fixed", inset: 0, background: "rgba(20,18,14,.45)", zIndex: 101 }}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={t.alleRechner}
+              className="tbar-sheet"
+            >
+              <div style={{ padding: "14px 18px 6px", fontSize: 13, fontWeight: 800, color: "var(--ct)" }}>
+                {t.alleRechner}
+              </div>
+              {tabs.map((tb) => (
+                <button
+                  key={tb.id}
+                  onClick={() => {
+                    tabSwitchHaptic();
+                    setTab(tb.id);
+                    setTabMenuOpen(false);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  aria-current={tab === tb.id ? "page" : undefined}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    width: "100%",
+                    padding: "12px 18px",
+                    border: "none",
+                    background: tab === tb.id ? "var(--ca-bg)" : "transparent",
+                    color: tab === tb.id ? "var(--ca-dk)" : "var(--ct)",
+                    fontSize: 14,
+                    fontWeight: tab === tb.id ? 700 : 600,
+                    fontFamily: "inherit",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    minHeight: 48,
+                  }}
+                >
+                  {tb.ic(tab === tb.id)}
+                  {tb.l}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
       {!isOnline && <OfflineBanner bottom={"calc(72px + env(safe-area-inset-bottom))"} />}
     </AppProviders>
