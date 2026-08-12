@@ -1,3 +1,43 @@
+## 2026-08-12 (1.7.40)
+
+### "Mein Konto" nutzt jetzt dasselbe Raster wie der Rest der App
+
+**Anlass:** Zwei Vollbild-Screenshots des Nutzers zum Vergleich. In 1.7.39
+hatte ich zwar die Kopfzeilen-MASSE angeglichen (Hoehe, Logo, Schriftgroesse),
+aber nicht das RASTER: die gesamte Flaeche inklusive Kopfzeile hing weiterhin
+in einem auf 900px zentrierten Block. Dadurch rutschte das Logo in die
+Bildmitte statt an den linken Rand, und die durchgehende Trennlinie unter der
+Kopfzeile fehlte ganz.
+
+**Umbau:** Die Kopfzeile ist jetzt ein eigener, fensterbreiter Balken
+(`.ma-hdr-bar`) mit Trennlinie und weichgezeichnetem Hintergrund - dieselbe
+Bauart wie `.hdr` im App-Shell; zusaetzlich `position:sticky`, sie bleibt
+beim Scrollen also stehen. Kopf- und Inhaltsbereich verwenden dieselben
+Container-Masse wie `.hdr-inner`/`.content` (max-width 1400 plus 14/28/40px
+Padding je Breakpoint). Damit beginnen Logo UND Bereichsliste automatisch auf
+derselben senkrechten Kante wie der Inhalt im Rechner - genau die vom Nutzer
+gewuenschte Ausrichtung.
+
+**Dabei gefunden:** Ohne reservierten Scrollbalken-Platz war die Flaeche bei
+kurzen Bereichen (Profil) 15px breiter als bei langen (Konto & Sicherheit) -
+Logo und Bereichsliste sprangen beim Bereichswechsel um 7px zur Seite.
+`scrollbar-gutter:stable` auf der Flaeche haelt den Platz konstant frei; das
+bringt die linke Kante zugleich mit dem App-Shell zur Deckung, dessen Seite
+dahinter ebenfalls einen Balken zeigt.
+
+**Inhaltsspalte gedeckelt (900px):** Ohne Deckel zoegen sich Zeilen wie
+"E-Mail ... adresse@... ändern" auf einem 1920er-Schirm ueber 1000px
+auseinander, Beschriftung und Wert haetten kaum noch zusammengehoert. Die
+Bereichsliste bleibt davon unberuehrt und sitzt weiter buendig unter dem Logo.
+
+**Verifiziert:** Live gemessen bei 1920px und 375px. Logo im Rechner und in
+"Mein Konto" auf demselben Pixel (1920px: beide 293; 375px: beide 14),
+Bereichsliste exakt unter dem Logo (293 bzw. 14), Trennlinie ueber die volle
+Breite, kein Versatz mehr beim Wechsel zwischen kurzem und langem Bereich
+(Profil und Konto & Sicherheit beide 293). "← Zurück" fuehrt korrekt in den
+Rechner. Testkonto danach aus der lokalen Datenbank entfernt. `npm test` 301
+Tests gruen, Lint ohne Fehler.
+
 ## 2026-08-12 (1.7.39)
 
 ### Uebergang in "Mein Konto" ohne Bruch + der zweite Scrollbalken wirklich weg

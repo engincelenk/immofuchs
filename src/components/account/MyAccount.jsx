@@ -121,7 +121,20 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
   return createPortal(
     <div
       role="presentation"
-      style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 1000, overflowY: "auto" }}
+      // scrollbar-gutter:stable haelt den Platz fuer den Scrollbalken immer
+      // frei. Ohne das ist die Flaeche bei kurzen Bereichen (Profil) 15px
+      // breiter als bei langen (Konto & Sicherheit) - Logo und Bereichsliste
+      // sprangen beim Bereichswechsel um 7px zur Seite. Zugleich stimmt die
+      // linke Kante damit mit dem App-Shell ueberein, dessen Seite hinter dem
+      // Overlay ebenfalls einen Balken zeigt.
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "var(--bg)",
+        zIndex: 1000,
+        overflowY: "scroll",
+        scrollbarGutter: "stable",
+      }}
     >
       <div
         ref={dialogRef}
@@ -129,8 +142,6 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
         aria-modal="true"
         aria-label={t.accountTitle}
         style={{
-          maxWidth: 900,
-          margin: "0 auto",
           minHeight: "100%",
           display: "flex",
           flexDirection: "column",
@@ -150,7 +161,15 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
             paddingTop mit safe-area-inset (Bugreport 06.08.): ohne das lag
             die Kopfzeile auf iOS unter der Statusleiste. */}
         <style>{`
-          .ma-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px;padding-top:env(safe-area-inset-top);box-sizing:content-box}
+          /* .ma-hdr-bar entspricht .hdr aus App.jsx: volle Fensterbreite,
+             durchgehende Trennlinie, gleicher Hintergrund mit Weichzeichner.
+             .ma-hdr und .ma-body wiederholen die Container-Masse von
+             .hdr-inner bzw. .content (max-width 1400 + 14/28/40px Padding je
+             Breakpoint) - dadurch beginnen Logo UND Bereichsliste automatisch
+             auf derselben senkrechten Kante wie der Inhalt im Rechner. */
+          .ma-hdr-bar{position:sticky;top:0;z-index:5;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);padding-top:env(safe-area-inset-top)}
+          .ma-hdr{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px}
+          .ma-body{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
           .ma-logo{width:38px;height:38px}
           .ma-wordmark{font-size:17px}
           .ma-brand{gap:8px}
@@ -159,9 +178,16 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
             .ma-wordmark{font-size:24px}
             .ma-brand{gap:14px}
           }
-          @media(min-width:700px){.ma-hdr{padding-left:28px;padding-right:28px}}
-          @media(min-width:1100px){.ma-hdr{padding-left:40px;padding-right:40px}}
+          @media(min-width:700px){
+            .ma-hdr{padding-left:28px;padding-right:28px}
+            .ma-body{padding:24px 28px 40px}
+          }
+          @media(min-width:1100px){
+            .ma-hdr{padding-left:40px;padding-right:40px}
+            .ma-body{padding:28px 40px 40px}
+          }
         `}</style>
+        <div className="ma-hdr-bar">
         <div className="ma-hdr">
           <div className="ma-brand" style={{ minWidth: 0, display: "flex", alignItems: "center" }}>
             <img
@@ -216,6 +242,7 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
             </button>
           </div>
         </div>
+        </div>
         {/* Nutzer-Screenshot 2026-08-12: Auf dem Handy belegte der ☰-Knopf
             eine komplette eigene Zeile, in der sonst nichts stand (seit die
             Bereichsbezeichnung daraus entfernt wurde) - viel Weiss fuer einen
@@ -244,12 +271,12 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
         )}
 
         <div
+          className="ma-body"
           style={{
             display: "flex",
             flexDirection: isDesktop ? "row" : "column",
             alignItems: "stretch",
-            gap: isDesktop ? 20 : 0,
-            padding: isDesktop ? "8px 20px 40px" : "0 0 40px",
+            gap: isDesktop ? 24 : 0,
             flex: 1,
           }}
         >
@@ -270,7 +297,12 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
             </nav>
           ) : null}
 
-          <div style={{ flex: 1, minWidth: 0, padding: isDesktop ? "0" : "20px 20px 0" }}>
+          {/* Inhaltsspalte gedeckelt: Ohne Deckel zoegen sich Zeilen wie
+              "E-Mail ........ adresse@... ändern" auf einem 1920er-Schirm
+              ueber ueber 1000px auseinander - Beschriftung und Wert haetten
+              dann kaum noch erkennbar zusammengehoert. Die Bereichsliste
+              bleibt davon unberuehrt und sitzt weiter buendig unter dem Logo. */}
+          <div style={{ flex: 1, minWidth: 0, maxWidth: isDesktop ? 900 : "none" }}>
             <ActiveSection
               t={t}
               account={account}
