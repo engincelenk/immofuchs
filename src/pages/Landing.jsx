@@ -274,9 +274,15 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 unsichtbar/unerreichbar. Fix: Sprachwahl zieht bei ≤880px in
                 die Mobile-Schublade um (siehe unten), hier nur noch auf
                 breiteren Screens sichtbar (.lp-langsel-top-Regel unten). */}
-            <div className="lp-langsel-top">
-              <LangSel lang={lang} setLang={setLang} />
-            </div>
+            {/* Nutzer-Vorgabe 2026-08-12: fuer Eingeloggte liegt die
+                Sprachwahl ausschliesslich in "Einstellungen". Nicht
+                eingeloggte Besucher behalten sie hier - fuer die gibt es
+                diesen Bereich nicht. */}
+            {!account?.isLoggedIn && (
+              <div className="lp-langsel-top">
+                <LangSel lang={lang} setLang={setLang} />
+              </div>
+            )}
             {/* REQ-LP-01 (Nutzer-Konzept 2026-08-11): "Jetzt rechnen" nur fuer
                 eingeloggte Nutzer sichtbar - nicht eingeloggte sehen bereits
                 den "Anmelden"-Knopf oben, ein zweiter waere redundant. Die
@@ -415,10 +421,15 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               )}
               {/* Sprachwahl zieht bei ≤880px hierher um, siehe Kommentar oben
                   bei .lp-langsel-top - Platz in der Kopfzeile reichte dort
-                  nicht fuer Logo + Konto-Knopf + Sprachwahl + Menü-Button. */}
-              <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--cb)" }}>
-                <LangSel lang={lang} setLang={setLang} />
-              </div>
+                  nicht fuer Logo + Konto-Knopf + Sprachwahl + Menü-Button.
+                  Wie oben nur fuer nicht eingeloggte Besucher (Nutzer-Vorgabe
+                  2026-08-12): eingeloggt liegt die Sprachwahl allein in
+                  "Einstellungen". */}
+              {!account?.isLoggedIn && (
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--cb)" }}>
+                  <LangSel lang={lang} setLang={setLang} />
+                </div>
+              )}
             </div>
           </div>
         </>

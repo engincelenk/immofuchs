@@ -1,3 +1,33 @@
+## 2026-08-12 (1.7.38)
+
+### Sprachwahl aus dem Kopf entfernt, sobald man eingeloggt ist
+
+**Anlass:** Nutzer-Screenshot des App-Kopfs — "Sprachauswahl hier ist nicht
+mehr notwendig. Das ist nun unter Einstellungen." Auf Rueckfrage bestaetigt:
+auf der Landingpage soll sie fuer nicht eingeloggte Besucher bleiben.
+Greift einen der offenen Punkte aus dem UX-Audit auf (die Sprachwahl
+existierte auf vier Flaechen gleichzeitig).
+
+Der Umschalter verschwindet fuer eingeloggte Nutzer aus dem App-Kopf
+(`App.jsx`), aus dem Landing-Kopf und aus dem mobilen Landing-Seitenmenue
+(`Landing.jsx`). Fuer sie liegt die Sprache jetzt ausschliesslich in
+"Einstellungen".
+
+**Bewusste Abweichung von der woertlichen Vorgabe:** Fuer NICHT eingeloggte
+Nutzer bleibt die Sprachwahl auch im App-Kopf stehen, nicht nur auf der
+Landingpage. Grund: Ein ausgeloggter Nutzer kann sehr wohl im App-Shell
+landen (Klick auf eine Rechner-Kachel auf der Landingpage) und sieht dort die
+Sperrwand "Anmeldung erforderlich" — ohne den Umschalter haette er dort gar
+keinen Weg mehr zur Sprachwahl, da "Einstellungen" ein Konto voraussetzt.
+Falls das nicht gewuenscht ist, ist es eine Zeile.
+
+**Verifiziert:** Alle vier Zustaende live bei 375px durchgespielt.
+Ausgeloggt: Sprachwahl im Landing-Seitenmenue vorhanden, im App-Kopf
+vorhanden (neben "Anmelden", rechte Kante 361 von 375px). Eingeloggt:
+Landing-Seitenmenue zeigt nur noch Rechner / So funktioniert's / Bauzinsen /
+Mein Konto, der App-Kopf nur noch das Avatar-Symbol. `npm test` 301 Tests
+gruen, Lint ohne Fehler.
+
 ## 2026-08-12 (1.7.37)
 
 ### UX-Audit II: Begriffe getrennt, Upgrade-Pfad repariert, Konto-Kopf entschlackt

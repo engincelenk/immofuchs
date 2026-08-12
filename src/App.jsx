@@ -16,6 +16,7 @@ import { useSavedObjects, Merkliste } from "./components/shell/Merkliste.jsx";
 import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
 import { ProHeaderButton } from "./components/account/ProHeaderButton.jsx";
 import { CalculatorTrialGate } from "./components/account/CalculatorTrialGate.jsx";
+import { useAccountCtx } from "./context/AccountContext.jsx";
 import { hideSplashScreen, tabSwitchHaptic } from "./utils/nativeInit.js";
 
 const IC = {
@@ -260,6 +261,9 @@ export default function App() {
   // Liste aller Rechner, erreichbar ueber den festen Knopf rechts an der
   // Tab-Leiste (Nutzer-Feedback 2026-08-12).
   const [tabMenuOpen, setTabMenuOpen] = useState(false);
+  // Nur fuer die Sichtbarkeit der Sprachwahl im Kopf - AccountProvider liegt
+  // ueber App() (siehe main.jsx), der Login-Status ist hier also verfuegbar.
+  const account = useAccountCtx();
   const [zinsen, setZinsen] = useState(null); // holds the raw zinsen.json config (with live BBK)
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -627,9 +631,15 @@ export default function App() {
                 <span style={{ color: "var(--ct)", fontWeight: 700 }}>.info</span>
               </div>
             </button>
+            {/* Nutzer-Vorgabe 2026-08-12: Die Sprachwahl gehoert fuer
+                eingeloggte Nutzer ausschliesslich in "Einstellungen" - im Kopf
+                war sie die dritte Kopie desselben Umschalters. Fuer NICHT
+                eingeloggte bleibt sie hier stehen: fuer die gibt es keinen
+                Bereich "Einstellungen", sie haetten sonst gar keinen Weg mehr
+                zur Sprachwahl, sobald sie einen Rechner geoeffnet haben. */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
               <ProHeaderButton />
-              <LangSel lang={lang} setLang={setLang} />
+              {!account?.isLoggedIn && <LangSel lang={lang} setLang={setLang} />}
             </div>
           </div>
         </div>
