@@ -6,8 +6,6 @@ import { ACCOUNT_T } from "../../i18n/account.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
-import { BrandIcon } from "../ui/BrandIcon.jsx";
-import { PlanChip } from "./PlanChip.jsx";
 import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
 import { visibleSections } from "./accountSections.js";
 import { ProfilSection } from "./sections/ProfilSection.jsx";
@@ -68,17 +66,24 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const avatarRef = useRef(null);
 
-  // Nutzer-Feedback 2026-08-12: In "Mein Konto" waren ZWEI Scrollbalken
-  // sichtbar - der dieser Flaeche (overflowY:auto auf dem fixed Overlay) und
-  // zusaetzlich der der Seite dahinter, die weiterhin scrollbar blieb. Solange
-  // dieser Bereich offen ist, wird der Seiten-Scroll deshalb gesperrt; es
-  // bleibt genau ein Balken uebrig, der wie der gewohnte Browser-Scrollbalken
-  // am rechten Rand sitzt.
+  // Zwei Scrollbalken (Nutzer-Screenshots 12.08., zweiter Anlauf): Der erste
+  // Versuch sperrte nur <body> - das reicht hier nicht. html und body tragen
+  // global `overflow-x:hidden` (index.html/App.jsx), und sobald EINE Achse
+  // nicht `visible` ist, rechnet CSS die andere auf `auto` hoch. Damit ist
+  // <html> selbst ein Scroll-Container, und weil sein overflow nicht
+  // `visible` ist, wird die Angabe von <body> gar nicht mehr auf den Viewport
+  // uebernommen. Der Seiten-Scrollbalken gehoerte also die ganze Zeit zu
+  // <html> und blieb neben dem des Overlays stehen. Jetzt werden beide
+  // gesperrt.
   useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
+    const html = document.documentElement;
+    const prevHtml = html.style.overflow;
+    const prevBody = document.body.style.overflow;
+    html.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = prevOverflow;
+      html.style.overflow = prevHtml;
+      document.body.style.overflow = prevBody;
     };
   }, []);
 
@@ -132,61 +137,82 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
           fontFamily: "'DM Sans', sans-serif",
         }}
       >
-        {/* paddingTop mit safe-area-inset (Bugreport 06.08.): ohne das lag die
-            Kopfzeile auf iOS unter der Statusleiste - Uhrzeit und Titel
-            ueberlappten sich. Gleiche Behandlung wie .hdr in App.jsx. */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            padding: "14px 20px",
-            paddingTop: "calc(14px + env(safe-area-inset-top))",
-          }}
-        >
-          {/* Kopfzeile nach Nutzer-Entwurf 2026-08-12 (Bild 2): links Logo mit
-              Wortmarke und Tarif-Chip, rechts der Avatar. "Abmelden" steckt
-              seither IM Avatar-Menue - damit ist es auch nicht mehr Nachbar
-              des ✕, was am 12.08. als zu dicht gemeldet worden war. Die
-              Begruessungszeile entfaellt: der Name steht jetzt im Avatar und
-              im Menue darunter, eine dritte Nennung waere Wiederholung. */}
-          <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <BrandIcon size={26} />
-            <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.3, color: "var(--ct)" }}>
+        {/* Nutzer-Feedback 2026-08-12: Der Wechsel vom Rechner hierher wirkte
+            wie ein Bruch - "alles wird auf einmal kleiner". Ursache war eine
+            eigene, deutlich kompaktere Kopfzeile (Logo 26px/Schrift 15px)
+            gegenueber der des App-Shells (54px/24px, Hoehe 78px). Diese
+            Kopfzeile uebernimmt deshalb exakt dessen Masse inklusive
+            Umbruchpunkt bei 480px, sodass beim Oeffnen optisch nur der
+            Inhalt darunter wechselt. Eigene Klassennamen statt .hdr-*, weil
+            der Style-Block des App-Shells auf der Landingpage gar nicht
+            gerendert wird - von dort laesst sich "Mein Konto" ebenfalls
+            oeffnen.
+            paddingTop mit safe-area-inset (Bugreport 06.08.): ohne das lag
+            die Kopfzeile auf iOS unter der Statusleiste. */}
+        <style>{`
+          .ma-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px;padding-top:env(safe-area-inset-top);box-sizing:content-box}
+          .ma-logo{width:38px;height:38px}
+          .ma-wordmark{font-size:17px}
+          .ma-brand{gap:8px}
+          @media(min-width:480px){
+            .ma-logo{width:54px;height:54px}
+            .ma-wordmark{font-size:24px}
+            .ma-brand{gap:14px}
+          }
+          @media(min-width:700px){.ma-hdr{padding-left:28px;padding-right:28px}}
+          @media(min-width:1100px){.ma-hdr{padding-left:40px;padding-right:40px}}
+        `}</style>
+        <div className="ma-hdr">
+          <div className="ma-brand" style={{ minWidth: 0, display: "flex", alignItems: "center" }}>
+            <img
+              src="/icon-192.png"
+              alt="Immofuchs"
+              className="ma-logo"
+              style={{ objectFit: "contain", flexShrink: 0 }}
+            />
+            <span
+              className="ma-wordmark"
+              style={{ fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: "var(--ct)", whiteSpace: "nowrap" }}
+            >
               immo<span style={{ color: "var(--ca)" }}>fuchs</span>
               <span style={{ fontWeight: 700 }}>.info</span>
             </span>
-            {/* Mit Restlaufzeit der Testphase (anders als in der schmalen
-                App-Kopfzeile) - beantwortet "wann wird abgebucht?" sofort,
-                statt erst im Bereich Abonnement. */}
-            <PlanChip t={t} me={account.me} withTrialDays />
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            {/* Tarif-Chip sitzt jetzt IM Avatar statt neben dem Logo
+                (Nutzer-Hinweis 12.08.): im App-Kopf stand er bereits dort,
+                nebeneinander wirkten zwei Platzierungen fuer dieselbe
+                Information uneinheitlich. Ohne Resttage - die stehen im
+                Bereich "Abonnement", im Kopf waere die Zeile zu lang. */}
             <AccountAvatarButton
               t={t}
               me={account.me}
               open={menuOpen}
               onToggle={() => setMenuOpen((o) => !o)}
               innerRef={avatarRef}
+              showChip
             />
-            {/* Im Entwurf gibt es keinen sichtbaren Rueckweg zu den Rechnern -
-                ohne das ✕ waere diese Flaeche eine Sackgasse, deshalb bleibt
-                es (mit dem Nutzer am 12.08. so abgestimmt). */}
+            {/* Nutzer-Vorgabe 2026-08-12: benannter Zurueck-Weg statt eines
+                blossen ✕ - ein Kreuz neben dem Avatar liess offen, was es
+                schliesst (Menue? Konto? Anwendung?). */}
             <button
               onClick={onClose}
-              aria-label={t.close}
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
                 background: "none",
                 border: "none",
-                fontSize: 20,
+                fontSize: 13,
+                fontWeight: 600,
                 cursor: "pointer",
-                color: "var(--ch)",
-                lineHeight: 1,
-                padding: "0 0 0 4px",
+                color: "var(--ca-dk)",
+                fontFamily: "inherit",
+                padding: "6px 2px",
+                whiteSpace: "nowrap",
               }}
             >
-              ✕
+              <span aria-hidden="true">←</span> {t.wizardBack}
             </button>
           </div>
         </div>

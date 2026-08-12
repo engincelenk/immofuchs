@@ -1,3 +1,54 @@
+## 2026-08-12 (1.7.39)
+
+### Uebergang in "Mein Konto" ohne Bruch + der zweite Scrollbalken wirklich weg
+
+**Anlass:** Nutzer-Screenshots mit fuenf Punkten.
+
+**1. Der zweite Scrollbalken — meine erste Diagnose war falsch.** In 1.7.35
+hatte ich `body{overflow:hidden}` gesetzt und danach genau einen
+Scrollcontainer gemessen — der Nutzer sah trotzdem weiter zwei Balken. Der
+Fehler lag in der Messung: Ich hatte auf `scrollHeight > clientHeight`
+gefiltert, aber nicht geprueft, wer den Viewport-Scrollbalken ueberhaupt
+stellt. Tatsaechlich tragen html und body global `overflow-x:hidden`
+(index.html Z.131, App.jsx). Sobald EINE Achse nicht `visible` ist, rechnet
+CSS die andere auf `auto` hoch — `<html>` ist damit selbst ein
+Scroll-Container, und weil sein overflow nicht mehr `visible` ist, wird die
+Angabe von `<body>` gar nicht mehr auf den Viewport uebernommen. Mein
+body-Lock lief also ins Leere; der Seitenbalken gehoerte die ganze Zeit zu
+`<html>`. Jetzt werden beide gesperrt (`MyAccount.jsx`, `CheckoutWizard.jsx`).
+Live nachgemessen: vorher `htmlOverflowY:"auto"` bei 1024px hohem Inhalt
+dahinter, jetzt beide `hidden` und genau ein sichtbarer Balken.
+
+**2. Kein Groessensprung mehr beim Oeffnen ("alles wird auf einmal
+kleiner"):** "Mein Konto" hatte eine eigene, deutlich kompaktere Kopfzeile
+(Logo 26px, Schrift 15px) gegenueber dem App-Shell (54px/24px, Hoehe 78px).
+Die Kopfzeile uebernimmt jetzt exakt dessen Masse inklusive Umbruchpunkt bei
+480px — beim Oeffnen wechselt optisch nur noch der Inhalt darunter. Eigene
+Klassen (`.ma-hdr/.ma-logo/.ma-wordmark`) statt `.hdr-*`, weil der
+Style-Block des App-Shells auf der Landingpage nicht gerendert wird, "Mein
+Konto" sich von dort aber ebenfalls oeffnen laesst. Gemessen: App-Shell und
+Kontobereich beide 78px Hoehe, Logo 54px (Desktop) bzw. 38px (Mobil),
+Wortmarke 24px bzw. 17px.
+
+**3. Benannter Zurueck-Weg statt ✕:** Ein Kreuz direkt neben dem Avatar liess
+offen, was es schliesst — Menue, Konto oder Anwendung. Jetzt "← Zurück".
+
+**4. Tarif-Chip nur noch an einer Stelle:** Er stand im Kontobereich neben
+dem Logo, im App-Kopf dagegen im Avatar. Jetzt einheitlich im Avatar. Die
+Restlaufzeit der Testphase entfaellt dort (zu lang fuer die Kopfzeile) — sie
+steht weiterhin im Bereich "Abonnement".
+
+**5. Doppelte Trennlinie im Kurzmenue:** In der Kurzfassung (nur Name/E-Mail
++ Abmelden) lagen zwei Linien dicht uebereinander. Die zweite erscheint jetzt
+nur noch, wenn darueber tatsaechlich eine Bereichsliste steht.
+
+**Verifiziert:** Live bei 1280px und 375px mit Testkonto. Genau ein
+Scrollbalken bei geoeffnetem Kontobereich (html und body beide `hidden`),
+Kopfzeilen-Masse in beiden Ansichten identisch, "← Zurück" statt ✕,
+Chip nur noch im Avatar (nicht mehr neben dem Logo), Kurzmenue mit einer
+statt zwei Trennlinien, rechte Kante bei 361 von 375px. Testkonto danach aus
+der lokalen Datenbank entfernt. `npm test` 301 Tests gruen, Lint ohne Fehler.
+
 ## 2026-08-12 (1.7.38)
 
 ### Sprachwahl aus dem Kopf entfernt, sobald man eingeloggt ist

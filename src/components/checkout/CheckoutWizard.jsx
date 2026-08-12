@@ -130,15 +130,20 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
 
   useFocusTrap(dialogRef, onClose, [stepIndex, passwordReset]);
 
-  // Seiten-Scroll sperren, solange der Wizard offen ist (Nutzer-Feedback
-  // 2026-08-12 zum selben Effekt in "Mein Konto"): sonst liegen zwei
-  // Scrollbalken nebeneinander - der dieser Flaeche und der der Seite
-  // dahinter, die ohne Sperre weiter scrollbar bleibt.
+  // Seiten-Scroll sperren, solange der Wizard offen ist. html UND body, nicht
+  // nur body: durch das globale `overflow-x:hidden` rechnet CSS die
+  // Y-Achse von <html> auf `auto` hoch, wodurch <html> der eigentliche
+  // Seiten-Scroller ist und die body-Angabe nicht mehr auf den Viewport
+  // durchschlaegt (ausfuehrlich kommentiert in MyAccount.jsx).
   useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
+    const html = document.documentElement;
+    const prevHtml = html.style.overflow;
+    const prevBody = document.body.style.overflow;
+    html.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = prevOverflow;
+      html.style.overflow = prevHtml;
+      document.body.style.overflow = prevBody;
     };
   }, []);
 

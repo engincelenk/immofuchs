@@ -141,7 +141,16 @@ export function AccountMenu({ t, me, variant = "full", anchorRef, onSelect, onLo
           </span>
         </button>
       ))}
-      <div style={{ borderTop: "1px solid var(--cb)", marginTop: 6, paddingTop: 6 }}>{logoutRow}</div>
+      {/* Nutzer-Hinweis 2026-08-12: In der Kurzfassung (nur Identitaet +
+          Abmelden) lagen hier zwei Trennlinien dicht uebereinander - die
+          unter dem Namensblock und diese. Bei nur zwei Bloecken genuegt eine;
+          die zweite Linie kam nur noch dann dazu, wenn darueber wirklich
+          eine Liste von Bereichen steht. */}
+      {sections.length > 0 ? (
+        <div style={{ borderTop: "1px solid var(--cb)", marginTop: 6, paddingTop: 6 }}>{logoutRow}</div>
+      ) : (
+        <div style={{ paddingTop: 2 }}>{logoutRow}</div>
+      )}
     </>
   );
 
