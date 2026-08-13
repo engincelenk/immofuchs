@@ -1,3 +1,275 @@
+## 2026-08-13 (1.8.4)
+
+### Admin Panel MVP — Phase 5: Dashboard-Aktivitaeten und Audit-Filter
+
+Letzte der fuenf Phasen. Damit sind alle 20 MUST-HAVEs des Auftrags
+umgesetzt.
+
+**Dashboard:** neue Kachel "Neue Nutzer (Monat)" - direkt aus
+users.created_at ableitbar. "Umsatz aktueller Monat" (Auftrag Abschnitt 3,
+"sofern die Daten bereits verfuegbar sind") fehlt bewusst: tatsaechliche
+Zahlungen liegen bei Paddle, in D1 stehen nur Abo-Zustaende. Eine
+Hochrechnung aus Planpreisen waere eine erfundene Zahl - MRR ist als
+Momentaufnahme aus laufenden Abos vertretbar, ein Monatsumsatz waere es
+nicht.
+
+**Letzte Aktivitaeten:** Read-Only-Feed aus vier D1-Quellen (Registrierungen,
+Abo-Abschluesse, Kuendigungen, Admin-Aktionen), zusammengefuehrt und nach
+Zeit sortiert. Bewusst KEINE eigene Ereignistabelle: die vier Quellen tragen
+ihren Zeitstempel bereits, eine zusaetzliche Tabelle waere eine zweite
+Wahrheit, die beim Schreiben vergessen werden kann.
+
+Zwei vom Auftrag genannte Ereignisarten fehlen, mit Begruendung im Code und
+als Hinweis unter der Ueberschrift:
+- "Gutschein eingeloest": passiert bei Paddle, D1 speichert dazu nichts.
+- reine "Login"-Ereignisse: login_attempts wird nach 24 Stunden vom Cron
+  geleert (Brute-Force-Schutz, kein Verlauf) - ein Feed daraus waere je nach
+  Tageszeit mal voll und mal leer. users.last_login_at zeigt nur den jeweils
+  letzten Login und wuerde denselben Nutzer nie zweimal zeigen. Beides waere
+  irrefuehrender als die Auslassung.
+
+Kennzahlen und Feed laden unabhaengig voneinander: faellt eines aus, steht
+das andere trotzdem.
+
+**Audit-Log:** Filter fuer Zeitraum, Admin, Aktion und betroffenes Objekt
+(die serverseitigen Filter gab es seit Phase 1, jetzt haben sie
+Bedienelemente). Die Admin-Auswahl listet nur Konten, die wirklich schon eine
+Aktion protokolliert haben. Die Beschriftungstabelle kennt jetzt alle 14
+Aktionen statt der urspruenglichen 5 - unbekannte Schluessel erscheinen als
+Rohwert statt unbeschriftet zu verschwinden, damit eine kuenftig ergaenzte
+Aktion auffaellt. Der Hinweistext sagt jetzt ausdruecklich, dass der Verlauf
+unveraenderlich ist (Auftrag Abschnitt 10) - es gibt dafuer auch keine
+schreibende Route.
+
+**Verifiziert:** Worker `tsc --noEmit` sauber, Worker-Tests 79 gruen,
+Frontend-Tests 249 gruen, Lint 0 Fehler, Build erfolgreich.
+
+## 2026-08-13 (1.8.3)
+
+### Admin Panel MVP — Phase 4: Gutscheine ausgebaut
+
+**Zuerst geprueft, was Paddle ueberhaupt kann** (offizielle API-Referenz,
+2026-08-13): zwei Felder aus dem Auftrag Abschnitt 9 gibt es dort NICHT und
+sie fehlen deshalb bewusst, statt eine Scheinfunktion zu bauen:
+- **Startdatum**: Paddle kennt nur `expires_at`. Ein Gutschein gilt ab dem
+  Anlegen; wer spaeter starten will, legt ihn spaeter an.
+- **"pro Kunde nur einmal"**: `usage_limit` ist laut Referenz ausdruecklich
+  ein GESAMT-Limit, kein Limit je Kunde.
+Beides steht als Hinweis ueber der Gutschein-Liste, damit es beim Anlegen
+nicht stillschweigend anders erwartet wird.
+
+**Neu umgesetzt:** Ablaufdatum ("gueltig bis") beim Anlegen und Bearbeiten,
+Bearbeiten-Dialog (Beschreibung, Rabattwert, Ablaufdatum, Nutzungslimit),
+Duplizieren, Code kopieren, Status-Filter (Aktiv/Inaktiv/Abgelaufen) und
+Mehrfach-Erzeugung von 10/50/100 Codes.
+
+**Code und Rabattart bleiben unveraenderlich**, obwohl Paddle beides per
+PATCH zuliesse: ein bereits verteilter Gutschein wuerde sonst still zu einem
+anderen. Dafuer gibt es "Duplizieren" - das fuellt das Anlegen-Formular vor,
+statt sofort anzulegen, damit vor dem Speichern noch etwas geaendert werden
+kann.
+
+**Mehrfach-Codes:** Der Code-Eingabewert dient dabei als Praefix, die
+eindeutigen Suffixe erzeugt der Worker aus einem Alphabet OHNE 0/O/1/I/L -
+diese Codes werden abgetippt und vorgelesen, und genau diese Zeichen werden
+dabei verwechselt. Deckel bei 100 pro Anfrage (jeder Code ist ein eigener
+Paddle-Aufruf). Bewusst nacheinander statt parallel, um nicht in
+Paddle-Ratelimits zu laufen. Scheitert einer mittendrin, bleiben die bereits
+erzeugten Codes bestehen - sie sind gueltige Gutscheine, ein Rueckbau waere
+schlimmer als ein Teilergebnis; die Meldung nennt dann beide Zahlen. EIN
+Audit-Eintrag fuer den ganzen Vorgang statt 100 einzelner: der Log bildet die
+Aktion des Admins ab, nicht jede Paddle-Anfrage.
+
+**Sorgfalt beim Loeschen von Werten:** `usage_limit` und `expires_at` duerfen
+ausdruecklich auf null gesetzt werden ("unbegrenzt" / "laeuft nicht ab").
+Deshalb pruefen Route und Paddle-Schicht auf `undefined` statt auf Falsy -
+ein `if (patch.usageLimit)` haette das Entfernen eines Limits verschluckt.
+
+**Verifiziert:** Worker `tsc --noEmit` sauber, Worker-Tests 79 gruen (vorher
+71; neu: Ablaufdatum-Parsing inkl. der Unterscheidung null/undefined, und der
+Code-Generator - Praefix-Normalisierung, keine verwechselbaren Zeichen ueber
+200 Ziehungen, 500 Codes ohne Dublette), Frontend-Tests 249 gruen, Lint 0
+Fehler, Build erfolgreich.
+
+## 2026-08-13 (1.8.2)
+
+### Admin Panel MVP — Phase 3: Abos & Zahlungen
+
+Neuer Tab zwischen "Nutzer" und "Gutscheine". Rein lesend, per Auftrag
+(Abschnitt 8): es gibt in diesem Bereich bewusst keine einzige schreibende
+Route und keinen Speichern-Knopf - Betrag, Zahlungsstatus, Erstattung und
+Abrechnungszyklus gehoeren zu Paddle als Merchant of Record.
+
+**Backend:** `GET /admin/subscriptions` (Liste mit den vier Filtern des
+Auftrags) und `GET /admin/subscriptions/:id` (Detail), beide hinter der
+Permission `subscription.read` - Support darf also mitlesen. Der Filter
+"Gekuendigt" umfasst serverseitig sowohl 'canceled' als auch
+'cancel_scheduled': operativ ist das dieselbe Frage ("wer geht weg?"), auch
+wenn es zwei DB-Status sind.
+
+**Letzte Zahlung:** Die Liste leitet nur den Zahlungs-ZUSTAND aus dem
+gespiegelten Status ab (past_due -> fehlgeschlagen, trialing -> noch keine,
+sonst ok) - ein Paddle-Aufruf pro Zeile waeren bei 20 Zeilen 20 Anfragen.
+Das echte Zahlungsdatum samt Betrag holt erst die Detailansicht, mit genau
+einem Aufruf (`paddle/transactions.ts`, neu). Schlaegt der fehl - lokal ohne
+API-Key, oder Paddle nicht erreichbar - liefert der Helfer null statt zu
+werfen: die uebrigen Angaben stammen aus D1 und die Ansicht bleibt benutzbar.
+Bewusst nichts davon in D1 gespiegelt (Auftrag Abschnitt 1C).
+
+**"In Paddle oeffnen":** Die Paddle-Doku dokumentiert den Pfad zu einem
+einzelnen Abo im VERKAEUFER-Dashboard nicht (am 2026-08-13 in der offiziellen
+Referenz nachgesehen; belegt sind nur die Basis-Domains und der separate
+Kaeufer-Portal-Pfad). Der Link wird deshalb aus PADDLE_ENV gebaut, ist aber
+ueber die neue optionale Variable PADDLE_DASHBOARD_BASE_URL
+ueberschreibbar - laeuft er ins Leere, ist das eine Konfigurationsaenderung
+statt eines Deploys. Zusaetzlich hat jede ID im Detail einen
+"Kopieren"-Knopf, damit im Zweifel manuell im Dashboard gesucht werden kann.
+
+**Oberflaeche:** Tabelle mit Nutzer/Produkt/Plan/Status/Start/naechste
+Zahlung/letzte Zahlung, Status-Filter, Pagination; Klick oeffnet einen
+Detail-Drawer in derselben Bauart wie der Nutzer-Drawer aus Phase 2
+(kein eigener Fokus-Trap, Escape schliesst). Waehrend der Testphase zeigt
+die Spalte "naechste Zahlung" bewusst "Trial bis ..." - das Datum ist dann
+kein Abbuchungstermin, gleiche Unterscheidung wie im Kundenbereich.
+
+**Verifiziert:** Worker `tsc --noEmit` sauber, Worker-Tests 71 gruen (vorher
+66; neu: die vier Abo-Filter, Ablehnung roher DB-Status als Filter und ein
+Test gegen geerbte Object-Eigenschaften wie "constructor" als
+Filterschluessel), Frontend-Tests 249 gruen, Lint 0 Fehler, Build
+erfolgreich.
+
+**Zahlenkorrektur zu 1.8.0/1.8.1:** die dort genannten "315 Tests" waren
+Frontend UND Worker zusammen - `vitest run src` trifft auch `worker/src`.
+Sauber getrennt sind es 249 Frontend- und (damals) 66 Worker-Tests.
+
+## 2026-08-13 (1.8.1)
+
+### Admin Panel MVP — Phase 2: Nutzerverwaltung-Oberflaeche
+
+Bindet die in Phase 1 gebauten Routen an. Ab hier ist die Nutzerverwaltung
+Ende-zu-Ende bedienbar (UI -> API -> Validierung -> DB -> Audit -> UI).
+
+**Side Drawer statt Seitenwechsel** (Auftrag Abschnitt 5): Ein Klick auf eine
+Tabellenzeile oeffnet den Nutzer rechts in einem Drawer
+(`AdminUserDrawer.jsx`), die Liste bleibt dahinter stehen. Die fruehere
+`AdminUserDetailView.jsx` hat die Liste komplett ersetzt - beim Zurueckgehen
+gingen Seite, Filter und Scrollposition verloren; sie ist ersatzlos
+entfallen. Bewusst OHNE eigenen Fokus-Trap: "Mein Konto" haelt bereits einen
+aktiv, und zwei gleichzeitige Traps ueberschreiben sich beim Tabben - dieselbe
+Begruendung, aus der der Checkout-Wizard den Konto-Bereich ersetzt statt sich
+darueberzulegen. Stattdessen schliesst Escape, und der Schliessen-Knopf ist
+das erste Element.
+
+**Direkt editierbare Felder im Drawer** (Auftrag Abschnitt 6): Rolle als
+Dropdown (Customer / Admin/Support / Owner/Admin), Status als Dropdown
+(Aktiv / Gesperrt), Testuser und Beta als Schalter, Support-Notiz als
+Textfeld mit Verlauf (Notiz, Admin, Datum). Sperren und Loeschen bekommen
+eine Bestaetigung, Entsperren nicht - das ist folgenlos zurueckdrehbar.
+
+**Aktionen**: Passwort-Reset senden (Knopf ist deaktiviert bei Konten ohne
+Passwort - Google/Apple/Passkey haben keinen Reset-Weg, der Knopf waere ein
+Blindgaenger), alle Sitzungen beenden, und eine abgesetzte Danger Zone zum
+endgueltigen Loeschen.
+
+**Toasts** (Auftrag Abschnitt 12): Neuer, bewusst kleiner eigener Mechanismus
+(`AdminToast.jsx`) statt einer Bibliothek - gebraucht werden zwei Zustaende
+an einer Stelle. Kein optimistisches Anzeigen: gemeldet wird erst NACH der
+Antwort des Workers, wie in Abschnitt 11 vorgegeben. Nach jeder Aenderung
+wird das Detail neu geladen, damit die Anzeige den gespeicherten Stand zeigt
+und nicht den erhofften.
+
+**Nutzerliste** (Auftrag Abschnitt 4): Filter nach Rolle, Status und Abo,
+vier Sortierungen, neue Abo-Spalte, Testuser-/Beta-Marker als kleine Chips in
+der E-Mail-Spalte (zwei eigene, fast immer leere Spalten waeren verschwendete
+Tabellenbreite). Die Suche wird weiterhin abgeschickt, die Dropdowns greifen
+sofort - bei Auswahlfeldern gibt es kein Tippen, auf das man warten muesste.
+Jede Filteraenderung springt auf Seite 1 zurueck.
+
+**Support-Rolle sichtbar gemacht**: `accountSections.js` kannte bisher nur
+`roleRequired: "admin"`; daraus wurde `rolesAllowed: ["admin","support"]`,
+sonst haette die in Phase 1 eingefuehrte Rolle den Bereich gar nicht
+erreichen koennen. Was 'support' nicht darf (Rolle, Status, Schalter,
+Loeschen, Gutscheine anlegen/umschalten), blendet die UI aus - der Worker
+lehnt es zusaetzlich mit 403 ab. Beides, nicht nur eins: "UI-Verstecken
+alleine reicht nicht" (Auftrag Abschnitt 16).
+
+**Nebenbei aufgeraeumt:** Die Gutschein-Aufrufe in `adminApi.js` setzten als
+einzige keinen Content-Type - jetzt gehen alle schreibenden Aufrufe ueber
+einen gemeinsamen `post()`-Helfer, wo er nicht mehr vergessen werden kann.
+
+**Verifiziert:** `npm run build` erfolgreich, Lint 0 Fehler, 315 Tests gruen.
+
+**Noch offen:** Abos & Zahlungen (Phase 3), Gutschein-Ausbau (Phase 4),
+Dashboard-Aktivitaeten + Audit-Filter-UI (Phase 5). Die Audit-Filter sind
+serverseitig schon da, aber noch ohne Bedienelemente.
+
+## 2026-08-13 (1.8.0)
+
+### Admin Panel MVP — Phase 1: DB & Backend-Fundament
+
+Erste von fuenf Phasen (Auftrag "ImmoFuchs Admin Panel MVP", 2026-08-13).
+Reine Server-Arbeit: die Admin-Oberflaeche bleibt unveraendert lauffaehig,
+die neuen Routen sind noch nicht angebunden (das ist Phase 2).
+
+**Migration 0019 — Rollenmodell umgebaut:** 'test_user' war bisher eine
+ROLLE, der Auftrag verlangt aber drei Rollen (Customer / Admin-Support /
+Owner-Admin) UND einen davon unabhaengigen Testuser-Schalter. Beides ging
+nicht gleichzeitig, weil eine Zeile genau eine Rolle hat - ein Nutzer konnte
+also nie Kunde UND Testnutzer sein. Deshalb: `users.is_test_user` und
+`users.is_beta` als eigene Spalten, Bestandsdaten werden umgezogen
+(role='test_user' -> role='customer' + is_test_user=1), und die frei
+gewordene Rollen-Ebene bekommt stattdessen 'support'.
+Neue Tabelle `user_support_notes` (Auftrag Abschnitt 6: Notizen "mit Datum
+und Admin verknuepft" - das ist eine 1:n-Historie, kein einzelnes Feld).
+admin_email denormalisiert wie im Audit-Log, damit eine Notiz lesbar bleibt,
+wenn der schreibende Admin spaeter geloescht wird.
+
+**Rechte-Matrix (Auftrag Abschnitt 13):** ROLE_PERMISSIONS neu aufgeteilt -
+admin = Vollzugriff, support = ansehen + Support-Notizen, customer =
+Produktfunktionen. Neue Middleware `requirePermission(x)` mit den benannten
+Stufen `requireAdminRead` (admin+support) und `requireAdmin` (nur admin);
+kritische Aktionen tragen ihre eigene, engere Permission (user.delete,
+discount.manage). Dass sich 'support' rein additiv ergaenzen liess, ohne die
+Middleware umzubauen, ist genau der Gewinn der permission- statt
+rollennamen-basierten Pruefung aus Dok 8.2.
+
+**Neue Admin-Routen** (alle mit Audit-Eintrag, alle serverseitig geprueft):
+- POST /admin/users/:id/role — Rolle aendern, Selbst-Degradierung blockiert
+- POST /admin/users/:id/flags — Testuser/Beta einzeln umschaltbar (beide
+  optional, sonst wuerde ein Umschalten den anderen Wert ueberschreiben)
+- POST /admin/users/:id/notes — Support-Notiz, auch fuer Rolle 'support'
+- POST /admin/users/:id/password-reset — loest dieselbe Mail aus wie
+  "Passwort vergessen"; das Passwort wird nie angezeigt, der Admin sieht den
+  Token nicht. 400 statt stiller Erfolg bei Konten ohne Passwort
+  (OAuth/Passkey) - anders als im oeffentlichen Endpunkt ist hier keine
+  neutrale Antwort noetig, der Admin darf den Kontozustand ohnehin sehen.
+- POST /admin/users/:id/sessions/revoke — alle Sitzungen beenden
+- POST /admin/users/:id/delete — endgueltig loeschen ueber dieselbe Funktion
+  wie die Selbstloeschung (inkl. sofortiger Paddle-Kuendigung, sonst liefe
+  ein Abo ohne Konto weiter). Audit-Eintrag wird VOR dem Loeschen
+  geschrieben und ueberlebt es bewusst.
+
+**Erweitert:** GET /admin/users um Filter (Rolle/Status/Abo), Sortierung und
+Abo-Spalte per LEFT JOIN; GET /admin/users/:id um Flags, Support-Notizen,
+Paddle-IDs und `hasPassword`; GET /admin/audit-log um Filter (Zeitraum,
+Admin, Aktion, Nutzer) plus die Admin-Auswahlliste. Alle Filter- und
+Sortierwerte laufen gegen eine Whitelist und fallen sonst still auf
+"kein Filter" zurueck - ein manipulierter Query-String darf weder SQL
+beeinflussen noch einen Fehler ausloesen.
+
+**Audit-Log** protokolliert jetzt 10 statt 3 Aktionen (neu: Rolle, Testuser,
+Beta, Notiz, Passwort-Reset, Sessions beendet, Loeschung).
+
+**Verifiziert:** `npx tsc --noEmit` sauber, Worker-Tests 66 gruen (vorher
+52 - neu: Support-Rechte-Matrix als Negativ-Tests, Filter-/Sortier-Whitelist
+inkl. SQL-Injection-Versuchen), Projekt-Tests 315 gruen, Lint 0 Fehler.
+
+**Nicht in dieser Phase:** UI (Phase 2), Abos-Ansicht (Phase 3),
+Gutschein-Ausbau (Phase 4), Dashboard-Aktivitaeten + Audit-Filter-UI
+(Phase 5). "Anzahl Berechnungen"/"KI-Anfragen" (Auftrag Abschnitt 5) sind
+bewusst ausgelassen - es gibt dafuer keine Zaehler in der Datenbank, nur
+Einmal-Flags; ein Tracking dafuer waere ein eigener Auftrag.
+
 ## 2026-08-13 (1.7.43)
 
 ### Zwei Breiten-Stufen fuer die restlichen Konto-Unterbereiche

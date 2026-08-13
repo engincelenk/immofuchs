@@ -66,10 +66,19 @@ export async function listDiscounts(env: Env): Promise<PaddleDiscount[]> {
   return (data.data ?? []).map(mapDiscount);
 }
 
-export async function createDiscount(
-  env: Env,
-  input: { code: string; description: string; type: DiscountType; amount: string; usageLimit?: number | null },
-): Promise<PaddleDiscount> {
+export interface DiscountInput {
+  code: string;
+  description: string;
+  type: DiscountType;
+  amount: string;
+  usageLimit?: number | null;
+  // ISO-8601-Zeitstempel oder null. Paddle kennt NUR ein Ablaufdatum -
+  // ein Startdatum (Auftrag Abschnitt 9) gibt es in der API nicht, ein
+  // Gutschein gilt ab dem Anlegen (offizielle Referenz, 2026-08-13 geprueft).
+  expiresAt?: string | null;
+}
+
+export async function createDiscount(env: Env, input: DiscountInput): Promise<PaddleDiscount> {
   const body: Record<string, unknown> = {
     code: input.code,
     description: input.description,
@@ -79,10 +88,48 @@ export async function createDiscount(
     recur: false,
   };
   if (input.usageLimit) body.usage_limit = input.usageLimit;
+  if (input.expiresAt) body.expires_at = input.expiresAt;
   const result = await paddleFetch(env, "/discounts", { method: "POST", body });
   if (!result.ok) {
     console.error("paddle_create_discount_failed", result.status, JSON.stringify(result.data).slice(0, 300));
     throw new Error(`paddle_create_discount_failed_${result.status}`);
+  }
+  return mapDiscount((result.data as { data: RawDiscount }).data);
+}
+
+// Bearbeiten (Auftrag Abschnitt 9). Alle vier Felder sind laut Paddle-Referenz
+// per PATCH aenderbar (2026-08-13 geprueft). Bewusst NICHT aenderbar gemacht:
+// der Code selbst und der Rabatt-Typ - beide waeren zwar technisch moeglich,
+// wuerden aber einen bereits verteilten Gutschein still zu einem anderen
+// machen. Wer das braucht, legt einen neuen an (dafuer gibt es "Duplizieren").
+export interface DiscountPatch {
+  description?: string;
+  amount?: string;
+  usageLimit?: number | null;
+  expiresAt?: string | null;
+  status?: "active" | "archived";
+}
+
+export async function updateDiscount(
+  env: Env,
+  discountId: string,
+  patch: DiscountPatch,
+): Promise<PaddleDiscount> {
+  const body: Record<string, unknown> = {};
+  if (patch.description !== undefined) body.description = patch.description;
+  if (patch.amount !== undefined) body.amount = patch.amount;
+  if (patch.status !== undefined) body.status = patch.status;
+  // usageLimit und expiresAt duerfen ausdruecklich auf null gesetzt werden
+  // ("unbegrenzt" / "laeuft nicht ab"), deshalb hier die Pruefung auf
+  // undefined statt auf Falsy - `if (patch.usageLimit)` wuerde das Loeschen
+  // eines Limits verschlucken.
+  if (patch.usageLimit !== undefined) body.usage_limit = patch.usageLimit;
+  if (patch.expiresAt !== undefined) body.expires_at = patch.expiresAt;
+
+  const result = await paddleFetch(env, `/discounts/${discountId}`, { method: "PATCH", body });
+  if (!result.ok) {
+    console.error("paddle_update_discount_failed", result.status, JSON.stringify(result.data).slice(0, 300));
+    throw new Error(`paddle_update_discount_failed_${result.status}`);
   }
   return mapDiscount((result.data as { data: RawDiscount }).data);
 }
@@ -94,6 +141,20 @@ export async function setDiscountStatus(
 ): Promise<void> {
   const result = await paddleFetch(env, `/discounts/${discountId}`, { method: "PATCH", body: { status } });
   if (!result.ok) throw new Error(`paddle_update_discount_failed_${result.status}`);
+}
+
+// Mehrere Codes auf einmal (Auftrag Abschnitt 9, "Nice to have"). Ohne
+// 0/O/1/I/L: die Codes werden abgetippt oder vorgelesen, und genau diese
+// Zeichen werden dabei verwechselt.
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const CODE_SUFFIX_LENGTH = 6;
+
+export function generateDiscountCode(prefix: string): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(CODE_SUFFIX_LENGTH));
+  let suffix = "";
+  for (const byte of bytes) suffix += CODE_ALPHABET[byte % CODE_ALPHABET.length];
+  const clean = prefix.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return clean ? `${clean}-${suffix}` : suffix;
 }
 
 // Wird beim Checkout aufgerufen (routes/billing.ts): loest den vom Nutzer

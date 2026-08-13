@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { sectionIntroStyle, sectionTitleStyle } from "../accountStyles.js";
+import { AdminToastProvider } from "./admin/AdminToast.jsx";
 import { AdminDashboardView } from "./admin/AdminDashboardView.jsx";
 import { AdminUsersView } from "./admin/AdminUsersView.jsx";
+import { AdminSubscriptionsView } from "./admin/AdminSubscriptionsView.jsx";
 import { AdminAuditLogView } from "./admin/AdminAuditLogView.jsx";
 import { AdminDiscountsView } from "./admin/AdminDiscountsView.jsx";
 
@@ -15,19 +17,30 @@ import { AdminDiscountsView } from "./admin/AdminDiscountsView.jsx";
 const TABS = [
   { key: "dashboard", label: "Dashboard", Component: AdminDashboardView },
   { key: "users", label: "Nutzer", Component: AdminUsersView },
+  { key: "subscriptions", label: "Abos & Zahlungen", Component: AdminSubscriptionsView },
   { key: "discounts", label: "Gutscheine", Component: AdminDiscountsView },
   { key: "audit", label: "Sicherheit & Audit-Log", Component: AdminAuditLogView },
 ];
 
-export function AdminSection({ t }) {
+export function AdminSection({ t, account }) {
   const [activeKey, setActiveKey] = useState("dashboard");
   const active = TABS.find((tab) => tab.key === activeKey) || TABS[0];
   const ActiveTab = active.Component;
+  // Rolle des ANGEMELDETEN Admins (nicht die des betrachteten Nutzers) - die
+  // Unteransichten blenden damit aus, was 'support' laut Auftrag Abschnitt 13
+  // nicht darf. Der Worker lehnt es zusaetzlich mit 403 ab; die UI-Regel ist
+  // Bequemlichkeit, nicht der Schutz (Auftrag Abschnitt 16).
+  const currentUser = account?.me || null;
+  const isSupportOnly = currentUser?.role === "support";
 
   return (
-    <div>
+    <AdminToastProvider>
       <h2 style={sectionTitleStyle}>{t.navAdmin}</h2>
-      <p style={sectionIntroStyle}>Nutzerverwaltung, Kennzahlen und Audit-Log - nur für Administrator-Konten sichtbar.</p>
+      <p style={sectionIntroStyle}>
+        {isSupportOnly
+          ? "Nutzer, Kennzahlen und Audit-Log ansehen. Änderungen an Rollen, Status und Gutscheinen sind Owner/Admin vorbehalten."
+          : "Nutzerverwaltung, Kennzahlen und Audit-Log - nur für Administrator-Konten sichtbar."}
+      </p>
 
       <div
         style={{
@@ -63,7 +76,7 @@ export function AdminSection({ t }) {
         ))}
       </div>
 
-      <ActiveTab />
-    </div>
+      <ActiveTab currentUser={currentUser} />
+    </AdminToastProvider>
   );
 }

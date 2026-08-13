@@ -9,7 +9,12 @@ export const PAST_DUE_GRACE_MS = 3 * 24 * 60 * 60 * 1000; // 3 Tage Kulanzfrist 
 const ENTITLEMENT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 Minuten (4.9 Performance-Trade-off)
 const ENTITLEMENT_COOKIE = "if_entitlement";
 
-export type Role = "customer" | "admin" | "test_user";
+// Admin-MVP 2026-08-13: 'test_user' ist keine Rolle mehr, sondern ein
+// unabhaengiger Schalter (users.is_test_user, Migration 0019) - ein Nutzer
+// kann jetzt gleichzeitig Kunde und Testnutzer sein. Dafuer kommt auf der
+// Rollen-Ebene 'support' dazu (Auftrag Abschnitt 13: Admin/Support darf
+// lesen und Notizen schreiben, aber nichts Kritisches aendern).
+export type Role = "customer" | "support" | "admin";
 
 export function hasRole(user: Pick<UserRow, "role">, role: Role): boolean {
   if (role === "customer") return true; // jeder authentifizierte Nutzer ist mindestens 'customer'
@@ -17,41 +22,60 @@ export function hasRole(user: Pick<UserRow, "role">, role: Role): boolean {
 }
 
 // Access-Management-Fundament (Konzept-Dok "Neue Phase" Abschnitt 8.2,
-// 3-Rollen-Modell ADMIN/TEST_USER/CUSTOMER, verbindlich entschieden
-// 2026-08-08). Rollennamen bleiben in der DB klein geschrieben
-// ('customer'/'admin'/'test_user'), wie bisher schon fuer 'customer'/'admin'
-// in Migration 0001 - das Dokument beschreibt die Rollen konzeptionell in
-// Grossschreibung, keine erzwungene DB-Konvention. `role` ist eine reine
-// TEXT-Spalte ohne CHECK-Constraint (Migration 0001), daher ist fuer den
-// neuen Wert 'test_user' KEINE Schema-Migration noetig.
+// verbindlich entschieden 2026-08-08). Rollennamen bleiben in der DB klein
+// geschrieben ('customer'/'support'/'admin'), wie bisher schon fuer
+// 'customer'/'admin' in Migration 0001 - das Dokument beschreibt die Rollen
+// konzeptionell in Grossschreibung, keine erzwungene DB-Konvention. `role`
+// ist eine reine TEXT-Spalte ohne CHECK-Constraint (Migration 0001), daher
+// braucht auch 'support' keine Schema-Aenderung.
 //
-// Wichtig (Dok 7.1/8.2, technische Vorgabe des Auftraggebers): kuenftige
-// Rechtepruefungen im Code sollen auf diesen granularen Permission-Strings
-// basieren, NICHT auf direkten Rollennamen-Vergleichen (`if role === 'admin'`)
-// - macht eine spaetere Aufteilung in weitere Rollen (z. B. eigene SUPPORT-,
-// FINANCE-Rolle) additiv statt eines Rewrites. Diese Datei liefert das
-// Fundament (Typen + Zuordnung); tatsaechliche Admin-Routen, die
-// hasPermission() aufrufen, sind Teil von Paket 7 (Admin Panel) und noch
-// nicht Teil dieser Aenderung - es gibt aktuell nichts zu schuetzen.
+// Wichtig (Dok 7.1/8.2, technische Vorgabe des Auftraggebers): Rechte-
+// pruefungen im Code basieren auf diesen granularen Permission-Strings,
+// NICHT auf direkten Rollennamen-Vergleichen (`if role === 'admin'`) - macht
+// eine spaetere Aufteilung in weitere Rollen (z. B. eigene FINANCE-Rolle)
+// additiv statt eines Rewrites. Genau das hat sich beim Admin-MVP schon
+// ausgezahlt: 'support' liess sich rein additiv ergaenzen.
+//
+// 'test.access' entfaellt als Permission: Testnutzer ist seit Migration 0019
+// keine Rolle mehr, sondern der Schalter users.is_test_user - ein Merkmal
+// quer zu den Rollen, keine eigene Rechte-Ebene.
 export type Permission =
-  | "user.manage"
+  | "user.read" // Nutzer ansehen (Liste, Detail) - Support und Admin
+  | "user.manage" // Nutzer aendern (Rolle, Status, Schalter) - nur Admin
+  | "user.note" // Support-Notiz schreiben - Support und Admin
+  | "user.delete" // Nutzer endgueltig loeschen - nur Admin
+  | "subscription.read"
   | "subscription.manage"
   | "invoice.manage"
+  | "discount.read"
+  | "discount.manage"
   | "product.manage"
   | "security.manage"
-  | "test.access"
   | "calculator.use"
   | "ai.use"
   | "profile.manage"
   | "invoice.read";
 
-// 1:1 aus Dok 5.2 Punkt 9 uebernommen - bewusst keine Vererbung zwischen den
-// Rollen ergaenzt, die im Dokument nicht explizit steht (Projektregel: keine
-// Annahmen/Spekulationen). Falls ADMIN spaeter auch CUSTOMER-Rechte braucht,
-// ist das eine eigene, zu klaerende Entscheidung.
+// Auftrag Abschnitt 13: Owner/Admin hat Vollzugriff, Admin/Support darf
+// ansehen und Support-Notizen schreiben, aber keine kritischen Aenderungen
+// (keine Rollen, kein Sperren, kein Loeschen, keine Gutschein-Aenderung).
+// Bewusst weiterhin keine Vererbung zwischen den Rollen - jede Rolle listet
+// ihre Rechte vollstaendig auf, das macht die Matrix beim Lesen eindeutig.
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  admin: ["user.manage", "subscription.manage", "invoice.manage", "product.manage", "security.manage"],
-  test_user: ["test.access"],
+  admin: [
+    "user.read",
+    "user.manage",
+    "user.note",
+    "user.delete",
+    "subscription.read",
+    "subscription.manage",
+    "invoice.manage",
+    "discount.read",
+    "discount.manage",
+    "product.manage",
+    "security.manage",
+  ],
+  support: ["user.read", "user.note", "subscription.read", "discount.read"],
   customer: ["calculator.use", "ai.use", "profile.manage", "invoice.read"],
 };
 

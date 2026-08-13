@@ -84,16 +84,11 @@ describe("hasRole", () => {
   });
 });
 
-describe("hasPermission (Konzept-Dok 8.2, 3-Rollen-Modell)", () => {
+describe("hasPermission (Konzept-Dok 8.2, Rollenmodell customer/support/admin)", () => {
   it("admin hat nur die im Dok gelisteten Admin-Permissions, keine Customer-Permissions", () => {
     expect(hasPermission({ role: "admin" }, "user.manage")).toBe(true);
     expect(hasPermission({ role: "admin" }, "security.manage")).toBe(true);
     expect(hasPermission({ role: "admin" }, "calculator.use")).toBe(false);
-  });
-
-  it("test_user hat nur test.access", () => {
-    expect(hasPermission({ role: "test_user" }, "test.access")).toBe(true);
-    expect(hasPermission({ role: "test_user" }, "calculator.use")).toBe(false);
   });
 
   it("customer hat Produktfunktionen, keine Admin-Rechte", () => {
@@ -106,5 +101,45 @@ describe("hasPermission (Konzept-Dok 8.2, 3-Rollen-Modell)", () => {
 
   it("unbekannte/leere Rolle hat sicherheitshalber keine Permissions", () => {
     expect(hasPermission({ role: "unknown_role" }, "calculator.use")).toBe(false);
+  });
+});
+
+// Admin-MVP Abschnitt 13: der springende Punkt der Support-Rolle ist, was sie
+// NICHT darf - deshalb hier jede kritische Aktion einzeln als Negativ-Test.
+// "UI-Verstecken alleine reicht nicht": diese Matrix ist die serverseitige
+// Wahrheit, die requirePermission() in middleware.ts durchsetzt.
+describe("hasPermission — Support-Rolle (Admin-MVP, Auftrag Abschnitt 13)", () => {
+  it("support darf ansehen und Support-Notizen schreiben", () => {
+    expect(hasPermission({ role: "support" }, "user.read")).toBe(true);
+    expect(hasPermission({ role: "support" }, "user.note")).toBe(true);
+    expect(hasPermission({ role: "support" }, "subscription.read")).toBe(true);
+    expect(hasPermission({ role: "support" }, "discount.read")).toBe(true);
+  });
+
+  it("support darf NICHT aendern, loeschen oder Gutscheine verwalten", () => {
+    expect(hasPermission({ role: "support" }, "user.manage")).toBe(false);
+    expect(hasPermission({ role: "support" }, "user.delete")).toBe(false);
+    expect(hasPermission({ role: "support" }, "discount.manage")).toBe(false);
+    expect(hasPermission({ role: "support" }, "subscription.manage")).toBe(false);
+    expect(hasPermission({ role: "support" }, "security.manage")).toBe(false);
+  });
+
+  it("admin darf alles, was support darf, und zusaetzlich die kritischen Aktionen", () => {
+    expect(hasPermission({ role: "admin" }, "user.read")).toBe(true);
+    expect(hasPermission({ role: "admin" }, "user.note")).toBe(true);
+    expect(hasPermission({ role: "admin" }, "user.delete")).toBe(true);
+    expect(hasPermission({ role: "admin" }, "discount.manage")).toBe(true);
+  });
+
+  it("customer kommt an keine einzige Admin-Permission", () => {
+    expect(hasPermission({ role: "customer" }, "user.read")).toBe(false);
+    expect(hasPermission({ role: "customer" }, "user.note")).toBe(false);
+    expect(hasPermission({ role: "customer" }, "user.delete")).toBe(false);
+    expect(hasPermission({ role: "customer" }, "discount.read")).toBe(false);
+  });
+
+  it("'test_user' ist keine Rolle mehr (Migration 0019) und hat daher keine Rechte", () => {
+    expect(hasPermission({ role: "test_user" }, "user.read")).toBe(false);
+    expect(hasPermission({ role: "test_user" }, "calculator.use")).toBe(false);
   });
 });

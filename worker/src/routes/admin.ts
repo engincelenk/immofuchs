@@ -6,39 +6,139 @@
 // dieses Pakets, siehe Paket 6 "Admin Panel".
 import { Hono } from "hono";
 import type { Env } from "../types";
-import { requireAuth, requireAdmin, requireCsrfOrigin, type AuthVars } from "../middleware";
+import {
+  requireAuth,
+  requireAdmin,
+  requireAdminRead,
+  requirePermission,
+  requireCsrfOrigin,
+  type AuthVars,
+} from "../middleware";
+import type { AdminUsersFilter, AdminAuditLogFilter, AdminSubscriptionFilterKey } from "../db";
 import {
   getUserById,
   getActiveSubscription,
+  listSubscriptionsForAdmin,
+  getSubscriptionForAdmin,
+  isAdminSubscriptionFilter,
   listUsersForAdmin,
   setUserAccountStatus,
+  setUserRole,
+  setUserFlags,
+  addSupportNote,
+  listSupportNotes,
   deleteAllSessionsForUser,
   getAdminDashboardStats,
+  listAdminActivity,
   logAdminAction,
   listAdminAuditLog,
+  listAuditLogAdmins,
 } from "../db";
-import { listDiscounts, createDiscount, setDiscountStatus } from "../paddle/discounts";
+import { deleteAccountCompletely } from "../accountDeletion";
+import { requestPasswordReset } from "../auth/passwordAuth";
+import { ROLE_PERMISSIONS, type Role } from "../entitlement";
+import {
+  listDiscounts,
+  createDiscount,
+  updateDiscount,
+  setDiscountStatus,
+  generateDiscountCode,
+  type DiscountPatch,
+} from "../paddle/discounts";
+import { getTransactionSummary, paddleDashboardSubscriptionUrl } from "../paddle/transactions";
 
 const PAGE_SIZE = 20;
+
+// Genau die Rollen aus entitlement.ts - abgeleitet statt zweitkopiert, damit
+// eine kuenftige vierte Rolle nicht an dieser Stelle vergessen wird.
+const VALID_ROLES = Object.keys(ROLE_PERMISSIONS) as Role[];
+
+// Obergrenze fuer die Mehrfach-Erzeugung (Auftrag nennt 10/50/100). Jeder
+// Code ist ein eigener Paddle-Aufruf - ohne Deckel liesse sich der Worker
+// mit einer einzigen Anfrage minutenlang beschaeftigen.
+const MAX_BULK_DISCOUNTS = 100;
+
+// Datumsangaben aus der Oberflaeche kommen als "YYYY-MM-DD" (input[type=date]).
+// Paddle erwartet ISO-8601 mit Zeit. Ende des Tages in UTC, damit ein
+// Gutschein am angegebenen Tag noch gilt und nicht um 00:00 verfaellt.
+export function parseExpiryDate(value: unknown): string | null | undefined {
+  if (value === null) return null; // ausdruecklich "laeuft nicht ab"
+  if (typeof value !== "string" || !value.trim()) return undefined; // nicht mitgeschickt
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return undefined;
+  const ms = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59);
+  if (!Number.isFinite(ms)) return undefined;
+  return new Date(ms).toISOString();
+}
 
 // LIKE-Wildcards (%/_) im Nutzer-Suchbegriff sind sonst ungewollte Platzhalter
 // (z.B. wuerde die Suche nach "max_50" auch "maxX50" treffen) - deshalb hier
 // escaped, mit '\' als ESCAPE-Zeichen (siehe listUsersForAdmin in db.ts).
 // Der Backslash selbst muss zuerst escaped werden, sonst wuerde ein
 // nutzereingegebener Backslash das Escaping der nachfolgenden Zeichen stoeren.
-export function parseAdminUsersQuery(query: URLSearchParams): { search: string; page: number } {
+//
+// Alle Filter-/Sortierwerte werden gegen eine Whitelist geprueft und fallen
+// sonst auf "kein Filter" bzw. den Standard zurueck - ein manipulierter
+// Query-String darf weder SQL beeinflussen noch einen Fehler ausloesen.
+export function parseAdminUsersQuery(
+  query: URLSearchParams,
+): { filter: AdminUsersFilter; page: number } {
   const rawSearch = (query.get("q") || "").trim();
   const search = rawSearch.replace(/[\\%_]/g, (ch) => `\\${ch}`);
   const rawPage = parseInt(query.get("page") || "1", 10);
   const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
-  return { search, page };
+
+  const rawRole = query.get("role") || "";
+  const role = (VALID_ROLES as string[]).includes(rawRole) ? rawRole : null;
+
+  const rawStatus = query.get("status") || "";
+  const accountStatus = rawStatus === "ACTIVE" || rawStatus === "SUSPENDED" ? rawStatus : null;
+
+  const rawSub = query.get("subscription") || "";
+  const subscription = rawSub === "pro" || rawSub === "free" ? rawSub : null;
+
+  const rawSort = query.get("sort") || "";
+  const sort: AdminUsersFilter["sort"] =
+    rawSort === "created_asc" || rawSort === "last_login_desc" || rawSort === "email_asc"
+      ? rawSort
+      : "created_desc";
+
+  return { filter: { search, role, accountStatus, subscription, sort }, page };
+}
+
+// Zeitraum als Millisekunden-Zeitstempel (created_at ist in D1 ebenfalls ms).
+// Ungueltige Werte werden zu null, nicht zu NaN - NaN im Binding wuerde die
+// Query still leerlaufen lassen statt den Filter zu ignorieren.
+export function parseAdminAuditQuery(
+  query: URLSearchParams,
+): { filter: AdminAuditLogFilter; page: number } {
+  const rawPage = parseInt(query.get("page") || "1", 10);
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+  const num = (key: string): number | null => {
+    const parsed = parseInt(query.get(key) || "", 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const str = (key: string): string | null => {
+    const value = (query.get(key) || "").trim();
+    return value || null;
+  };
+  return {
+    filter: {
+      adminEmail: str("admin"),
+      action: str("action"),
+      targetId: str("target"),
+      from: num("from"),
+      to: num("to"),
+    },
+    page,
+  };
 }
 
 export const adminRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
 
-adminRoutes.get("/users", requireAuth, requireAdmin, async (c) => {
-  const { search, page } = parseAdminUsersQuery(new URL(c.req.url).searchParams);
-  const { users, total } = await listUsersForAdmin(c.env.DB, search, page, PAGE_SIZE);
+adminRoutes.get("/users", requireAuth, requireAdminRead, async (c) => {
+  const { filter, page } = parseAdminUsersQuery(new URL(c.req.url).searchParams);
+  const { users, total } = await listUsersForAdmin(c.env.DB, filter, page, PAGE_SIZE);
   return c.json({
     users: users.map((u) => ({
       id: u.id,
@@ -47,6 +147,9 @@ adminRoutes.get("/users", requireAuth, requireAdmin, async (c) => {
       accountStatus: u.account_status,
       createdAt: u.created_at,
       lastLoginAt: u.last_login_at,
+      isTestUser: Boolean(u.is_test_user),
+      isBeta: Boolean(u.is_beta),
+      subscription: u.sub_status ? { status: u.sub_status, plan: u.sub_plan } : null,
     })),
     total,
     page,
@@ -54,24 +157,246 @@ adminRoutes.get("/users", requireAuth, requireAdmin, async (c) => {
   });
 });
 
-adminRoutes.get("/users/:id", requireAuth, requireAdmin, async (c) => {
+adminRoutes.get("/users/:id", requireAuth, requireAdminRead, async (c) => {
   const id = c.req.param("id");
   const user = await getUserById(c.env.DB, id);
   if (!user) return c.json({ error: "not_found" }, 404);
-  const sub = await getActiveSubscription(c.env.DB, id);
+  const [sub, notes] = await Promise.all([
+    getActiveSubscription(c.env.DB, id),
+    listSupportNotes(c.env.DB, id),
+  ]);
   return c.json({
     id: user.id,
     email: user.email,
+    name: user.name,
     role: user.role,
     accountStatus: user.account_status,
     createdAt: user.created_at,
     lastLoginAt: user.last_login_at,
     emailVerified: Boolean(user.email_verified_at),
+    isTestUser: Boolean(user.is_test_user),
+    isBeta: Boolean(user.is_beta),
+    // Ohne password_hash gibt es keinen Reset-Weg (reines OAuth-/Passkey-
+    // Konto) - die UI soll den Knopf dann gar nicht erst anbieten, statt ihn
+    // ins Leere laufen zu lassen. Der Hash selbst wird NIE ausgeliefert.
+    hasPassword: Boolean(user.password_hash),
     subscription: sub
-      ? { plan: sub.plan, status: sub.status, currentPeriodEnd: sub.current_period_end }
+      ? {
+          plan: sub.plan,
+          status: sub.status,
+          currentPeriodEnd: sub.current_period_end,
+          firstPurchaseAt: sub.first_purchase_at,
+          cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+          paddleCustomerId: sub.paddle_customer_id,
+          paddleSubscriptionId: sub.paddle_subscription_id,
+        }
       : null,
+    supportNotes: notes.map((n) => ({
+      id: n.id,
+      note: n.note,
+      adminEmail: n.admin_email,
+      createdAt: n.created_at,
+    })),
   });
 });
+
+// Rolle aendern (Auftrag Abschnitt 6). Nur 'admin' (user.manage) - ein
+// Support-Konto darf sich sonst selbst zum Owner machen.
+adminRoutes.post("/users/:id/role", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json().catch(() => null);
+  const role = body && typeof body.role === "string" ? body.role : "";
+  if (!(VALID_ROLES as string[]).includes(role)) return c.json({ error: "invalid_role" }, 400);
+
+  const user = await getUserById(c.env.DB, id);
+  if (!user) return c.json({ error: "not_found" }, 404);
+
+  // Gleiche Logik wie beim Selbst-Sperren: ein Admin darf sich nicht selbst
+  // die Admin-Rechte nehmen, sonst sperrt ein Fehlklick den Zugang aus.
+  if (id === c.var.userId && role !== "admin") {
+    return c.json({ error: "cannot_demote_self" }, 400);
+  }
+
+  const from = user.role;
+  if (from === role) return c.json({ ok: true, role });
+  await setUserRole(c.env.DB, id, role);
+  await logAdminAction(c.env.DB, {
+    adminUserId: c.var.userId,
+    adminEmail: c.var.user.email,
+    action: "user.role_change",
+    targetType: "user",
+    targetId: id,
+    details: { from, to: role, targetEmail: user.email },
+  });
+  return c.json({ ok: true, role });
+});
+
+// Testuser-/Beta-Schalter (Auftrag Abschnitt 6). Beide optional, damit ein
+// Umschalten den jeweils anderen Wert nicht mit ueberschreibt.
+adminRoutes.post("/users/:id/flags", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json().catch(() => null);
+  const isTestUser = typeof body?.isTestUser === "boolean" ? body.isTestUser : undefined;
+  const isBeta = typeof body?.isBeta === "boolean" ? body.isBeta : undefined;
+  if (isTestUser === undefined && isBeta === undefined) return c.json({ error: "invalid_flags" }, 400);
+
+  const user = await getUserById(c.env.DB, id);
+  if (!user) return c.json({ error: "not_found" }, 404);
+
+  await setUserFlags(c.env.DB, id, { isTestUser, isBeta });
+  // Zwei getrennte Audit-Eintraege statt eines gemeinsamen: der Auftrag
+  // (Abschnitt 10) listet "Testuser geaendert" und "Beta-Zugriff geaendert"
+  // als eigene, einzeln filterbare Aktionen.
+  if (isTestUser !== undefined && Boolean(user.is_test_user) !== isTestUser) {
+    await logAdminAction(c.env.DB, {
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      action: "user.test_user_change",
+      targetType: "user",
+      targetId: id,
+      details: { to: isTestUser, targetEmail: user.email },
+    });
+  }
+  if (isBeta !== undefined && Boolean(user.is_beta) !== isBeta) {
+    await logAdminAction(c.env.DB, {
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      action: "user.beta_change",
+      targetType: "user",
+      targetId: id,
+      details: { to: isBeta, targetEmail: user.email },
+    });
+  }
+  return c.json({
+    ok: true,
+    isTestUser: isTestUser ?? Boolean(user.is_test_user),
+    isBeta: isBeta ?? Boolean(user.is_beta),
+  });
+});
+
+// Support-Notiz (Auftrag Abschnitt 6/7). Auch fuer die Rolle 'support' - das
+// ist deren Kernaufgabe, siehe Abschnitt 13.
+adminRoutes.post(
+  "/users/:id/notes",
+  requireAuth,
+  requirePermission("user.note"),
+  requireCsrfOrigin,
+  async (c) => {
+    const id = c.req.param("id");
+    const body = await c.req.json().catch(() => null);
+    const note = body && typeof body.note === "string" ? body.note.trim() : "";
+    if (!note || note.length > 2000) return c.json({ error: "invalid_note" }, 400);
+
+    const user = await getUserById(c.env.DB, id);
+    if (!user) return c.json({ error: "not_found" }, 404);
+
+    const row = await addSupportNote(c.env.DB, {
+      userId: id,
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      note,
+    });
+    await logAdminAction(c.env.DB, {
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      action: "user.note_add",
+      targetType: "user",
+      targetId: id,
+      details: { targetEmail: user.email },
+    });
+    return c.json({
+      note: { id: row.id, note: row.note, adminEmail: row.admin_email, createdAt: row.created_at },
+    });
+  },
+);
+
+// Passwort-Reset ausloesen (Auftrag Abschnitt 7). Verschickt exakt dieselbe
+// Mail wie "Passwort vergessen" im Login - das Passwort selbst wird nie
+// angezeigt und der Admin bekommt den Token nicht zu sehen.
+adminRoutes.post(
+  "/users/:id/password-reset",
+  requireAuth,
+  requireAdmin,
+  requireCsrfOrigin,
+  async (c) => {
+    const id = c.req.param("id");
+    const user = await getUserById(c.env.DB, id);
+    if (!user) return c.json({ error: "not_found" }, 404);
+    // Anders als im oeffentlichen Endpunkt ist hier KEINE neutrale Antwort
+    // noetig (der Admin darf den Kontozustand ohnehin sehen) - ein klarer
+    // Fehler ist hilfreicher als eine stille Erfolgsmeldung ohne Wirkung.
+    if (!user.password_hash) return c.json({ error: "no_password_account" }, 400);
+
+    await requestPasswordReset(c.env, user.email);
+    await logAdminAction(c.env.DB, {
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      action: "user.password_reset",
+      targetType: "user",
+      targetId: id,
+      details: { targetEmail: user.email },
+    });
+    return c.json({ ok: true });
+  },
+);
+
+// Alle Sitzungen beenden (Auftrag Abschnitt 7).
+adminRoutes.post(
+  "/users/:id/sessions/revoke",
+  requireAuth,
+  requireAdmin,
+  requireCsrfOrigin,
+  async (c) => {
+    const id = c.req.param("id");
+    const user = await getUserById(c.env.DB, id);
+    if (!user) return c.json({ error: "not_found" }, 404);
+
+    await deleteAllSessionsForUser(c.env.DB, id);
+    await logAdminAction(c.env.DB, {
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      action: "user.sessions_revoke",
+      targetType: "user",
+      targetId: id,
+      details: { targetEmail: user.email },
+    });
+    return c.json({ ok: true });
+  },
+);
+
+// Nutzer endgueltig loeschen (Auftrag Abschnitt 7 "Danger Zone"). Nutzt
+// bewusst dieselbe Funktion wie die Selbstloeschung durch den Nutzer
+// (accountDeletion.ts) - inklusive sofortiger Paddle-Kuendigung, sonst liefe
+// ein Abo ohne zugehoeriges Konto weiter. Der Audit-Eintrag wird VOR dem
+// Loeschen geschrieben, sonst gibt es bei einem Fehlschlag mittendrin keine
+// Spur; er ueberlebt die Loeschung bewusst (siehe deleteUserCompletely).
+adminRoutes.post(
+  "/users/:id/delete",
+  requireAuth,
+  requirePermission("user.delete"),
+  requireCsrfOrigin,
+  async (c) => {
+    const id = c.req.param("id");
+    const user = await getUserById(c.env.DB, id);
+    if (!user) return c.json({ error: "not_found" }, 404);
+    if (id === c.var.userId) return c.json({ error: "cannot_delete_self" }, 400);
+
+    await logAdminAction(c.env.DB, {
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      action: "user.delete",
+      targetType: "user",
+      targetId: id,
+      details: { targetEmail: user.email, role: user.role },
+    });
+    try {
+      await deleteAccountCompletely(c.env, id, user.email);
+    } catch {
+      return c.json({ error: "delete_failed_try_again" }, 502);
+    }
+    return c.json({ ok: true });
+  },
+);
 
 // Access Management (Konzept-Dok Abschnitt 2: "Benutzer sperren/entsperren").
 // Beim Sperren zusaetzlich alle Sessions beenden - sonst bliebe eine bereits
@@ -107,17 +432,106 @@ adminRoutes.post("/users/:id/status", requireAuth, requireAdmin, requireCsrfOrig
   return c.json({ ok: true, accountStatus: status });
 });
 
+// ═══ Abos & Zahlungen (Admin-MVP Abschnitt 8) ═══
+// Rein lesend. Betrag, Zahlungsstatus, Refund und Abrechnungszyklus bleiben
+// bei Paddle - es gibt hier bewusst KEINE schreibende Route dafuer.
+
+export function parseAdminSubscriptionsQuery(
+  query: URLSearchParams,
+): { status: AdminSubscriptionFilterKey | null; page: number } {
+  const rawPage = parseInt(query.get("page") || "1", 10);
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+  const rawStatus = (query.get("status") || "").trim();
+  return { status: isAdminSubscriptionFilter(rawStatus) ? rawStatus : null, page };
+}
+
+// Ohne Paddle-Aufruf pro Zeile - der waere bei 20 Zeilen 20 Anfragen. Der
+// "letzte Zahlungsstatus" der Liste wird deshalb aus dem gespiegelten Status
+// abgeleitet, die echte Transaktion holt erst die Detailansicht.
+function paymentStateFromRow(row: { status: string; past_due_since: number | null }): string {
+  if (row.status === "past_due") return "failed";
+  if (row.status === "trialing") return "none";
+  return "ok";
+}
+
+adminRoutes.get("/subscriptions", requireAuth, requirePermission("subscription.read"), async (c) => {
+  const { status, page } = parseAdminSubscriptionsQuery(new URL(c.req.url).searchParams);
+  const { subscriptions, total } = await listSubscriptionsForAdmin(c.env.DB, status, page, PAGE_SIZE);
+  return c.json({
+    subscriptions: subscriptions.map((s) => ({
+      id: s.id,
+      userId: s.user_id,
+      email: s.email,
+      // "Produkt" ist im Auftrag eine eigene Spalte - es gibt aktuell genau
+      // ein Produkt, deshalb konstant statt aus der DB (dort steht es nicht).
+      product: "ImmoFuchs Pro",
+      plan: s.plan,
+      status: s.status,
+      startedAt: s.first_purchase_at,
+      currentPeriodEnd: s.current_period_end,
+      cancelAtPeriodEnd: Boolean(s.cancel_at_period_end),
+      pastDueSince: s.past_due_since,
+      paymentState: paymentStateFromRow(s),
+    })),
+    total,
+    page,
+    pageSize: PAGE_SIZE,
+  });
+});
+
+adminRoutes.get("/subscriptions/:id", requireAuth, requirePermission("subscription.read"), async (c) => {
+  const sub = await getSubscriptionForAdmin(c.env.DB, c.req.param("id"));
+  if (!sub) return c.json({ error: "not_found" }, 404);
+  // Genau ein Paddle-Aufruf, und nur wenn es ueberhaupt eine Transaktion
+  // gibt. Schlaegt er fehl (kein API-Key lokal, Paddle nicht erreichbar),
+  // liefert der Helfer null - die uebrigen Angaben kommen aus D1 und die
+  // Ansicht bleibt benutzbar.
+  const lastPayment = sub.latest_transaction_id
+    ? await getTransactionSummary(c.env, sub.latest_transaction_id)
+    : null;
+  return c.json({
+    id: sub.id,
+    userId: sub.user_id,
+    email: sub.email,
+    product: "ImmoFuchs Pro",
+    plan: sub.plan,
+    status: sub.status,
+    startedAt: sub.first_purchase_at,
+    currentPeriodEnd: sub.current_period_end,
+    cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+    pastDueSince: sub.past_due_since,
+    paymentState: paymentStateFromRow(sub),
+    // Waehrend der Testphase ist current_period_end das Trial-Ende, sonst der
+    // naechste Abbuchungstermin (gleiche Unterscheidung wie im Kundenbereich).
+    trialEndsAt: sub.status === "trialing" ? sub.current_period_end : null,
+    paddleCustomerId: sub.paddle_customer_id,
+    paddleSubscriptionId: sub.paddle_subscription_id,
+    latestTransactionId: sub.latest_transaction_id,
+    lastPayment,
+    paddleUrl: paddleDashboardSubscriptionUrl(c.env, sub.paddle_subscription_id),
+  });
+});
+
 // Dashboard (Konzept-Dok Abschnitt 3, MVP-Pflicht #1).
-adminRoutes.get("/dashboard", requireAuth, requireAdmin, async (c) => {
+adminRoutes.get("/dashboard", requireAuth, requireAdminRead, async (c) => {
   const stats = await getAdminDashboardStats(c.env.DB);
   return c.json(stats);
+});
+
+// Letzte Aktivitaeten (Admin-MVP Abschnitt 3). Read-Only, feste Obergrenze -
+// der Feed ist eine Uebersicht, kein Export.
+const ACTIVITY_LIMIT = 20;
+
+adminRoutes.get("/activity", requireAuth, requireAdminRead, async (c) => {
+  const entries = await listAdminActivity(c.env.DB, ACTIVITY_LIMIT);
+  return c.json({ entries });
 });
 
 // Gutscheine (Stufe F, Nutzer-Konzept 2026-08-11) - Paddle bleibt einzige
 // Quelle fuer Rabattdaten, D1 speichert dazu nichts. "amount" ist bei
 // type==="percentage" ein reiner Prozentwert ("10" = 10%), bei "flat" ein
 // Betrag in der kleinsten Waehrungseinheit (Cent) - siehe Paddle-API.
-adminRoutes.get("/discounts", requireAuth, requireAdmin, async (c) => {
+adminRoutes.get("/discounts", requireAuth, requirePermission("discount.read"), async (c) => {
   try {
     const discounts = await listDiscounts(c.env);
     return c.json({ discounts });
@@ -127,60 +541,181 @@ adminRoutes.get("/discounts", requireAuth, requireAdmin, async (c) => {
   }
 });
 
-adminRoutes.post("/discounts", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const code = body && typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
-  const description = body && typeof body.description === "string" ? body.description.trim() : "";
-  const type = body?.type === "flat" ? "flat" : body?.type === "percentage" ? "percentage" : null;
-  const amount = body && typeof body.amount === "string" ? body.amount.trim() : "";
-  const usageLimit = Number.isInteger(body?.usageLimit) && body.usageLimit > 0 ? body.usageLimit : null;
-  if (!code || !description || !type || !amount) return c.json({ error: "invalid_discount" }, 400);
+adminRoutes.post(
+  "/discounts",
+  requireAuth,
+  requirePermission("discount.manage"),
+  requireCsrfOrigin,
+  async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const code = body && typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
+    const description = body && typeof body.description === "string" ? body.description.trim() : "";
+    const type = body?.type === "flat" ? "flat" : body?.type === "percentage" ? "percentage" : null;
+    const amount = body && typeof body.amount === "string" ? body.amount.trim() : "";
+    const usageLimit = Number.isInteger(body?.usageLimit) && body.usageLimit > 0 ? body.usageLimit : null;
+    const expiresAt = parseExpiryDate(body?.expiresAt) ?? null;
+    if (!code || !description || !type || !amount) return c.json({ error: "invalid_discount" }, 400);
 
-  try {
-    const discount = await createDiscount(c.env, { code, description, type, amount, usageLimit });
-    await logAdminAction(c.env.DB, {
-      adminUserId: c.var.userId,
-      adminEmail: c.var.user.email,
-      action: "discount.create",
-      targetType: "discount",
-      targetId: discount.id,
-      details: { code: discount.code, type: discount.type, amount: discount.amount },
-    });
-    return c.json({ discount });
-  } catch (err) {
-    console.error("admin_create_discount_failed", err instanceof Error ? err.message : "unknown");
-    return c.json({ error: "create_discount_failed" }, 502);
-  }
-});
+    try {
+      const discount = await createDiscount(c.env, { code, description, type, amount, usageLimit, expiresAt });
+      await logAdminAction(c.env.DB, {
+        adminUserId: c.var.userId,
+        adminEmail: c.var.user.email,
+        action: "discount.create",
+        targetType: "discount",
+        targetId: discount.id,
+        details: { code: discount.code, type: discount.type, amount: discount.amount },
+      });
+      return c.json({ discount });
+    } catch (err) {
+      console.error("admin_create_discount_failed", err instanceof Error ? err.message : "unknown");
+      return c.json({ error: "create_discount_failed" }, 502);
+    }
+  },
+);
 
-adminRoutes.post("/discounts/:id/status", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
-  const id = c.req.param("id");
-  const body = await c.req.json().catch(() => null);
-  const status = body && typeof body.status === "string" ? body.status : "";
-  if (status !== "active" && status !== "archived") return c.json({ error: "invalid_status" }, 400);
+// Mehrere Codes auf einmal (Auftrag Abschnitt 9). Jeder Code ist ein eigener
+// Paddle-Aufruf - bewusst nacheinander statt parallel, um nicht in
+// Paddle-Ratelimits zu laufen. Bereits erzeugte Codes bleiben bestehen, wenn
+// einer scheitert: sie sind gueltige Gutscheine, ein Rueckbau waere
+// schlimmer als ein Teilergebnis. Die Antwort meldet beides ehrlich.
+adminRoutes.post(
+  "/discounts/bulk",
+  requireAuth,
+  requirePermission("discount.manage"),
+  requireCsrfOrigin,
+  async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const count = Number.isInteger(body?.count) ? body.count : 0;
+    const description = body && typeof body.description === "string" ? body.description.trim() : "";
+    const type = body?.type === "flat" ? "flat" : body?.type === "percentage" ? "percentage" : null;
+    const amount = body && typeof body.amount === "string" ? body.amount.trim() : "";
+    const prefix = body && typeof body.prefix === "string" ? body.prefix : "";
+    const usageLimit = Number.isInteger(body?.usageLimit) && body.usageLimit > 0 ? body.usageLimit : null;
+    const expiresAt = parseExpiryDate(body?.expiresAt) ?? null;
 
-  try {
-    await setDiscountStatus(c.env, id, status);
-    await logAdminAction(c.env.DB, {
-      adminUserId: c.var.userId,
-      adminEmail: c.var.user.email,
-      action: status === "archived" ? "discount.deactivate" : "discount.activate",
-      targetType: "discount",
-      targetId: id,
-      details: { to: status },
-    });
-    return c.json({ ok: true, status });
-  } catch (err) {
-    console.error("admin_update_discount_failed", err instanceof Error ? err.message : "unknown");
-    return c.json({ error: "update_discount_failed" }, 502);
-  }
-});
+    if (count < 1 || count > MAX_BULK_DISCOUNTS) return c.json({ error: "invalid_count" }, 400);
+    if (!description || !type || !amount) return c.json({ error: "invalid_discount" }, 400);
 
-// Audit Log (Konzept-Dok Abschnitt 13/6, MVP-Pflicht #7).
-adminRoutes.get("/audit-log", requireAuth, requireAdmin, async (c) => {
-  const rawPage = parseInt(new URL(c.req.url).searchParams.get("page") || "1", 10);
-  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
-  const { entries, total } = await listAdminAuditLog(c.env.DB, page, PAGE_SIZE);
+    const created: string[] = [];
+    let failed = 0;
+    for (let i = 0; i < count; i++) {
+      try {
+        const discount = await createDiscount(c.env, {
+          code: generateDiscountCode(prefix),
+          description,
+          type,
+          amount,
+          usageLimit,
+          expiresAt,
+        });
+        created.push(discount.code || discount.id);
+      } catch (err) {
+        console.error("admin_bulk_discount_failed", err instanceof Error ? err.message : "unknown");
+        failed++;
+      }
+    }
+
+    // Ein Audit-Eintrag fuer den ganzen Vorgang statt 100 einzelner - der Log
+    // soll die Aktion des Admins abbilden, nicht jede Paddle-Anfrage.
+    if (created.length > 0) {
+      await logAdminAction(c.env.DB, {
+        adminUserId: c.var.userId,
+        adminEmail: c.var.user.email,
+        action: "discount.bulk_create",
+        targetType: "discount",
+        targetId: `bulk:${created.length}`,
+        details: { requested: count, created: created.length, failed, type, amount, prefix: prefix || null },
+      });
+    }
+    if (created.length === 0) return c.json({ error: "create_discount_failed" }, 502);
+    return c.json({ codes: created, requested: count, failed });
+  },
+);
+
+// Bearbeiten (Auftrag Abschnitt 9): Beschreibung, Rabattwert, Ablaufdatum,
+// Nutzungslimit, Status. Code und Rabatt-Typ bewusst nicht - siehe
+// paddle/discounts.ts (ein verteilter Gutschein wuerde sonst still zu einem
+// anderen); dafuer gibt es "Duplizieren".
+adminRoutes.post(
+  "/discounts/:id",
+  requireAuth,
+  requirePermission("discount.manage"),
+  requireCsrfOrigin,
+  async (c) => {
+    const id = c.req.param("id");
+    const body = await c.req.json().catch(() => null);
+    const patch: DiscountPatch = {};
+
+    if (typeof body?.description === "string" && body.description.trim()) {
+      patch.description = body.description.trim();
+    }
+    if (typeof body?.amount === "string" && body.amount.trim()) patch.amount = body.amount.trim();
+    if (body?.status === "active" || body?.status === "archived") patch.status = body.status;
+    // null ist hier eine gueltige Angabe ("unbegrenzt"), deshalb explizit
+    // von "nicht mitgeschickt" unterschieden.
+    if (body?.usageLimit === null) patch.usageLimit = null;
+    else if (Number.isInteger(body?.usageLimit) && body.usageLimit > 0) patch.usageLimit = body.usageLimit;
+    const expiresAt = parseExpiryDate(body?.expiresAt);
+    if (expiresAt !== undefined) patch.expiresAt = expiresAt;
+
+    if (Object.keys(patch).length === 0) return c.json({ error: "invalid_discount" }, 400);
+
+    try {
+      const discount = await updateDiscount(c.env, id, patch);
+      await logAdminAction(c.env.DB, {
+        adminUserId: c.var.userId,
+        adminEmail: c.var.user.email,
+        action: "discount.update",
+        targetType: "discount",
+        targetId: id,
+        details: { code: discount.code, changed: Object.keys(patch) },
+      });
+      return c.json({ discount });
+    } catch (err) {
+      console.error("admin_update_discount_failed", err instanceof Error ? err.message : "unknown");
+      return c.json({ error: "update_discount_failed" }, 502);
+    }
+  },
+);
+
+adminRoutes.post(
+  "/discounts/:id/status",
+  requireAuth,
+  requirePermission("discount.manage"),
+  requireCsrfOrigin,
+  async (c) => {
+    const id = c.req.param("id");
+    const body = await c.req.json().catch(() => null);
+    const status = body && typeof body.status === "string" ? body.status : "";
+    if (status !== "active" && status !== "archived") return c.json({ error: "invalid_status" }, 400);
+
+    try {
+      await setDiscountStatus(c.env, id, status);
+      await logAdminAction(c.env.DB, {
+        adminUserId: c.var.userId,
+        adminEmail: c.var.user.email,
+        action: status === "archived" ? "discount.deactivate" : "discount.activate",
+        targetType: "discount",
+        targetId: id,
+        details: { to: status },
+      });
+      return c.json({ ok: true, status });
+    } catch (err) {
+      console.error("admin_update_discount_failed", err instanceof Error ? err.message : "unknown");
+      return c.json({ error: "update_discount_failed" }, 502);
+    }
+  },
+);
+
+// Audit Log (Konzept-Dok Abschnitt 13/6, MVP-Pflicht #7). Read-Only, ohne
+// Bearbeiten/Loeschen - es gibt bewusst keine schreibende Route dafuer.
+adminRoutes.get("/audit-log", requireAuth, requireAdminRead, async (c) => {
+  const { filter, page } = parseAdminAuditQuery(new URL(c.req.url).searchParams);
+  const [{ entries, total }, admins] = await Promise.all([
+    listAdminAuditLog(c.env.DB, page, PAGE_SIZE, filter),
+    listAuditLogAdmins(c.env.DB),
+  ]);
   return c.json({
     entries: entries.map((e) => ({
       id: e.id,
@@ -194,5 +729,8 @@ adminRoutes.get("/audit-log", requireAuth, requireAdmin, async (c) => {
     total,
     page,
     pageSize: PAGE_SIZE,
+    // Auswahlwerte fuer den Admin-Filter gleich mitliefern - spart der UI
+    // einen zweiten Endpunkt fuer eine sehr kurze Liste.
+    admins,
   });
 });

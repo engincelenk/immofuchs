@@ -235,6 +235,11 @@ export interface Env {
   PADDLE_ENV?: string; // "sandbox" | "production"
   PADDLE_PRICE_ID_MONTHLY?: string;
   PADDLE_PRICE_ID_YEARLY?: string;
+  // Optional: Basis des Paddle-Verkaeufer-Dashboards fuer den "In Paddle
+  // oeffnen"-Link im Admin-Panel. Ohne Wert wird aus PADDLE_ENV abgeleitet -
+  // siehe paddle/transactions.ts, wo auch steht, warum das ueberschreibbar
+  // sein muss (Paddle dokumentiert den Deep-Link-Pfad nicht).
+  PADDLE_DASHBOARD_BASE_URL?: string;
 
   // Feature-Gating (4.0a, 4.18, 4.9)
   OBJECTS_SOFT_CAP?: string;

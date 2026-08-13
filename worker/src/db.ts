@@ -34,6 +34,11 @@ export interface UserRow {
   // Rechner kombiniert, einmal gesetzt nie zurueckgesetzt - unabhaengig von
   // trial_used_at (das ist der bezahlte 7-Tage-Paddle-Trial).
   calculator_trial_used_at: number | null;
+  // Admin-MVP (Migration 0019): Merkmale quer zur Rolle, vom Admin-Panel
+  // umschaltbar. is_test_user hat die frueherer Rolle 'test_user' abgeloest,
+  // damit ein Nutzer gleichzeitig Kunde UND Testnutzer sein kann.
+  is_test_user: number;
+  is_beta: number;
 }
 
 export interface SessionRow {
@@ -122,6 +127,8 @@ export async function createUser(db: Env["DB"], email: string): Promise<UserRow>
     trial_used_at: null,
     marketing_emails_enabled: 0,
     calculator_trial_used_at: null,
+    is_test_user: 0,
+    is_beta: 0,
   };
 }
 
@@ -245,6 +252,8 @@ export async function createUserWithPassword(
     trial_used_at: null,
     marketing_emails_enabled: 0,
     calculator_trial_used_at: null,
+    is_test_user: 0,
+    is_beta: 0,
   };
 }
 
@@ -829,33 +838,235 @@ export interface AdminUserSummary {
   account_status: "ACTIVE" | "SUSPENDED" | "DELETED";
   created_at: number;
   last_login_at: number | null;
+  is_test_user: number;
+  is_beta: number;
+  // Aus dem LEFT JOIN auf subscriptions - NULL, wenn der Nutzer kein
+  // laufendes Abo hat (Free). Der Auftrag verlangt "Abo" als Spalte und als
+  // Filter in der Nutzerliste (Abschnitt 4).
+  sub_status: string | null;
+  sub_plan: string | null;
 }
+
+export interface AdminUsersFilter {
+  search: string;
+  role: string | null;
+  accountStatus: string | null;
+  // "pro" = laufendes Abo (active/trialing/cancel_scheduled/past_due),
+  // "free" = keine solche Zeile. Bewusst diese zwei groben Werte statt jedes
+  // einzelnen Paddle-Status: als Listenfilter ist "zahlt / zahlt nicht" die
+  // Frage, die Feinheiten stehen im Bereich "Abos & Zahlungen".
+  subscription: "pro" | "free" | null;
+  sort: "created_desc" | "created_asc" | "last_login_desc" | "email_asc";
+}
+
+// Whitelist statt String-Interpolation des Sortier-Parameters: der Wert kommt
+// aus der Query-String und darf niemals ungeprueft in SQL landen.
+const ADMIN_USER_SORT_SQL: Record<AdminUsersFilter["sort"], string> = {
+  created_desc: "users.created_at DESC",
+  created_asc: "users.created_at ASC",
+  // NULLS LAST von Hand: SQLite sortiert NULL sonst vor allen Werten, damit
+  // stuenden "hat sich nie angemeldet" ganz oben statt ganz unten.
+  last_login_desc: "users.last_login_at IS NULL, users.last_login_at DESC",
+  email_asc: "users.email ASC",
+};
+
+// Nur diese Abo-Zustaende gelten als "laufend" - identisch zur Definition in
+// getActiveSubscription (db.ts) und computeIsPro (entitlement.ts).
+const LIVE_SUB_STATUSES = "'active','trialing','cancel_scheduled','past_due'";
 
 // ESCAPE '\' passend zum Escaping in routes/admin.ts (parseAdminUsersQuery) -
 // ohne ESCAPE-Klausel wuerden % und _ im Suchbegriff als SQL-LIKE-Wildcards
 // statt als Literalzeichen interpretiert.
 export async function listUsersForAdmin(
   db: Env["DB"],
-  search: string,
+  filter: AdminUsersFilter,
   page: number,
   pageSize: number,
 ): Promise<{ users: AdminUserSummary[]; total: number }> {
-  const like = `%${search}%`;
+  const like = `%${filter.search}%`;
   const offset = (page - 1) * pageSize;
+
+  const where: string[] = ["users.email LIKE ? ESCAPE '\\'"];
+  const params: unknown[] = [like];
+  if (filter.role) {
+    where.push("users.role = ?");
+    params.push(filter.role);
+  }
+  if (filter.accountStatus) {
+    where.push("users.account_status = ?");
+    params.push(filter.accountStatus);
+  }
+  if (filter.subscription === "pro") where.push("sub.id IS NOT NULL");
+  if (filter.subscription === "free") where.push("sub.id IS NULL");
+
+  // Der JOIN muss auch fuer den COUNT gelten, sonst zaehlt die Gesamtzahl
+  // beim Abo-Filter andere Zeilen als die Liste zeigt (falsche Pagination).
+  const from = `FROM users LEFT JOIN subscriptions sub
+      ON sub.user_id = users.id AND sub.status IN (${LIVE_SUB_STATUSES})`;
+  const whereSql = `WHERE ${where.join(" AND ")}`;
+
   const [rows, countRow] = await Promise.all([
     db
       .prepare(
-        `SELECT id, email, role, account_status, created_at, last_login_at FROM users
-         WHERE email LIKE ? ESCAPE '\\' ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        `SELECT users.id, users.email, users.role, users.account_status, users.created_at,
+                users.last_login_at, users.is_test_user, users.is_beta,
+                sub.status AS sub_status, sub.plan AS sub_plan
+         ${from} ${whereSql}
+         ORDER BY ${ADMIN_USER_SORT_SQL[filter.sort]} LIMIT ? OFFSET ?`,
       )
-      .bind(like, pageSize, offset)
+      .bind(...params, pageSize, offset)
       .all<AdminUserSummary>(),
     db
-      .prepare(`SELECT COUNT(*) as n FROM users WHERE email LIKE ? ESCAPE '\\'`)
-      .bind(like)
+      .prepare(`SELECT COUNT(*) as n ${from} ${whereSql}`)
+      .bind(...params)
       .first<{ n: number }>(),
   ]);
   return { users: rows.results, total: countRow?.n ?? 0 };
+}
+
+// ═══ Admin Panel — schreibende Nutzer-Aktionen (Admin-MVP Abschnitt 6/7) ═══
+
+export async function setUserRole(db: Env["DB"], userId: string, role: string): Promise<void> {
+  await db.prepare("UPDATE users SET role = ? WHERE id = ?").bind(role, userId).run();
+}
+
+// Beide Schalter in einem Statement, aber einzeln optional: das Admin-Panel
+// schickt nur den umgeschalteten Wert, nicht beide - sonst wuerde ein
+// Doppelklick auf "Beta" den Testuser-Schalter mit zuruecksetzen.
+export async function setUserFlags(
+  db: Env["DB"],
+  userId: string,
+  flags: { isTestUser?: boolean; isBeta?: boolean },
+): Promise<void> {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  if (flags.isTestUser !== undefined) {
+    sets.push("is_test_user = ?");
+    params.push(flags.isTestUser ? 1 : 0);
+  }
+  if (flags.isBeta !== undefined) {
+    sets.push("is_beta = ?");
+    params.push(flags.isBeta ? 1 : 0);
+  }
+  if (sets.length === 0) return;
+  await db
+    .prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`)
+    .bind(...params, userId)
+    .run();
+}
+
+// ═══ Admin Panel — Abos & Zahlungen (Admin-MVP Abschnitt 8, rein lesend) ═══
+// Bewusst keine schreibenden Funktionen: Betrag, Zahlungsstatus, Refund und
+// Abrechnungszyklus gehoeren zu Paddle (Auftrag Abschnitt 8, "keine eigene
+// Billing-Logik"). D1 haelt nur die Spiegelung, die der Webhook pflegt.
+
+export interface AdminSubscriptionRow extends SubscriptionRow {
+  // Aus dem JOIN auf users - die Liste zeigt den Nutzer, nicht die user_id.
+  email: string;
+}
+
+// Die Filter des Auftrags ("Aktiv / Trial / Gekuendigt / Zahlung
+// fehlgeschlagen") sind teils EIN Status, teils zwei: "Gekuendigt" umfasst
+// sowohl das bereits beendete Abo als auch das zum Periodenende gekuendigte,
+// das operativ dieselbe Frage beantwortet ("wer geht weg?").
+const ADMIN_SUB_FILTER_STATUSES: Record<string, readonly string[]> = {
+  active: ["active"],
+  trialing: ["trialing"],
+  canceled: ["canceled", "cancel_scheduled"],
+  past_due: ["past_due"],
+};
+
+export type AdminSubscriptionFilterKey = keyof typeof ADMIN_SUB_FILTER_STATUSES;
+
+export function isAdminSubscriptionFilter(value: string): value is AdminSubscriptionFilterKey {
+  return Object.prototype.hasOwnProperty.call(ADMIN_SUB_FILTER_STATUSES, value);
+}
+
+export async function listSubscriptionsForAdmin(
+  db: Env["DB"],
+  statusFilter: AdminSubscriptionFilterKey | null,
+  page: number,
+  pageSize: number,
+): Promise<{ subscriptions: AdminSubscriptionRow[]; total: number }> {
+  const offset = (page - 1) * pageSize;
+  let whereSql = "";
+  const params: unknown[] = [];
+  if (statusFilter) {
+    const statuses = ADMIN_SUB_FILTER_STATUSES[statusFilter];
+    // Platzhalter statt String-Interpolation, obwohl die Werte aus einer
+    // festen Tabelle kommen - der Filterschluessel selbst ist Nutzereingabe.
+    whereSql = `WHERE s.status IN (${statuses.map(() => "?").join(",")})`;
+    params.push(...statuses);
+  }
+  const from = "FROM subscriptions s JOIN users u ON u.id = s.user_id";
+  const [rows, countRow] = await Promise.all([
+    db
+      .prepare(
+        `SELECT s.*, u.email AS email ${from} ${whereSql}
+         ORDER BY s.updated_at DESC LIMIT ? OFFSET ?`,
+      )
+      .bind(...params, pageSize, offset)
+      .all<AdminSubscriptionRow>(),
+    db
+      .prepare(`SELECT COUNT(*) as n ${from} ${whereSql}`)
+      .bind(...params)
+      .first<{ n: number }>(),
+  ]);
+  return { subscriptions: rows.results, total: countRow?.n ?? 0 };
+}
+
+export async function getSubscriptionForAdmin(
+  db: Env["DB"],
+  id: string,
+): Promise<AdminSubscriptionRow | null> {
+  return db
+    .prepare(
+      `SELECT s.*, u.email AS email FROM subscriptions s
+       JOIN users u ON u.id = s.user_id WHERE s.id = ?`,
+    )
+    .bind(id)
+    .first<AdminSubscriptionRow>();
+}
+
+// ═══ Admin Panel — Support-Notizen (Migration 0019) ═══
+
+export interface SupportNoteRow {
+  id: string;
+  user_id: string;
+  admin_user_id: string;
+  admin_email: string;
+  note: string;
+  created_at: number;
+}
+
+export async function addSupportNote(
+  db: Env["DB"],
+  entry: { userId: string; adminUserId: string; adminEmail: string; note: string },
+): Promise<SupportNoteRow> {
+  const row: SupportNoteRow = {
+    id: newId(),
+    user_id: entry.userId,
+    admin_user_id: entry.adminUserId,
+    admin_email: entry.adminEmail,
+    note: entry.note,
+    created_at: Date.now(),
+  };
+  await db
+    .prepare(
+      `INSERT INTO user_support_notes (id, user_id, admin_user_id, admin_email, note, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(row.id, row.user_id, row.admin_user_id, row.admin_email, row.note, row.created_at)
+    .run();
+  return row;
+}
+
+export async function listSupportNotes(db: Env["DB"], userId: string): Promise<SupportNoteRow[]> {
+  const rows = await db
+    .prepare("SELECT * FROM user_support_notes WHERE user_id = ? ORDER BY created_at DESC")
+    .bind(userId)
+    .all<SupportNoteRow>();
+  return rows.results;
 }
 
 // ═══ Admin Panel — Dashboard (Paket 6, MVP-Pflicht #1) ═══
@@ -871,6 +1082,12 @@ export interface AdminDashboardStats {
   trialUsers: number;
   mrr: number;
   cancellationsThisMonth: number;
+  // Admin-MVP Abschnitt 3 ("zusaetzlich, sofern die Daten bereits verfuegbar
+  // sind"): neue Nutzer im laufenden Monat ist aus users.created_at direkt
+  // ableitbar. "Umsatz aktueller Monat" ist es NICHT - tatsaechliche
+  // Zahlungen liegen bei Paddle, in D1 stehen nur Abo-Zustaende. Eine
+  // Hochrechnung aus Planpreisen waere eine erfundene Zahl und fehlt deshalb.
+  newUsersThisMonth: number;
 }
 
 // Gleiche Preise wie im Renewal-/Trial-Ending-Mailing (scheduled.ts) - EINE
@@ -886,7 +1103,7 @@ export async function getAdminDashboardStats(db: Env["DB"]): Promise<AdminDashbo
     return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
   })();
 
-  const [totalUsersRow, planRows, trialRow, cancelRow] = await Promise.all([
+  const [totalUsersRow, planRows, trialRow, cancelRow, newUsersRow] = await Promise.all([
     db.prepare("SELECT COUNT(*) as n FROM users").first<{ n: number }>(),
     db
       .prepare(
@@ -898,6 +1115,10 @@ export async function getAdminDashboardStats(db: Env["DB"]): Promise<AdminDashbo
       .prepare(
         `SELECT COUNT(*) as n FROM subscriptions WHERE status IN ('cancel_scheduled','canceled') AND updated_at >= ?`,
       )
+      .bind(monthStart)
+      .first<{ n: number }>(),
+    db
+      .prepare("SELECT COUNT(*) as n FROM users WHERE created_at >= ?")
       .bind(monthStart)
       .first<{ n: number }>(),
   ]);
@@ -915,7 +1136,103 @@ export async function getAdminDashboardStats(db: Env["DB"]): Promise<AdminDashbo
     trialUsers: trialRow?.n ?? 0,
     mrr: Math.round(mrr * 100) / 100,
     cancellationsThisMonth: cancelRow?.n ?? 0,
+    newUsersThisMonth: newUsersRow?.n ?? 0,
   };
+}
+
+// ═══ Admin Panel — Letzte Aktivitaeten (Admin-MVP Abschnitt 3) ═══
+// Read-Only-Feed aus dem, was D1 wirklich weiss. Bewusst KEINE eigene
+// Ereignistabelle dafuer: die vier Quellen unten tragen ihren Zeitstempel
+// bereits, eine zusaetzliche Tabelle waere eine zweite Wahrheit, die beim
+// Schreiben vergessen werden kann.
+//
+// Nicht enthalten (Auftrag nennt es, D1 hat es nicht): "Gutschein
+// eingeloest" - Einloesungen passieren bei Paddle, wir speichern dazu nichts.
+// Auch reine Logins fehlen: login_attempts wird nach 24 Stunden vom Cron
+// geleert (Brute-Force-Schutz, kein Verlauf), ein Feed daraus waere je nach
+// Tageszeit mal voll und mal leer. users.last_login_at zeigt nur den
+// jeweils letzten Login und wuerde denselben Nutzer nie zweimal zeigen -
+// beides waere irrefuehrender als die Auslassung.
+export interface AdminActivityEntry {
+  kind: "user.registered" | "subscription.started" | "subscription.canceled" | "admin.action";
+  at: number;
+  // Wer/was betroffen ist - bei Admin-Aktionen der ausfuehrende Admin.
+  subject: string;
+  detail: string | null;
+}
+
+export async function listAdminActivity(db: Env["DB"], limit: number): Promise<AdminActivityEntry[]> {
+  // Jede Quelle liefert hoechstens `limit` Zeilen; zusammengefuehrt und
+  // sortiert bleiben davon die neuesten `limit` uebrig. Das ist korrekt,
+  // weil keine Quelle mehr als `limit` neuere Eintraege haben kann, als sie
+  // selbst geliefert hat.
+  const [users, started, canceled, admin] = await Promise.all([
+    db
+      .prepare("SELECT email, created_at FROM users ORDER BY created_at DESC LIMIT ?")
+      .bind(limit)
+      .all<{ email: string; created_at: number }>(),
+    db
+      .prepare(
+        `SELECT u.email, s.plan, s.status, s.first_purchase_at FROM subscriptions s
+         JOIN users u ON u.id = s.user_id
+         ORDER BY s.first_purchase_at DESC LIMIT ?`,
+      )
+      .bind(limit)
+      .all<{ email: string; plan: string; status: string; first_purchase_at: number }>(),
+    db
+      .prepare(
+        `SELECT u.email, s.status, s.updated_at FROM subscriptions s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.status IN ('canceled','cancel_scheduled')
+         ORDER BY s.updated_at DESC LIMIT ?`,
+      )
+      .bind(limit)
+      .all<{ email: string; status: string; updated_at: number }>(),
+    db
+      .prepare(
+        "SELECT admin_email, action, details, created_at FROM admin_audit_log ORDER BY created_at DESC LIMIT ?",
+      )
+      .bind(limit)
+      .all<{ admin_email: string; action: string; details: string | null; created_at: number }>(),
+  ]);
+
+  const entries: AdminActivityEntry[] = [
+    ...users.results.map((r) => ({
+      kind: "user.registered" as const,
+      at: r.created_at,
+      subject: r.email,
+      detail: null,
+    })),
+    ...started.results.map((r) => ({
+      kind: "subscription.started" as const,
+      at: r.first_purchase_at,
+      subject: r.email,
+      detail: r.plan,
+    })),
+    ...canceled.results.map((r) => ({
+      kind: "subscription.canceled" as const,
+      at: r.updated_at,
+      subject: r.email,
+      detail: r.status,
+    })),
+    ...admin.results.map((r) => {
+      let targetEmail: string | null = null;
+      try {
+        targetEmail = r.details ? (JSON.parse(r.details).targetEmail ?? null) : null;
+      } catch {
+        // Kaputtes/altes details-JSON darf den ganzen Feed nicht kippen.
+        targetEmail = null;
+      }
+      return {
+        kind: "admin.action" as const,
+        at: r.created_at,
+        subject: r.admin_email,
+        detail: targetEmail ? `${r.action} · ${targetEmail}` : r.action,
+      };
+    }),
+  ];
+
+  return entries.sort((a, b) => b.at - a.at).slice(0, limit);
 }
 
 // ═══ Admin Panel — Audit Log (Paket 6, MVP-Pflicht #7) ═══
@@ -959,20 +1276,70 @@ export async function logAdminAction(
     .run();
 }
 
+export interface AdminAuditLogFilter {
+  adminEmail: string | null;
+  action: string | null;
+  // targetId statt E-Mail: die E-Mail des betroffenen Nutzers steht nur im
+  // details-JSON und ist dort nicht indizierbar - die ID ist der stabile,
+  // eindeutige Bezug (und genau das, was die UI beim Klick auf einen Nutzer
+  // ohnehin zur Hand hat).
+  targetId: string | null;
+  from: number | null;
+  to: number | null;
+}
+
 export async function listAdminAuditLog(
   db: Env["DB"],
   page: number,
   pageSize: number,
+  filter?: AdminAuditLogFilter,
 ): Promise<{ entries: AdminAuditLogEntry[]; total: number }> {
   const offset = (page - 1) * pageSize;
+  const where: string[] = [];
+  const params: unknown[] = [];
+  if (filter?.adminEmail) {
+    where.push("admin_email = ?");
+    params.push(filter.adminEmail);
+  }
+  if (filter?.action) {
+    where.push("action = ?");
+    params.push(filter.action);
+  }
+  if (filter?.targetId) {
+    where.push("target_id = ?");
+    params.push(filter.targetId);
+  }
+  if (filter?.from !== null && filter?.from !== undefined) {
+    where.push("created_at >= ?");
+    params.push(filter.from);
+  }
+  if (filter?.to !== null && filter?.to !== undefined) {
+    where.push("created_at <= ?");
+    params.push(filter.to);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
   const [rows, countRow] = await Promise.all([
     db
-      .prepare("SELECT * FROM admin_audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?")
-      .bind(pageSize, offset)
+      .prepare(`SELECT * FROM admin_audit_log ${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+      .bind(...params, pageSize, offset)
       .all<AdminAuditLogEntry>(),
-    db.prepare("SELECT COUNT(*) as n FROM admin_audit_log").first<{ n: number }>(),
+    db
+      .prepare(`SELECT COUNT(*) as n FROM admin_audit_log ${whereSql}`)
+      .bind(...params)
+      .first<{ n: number }>(),
   ]);
   return { entries: rows.results, total: countRow?.n ?? 0 };
+}
+
+// Fuer den Audit-Filter "Admin": nur die Konten, die tatsaechlich schon eine
+// Aktion protokolliert haben - eine Liste aller Admins waere laenger und
+// enthielte Eintraege, zu denen es gar keine Log-Zeilen gibt.
+export async function listAuditLogAdmins(db: Env["DB"]): Promise<string[]> {
+  const rows = await db
+    .prepare("SELECT DISTINCT admin_email FROM admin_audit_log ORDER BY admin_email ASC")
+    .all<{ admin_email: string }>();
+  return rows.results.map((r) => r.admin_email);
 }
 
 // ═══ Art. 17 — Konto vollständig löschen ═══
@@ -990,6 +1357,10 @@ export async function deleteUserCompletely(db: Env["DB"], userId: string): Promi
     db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM password_reset_tokens WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM email_change_requests WHERE user_id = ?").bind(userId),
+    // Support-Notizen gehoeren zum geloeschten Konto (Migration 0019) und
+    // verschwinden mit ihm. Der admin_audit_log bleibt bewusst stehen - er
+    // dokumentiert, WER geloescht hat, und muss die Loeschung ueberleben.
+    db.prepare("DELETE FROM user_support_notes WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM users WHERE id = ?").bind(userId),
   ]);
 }
