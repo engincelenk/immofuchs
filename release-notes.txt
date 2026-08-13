@@ -1,3 +1,26 @@
+## 2026-08-13 (1.7.42)
+
+### Breiten-Review aller Konto-Unterbereiche, eine Korrektur
+
+**Anlass:** Nutzer-Nachfrage: die 1.7.41-Verschlankung hatte nur Profil und
+Abonnement betrachtet, nicht alle 7 Unterbereiche systematisch.
+
+**Ergebnis der Durchsicht (Zahlungen, Einstellungen, Support, Konto &
+Sicherheit, Admin):** `actionBtnStyle` (linksbuendiger Text, volle Breite,
+oft mit Icon) ist app-weit bereits das bewusste Zeilen-Muster fuer
+Einzelaktionen - Zahlungsmethode verwalten, Export, Abmelden, Alle Geraete
+abmelden, Zur Merkliste, Kontakt/Feedback nutzen es alle unveraendert bei
+voller Breite und lesen sich dadurch wie eine Settings-Liste, nicht wie ein
+verlorener Formular-Button. Rechnungsliste und Geraeteliste sind
+Listendaten, die die Breite wie Admin brauchen. Keine Aenderung an diesen 5
+Bereichen.
+
+**Korrektur:** "Kuendigen"/"Reaktivieren" in Abonnement (`AbonnementSection.jsx`)
+waren in 1.7.41 versehentlich auf auto-Breite/rechtsbuendig umgestellt worden -
+das brach mit dem `actionBtnStyle`-Muster, das ueberall sonst unveraendert
+blieb. Zurueckgesetzt auf volle Breite, konsistent mit allen anderen
+`actionBtnStyle`-Vorkommen.
+
 ## 2026-08-13 (1.7.41)
 
 ### Admin-Rolle zeigt jetzt "Pro" — auch ohne Abo

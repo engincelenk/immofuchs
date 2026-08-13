@@ -152,20 +152,23 @@ export function AbonnementSection({ t, account, onUpgrade }) {
 
           <div style={blockCardStyle}>
             <div style={blockTitleStyle}>{t.aboActionsTitle}</div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+            {/* Zurueckgenommen (UX-Korrektur 2026-08-13): volle Breite ist
+                hier richtig, nicht falsch - actionBtnStyle ist app-weit das
+                bewusste Zeilen-Muster fuer Einzelaktionen (siehe
+                Zahlungsmethode-verwalten, Export, Abmelden, Merkliste,
+                Kontakt/Feedback ua.), auto-Breite haette nur DIESE zwei
+                Buttons inkonsistent zum Rest gemacht. */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {subscription.status === "cancel_scheduled" ? (
                 <button
                   onClick={() => run("reactivate", account.reactivateSubscription)}
                   disabled={busy === "reactivate"}
-                  style={{ ...actionBtnStyle, width: "auto", textAlign: "center", padding: "11px 20px" }}
+                  style={actionBtnStyle}
                 >
                   {t.accountReactivate}
                 </button>
               ) : (
-                <button
-                  onClick={() => setShowCancel(true)}
-                  style={{ ...actionBtnStyle, width: "auto", textAlign: "center", padding: "11px 20px" }}
-                >
+                <button onClick={() => setShowCancel(true)} style={actionBtnStyle}>
                   {t.accountCancel}
                 </button>
               )}
@@ -178,7 +181,7 @@ export function AbonnementSection({ t, account, onUpgrade }) {
                 <button
                   onClick={() => run("refund", account.refundSubscription)}
                   disabled={busy === "refund"}
-                  style={{ ...inlineLinkBtnStyle, marginTop: 4 }}
+                  style={{ ...inlineLinkBtnStyle, marginTop: 4, alignSelf: "flex-start" }}
                 >
                   {t.accountRefund}
                 </button>
