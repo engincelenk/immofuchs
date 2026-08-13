@@ -1,3 +1,42 @@
+## 2026-08-13 (1.10.1)
+
+### Vier Korrekturen am neuen Header-Menue (Nutzer-Screenshots)
+
+**1. Kategorien entfallen, flache Liste.** Die Zwei-Ebenen-Struktur mit
+"Konto & Abo" / "Hilfe & Sicherheit" ist raus - alle Punkte stehen jetzt
+direkt untereinander (Seiten-Navigation, Identitaet, Profil, Abonnement,
+Zahlungen, Einstellungen, Support, Konto & Sicherheit, ggf. Admin,
+Abmelden). Begruendung des Nutzers: ein Vollbild-Menue hat Platz fuer die
+~10 Zeilen, jede Zwischenebene ist ein zusaetzlicher Klick zum Ziel. Die
+Trennlinie vor "Support" bleibt erhalten - sie kommt weiterhin aus dem
+`groupStart`-Flag in accountSections.js, genau wie in der
+Desktop-Seitenleiste. Mit den Kategorien entfaellt auch die
+Slide-Animation, die es nur fuer den Ebenenwechsel gab.
+
+**2. Sackgasse am Ende des Drill-downs behoben.** Wer ueber das Menue in
+einen Bereich ging, fand dort zwar ein ←, das aber den GANZEN Kontobereich
+schloss und in die App zurueckwarf - es gab keinen Weg zur vorigen Stufe.
+Auf dem Handy fuehrt das ← jetzt zurueck ins Menue (neue optionale Prop
+`onBackToMenu` in MyAccount.jsx). Damit ergibt sich eine saubere Kette:
+Bereich → ← → Menue → ✕ → App. Auf dem Desktop bleibt es beim Schliessen,
+dort steht die Bereichsliste dauerhaft in der Seitenleiste und es gibt
+keine "vorige Stufe".
+
+**3. Volles Logo im Menue-Kopf.** Statt der verkuerzten Textmarke
+("immofuchs" ohne Icon und ohne ".info") steht dort jetzt dasselbe Logo wie
+im App- und Seitenkopf: Fuchs-Icon (BrandIcon) + "immofuchs.info". Dieselbe
+Abweichung hatte zuvor schon die alte Landing-Schublade.
+
+**4. Einheitlicher linker Abstand.** Die Navigationszeilen (Rechner, So
+funktioniert's, Bauzinsen) sassen bei 4px, "Anmelden" und die Sprachwahl bei
+16px - die Woerter begannen auf zwei verschiedenen Kanten. Alles nutzt jetzt
+eine gemeinsame Konstante (16px), inklusive Kopfzeile und Identitaetsblock.
+Der dafuer eigens gepflegte `navLinkMobile`-Stil in Landing.jsx entfaellt;
+die Scroll-Anker laufen jetzt als `navItems`-Liste durch dieselbe
+MenuRow-Komponente wie alles andere.
+
+**Verifiziert:** Lint 0 Fehler, Build erfolgreich, 249 Frontend-Tests gruen.
+
 ## 2026-08-13 (1.10.0)
 
 ### Zwei Header-Menues zu einem Vollbild-Drill-down zusammengelegt

@@ -47,7 +47,14 @@ const SECTION_COMPONENTS = {
   admin: AdminSection,
 };
 
-export function MyAccount({ onClose, initialSection = "profil" }) {
+// onBackToMenu (optional, Nutzer-Korrektur 2026-08-13): auf dem Handy fuehrt
+// das ← zurueck ins Header-Menue statt den ganzen Kontobereich zu schliessen.
+// Vorher endete der Weg hier in einer Sackgasse - man kam ueber das Menue in
+// einen Bereich, das ← sprang aber gleich wieder ganz raus in die App, es gab
+// also keinen Weg zur vorigen Stufe. Auf dem Desktop bleibt es beim
+// Schliessen: dort steht die Bereichsliste ohnehin dauerhaft in der
+// Seitenleiste, eine "vorige Stufe" gibt es nicht.
+export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) {
   const { lang, setLang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
@@ -204,8 +211,10 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
                 stabile Position). Der Avatar steht dadurch jetzt allein
                 rechts. */}
             <span aria-hidden="true" style={{ width: 1, height: 20, background: "var(--cb)", margin: "0 16px", flexShrink: 0 }} />
+            {/* Auf dem Handy zurueck ins Menue (vorige Stufe), auf dem
+                Desktop wie bisher raus in die App - siehe onBackToMenu oben. */}
             <button
-              onClick={onClose}
+              onClick={!isDesktop && onBackToMenu ? onBackToMenu : onClose}
               aria-label={t.wizardBack}
               style={{
                 display: "flex",

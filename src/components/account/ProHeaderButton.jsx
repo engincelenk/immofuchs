@@ -176,7 +176,18 @@ export function ProHeaderButton() {
           onDone={account.dismissAccountDeleted}
         />
       )}
-      {openMode === "account" && <MyAccount onClose={handleClose} initialSection={sectionKey} />}
+      {openMode === "account" && (
+        <MyAccount
+          onClose={handleClose}
+          // Handy: ← fuehrt zurueck ins Menue statt raus in die App
+          // (Nutzer-Korrektur 2026-08-13) - Bereich → ← → Menue → ✕ → App.
+          onBackToMenu={() => {
+            setOpenMode(null);
+            setMenuOpen(true);
+          }}
+          initialSection={sectionKey}
+        />
+      )}
       {openMode === "login" && <CheckoutWizard onClose={handleClose} entryPoint="login" />}
       {openMode === "checkout" &&
         (resumesCheckout ? (

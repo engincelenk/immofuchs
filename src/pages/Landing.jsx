@@ -28,14 +28,6 @@ const navLink = {
   letterSpacing: 0.1,
   transition: "color .15s",
 };
-const navLinkMobile = {
-  ...navLink,
-  padding: "12px 4px",
-  fontSize: 15,
-  textAlign: "left",
-  borderBottom: "1px solid var(--cb)",
-};
-
 export function Landing({ onStart, zinsen, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
@@ -273,20 +265,12 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 open={menuOpen}
                 isLoggedIn={Boolean(account?.isLoggedIn)}
                 onClose={() => setMenuOpen(false)}
-                beforeIdentity={
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <button onClick={() => scrollTo("rechner")} style={navLinkMobile}>
-                      {l.navRechner}
-                    </button>
-                    <button onClick={() => scrollTo("funktioniert")} style={navLinkMobile}>
-                      {l.navHow}
-                    </button>
-                    <button onClick={() => scrollTo("zinsen")} style={navLinkMobile}>
-                      {l.navZinsen}
-                    </button>
-                  </div>
-                }
-                loggedOutFooter={<LangSel lang={lang} setLang={setLang} />}
+                navItems={[
+                  { key: "rechner", label: l.navRechner, onSelect: () => scrollTo("rechner") },
+                  { key: "funktioniert", label: l.navHow, onSelect: () => scrollTo("funktioniert") },
+                  { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
+                ]}
+                langSelector={<LangSel lang={lang} setLang={setLang} />}
                 onSelectSection={(key) => {
                   setMenuOpen(false);
                   setSectionKey(key);
@@ -401,7 +385,18 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               entryPoint="login"
             />
           )}
-          {openMode === "account" && <MyAccount onClose={() => setOpenMode(null)} initialSection={sectionKey} />}
+          {openMode === "account" && (
+            <MyAccount
+              onClose={() => setOpenMode(null)}
+              // Handy: ← fuehrt zurueck ins Menue statt raus auf die Seite
+              // (Nutzer-Korrektur 2026-08-13) - siehe MyAccount.jsx.
+              onBackToMenu={() => {
+                setOpenMode(null);
+                setMenuOpen(true);
+              }}
+              initialSection={sectionKey}
+            />
+          )}
         </Ctx.Provider>
       )}
       {/* Bugfund 2026-08-11: Passwort-/Passkey-Login ueber "Anmelden" auf
