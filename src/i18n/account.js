@@ -172,6 +172,11 @@ export const ACCOUNT_T = {
     // Site-Navigation der Landingpage (UX-Audit 2026-08-13) - vorher fuer
     // deren Aria-Beschriftung faelschlich accountNavAria mitbenutzt.
     siteNavAria: "Hauptmenü",
+    // Zwei Gruppentitel fuer das mobile Vollbild-Drill-down-Menue
+    // (HeaderMenu.jsx, UX-Konzept 2026-08-13) - spiegeln exakt die
+    // bestehende groupStart-Aufteilung aus accountSections.js.
+    menuGroupAccountTitle: "Konto & Abo",
+    menuGroupHelpTitle: "Hilfe & Sicherheit",
     // ═══ „Mein Konto" als Vollbild-Bereich (Phase 2) ═══
     accountNavAria: "Kontobereiche",
     navProfil: "Profil",
@@ -451,6 +456,8 @@ export const ACCOUNT_T = {
     newPasswordSuccessTitle: "Password saved",
     newPasswordSuccessCta: "Sign in now",
     siteNavAria: "Main menu",
+    menuGroupAccountTitle: "Account & Plan",
+    menuGroupHelpTitle: "Help & Security",
     // ═══ "My account" as a full-screen area (phase 2) ═══
     accountNavAria: "Account sections",
     navProfil: "Profile",
@@ -730,6 +737,8 @@ export const ACCOUNT_T = {
     newPasswordSuccessTitle: "Şifre kaydedildi",
     newPasswordSuccessCta: "Şimdi giriş yap",
     siteNavAria: "Ana menü",
+    menuGroupAccountTitle: "Hesap ve Abonelik",
+    menuGroupHelpTitle: "Yardım ve Güvenlik",
     // ═══ Tam ekran "Hesabım" alanı (Faz 2) ═══
     accountNavAria: "Hesap bölümleri",
     navProfil: "Profil",
@@ -1008,6 +1017,8 @@ export const ACCOUNT_T = {
     newPasswordSuccessTitle: "密码已保存",
     newPasswordSuccessCta: "立即登录",
     siteNavAria: "主菜单",
+    menuGroupAccountTitle: "账户与订阅",
+    menuGroupHelpTitle: "帮助与安全",
     // ═══ 全屏“我的账户”区域（第 2 阶段）═══
     accountNavAria: "账户板块",
     navProfil: "个人资料",
@@ -1287,6 +1298,8 @@ export const ACCOUNT_T = {
     newPasswordSuccessTitle: "पासवर्ड सहेजा गया",
     newPasswordSuccessCta: "अभी साइन इन करें",
     siteNavAria: "मुख्य मेनू",
+    menuGroupAccountTitle: "खाता और सदस्यता",
+    menuGroupHelpTitle: "सहायता और सुरक्षा",
     // ═══ पूर्ण-स्क्रीन "मेरा खाता" क्षेत्र (चरण 2) ═══
     accountNavAria: "खाता अनुभाग",
     navProfil: "प्रोफ़ाइल",

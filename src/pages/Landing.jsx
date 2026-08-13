@@ -6,14 +6,15 @@ import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
 import { LandingMascot } from "../components/assistant/LandingMascot.jsx";
 import { useAccountCtx } from "../context/AccountContext.jsx";
+import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { Ctx } from "../context/AppContext.jsx";
 import { ACCOUNT_T } from "../i18n/account.js";
 import { CheckoutWizard } from "../components/checkout/CheckoutWizard.jsx";
 import { MyAccount } from "../components/account/MyAccount.jsx";
 import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
 import { AccountAvatarButton, AccountMenu } from "../components/account/AccountMenu.jsx";
+import { HeaderMenu } from "../components/account/HeaderMenu.jsx";
 import { useSavedObjects } from "../components/shell/Merkliste.jsx";
-import { Sheet } from "../components/ui/Sheet.jsx";
 
 const navLink = {
   background: "none",
@@ -39,17 +40,20 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const zB = zinsen?.bundesanleihe_10j;
-  // Bottom-Sheet statt seitlicher Schublade (UX-Audit 2026-08-13): einheit-
-  // liches mobiles Muster mit dem Konto-Menue (AccountMenu.jsx), das
-  // gemeinsame Sheet-Bauteil uebernimmt Portal, Backdrop, Scroll-Sperre,
-  // Fokus-Trap und Escape/Aussenklick.
-  const [navOpen, setNavOpen] = useState(false);
+  const isDesktop = useIsDesktop();
   // Login-Standard-Flow (Konzept-Dok Abschnitt 2/1.5): "Anmelden" ist bereits
   // auf der Landingpage sichtbar, statt erst beim Klick in einen Rechner.
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
   // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
   const account = useAccountCtx();
   const [openMode, setOpenMode] = useState(null); // null | "checkout" | "login" | "account"
+  // Ein einziger Zustand fuer EINEN Menue-Trigger (UX-Konzept 2026-08-13):
+  // vorher steuerte `menuOpen` nur das Konto-Dropdown und ein separates
+  // `navOpen` die Seiten-Navigation - zwei Knoepfe (Avatar und ☰), die sich
+  // inhaltlich ueberschnitten (beide fuehrten zu "Mein Konto"). Eingeloggt
+  // oeffnet der Avatar dieses Menue, nicht eingeloggt der ☰-Knopf (es gibt
+  // dann keinen Avatar) - beide bedienen denselben Zustand und dieselbe
+  // Komponente (HeaderMenu mobil / AccountMenu Desktop).
   const [menuOpen, setMenuOpen] = useState(false);
   const [sectionKey, setSectionKey] = useState("profil");
   const avatarRef = useRef(null);
@@ -82,7 +86,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
     if (el) {
       const y = el.getBoundingClientRect().top + window.scrollY - 80;
       window.scrollTo({ top: y, behavior: "smooth" });
-      setNavOpen(false);
+      setMenuOpen(false);
     }
   };
 
@@ -238,24 +242,66 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               </button>
             )}
             {/* Immer gemountet statt `{menuOpen && ...}` - `open` steuert
-                die Sichtbarkeit, nur so kann Sheet.jsx die Ausstiegs-
-                Animation zeigen (siehe AccountMenu.jsx). */}
-            <AccountMenu
-              t={at}
-              me={account.me}
-              open={menuOpen}
-              anchorRef={avatarRef}
-              onClose={() => setMenuOpen(false)}
-              onSelect={(key) => {
-                setMenuOpen(false);
-                setSectionKey(key);
-                setOpenMode("account");
-              }}
-              onLogout={async () => {
-                setMenuOpen(false);
-                await account.logout();
-              }}
-            />
+                die Sichtbarkeit, nur so kann die Ausstiegs-Animation ablaufen
+                (siehe AccountMenu.jsx/HeaderMenu.jsx). Desktop = verankertes
+                Dropdown, Mobil = Vollbild-Drill-down (HeaderMenu, UX-Konzept
+                2026-08-13) - EIN Trigger (Avatar bzw. ☰, siehe unten) statt
+                zweier sich ueberschneidender Menues. HeaderMenu deckt hier
+                zusaetzlich die Seiten-Navigation ab (beforeIdentity) und die
+                Sprachwahl fuer nicht eingeloggte Besucher (loggedOutFooter). */}
+            {isDesktop ? (
+              <AccountMenu
+                t={at}
+                me={account.me}
+                open={menuOpen}
+                anchorRef={avatarRef}
+                onClose={() => setMenuOpen(false)}
+                onSelect={(key) => {
+                  setMenuOpen(false);
+                  setSectionKey(key);
+                  setOpenMode("account");
+                }}
+                onLogout={async () => {
+                  setMenuOpen(false);
+                  await account.logout();
+                }}
+              />
+            ) : (
+              <HeaderMenu
+                t={at}
+                me={account.me}
+                open={menuOpen}
+                isLoggedIn={Boolean(account?.isLoggedIn)}
+                onClose={() => setMenuOpen(false)}
+                beforeIdentity={
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <button onClick={() => scrollTo("rechner")} style={navLinkMobile}>
+                      {l.navRechner}
+                    </button>
+                    <button onClick={() => scrollTo("funktioniert")} style={navLinkMobile}>
+                      {l.navHow}
+                    </button>
+                    <button onClick={() => scrollTo("zinsen")} style={navLinkMobile}>
+                      {l.navZinsen}
+                    </button>
+                  </div>
+                }
+                loggedOutFooter={<LangSel lang={lang} setLang={setLang} />}
+                onSelectSection={(key) => {
+                  setMenuOpen(false);
+                  setSectionKey(key);
+                  setOpenMode("account");
+                }}
+                onLogin={() => {
+                  setMenuOpen(false);
+                  setOpenMode("login");
+                }}
+                onLogout={async () => {
+                  setMenuOpen(false);
+                  await account.logout();
+                }}
+              />
+            )}
             {/* Nutzer-Feedback 2026-08-11 (Screenshot): Sprachwahl + Menü-
                 Button ragten bei ≤880px zusammen mit Konto-Knopf + Logo
                 ueber den Viewport hinaus (kein Umbruch, keine Kuerzung) -
@@ -299,78 +345,39 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 {l.heroCtaPrimary}
               </button>
             )}
-            {/* Mobile nav toggle */}
-            <button
-              onClick={() => setNavOpen((o) => !o)}
-              className="lp-burger"
-              style={{
-                display: "none",
-                width: 40,
-                height: 40,
-                padding: 0,
-                background: "none",
-                border: "1px solid var(--cb)",
-                borderRadius: 8,
-                cursor: "pointer",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <span style={{ fontSize: 18 }}>☰</span>
-            </button>
+            {/* Einziger Menue-Trigger fuer nicht eingeloggte Besucher (UX-
+                Konzept 2026-08-13): es gibt dann keinen Avatar, der ☰-Knopf
+                bedient denselben `menuOpen`-Zustand und dieselbe Komponente
+                wie der Avatar. Eingeloggt entfaellt er ganz - der Avatar
+                allein genuegt als Trigger, kein zweiter Knopf fuer dieselbe
+                Aufgabe mehr (vorher: Avatar UND ☰ gleichzeitig sichtbar). */}
+            {!account?.isLoggedIn && (
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-expanded={menuOpen}
+                aria-label={at.siteNavAria}
+                className="lp-burger"
+                style={{
+                  display: "none",
+                  width: 40,
+                  height: 40,
+                  padding: 0,
+                  background: "none",
+                  border: "1px solid var(--cb)",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <span aria-hidden="true" style={{ fontSize: 18 }}>☰</span>
+              </button>
+            )}
           </div>
         </div>
 
       </header>
 
-      {/* Mobile-Navigation als Bottom-Sheet (UX-Audit 2026-08-13, vorher eine
-          seitlich einschiebende Schublade mit eigener, doppelter Kopfzeile -
-          Logo+Wortmarke standen dort bereits im Seitenkopf). Dasselbe Muster
-          wie das Konto-Menue (AccountMenu.jsx): Daumenreichweite in einer
-          installierten PWA ohne Browserleiste, und beide mobilen Menues der
-          App sehen jetzt gleich aus und verhalten sich gleich. */}
-      <Sheet open={navOpen} onClose={() => setNavOpen(false)} variant="bottom" label={at.siteNavAria}>
-        <div style={{ padding: "4px 18px 18px", display: "flex", flexDirection: "column", gap: 4 }}>
-          <button onClick={() => scrollTo("rechner")} style={navLinkMobile}>
-            {l.navRechner}
-          </button>
-          <button onClick={() => scrollTo("funktioniert")} style={navLinkMobile}>
-            {l.navHow}
-          </button>
-          <button onClick={() => scrollTo("zinsen")} style={navLinkMobile}>
-            {l.navZinsen}
-          </button>
-          {/* Nutzer-Vorgabe 2026-08-12: wieder aufgenommen. Am 11.08. auf
-              Empfehlung des ui-designer-Agenten entfernt (Argument: der
-              Header-Knopf bleibt mobil sichtbar, der Eintrag sei damit
-              der dritte Auftritt derselben Aktion). Der Nutzer moechte
-              ihn im Seitenmenue haben - ein vollstaendiges Menue, das
-              eine der Hauptaktionen auslaesst, wirkt beim Aufklappen
-              unvollstaendig. */}
-          {account && !account.loading && (
-            <button
-              onClick={() => {
-                setNavOpen(false);
-                setOpenMode(account.isLoggedIn ? "account" : "login");
-              }}
-              style={navLinkMobile}
-            >
-              {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
-            </button>
-          )}
-          {/* Sprachwahl zieht bei ≤880px hierher um, siehe Kommentar oben
-              bei .lp-langsel-top - Platz in der Kopfzeile reichte dort
-              nicht fuer Logo + Konto-Knopf + Sprachwahl + Menü-Button.
-              Wie oben nur fuer nicht eingeloggte Besucher (Nutzer-Vorgabe
-              2026-08-12): eingeloggt liegt die Sprachwahl allein in
-              "Einstellungen". */}
-          {!account?.isLoggedIn && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--cb)" }}>
-              <LangSel lang={lang} setLang={setLang} />
-            </div>
-          )}
-        </div>
-      </Sheet>
       {(openMode === "checkout" || openMode === "login" || openMode === "account") && (
         <Ctx.Provider value={landingCtxValue}>
           {openMode === "checkout" && <CheckoutWizard onClose={() => setOpenMode(null)} />}

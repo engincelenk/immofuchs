@@ -1,3 +1,65 @@
+## 2026-08-13 (1.10.0)
+
+### Zwei Header-Menues zu einem Vollbild-Drill-down zusammengelegt
+
+**Anlass:** Nutzer-Vorgabe mit CHECK24-Referenz-Screenshots: mobil zeigte der
+Header bisher zwei getrennte Trigger mit ueberschneidendem Ziel - der Avatar
+oeffnete das Kontomenue (Profil/Abo/...), ein separater ☰-Knopf daneben die
+Seiten-Navigation (Rechner/So funktioniert's/Bauzinsen) samt einem eigenen
+"Mein Konto"-Eintrag darin, der wiederum ins selbe Kontomenue fuehrte. Vorgabe:
+EIN Trigger, Inhalt als zweistufiges Vollbild-Menue (Kategorien statt einer
+endlosen flachen Liste) wie in den Referenz-Screenshots.
+
+**Neue Komponente `HeaderMenu.jsx`** (Vollbild, zwei Ebenen, nur mobil
+<1024px): Wurzel zeigt eingeloggt Identitaet + zwei Kategorien - "Konto & Abo"
+und "Hilfe & Sicherheit" -, die 1:1 die bestehende `groupStart`-Aufteilung aus
+`accountSections.js` spiegeln, keine neue Kategorisierung noetig. Nicht
+eingeloggt bleibt es eine flache Liste (zu wenige Eintraege fuer Kategorien).
+Kategorie-Ansicht slidet von rechts ein (translateX, 220ms
+cubic-bezier(.32,.72,0,1), abgeschaltet unter prefers-reduced-motion),
+fixierter Kopf mit Zurueck-Pfeil + Kategorietitel. Eigene Komponente statt
+einer weiteren Sheet.jsx-Variante (die Zwei-Ebenen-Slide-Logik passt nicht ins
+Sheet-Positionierungsmodell), nutzt aber dieselben geteilten Hooks
+(useFocusTrap, useScrollLock) wie jedes andere Overlay. Zeilen mit 44px+
+Tap-Flaeche und spuerbarem :active-Zustand (leichtes Einskalieren + Aufhellung,
+Chevron ruckt beim Antippen nach rechts) - per Pointer-Handler, da inline
+Styles kein :active kennen.
+
+**Drei Einsatzorte umgestellt** (ProHeaderButton, Landing, MyAccount): mobil
+HeaderMenu, Desktop unveraendert AccountMenu (Sheet variant="anchored") -
+dort gibt es das Platzproblem nicht, ein Vollbild-Overlay fuer ein Dropdown
+waere ueberdimensioniert. Alle drei entscheiden ueber denselben
+`useIsDesktop()`-Hook (1024px), den auch der Avatar-Knopf selbst fuer seine
+eigene Kompakt-/Vollansicht nutzt - keine Diskrepanz zwischen Trigger-Optik
+und geoeffnetem Menue.
+
+**Landing.jsx am staerksten veraendert:** der separate ☰-Knopf UND die vorher
+migrierte Bottom-Sheet-Seiten-Navigation entfallen ersatzlos. Eingeloggt ist
+der Avatar der einzige Trigger (☰ verschwindet komplett - kein zweiter Knopf
+mehr fuer dieselbe Aufgabe). Nicht eingeloggt gibt es keinen Avatar, dafuer
+bleibt ☰ als einziger Menue-Trigger bestehen und bedient denselben
+`menuOpen`-Zustand wie der Avatar (vorher zwei getrennte States `menuOpen` +
+`navOpen`). Die 3 Scroll-Anker wandern als `beforeIdentity`-Slot oben in
+HeaderMenu, die Sprachwahl fuer nicht eingeloggte Besucher als
+`loggedOutFooter`-Slot. Die separate "Anmelden"-Schaltflaeche bleibt
+unangetastet bestehen (Konversions-CTA, keine Navigation - nicht Teil der
+beanstandeten Dopplung).
+
+**Bewusst NICHT geaendert:** Design-Tokens (Fuchs-Orange, 12px-Radius, DM
+Sans, bestehende SVG-Icons statt einer neuen Icon-Bibliothek) - ein zuvor
+vorgelegter generischer Gestaltungsauftrag mit Grau-Palette/20px-Radius/
+Backdrop-Blur/Lucide-Icons wurde nicht umgesetzt, auf Rueckfrage wollte der
+Nutzer stattdessen die konkrete CHECK24-Struktur mit den bestehenden
+ImmoFuchs-Tokens. Wisch-zum-Schliessen ebenfalls nicht Teil dieses Auftrags
+(nicht erneut angefragt).
+
+**Verifiziert:** Lint 0 Fehler, Build erfolgreich, 249 Frontend-Tests gruen,
+i18n-Vollstaendigkeit (33 Tests, inkl. der 2 neuen Kategorietitel-Schluessel
+in allen 5 Sprachen) gruen. Fuer das Overlay selbst gibt es keine
+automatisierten Tests - Verifikation ausstehend per Durchklicken (besonders:
+Kategorie-Wechsel-Animation, Zurueck-Navigation, Fokus-Trap-Uebergabe beim
+Oeffnen aus "Mein Konto" heraus).
+
 ## 2026-08-13 (1.9.0)
 
 ### Mobile Menues vereinheitlicht (UX-Audit, Schritte 1-5 von 6)

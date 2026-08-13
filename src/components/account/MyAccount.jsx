@@ -8,6 +8,7 @@ import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { useScrollLock } from "../../hooks/useScrollLock.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
+import { HeaderMenu } from "./HeaderMenu.jsx";
 import { visibleSections } from "./accountSections.js";
 import { ProfilSection } from "./sections/ProfilSection.jsx";
 import { AbonnementSection } from "./sections/AbonnementSection.jsx";
@@ -257,22 +258,42 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
             Seitenleiste + Kurzmenue - dort gibt es keine Platznot und die
             Bereiche stehen ohnehin dauerhaft sichtbar daneben. */}
         {/* Immer gemountet statt `{menuOpen && ...}` - `open` steuert die
-            Sichtbarkeit, nur so kann Sheet.jsx die Ausstiegs-Animation
-            zeigen (siehe AccountMenu.jsx). */}
-        <AccountMenu
-          t={t}
-          me={account.me}
-          open={menuOpen}
-          variant={isDesktop ? "compact" : "full"}
-          anchorRef={avatarRef}
-          onClose={() => setMenuOpen(false)}
-          onSelect={(key) => {
-            setMenuOpen(false);
-            setActiveKey(key);
-          }}
-          onLogout={handleLogout}
-          logoutBusy={logoutBusy}
-        />
+            Sichtbarkeit, nur so kann die Ausstiegs-Animation ablaufen (siehe
+            AccountMenu.jsx/HeaderMenu.jsx). Desktop: kompaktes verankertes
+            Dropdown (die Bereiche stehen dort bereits dauerhaft in der
+            Seitenleiste). Mobil: Vollbild-Drill-down (HeaderMenu) - hier IST
+            das Menue der einzige Weg, den Bereich zu wechseln, seit die
+            Seitenleiste auf dem Handy nicht gerendert wird. */}
+        {isDesktop ? (
+          <AccountMenu
+            t={t}
+            me={account.me}
+            open={menuOpen}
+            variant="compact"
+            anchorRef={avatarRef}
+            onClose={() => setMenuOpen(false)}
+            onSelect={(key) => {
+              setMenuOpen(false);
+              setActiveKey(key);
+            }}
+            onLogout={handleLogout}
+            logoutBusy={logoutBusy}
+          />
+        ) : (
+          <HeaderMenu
+            t={t}
+            me={account.me}
+            open={menuOpen}
+            isLoggedIn
+            onClose={() => setMenuOpen(false)}
+            onSelectSection={(key) => {
+              setMenuOpen(false);
+              setActiveKey(key);
+            }}
+            onLogout={handleLogout}
+            logoutBusy={logoutBusy}
+          />
+        )}
 
         <div
           className="ma-body"
