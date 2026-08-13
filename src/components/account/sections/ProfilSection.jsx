@@ -62,7 +62,7 @@ export function ProfilSection({ t, account }) {
   }
 
   return (
-    <div>
+    <div style={{ maxWidth: 480 }}>
       <h2 style={sectionTitleStyle}>{t.navProfil}</h2>
       <p style={sectionIntroStyle}>{t.profilIntro}</p>
 
@@ -265,9 +265,11 @@ function PasswordBlock({ t, account }) {
           autoComplete="new-password"
           style={textInputStyle}
         />
-        <button type="submit" disabled={busy} style={primaryBtnStyle}>
-          {t.profilPasswordSubmit}
-        </button>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button type="submit" disabled={busy} style={{ ...primaryBtnStyle, width: "auto", padding: "11px 28px" }}>
+            {t.profilPasswordSubmit}
+          </button>
+        </div>
       </div>
     </form>
   );

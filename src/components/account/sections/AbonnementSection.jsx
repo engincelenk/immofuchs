@@ -114,13 +114,32 @@ export function AbonnementSection({ t, account, onUpgrade }) {
             )}
           </div>
 
+          {/* Elegantere Alternative zur frueheren volle-Breite-Leiste
+              (UX-Vorschlag 2026-08-13): Titel/Hinweis links, Aktions-Button
+              rechts in einer Zeile statt darunter gestapelt - Muster von
+              Stripe/Linear-Abrechnungsseiten. */}
           {canChangePlan && (
-            <div style={blockCardStyle}>
-              <div style={blockTitleStyle}>{t.aboChangePlanTitle}</div>
-              <p style={blockHintStyle}>
-                {t.aboChangePlanHint.replace("{date}", formatPeriodEndDate(subscription) || "")}
-              </p>
-              <button onClick={handleChangePlan} disabled={busy === "plan"} style={actionBtnStyle}>
+            <div
+              style={{
+                ...blockCardStyle,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={blockTitleStyle}>{t.aboChangePlanTitle}</div>
+                <p style={{ ...blockHintStyle, margin: 0 }}>
+                  {t.aboChangePlanHint.replace("{date}", formatPeriodEndDate(subscription) || "")}
+                </p>
+              </div>
+              <button
+                onClick={handleChangePlan}
+                disabled={busy === "plan"}
+                style={{ ...actionBtnStyle, width: "auto", flexShrink: 0, textAlign: "center", padding: "11px 20px" }}
+              >
                 {t.aboChangePlanCta
                   .replace("{plan}", targetPlan === "monthly" ? t.planMonthly : t.planYearly)
                   .replace(
@@ -133,17 +152,20 @@ export function AbonnementSection({ t, account, onUpgrade }) {
 
           <div style={blockCardStyle}>
             <div style={blockTitleStyle}>{t.aboActionsTitle}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
               {subscription.status === "cancel_scheduled" ? (
                 <button
                   onClick={() => run("reactivate", account.reactivateSubscription)}
                   disabled={busy === "reactivate"}
-                  style={actionBtnStyle}
+                  style={{ ...actionBtnStyle, width: "auto", textAlign: "center", padding: "11px 20px" }}
                 >
                   {t.accountReactivate}
                 </button>
               ) : (
-                <button onClick={() => setShowCancel(true)} style={actionBtnStyle}>
+                <button
+                  onClick={() => setShowCancel(true)}
+                  style={{ ...actionBtnStyle, width: "auto", textAlign: "center", padding: "11px 20px" }}
+                >
                   {t.accountCancel}
                 </button>
               )}
@@ -156,7 +178,7 @@ export function AbonnementSection({ t, account, onUpgrade }) {
                 <button
                   onClick={() => run("refund", account.refundSubscription)}
                   disabled={busy === "refund"}
-                  style={{ ...inlineLinkBtnStyle, marginTop: 4, alignSelf: "flex-start" }}
+                  style={{ ...inlineLinkBtnStyle, marginTop: 4 }}
                 >
                   {t.accountRefund}
                 </button>

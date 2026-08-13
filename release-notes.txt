@@ -1,3 +1,47 @@
+## 2026-08-13 (1.7.41)
+
+### Admin-Rolle zeigt jetzt "Pro" — auch ohne Abo
+
+**Anlass:** Nutzer-Screenshot: das Admin-Testkonto zeigte "Free" im
+Konto-Chip, obwohl Admins wie Pro behandelt werden sollen.
+
+**Umbau:** `isProUncached()` (worker/src/entitlement.ts) prueft jetzt
+zusaetzlich zur Subscription die Rolle - `role === "admin"` ergibt immer
+`isPro:true`. Bewusst an dieser einen Stelle statt im Frontend, weil diese
+Funktion sowohl den Anzeige-Chip (`/me`) als auch die echte
+Rechtedurchsetzung (`requirePro`, Finn/Exposé) speist - ein reiner
+Anzeige-Fix haette "Pro" gezeigt, echte Pro-Funktionen fuer Admins aber
+weiterhin gesperrt gelassen.
+
+### "Zurück" nicht mehr am Avatar-Button geklebt
+
+**Anlass:** Nutzer-Screenshot: "← Zurück" stand nur 10px neben dem
+Konto-Avatar in derselben rechten Kopfzeilen-Gruppe - wirkte wie ein
+verklebter Klumpen.
+
+**Umbau:** "Zurück" ist aus der rechten Gruppe (`MyAccount.jsx`) in die linke
+gewandert, per duenner Trennlinie vom Logo abgesetzt. Der Avatar steht jetzt
+allein rechts. Auf dem Handy wird "Zurück" zum reinen 36px-Icon-Button (wie
+der Avatar), auf dem Desktop bleibt Icon+Text. Bewusst NICHT unter "Admin" in
+der Bereichsliste (eigener Vorschlag des Nutzers) - "Zurück" ist eine
+globale Verlassen-Aktion, keine Bereichs-Auswahl, und die Liste existiert auf
+dem Handy gar nicht, ihre Laenge wandert ausserdem mit der Rollenfilterung.
+
+### Profil und Abonnement: schmalere, modernere Formulare
+
+**Anlass:** Nutzer-Screenshot: Passwortfelder und Buttons auf der
+Profil-Seite zogen sich auf breiten Bildschirmen fast ueber die volle
+900px-Spalte - wirkte unnoetig altbacken.
+
+**Umbau:** Profil-Bereich jetzt auf 480px gedeckelt (linksbuendig statt
+zentriert), der "Passwort speichern"-Button wechselt von voller Breite auf
+auto-Breite rechtsbuendig - dasselbe Muster, das die E-Mail-/Name-Formulare
+im selben Bereich schon nutzen. Bei Abonnement wandert "Tarif wechseln" von
+Titel+Hinweis+voller-Breite-Leiste zu einer Zeile: Text links, Button rechts
+(Stripe/Linear-Abrechnungsmuster); "Kuendigen"/"Reaktivieren" ebenfalls
+auto-Breite statt Vollbreite. Admin-Bereich bleibt bewusst unveraendert bei
+900px (Tabellen/Kachelraster brauchen die Breite).
+
 ## 2026-08-12 (1.7.40)
 
 ### "Mein Konto" nutzt jetzt dasselbe Raster wie der Rest der App

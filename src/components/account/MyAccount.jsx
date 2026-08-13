@@ -189,58 +189,73 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
         `}</style>
         <div className="ma-hdr-bar">
         <div className="ma-hdr">
-          <div className="ma-brand" style={{ minWidth: 0, display: "flex", alignItems: "center" }}>
-            <img
-              src="/icon-192.png"
-              alt="Immofuchs"
-              className="ma-logo"
-              style={{ objectFit: "contain", flexShrink: 0 }}
-            />
-            <span
-              className="ma-wordmark"
-              style={{ fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: "var(--ct)", whiteSpace: "nowrap" }}
-            >
-              immo<span style={{ color: "var(--ca)" }}>fuchs</span>
-              <span style={{ fontWeight: 700 }}>.info</span>
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            {/* Tarif-Chip sitzt jetzt IM Avatar statt neben dem Logo
-                (Nutzer-Hinweis 12.08.): im App-Kopf stand er bereits dort,
-                nebeneinander wirkten zwei Platzierungen fuer dieselbe
-                Information uneinheitlich. Ohne Resttage - die stehen im
-                Bereich "Abonnement", im Kopf waere die Zeile zu lang. */}
-            <AccountAvatarButton
-              t={t}
-              me={account.me}
-              open={menuOpen}
-              onToggle={() => setMenuOpen((o) => !o)}
-              innerRef={avatarRef}
-              showChip
-            />
-            {/* Nutzer-Vorgabe 2026-08-12: benannter Zurueck-Weg statt eines
-                blossen ✕ - ein Kreuz neben dem Avatar liess offen, was es
-                schliesst (Menue? Konto? Anwendung?). */}
+          <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
+            <div className="ma-brand" style={{ minWidth: 0, display: "flex", alignItems: "center" }}>
+              <img
+                src="/icon-192.png"
+                alt="Immofuchs"
+                className="ma-logo"
+                style={{ objectFit: "contain", flexShrink: 0 }}
+              />
+              <span
+                className="ma-wordmark"
+                style={{ fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: "var(--ct)", whiteSpace: "nowrap" }}
+              >
+                immo<span style={{ color: "var(--ca)" }}>fuchs</span>
+                <span style={{ fontWeight: 700 }}>.info</span>
+              </span>
+            </div>
+            {/* Nutzer-Vorgabe 2026-08-13: "Zurueck" ist eine globale
+                Verlassen-Aktion (zurueck in die App), kein Bereich der
+                Sidebar - deshalb hier neben dem Logo statt im rechten
+                Cluster beim Avatar (die beiden wirkten dort 10px
+                auseinander wie ein verklebter Klumpen) oder unten in der
+                Bereichsliste (dort gibts auf dem Handy keine Entsprechung,
+                die Liste existiert nur bei isDesktop, und ihre Laenge
+                wandert mit der Rollenfilterung - "Zurueck" braucht eine
+                stabile Position). Der Avatar steht dadurch jetzt allein
+                rechts. */}
+            <span aria-hidden="true" style={{ width: 1, height: 20, background: "var(--cb)", margin: "0 16px", flexShrink: 0 }} />
             <button
               onClick={onClose}
+              aria-label={t.wizardBack}
               style={{
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 4,
                 background: "none",
-                border: "none",
+                border: isDesktop ? "none" : "1px solid var(--cb)",
+                borderRadius: isDesktop ? 0 : 999,
+                width: isDesktop ? "auto" : 36,
+                height: isDesktop ? "auto" : 36,
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: "pointer",
                 color: "var(--ca-dk)",
                 fontFamily: "inherit",
-                padding: "6px 2px",
+                padding: isDesktop ? "6px 2px" : 0,
                 whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
-              <span aria-hidden="true">←</span> {t.wizardBack}
+              <span aria-hidden="true">←</span>
+              {isDesktop && <span>{t.wizardBack}</span>}
             </button>
           </div>
+          {/* Tarif-Chip sitzt jetzt IM Avatar statt neben dem Logo
+              (Nutzer-Hinweis 12.08.): im App-Kopf stand er bereits dort,
+              nebeneinander wirkten zwei Platzierungen fuer dieselbe
+              Information uneinheitlich. Ohne Resttage - die stehen im
+              Bereich "Abonnement", im Kopf waere die Zeile zu lang. */}
+          <AccountAvatarButton
+            t={t}
+            me={account.me}
+            open={menuOpen}
+            onToggle={() => setMenuOpen((o) => !o)}
+            innerRef={avatarRef}
+            showChip
+          />
         </div>
         </div>
         {/* Nutzer-Screenshot 2026-08-12: Auf dem Handy belegte der ☰-Knopf

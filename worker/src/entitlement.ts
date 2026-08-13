@@ -80,7 +80,13 @@ export function computeIsPro(sub: SubscriptionRow | null, now: number): boolean 
 // D1-Pruefung, ohne Cache - Grundwahrheit, immer korrekt, aber ein D1-Read
 // teurer als ein Cookie-Read (siehe Cache-Wrapper unten).
 export async function isProUncached(env: Env, userId: string): Promise<boolean> {
-  const sub = await getActiveSubscription(env.DB, userId);
+  // Admin zaehlt immer als Pro (Nutzer-Entscheidung 2026-08-13): bewusst hier
+  // und nicht an jedem Aufrufer einzeln, da diese Funktion sowohl den
+  // Anzeige-Chip (/me) als auch die echte Rechtedurchsetzung (requirePro,
+  // Finn/Expose) speist - ein reiner Frontend-Fix haette "Pro" angezeigt,
+  // echte Pro-Funktionen fuer Admins aber weiterhin gesperrt.
+  const [user, sub] = await Promise.all([getUserById(env.DB, userId), getActiveSubscription(env.DB, userId)]);
+  if (user?.role === "admin") return true;
   return computeIsPro(sub, Date.now());
 }
 
