@@ -1,3 +1,32 @@
+## 2026-08-13 (1.7.43)
+
+### Zwei Breiten-Stufen fuer die restlichen Konto-Unterbereiche
+
+**Anlass:** Nutzer-Screenshots von dev: die 1.7.41/1.7.42-Verschlankung hatte
+nur einzelne Buttons betrachtet, nicht die umschliessenden Karten. Bei
+Abonnement (Free-Plan-Karte mit "Auf Pro upgraden") und Einstellungen
+(Sprachchips, Benachrichtigung, Export, Rechtliches) blieb der Container bei
+900px, obwohl der Inhalt jeder Karte kurz ist - viel Leerraum rechts neben
+5 Chips oder einer Checkbox.
+
+**Umbau:** Zwei Breiten-Stufen ergaenzt (jeweils linksbuendig wie Profil,
+kein Zentrieren):
+- 480px: Abonnement, Einstellungen (reine Label-Wert-Paare bzw. kurze
+  Formular-Elemente, wie Profil)
+- 560px: Zahlungen, Support, Konto & Sicherheit (Zeilen mit 2-4 Elementen -
+  Rechnungs-/Geraete-Zeilen mit Badge+Link, FAQ-Flietext braucht etwas mehr
+  Zeilenlaenge als 480px)
+
+Der app-weite `actionBtnStyle` (volle Breite, linksbuendig, Icon-Zeile)
+bleibt unveraendert - das Problem war nie der Button-Stil selbst, sondern
+dass er in einer 900px-Karte sass. In einem 480/560px-Container liest sich
+derselbe Button als richtig skalierte Aktion statt als gestreckte Leiste -
+loest nebenbei auch die vorherige "Kuendigen/Reaktivieren voll- oder
+auto-Breite"-Frage, ohne den Button-Stil anzufassen.
+
+Admin bleibt unveraendert bei 900px (Tabellen/Kachelraster brauchen die
+Breite).
+
 ## 2026-08-13 (1.7.42)
 
 ### Breiten-Review aller Konto-Unterbereiche, eine Korrektur

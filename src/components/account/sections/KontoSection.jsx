@@ -110,7 +110,7 @@ export function KontoSection({ t, account, lang, onClose }) {
   }
 
   return (
-    <div>
+    <div style={{ maxWidth: 560 }}>
       <h2 style={sectionTitleStyle}>{t.navSicherheit}</h2>
       <p style={sectionIntroStyle}>{t.kontoIntro}</p>
 

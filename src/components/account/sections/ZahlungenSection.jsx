@@ -97,7 +97,7 @@ export function ZahlungenSection({ t, account, lang }) {
   }
 
   return (
-    <div>
+    <div style={{ maxWidth: 560 }}>
       <h2 style={sectionTitleStyle}>{t.navZahlung}</h2>
       <p style={sectionIntroStyle}>{t.zahlungBody}</p>
 

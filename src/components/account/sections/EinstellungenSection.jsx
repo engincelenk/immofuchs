@@ -21,7 +21,7 @@ export function EinstellungenSection({ t, account, lang, setLang }) {
   }
 
   return (
-    <div>
+    <div style={{ maxWidth: 480 }}>
       <h2 style={sectionTitleStyle}>{t.navDatenschutz}</h2>
       <p style={sectionIntroStyle}>{t.einstellungenIntro}</p>
 

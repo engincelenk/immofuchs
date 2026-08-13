@@ -69,7 +69,7 @@ export function AbonnementSection({ t, account, onUpgrade }) {
 
   if (showCancel) {
     return (
-      <div>
+      <div style={{ maxWidth: 480 }}>
         <h2 style={sectionTitleStyle}>{t.navAbonnement}</h2>
         <p style={sectionIntroStyle}>{t.aboIntro}</p>
         <div style={blockCardStyle}>
@@ -80,7 +80,7 @@ export function AbonnementSection({ t, account, onUpgrade }) {
   }
 
   return (
-    <div>
+    <div style={{ maxWidth: 480 }}>
       <h2 style={sectionTitleStyle}>{t.navAbonnement}</h2>
       <p style={sectionIntroStyle}>{t.aboIntro}</p>
 

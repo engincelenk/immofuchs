@@ -18,7 +18,7 @@ export function SupportSection({ t }) {
   const mailto = (subject) => `mailto:${SUPPORT_MAIL}?subject=${encodeURIComponent(subject)}`;
 
   return (
-    <div>
+    <div style={{ maxWidth: 560 }}>
       <h2 style={sectionTitleStyle}>{t.navSupport}</h2>
       <p style={sectionIntroStyle}>{t.supportIntro}</p>
 
