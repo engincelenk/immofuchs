@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Sheet } from "../../../ui/Sheet.jsx";
 import {
   addSupportNote,
   deleteUser,
@@ -33,13 +33,25 @@ import {
 // hat - dabei ging der Listen-Zustand (Seite, Filter, Scrollposition) beim
 // Zurueckgehen verloren.
 //
-// Bewusst KEIN eigener Fokus-Trap: "Mein Konto" haelt bereits einen aktiv
-// (MyAccount.jsx/useFocusTrap), und zwei gleichzeitig aktive Traps
-// ueberschreiben sich beim Tabben gegenseitig - dieselbe Begruendung, aus der
-// der Checkout-Wizard den Konto-Bereich ersetzt statt sich darueberzulegen.
-// Stattdessen: Escape schliesst, der Schliessen-Knopf ist erstes Element.
+// Seit dem UX-Audit 2026-08-13 auf dem gemeinsamen Sheet-Bauteil
+// (variant="right"). Der urspruengliche Grund, HIER keinen Fokus-Trap zu
+// nutzen ("Mein Konto" haelt schon einen aktiv, zwei gleichzeitig aktive
+// Traps ueberschreiben sich beim Tabben) gilt nicht mehr als Verzicht,
+// sondern ist jetzt strukturell geloest: useFocusTrap.js fuehrt seither einen
+// Stapel, in dem nur der oberste Trap reagiert - Sheet aktiviert also
+// gefahrlos einen eigenen.
 export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
   const toast = useAdminToast();
+  const open = Boolean(userId);
+  // Der Aufrufer rendert diese Komponente jetzt immer (nicht mehr
+  // `{selectedId && ...}`), damit Sheet die Ausstiegs-Animation zeigen kann -
+  // `userId` wird dabei kurzzeitig null, waehrend `open` schon false ist.
+  // Die zuletzt bekannte ID haelt den Inhalt waehrend dieser Animation
+  // sichtbar, statt schlagartig zu verschwinden.
+  const lastUserIdRef = useRef(userId);
+  if (userId) lastUserIdRef.current = userId;
+  const effectiveUserId = userId ?? lastUserIdRef.current;
+
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -57,28 +69,24 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
   const isSelf = detail?.id === currentUser?.id;
 
   const load = useCallback(async () => {
+    if (!effectiveUserId) return;
     setLoading(true);
     setLoadError(null);
     try {
-      setDetail(await fetchUserDetail(userId));
+      setDetail(await fetchUserDetail(effectiveUserId));
     } catch (err) {
       setLoadError(errorText(err));
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [effectiveUserId]);
 
+  // Nur beim tatsaechlichen Oeffnen neu laden, nicht auch noch waehrend die
+  // Ausstiegs-Animation lauft (open bereits false, effectiveUserId aber noch
+  // gesetzt).
   useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    if (open) load();
+  }, [open, load]);
 
   // Einheitlicher Ablauf fuer jede schreibende Aktion (Auftrag Abschnitt 11):
   // Backend speichern -> Erfolg melden -> Detail neu laden (damit die
@@ -101,7 +109,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
   async function handleDelete() {
     setBusy("delete");
     try {
-      await deleteUser(userId);
+      await deleteUser(effectiveUserId);
       toast.success("Nutzer wurde gelöscht.");
       onChanged?.();
       onClose(); // Das Konto existiert nicht mehr - kein Neuladen des Details.
@@ -115,39 +123,22 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
     e.preventDefault();
     const text = note.trim();
     if (!text) return;
-    await run("note", () => addSupportNote(userId, text), "Notiz gespeichert.", { reloadList: false });
+    await run("note", () => addSupportNote(effectiveUserId, text), "Notiz gespeichert.", { reloadList: false });
     setNote("");
   }
 
-  return createPortal(
-    <div
-      role="presentation"
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        // Ueber dem Konto-Overlay (z-index 1000), unter den Toasts (1200).
-        zIndex: 1100,
-        background: "rgba(26,26,26,.32)",
-        display: "flex",
-        justifyContent: "flex-end",
-      }}
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      variant="right"
+      size="min(480px, 100%)"
+      label={`Nutzer ${detail?.email || ""}`}
     >
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Nutzer ${detail?.email || ""}`}
-        onClick={(e) => e.stopPropagation()}
+      <div
         style={{
-          width: "min(480px, 100%)",
-          height: "100%",
-          overflowY: "auto",
-          background: "var(--bg)",
-          borderLeft: "1px solid var(--cb)",
-          boxSizing: "border-box",
           padding: "16px 16px calc(24px + env(safe-area-inset-bottom))",
-          paddingTop: "calc(16px + env(safe-area-inset-top))",
-          fontFamily: "'DM Sans', sans-serif",
+          boxSizing: "border-box",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -185,7 +176,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                     value={detail.role}
                     disabled={busy === "role"}
                     onChange={(e) =>
-                      run("role", () => setUserRole(userId, e.target.value), "Rolle erfolgreich geändert.")
+                      run("role", () => setUserRole(effectiveUserId, e.target.value), "Rolle erfolgreich geändert.")
                     }
                     style={selectStyle}
                   >
@@ -220,7 +211,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                       // (Abschnitt 11) verlangte Bestaetigung. Entsperren
                       // nicht, das ist folgenlos zurueckdrehbar.
                       if (e.target.value === "SUSPENDED") setConfirm("suspend");
-                      else run("status", () => setUserStatus(userId, "ACTIVE"), "Konto entsperrt.");
+                      else run("status", () => setUserStatus(effectiveUserId, "ACTIVE"), "Konto entsperrt.");
                     }}
                     style={selectStyle}
                   >
@@ -239,7 +230,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                   busy={busy === "status"}
                   onCancel={() => setConfirm(null)}
                   onConfirm={async () => {
-                    await run("status", () => setUserStatus(userId, "SUSPENDED"), "Konto gesperrt.");
+                    await run("status", () => setUserStatus(effectiveUserId, "SUSPENDED"), "Konto gesperrt.");
                     setConfirm(null);
                   }}
                 />
@@ -254,7 +245,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                     onChange={(next) =>
                       run(
                         "flags",
-                        () => setUserFlags(userId, { isTestUser: next }),
+                        () => setUserFlags(effectiveUserId, { isTestUser: next }),
                         next ? "Testuser aktiviert." : "Testuser deaktiviert.",
                       )
                     }
@@ -266,7 +257,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                     onChange={(next) =>
                       run(
                         "flags",
-                        () => setUserFlags(userId, { isBeta: next }),
+                        () => setUserFlags(effectiveUserId, { isBeta: next }),
                         next ? "Beta-Zugriff aktiviert." : "Beta-Zugriff deaktiviert.",
                       )
                     }
@@ -332,7 +323,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                     onClick={() =>
                       run(
                         "reset",
-                        () => triggerPasswordReset(userId),
+                        () => triggerPasswordReset(effectiveUserId),
                         "Passwort-Reset-Mail wurde verschickt.",
                         { reloadList: false },
                       )
@@ -351,7 +342,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                   )}
                   <button
                     onClick={() =>
-                      run("sessions", () => revokeSessions(userId), "Alle Sitzungen wurden beendet.", {
+                      run("sessions", () => revokeSessions(effectiveUserId), "Alle Sitzungen wurden beendet.", {
                         reloadList: false,
                       })
                     }
@@ -396,9 +387,8 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
             )}
           </>
         )}
-      </aside>
-    </div>,
-    document.body,
+      </div>
+    </Sheet>
   );
 }
 

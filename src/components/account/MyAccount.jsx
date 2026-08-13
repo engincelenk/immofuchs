@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
+import { useScrollLock } from "../../hooks/useScrollLock.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
 import { visibleSections } from "./accountSections.js";
@@ -66,26 +67,12 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const avatarRef = useRef(null);
 
-  // Zwei Scrollbalken (Nutzer-Screenshots 12.08., zweiter Anlauf): Der erste
-  // Versuch sperrte nur <body> - das reicht hier nicht. html und body tragen
-  // global `overflow-x:hidden` (index.html/App.jsx), und sobald EINE Achse
-  // nicht `visible` ist, rechnet CSS die andere auf `auto` hoch. Damit ist
-  // <html> selbst ein Scroll-Container, und weil sein overflow nicht
-  // `visible` ist, wird die Angabe von <body> gar nicht mehr auf den Viewport
-  // uebernommen. Der Seiten-Scrollbalken gehoerte also die ganze Zeit zu
-  // <html> und blieb neben dem des Overlays stehen. Jetzt werden beide
-  // gesperrt.
-  useEffect(() => {
-    const html = document.documentElement;
-    const prevHtml = html.style.overflow;
-    const prevBody = document.body.style.overflow;
-    html.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    return () => {
-      html.style.overflow = prevHtml;
-      document.body.style.overflow = prevBody;
-    };
-  }, []);
+  // Zwei Scrollbalken (Nutzer-Screenshots 12.08., zweiter Anlauf): siehe
+  // useScrollLock.js fuer die volle Begruendung (html UND body sperren,
+  // nicht nur body). Seit dem UX-Audit 2026-08-13 der gemeinsame Hook statt
+  // einer eigenen Kopie, damit Sheet.jsx und dieser Bereich hier dieselbe
+  // Logik teilen.
+  useScrollLock(true);
 
   async function handleLogout() {
     setLogoutBusy(true);
@@ -269,21 +256,23 @@ export function MyAccount({ onClose, initialSection = "profil" }) {
             ☰-Zeile entfaellt ersatzlos. Auf dem Desktop bleibt es bei
             Seitenleiste + Kurzmenue - dort gibt es keine Platznot und die
             Bereiche stehen ohnehin dauerhaft sichtbar daneben. */}
-        {menuOpen && (
-          <AccountMenu
-            t={t}
-            me={account.me}
-            variant={isDesktop ? "compact" : "full"}
-            anchorRef={avatarRef}
-            onClose={() => setMenuOpen(false)}
-            onSelect={(key) => {
-              setMenuOpen(false);
-              setActiveKey(key);
-            }}
-            onLogout={handleLogout}
-            logoutBusy={logoutBusy}
-          />
-        )}
+        {/* Immer gemountet statt `{menuOpen && ...}` - `open` steuert die
+            Sichtbarkeit, nur so kann Sheet.jsx die Ausstiegs-Animation
+            zeigen (siehe AccountMenu.jsx). */}
+        <AccountMenu
+          t={t}
+          me={account.me}
+          open={menuOpen}
+          variant={isDesktop ? "compact" : "full"}
+          anchorRef={avatarRef}
+          onClose={() => setMenuOpen(false)}
+          onSelect={(key) => {
+            setMenuOpen(false);
+            setActiveKey(key);
+          }}
+          onLogout={handleLogout}
+          logoutBusy={logoutBusy}
+        />
 
         <div
           className="ma-body"

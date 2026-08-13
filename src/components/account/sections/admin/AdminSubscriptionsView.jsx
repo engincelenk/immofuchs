@@ -173,9 +173,9 @@ export function AdminSubscriptionsView() {
         </button>
       </div>
 
-      {selectedId && (
-        <AdminSubscriptionDrawer subscriptionId={selectedId} onClose={() => setSelectedId(null)} />
-      )}
+      {/* Immer gemountet statt `{selectedId && ...}` - siehe
+          AdminSubscriptionDrawer fuer die Begruendung (Ausstiegs-Animation). */}
+      <AdminSubscriptionDrawer subscriptionId={selectedId} onClose={() => setSelectedId(null)} />
     </div>
   );
 }

@@ -113,23 +113,25 @@ export function ProHeaderButton() {
           {t.loginSubmit}
         </button>
       )}
-      {menuOpen && (
-        <AccountMenu
-          t={t}
-          me={account.me}
-          anchorRef={avatarRef}
-          onClose={() => setMenuOpen(false)}
-          onSelect={(key) => {
-            setMenuOpen(false);
-            setSectionKey(key);
-            setOpenMode("account");
-          }}
-          onLogout={async () => {
-            setMenuOpen(false);
-            await account.logout();
-          }}
-        />
-      )}
+      {/* Immer gemountet statt `{menuOpen && ...}` - `open` steuert die
+          Sichtbarkeit, nur so kann Sheet.jsx die Ausstiegs-Animation zeigen
+          (siehe AccountMenu.jsx). */}
+      <AccountMenu
+        t={t}
+        me={account.me}
+        open={menuOpen}
+        anchorRef={avatarRef}
+        onClose={() => setMenuOpen(false)}
+        onSelect={(key) => {
+          setMenuOpen(false);
+          setSectionKey(key);
+          setOpenMode("account");
+        }}
+        onLogout={async () => {
+          setMenuOpen(false);
+          await account.logout();
+        }}
+      />
       {account.loginSuccess && (
         <LoginSuccessToast
           t={t}

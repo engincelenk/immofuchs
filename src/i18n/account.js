@@ -169,6 +169,9 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "Dieser Link ist abgelaufen oder ungültig.",
     newPasswordSuccessTitle: "Passwort gespeichert",
     newPasswordSuccessCta: "Jetzt anmelden",
+    // Site-Navigation der Landingpage (UX-Audit 2026-08-13) - vorher fuer
+    // deren Aria-Beschriftung faelschlich accountNavAria mitbenutzt.
+    siteNavAria: "Hauptmenü",
     // ═══ „Mein Konto" als Vollbild-Bereich (Phase 2) ═══
     accountNavAria: "Kontobereiche",
     navProfil: "Profil",
@@ -447,6 +450,7 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "This link has expired or is invalid.",
     newPasswordSuccessTitle: "Password saved",
     newPasswordSuccessCta: "Sign in now",
+    siteNavAria: "Main menu",
     // ═══ "My account" as a full-screen area (phase 2) ═══
     accountNavAria: "Account sections",
     navProfil: "Profile",
@@ -725,6 +729,7 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "Bu bağlantının süresi dolmuş veya geçersiz.",
     newPasswordSuccessTitle: "Şifre kaydedildi",
     newPasswordSuccessCta: "Şimdi giriş yap",
+    siteNavAria: "Ana menü",
     // ═══ Tam ekran "Hesabım" alanı (Faz 2) ═══
     accountNavAria: "Hesap bölümleri",
     navProfil: "Profil",
@@ -1002,6 +1007,7 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "此链接已过期或无效。",
     newPasswordSuccessTitle: "密码已保存",
     newPasswordSuccessCta: "立即登录",
+    siteNavAria: "主菜单",
     // ═══ 全屏“我的账户”区域（第 2 阶段）═══
     accountNavAria: "账户板块",
     navProfil: "个人资料",
@@ -1280,6 +1286,7 @@ export const ACCOUNT_T = {
     newPasswordErrorInvalidToken: "यह लिंक समाप्त हो गया है या अमान्य है।",
     newPasswordSuccessTitle: "पासवर्ड सहेजा गया",
     newPasswordSuccessCta: "अभी साइन इन करें",
+    siteNavAria: "मुख्य मेनू",
     // ═══ पूर्ण-स्क्रीन "मेरा खाता" क्षेत्र (चरण 2) ═══
     accountNavAria: "खाता अनुभाग",
     navProfil: "प्रोफ़ाइल",

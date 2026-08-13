@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
+import { Sheet } from "../ui/Sheet.jsx";
 import { IconAvatar, IconLogout } from "./accountIcons.jsx";
 import { visibleSections } from "./accountSections.js";
 import { PlanChip } from "./PlanChip.jsx";
 
-// Kontomenue nach Nutzer-Entwurf 2026-08-12 (zwei Screenshots).
+// Kontomenue nach Nutzer-Entwurf 2026-08-12 (zwei Screenshots), seit dem
+// UX-Audit 2026-08-13 auf dem gemeinsamen Sheet-Bauteil (src/components/ui).
 //
 // Der Konto-Knopf im Kopf oeffnet seither NICHT mehr direkt die Vollbild-
 // flaeche, sondern erst dieses Menue; der gewaehlte Eintrag entscheidet, in
@@ -18,50 +18,27 @@ import { PlanChip } from "./PlanChip.jsx";
 //               wo die Bereiche bereits in der Seitenleiste stehen; ein
 //               zweites Mal dieselbe Liste waere dort reine Wiederholung)
 //
-// Desktop: Dropdown am Knopf. Mobil: Sheet von unten, wie die
-// "Alle Rechner"-Liste an der Tab-Leiste - oben zusaetzlich Name und E-Mail,
-// weil der Avatar dort aus Platzgruenden ohne Namen auskommt.
-export function AccountMenu({ t, me, variant = "full", anchorRef, onSelect, onLogout, onClose, logoutBusy = false }) {
+// Desktop: nicht-modales Popover am Knopf (Sheet variant="anchored"). Mobil:
+// modales Sheet von unten, wie die "Alle Rechner"-Liste an der Tab-Leiste -
+// oben zusaetzlich Name und E-Mail, weil der Avatar dort aus Platzgruenden
+// ohne Namen auskommt.
+//
+// `open` steuert sichtbar/unsichtbar, die Komponente selbst bleibt IMMER
+// gemountet (Aufrufer rendern nicht mehr bedingt) - nur so kann Sheet die
+// Ausstiegs-Animation zeigen, bevor der Aufrufer sie tatsaechlich entfernt.
+export function AccountMenu({
+  t,
+  me,
+  variant = "full",
+  anchorRef,
+  open,
+  onSelect,
+  onLogout,
+  onClose,
+  logoutBusy = false,
+}) {
   const isDesktop = useIsDesktop();
-  const menuRef = useRef(null);
   const sections = variant === "full" ? visibleSections(me?.role) : [];
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    const onPointer = (e) => {
-      // Klick ausserhalb schliesst - der Knopf selbst ist ausgenommen, sonst
-      // wuerde sein eigener Klick das gerade geoeffnete Menue sofort wieder
-      // zumachen (Oeffnen und Schliessen heben sich auf).
-      if (menuRef.current?.contains(e.target)) return;
-      if (anchorRef?.current?.contains(e.target)) return;
-      onClose();
-    };
-    document.addEventListener("keydown", onKey, true);
-    document.addEventListener("mousedown", onPointer);
-    return () => {
-      document.removeEventListener("keydown", onKey, true);
-      document.removeEventListener("mousedown", onPointer);
-    };
-  }, [onClose, anchorRef]);
-
-  // Position des Dropdowns am Knopf ausrichten (rechtsbuendig). Ueber ein
-  // Portal gerendert, damit es nicht am overflow/stacking der Kopfzeile
-  // haengenbleibt - deshalb hier absolute Fensterkoordinaten.
-  // documentElement.clientWidth statt window.innerWidth: letzteres schliesst
-  // die Breite des Scrollbalkens mit ein, ein position:fixed-Element wird aber
-  // am Viewport OHNE Scrollbalken ausgerichtet. Mit innerWidth sass das Menue
-  // deshalb genau um die Scrollbalken-Breite (hier 15px) links neben dem
-  // Avatar statt buendig darunter.
-  const rect = anchorRef?.current?.getBoundingClientRect();
-  const viewportWidth = document.documentElement.clientWidth;
-  const desktopPos = rect
-    ? { top: Math.round(rect.bottom + 8), right: Math.round(viewportWidth - rect.right) }
-    : { top: 70, right: 20 };
 
   const identity = (
     <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--cb)" }}>
@@ -154,66 +131,23 @@ export function AccountMenu({ t, me, variant = "full", anchorRef, onSelect, onLo
     </>
   );
 
-  const shared = {
-    ref: menuRef,
-    role: "menu",
-    "aria-label": t.accountMenuAria,
-    style: {
-      position: "fixed",
-      zIndex: 1200,
-      background: "var(--cc)",
-      border: "1px solid var(--cb)",
-      fontFamily: "'DM Sans', sans-serif",
-      overflowY: "auto",
-    },
-  };
-
-  if (isDesktop) {
-    return createPortal(
-      <div
-        {...shared}
-        style={{
-          ...shared.style,
-          top: desktopPos.top,
-          right: desktopPos.right,
-          width: 320,
-          maxHeight: "calc(100vh - 100px)",
-          borderRadius: 14,
-          boxShadow: "0 18px 44px rgba(0,0,0,.18)",
-          padding: "6px 0",
-        }}
-      >
-        {body}
-      </div>,
-      document.body,
-    );
-  }
-
-  return createPortal(
-    <>
-      <div
-        onClick={onClose}
-        aria-hidden="true"
-        style={{ position: "fixed", inset: 0, background: "rgba(20,18,14,.45)", zIndex: 1199 }}
-      />
-      <div
-        {...shared}
-        style={{
-          ...shared.style,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          borderRadius: "16px 16px 0 0",
-          borderBottom: "none",
-          boxShadow: "0 -8px 30px rgba(0,0,0,.18)",
-          maxHeight: "85vh",
-          paddingBottom: "calc(6px + env(safe-area-inset-bottom))",
-        }}
-      >
-        {body}
-      </div>
-    </>,
-    document.body,
+  // Desktop = nicht-modales Popover am Knopf (Sheet variant="anchored"),
+  // Mobil = modales Sheet von unten - Sheet.jsx uebernimmt Portal,
+  // Backdrop/z-index, Scroll-Sperre bzw. Fokus-Trap je nach Variante,
+  // Positionierung und die Escape-/Aussenklick-Behandlung.
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      variant={isDesktop ? "anchored" : "bottom"}
+      anchorRef={anchorRef}
+      label={t.accountMenuAria}
+      size={isDesktop ? 320 : undefined}
+    >
+      {/* Die "6px 0"-Luft gab es urspruenglich nur in der Desktop-Fassung -
+          mobil sitzen die Zeilen direkt unter der abgerundeten Kante. */}
+      <div style={{ padding: isDesktop ? "6px 0" : undefined }}>{body}</div>
+    </Sheet>
   );
 }
 

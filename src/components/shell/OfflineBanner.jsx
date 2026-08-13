@@ -22,7 +22,11 @@ export function OfflineBanner({ bottom }) {
         left: 0,
         right: 0,
         bottom,
-        zIndex: 150,
+        // Ueber allen Sheet-Overlays (Backdrop 1190/Panel 1200, siehe
+        // Sheet.jsx) - UX-Audit 2026-08-13: Systemstatus (kein Netz) muss
+        // sichtbar bleiben, auch wenn gerade ein Menue offen ist, statt
+        // dahinter zu verschwinden.
+        zIndex: 1300,
         background: "#1E3A5F",
         color: "rgba(255,255,255,0.88)",
         padding: "7px 16px",

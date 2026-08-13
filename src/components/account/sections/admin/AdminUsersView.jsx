@@ -242,14 +242,16 @@ export function AdminUsersView({ currentUser }) {
         </button>
       </div>
 
-      {selectedId && (
-        <AdminUserDrawer
-          userId={selectedId}
-          currentUser={currentUser}
-          onClose={() => setSelectedId(null)}
-          onChanged={load}
-        />
-      )}
+      {/* Immer gemountet statt `{selectedId && ...}` - AdminUserDrawer leitet
+          `open` aus `userId` ab und behaelt die zuletzt gewaehlte ID waehrend
+          der Ausstiegs-Animation (siehe dort), nur so kann Sheet.jsx sie
+          zeigen. */}
+      <AdminUserDrawer
+        userId={selectedId}
+        currentUser={currentUser}
+        onClose={() => setSelectedId(null)}
+        onChanged={load}
+      />
     </div>
   );
 }

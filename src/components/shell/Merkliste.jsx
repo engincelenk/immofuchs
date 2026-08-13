@@ -11,6 +11,7 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_FIELDS, tabZuRechner } from "../../utils/assistantContext.js";
 import { apiFetch } from "../../utils/apiBase.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
+import { Sheet } from "../ui/Sheet.jsx";
 import { ObjektDetail } from "../dashboard/ObjektDetail.jsx";
 import { scoreBadgeColor, scoreBadgeText } from "../dashboard/dashboardUtils.js";
 import { computeRendite } from "../../utils/rendite.js";
@@ -259,45 +260,27 @@ export function useSavedObjects(setData) {
   return { savedList, saveObj, delObj, loadObj, isPro, freeLimit: FREE_OBJECT_LIMIT };
 }
 
-export function SaveModal({ onClose, onSave, defaultName, lang }) {
+// Gemeinsames Sheet-Bauteil statt eigenem Backdrop/Panel (UX-Audit
+// 2026-08-13) - `open` steuert die Sichtbarkeit, die Komponente selbst
+// bleibt immer gemountet (siehe SaveBtn unten), sonst gaebe es keine
+// Ausstiegs-Animation. `initialFocusRef` uebernimmt das manuelle
+// setTimeout-Fokussieren, das Sheet fokussiert automatisch, sobald der
+// Uebergang sichtbar geworden ist.
+export function SaveModal({ open, onClose, onSave, defaultName, lang }) {
   const t = T[lang] || T.de;
   const [name, setName] = useState(defaultName || "");
   const inp = useRef(null);
+  // Die Komponente bleibt jetzt dauerhaft gemountet (siehe SaveBtn) - ohne
+  // diesen Reset stuende beim naechsten Oeffnen noch der zuletzt getippte
+  // Name im Feld, statt wieder mit `defaultName` zu starten (vorher gab es
+  // das nicht zu beachten: `{open && <SaveModal/>}` erzeugte bei jedem
+  // Oeffnen einen frischen useState-Ausgangswert).
   useEffect(() => {
-    setTimeout(() => inp.current?.focus(), 100);
-  }, []);
-  return createPortal(
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        zIndex: 9000,
-        display: "flex",
-        alignItems: "flex-end",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "var(--cc)",
-          borderRadius: "16px 16px 0 0",
-          padding: "24px 20px 36px",
-          width: "100%",
-          maxWidth: 480,
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 4,
-            background: "var(--cb)",
-            borderRadius: 2,
-            margin: "0 auto 20px",
-          }}
-        />
+    if (open) setName(defaultName || "");
+  }, [open, defaultName]);
+  return (
+    <Sheet open={open} onClose={onClose} variant="bottom" size={480} label={t.saveModalTitle || "Objekt speichern"} initialFocusRef={inp}>
+      <div style={{ padding: "0 20px 36px" }}>
         <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, color: "var(--ct)" }}>
           {t.saveModalTitle || "Objekt speichern"}
         </div>
@@ -342,8 +325,7 @@ export function SaveModal({ onClose, onSave, defaultName, lang }) {
           {t.saveConfirm || "Speichern"}
         </button>
       </div>
-    </div>,
-    document.body,
+    </Sheet>
   );
 }
 
@@ -405,17 +387,19 @@ export function SaveBtn({ tab }) {
         {limitReached ? `👑 ${at.trialLockedCta}` : t.saveBtnLabel || "Speichern"}
       </button>
       {showUpgrade && <CheckoutWizard onClose={() => setShowUpgrade(false)} />}
-      {open && (
-        <SaveModal
-          lang={lang}
-          defaultName={defaultName}
-          onClose={() => setOpen(false)}
-          onSave={(name) => {
-            saveObj(name, d, tab);
-            setOpen(false);
-          }}
-        />
-      )}
+      {/* Immer gemountet statt `{open && ...}` - `open` steuert die
+          Sichtbarkeit, nur so kann Sheet.jsx die Ausstiegs-Animation zeigen
+          (siehe SaveModal). */}
+      <SaveModal
+        open={open}
+        lang={lang}
+        defaultName={defaultName}
+        onClose={() => setOpen(false)}
+        onSave={(name) => {
+          saveObj(name, d, tab);
+          setOpen(false);
+        }}
+      />
     </>
   );
 }

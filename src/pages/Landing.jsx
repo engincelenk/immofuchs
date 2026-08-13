@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { TL } from "../i18n/translations.js";
 import { MARKET_RATES } from "../data.js";
 import { LANG_LOCALE } from "../utils/helpers.js";
@@ -13,7 +13,7 @@ import { MyAccount } from "../components/account/MyAccount.jsx";
 import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
 import { AccountAvatarButton, AccountMenu } from "../components/account/AccountMenu.jsx";
 import { useSavedObjects } from "../components/shell/Merkliste.jsx";
-import { BrandIcon } from "../components/ui/BrandIcon.jsx";
+import { Sheet } from "../components/ui/Sheet.jsx";
 
 const navLink = {
   background: "none",
@@ -39,24 +39,11 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const zB = zinsen?.bundesanleihe_10j;
+  // Bottom-Sheet statt seitlicher Schublade (UX-Audit 2026-08-13): einheit-
+  // liches mobiles Muster mit dem Konto-Menue (AccountMenu.jsx), das
+  // gemeinsame Sheet-Bauteil uebernimmt Portal, Backdrop, Scroll-Sperre,
+  // Fokus-Trap und Escape/Aussenklick.
   const [navOpen, setNavOpen] = useState(false);
-  // Slide-in-Schublade statt Dropdown unter dem Header (Nutzer-Vorgabe
-  // 2026-08-11, Referenz-Screenshots): Hintergrund darf waehrend der
-  // Schublade nicht scrollen, Escape schliesst wie bei jedem Overlay in
-  // dieser App (Wizard/Mein Konto nutzen dafuer useFocusTrap).
-  useEffect(() => {
-    if (!navOpen) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const handler = (e) => {
-      if (e.key === "Escape") setNavOpen(false);
-    };
-    document.addEventListener("keydown", handler);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.removeEventListener("keydown", handler);
-    };
-  }, [navOpen]);
   // Login-Standard-Flow (Konzept-Dok Abschnitt 2/1.5): "Anmelden" ist bereits
   // auf der Landingpage sichtbar, statt erst beim Klick in einen Rechner.
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
@@ -250,23 +237,25 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 {at.loginSubmit}
               </button>
             )}
-            {menuOpen && (
-              <AccountMenu
-                t={at}
-                me={account.me}
-                anchorRef={avatarRef}
-                onClose={() => setMenuOpen(false)}
-                onSelect={(key) => {
-                  setMenuOpen(false);
-                  setSectionKey(key);
-                  setOpenMode("account");
-                }}
-                onLogout={async () => {
-                  setMenuOpen(false);
-                  await account.logout();
-                }}
-              />
-            )}
+            {/* Immer gemountet statt `{menuOpen && ...}` - `open` steuert
+                die Sichtbarkeit, nur so kann Sheet.jsx die Ausstiegs-
+                Animation zeigen (siehe AccountMenu.jsx). */}
+            <AccountMenu
+              t={at}
+              me={account.me}
+              open={menuOpen}
+              anchorRef={avatarRef}
+              onClose={() => setMenuOpen(false)}
+              onSelect={(key) => {
+                setMenuOpen(false);
+                setSectionKey(key);
+                setOpenMode("account");
+              }}
+              onLogout={async () => {
+                setMenuOpen(false);
+                await account.logout();
+              }}
+            />
             {/* Nutzer-Feedback 2026-08-11 (Screenshot): Sprachwahl + Menü-
                 Button ragten bei ≤880px zusammen mit Konto-Knopf + Logo
                 ueber den Viewport hinaus (kein Umbruch, keine Kuerzung) -
@@ -334,106 +323,54 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
 
       </header>
 
-      {/* Mobile nav drawer (Nutzer-Vorgabe 2026-08-11, Referenz-Screenshots):
-          seitlich einschiebende Flaeche mit abgedunkeltem Hintergrund statt
-          eines Dropdowns unter dem Header - dasselbe Muster wie das
-          Seitenmenue der Referenz-App. Ausserhalb von <header>, damit sie
-          ueber der gesamten Seite liegt, nicht nur unter der Kopfzeile. */}
-      {navOpen && (
-        <>
-          <div
-            onClick={() => setNavOpen(false)}
-            aria-hidden="true"
-            style={{ position: "fixed", inset: 0, background: "rgba(20,18,14,.45)", zIndex: 59 }}
-          />
-          <div
-            className="lp-nav-mobile"
-            role="dialog"
-            aria-modal="true"
-            aria-label={at.accountNavAria}
-            style={{
-              position: "fixed",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: "min(300px, 84vw)",
-              background: "var(--cc)",
-              zIndex: 60,
-              boxShadow: "6px 0 28px rgba(0,0,0,.18)",
-              display: "flex",
-              flexDirection: "column",
-              overflowY: "auto",
-              paddingTop: "env(safe-area-inset-top)",
-              animation: "lp-drawer-in .22s ease-out",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "16px 18px",
-                borderBottom: "1px solid var(--cb)",
+      {/* Mobile-Navigation als Bottom-Sheet (UX-Audit 2026-08-13, vorher eine
+          seitlich einschiebende Schublade mit eigener, doppelter Kopfzeile -
+          Logo+Wortmarke standen dort bereits im Seitenkopf). Dasselbe Muster
+          wie das Konto-Menue (AccountMenu.jsx): Daumenreichweite in einer
+          installierten PWA ohne Browserleiste, und beide mobilen Menues der
+          App sehen jetzt gleich aus und verhalten sich gleich. */}
+      <Sheet open={navOpen} onClose={() => setNavOpen(false)} variant="bottom" label={at.siteNavAria}>
+        <div style={{ padding: "4px 18px 18px", display: "flex", flexDirection: "column", gap: 4 }}>
+          <button onClick={() => scrollTo("rechner")} style={navLinkMobile}>
+            {l.navRechner}
+          </button>
+          <button onClick={() => scrollTo("funktioniert")} style={navLinkMobile}>
+            {l.navHow}
+          </button>
+          <button onClick={() => scrollTo("zinsen")} style={navLinkMobile}>
+            {l.navZinsen}
+          </button>
+          {/* Nutzer-Vorgabe 2026-08-12: wieder aufgenommen. Am 11.08. auf
+              Empfehlung des ui-designer-Agenten entfernt (Argument: der
+              Header-Knopf bleibt mobil sichtbar, der Eintrag sei damit
+              der dritte Auftritt derselben Aktion). Der Nutzer moechte
+              ihn im Seitenmenue haben - ein vollstaendiges Menue, das
+              eine der Hauptaktionen auslaesst, wirkt beim Aufklappen
+              unvollstaendig. */}
+          {account && !account.loading && (
+            <button
+              onClick={() => {
+                setNavOpen(false);
+                setOpenMode(account.isLoggedIn ? "account" : "login");
               }}
+              style={navLinkMobile}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <BrandIcon size={30} />
-                <span style={{ fontSize: 16, fontWeight: 800, color: "var(--ct)" }}>
-                  immo<span style={{ color: "var(--ca)" }}>fuchs</span>
-                </span>
-              </div>
-              <button
-                onClick={() => setNavOpen(false)}
-                aria-label={at.close}
-                style={{ background: "none", border: "none", fontSize: 20, color: "var(--ch)", cursor: "pointer", padding: 4, lineHeight: 1 }}
-              >
-                ✕
-              </button>
+              {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
+            </button>
+          )}
+          {/* Sprachwahl zieht bei ≤880px hierher um, siehe Kommentar oben
+              bei .lp-langsel-top - Platz in der Kopfzeile reichte dort
+              nicht fuer Logo + Konto-Knopf + Sprachwahl + Menü-Button.
+              Wie oben nur fuer nicht eingeloggte Besucher (Nutzer-Vorgabe
+              2026-08-12): eingeloggt liegt die Sprachwahl allein in
+              "Einstellungen". */}
+          {!account?.isLoggedIn && (
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--cb)" }}>
+              <LangSel lang={lang} setLang={setLang} />
             </div>
-
-            <div style={{ padding: "12px 18px 18px", display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
-              <button onClick={() => scrollTo("rechner")} style={navLinkMobile}>
-                {l.navRechner}
-              </button>
-              <button onClick={() => scrollTo("funktioniert")} style={navLinkMobile}>
-                {l.navHow}
-              </button>
-              <button onClick={() => scrollTo("zinsen")} style={navLinkMobile}>
-                {l.navZinsen}
-              </button>
-              {/* Nutzer-Vorgabe 2026-08-12: wieder aufgenommen. Am 11.08. auf
-                  Empfehlung des ui-designer-Agenten entfernt (Argument: der
-                  Header-Knopf bleibt mobil sichtbar, der Eintrag sei damit
-                  der dritte Auftritt derselben Aktion). Der Nutzer moechte
-                  ihn im Seitenmenue haben - ein vollstaendiges Menue, das
-                  eine der Hauptaktionen auslaesst, wirkt beim Aufklappen
-                  unvollstaendig. */}
-              {account && !account.loading && (
-                <button
-                  onClick={() => {
-                    setNavOpen(false);
-                    setOpenMode(account.isLoggedIn ? "account" : "login");
-                  }}
-                  style={navLinkMobile}
-                >
-                  {account.isLoggedIn ? at.accountTitle : at.loginSubmit}
-                </button>
-              )}
-              {/* Sprachwahl zieht bei ≤880px hierher um, siehe Kommentar oben
-                  bei .lp-langsel-top - Platz in der Kopfzeile reichte dort
-                  nicht fuer Logo + Konto-Knopf + Sprachwahl + Menü-Button.
-                  Wie oben nur fuer nicht eingeloggte Besucher (Nutzer-Vorgabe
-                  2026-08-12): eingeloggt liegt die Sprachwahl allein in
-                  "Einstellungen". */}
-              {!account?.isLoggedIn && (
-                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--cb)" }}>
-                  <LangSel lang={lang} setLang={setLang} />
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+          )}
+        </div>
+      </Sheet>
       {(openMode === "checkout" || openMode === "login" || openMode === "account") && (
         <Ctx.Provider value={landingCtxValue}>
           {openMode === "checkout" && <CheckoutWizard onClose={() => setOpenMode(null)} />}
@@ -1836,13 +1773,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         .lp-hdr-inner{gap:10px!important}
         .lp-account-btn{padding:8px 8px!important;font-size:11.5px!important}
       }
-      @media(min-width:881px){
-        .lp-nav-mobile{display:none!important}
-      }
       @media(max-width:560px){
         .lp-cta{display:none!important}
       }
-      @keyframes lp-drawer-in{from{transform:translateX(-100%)}to{transform:translateX(0)}}
     `}</style>
       <LandingMascot onStart={onStart} lang={lang} />
     </div>

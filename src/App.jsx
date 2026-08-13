@@ -5,6 +5,7 @@ import { AppProviders } from "./context/AppProviders.jsx";
 import { T } from "./i18n/translations.js";
 import { TIPS } from "./i18n/tips.js";
 import { LangSel } from "./components/ui/LangSel.jsx";
+import { Sheet } from "./components/ui/Sheet.jsx";
 import Haupt from "./components/calculators/Renditerechner.jsx";
 import Kredit from "./components/calculators/Finanzierung.jsx";
 import Miete from "./components/calculators/Miete.jsx";
@@ -537,8 +538,6 @@ export default function App() {
            diesem Knopf weiterlaufen - der eigentliche Hinweis darauf, dass
            die Leiste scrollbar ist. */
         box-shadow:-8px 0 10px -6px rgba(0,0,0,.14)}
-      .tbar-sheet{position:fixed;left:0;right:0;bottom:0;z-index:102;background:var(--cc);border-top:1px solid var(--cb);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);padding-bottom:calc(10px + env(safe-area-inset-bottom));max-height:80vh;overflow-y:auto;font-family:'DM Sans',sans-serif}
-      @media(min-width:700px){.tbar-sheet{max-width:640px;margin:0 auto}}
       .tbtn{flex:0 0 auto;min-width:64px;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border:none;background:none;cursor:pointer;min-height:48px;scroll-snap-align:center}
       .tbtn span{font-size:11px;font-weight:600;letter-spacing:.3px}
       .content{padding:14px 14px;max-width:1400px;margin:0 auto;width:100%;overflow-x:hidden;overflow-x:clip;overflow-y:visible}
@@ -582,7 +581,7 @@ export default function App() {
         .mob-next-btn{display:block}
       }
       @media print{
-        .tbar,.tbar-wrap,.tbar-sheet,.hdr,.mob-toggle,.inp-pane,.no-print{display:none!important}
+        .tbar,.tbar-wrap,.hdr,.mob-toggle,.inp-pane,.no-print{display:none!important}
         .res-pane{display:block!important}
         .split{display:block!important}
         .shell{padding:0;max-width:100%}
@@ -791,56 +790,53 @@ export default function App() {
             <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ch)" }}>{t.alle}</span>
           </button>
         </div>
-        {tabMenuOpen && (
-          <>
-            <div
-              onClick={() => setTabMenuOpen(false)}
-              aria-hidden="true"
-              style={{ position: "fixed", inset: 0, background: "rgba(20,18,14,.45)", zIndex: 101 }}
-            />
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-label={t.alleRechner}
-              className="tbar-sheet"
+        {/* Gemeinsames Sheet-Bauteil statt eigener Backdrop/Panel-Auszeichnung
+            (UX-Audit 2026-08-13) - vorher ohne Scroll-Sperre UND ohne
+            Escape-Taste, beides jetzt inklusive. `size` reproduziert exakt
+            die vorherige responsive Deckelung (voller Breite unter 700px,
+            640px zentriert darueber) ohne eigene Media Query. */}
+        <Sheet
+          open={tabMenuOpen}
+          onClose={() => setTabMenuOpen(false)}
+          variant="bottom"
+          label={t.alleRechner}
+          size="min(640px, 100vw)"
+        >
+          <div style={{ padding: "14px 18px 6px", fontSize: 13, fontWeight: 800, color: "var(--ct)" }}>
+            {t.alleRechner}
+          </div>
+          {tabs.map((tb) => (
+            <button
+              key={tb.id}
+              onClick={() => {
+                tabSwitchHaptic();
+                setTab(tb.id);
+                setTabMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              aria-current={tab === tb.id ? "page" : undefined}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                width: "100%",
+                padding: "12px 18px",
+                border: "none",
+                background: tab === tb.id ? "var(--ca-bg)" : "transparent",
+                color: tab === tb.id ? "var(--ca-dk)" : "var(--ct)",
+                fontSize: 14,
+                fontWeight: tab === tb.id ? 700 : 600,
+                fontFamily: "inherit",
+                textAlign: "left",
+                cursor: "pointer",
+                minHeight: 48,
+              }}
             >
-              <div style={{ padding: "14px 18px 6px", fontSize: 13, fontWeight: 800, color: "var(--ct)" }}>
-                {t.alleRechner}
-              </div>
-              {tabs.map((tb) => (
-                <button
-                  key={tb.id}
-                  onClick={() => {
-                    tabSwitchHaptic();
-                    setTab(tb.id);
-                    setTabMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  aria-current={tab === tb.id ? "page" : undefined}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    width: "100%",
-                    padding: "12px 18px",
-                    border: "none",
-                    background: tab === tb.id ? "var(--ca-bg)" : "transparent",
-                    color: tab === tb.id ? "var(--ca-dk)" : "var(--ct)",
-                    fontSize: 14,
-                    fontWeight: tab === tb.id ? 700 : 600,
-                    fontFamily: "inherit",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    minHeight: 48,
-                  }}
-                >
-                  {tb.ic(tab === tb.id)}
-                  {tb.l}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+              {tb.ic(tab === tb.id)}
+              {tb.l}
+            </button>
+          ))}
+        </Sheet>
       </div>
       {!isOnline && <OfflineBanner bottom={"calc(72px + env(safe-area-inset-bottom))"} />}
     </AppProviders>

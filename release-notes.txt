@@ -1,3 +1,86 @@
+## 2026-08-13 (1.9.0)
+
+### Mobile Menues vereinheitlicht (UX-Audit, Schritte 1-5 von 6)
+
+**Anlass:** Nutzer-Screenshots: das ☰-Menue der Landingpage (seitliche
+Schublade) und das Konto-Menue (Bottom-Sheet) sahen unterschiedlich aus und
+verhielten sich unterschiedlich, obwohl beide dieselbe Aufgabe haben. Ein
+UI/UX-Audit deckte dabei auf, dass die App insgesamt sieben handgebaute
+Overlays besitzt, keins davon auf einer gemeinsamen Grundlage - u. a. fehlte
+dem Konto-Menue die Scroll-Sperre (Seite scrollte auf dem Handy hinter dem
+Sheet weiter mit), keinem der beiden Menues ein Fokus-Trap, und das
+Desktop-Kontomenue positionierte sich beim Scrollen in der stehenden
+Kopfzeile nicht neu.
+
+**Fundament (neu):**
+- `src/hooks/useScrollLock.js` - sperrt html UND body (aus MyAccount.jsx
+  herausgezogen, das Problem "nur body reicht nicht" war dort bereits geloest
+  und dokumentiert).
+- `src/hooks/useFocusTrap.js` - jetzt stapelbar: nur der oberste aktive Trap
+  reagiert auf Tab/Escape. Loest das Problem, das bisher dazu fuehrte, dass
+  die Admin-Drawer bewusst OHNE Trap gebaut waren (zwei gleichzeitig aktive
+  Traps ueberschrieben sich beim Tabben) - jetzt koennen sie sicher einen
+  eigenen aktivieren.
+- `src/components/ui/Sheet.jsx` - gemeinsames Overlay-Bauteil mit vier
+  Varianten (bottom/left/right/anchored). Uebernimmt Portal, Backdrop,
+  z-index (Scrim 1190/Panel 1200 durchgaengig statt sieben verschiedener
+  Werte), Scroll-Sperre und Fokus-Trap fuer modale Varianten (bottom/left/
+  right), sowie bei "anchored" (nicht-modales Desktop-Popover) Live-
+  Repositionierung bei Scroll/Resize und Schliessen bei Fokusverlust
+  (focusout) statt eines Fokus-Trap. Ein- UND Ausstiegs-Animation
+  (cubic-bezier(.32,.72,0,1)), abgeschaltet unter prefers-reduced-motion.
+  Aufrufer rendern seither immer (kein `{open && <X/>}` mehr) und steuern
+  ueber die `open`-Prop - nur so kann die Ausstiegs-Animation ablaufen, bevor
+  die Komponente tatsaechlich entfernt wird.
+
+**Migriert (5 von 6 identifizierten Overlays, wie mit dem Nutzer
+abgestimmt):**
+1. **AccountMenu.jsx** (3 Einsatzorte: Landingpage, App-Kopfzeile, "Mein
+   Konto") - mobil variant="bottom", Desktop variant="anchored". Behebt
+   fehlende Scroll-Sperre, fehlenden Fokus-Trap und die nicht
+   nachgefuehrte Desktop-Position in einem Zug an allen drei Stellen.
+2. **Landing.jsx ☰-Menue** - von seitlicher Schublade auf variant="bottom"
+   umgestellt (dasselbe Muster wie das Konto-Menue). Die doppelte Kopfzeile
+   (Logo+Wortmarke, dort ohne ".info" - Abweichung vom Seitenkopf) entfaellt
+   ersatzlos. Die Aria-Beschriftung nutzte bisher faelschlich den
+   Konto-Bereichs-String ("Kontobereiche") - neuer eigener Schluessel
+   `siteNavAria` in allen 5 Sprachen.
+3. **App.jsx "Alle Rechner"-Sheet** - hatte bisher weder Scroll-Sperre noch
+   Escape-Taste, beides jetzt inklusive. `size="min(640px, 100vw)"`
+   reproduziert die vorherige responsive Deckelung ohne eigene Media Query.
+4. **Merkliste.jsx SaveModal** - der "Objekt speichern"-Dialog. Da die
+   Komponente jetzt dauerhaft gemountet bleibt (Voraussetzung fuer die
+   Ausstiegs-Animation), wurde ein Reset-Effekt ergaenzt, der das Namensfeld
+   beim erneuten Oeffnen wieder auf `defaultName` zuruecksetzt - vorher
+   erledigte das unbeabsichtigt der Re-Mount bei jedem Oeffnen.
+5. **AdminUserDrawer.jsx + AdminSubscriptionDrawer.jsx** - variant="right".
+   Beide hatten bisher keinen Fokus-Trap (Begruendung s. o., jetzt durch den
+   stapelbaren Trap ueberholt). Da beide Drawer ebenfalls dauerhaft gemountet
+   bleiben, behalten sie waehrend der Ausstiegs-Animation die zuletzt
+   gewaehlte ID (Nutzer/Abo), damit der Inhalt sichtbar bleibt statt
+   schlagartig leer zu werden.
+
+**Z-Ebenen bereinigt:** OfflineBanner (Netz-Status) steigt von z150 auf
+z1300 - liegt jetzt ueber allen Sheet-Overlays statt darunter, Systemstatus
+soll auch bei offenem Menue sichtbar bleiben. Die MascotFab-Schaltflaeche
+(z120) schwamm bisher sichtbar/anklickbar UEBER dem abgedunkelten
+Landing-Menue und dem "Alle Rechner"-Sheet (deren alte z-Werte lagen
+darunter) - seit beide auf Sheet.jsx mit z1190/1200 umgestellt sind, ist das
+automatisch behoben, ohne die FAB selbst anzufassen.
+
+**Bewusst NICHT migriert:** das Finn-Assistenten-Sheet
+(`assistantStyles.js`) - es ist von den sieben Overlays das einzige, das
+bereits eine korrekte Ein-/Ausstiegs-Animation hatte (Vorbild fuer Sheet.jsx)
+und zusaetzlich eine Desktop-Fenster-Variante ohne Entsprechung im neuen
+Bauteil. Kernfunktion, kein bekannter Fehler dort - Migration war eine
+Nutzer-Entscheidung, aufzuschieben statt das funktionierende Referenzstueck
+anzufassen.
+
+**Verifiziert:** Lint 0 Fehler (8 unveraenderte, unabhaengige Warnungen),
+Build erfolgreich, 249 Frontend-Tests gruen. Fuer die Overlays selbst gibt es
+keine automatisierten Tests (die Testsuite deckt Rechenlogik ab, nicht UI) -
+Verifikation ausstehend per Durchklicken.
+
 ## 2026-08-13 (1.8.4)
 
 ### Admin Panel MVP — Phase 5: Dashboard-Aktivitaeten und Audit-Filter

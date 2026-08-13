@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Sheet } from "../../../ui/Sheet.jsx";
 import { fetchSubscriptionDetail } from "./adminApi.js";
 import { useAdminToast } from "./AdminToast.jsx";
 import {
@@ -14,39 +14,41 @@ import {
 } from "./adminUiStyles.js";
 
 // Abo-Detail als Drawer (Admin-MVP Abschnitt 8). Gleiche Bauart wie der
-// Nutzer-Drawer: kein eigener Fokus-Trap (Mein Konto haelt schon einen),
-// Escape schliesst.
+// Nutzer-Drawer, seit dem UX-Audit 2026-08-13 auf dem gemeinsamen Sheet-
+// Bauteil (variant="right").
 //
 // Read-Only per Auftrag: es gibt hier bewusst keinen einzigen Speichern-Knopf.
 export function AdminSubscriptionDrawer({ subscriptionId, onClose }) {
   const toast = useAdminToast();
+  const open = Boolean(subscriptionId);
+  // Aufrufer rendert immer (nicht mehr `{selectedId && ...}`), damit Sheet
+  // die Ausstiegs-Animation zeigen kann - die zuletzt bekannte ID haelt den
+  // Inhalt waehrend dieser Animation sichtbar (siehe AdminUserDrawer.jsx fuer
+  // dieselbe Begruendung ausfuehrlicher).
+  const lastIdRef = useRef(subscriptionId);
+  if (subscriptionId) lastIdRef.current = subscriptionId;
+  const effectiveId = subscriptionId ?? lastIdRef.current;
+
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
   const load = useCallback(async () => {
+    if (!effectiveId) return;
     setLoading(true);
     setLoadError(null);
     try {
-      setDetail(await fetchSubscriptionDetail(subscriptionId));
+      setDetail(await fetchSubscriptionDetail(effectiveId));
     } catch (err) {
       setLoadError(errorText(err));
     } finally {
       setLoading(false);
     }
-  }, [subscriptionId]);
+  }, [effectiveId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    if (open) load();
+  }, [open, load]);
 
   async function copy(value, label) {
     try {
@@ -59,34 +61,18 @@ export function AdminSubscriptionDrawer({ subscriptionId, onClose }) {
     }
   }
 
-  return createPortal(
-    <div
-      role="presentation"
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1100,
-        background: "rgba(26,26,26,.32)",
-        display: "flex",
-        justifyContent: "flex-end",
-      }}
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      variant="right"
+      size="min(480px, 100%)"
+      label={`Abo ${detail?.email || ""}`}
     >
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Abo ${detail?.email || ""}`}
-        onClick={(e) => e.stopPropagation()}
+      <div
         style={{
-          width: "min(480px, 100%)",
-          height: "100%",
-          overflowY: "auto",
-          background: "var(--bg)",
-          borderLeft: "1px solid var(--cb)",
-          boxSizing: "border-box",
           padding: "16px 16px calc(24px + env(safe-area-inset-bottom))",
-          paddingTop: "calc(16px + env(safe-area-inset-top))",
-          fontFamily: "'DM Sans', sans-serif",
+          boxSizing: "border-box",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -171,9 +157,8 @@ export function AdminSubscriptionDrawer({ subscriptionId, onClose }) {
             </Block>
           </>
         )}
-      </aside>
-    </div>,
-    document.body,
+      </div>
+    </Sheet>
   );
 }
 
