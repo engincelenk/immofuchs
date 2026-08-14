@@ -1,3 +1,33 @@
+## 2026-08-14 (1.10.2)
+
+### Logo-Groesse vereinheitlicht, Zurueck-Button auf Bereichshoehe (Nutzer-Screenshots)
+
+**1. Einheitliche Logo-Groesse.** Fuchs-Icon + "immofuchs.info" liefen mit
+drei unterschiedlichen Groessen: Rechner-Kopf (App.jsx, 54px/24px, immer
+gleich) war die Referenz - Landing.jsx schrumpfte mobil (≤880px) auf
+36px/16px, das Vollbild-Menue (HeaderMenu.jsx) war durchgehend auf 34px/17px
+fixiert, und der Kontobereich-Kopf (MyAccount.jsx) schrumpfte unter 480px
+auf 38px/17px. Alle drei liegen jetzt fest bei 54px/24px wie im Rechner-Kopf
+- die urspruengliche Sorge, das Logo koennte auf schmalen Handys (320-375px)
+zusammen mit Konto-/Menue-Button aus dem Viewport laufen, hat sich beim
+Test im Browser nicht bestaetigt (kein horizontaler Overflow bei 320px).
+
+**2. Zurueck-Button auf Hoehe der Bereichsueberschrift.** Der ← Button sass
+mobil bisher oben im Kopf von "Mein Konto" neben dem Logo - der Nutzer
+wollte ihn stattdessen auf Hoehe der Bereichsueberschrift (z.B. "Profil"),
+dort wo auf dem Screenshot der rote Rahmen war. Neue gemeinsame Komponente
+`SectionTitle.jsx` zeigt Bereichstitel und (nur mobil) Zurueck-Button
+nebeneinander; alle 7 Bereiche (Profil, Abonnement, Zahlungen,
+Einstellungen, Konto & Sicherheit, Support, Admin) nutzen sie jetzt statt
+eines einfachen `<h2>`. Am Desktop bleibt "← Zurueck" wie bisher im Kopf,
+dort gibt es weder Platznot noch eine "vorige Stufe" im Sinne des
+Drilldowns.
+
+**Verifiziert:** Build erfolgreich. Landing-Page im Browser bei 320/375px
+geprueft (Logo 54px/24px, kein Overflow). Login-pflichtige Ansichten
+(Vollbild-Menue, Kontobereiche) noch nicht im Browser geprueft - dafuer
+braucht es den lokalen Worker (siehe Rueckfrage im Chat).
+
 ## 2026-08-13 (1.10.1)
 
 ### Vier Korrekturen am neuen Header-Menue (Nutzer-Screenshots)

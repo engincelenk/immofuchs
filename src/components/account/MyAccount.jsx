@@ -165,14 +165,9 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
           .ma-hdr-bar{position:sticky;top:0;z-index:5;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);padding-top:env(safe-area-inset-top)}
           .ma-hdr{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px}
           .ma-body{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
-          .ma-logo{width:38px;height:38px}
-          .ma-wordmark{font-size:17px}
-          .ma-brand{gap:8px}
-          @media(min-width:480px){
-            .ma-logo{width:54px;height:54px}
-            .ma-wordmark{font-size:24px}
-            .ma-brand{gap:14px}
-          }
+          .ma-logo{width:54px;height:54px}
+          .ma-wordmark{font-size:24px}
+          .ma-brand{gap:14px}
           @media(min-width:700px){
             .ma-hdr{padding-left:28px;padding-right:28px}
             .ma-body{padding:24px 28px 40px}
@@ -209,36 +204,39 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
                 die Liste existiert nur bei isDesktop, und ihre Laenge
                 wandert mit der Rollenfilterung - "Zurueck" braucht eine
                 stabile Position). Der Avatar steht dadurch jetzt allein
-                rechts. */}
-            <span aria-hidden="true" style={{ width: 1, height: 20, background: "var(--cb)", margin: "0 16px", flexShrink: 0 }} />
-            {/* Auf dem Handy zurueck ins Menue (vorige Stufe), auf dem
-                Desktop wie bisher raus in die App - siehe onBackToMenu oben. */}
-            <button
-              onClick={!isDesktop && onBackToMenu ? onBackToMenu : onClose}
-              aria-label={t.wizardBack}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
-                background: "none",
-                border: isDesktop ? "none" : "1px solid var(--cb)",
-                borderRadius: isDesktop ? 0 : 999,
-                width: isDesktop ? "auto" : 36,
-                height: isDesktop ? "auto" : 36,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                color: "var(--ca-dk)",
-                fontFamily: "inherit",
-                padding: isDesktop ? "6px 2px" : 0,
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              <span aria-hidden="true">←</span>
-              {isDesktop && <span>{t.wizardBack}</span>}
-            </button>
+                rechts.
+                Nur noch Desktop (Nutzer-Korrektur 2026-08-14): auf dem Handy
+                fuehrte "Zurueck ins Menue" hier bereits zur vorigen Stufe -
+                der Knopf sitzt jetzt stattdessen bei der Bereichsueberschrift
+                (SectionTitle.jsx / onBack), auf Hoehe von z.B. "Profil". */}
+            {isDesktop && (
+              <>
+                <span aria-hidden="true" style={{ width: 1, height: 20, background: "var(--cb)", margin: "0 16px", flexShrink: 0 }} />
+                <button
+                  onClick={onClose}
+                  aria-label={t.wizardBack}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                    background: "none",
+                    border: "none",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    color: "var(--ca-dk)",
+                    fontFamily: "inherit",
+                    padding: "6px 2px",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  <span aria-hidden="true">←</span>
+                  <span>{t.wizardBack}</span>
+                </button>
+              </>
+            )}
           </div>
           {/* Tarif-Chip sitzt jetzt IM Avatar statt neben dem Logo
               (Nutzer-Hinweis 12.08.): im App-Kopf stand er bereits dort,
@@ -344,6 +342,7 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
               setLang={setLang}
               onClose={onClose}
               onUpgrade={() => setShowUpgrade(true)}
+              onBack={!isDesktop ? onBackToMenu : undefined}
             />
           </div>
         </div>

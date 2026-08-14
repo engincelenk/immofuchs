@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext.jsx";
 import { LANG_LOCALE } from "../../../utils/helpers.js";
 import { linkedProviderLabel } from "../../../utils/accountEntitlement.js";
 import { errorBannerStyle, textInputStyle, warnBannerStyle } from "../../checkout/checkoutStyles.js";
+import { SectionTitle } from "./SectionTitle.jsx";
 import {
   actionBtnStyle,
   blockCardStyle,
@@ -14,7 +15,6 @@ import {
   labelStyle,
   labelValueRowStyle,
   sectionIntroStyle,
-  sectionTitleStyle,
   valueStyle,
 } from "../accountStyles.js";
 
@@ -23,7 +23,7 @@ import {
 // es aber bestehende Funktionalitaet ist, die nicht verloren gehen soll:
 // aktive Sitzungen (vorher eigener Tab "Sicherheit") und der Einstieg in die
 // Merkliste (vorher eigener Tab "Gespeicherte Berechnungen").
-export function KontoSection({ t, account, lang, onClose }) {
+export function KontoSection({ t, account, lang, onClose, onBack }) {
   const locale = LANG_LOCALE[lang] || "de-DE";
   const { savedList, setTabExt, isProSavedObjects, savedObjectsFreeLimit } = useApp();
   const savedCount = savedList?.length || 0;
@@ -111,7 +111,7 @@ export function KontoSection({ t, account, lang, onClose }) {
 
   return (
     <div style={{ maxWidth: 560 }}>
-      <h2 style={sectionTitleStyle}>{t.navSicherheit}</h2>
+      <SectionTitle title={t.navSicherheit} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>{t.kontoIntro}</p>
 
       {sessionsError && <div style={errorBannerStyle}>{t.sicherheitSessionsError}</div>}

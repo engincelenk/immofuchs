@@ -154,22 +154,23 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               alt="Immofuchs"
               className="lp-logo-icon"
               style={{
-                width: 52,
-                height: 52,
+                width: 54,
+                height: 54,
                 objectFit: "contain",
                 flexShrink: 0,
                 borderRadius: 10,
               }}
             />
-            {/* Nutzer-Feedback 2026-08-11 (Screenshot): Logo+Wortmarke allein
-                nahmen bei 375px schon 234px ein (52px Icon + 23px-Text) -
-                zusammen mit Konto-Knopf + Menü-Button blieb kein Platz mehr,
-                beide rutschten unsichtbar aus dem Viewport. .lp-logo-text
-                schrumpft deshalb bei ≤880px (Regel unten). */}
+            {/* Einheitliche Logogroesse mit App-/Kontokopf (Nutzer-Korrektur
+                2026-08-14): vorher schrumpfte die Wortmarke bei ≤880px auf
+                36px/16px wegen Platzmangels neben Konto-/Menü-Button
+                (Nutzer-Feedback 2026-08-11) - der Knopf-Bereich bekommt den
+                noetigen Platz jetzt stattdessen ueber .lp-hdr-inner-Gap bzw.
+                die eigene .lp-account-btn-Verkleinerung weiter unten. */}
             <div
               className="lp-logo-text"
               style={{
-                fontSize: 23,
+                fontSize: 24,
                 fontWeight: 800,
                 letterSpacing: -0.5,
                 lineHeight: 1,
@@ -1766,12 +1767,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         .lp-nav{display:none!important}
         .lp-burger{display:inline-flex!important}
         .lp-langsel-top{display:none!important}
-        .lp-logo-icon{width:36px!important;height:36px!important}
-        .lp-logo-text{font-size:16px!important}
         .lp-account-btn{padding:8px 10px!important;font-size:12.5px!important}
       }
       @media(max-width:340px){
-        .lp-logo-text{font-size:14px!important}
         .lp-hdr-inner{gap:10px!important}
         .lp-account-btn{padding:8px 8px!important;font-size:11.5px!important}
       }

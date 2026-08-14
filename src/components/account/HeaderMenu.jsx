@@ -108,8 +108,8 @@ export function HeaderMenu({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <BrandIcon size={34} />
-          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.4, color: "var(--ct)", whiteSpace: "nowrap" }}>
+          <BrandIcon size={54} />
+          <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5, color: "var(--ct)", whiteSpace: "nowrap" }}>
             immo<span style={{ color: "var(--ca)" }}>fuchs</span>
             <span style={{ fontWeight: 700 }}>.info</span>
           </span>

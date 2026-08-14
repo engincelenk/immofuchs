@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { sectionIntroStyle, sectionTitleStyle } from "../accountStyles.js";
+import { sectionIntroStyle } from "../accountStyles.js";
+import { SectionTitle } from "./SectionTitle.jsx";
 import { AdminToastProvider } from "./admin/AdminToast.jsx";
 import { AdminDashboardView } from "./admin/AdminDashboardView.jsx";
 import { AdminUsersView } from "./admin/AdminUsersView.jsx";
@@ -22,7 +23,7 @@ const TABS = [
   { key: "audit", label: "Sicherheit & Audit-Log", Component: AdminAuditLogView },
 ];
 
-export function AdminSection({ t, account }) {
+export function AdminSection({ t, account, onBack }) {
   const [activeKey, setActiveKey] = useState("dashboard");
   const active = TABS.find((tab) => tab.key === activeKey) || TABS[0];
   const ActiveTab = active.Component;
@@ -35,7 +36,7 @@ export function AdminSection({ t, account }) {
 
   return (
     <AdminToastProvider>
-      <h2 style={sectionTitleStyle}>{t.navAdmin}</h2>
+      <SectionTitle title={t.navAdmin} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>
         {isSupportOnly
           ? "Nutzer, Kennzahlen und Audit-Log ansehen. Änderungen an Rollen, Status und Gutscheinen sind Owner/Admin vorbehalten."

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { LANG_LOCALE } from "../../../utils/helpers.js";
 import { errorBannerStyle } from "../../checkout/checkoutStyles.js";
+import { SectionTitle } from "./SectionTitle.jsx";
 import {
   actionBtnStyle,
   blockCardStyle,
@@ -9,7 +10,6 @@ import {
   emptyStateStyle,
   inlineLinkBtnStyle,
   sectionIntroStyle,
-  sectionTitleStyle,
 } from "../accountStyles.js";
 
 // Spec-v3.0 Kap. 4.1/4.6: "Zahlungen" fasst Zahlungsmethode und Rechnungen in
@@ -17,7 +17,7 @@ import {
 // RechnungenSection, hier zusammengefuehrt). Beide Datenquellen bleiben
 // unveraendert bei Paddle (Merchant of Record) - wir speichern selbst weder
 // Kartendaten noch Rechnungsadressen.
-export function ZahlungenSection({ t, account, lang }) {
+export function ZahlungenSection({ t, account, lang, onBack }) {
   const locale = LANG_LOCALE[lang] || "de-DE";
   const hasSubscription = Boolean(account.me.subscription);
 
@@ -98,7 +98,7 @@ export function ZahlungenSection({ t, account, lang }) {
 
   return (
     <div style={{ maxWidth: 560 }}>
-      <h2 style={sectionTitleStyle}>{t.navZahlung}</h2>
+      <SectionTitle title={t.navZahlung} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>{t.zahlungBody}</p>
 
       {portalError && <div style={errorBannerStyle}>{t.zahlungError}</div>}

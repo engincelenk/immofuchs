@@ -2,6 +2,7 @@ import { useState } from "react";
 import { linkedProviderLabel } from "../../../utils/accountEntitlement.js";
 import { errorBannerStyle, primaryBtnStyle, textInputStyle } from "../../checkout/checkoutStyles.js";
 import { PasswordField } from "../../checkout/CheckoutShared.jsx";
+import { SectionTitle } from "./SectionTitle.jsx";
 import {
   blockCardStyle,
   blockHintStyle,
@@ -10,7 +11,6 @@ import {
   labelStyle,
   labelValueRowStyle,
   sectionIntroStyle,
-  sectionTitleStyle,
   successBannerStyle,
   valueStyle,
 } from "../accountStyles.js";
@@ -19,7 +19,7 @@ import {
 // E-Mail-Wechsel ist unveraendert aus dem alten AccountPanel uebernommen
 // (Double-Opt-In: der Server verschickt nur einen Bestaetigungslink, die
 // Adresse wechselt erst nach dem Klick).
-export function ProfilSection({ t, account }) {
+export function ProfilSection({ t, account, onBack }) {
   const { email, name, linkedProviders } = account.me;
   const [changingEmail, setChangingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -63,7 +63,7 @@ export function ProfilSection({ t, account }) {
 
   return (
     <div style={{ maxWidth: 480 }}>
-      <h2 style={sectionTitleStyle}>{t.navProfil}</h2>
+      <SectionTitle title={t.navProfil} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>{t.profilIntro}</p>
 
       <div style={blockCardStyle}>

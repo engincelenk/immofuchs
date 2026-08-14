@@ -6,6 +6,7 @@ import {
 } from "../../../utils/accountEntitlement.js";
 import { errorBannerStyle, primaryBtnStyle, warnBannerStyle } from "../../checkout/checkoutStyles.js";
 import { CancelFlow } from "../CancelFlow.jsx";
+import { SectionTitle } from "./SectionTitle.jsx";
 import {
   actionBtnStyle,
   blockCardStyle,
@@ -15,7 +16,6 @@ import {
   labelStyle,
   labelValueRowStyle,
   sectionIntroStyle,
-  sectionTitleStyle,
   successBannerStyle,
   valueStyle,
 } from "../accountStyles.js";
@@ -30,7 +30,7 @@ const STATUS_KEYS = {
   cancel_scheduled: "statusCancelScheduled",
 };
 
-export function AbonnementSection({ t, account, onUpgrade }) {
+export function AbonnementSection({ t, account, onUpgrade, onBack }) {
   const subscription = account.me.subscription;
   const [showCancel, setShowCancel] = useState(false);
   const [busy, setBusy] = useState(null);
@@ -70,7 +70,7 @@ export function AbonnementSection({ t, account, onUpgrade }) {
   if (showCancel) {
     return (
       <div style={{ maxWidth: 480 }}>
-        <h2 style={sectionTitleStyle}>{t.navAbonnement}</h2>
+        <SectionTitle title={t.navAbonnement} onBack={onBack} backLabel={t.wizardBack} />
         <p style={sectionIntroStyle}>{t.aboIntro}</p>
         <div style={blockCardStyle}>
           <CancelFlow t={t} account={account} onDone={() => setShowCancel(false)} />
@@ -81,7 +81,7 @@ export function AbonnementSection({ t, account, onUpgrade }) {
 
   return (
     <div style={{ maxWidth: 480 }}>
-      <h2 style={sectionTitleStyle}>{t.navAbonnement}</h2>
+      <SectionTitle title={t.navAbonnement} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>{t.aboIntro}</p>
 
       {notice && (

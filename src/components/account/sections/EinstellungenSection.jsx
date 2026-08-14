@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LANGS } from "../../../i18n/translations.js";
-import { actionBtnStyle, blockCardStyle, blockHintStyle, blockTitleStyle, sectionIntroStyle, sectionTitleStyle } from "../accountStyles.js";
+import { SectionTitle } from "./SectionTitle.jsx";
+import { actionBtnStyle, blockCardStyle, blockHintStyle, blockTitleStyle, sectionIntroStyle } from "../accountStyles.js";
 
 // Spec-v3.0 Kap. 4.1/4.7: "Einstellungen" buendelt Sprache (vorher in
 // Profil), Benachrichtigungen und Datenschutz/Analyse - vorher hiess dieser
@@ -8,7 +9,7 @@ import { actionBtnStyle, blockCardStyle, blockHintStyle, blockTitleStyle, sectio
 // jetzt nach "Konto" gehoert (Kap. 4.5, siehe KontoSection.jsx). Export
 // (Art. 20 DSGVO) bleibt hier, da inhaltlich am naechsten zu
 // "Datenschutz/Analyse erlauben".
-export function EinstellungenSection({ t, account, lang, setLang }) {
+export function EinstellungenSection({ t, account, lang, setLang, onBack }) {
   const [notifBusy, setNotifBusy] = useState(false);
   const marketingEmailsEnabled = Boolean(account.me.marketingEmailsEnabled);
 
@@ -22,7 +23,7 @@ export function EinstellungenSection({ t, account, lang, setLang }) {
 
   return (
     <div style={{ maxWidth: 480 }}>
-      <h2 style={sectionTitleStyle}>{t.navDatenschutz}</h2>
+      <SectionTitle title={t.navDatenschutz} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>{t.einstellungenIntro}</p>
 
       <div style={blockCardStyle}>

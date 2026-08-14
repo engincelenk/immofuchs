@@ -1,11 +1,11 @@
 import { AccordionSection } from "../../ui/AccordionSection.jsx";
+import { SectionTitle } from "./SectionTitle.jsx";
 import {
   actionBtnStyle,
   blockCardStyle,
   blockHintStyle,
   blockTitleStyle,
   sectionIntroStyle,
-  sectionTitleStyle,
 } from "../accountStyles.js";
 
 // Bereich 8: Hilfe. Rein statisch - kein Ticketsystem, kein Chat. Die
@@ -14,12 +14,12 @@ import {
 const SUPPORT_MAIL = "info@immofuchs.info";
 const FAQ_KEYS = ["1", "2", "3", "4", "5"];
 
-export function SupportSection({ t }) {
+export function SupportSection({ t, onBack }) {
   const mailto = (subject) => `mailto:${SUPPORT_MAIL}?subject=${encodeURIComponent(subject)}`;
 
   return (
     <div style={{ maxWidth: 560 }}>
-      <h2 style={sectionTitleStyle}>{t.navSupport}</h2>
+      <SectionTitle title={t.navSupport} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>{t.supportIntro}</p>
 
       <div style={{ marginBottom: 14 }}>
