@@ -165,9 +165,14 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
           .ma-hdr-bar{position:sticky;top:0;z-index:5;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);padding-top:env(safe-area-inset-top)}
           .ma-hdr{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px}
           .ma-body{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
-          .ma-logo{width:54px;height:54px}
-          .ma-wordmark{font-size:24px}
-          .ma-brand{gap:14px}
+          .ma-logo{width:38px;height:38px}
+          .ma-wordmark{font-size:17px}
+          .ma-brand{gap:8px}
+          @media(min-width:480px){
+            .ma-logo{width:54px;height:54px}
+            .ma-wordmark{font-size:24px}
+            .ma-brand{gap:14px}
+          }
           @media(min-width:700px){
             .ma-hdr{padding-left:28px;padding-right:28px}
             .ma-body{padding:24px 28px 40px}

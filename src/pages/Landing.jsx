@@ -1759,9 +1759,17 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
          fehlte hier also schlicht. */
       .lp-acct-full{display:none}
       .lp-acct-short{display:inline}
+      /* Logo-Groesse identisch zum Rechner-Kopf (.hdr-logo-img/.hdr-wordmark
+         in App.jsx, Nutzer-Korrektur 2026-08-14): unter 480px 38px/17px,
+         darueber 54px/24px - das war die uebersehene "richtige" Referenz,
+         nicht die zuvor gesetzte feste 54px/24px-Groesse. */
+      .lp-logo-icon{width:38px!important;height:38px!important}
+      .lp-logo-text{font-size:17px!important}
       @media(min-width:480px){
         .lp-acct-full{display:inline}
         .lp-acct-short{display:none}
+        .lp-logo-icon{width:54px!important;height:54px!important}
+        .lp-logo-text{font-size:24px!important}
       }
       @media(max-width:880px){
         .lp-nav{display:none!important}

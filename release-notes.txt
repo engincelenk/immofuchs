@@ -1,3 +1,32 @@
+## 2026-08-14 (1.10.3)
+
+### Korrektur: Logo-Groesse war NICHT ueberall fix 54px/24px (Nutzer-Screenshots
+    auf dev.immofuchs.info)
+
+**Ursache des Fehlers in 1.10.2:** Der Rechner-Kopf (App.jsx), der als
+Referenz diente, ist entgegen meiner damaligen Annahme selbst responsiv -
+eine CSS-Regel mit `!important` (`.hdr-logo-img`/`.hdr-wordmark`,
+uebersehen weil sie in einem separaten Style-Block weiter oben in App.jsx
+steht) schrumpft ihn unter 480px auf 38px/17px und vergroessert erst ab
+480px auf 54px/24px. 1.10.2 hat faelschlich alle vier Header auf feste
+54px/24px gebracht - dadurch wurden Landing.jsx, HeaderMenu.jsx und
+MyAccount.jsx auf dem Handy (<480px) GROESSER als der eigentliche
+Rechner-Kopf, statt kleiner zu werden wie er.
+
+**Korrektur:** Alle vier Header folgen jetzt derselben Regel wie App.jsx:
+<480px 38px/17px, ab 480px 54px/24px.
+- `MyAccount.jsx`: hatte diese Regel bereits vor 1.10.2 korrekt - zurueckgesetzt.
+- `HeaderMenu.jsx`: BrandIcon (fixe Groesse per Prop) ersetzt durch normales
+  `<img>` mit Klasse `.hm-logo`/`.hm-wordmark` und der gleichen Media-Query,
+  da sich eine Prop-gesteuerte Groesse nicht responsiv per CSS ueberschreiben
+  laesst.
+- `Landing.jsx`: `.lp-logo-icon`/`.lp-logo-text` bekommen dieselbe
+  `!important`-Regel bei 480px statt der vorherigen falschen 880px-Schwelle.
+
+**Verifiziert:** Build erfolgreich. Lokal im Browser bei 375px (alle vier:
+38px/17px) und 500px (alle vier: 54px/24px) nachgemessen (computed styles,
+nicht nur optisch).
+
 ## 2026-08-14 (1.10.2)
 
 ### Logo-Groesse vereinheitlicht, Zurueck-Button auf Bereichshoehe (Nutzer-Screenshots)

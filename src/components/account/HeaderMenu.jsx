@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useScrollLock } from "../../hooks/useScrollLock.js";
-import { BrandIcon } from "../ui/BrandIcon.jsx";
 import { IconLogout } from "./accountIcons.jsx";
 import { PlanChip } from "./PlanChip.jsx";
 import { visibleSections } from "./accountSections.js";
@@ -92,6 +91,18 @@ export function HeaderMenu({
         transition: motionMs ? `opacity ${motionMs}ms ease` : undefined,
       }}
     >
+      {/* Logo-Groesse identisch zum Rechner-Kopf (.hdr-logo-img/.hdr-wordmark
+          in App.jsx, Nutzer-Korrektur 2026-08-14): unter 480px 38px/17px,
+          darueber 54px/24px - das war die uebersehene "richtige" Referenz,
+          nicht die feste 54px/24px-Groesse. */}
+      <style>{`
+        .hm-logo{width:38px;height:38px}
+        .hm-wordmark{font-size:17px}
+        @media(min-width:480px){
+          .hm-logo{width:54px;height:54px}
+          .hm-wordmark{font-size:24px}
+        }
+      `}</style>
       {/* Kopfzeile mit dem VOLLEN Logo (Icon + Wortmarke inkl. ".info"),
           identisch zum App-/Seitenkopf (Nutzer-Vorgabe 2026-08-13). Vorher
           stand hier eine verkuerzte Textmarke ohne Icon und ohne ".info" -
@@ -108,8 +119,13 @@ export function HeaderMenu({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <BrandIcon size={54} />
-          <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5, color: "var(--ct)", whiteSpace: "nowrap" }}>
+          <img
+            src="/icon-192.png"
+            alt=""
+            className="hm-logo"
+            style={{ objectFit: "contain", flexShrink: 0, borderRadius: 8 }}
+          />
+          <span className="hm-wordmark" style={{ fontWeight: 800, letterSpacing: -0.5, color: "var(--ct)", whiteSpace: "nowrap" }}>
             immo<span style={{ color: "var(--ca)" }}>fuchs</span>
             <span style={{ fontWeight: 700 }}>.info</span>
           </span>
