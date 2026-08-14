@@ -56,6 +56,7 @@ export function computeRendite(d, t) {
   const flaeche = +d.flaeche || 1,
     kaltmiete = +d.kaltmiete || 0,
     eigenkapital = +d.eigenkapital || 0;
+  const nkFinanzieren = !!d.nkFinanzieren;
   const zinsProz = +d.zinssatz || 0,
     tilgungProz = +d.tilgung || 0,
     notarProz = +d.notar || 0,
@@ -84,7 +85,16 @@ export function computeRendite(d, t) {
   const preisProQm = flaeche > 0 ? kaufpreis / flaeche : 0;
   const jahresMiete = kaltmiete * 12;
   const nebenkosten = (gesamtKaufpreis * (grEstProz + notarProz + maklerProz)) / 100;
-  const darlehen = Math.max(0, gesamtKaufpreis - eigenkapital);
+  // nkFinanzieren AN: Nebenkosten fliessen mit ins Darlehen (Bank-Modell, z.B.
+  // "Finanzierungsbedarf = Kaufpreis + Nebenkosten - Eigenkapital" in einem
+  // Bankangebot). AUS (Standard): Nebenkosten bleiben ausserhalb des
+  // Darlehens, das Eigenkapital wirkt nur gegen den Kaufpreis - stattdessen
+  // taucht die Nebenkosten-Summe unten als eigene Barauslage in nkCash auf.
+  const finanzierungsbasis = nkFinanzieren ? gesamtKaufpreis + nebenkosten : gesamtKaufpreis;
+  const darlehen = Math.max(0, finanzierungsbasis - eigenkapital);
+  // Beleihungsauslauf bleibt bewusst gegen den reinen Kaufpreis (Beleihungswert
+  // der Bank), nicht gegen die Finanzierungsbasis - Nebenkosten sind keine
+  // Sicherheit und erhoehen die Beleihung dadurch korrekt mit.
   const beleihung = gesamtKaufpreis > 0 ? (darlehen / gesamtKaufpreis) * 100 : 0;
   const monatsZins = zinsProz / 100 / 12;
   const annuitaetMon = (darlehen * (zinsProz + tilgungProz)) / 100 / 12;
@@ -184,12 +194,17 @@ export function computeRendite(d, t) {
   const wertzuwachs = gesamtKaufpreis * (Math.pow(1 + wertsteigerungProz / 100, jahre) - 1);
   const verkaufswert = gesamtKaufpreis + wertzuwachs;
   const restschuldEnde = restschuld;
+  // nkFinanzieren AN: Nebenkosten stecken bereits im Darlehen (oben) und sind
+  // damit keine zusaetzliche Barauslage mehr - sonst wuerden sie hier ein
+  // zweites Mal vom Saldo abgezogen (einmal als hoehere Restschuld/Zins- und
+  // Tilgungslast, einmal als sofortige Kaufnebenkosten in bar).
+  const nkCash = nkFinanzieren ? 0 : nebenkosten;
   const gesamtSaldoMitSt =
     verkaufswert -
     restschuldEnde +
     summeCfMitSt -
     eigenkapital -
-    nebenkosten -
+    nkCash -
     sonderumlage -
     renovierung;
   const gesamtSaldoOhneSt =
@@ -197,7 +212,7 @@ export function computeRendite(d, t) {
     restschuldEnde +
     summeCfOhneSt -
     eigenkapital -
-    nebenkosten -
+    nkCash -
     sonderumlage -
     renovierung;
 

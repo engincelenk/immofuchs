@@ -5,7 +5,7 @@ import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP, tpl } from "../../utils/helpers.js";
 import { rate, vrd } from "../../utils/bands.js";
 import { computeRendite } from "../../utils/rendite.js";
-import { F, Sel, Row, Sec, Ins, VT, AmpelKPI, NeutralKPI } from "../ui/atoms.jsx";
+import { F, Sel, Row, Sec, Ins, VT, AmpelKPI, NeutralKPI, Toggle } from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
 import { RBar } from "../charts/RBar.jsx";
 import { InvestmentCheckRadar } from "../charts/InvestmentCheckRadar.jsx";
@@ -193,6 +193,13 @@ export default function Haupt() {
             value={d.eigenkapital}
             onChange={(v) => set("eigenkapital", v)}
             tip={tip("eigenkapital")}
+          />
+          <Toggle
+            checked={!!d.nkFinanzieren}
+            onChange={(v) => set("nkFinanzieren", v)}
+            label={t.nkFinanzierenLabel}
+            sub={t.nkFinanzierenSub}
+            tip={tip("nkFinanzieren")}
           />
           <Row>
             <F

@@ -22,6 +22,8 @@ export const TIPS = {
       "Erwartete Leerstandsmonate im Analysezeitraum. Realistisch: 2-4 Monate pro 10 Jahre.",
     eigenkapital:
       "Liquide Mittel für Kauf. Faustregel: mind. Kaufnebenkosten + 20% des Kaufpreises.",
+    nkFinanzieren:
+      "Standard (aus): Nebenkosten zahlst du zusätzlich zum Eigenkapital bar, das Darlehen deckt nur den Kaufpreis. AN: Nebenkosten fließen mit ins Darlehen — wie es Banken im Finanzierungsangebot oft rechnen (Finanzierungsbedarf = Kaufpreis + Nebenkosten − Eigenkapital). Erhöht Darlehen, Rate und Beleihungsauslauf.",
     zinssatz: `Sollzins p.a. (nicht Effektivzins). Aktueller Marktdurchschnitt: ${MARKET_RATES.avg} %. Quellen: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank.`,
     tilgung: "Anfängliche Tilgung p.a. Empfehlung: mind. 2-3% für vertretbare Laufzeit.",
     grEst: "Grunderwerbsteuer nach GrEStG - bundeslandabhängig 3,5%-6,5%.",
@@ -80,6 +82,8 @@ export const TIPS = {
       "Expected vacancy months over the analysis period. Realistic: 2-4 months per 10 years.",
     eigenkapital:
       "Liquid funds for purchase. Rule of thumb: at least closing costs + 20% of purchase price.",
+    nkFinanzieren:
+      "Default (off): you pay closing costs in cash on top of your equity, the loan only covers the purchase price. ON: closing costs are added to the loan — as banks often calculate a financing offer (financing need = purchase price + closing costs − equity). Increases loan, rate and loan-to-value.",
     zinssatz: `Nominal rate p.a. (not APR). Current market average: ${MARKET_RATES.avg}% (as of ${MARKET_RATES.stand}). Sources: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank.`,
     tilgung: "Initial annual repayment rate. Recommend: at least 2-3% for reasonable term.",
     grEst: "Real estate transfer tax (GrEStG) — varies 3.5%-6.5% by German state.",
@@ -136,6 +140,8 @@ export const TIPS = {
     leerstand: "Analiz dönemi boyunca beklenen boş ay sayısı. Gerçekçi: 10 yılda 2-4 ay.",
     eigenkapital:
       "Satın alma için likit fonlar. Kural: en az kapanış maliyetleri + alım fiyatının %20'si.",
+    nkFinanzieren:
+      "Varsayılan (kapalı): Yan giderleri öz sermayenin üzerine nakit ödersin, kredi sadece alım fiyatını karşılar. AÇIK: Yan giderler krediye eklenir — bankaların finansman teklifinde sık hesapladığı gibi (finansman ihtiyacı = alım fiyatı + yan giderler − öz sermaye). Krediyi, taksiti ve kredi/değer oranını artırır.",
     zinssatz: `Yıllık nominal faiz (efektif faiz değil). Güncel piyasa ortalaması: %${MARKET_RATES.avg} (${MARKET_RATES.stand} itibariyle). Kaynaklar: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank.`,
     tilgung: "Yıllık başlangıç anapara ödemesi. Tavsiye: makul vade için en az %2-3.",
     grEst: "Almanya'da emlak alım vergisi (GrEStG) - eyalete göre %3,5-6,5.",
@@ -190,6 +196,8 @@ export const TIPS = {
     nichtUml: `管理费、维护费和储备金——物业费中由您承担的部分。参考值为每平方米每月 ${NU_EN.min}–${NU_EN.max} 欧元；计算器采用中间值（${NU_EN.mittel} 欧元/m²），并跟随居住面积，直到您手动修改该字段。`,
     leerstand: "分析期内预期空置月数。现实值：每10年2-4个月。",
     eigenkapital: "购买的流动资金。经验法则：至少交易费用 + 购买价的20%。",
+    nkFinanzieren:
+      "默认（关）：附加费用需在自有资金之外另付现金，贷款仅覆盖购房价。开：附加费用计入贷款——与银行融资方案的常见算法一致（融资需求 = 购房价 + 附加费用 − 自有资金）。会提高贷款额、月供和贷款成数。",
     zinssatz: `年度名义利率（非有效利率）。当前市场平均水平：${MARKET_RATES.avg}%（截至 ${MARKET_RATES.stand}）。来源：Dr. Klein、Vergleich.de、Finanztip、Finanzfacts、Interhyp、德国联邦银行。`,
     tilgung: "年度初始还款率。建议：至少2-3%以获得合理期限。",
     grEst: "房地产转让税（GrEStG）- 各州 3.5%-6.5%。",
@@ -237,6 +245,8 @@ export const TIPS = {
     nichtUml: `प्रबंधन, रखरखाव और आरक्षित निधि — मेंटेनेंस शुल्क का वह हिस्सा जो आप स्वयं वहन करते हैं। मानक: प्रति m² प्रति माह €${NU_EN.min}–${NU_EN.max}; कैलकुलेटर मध्य मान (€${NU_EN.mittel}/m²) लेता है और जब तक आप इसे स्वयं न बदलें, रहने के क्षेत्र का अनुसरण करता है।`,
     leerstand: "विश्लेषण अवधि में अपेक्षित खाली महीने। यथार्थवादी: 10 वर्षों में 2-4 महीने।",
     eigenkapital: "खरीद के लिए तरल धन। नियम: कम से कम क्लोजिंग लागत + खरीद मूल्य का 20%।",
+    nkFinanzieren:
+      "डिफ़ॉल्ट (बंद): अतिरिक्त लागत आप स्वपूंजी के ऊपर नकद चुकाते हैं, ऋण केवल खरीद मूल्य को कवर करता है। चालू: अतिरिक्त लागत ऋण में जोड़ी जाती है — जैसा बैंक अक्सर वित्तपोषण प्रस्ताव में गणना करते हैं (वित्तपोषण आवश्यकता = खरीद मूल्य + अतिरिक्त लागत − स्वपूंजी)। इससे ऋण, किस्त और ऋण-मूल्य अनुपात बढ़ जाता है।",
     zinssatz: `प्रति वर्ष नाममात्र दर (प्रभावी दर नहीं)। वर्तमान बाजार औसत: ${MARKET_RATES.avg}% (${MARKET_RATES.stand} तक)। स्रोत: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank।`,
     tilgung: "वार्षिक प्रारंभिक चुकौती दर। सिफारिश: उचित अवधि के लिए कम से कम 2-3%।",
     grEst: "रियल एस्टेट हस्तांतरण कर (GrEStG) - जर्मन राज्य के अनुसार 3.5%-6.5%।",

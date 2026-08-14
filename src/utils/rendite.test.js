@@ -102,6 +102,50 @@ describe("computeRendite — Vollfinanzierung (Risiko-Rotbereich)", () => {
   });
 });
 
+describe("computeRendite — nkFinanzieren (Nebenkosten mitfinanzieren)", () => {
+  const R = computeRendite(baseD, {});
+  const RnK = computeRendite({ ...baseD, nkFinanzieren: true }, {});
+
+  it("Standard (aus): Darlehen unveraendert ohne Nebenkosten", () => {
+    expect(R.da).toBe(240000);
+  });
+
+  it("AN: Darlehen enthaelt die Nebenkosten-Summe", () => {
+    expect(RnK.nbk).toBeCloseTo(R.nbk, 5); // Nebenkosten-Summe selbst unveraendert
+    expect(RnK.da).toBeCloseTo(240000 + R.nbk, 5);
+  });
+
+  it("AN: Beleihung steigt entsprechend, bleibt aber gegen den reinen Kaufpreis berechnet", () => {
+    expect(RnK.bel).toBeCloseTo((RnK.da / R.gKP) * 100, 5);
+    expect(RnK.bel).toBeGreaterThan(R.bel);
+  });
+
+  it("AN: hoehere Annuitaet durch das groessere Darlehen", () => {
+    expect(RnK.ann).toBeGreaterThan(R.ann);
+  });
+
+  // Nutzer-Beispiel 2026-08-14: reales Bankangebot (Sparda-Bank Suedwest),
+  // Kaufpreis 210.000 EUR, Objekt in BW (5% GrESt). Bank rechnet
+  // Finanzierungsbedarf = Kaufpreis + Nebenkosten - Eigenkapital = 188.000 EUR.
+  it("Realer Bankfall: Finanzierungsbedarf trifft das Bankangebot exakt", () => {
+    const RBank = computeRendite(
+      {
+        ...baseD,
+        kaufpreis: "210000",
+        garage: "0",
+        eigenkapital: "43777",
+        notar: "1.8",
+        makler: "3.57",
+        bundesland: "BW",
+        nkFinanzieren: true,
+      },
+      {},
+    );
+    expect(Math.round(RBank.nbk)).toBe(21777); // 7.497 Makler + 3.780 Notar + 10.500 GrESt
+    expect(Math.round(RBank.da)).toBe(188000);
+  });
+});
+
 describe("computeRendite — Randfall Kaufpreis 0", () => {
   it("liefert Nullwerte statt NaN/Absturz", () => {
     const R = computeRendite({ ...baseD, kaufpreis: "0", garage: "0", eigenkapital: "0" }, {});

@@ -164,6 +164,11 @@ function createDefaults() {
     mieteQm: "15",
     garage: "20000",
     eigenkapital: "60000",
+    // Aus/Ein (Nutzer-Vorgabe 2026-08-14): Standard AUS = bisheriges Verhalten
+    // unveraendert (Nebenkosten zusaetzlich zum Eigenkapital bar zu zahlen).
+    // AN rechnet wie viele Banken das Finanzierungsangebot: Nebenkosten werden
+    // mit ins Darlehen aufgenommen (siehe darlehen-Formel in rendite.js).
+    nkFinanzieren: false,
     zinssatz: String(MARKET_RATES.avg),
     tilgung: "1",
     zinsbindung: "10",

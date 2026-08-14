@@ -3,7 +3,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import { GREST } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
-import { F, Sel, Row, Sec, KPI, Ins, VT } from "../ui/atoms.jsx";
+import { F, Sel, Row, Sec, KPI, Ins, VT, Toggle } from "../ui/atoms.jsx";
 import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -30,8 +30,14 @@ export default function Kredit() {
       nP = +d.notar || 0,
       mP = +d.makler || 0;
     if (kp <= 0) return null;
-    const da = Math.max(0, gKP - ek),
-      nbk = (gKP * (gP + nP + mP)) / 100;
+    const nkFinanzieren = !!d.nkFinanzieren;
+    const nbk = (gKP * (gP + nP + mP)) / 100;
+    // Wie in rendite.js: nkFinanzieren AN rechnet wie ein Bank-Finanzierungsangebot
+    // (Nebenkosten mit im Darlehen), AUS = bisheriges Verhalten (Nebenkosten
+    // bleiben ausserhalb, extra bar zu zahlen).
+    const finBasis = nkFinanzieren ? gKP + nbk : gKP;
+    const da = Math.max(0, finBasis - ek);
+    // Beleihung bewusst gegen gKP (Beleihungswert), nicht gegen finBasis - siehe rendite.js.
     const bel = gKP > 0 ? (da / gKP) * 100 : 0,
       mz = zP / 100 / 12;
     const ann = (da * (zP + tP)) / 100 / 12;
@@ -99,7 +105,8 @@ export default function Kredit() {
       t1,
       gP,
       zbJ,
-      gA: da + sZ + nbk,
+      // nkFinanzieren AN: nbk steckt schon in da (Darlehen) - sonst doppelt gezaehlt.
+      gA: da + sZ + (nkFinanzieren ? 0 : nbk),
       sondP,
       sondE,
       sZ2,
@@ -132,6 +139,13 @@ export default function Kredit() {
             />
             <F label={t.darlehen} unit="€" value={R ? fmt(R.da) : "—"} readOnly />
           </Row>
+          <Toggle
+            checked={!!d.nkFinanzieren}
+            onChange={(v) => set("nkFinanzieren", v)}
+            label={t.nkFinanzierenLabel}
+            sub={t.nkFinanzierenSub}
+            tip={tip("nkFinanzieren")}
+          />
           <Sec title={t.nbk} icon="📋" />
           <Row>
             <F label={t.grEst} unit="%" value={R?.gP || "—"} readOnly tip={tip("grEst")} />

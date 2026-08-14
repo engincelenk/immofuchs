@@ -167,6 +167,72 @@ export function Sel({ label, value, onChange, options }) {
 export function Row({ children }) {
   return <div className="if-row">{children}</div>;
 }
+// An/Aus-Schalter fuer Formular-Optionen ausserhalb einfacher Zahlenfelder
+// (z.B. "Nebenkosten mitfinanzieren"). Kompakte Variante des Toggle-Musters
+// aus Sanier.jsx (dort inline, hier wiederverwendbar fuer Renditerechner UND
+// Kreditrechner - dieselbe Option an zwei Stellen).
+export function Toggle({ checked, onChange, label, sub, tip }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      type="button"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        width: "100%",
+        background: checked ? "#dcfce7" : "var(--ci)",
+        border: `1px solid ${checked ? "#22c55e" : "var(--cb)"}`,
+        borderRadius: 8,
+        padding: "8px 10px",
+        cursor: "pointer",
+        marginBottom: 14,
+        textAlign: "left",
+        fontFamily: "inherit",
+      }}
+    >
+      <div
+        style={{
+          width: 34,
+          height: 20,
+          borderRadius: 10,
+          background: checked ? "#22c55e" : "var(--cb)",
+          position: "relative",
+          flexShrink: 0,
+          transition: "background .2s",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 2,
+            left: checked ? 16 : 2,
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            background: "#fff",
+            transition: "left .2s",
+          }}
+        />
+      </div>
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: checked ? "#15803d" : "var(--ct)",
+          }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {label}
+            {tip && <Tip text={tip} />}
+          </span>
+        </div>
+        {sub && <div style={{ fontSize: 10, color: "var(--ch)", marginTop: 1 }}>{sub}</div>}
+      </div>
+    </button>
+  );
+}
 export function Sec({ title, icon }) {
   return (
     <div

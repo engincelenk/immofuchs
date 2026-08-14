@@ -1,3 +1,43 @@
+## 2026-08-14 (1.11.0)
+
+### Neu: "Nebenkosten mitfinanzieren" in Renditerechner & Kreditrechner
+    (Nutzer-Beispiel: reales Bankangebot Sparda-Bank Suedwest)
+
+**Hintergrund:** Renditerechner und Kreditrechner haben bisher immer
+gerechnet: Darlehen = Kaufpreis (+Garage) − Eigenkapital. Kaufnebenkosten
+(Grunderwerbsteuer, Notar, Makler) wurden zwar angezeigt, aber nicht ins
+Darlehen eingerechnet - das Modell ging davon aus, dass die Nebenkosten
+zusaetzlich zum Eigenkapital bar bezahlt werden. Banken rechnen ein
+Finanzierungsangebot oft anders: Finanzierungsbedarf = Kaufpreis +
+Nebenkosten − Eigenkapital, die Nebenkosten werden also mitfinanziert.
+
+**Neuer Schalter "Nebenkosten mitfinanzieren"** (Standard: AUS = bisheriges
+Verhalten unveraendert) in Renditerechner und Kreditrechner, direkt unter dem
+Eigenkapital-Feld. AN:
+- Darlehen = Kaufpreis + Nebenkosten − Eigenkapital.
+- Beleihungsauslauf steigt entsprechend (bleibt aber gegen den reinen
+  Kaufpreis als Beleihungswert berechnet, nicht gegen die Finanzierungsbasis).
+- Monatsrate/Annuitaet steigt automatisch mit dem groesseren Darlehen.
+- Im Renditerechner-Gesamtsaldo werden die Nebenkosten dann NICHT mehr
+  zusaetzlich als sofortige Barauslage abgezogen (sonst waeren sie doppelt
+  gezaehlt: einmal als hoehere Darlehenslast, einmal als Bargeld).
+- Im Kreditrechner-"Gesamtaufwand" (Darlehen + Zinsen + Nebenkosten) entfaellt
+  aus demselben Grund die separate Nebenkosten-Position.
+
+**Betroffene Dateien:** `src/utils/rendite.js` (Renditerechner-Kern),
+`src/components/calculators/Finanzierung.jsx` (Kreditrechner hat eine eigene,
+unabhaengige Formel-Kopie), `src/utils/kreditKennzahlen.js`
+(Merkliste-Kartenvorschau) - alle drei Formel-Kopien wurden angepasst, damit
+keine auseinanderlaeuft. Neuer wiederverwendbarer `Toggle`-Baustein in
+`src/components/ui/atoms.jsx` (Kompaktversion des bisherigen inline
+Schalter-Musters aus Sanier.jsx/iSFP). Uebersetzungen fuer alle 5 Sprachen
+(DE/EN/TR/ZH/HI) in `translations.js` und `tips.js` ergaenzt.
+
+**Verifiziert:** Build erfolgreich, alle 333 Frontend-Tests gruen (inkl. 6
+neuer Tests fuer den Schalter). Testfall mit den echten Zahlen aus dem
+Bankangebot des Nutzers (Kaufpreis 210.000 €, Notar 1,8%, Makler 3,57%, GrESt
+5% BW, Eigenkapital 43.777 €) trifft das Darlehen von 188.000 € exakt.
+
 ## 2026-08-14 (1.10.3)
 
 ### Korrektur: Logo-Groesse war NICHT ueberall fix 54px/24px (Nutzer-Screenshots
