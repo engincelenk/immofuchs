@@ -129,3 +129,160 @@ export function IconLogout({ size }) {
     </Svg>
   );
 }
+
+// ═══ Ergaenzung Menue-Neugestaltung 2026-08-17 ═══
+//
+// Bisher waren nur die sieben Bereichs-Icons gezeichnet; alles Kleinteilige
+// drumherum lief ueber Unicode-Zeichen (▼ ✕ › ← ↗ ↓ →) und in den
+// Bereichsinhalten ueber Emoji (💳 🧾 ✉ 💡 🔒 ✨). Beide sehen je nach
+// Betriebssystem anders aus, haben eine andere Strichstaerke als die Icons
+// daneben und lassen sich nicht auf die Textfarbe einstellen - genau die
+// Begruendung, aus der die Bereichs-Icons schon 2026-08-12 gezeichnet wurden.
+// Die Ausnahme bleiben die Flaggen der Sprachwahl (LangSel.jsx): dort sind
+// Emoji eine bewusste Nutzer-Entscheidung.
+
+export function IconChevronRight({ size = 18 }) {
+  return (
+    <Svg size={size}>
+      <path d="M9 5l7 7-7 7" />
+    </Svg>
+  );
+}
+
+export function IconChevronDown({ size = 18 }) {
+  return (
+    <Svg size={size}>
+      <path d="M5 9l7 7 7-7" />
+    </Svg>
+  );
+}
+
+export function IconArrowLeft({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M19 12H5" />
+      <path d="M11 6l-6 6 6 6" />
+    </Svg>
+  );
+}
+
+export function IconArrowRight({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M5 12h14" />
+      <path d="M13 6l6 6-6 6" />
+    </Svg>
+  );
+}
+
+export function IconMenu({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </Svg>
+  );
+}
+
+export function IconClose({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </Svg>
+  );
+}
+
+// Pfeil aus einem Rahmen heraus - kennzeichnet Ziele ausserhalb der App
+// (neuer Tab), wie das ↗ im Vorbild.
+export function IconExternal({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M14 4h6v6" />
+      <path d="M20 4l-8.5 8.5" />
+      <path d="M19 14.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V6.5A1.5 1.5 0 0 1 5 5h4.5" />
+    </Svg>
+  );
+}
+
+export function IconDownload({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M12 3v12" />
+      <path d="M7.5 10.5L12 15l4.5-4.5" />
+      <path d="M4 19h16" />
+    </Svg>
+  );
+}
+
+export function IconHome({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M4 10.5L12 4l8 6.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8.5z" />
+    </Svg>
+  );
+}
+
+// Schriftzeichen mit lateinischem "A" - das gaengige Sinnbild fuer
+// Sprachwahl, wie im Vorbild.
+export function IconLanguage({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M3 5.5h9" />
+      <path d="M7.5 3.5v2" />
+      <path d="M10 5.5c0 4-3 7-6.5 8" />
+      <path d="M5.5 9c1 2 2.7 3.5 4.7 4.3" />
+      <path d="M13 20l4-9 4 9" />
+      <path d="M14.4 17h5.2" />
+    </Svg>
+  );
+}
+
+// Rechnung/Beleg - ersetzt 🧾 in den Zahlungen.
+export function IconBeleg({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M5.5 3.5h13v17l-2.2-1.5-2.1 1.5-2.2-1.5L9.8 20l-2.1-1.5L5.5 20V3.5z" />
+      <path d="M9 8h6M9 12h6" />
+    </Svg>
+  );
+}
+
+// Briefumschlag - ersetzt ✉ im Support.
+export function IconMail({ size }) {
+  return (
+    <Svg size={size}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3.5 6.5l8.5 6 8.5-6" />
+    </Svg>
+  );
+}
+
+// Gluehbirne - ersetzt 💡 im Support.
+export function IconIdee({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M9 17.5h6" />
+      <path d="M10 20.5h4" />
+      <path d="M12 3a6 6 0 0 0-3.5 10.9c.4.3.6.7.6 1.2v.4h5.8v-.4c0-.5.2-.9.6-1.2A6 6 0 0 0 12 3z" />
+    </Svg>
+  );
+}
+
+// Geschlossenes Schloss - ersetzt 🔒 an der Rechner-Sperre.
+export function IconSchloss({ size }) {
+  return (
+    <Svg size={size}>
+      <rect x="4.5" y="10" width="15" height="10" rx="2" />
+      <path d="M8 10V7.5a4 4 0 0 1 8 0V10" />
+    </Svg>
+  );
+}
+
+// Funkeln - ersetzt ✨ dort, wo auf Pro-Funktionen hingewiesen wird.
+export function IconFunkeln({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M12 3l1.7 4.8L18.5 9.5l-4.8 1.7L12 16l-1.7-4.8L5.5 9.5l4.8-1.7L12 3z" />
+      <path d="M18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" />
+    </Svg>
+  );
+}

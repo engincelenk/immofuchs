@@ -16,10 +16,13 @@ import { PaymentStep } from "./PaymentStep.jsx";
 import { WelcomeStep } from "./WelcomeStep.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
 
-// Ab dieser Breite bekommt der Wizard eine zweite Spalte mit der
-// Bestelluebersicht (siehe showSummary unten) - derselbe Breakpoint wie
-// useIsDesktop, damit Assistent und Checkout an derselben Kante umschalten.
+// Dialogbreite je Schritt (Neugestaltung 2026-08-17). Der Zahlungsschritt
+// bettet Paddles Formular ein und braucht daneben noch Platz fuer die
+// Bestelluebersicht - die uebrigen Schritte wuerden auf dieser Breite
+// auseinanderfallen. Formularschritte bleiben deshalb schmal.
+const PAYMENT_DIALOG_WIDTH = 1040;
 const WIDE_DIALOG_WIDTH = 900;
+const TERM_DIALOG_WIDTH = 560;
 const NARROW_DIALOG_WIDTH = 460;
 
 // Vollflaechiger Checkout-Assistent (Spec-Abschnitt 5) - ersetzt das
@@ -70,6 +73,16 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     initialVariant === "upgrade" ? getWizardSteps(initialVariant).indexOf("payment") : 0,
   );
   const [plan, setPlan] = useState(initialPlan || "yearly");
+  // Gutscheincode liegt seit der Neugestaltung 2026-08-17 im Wizard statt im
+  // Zahlungsschritt: eingegeben wird er in der Kostenbox beim Waehlen der
+  // Laufzeit, gebraucht wird er erst beim Erzeugen der Paddle-Transaktion -
+  // zwei Schritte weiter. Der Fehler wandert denselben Weg zurueck, damit er
+  // dort erscheint, wo das Eingabefeld steht.
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountError, setDiscountError] = useState(null);
+  // Echte Betraege aus Paddles Checkout-Events, sobald das eingebettete
+  // Formular geladen ist (siehe PaymentStep).
+  const [paddleTotals, setPaddleTotals] = useState(null);
   const [verifyEmail, setVerifyEmail] = useState(null);
   const [passwordReset, setPasswordReset] = useState(
     account?.resetToken ? { initialStep: "reset" } : null,
@@ -85,18 +98,32 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     [variant, t],
   );
   const currentKey = steps[stepIndex]?.key;
-  // Zweispalten-Ansicht nur dort, wo eine Bestelluebersicht sinnvollen
-  // Zusatzkontext liefert (Nutzerwunsch 07.08.: Browser/Mobile sollen
-  // dieselbe Kaufstrecke zeigen statt zwei unterschiedliche "Staende").
-  // "verify"/"welcome"/Passwort-Reset bleiben bewusst schmal und zentriert -
-  // dort gibt es nichts, das eine zweite Spalte fuellen wuerde.
-  // login-only zeigt nie eine Bestelluebersicht - es gibt an dieser Stelle
-  // weder Plan noch Preis zu bestaetigen, das waere nur verwirrend.
+  // Wo eine Bestelluebersicht sinnvollen Zusatzkontext liefert.
+  // "verify"/"welcome"/Passwort-Reset bleiben bewusst ohne - dort gibt es
+  // nichts zu bestaetigen. Der Laufzeit-Schritt ebenfalls nicht: dort steht die
+  // Kostenbox bereits direkt unter der Auswahl (PricingStep), eine zweite
+  // waere doppelt. login-only zeigt nie eine - es gibt an dieser Stelle weder
+  // Plan noch Preis, das waere nur verwirrend.
+  //
+  // Korrektur 2026-08-17: haengt nicht mehr an isDesktop. Vorher blendete das
+  // die Uebersicht auf dem Handy KOMPLETT aus - dort sah der Nutzer bis zum
+  // Bezahlen nie, was ihn erwartet. Jetzt entscheidet isDesktop nur noch
+  // ueber die Platzierung: daneben oder darunter.
   const showSummary =
-    isDesktop &&
     !passwordReset &&
     variant !== "login-only" &&
-    (currentKey === "pricing" || currentKey === "account" || currentKey === "payment");
+    (currentKey === "account" || currentKey === "payment");
+  const summaryBeside = showSummary && isDesktop;
+
+  const dialogWidth = passwordReset
+    ? NARROW_DIALOG_WIDTH
+    : currentKey === "payment"
+      ? PAYMENT_DIALOG_WIDTH
+      : summaryBeside
+        ? WIDE_DIALOG_WIDTH
+        : currentKey === "pricing"
+          ? TERM_DIALOG_WIDTH
+          : NARROW_DIALOG_WIDTH;
 
   // Sobald ein eingeloggter Free-Nutzer WAEHREND des Konto-Schritts erkannt
   // wird (egal ueber welchen der fuenf Login-/Registrierungswege), direkt zur
@@ -226,8 +253,14 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         plan={plan}
         setPlan={setPlan}
         onContinue={handlePricingContinue}
+        onCancel={onClose}
         account={account}
-        hideFeatures={showSummary}
+        discountCode={discountCode}
+        setDiscountCode={(code) => {
+          setDiscountCode(code);
+          setDiscountError(null);
+        }}
+        discountError={discountError}
       />
     );
   } else if (currentKey === "account") {
@@ -249,9 +282,16 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         t={t}
         account={account}
         plan={plan}
-        onEditPlan={editPlanHandler}
         onCompleted={handlePaymentCompleted}
-        hideSummary={showSummary}
+        discountCode={discountCode}
+        // Ungueltiger Code: zurueck in den Laufzeit-Schritt, wo das
+        // Eingabefeld steht - eine Fehlermeldung ohne zugehoeriges Feld waere
+        // eine Sackgasse.
+        onDiscountError={(message) => {
+          setDiscountError(message);
+          if (editPlanHandler) editPlanHandler();
+        }}
+        onTotals={setPaddleTotals}
       />
     );
   } else if (currentKey === "welcome") {
@@ -291,7 +331,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         ref={dialogRef}
         style={{
           width: "100%",
-          maxWidth: showSummary ? WIDE_DIALOG_WIDTH : NARROW_DIALOG_WIDTH,
+          maxWidth: dialogWidth,
           margin: isDesktop ? 0 : "0 auto",
           minHeight: isDesktop ? 0 : "100%",
           display: "flex",
@@ -355,32 +395,60 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
           </button>
         </div>
         {!passwordReset && variant !== "login-only" && (
-          <StepHeader steps={steps} currentIndex={stepIndex} ariaLabel={steps[stepIndex]?.label} />
+          <StepHeader
+            steps={steps}
+            currentIndex={stepIndex}
+            counterLabel={t.stepCounter
+              .replace("{current}", String(stepIndex + 1))
+              .replace("{total}", String(steps.length))}
+          />
         )}
+        {/* Die Bestelluebersicht steht auf dem Desktop rechts neben dem
+            Formular und auf dem Handy darunter - deshalb hier eine
+            Flex-Richtung statt zweier getrennter Zweige (dieselben Daten,
+            nur andere Achse). Auf dem Desktop steht das Formular zuerst im
+            Markup und die Uebersicht rechts; auf dem Handy folgt sie
+            darunter, was der Lesereihenfolge entspricht. */}
         <div
           style={{
             display: "flex",
-            gap: 28,
-            alignItems: "flex-start",
-            justifyContent: showSummary ? "center" : "stretch",
+            flexDirection: summaryBeside ? "row" : "column",
+            gap: summaryBeside ? 28 : 18,
+            alignItems: summaryBeside ? "flex-start" : "stretch",
             padding: "20px",
+            paddingBottom: "calc(20px + env(safe-area-inset-bottom))",
             flex: 1,
           }}
         >
+          <div style={{ flex: summaryBeside ? "1 1 auto" : undefined, minWidth: 0 }}>{content}</div>
           {showSummary && (
-            <div style={{ flex: "0 0 280px" }}>
+            <div style={{ flex: summaryBeside ? "0 0 300px" : undefined, minWidth: 0 }}>
               <OrderSummary
                 t={t}
                 plan={plan}
-                account={account}
-                showTrialNotice={currentKey === "payment"}
-                onEditPlan={currentKey === "payment" ? editPlanHandler : null}
+                variant={summaryBeside ? "card" : "box"}
+                paddleTotals={currentKey === "payment" ? paddleTotals : null}
+                showRenewal
               />
+              {editPlanHandler && (
+                <button
+                  onClick={editPlanHandler}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: "10px 0 0",
+                    fontSize: 12,
+                    color: "var(--ca-dk)",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textDecoration: "underline",
+                  }}
+                >
+                  {t.accountChange}
+                </button>
+              )}
             </div>
           )}
-          <div style={{ flex: showSummary ? "1 1 460px" : 1, maxWidth: showSummary ? 460 : "none", minWidth: 0 }}>
-            {content}
-          </div>
         </div>
       </div>
     </div>,

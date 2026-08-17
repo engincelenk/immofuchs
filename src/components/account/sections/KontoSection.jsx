@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext.jsx";
 import { LANG_LOCALE } from "../../../utils/helpers.js";
 import { linkedProviderLabel } from "../../../utils/accountEntitlement.js";
 import { errorBannerStyle, textInputStyle, warnBannerStyle } from "../../checkout/checkoutStyles.js";
+import { IconArrowRight } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
 import {
   actionBtnStyle,
@@ -214,8 +215,12 @@ export function KontoSection({ t, account, lang, onClose, onBack }) {
             {t.gespeichertFreeHint.replace("{limit}", String(savedObjectsFreeLimit))}
           </p>
         )}
-        <button onClick={handleOpenMerkliste} style={actionBtnStyle}>
-          {t.gespeichertCta} →
+        <button
+          onClick={handleOpenMerkliste}
+          style={{ ...actionBtnStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}
+        >
+          {t.gespeichertCta}
+          <IconArrowRight size={17} />
         </button>
       </div>
 

@@ -362,11 +362,18 @@ export function useAccount() {
     return { ok };
   }, [broadcastIsPro]);
 
-  // Paddle-Checkout (4.6): erzeugt server-seitig eine Transaktion, oeffnet sie
-  // per dynamisch nachgeladenem Paddle.js als Overlay (paddleLoader.js).
+  // Paddle-Checkout (4.6): erzeugt server-seitig eine Transaktion und oeffnet
+  // sie per dynamisch nachgeladenem Paddle.js (paddleLoader.js).
   // discountCode optional (Stufe F, Nutzer-Konzept 2026-08-11) - wird
   // server-seitig gegen Paddle aufgeloest, siehe routes/billing.ts.
-  const startCheckout = useCallback(async (plan, discountCode) => {
+  //
+  // `frameTarget` (Checkout-Neugestaltung 2026-08-17): Klassenname des
+  // Containers, in den Paddle sein Zahlungsformular einbettet. Damit laeuft
+  // die Zahlung innerhalb unserer Kaufstrecke - mit eigener Bestelluebersicht
+  // daneben - statt in Paddles bildschirmfuellendem Fremd-Overlay. Ohne diesen
+  // Parameter bleibt das bisherige Overlay-Verhalten, was der Rueckfallweg
+  // ist, wenn der eingebettete Rahmen nicht laedt.
+  const startCheckout = useCallback(async (plan, discountCode, frameTarget) => {
     const res = await apiFetch("/billing/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -399,7 +406,26 @@ export function useAccount() {
     // bleibt jetzt offen und reagiert selbst auf das checkout.completed-Event
     // (siehe paddleLoader.js/onPaddleCheckoutEvent), damit der neue
     // WelcomeStep sichtbar wird statt eines Seiten-Neuladens.
-    Paddle.Checkout.open({ transactionId });
+    Paddle.Checkout.open(
+      frameTarget
+        ? {
+            transactionId,
+            settings: {
+              displayMode: "inline",
+              // Paddle erwartet hier einen KLASSEN-Namen, keine ID - der
+              // Container in PaymentStep traegt sie entsprechend als
+              // className, nicht als id.
+              frameTarget,
+              frameInitialHeight: 460,
+              // Transparenter Hintergrund ohne Rahmen: die umgebende Karte
+              // liefert bereits Flaeche und Kante, ein zweiter Rahmen wuerde
+              // doppelt wirken.
+              frameStyle: "width:100%; min-width:312px; background-color:transparent; border:none;",
+              theme: "light",
+            },
+          }
+        : { transactionId },
+    );
   }, []);
 
   const openBillingPortal = useCallback(async () => {

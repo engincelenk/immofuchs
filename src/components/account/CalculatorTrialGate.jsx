@@ -4,6 +4,7 @@ import { useCalculatorTrial } from "../../hooks/useCalculatorTrial.js";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
+import { IconFunkeln, IconSchloss } from "./accountIcons.jsx";
 
 // Wrapper auf Tab-Ebene (App.jsx) statt Aenderungen in den sechs Rechner-
 // Komponenten selbst - kein einziger bestehender Rechner wird angefasst.
@@ -25,7 +26,11 @@ export function CalculatorTrialGate({ children, onDismiss }) {
 
   if (isLocked) {
     return (
-      <GatePanel icon="🔒" title={t.loginRequiredTitle} body={t.loginRequiredBody}>
+      <GatePanel
+        icon={<IconSchloss size={40} />}
+        title={t.loginRequiredTitle}
+        body={t.loginRequiredBody}
+      >
         <button onClick={() => setShowLogin(true)} style={primaryBtnStyle}>
           <BrandIcon size={18} style={{ marginRight: 4, verticalAlign: "-4px" }} /> {t.loginRequiredCta}
         </button>
@@ -79,7 +84,9 @@ export function CalculatorTrialGate({ children, onDismiss }) {
             color: "var(--ct)",
           }}
         >
-          <span aria-hidden="true">✨</span>
+          <span aria-hidden="true" style={{ display: "flex", flexShrink: 0, color: "var(--ca-dk)" }}>
+            <IconFunkeln size={16} />
+          </span>
           <span>{t.trialRunNotice}</span>
         </div>
       )}
@@ -99,7 +106,18 @@ function GatePanel({ icon, title, body, children }) {
         border: "1px solid var(--cb)",
       }}
     >
-      <div style={{ fontSize: 40, marginBottom: 14 }}>{icon}</div>
+      {/* Gezeichnete Icons statt Emoji (2026-08-17) - deshalb hier zentriert
+          und in der Akzentfarbe statt nur als grosse Schrift. */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: 14,
+          color: "var(--ca-dk)",
+        }}
+      >
+        {icon}
+      </div>
       <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{title}</div>
       <p style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.6, maxWidth: 380, margin: "0 auto 20px" }}>
         {body}

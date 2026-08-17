@@ -1,3 +1,4 @@
+import { IconArrowLeft } from "../accountIcons.jsx";
 import { sectionTitleStyle } from "../accountStyles.js";
 
 // Gemeinsame Ueberschriftzeile aller Kontobereiche (Profil, Abonnement, ...).
@@ -30,7 +31,7 @@ export function SectionTitle({ title, onBack, backLabel }) {
             fontFamily: "inherit",
           }}
         >
-          <span aria-hidden="true">←</span>
+          <IconArrowLeft size={17} />
         </button>
       )}
     </div>

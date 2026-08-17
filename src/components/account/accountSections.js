@@ -14,22 +14,26 @@ import {
 // zwangslaeufig auseinanderlaufen - Reihenfolge, Rollenfilter und
 // Beschriftung leben deshalb nur noch hier.
 //
-// `titleKey` weicht bewusst nur beim Profil vom Navigationslabel ab: in der
-// Seitenleiste heisst der Bereich "Profil", im Menue "Profil anzeigen"
-// (dort ist es eine Handlung, kein Ort).
+// Jeder Bereich traegt nur noch EINE Beschriftung (Neugestaltung
+// 2026-08-17). Vorher gab es zusaetzlich `titleKey` (abweichender Titel im
+// Menue: "Profil anzeigen" statt "Profil") und `descKey` (Beschreibungszeile
+// darunter). Beide entfielen mit den einzeiligen Menuezeilen - dieselbe
+// Beschriftung steht jetzt im Menue, in der Seitenleiste, in den mobilen
+// Pillen und in den Brotkrumen, was das Wiederfinden erleichtert.
+// Die uebersetzten Beschreibungstexte (menu*Desc) stehen weiterhin in
+// i18n/account.js, falls sie einmal zurueckkehren sollen.
 export const SECTION_META = [
-  { key: "profil", labelKey: "navProfil", titleKey: "menuProfilTitle", descKey: "menuProfilDesc", Icon: IconProfil },
-  { key: "abo", labelKey: "navAbonnement", descKey: "menuAboDesc", Icon: IconAbo },
-  { key: "zahlung", labelKey: "navZahlung", descKey: "menuZahlungDesc", Icon: IconZahlung },
-  { key: "einstellungen", labelKey: "navDatenschutz", descKey: "menuEinstellungenDesc", Icon: IconEinstellungen },
+  { key: "profil", labelKey: "navProfil", Icon: IconProfil },
+  { key: "abo", labelKey: "navAbonnement", Icon: IconAbo },
+  { key: "zahlung", labelKey: "navZahlung", Icon: IconZahlung },
+  { key: "einstellungen", labelKey: "navDatenschutz", Icon: IconEinstellungen },
   // Trennlinie im Menue vor diesem Eintrag (Entwurf): oben die Bereiche rund
   // um Vertrag und Daten, darunter Hilfe/Sicherheit/Verwaltung.
-  { key: "support", labelKey: "navSupport", descKey: "menuSupportDesc", Icon: IconSupport, groupStart: true },
-  { key: "konto", labelKey: "navSicherheit", descKey: "menuSicherheitDesc", Icon: IconSicherheit },
+  { key: "support", labelKey: "navSupport", Icon: IconSupport, groupStart: true },
+  { key: "konto", labelKey: "navSicherheit", Icon: IconSicherheit },
   {
     key: "admin",
     labelKey: "navAdmin",
-    descKey: "menuAdminDesc",
     Icon: IconAdmin,
     rolesAllowed: ["admin"],
   },

@@ -1,4 +1,4 @@
-import { errorBannerStyle, secondaryBtnStyle, textInputStyle } from "./checkoutStyles.js";
+import { errorBannerStyle, linkBtnStyle, textInputStyle } from "./checkoutStyles.js";
 
 // Fehlertext-Mapping (Extrakt aus LoginModal.jsx) - eine Stelle fuer alle
 // Fehlercodes, die AccountStep/PasswordResetFlow zurueckbekommen koennen.
@@ -26,26 +26,256 @@ export function ErrorBanner({ t, code }) {
   return <div style={errorBannerStyle}>{map[code] || t.loginErrorOauth}</div>;
 }
 
-export function PasswordField({ value, onChange, placeholder, show, onToggleShow, t, autoComplete, minLength }) {
+// Zwischenzustand beim Oeffnen der Kasse (Referenz-Screenshot "Weiterleitung
+// zur Kasse ..."). Vorher passierte zwischen Klick und Paddle-Fenster sichtbar
+// nichts - bei langsamer Verbindung wirkte der Kauf-Button dadurch kaputt und
+// wurde erneut gedrueckt.
+export function RedirectOverlay({ label }) {
   return (
-    <div style={{ display: "flex", gap: 4 }}>
-      <input
-        type={show ? "text" : "password"}
-        required
-        minLength={minLength}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        style={{ ...textInputStyle, flex: 1 }}
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 5,
+        background: "rgba(255,255,255,.92)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+        borderRadius: 12,
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className="if-checkout-spinner"
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          border: "3px solid var(--cb)",
+          borderTopColor: "var(--ca)",
+        }}
       />
-      <button
-        type="button"
-        onClick={onToggleShow}
-        aria-label={show ? t.loginPasswordHideAria : t.loginPasswordShowAria}
-        style={{ ...secondaryBtnStyle, width: 42, minHeight: 42, padding: 0, flex: "0 0 auto" }}
-      >
-        {show ? "🙈" : "👁"}
+      <span style={{ fontSize: 14, fontWeight: 700 }}>{label}</span>
+      <style>{`
+        .if-checkout-spinner{animation:ifCheckoutSpin .8s linear infinite}
+        @keyframes ifCheckoutSpin{to{transform:rotate(360deg)}}
+        @media (prefers-reduced-motion: reduce){.if-checkout-spinner{animation:none}}
+      `}</style>
+    </div>
+  );
+}
+
+// ═══ Formular-Bausteine der Anmeldemasken (Neugestaltung 2026-08-17) ═══
+//
+// Vorher trugen alle Felder ihre Beschriftung nur als Platzhalter. Der
+// verschwindet beim ersten Zeichen - wer beim Ausfuellen unterbrochen wird,
+// sieht danach unbeschriftete Kaesten und muss raten, was wohin gehoert.
+// Beide Referenz-Masken setzen die Beschriftung deshalb ueber das Feld, wo sie
+// stehen bleibt. Nebeneffekt: Screenreader bekommen ueber `htmlFor` endlich
+// eine echte Verknuepfung statt nur eines Platzhalters.
+
+// Ueberschrift einer Maske. Die Masken hatten bisher entweder eine kleine
+// fette Zeile (Registrierung, Passwort-Reset) oder gar keine (Login) - im
+// Login stand nur ein grauer Untertitel, der nicht sagte, wo man ist.
+export function AuthHeading({ title, subtitle }) {
+  return (
+    <div style={{ marginBottom: subtitle ? 14 : 18 }}>
+      <h2 style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.4, margin: 0, color: "var(--ct)" }}>
+        {title}
+      </h2>
+      {subtitle && (
+        <p style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.5, margin: "6px 0 0" }}>{subtitle}</p>
+      )}
+    </div>
+  );
+}
+
+const fieldLabelStyle = {
+  display: "block",
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: "var(--cl)",
+  marginBottom: 5,
+};
+
+// Beschriftungszeile eines Feldes. `trailing` nimmt den "Passwort
+// vergessen?"-Link auf, der im mobilen Vorbild rechts auf Hoehe der
+// Beschriftung sitzt statt eine eigene Zeile unter dem Knopf zu belegen.
+function FieldLabel({ htmlFor, label, trailing }) {
+  if (!trailing) {
+    return (
+      <label htmlFor={htmlFor} style={fieldLabelStyle}>
+        {label}
+      </label>
+    );
+  }
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+      <label htmlFor={htmlFor} style={fieldLabelStyle}>
+        {label}
+      </label>
+      {trailing}
+    </div>
+  );
+}
+
+export function TextField({ id, label, hint, trailing, style, ...inputProps }) {
+  return (
+    <div>
+      <FieldLabel htmlFor={id} label={label} trailing={trailing} />
+      <input id={id} {...inputProps} style={{ ...textInputStyle, ...style }} />
+      {hint && <p style={{ fontSize: 11, color: "var(--ch)", margin: "5px 0 0" }}>{hint}</p>}
+    </div>
+  );
+}
+
+export function PasswordField({
+  id,
+  label,
+  hint,
+  trailing,
+  value,
+  onChange,
+  show,
+  onToggleShow,
+  t,
+  autoComplete,
+  minLength,
+}) {
+  return (
+    <div>
+      <FieldLabel htmlFor={id} label={label} trailing={trailing} />
+      {/* Auge IM Feld statt als eigener Knopf daneben (Vorbild): der separate
+          42px-Knopf nahm dem Eingabefeld Breite und sah auf den ersten Blick
+          aus wie ein zweites, kleines Feld. */}
+      <div style={{ position: "relative" }}>
+        <input
+          id={id}
+          type={show ? "text" : "password"}
+          required
+          minLength={minLength}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoComplete={autoComplete}
+          style={{ ...textInputStyle, paddingRight: 44 }}
+        />
+        <button
+          type="button"
+          onClick={onToggleShow}
+          aria-label={show ? t.loginPasswordHideAria : t.loginPasswordShowAria}
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: 42,
+            height: 42,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            color: "var(--ch)",
+          }}
+        >
+          <EyeIcon off={show} />
+        </button>
+      </div>
+      {hint && <p style={{ fontSize: 11, color: "var(--ch)", margin: "5px 0 0" }}>{hint}</p>}
+    </div>
+  );
+}
+
+// Gezeichnetes Auge statt der Emoji 👁/🙈 - dieselbe Begruendung wie bei den
+// Kontomenue-Icons: Emoji sehen je nach Betriebssystem anders aus und lassen
+// sich nicht auf die Textfarbe einstellen.
+function EyeIcon({ off }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {off && <path d="M4 20L20 4" />}
+    </svg>
+  );
+}
+
+// Grosser Briefumschlag fuer die beiden "Wir haben dir eine E-Mail
+// geschickt"-Bildschirme (Passwort-Reset und E-Mail-Bestaetigung). Ersetzt das
+// Emoji ✉️, das dort in zwei verschiedenen Groessen stand.
+export function MailGlyph({ size = 38 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3.5 6.5l8.5 6 8.5-6" />
+    </svg>
+  );
+}
+
+// Schloss fuer den Sicherheitshinweis am Zahlungsformular - ersetzt das
+// letzte verbliebene Emoji in der Kaufstrecke.
+export function LockGlyph({ size = 14 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <rect x="4.5" y="10" width="15" height="10" rx="2" />
+      <path d="M8 10V7.5a4 4 0 0 1 8 0V10" />
+    </svg>
+  );
+}
+
+// Trennlinie mit Beschriftung ("oder") zwischen den beiden Anmeldewegen.
+export function OrDivider({ label }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
+      <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
+      <span style={{ fontSize: 12, color: "var(--ch)" }}>{label}</span>
+      <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
+    </div>
+  );
+}
+
+// Fusszeile "Noch kein Konto? Registrieren" - im Vorbild ohne Trennlinie
+// darueber, nur ruhig zentriert.
+export function AuthFooterLink({ onClick, children }) {
+  return (
+    <div style={{ textAlign: "center", marginTop: 18 }}>
+      <button type="button" onClick={onClick} style={{ ...linkBtnStyle, fontSize: 13 }}>
+        {children}
       </button>
     </div>
   );

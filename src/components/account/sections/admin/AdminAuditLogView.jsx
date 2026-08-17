@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { IconArrowLeft, IconArrowRight } from "../../accountIcons.jsx";
 import { fetchAuditLog } from "./adminApi.js";
 import { errorText, labelStyle, mutedTextStyle, secondaryBtnStyle, selectStyle } from "./adminUiStyles.js";
 
@@ -12,7 +13,6 @@ const ACTION_LABELS = {
   "user.unsuspend": "Nutzer entsperrt",
   "user.role_change": "Rolle geändert",
   "user.test_user_change": "Testuser geändert",
-  "user.beta_change": "Beta-Zugriff geändert",
   "user.note_add": "Support-Notiz hinzugefügt",
   "user.password_reset": "Passwort-Reset ausgelöst",
   "user.sessions_revoke": "Sitzungen beendet",
@@ -68,7 +68,7 @@ export function AdminAuditLogView() {
     <div>
       <p style={{ ...mutedTextStyle, marginTop: 0, marginBottom: 16 }}>
         Protokolliert jede schreibende Admin-Aktion. Der Verlauf ist unveränderlich – Einträge lassen sich weder
-        bearbeiten noch löschen, auch nicht von Owner/Admin.
+        bearbeiten noch löschen, auch nicht von Admin.
       </p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end", marginBottom: 16 }}>
@@ -201,14 +201,24 @@ export function AdminAuditLogView() {
             ))}
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
-            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} style={secondaryBtnStyle}>
-              ← Zurück
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              style={{ ...secondaryBtnStyle, display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              <IconArrowLeft size={16} />
+              Zurück
             </button>
             <span style={{ fontSize: 13, color: "var(--ch)" }}>
               Seite {page} / {totalPages} · {data.total} Einträge
             </span>
-            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} style={secondaryBtnStyle}>
-              Weiter →
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              style={{ ...secondaryBtnStyle, display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              Weiter
+              <IconArrowRight size={16} />
             </button>
           </div>
         </>

@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
-import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { MyAccount } from "./MyAccount.jsx";
 import { LoginSuccessToast } from "./LoginSuccessToast.jsx";
 import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
-import { HeaderMenu } from "./HeaderMenu.jsx";
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
 // NICHT in Statusleiste.jsx). Label "Pro" mit Kroenchen-Icon, Fuchs-Orange.
@@ -27,7 +25,6 @@ export function ProHeaderButton() {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
-  const isDesktop = useIsDesktop();
   // Was geoeffnet ist, wird beim Oeffnen einmal festgelegt und NICHT bei jedem
   // Render neu aus isLoggedIn abgeleitet (Befund 06.08.): vorher entschied ein
   // Ternaer im Render darueber, wodurch die Anmeldung mitten im Kauf die
@@ -118,49 +115,27 @@ export function ProHeaderButton() {
       )}
       {/* Immer gemountet statt `{menuOpen && ...}` - `open` steuert die
           Sichtbarkeit, nur so kann die Ausstiegs-Animation ablaufen (siehe
-          AccountMenu.jsx/HeaderMenu.jsx). Desktop = verankertes Dropdown
-          (AccountMenu), Mobil = Vollbild-Drill-down (HeaderMenu, UX-Konzept
-          2026-08-13) - EIN Trigger (der Avatar), aber je nach Platzangebot
-          eine andere Darstellung. */}
-      {isDesktop ? (
-        <AccountMenu
-          t={t}
-          me={account.me}
-          open={menuOpen}
-          anchorRef={avatarRef}
-          onClose={() => setMenuOpen(false)}
-          onSelect={(key) => {
-            setMenuOpen(false);
-            setSectionKey(key);
-            setOpenMode("account");
-          }}
-          onLogout={async () => {
-            setMenuOpen(false);
-            await account.logout();
-          }}
-        />
-      ) : (
-        <HeaderMenu
-          t={t}
-          me={account.me}
-          open={menuOpen}
-          isLoggedIn={Boolean(account.isLoggedIn)}
-          onClose={() => setMenuOpen(false)}
-          onSelectSection={(key) => {
-            setMenuOpen(false);
-            setSectionKey(key);
-            setOpenMode("account");
-          }}
-          onLogin={() => {
-            setMenuOpen(false);
-            setOpenMode("login");
-          }}
-          onLogout={async () => {
-            setMenuOpen(false);
-            await account.logout();
-          }}
-        />
-      )}
+          Sheet.jsx). Seit der Neugestaltung 2026-08-17 EINE Komponente fuer
+          beide Groessen: AccountMenu waehlt selbst zwischen angedocktem
+          Popover (Browser) und Sheet von unten (Handy). Vorher stand hier
+          eine Verzweigung auf ein zweites, eigenstaendiges Vollbildmenue. */}
+      <AccountMenu
+        t={t}
+        me={account.me}
+        lang={lang}
+        open={menuOpen}
+        anchorRef={avatarRef}
+        onClose={() => setMenuOpen(false)}
+        onSelect={(key) => {
+          setMenuOpen(false);
+          setSectionKey(key);
+          setOpenMode("account");
+        }}
+        onLogout={async () => {
+          setMenuOpen(false);
+          await account.logout();
+        }}
+      />
       {account.loginSuccess && (
         <LoginSuccessToast
           t={t}

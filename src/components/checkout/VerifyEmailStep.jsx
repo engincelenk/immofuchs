@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ErrorBanner } from "./CheckoutShared.jsx";
+import { ErrorBanner, MailGlyph } from "./CheckoutShared.jsx";
 import { secondaryBtnStyle } from "./checkoutStyles.js";
 
 // 60-Sek.-Cooldown fuer "Bestaetigung erneut senden" - startet bei jedem
@@ -29,9 +29,13 @@ export function VerifyEmailStep({ t, account, email }) {
 
   return (
     <div style={{ textAlign: "center", padding: "20px 0" }}>
-      <div style={{ fontSize: 32, marginBottom: 12 }}>✉️</div>
-      <div style={{ fontSize: 14, fontWeight: 700 }}>{t.verifySentTitle}</div>
-      <p style={{ fontSize: 12, color: "var(--ch)", marginTop: 8 }}>{t.verifySentBody.replace("{email}", email || "")}</p>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, color: "var(--ca-dk)" }}>
+        <MailGlyph />
+      </div>
+      <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.3 }}>{t.verifySentTitle}</div>
+      <p style={{ fontSize: 13, color: "var(--ch)", marginTop: 8, lineHeight: 1.55 }}>
+        {t.verifySentBody.replace("{email}", email || "")}
+      </p>
       {inlineError && <ErrorBanner t={t} code={inlineError} />}
       <button
         onClick={handleResend}

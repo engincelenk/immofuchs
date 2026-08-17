@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { LANG_LOCALE } from "../../../utils/helpers.js";
 import { errorBannerStyle } from "../../checkout/checkoutStyles.js";
+import { IconBeleg, IconExternal, IconZahlung } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
 import {
   actionBtnStyle,
@@ -111,14 +112,18 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
             style={{ ...actionBtnStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}
           >
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span aria-hidden="true">💳</span>
+              <IconZahlung size={18} />
               {t.zahlungCta}
             </span>
-            <span aria-hidden="true" style={{ color: "var(--ch)" }}>↗</span>
+            <span aria-hidden="true" style={{ display: "flex", color: "var(--ch)" }}>
+              <IconExternal size={16} />
+            </span>
           </button>
         ) : (
           <p style={{ ...blockHintStyle, margin: 0, display: "flex", alignItems: "flex-start", gap: 8 }}>
-            <span aria-hidden="true">💳</span>
+            <span aria-hidden="true" style={{ display: "flex", flexShrink: 0, marginTop: 1 }}>
+              <IconZahlung size={16} />
+            </span>
             <span>{t.zahlungFreeHint}</span>
           </p>
         )}
@@ -126,7 +131,7 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
 
       <div style={blockCardStyle}>
         <div style={{ ...blockTitleStyle, display: "flex", alignItems: "center", gap: 8 }}>
-          <span aria-hidden="true">🧾</span>
+          <IconBeleg size={18} />
           {t.navRechnungen}
         </div>
         <p style={blockHintStyle}>{t.rechnungenIntro}</p>
@@ -177,9 +182,17 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
                 <button
                   onClick={() => handlePdf(invoice.id)}
                   aria-label={t.rechnungenPdfAria.replace("{date}", formatDate(invoice))}
-                  style={{ ...inlineLinkBtnStyle, fontSize: 12.5, flexShrink: 0 }}
+                  style={{
+                    ...inlineLinkBtnStyle,
+                    fontSize: 12.5,
+                    flexShrink: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
                 >
-                  {t.rechnungenPdf} ↗
+                  {t.rechnungenPdf}
+                  <IconExternal size={14} />
                 </button>
               </div>
             </div>

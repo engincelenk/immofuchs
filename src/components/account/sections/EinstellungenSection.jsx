@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { LANGS } from "../../../i18n/translations.js";
+import { IconDownload } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
 import { actionBtnStyle, blockCardStyle, blockHintStyle, blockTitleStyle, sectionIntroStyle } from "../accountStyles.js";
 
@@ -71,8 +72,12 @@ export function EinstellungenSection({ t, account, lang, setLang, onBack }) {
       <div style={blockCardStyle}>
         <div style={blockTitleStyle}>{t.accountExport}</div>
         <p style={blockHintStyle}>{t.datenschutzExportHint}</p>
-        <button onClick={account.exportData} style={actionBtnStyle}>
-          {t.accountExport} ↓
+        <button
+          onClick={account.exportData}
+          style={{ ...actionBtnStyle, display: "flex", alignItems: "center", gap: 10 }}
+        >
+          <IconDownload size={18} />
+          {t.accountExport}
         </button>
       </div>
 

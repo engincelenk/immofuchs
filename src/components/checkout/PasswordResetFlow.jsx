@@ -1,7 +1,13 @@
-import { useState } from "react";
-import { ErrorBanner } from "./CheckoutShared.jsx";
-import { PasswordField } from "./CheckoutShared.jsx";
-import { infoBannerStyle, linkBtnStyle, primaryBtnStyle, textInputStyle } from "./checkoutStyles.js";
+import { useId, useState } from "react";
+import {
+  AuthFooterLink,
+  AuthHeading,
+  ErrorBanner,
+  MailGlyph,
+  PasswordField,
+  TextField,
+} from "./CheckoutShared.jsx";
+import { infoBannerStyle, primaryBtnStyle } from "./checkoutStyles.js";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
 
 // Eigenstaendiger Ablauf ausserhalb der Kern-Fortschrittsleiste (Spec 5.1) -
@@ -9,6 +15,7 @@ import { BrandIcon } from "../ui/BrandIcon.jsx";
 // AccountStep ("Passwort vergessen?") oder direkt bei ?reset_token=
 // (initialStep-Prop).
 export function PasswordResetFlow({ t, account, initialStep = "request", onBack }) {
+  const uid = useId();
   const [step, setStep] = useState(initialStep); // "request" | "sent" | "reset" | "success"
   const [forgotEmail, setForgotEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -45,13 +52,14 @@ export function PasswordResetFlow({ t, account, initialStep = "request", onBack 
   if (step === "reset") {
     return (
       <div>
-        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>{t.newPasswordTitle}</div>
+        <AuthHeading title={t.newPasswordTitle} />
         {inlineError && <ErrorBanner t={t} code={inlineError} />}
-        <form onSubmit={handleNewPasswordSubmit} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <form onSubmit={handleNewPasswordSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <PasswordField
+            id={`${uid}-new`}
+            label={t.newPasswordPlaceholder}
             value={newPassword}
             onChange={setNewPassword}
-            placeholder={t.newPasswordPlaceholder}
             show={showNewPassword}
             onToggleShow={() => setShowNewPassword((s) => !s)}
             t={t}
@@ -59,9 +67,10 @@ export function PasswordResetFlow({ t, account, initialStep = "request", onBack 
             minLength={10}
           />
           <PasswordField
+            id={`${uid}-new-repeat`}
+            label={t.newPasswordRepeatPlaceholder}
             value={newPasswordRepeat}
             onChange={setNewPasswordRepeat}
-            placeholder={t.newPasswordRepeatPlaceholder}
             show={showNewPassword}
             onToggleShow={() => setShowNewPassword((s) => !s)}
             t={t}
@@ -92,8 +101,12 @@ export function PasswordResetFlow({ t, account, initialStep = "request", onBack 
   if (step === "sent") {
     return (
       <div style={{ textAlign: "center", padding: "20px 0" }}>
-        <div style={{ fontSize: 32, marginBottom: 12 }}>✉️</div>
-        <p style={{ fontSize: 13, color: "var(--ch)" }}>{t.forgotPasswordSentInfo}</p>
+        {/* Gezeichneter Briefumschlag statt des Emoji ✉️ - dieselbe
+            Begruendung wie bei den uebrigen Icons (Neugestaltung 2026-08-17). */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, color: "var(--ca-dk)" }}>
+          <MailGlyph />
+        </div>
+        <p style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.55 }}>{t.forgotPasswordSentInfo}</p>
         <button
           onClick={onBack}
           style={{ marginTop: 16, background: "none", border: "1px solid var(--cb)", borderRadius: 10, padding: "10px 16px", fontFamily: "inherit", cursor: "pointer" }}
@@ -106,27 +119,22 @@ export function PasswordResetFlow({ t, account, initialStep = "request", onBack 
 
   return (
     <div>
-      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>{t.forgotPasswordTitle}</div>
-      <p style={{ fontSize: 13, color: "var(--ch)", marginBottom: 16 }}>{t.forgotPasswordBody}</p>
-      <form onSubmit={handleRequestSubmit} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <input
+      <AuthHeading title={t.forgotPasswordTitle} subtitle={t.forgotPasswordBody} />
+      <form onSubmit={handleRequestSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <TextField
+          id={`${uid}-forgot-email`}
+          label={t.loginEmailPlaceholder}
           type="email"
           required
           value={forgotEmail}
           onChange={(e) => setForgotEmail(e.target.value)}
-          placeholder={t.loginEmailPlaceholder}
           autoComplete="username"
-          style={textInputStyle}
         />
         <button type="submit" disabled={busy} style={primaryBtnStyle}>
           {t.forgotPasswordSubmit}
         </button>
       </form>
-      <div style={{ textAlign: "center", marginTop: 14 }}>
-        <button type="button" onClick={onBack} style={linkBtnStyle}>
-          {t.backToLogin}
-        </button>
-      </div>
+      <AuthFooterLink onClick={onBack}>{t.backToLogin}</AuthFooterLink>
     </div>
   );
 }

@@ -101,3 +101,62 @@ export const cardStyle = {
   borderRadius: 10,
   padding: 14,
 };
+
+// ═══ Checkout-Neugestaltung 2026-08-17 (Referenz-Screenshots) ═══
+
+// Textbutton neben dem Primary-Button ("Abbrechen"). Die Referenz stellt die
+// Abbruch-Option bewusst als Link daneben statt als zweiten Rahmen-Button -
+// das laesst den Weiter-Weg als einzige echte Handlung stehen.
+export const ghostBtnStyle = {
+  background: "none",
+  border: "none",
+  padding: "14px 18px",
+  fontSize: 14,
+  fontWeight: 600,
+  color: "var(--ca-dk)",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  borderRadius: 10,
+};
+
+// Graue Kostenbox unter der Laufzeit-Auswahl. Absichtlich --ci (Input-Ton)
+// statt --cc: sie soll sich als ruhige Flaeche vom weissen Karten-Umfeld
+// abheben, so wie im Vorbild.
+export const summaryBoxStyle = {
+  background: "var(--ci)",
+  border: "1px solid var(--cb)",
+  borderRadius: 12,
+  padding: 16,
+};
+
+// Preis-Chip rechts in den Laufzeit-Karten (Vorbild: grau hinterlegter
+// Preis neben dem durchgestrichenen Listenpreis).
+export const priceChipStyle = {
+  background: "var(--cc)",
+  border: "1px solid var(--cb)",
+  borderRadius: 8,
+  padding: "5px 9px",
+  fontSize: 14,
+  fontWeight: 800,
+  whiteSpace: "nowrap",
+};
+
+// Ersparnis-Badge ("17 % sparen") - heller Akzent-Hintergrund statt
+// vollflaechigem Orange, damit er neben dem Preis nicht lauter ist als der
+// Preis selbst.
+export const saveBadgeStyle = {
+  display: "inline-block",
+  background: "#FCE9DC",
+  color: "var(--ca-dk)",
+  borderRadius: 20,
+  padding: "3px 9px",
+  fontSize: 11,
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+};
+
+export const strikePriceStyle = {
+  fontSize: 12.5,
+  color: "var(--ch)",
+  textDecoration: "line-through",
+};

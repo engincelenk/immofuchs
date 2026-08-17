@@ -8,7 +8,7 @@ import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { useScrollLock } from "../../hooks/useScrollLock.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
-import { HeaderMenu } from "./HeaderMenu.jsx";
+import { IconArrowLeft, IconChevronRight, IconHome } from "./accountIcons.jsx";
 import { visibleSections } from "./accountSections.js";
 import { ProfilSection } from "./sections/ProfilSection.jsx";
 import { AbonnementSection } from "./sections/AbonnementSection.jsx";
@@ -67,11 +67,9 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
   // ueberschreiben. Deshalb ersetzt der Wizard diesen Bereich komplett.
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
-  // Avatar-Menue im Kopf (Nutzer-Entwurf 2026-08-12). Auf dem Desktop die
-  // Kurzfassung (Name, E-Mail, Abmelden) - die Bereiche stehen dort dauerhaft
-  // in der Seitenleiste. Auf dem Handy die volle Fassung inklusive Bereiche,
-  // seit die separate ☰-Zeile entfallen ist (Nutzer-Screenshot 2026-08-12:
-  // eine ganze Zeile fuer einen einzelnen Knopf, daneben nur Weiss).
+  // Avatar-Menue im Kopf. Auf dem Desktop die Kurzfassung (Name, E-Mail,
+  // Abmelden) - die Bereiche stehen dort dauerhaft in der Seitenleiste. Auf
+  // dem Handy die volle Fassung inklusive Bereiche.
   const [menuOpen, setMenuOpen] = useState(false);
   const avatarRef = useRef(null);
 
@@ -237,7 +235,7 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
                     flexShrink: 0,
                   }}
                 >
-                  <span aria-hidden="true">←</span>
+                  <IconArrowLeft size={16} />
                   <span>{t.wizardBack}</span>
                 </button>
               </>
@@ -258,65 +256,90 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
           />
         </div>
         </div>
-        {/* Nutzer-Screenshot 2026-08-12: Auf dem Handy belegte der ☰-Knopf
-            eine komplette eigene Zeile, in der sonst nichts stand (seit die
-            Bereichsbezeichnung daraus entfernt wurde) - viel Weiss fuer einen
-            44px-Knopf. Ausserdem standen dort zwei Menues uebereinander: der
-            Avatar (Name/E-Mail/Abmelden) und ☰ (Bereiche), wobei der Avatar
-            mobil nur "Abmelden" beitrug, weil Name und E-Mail bereits im Kopf
-            des ☰-Panels standen. Beides loest dieselbe Massnahme: mobil
-            oeffnet der Avatar das VOLLE Menue inklusive Bereiche, die
-            ☰-Zeile entfaellt ersatzlos. Auf dem Desktop bleibt es bei
-            Seitenleiste + Kurzmenue - dort gibt es keine Platznot und die
-            Bereiche stehen ohnehin dauerhaft sichtbar daneben. */}
         {/* Immer gemountet statt `{menuOpen && ...}` - `open` steuert die
             Sichtbarkeit, nur so kann die Ausstiegs-Animation ablaufen (siehe
-            AccountMenu.jsx/HeaderMenu.jsx). Desktop: kompaktes verankertes
-            Dropdown (die Bereiche stehen dort bereits dauerhaft in der
-            Seitenleiste). Mobil: Vollbild-Drill-down (HeaderMenu) - hier IST
-            das Menue der einzige Weg, den Bereich zu wechseln, seit die
-            Seitenleiste auf dem Handy nicht gerendert wird. */}
-        {isDesktop ? (
-          <AccountMenu
-            t={t}
-            me={account.me}
-            open={menuOpen}
-            variant="compact"
-            anchorRef={avatarRef}
-            onClose={() => setMenuOpen(false)}
-            onSelect={(key) => {
-              setMenuOpen(false);
-              setActiveKey(key);
-            }}
-            onLogout={handleLogout}
-            logoutBusy={logoutBusy}
-          />
-        ) : (
-          <HeaderMenu
-            t={t}
-            me={account.me}
-            open={menuOpen}
-            isLoggedIn
-            onClose={() => setMenuOpen(false)}
-            onSelectSection={(key) => {
-              setMenuOpen(false);
-              setActiveKey(key);
-            }}
-            onLogout={handleLogout}
-            logoutBusy={logoutBusy}
-          />
-        )}
-
-        <div
-          className="ma-body"
-          style={{
-            display: "flex",
-            flexDirection: isDesktop ? "row" : "column",
-            alignItems: "stretch",
-            gap: isDesktop ? 24 : 0,
-            flex: 1,
+            Sheet.jsx). Seit der Neugestaltung 2026-08-17 dieselbe Komponente
+            wie im App-Kopf; sie waehlt selbst die Darstellung.
+            Die Bereichsliste bleibt hier nur auf dem Desktop ausgespart
+            (variant="compact"): dort steht sie dauerhaft in der Seitenleiste
+            daneben, ein zweites Mal waere reine Wiederholung. Auf dem Handy
+            wird die volle Liste gebraucht. */}
+        <AccountMenu
+          t={t}
+          me={account.me}
+          lang={lang}
+          open={menuOpen}
+          variant={isDesktop ? "compact" : "full"}
+          anchorRef={avatarRef}
+          onClose={() => setMenuOpen(false)}
+          onSelect={(key) => {
+            setMenuOpen(false);
+            setActiveKey(key);
           }}
-        >
+          onLogout={handleLogout}
+          logoutBusy={logoutBusy}
+        />
+
+        <div className="ma-body" style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+          {/* Brotkrumen (Vorbild). Sie beantworten die Frage, die der
+              Kontobereich vorher offen liess: wo bin ich, und wie komme ich
+              eine Stufe zurueck? Das Haus fuehrt aus dem Kontobereich heraus
+              in die Anwendung - dieselbe Handlung wie "Zurueck" oben, aber an
+              der Stelle, an der man sie im Vorbild sucht. */}
+          <nav aria-label={t.breadcrumbAria} style={{ marginBottom: 10 }}>
+            <ol
+              style={{
+                listStyle: "none",
+                display: "flex",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 6,
+                margin: 0,
+                padding: 0,
+                fontSize: 13,
+              }}
+            >
+              <li style={{ display: "flex", alignItems: "center" }}>
+                <button
+                  onClick={onClose}
+                  aria-label={t.breadcrumbHomeAria}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    background: "none",
+                    border: "none",
+                    padding: 4,
+                    margin: -4,
+                    cursor: "pointer",
+                    color: "var(--ch)",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <IconHome size={16} />
+                </button>
+              </li>
+              <li aria-hidden="true" style={{ display: "flex", color: "var(--cb)" }}>
+                <IconChevronRight size={14} />
+              </li>
+              <li style={{ color: "var(--ch)" }}>{t.accountTitle}</li>
+              <li aria-hidden="true" style={{ display: "flex", color: "var(--cb)" }}>
+                <IconChevronRight size={14} />
+              </li>
+              <li style={{ fontWeight: 700, color: "var(--ct)" }} aria-current="page">
+                {t[active.labelKey]}
+              </li>
+            </ol>
+          </nav>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: isDesktop ? "row" : "column",
+              alignItems: "stretch",
+              gap: isDesktop ? 24 : 0,
+              flex: 1,
+            }}
+          >
           {isDesktop ? (
             <nav
               aria-label={t.accountNavAria}
@@ -328,11 +351,46 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
                   label={t[s.labelKey]}
                   Icon={s.Icon}
                   active={s.key === activeKey}
+                  groupStart={s.groupStart}
                   onClick={() => setActiveKey(s.key)}
                 />
               ))}
             </nav>
-          ) : null}
+          ) : (
+            /* Mobile Bereichswahl (Neugestaltung 2026-08-17). Vorher gab es
+               auf dem Handy GAR KEINE Navigation: wer einen Bereich offen
+               hatte, musste ueber das ← zurueck ins Menue und von dort neu
+               hinein, nur um von "Profil" nach "Zahlungen" zu wechseln. Die
+               waagerecht scrollende Pillen-Leiste ist dasselbe Muster, das
+               der Admin-Bereich bereits nutzt (AdminSection.jsx). */
+            <nav
+              aria-label={t.accountNavAria}
+              style={{
+                display: "flex",
+                gap: 8,
+                overflowX: "auto",
+                paddingBottom: 12,
+                marginBottom: 4,
+                // Zieht die Leiste bis an die Kanten des Inhaltsbereichs, damit
+                // beim Scrollen nichts abgeschnitten "klebt".
+                marginLeft: -14,
+                marginRight: -14,
+                paddingLeft: 14,
+                paddingRight: 14,
+                scrollbarWidth: "none",
+              }}
+            >
+              {sections.map((s) => (
+                <SectionPill
+                  key={s.key}
+                  label={t[s.labelKey]}
+                  Icon={s.Icon}
+                  active={s.key === activeKey}
+                  onClick={() => setActiveKey(s.key)}
+                />
+              ))}
+            </nav>
+          )}
 
           {/* Inhaltsspalte gedeckelt: Ohne Deckel zoegen sich Zeilen wie
               "E-Mail ........ adresse@... ändern" auf einem 1920er-Schirm
@@ -350,6 +408,7 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
               onBack={!isDesktop ? onBackToMenu : undefined}
             />
           </div>
+          </div>
         </div>
       </div>
     </div>,
@@ -357,33 +416,90 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
   );
 }
 
-// Desktop-Vertikalliste (mobil ersetzt durch die aufklappbare
-// Bereichswahl weiter oben, siehe mobileNavOpen).
-function NavItem({ label, Icon, active, onClick }) {
+// Desktop-Seitenleiste. Neugestaltung 2026-08-17: der aktive Eintrag trug
+// vorher einen kompletten orangen Rahmen um die Pille - im Vorbild markiert
+// eine ruhige Flaeche den Ort, kein Kasten. Statt des Rahmens jetzt eine
+// getoente Flaeche mit einem senkrechten Balken an der linken Kante, der die
+// Lesekante der Liste betont statt sie zu unterbrechen.
+function NavItem({ label, Icon, active, groupStart, onClick }) {
   return (
     <button
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       style={{
+        position: "relative",
         display: "flex",
         alignItems: "center",
-        gap: 8,
+        gap: 10,
         padding: "10px 12px",
         borderRadius: 10,
-        border: `1px solid ${active ? "var(--ca)" : "transparent"}`,
+        border: "none",
         background: active ? "var(--ca-bg)" : "transparent",
         // --ca-dk statt --ca: auf --ca-bg liegt --ca unter der WCAG-AA-Grenze
         // fuer diese Schriftgroesse (S2-5).
         color: active ? "var(--ca-dk)" : "var(--ct)",
-        fontSize: 13,
+        fontSize: 13.5,
         fontWeight: active ? 700 : 600,
         cursor: "pointer",
         fontFamily: "inherit",
         textAlign: "left",
         whiteSpace: "nowrap",
+        // Trennlinie vor der zweiten Gruppe - dieselbe Gruppierung wie im
+        // Menue, beide kommen aus accountSections.js.
+        marginTop: groupStart ? 10 : 0,
+        paddingTop: groupStart ? 16 : 10,
+        borderTop: groupStart ? "1px solid var(--cb)" : undefined,
+        borderTopLeftRadius: groupStart ? 0 : 10,
+        borderTopRightRadius: groupStart ? 0 : 10,
       }}
     >
+      {active && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: groupStart ? 10 : 6,
+            bottom: 6,
+            width: 3,
+            borderRadius: 3,
+            background: "var(--ca)",
+          }}
+        />
+      )}
       <Icon size={18} />
+      <span>{label}</span>
+    </button>
+  );
+}
+
+// Mobile Bereichswahl als waagerecht scrollende Pille - im Gegensatz zur
+// Seitenleiste ohne Beschreibung und ohne Balken, weil die Leiste sonst
+// breiter als der Bildschirm waere.
+function SectionPill({ label, Icon, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        flexShrink: 0,
+        padding: "9px 14px",
+        borderRadius: 999,
+        border: `1px solid ${active ? "var(--ca)" : "var(--cb)"}`,
+        background: active ? "var(--ca-bg)" : "var(--cc)",
+        color: active ? "var(--ca-dk)" : "var(--ct)",
+        fontSize: 13.5,
+        fontWeight: active ? 700 : 600,
+        cursor: "pointer",
+        fontFamily: "inherit",
+        whiteSpace: "nowrap",
+        minHeight: 40,
+      }}
+    >
+      <Icon size={17} />
       <span>{label}</span>
     </button>
   );

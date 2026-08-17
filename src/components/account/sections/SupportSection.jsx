@@ -1,4 +1,5 @@
 import { AccordionSection } from "../../ui/AccordionSection.jsx";
+import { IconIdee, IconMail } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
 import {
   actionBtnStyle,
@@ -37,11 +38,19 @@ export function SupportSection({ t, onBack }) {
         <div style={blockTitleStyle}>{t.supportContactTitle}</div>
         <p style={blockHintStyle}>{t.supportContactBody}</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <a href={mailto(t.supportContactSubject)} style={{ ...actionBtnStyle, display: "block", textDecoration: "none" }}>
-            ✉ {t.supportContactCta}
+          <a
+            href={mailto(t.supportContactSubject)}
+            style={{ ...actionBtnStyle, display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
+          >
+            <IconMail size={18} />
+            {t.supportContactCta}
           </a>
-          <a href={mailto(t.supportFeedbackSubject)} style={{ ...actionBtnStyle, display: "block", textDecoration: "none" }}>
-            💡 {t.supportFeedbackCta}
+          <a
+            href={mailto(t.supportFeedbackSubject)}
+            style={{ ...actionBtnStyle, display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
+          >
+            <IconIdee size={18} />
+            {t.supportFeedbackCta}
           </a>
         </div>
       </div>

@@ -6,14 +6,15 @@ import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
 import { LandingMascot } from "../components/assistant/LandingMascot.jsx";
 import { useAccountCtx } from "../context/AccountContext.jsx";
-import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { Ctx } from "../context/AppContext.jsx";
 import { ACCOUNT_T } from "../i18n/account.js";
 import { CheckoutWizard } from "../components/checkout/CheckoutWizard.jsx";
+import { PricingSection } from "../components/checkout/PricingSection.jsx";
 import { MyAccount } from "../components/account/MyAccount.jsx";
 import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
 import { AccountAvatarButton, AccountMenu } from "../components/account/AccountMenu.jsx";
 import { HeaderMenu } from "../components/account/HeaderMenu.jsx";
+import { IconMenu } from "../components/account/accountIcons.jsx";
 import { useSavedObjects } from "../components/shell/Merkliste.jsx";
 
 const navLink = {
@@ -32,21 +33,24 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const zB = zinsen?.bundesanleihe_10j;
-  const isDesktop = useIsDesktop();
   // Login-Standard-Flow (Konzept-Dok Abschnitt 2/1.5): "Anmelden" ist bereits
   // auf der Landingpage sichtbar, statt erst beim Klick in einen Rechner.
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
   // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
   const account = useAccountCtx();
   const [openMode, setOpenMode] = useState(null); // null | "checkout" | "login" | "account"
-  // Ein einziger Zustand fuer EINEN Menue-Trigger (UX-Konzept 2026-08-13):
-  // vorher steuerte `menuOpen` nur das Konto-Dropdown und ein separates
-  // `navOpen` die Seiten-Navigation - zwei Knoepfe (Avatar und ☰), die sich
-  // inhaltlich ueberschnitten (beide fuehrten zu "Mein Konto"). Eingeloggt
-  // oeffnet der Avatar dieses Menue, nicht eingeloggt der ☰-Knopf (es gibt
-  // dann keinen Avatar) - beide bedienen denselben Zustand und dieselbe
-  // Komponente (HeaderMenu mobil / AccountMenu Desktop).
+  // Laufzeit, die der Besucher in der Preis-Sektion gewaehlt hat
+  // (Checkout-Neugestaltung 2026-08-17). Ohne diese Uebergabe muesste er die
+  // Wahl im Assistenten sofort ein zweites Mal treffen.
+  const [checkoutPlan, setCheckoutPlan] = useState(null);
+  // Wieder zwei Zustaende (Neugestaltung 2026-08-17). 2026-08-13 waren sie zu
+  // einem verschmolzen worden, weil beide Menues damals dieselbe Komponente
+  // oeffneten und sich inhaltlich ueberschnitten. Seit das Kontomenue nur noch
+  // Konto-Eintraege enthaelt und die Seiten-Navigation in einer eigenen
+  // Schublade liegt, sind es wieder zwei verschiedene Dinge: `menuOpen` der
+  // Avatar (Konto), `navOpen` der ☰-Knopf (Seiten-Navigation).
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [sectionKey, setSectionKey] = useState("profil");
   const avatarRef = useRef(null);
 
@@ -78,7 +82,10 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
     if (el) {
       const y = el.getBoundingClientRect().top + window.scrollY - 80;
       window.scrollTo({ top: y, behavior: "smooth" });
+      // Beide Menues schliessen: aufgerufen wird das sowohl aus der
+      // Seiten-Navigation in der Schublade als auch aus den Links im Kopf.
       setMenuOpen(false);
+      setNavOpen(false);
     }
   };
 
@@ -236,16 +243,16 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             )}
             {/* Immer gemountet statt `{menuOpen && ...}` - `open` steuert
                 die Sichtbarkeit, nur so kann die Ausstiegs-Animation ablaufen
-                (siehe AccountMenu.jsx/HeaderMenu.jsx). Desktop = verankertes
-                Dropdown, Mobil = Vollbild-Drill-down (HeaderMenu, UX-Konzept
-                2026-08-13) - EIN Trigger (Avatar bzw. ☰, siehe unten) statt
-                zweier sich ueberschneidender Menues. HeaderMenu deckt hier
-                zusaetzlich die Seiten-Navigation ab (beforeIdentity) und die
-                Sprachwahl fuer nicht eingeloggte Besucher (loggedOutFooter). */}
-            {isDesktop ? (
+                (siehe Sheet.jsx). Seit der Neugestaltung 2026-08-17 EINE
+                Komponente fuer beide Groessen; sie waehlt selbst zwischen
+                angedocktem Popover und Sheet von unten. Die Seiten-Navigation
+                liegt seither in der eigenen Schublade am ☰-Knopf, nicht mehr
+                im selben Menue - zwei verschiedene Dinge, zwei Trigger. */}
+            {account?.isLoggedIn && (
               <AccountMenu
                 t={at}
                 me={account.me}
+                lang={lang}
                 open={menuOpen}
                 anchorRef={avatarRef}
                 onClose={() => setMenuOpen(false)}
@@ -259,34 +266,25 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                   await account.logout();
                 }}
               />
-            ) : (
-              <HeaderMenu
-                t={at}
-                me={account.me}
-                open={menuOpen}
-                isLoggedIn={Boolean(account?.isLoggedIn)}
-                onClose={() => setMenuOpen(false)}
-                navItems={[
-                  { key: "rechner", label: l.navRechner, onSelect: () => scrollTo("rechner") },
-                  { key: "funktioniert", label: l.navHow, onSelect: () => scrollTo("funktioniert") },
-                  { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
-                ]}
-                langSelector={<LangSel lang={lang} setLang={setLang} />}
-                onSelectSection={(key) => {
-                  setMenuOpen(false);
-                  setSectionKey(key);
-                  setOpenMode("account");
-                }}
-                onLogin={() => {
-                  setMenuOpen(false);
-                  setOpenMode("login");
-                }}
-                onLogout={async () => {
-                  setMenuOpen(false);
-                  await account.logout();
-                }}
-              />
             )}
+            <HeaderMenu
+              t={at}
+              open={navOpen}
+              isLoggedIn={Boolean(account?.isLoggedIn)}
+              onClose={() => setNavOpen(false)}
+              navItems={[
+                { key: "rechner", label: l.navRechner, onSelect: () => scrollTo("rechner") },
+                { key: "funktioniert", label: l.navHow, onSelect: () => scrollTo("funktioniert") },
+                { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
+              ]}
+              langSelector={
+                account?.isLoggedIn ? null : <LangSel lang={lang} setLang={setLang} />
+              }
+              onLogin={() => {
+                setNavOpen(false);
+                setOpenMode("login");
+              }}
+            />
             {/* Nutzer-Feedback 2026-08-11 (Screenshot): Sprachwahl + Menü-
                 Button ragten bei ≤880px zusammen mit Konto-Knopf + Logo
                 ueber den Viewport hinaus (kein Umbruch, keine Kuerzung) -
@@ -330,34 +328,34 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 {l.heroCtaPrimary}
               </button>
             )}
-            {/* Einziger Menue-Trigger fuer nicht eingeloggte Besucher (UX-
-                Konzept 2026-08-13): es gibt dann keinen Avatar, der ☰-Knopf
-                bedient denselben `menuOpen`-Zustand und dieselbe Komponente
-                wie der Avatar. Eingeloggt entfaellt er ganz - der Avatar
-                allein genuegt als Trigger, kein zweiter Knopf fuer dieselbe
-                Aufgabe mehr (vorher: Avatar UND ☰ gleichzeitig sichtbar). */}
-            {!account?.isLoggedIn && (
-              <button
-                onClick={() => setMenuOpen((o) => !o)}
-                aria-expanded={menuOpen}
-                aria-label={at.siteNavAria}
-                className="lp-burger"
-                style={{
-                  display: "none",
-                  width: 40,
-                  height: 40,
-                  padding: 0,
-                  background: "none",
-                  border: "1px solid var(--cb)",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <span aria-hidden="true" style={{ fontSize: 18 }}>☰</span>
-              </button>
-            )}
+            {/* ☰ oeffnet die Seiten-Navigation - jetzt fuer ALLE Besucher
+                (Korrektur 2026-08-17). Vorher gab es ihn nur ausgeloggt, weil
+                er sich dasselbe Menue mit dem Avatar teilte. Damit war die
+                Seiten-Navigation (Rechner / So funktioniert's / Zinsen) fuer
+                angemeldete Besucher auf dem Handy ueberhaupt nicht mehr
+                erreichbar: die Links im Kopf sind ab 880px ausgeblendet, und
+                das Kontomenue des Avatars fuehrt nur in den Kontobereich. */}
+            <button
+              onClick={() => setNavOpen((o) => !o)}
+              aria-expanded={navOpen}
+              aria-label={at.siteNavAria}
+              className="lp-burger"
+              style={{
+                display: "none",
+                width: 40,
+                height: 40,
+                padding: 0,
+                background: "none",
+                border: "1px solid var(--cb)",
+                borderRadius: 8,
+                cursor: "pointer",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--ct)",
+              }}
+            >
+              <IconMenu size={20} />
+            </button>
           </div>
         </div>
 
@@ -365,7 +363,15 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
 
       {(openMode === "checkout" || openMode === "login" || openMode === "account") && (
         <Ctx.Provider value={landingCtxValue}>
-          {openMode === "checkout" && <CheckoutWizard onClose={() => setOpenMode(null)} />}
+          {openMode === "checkout" && (
+            <CheckoutWizard
+              onClose={() => {
+                setOpenMode(null);
+                setCheckoutPlan(null);
+              }}
+              initialPlan={checkoutPlan}
+            />
+          )}
           {/* UX-Audit 2026-08-11 (Punkt 2): Das Login-Ziel haengt bisher von
               der gewaehlten Methode ab. Google/Apple verlassen die Seite und
               kommen mit ?login_success=1 zurueck, worauf App.jsx
@@ -1589,6 +1595,22 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           </div>
         </div>
       </section>
+
+      {/* ═══════════ PREISE ═══════════ */}
+      {/* Steht bewusst NACH dem USP-Abschnitt: erst der Nutzen, dann der
+          Preis. Vorher gab es hier gar nichts - wer wissen wollte, was
+          ImmoFuchs kostet, musste den Kauf-Assistenten oeffnen. */}
+      <PricingSection
+        lang={lang}
+        onChoosePlan={(plan) => {
+          setCheckoutPlan(plan);
+          setOpenMode("checkout");
+        }}
+        // Free-Weg: wer schon angemeldet ist, geht direkt in den Rechner -
+        // fuer alle anderen ist der Login der erste Schritt (dieselbe
+        // Verzweigung wie beim "Anmelden"-Knopf in der Kopfzeile).
+        onStartFree={() => (account?.isLoggedIn ? onStart("haupt") : setOpenMode("login"))}
+      />
 
       {/* ═══════════ ZINSEN — discreet ticker section ═══════════ */}
       <section id="zinsen" style={{ padding: "clamp(30px,4vw,50px) 24px" }}>

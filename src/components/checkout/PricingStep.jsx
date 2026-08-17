@@ -1,16 +1,53 @@
-import { primaryBtnStyle } from "./checkoutStyles.js";
+import { useApp } from "../../context/AppContext.jsx";
+import { LANG_LOCALE } from "../../utils/helpers.js";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
+import { OrderSummary } from "./OrderSummary.jsx";
+import {
+  primaryBtnStyle,
+  ghostBtnStyle,
+  priceChipStyle,
+  saveBadgeStyle,
+  strikePriceStyle,
+} from "./checkoutStyles.js";
+import {
+  PLAN_AMOUNTS,
+  YEARLY_PER_MONTH_AMOUNT,
+  YEARLY_SAVINGS_PERCENT,
+  formatMoney,
+} from "./planPricing.js";
 
-export function PricingStep({ t, plan, setPlan, onContinue, account, hideFeatures }) {
-  const features = [t.compareRowRechnerPro, t.compareRowExposePro, t.compareRowFinnPro, t.compareRowMerklistePro];
-  const labels = [t.compareRowRechner, t.compareRowExpose, t.compareRowFinn, t.compareRowMerkliste];
+// Schritt 1: Abrechnungszeitraum waehlen (Neugestaltung 2026-08-17 nach den
+// Referenz-Screenshots). Vorher waren das zwei schmale Zeilen ohne
+// Preisvergleich - der Nutzer sah nirgends, was der Jahresplan spart und was
+// am Ende insgesamt abgebucht wird.
+//
+// Beide Karten nennen den Monatspreis, damit sie vergleichbar sind; der
+// tatsaechlich faellige Gesamtbetrag steht darunter in der Kostenbox. Genau
+// diese Trennung macht das Vorbild ebenfalls.
+export function PricingStep({
+  t,
+  plan,
+  setPlan,
+  onContinue,
+  onCancel,
+  account,
+  discountCode,
+  setDiscountCode,
+  discountError,
+}) {
+  const { lang } = useApp();
+  const locale = LANG_LOCALE[lang] || "de-DE";
   // T1 (Spec-v3.0 Kap. 3.0/3.1a): wer das Trial schon einmal hatte, sieht
   // keinen Trial-Hinweis mehr, sondern direkt den regulaeren Preis.
   const hasUsedTrial = Boolean(account?.me?.hasUsedTrial);
 
   return (
     <div>
-      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{t.planTitle}</div>
+      <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 3 }}>{t.termTitle}</div>
+      <p style={{ fontSize: 13, color: "var(--ch)", margin: "0 0 14px", lineHeight: 1.5 }}>
+        {t.termSub}
+      </p>
+
       {!hasUsedTrial && (
         <div
           style={{
@@ -31,50 +68,69 @@ export function PricingStep({ t, plan, setPlan, onContinue, account, hideFeature
         </div>
       )}
 
-      <div role="radiogroup" aria-label={t.planTitle} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
-        <PlanOption
-          selected={plan === "monthly"}
-          onClick={() => setPlan("monthly")}
-          label={t.planMonthly}
-          price={t.planMonthlyPrice}
-        />
-        <PlanOption
+      <div
+        role="radiogroup"
+        aria-label={t.planTitle}
+        style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}
+      >
+        <TermOption
           selected={plan === "yearly"}
           onClick={() => setPlan("yearly")}
           label={t.planYearly}
-          price={t.planYearlyPrice}
-          badge={t.planYearlyBadge}
+          badge={t.planSaveBadge.replace("{percent}", String(YEARLY_SAVINGS_PERCENT))}
+          strikePrice={formatMoney(PLAN_AMOUNTS.monthly, locale)}
+          price={formatMoney(YEARLY_PER_MONTH_AMOUNT, locale)}
+          perMonth={t.planPerMonth}
+        />
+        <TermOption
+          selected={plan === "monthly"}
+          onClick={() => setPlan("monthly")}
+          label={t.planMonthly}
+          price={formatMoney(PLAN_AMOUNTS.monthly, locale)}
+          perMonth={t.planPerMonth}
         />
       </div>
 
-      {/* Bei aktiver Desktop-Sidebar (CheckoutWizard) zeigt OrderSummary
-          dieselbe Liste bereits an - hier waere sie doppelt zu sehen. */}
-      {!hideFeatures && (
-        <>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ch)", marginBottom: 8 }}>
-            {t.pricingFeaturesTitle}
-          </div>
-          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 20px", display: "flex", flexDirection: "column", gap: 6 }}>
-            {features.map((feature, i) => (
-              <li key={labels[i]} style={{ display: "flex", gap: 8, fontSize: 12.5, color: "var(--ct)" }}>
-                <span style={{ color: "var(--ca)" }}>✓</span>
-                <span>
-                  <strong>{labels[i]}:</strong> {feature}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      <OrderSummary
+        t={t}
+        plan={plan}
+        variant="box"
+        discountCode={discountCode}
+        onDiscountCodeChange={setDiscountCode}
+        discountError={discountError}
+        showLegal
+      />
 
-      <button onClick={onContinue} style={primaryBtnStyle}>
-        {t.pricingContinue} →
-      </button>
+      <div style={{ fontSize: 11.5, color: "var(--ch)", margin: "10px 2px 16px" }}>
+        {hasUsedTrial
+          ? t.summaryRenewalNote.replace(
+              "{price}",
+              plan === "yearly" ? t.planYearlyPrice : t.planMonthlyPrice,
+            )
+          : t.paymentTrialNotice.replace(
+              "{price}",
+              plan === "yearly" ? t.planYearlyPrice : t.planMonthlyPrice,
+            )}
+      </div>
+
+      {/* Abbrechen bewusst als Textbutton neben dem Primary (Vorbild): der
+          Weiter-Weg bleibt damit die einzige Flaeche, die wie ein Button
+          aussieht. */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+        {onCancel && (
+          <button type="button" onClick={onCancel} style={ghostBtnStyle}>
+            {t.wizardCancel}
+          </button>
+        )}
+        <button onClick={onContinue} style={{ ...primaryBtnStyle, width: "auto", flex: "1 1 auto" }}>
+          {t.pricingContinue} →
+        </button>
+      </div>
     </div>
   );
 }
 
-function PlanOption({ selected, onClick, label, price, badge }) {
+function TermOption({ selected, onClick, label, badge, strikePrice, price, perMonth }) {
   return (
     <button
       type="button"
@@ -85,43 +141,60 @@ function PlanOption({ selected, onClick, label, price, badge }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "14px 16px",
+        gap: 10,
+        padding: "14px 14px",
         border: `2px solid ${selected ? "var(--ca)" : "var(--cb)"}`,
-        borderRadius: 10,
-        background: selected ? "var(--ca-bg)" : "var(--ci)",
+        borderRadius: 12,
+        background: selected ? "var(--ca-bg)" : "var(--cc)",
         cursor: "pointer",
         fontFamily: "inherit",
         textAlign: "left",
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
-      <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flexWrap: "wrap" }}>
+        {/* Ring mit Innenpunkt statt gefuelltem Kreis (Vorbild): der ausgewaehlte
+            Zustand ist so auch bei Farbfehlsichtigkeit an der Form erkennbar,
+            nicht nur an der Farbe. */}
         <span
+          aria-hidden="true"
           style={{
-            width: 18,
-            height: 18,
+            width: 20,
+            height: 20,
             borderRadius: "50%",
             border: `2px solid ${selected ? "var(--ca)" : "var(--cb)"}`,
-            background: selected ? "var(--ca)" : "transparent",
-            display: "inline-block",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            boxSizing: "border-box",
           }}
-        />
-        <span style={{ fontWeight: 600, fontSize: 14 }}>{label}</span>
-        {badge && (
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#fff",
-              background: "var(--ca)",
-              padding: "2px 7px",
-              borderRadius: 6,
-            }}
-          >
-            {badge}
-          </span>
-        )}
+        >
+          {selected && (
+            <span
+              style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--ca)" }}
+            />
+          )}
+        </span>
+        <span style={{ fontWeight: 700, fontSize: 14.5 }}>{label}</span>
+        {badge && <span style={saveBadgeStyle}>{badge}</span>}
       </span>
-      <span style={{ fontWeight: 700, fontSize: 14 }}>{price}</span>
+      <span
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          gap: 3,
+          flexShrink: 0,
+        }}
+      >
+        {strikePrice && <span style={strikePriceStyle}>{strikePrice}</span>}
+        <span style={priceChipStyle}>
+          {price}
+          <span style={{ fontWeight: 500, color: "var(--ch)" }}>{perMonth}</span>
+        </span>
+      </span>
     </button>
   );
 }

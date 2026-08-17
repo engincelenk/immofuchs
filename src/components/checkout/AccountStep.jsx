@@ -1,6 +1,15 @@
-import { useEffect, useState } from "react";
-import { ErrorBanner, GoogleIcon, AppleIcon, PasswordField } from "./CheckoutShared.jsx";
-import { linkBtnStyle, primaryBtnStyle, secondaryBtnStyle, appleBtnStyle, textInputStyle, warnBannerStyle } from "./checkoutStyles.js";
+import { useEffect, useId, useState } from "react";
+import {
+  AuthFooterLink,
+  AuthHeading,
+  ErrorBanner,
+  GoogleIcon,
+  AppleIcon,
+  OrDivider,
+  PasswordField,
+  TextField,
+} from "./CheckoutShared.jsx";
+import { linkBtnStyle, primaryBtnStyle, secondaryBtnStyle, appleBtnStyle, warnBannerStyle } from "./checkoutStyles.js";
 
 // Login/Registrierung als eigener Wizard-Schritt. `onVerificationSent` wird
 // nur beim Passwort-Registrierungspfad aufgerufen (einziger Weg mit
@@ -22,6 +31,11 @@ import { linkBtnStyle, primaryBtnStyle, secondaryBtnStyle, appleBtnStyle, textIn
 // Google/Apple verlassen die Seite komplett, wodurch der Wizard-State
 // verloren geht (siehe useAccount.js/startGoogleLogin).
 export function AccountStep({ t, account, plan, onVerificationSent, onForgotPassword, freeEntry }) {
+  // Eindeutige Feld-IDs fuer die label/htmlFor-Verknuepfung. useId statt fester
+  // Zeichenketten, weil der Wizard zusammen mit "Mein Konto" auf derselben
+  // Seite stehen kann - doppelte IDs wuerden die Beschriftung dem falschen
+  // Feld zuordnen.
+  const uid = useId();
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(null);
@@ -80,7 +94,7 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
   if (mode === "register") {
     return (
       <div>
-        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>{t.registerTitle}</div>
+        <AuthHeading title={t.registerTitle} />
         {inlineError && !emailTakenProviders && <ErrorBanner t={t} code={inlineError} />}
         {emailTakenProviders && (
           <div style={{ ...warnBannerStyle, marginBottom: 12 }}>
@@ -116,41 +130,42 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
             </div>
           </div>
         )}
-        <form onSubmit={handleRegisterSubmit} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <form onSubmit={handleRegisterSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {/* Konzept-Dok 1.6/3.3/8.8: Name wird ab jetzt bei der Registrierung
               abgefragt (wichtig fuer die Rechnungserstellung). Nur hier, nicht
               bei Google/Apple - die legen das Konto ohne eigenes Formular an,
               der Name laesst sich dort spaeter im Profil ergaenzen. */}
-          <input
+          <TextField
+            id={`${uid}-reg-name`}
+            label={t.registerNamePlaceholder}
             type="text"
             required
             maxLength={100}
             value={regName}
             onChange={(e) => setRegName(e.target.value)}
-            placeholder={t.registerNamePlaceholder}
             autoComplete="name"
-            style={textInputStyle}
           />
-          <input
+          <TextField
+            id={`${uid}-reg-email`}
+            label={t.loginEmailPlaceholder}
             type="email"
             required
             value={regEmail}
             onChange={(e) => setRegEmail(e.target.value)}
-            placeholder={t.loginEmailPlaceholder}
             autoComplete="username"
-            style={textInputStyle}
           />
           <PasswordField
+            id={`${uid}-reg-password`}
+            label={t.loginPasswordPlaceholder}
+            hint={t.registerPasswordHint}
             value={regPassword}
             onChange={setRegPassword}
-            placeholder={t.registerPasswordPlaceholder}
             show={showRegPassword}
             onToggleShow={() => setShowRegPassword((s) => !s)}
             t={t}
             autoComplete="new-password"
             minLength={10}
           />
-          <p style={{ fontSize: 10.5, color: "var(--ch)", margin: "-2px 0 4px" }}>{t.registerPasswordHint}</p>
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 11.5, color: "var(--ct)" }}>
             <input
               type="checkbox"
@@ -175,29 +190,38 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
             {t.registerSubmit}
           </button>
         </form>
-        <div style={{ textAlign: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--cb)" }}>
-          <button
-            type="button"
-            onClick={() => {
-              setEmail(regEmail);
-              setInlineError(null);
-              setEmailTakenProviders(null);
-              setMode("login");
-            }}
-            style={linkBtnStyle}
-          >
-            {t.registerHasAccount}
+
+        {/* Anbieter-Anmeldung UNTER dem Formular (Nutzer-Entscheidung
+            2026-08-17, mobiles Vorbild): stuenden die beiden Knoepfe oben,
+            rutschte das eigentliche Formular auf dem Handy unter die
+            Bildschirmkante. */}
+        <OrDivider label={t.loginOr} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button type="button" onClick={() => account.startGoogleLogin(plan)} style={secondaryBtnStyle}>
+            <GoogleIcon /> {t.loginGoogle}
+          </button>
+          <button type="button" onClick={() => account.startAppleLogin(plan)} style={appleBtnStyle}>
+            <AppleIcon /> {t.loginApple}
           </button>
         </div>
+
+        <AuthFooterLink
+          onClick={() => {
+            setEmail(regEmail);
+            setInlineError(null);
+            setEmailTakenProviders(null);
+            setMode("login");
+          }}
+        >
+          {t.registerHasAccount}
+        </AuthFooterLink>
       </div>
     );
   }
 
   return (
     <div>
-      <p style={{ fontSize: 13, color: "var(--ch)", marginBottom: 16 }}>
-        {freeEntry ? t.loginSubtitleFree : t.loginSubtitle}
-      </p>
+      <AuthHeading title={t.loginSubmit} subtitle={freeEntry ? t.loginSubtitleFree : t.loginSubtitle} />
       {(inlineError === "oauth_email_taken" || inlineError === "oauth_only") ? (
         <OAuthOnlyBanner
           t={t}
@@ -227,76 +251,69 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
           )}
         </>
       )}
-      {/* Untereinander statt nebeneinander (Nutzer-Vorgabe 2026-08-11,
-          Referenz-Screenshot): volle Breite pro Anbieter-Knopf statt
-          halbierter Breite - besser lesbar/antippbar auf Mobile, gaengiges
-          Muster bei Mehrfach-OAuth (ElevenLabs, Notion, Linear etc.). */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <button onClick={() => account.startGoogleLogin(plan)} style={secondaryBtnStyle}>
-          <GoogleIcon /> {t.loginGoogle}
-        </button>
-        <button onClick={() => account.startAppleLogin(plan)} style={appleBtnStyle}>
-          <AppleIcon /> {t.loginApple}
-        </button>
-      </div>
-      <p style={{ fontSize: 10.5, color: "var(--ch)", lineHeight: 1.6, margin: "10px 0 0" }}>
-        {t.registerTermsPrefix}{" "}
-        <a href="/agb.html" target="_blank" rel="noreferrer" style={{ color: "var(--ca-dk)" }}>
-          {t.registerTermsAgb}
-        </a>{" "}
-        {t.registerTermsAnd}{" "}
-        <a href="/datenschutz.html" target="_blank" rel="noreferrer" style={{ color: "var(--ca-dk)" }}>
-          {t.registerTermsPrivacy}
-        </a>
-        .
-      </p>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
-        <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
-        <span style={{ fontSize: 11, color: "var(--ch)" }}>{t.loginOr}</span>
-        <div style={{ flex: 1, height: 1, background: "var(--cb)" }} />
-      </div>
-      <form onSubmit={handlePasswordLogin} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <input
+      {/* Formular zuerst, Anbieter darunter (Nutzer-Entscheidung 2026-08-17).
+          Der Rechtstext, der vorher zwischen den Anbieter-Knoepfen und dem
+          Formular stand, ist hier ersatzlos entfallen: bei der ANMELDUNG
+          stimmt niemand etwas zu, das Konto besteht bereits. Bei der
+          Registrierung steht die Zustimmung weiterhin als Pflicht-Haekchen. */}
+      <form onSubmit={handlePasswordLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <TextField
+          id={`${uid}-email`}
+          label={t.loginEmailPlaceholder}
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder={t.loginEmailPlaceholder}
           autoComplete="username"
-          style={textInputStyle}
         />
         <PasswordField
+          id={`${uid}-password`}
+          label={t.loginPasswordPlaceholder}
           value={loginPassword}
           onChange={setLoginPassword}
-          placeholder={t.loginPasswordPlaceholder}
           show={showLoginPassword}
           onToggleShow={() => setShowLoginPassword((s) => !s)}
           t={t}
           autoComplete="current-password"
+          // "Passwort vergessen?" sitzt auf Hoehe der Beschriftung (mobiles
+          // Vorbild) statt unter dem Absende-Knopf: dort stand es hinter dem
+          // Ziel, das man gerade nicht erreichen konnte.
+          trailing={
+            <button type="button" onClick={onForgotPassword} style={{ ...linkBtnStyle, fontSize: 12.5 }}>
+              {t.loginForgotPassword}
+            </button>
+          }
         />
         <button type="submit" disabled={busy === "login-password"} style={primaryBtnStyle}>
           {t.loginSubmit}
         </button>
       </form>
-      <div style={{ marginTop: 8 }}>
-        <button type="button" onClick={onForgotPassword} style={linkBtnStyle}>
-          {t.loginForgotPassword}
+
+      <OrDivider label={t.loginOr} />
+
+      {/* Untereinander statt nebeneinander (Nutzer-Vorgabe 2026-08-11,
+          Referenz-Screenshot): volle Breite pro Anbieter-Knopf statt
+          halbierter Breite - besser lesbar/antippbar auf Mobile, gaengiges
+          Muster bei Mehrfach-OAuth (ElevenLabs, Notion, Linear etc.). */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <button type="button" onClick={() => account.startGoogleLogin(plan)} style={secondaryBtnStyle}>
+          <GoogleIcon /> {t.loginGoogle}
+        </button>
+        <button type="button" onClick={() => account.startAppleLogin(plan)} style={appleBtnStyle}>
+          <AppleIcon /> {t.loginApple}
         </button>
       </div>
-      <div style={{ textAlign: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--cb)" }}>
-        <button
-          type="button"
-          onClick={() => {
-            setRegEmail(email);
-            setInlineError(null);
-            setEmailTakenProviders(null);
-            setMode("register");
-          }}
-          style={linkBtnStyle}
-        >
-          {t.loginNoAccount}
-        </button>
-      </div>
+
+      <AuthFooterLink
+        onClick={() => {
+          setRegEmail(email);
+          setInlineError(null);
+          setEmailTakenProviders(null);
+          setMode("register");
+        }}
+      >
+        {t.loginNoAccount}
+      </AuthFooterLink>
     </div>
   );
 }

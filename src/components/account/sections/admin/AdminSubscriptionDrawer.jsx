@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sheet } from "../../../ui/Sheet.jsx";
+import { IconExternal } from "../../accountIcons.jsx";
 import { fetchSubscriptionDetail } from "./adminApi.js";
 import { useAdminToast } from "./AdminToast.jsx";
 import {
@@ -146,9 +147,17 @@ export function AdminSubscriptionDrawer({ subscriptionId, onClose }) {
                 href={detail.paddleUrl}
                 target="_blank"
                 rel="noreferrer"
-                style={{ ...primaryBtnStyle, display: "inline-block", marginTop: 12, textDecoration: "none" }}
+                style={{
+                  ...primaryBtnStyle,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  marginTop: 12,
+                  textDecoration: "none",
+                }}
               >
-                In Paddle öffnen ↗
+                In Paddle öffnen
+                <IconExternal size={16} />
               </a>
               <p style={{ ...mutedTextStyle, marginTop: 10, marginBottom: 0 }}>
                 Zahlungsbetrag, Erstattung, Zahlungsart und Abrechnungszyklus werden ausschließlich in Paddle

@@ -1,65 +1,54 @@
-// Nummerierte Fortschrittsleiste (Vorbild: Screenshot-Referenz vom
-// 2026-08-06, "CheckoutX" Case Study) - in ImmoFuchs-Tokens statt
-// Navy/Weiss: aktiver/erledigter Schritt in --ca, kuenftige Schritte als
-// --cb-Outline. `steps` ist bereits die uebersetzte Liste aus
-// CheckoutWizard ({key, label}), diese Komponente kennt kein i18n selbst.
-export function StepHeader({ steps, currentIndex, ariaLabel }) {
+// Fortschrittsanzeige des Checkout-Wizards.
+//
+// Neugestaltung 2026-08-17: vorher fuenf nummerierte Kreise mit
+// Verbindungslinien - viel Flaeche und Aufmerksamkeit fuer eine Information,
+// die nebensaechlich ist. Die Referenz-Kaufstrecke verzichtet ganz darauf; hier
+// bleibt sie dennoch, weil ImmoFuchs im Gegensatz zum Vorbild noch
+// Registrierung und E-Mail-Bestaetigung im Weg hat und der Nutzer sonst nicht
+// abschaetzen kann, wie viel noch kommt. Nur eben schlank: eine duenne Leiste
+// und eine Zeile Text.
+//
+// `steps` ist bereits die uebersetzte Liste aus CheckoutWizard ({key, label}),
+// diese Komponente kennt kein i18n selbst.
+export function StepHeader({ steps, currentIndex, counterLabel }) {
+  const total = steps.length;
+  const current = Math.min(currentIndex + 1, total);
+  const percent = total > 1 ? (current / total) * 100 : 100;
+
   return (
-    <div
-      role="progressbar"
-      aria-valuenow={currentIndex + 1}
-      aria-valuemin={1}
-      aria-valuemax={steps.length}
-      aria-label={ariaLabel}
-      style={{ display: "flex", alignItems: "flex-start", padding: "16px 20px 8px", gap: 0 }}
-    >
-      {steps.map((step, i) => (
+    <div style={{ padding: "0 20px 14px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: 7,
+        }}
+      >
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ct)" }}>
+          {steps[currentIndex]?.label}
+        </span>
+        <span style={{ fontSize: 11, color: "var(--ch)", flexShrink: 0 }}>{counterLabel}</span>
+      </div>
+      <div
+        role="progressbar"
+        aria-valuenow={current}
+        aria-valuemin={1}
+        aria-valuemax={total}
+        aria-label={counterLabel}
+        style={{ height: 4, borderRadius: 4, background: "var(--cb)", overflow: "hidden" }}
+      >
         <div
-          key={step.key}
-          style={{ display: "flex", alignItems: "flex-start", flex: i < steps.length - 1 ? 1 : "0 0 auto" }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
-            <div
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                fontWeight: 700,
-                background: i <= currentIndex ? "var(--ca)" : "var(--cc)",
-                color: i <= currentIndex ? "#fff" : "var(--ch)",
-                border: `1px solid ${i <= currentIndex ? "var(--ca)" : "var(--cb)"}`,
-                flexShrink: 0,
-              }}
-            >
-              {i < currentIndex ? "✓" : i + 1}
-            </div>
-            <span
-              style={{
-                fontSize: 9.5,
-                color: i <= currentIndex ? "var(--ct)" : "var(--ch)",
-                fontWeight: i === currentIndex ? 700 : 500,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {step.label}
-            </span>
-          </div>
-          {i < steps.length - 1 && (
-            <div
-              style={{
-                flex: 1,
-                height: 2,
-                background: i < currentIndex ? "var(--ca)" : "var(--cb)",
-                margin: "12px 4px 0",
-              }}
-            />
-          )}
-        </div>
-      ))}
+          style={{
+            width: `${percent}%`,
+            height: "100%",
+            background: "var(--ca)",
+            borderRadius: 4,
+            transition: "width .25s ease",
+          }}
+        />
+      </div>
     </div>
   );
 }

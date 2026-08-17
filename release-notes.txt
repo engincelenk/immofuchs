@@ -1,3 +1,190 @@
+## 2026-08-17 (1.15.0)
+
+### Anmeldemasken nach Referenz-Vorbild neu gebaut
+
+Betrifft alle fuenf Masken des Kauf-/Anmelde-Assistenten: Login,
+Registrierung, Passwort-vergessen, Neues-Passwort und E-Mail-Bestaetigung.
+
+**Feldbeschriftungen stehen jetzt ueber dem Feld.** Vorher trugen die Felder
+ihre Beschriftung nur als Platzhalter - der verschwindet beim ersten Zeichen,
+danach standen dort unbeschriftete Kaesten. Beide Referenz-Masken setzen das
+Label darueber, wo es stehen bleibt. Nebeneffekt: ueber `htmlFor` gibt es
+endlich eine echte Verknuepfung fuer Screenreader statt nur eines Platzhalters.
+Neue Bausteine in `CheckoutShared.jsx`: `AuthHeading`, `TextField`,
+`PasswordField` (neu geschnitten), `OrDivider`, `AuthFooterLink`.
+
+**Der Login hatte keine Ueberschrift** - nur einen grauen Untertitel. Jetzt
+traegt jede Maske eine Ueberschrift, die sagt, wo man ist.
+
+**Augen-Symbol sitzt im Passwortfeld** statt als eigener 42px-Knopf daneben.
+Der nahm dem Eingabefeld Breite und sah aus wie ein zweites, kleines Feld.
+
+**Reihenfolge umgestellt** (Nutzer-Entscheidung): Formular zuerst, Google/Apple
+darunter. ImmoFuchs hat ZWEI Anbieter-Knöpfe - standen die oben, rutschte der
+"Anmelden"-Knopf auf dem Handy unter die Bildschirmkante. Er liegt jetzt bei
+340px statt darunter.
+
+**Rechtstext aus dem Login entfernt** (Nutzer-Entscheidung): Bei der Anmeldung
+stimmt niemand etwas zu, das Konto besteht bereits - der Hinweis auf AGB und
+Datenschutz stand dort sachlich falsch und trennte zugleich die beiden
+Anmeldewege. Bei der Registrierung bleibt die Zustimmung unveraendert als
+Pflicht-Haekchen.
+
+**"Passwort vergessen?"** sitzt auf Hoehe der Feldbeschriftung statt unter dem
+Absende-Knopf - dort stand es hinter dem Ziel, das man gerade nicht erreichen
+konnte.
+
+**Restliche Emoji aus der Kaufstrecke entfernt:** gezeichnetes Auge statt
+👁/🙈, Briefumschlag statt ✉️ (in zwei Masken, dort vorher sogar in zwei
+verschiedenen Groessen), Schloss statt 🔒 am Zahlungsformular.
+
+Keine neuen i18n-Schluessel noetig - die vorhandenen `*Placeholder`-Texte
+dienen jetzt als Beschriftung.
+
+**Verifiziert:** Build erfolgreich, ESLint sauber, 360 Tests gruen. Im Browser
+geprueft: Login, Registrierung und Passwort-vergessen in Browser- und
+Mobilbreite - Label/Feld-Verknuepfung vorhanden, Schriftgroesse 16px
+(iOS-Zoom-Schutz), Auge innerhalb des Feldes, kein Querscrollen bei 375px.
+
+## 2026-08-17 (1.14.0)
+
+### Nutzermenü und Kontobereich nach Referenz-Vorbild neu gebaut
+
+**Eine Menü-Komponente statt zwei.** Die Menüzeilen entstanden bisher an zwei
+Stellen: `AccountMenu.jsx` fuer das Desktop-Dropdown und `HeaderMenu.jsx` fuer
+ein eigenes mobiles Vollbildmenue - mit unterschiedlichen Zeilenhoehen,
+unterschiedlichen Chevrons und sogar zwei verschiedenen Avataren fuer dieselbe
+Person (SVG-Silhouette im Kopf, Initialbuchstabe im Menue). Neu:
+`AccountMenuPanel.jsx` zeichnet die Zeilen einmal, `AccountMenu` waehlt nur
+noch die Huelle (angedocktes Popover im Browser, Sheet von unten auf dem
+Handy). `HeaderMenu` ist seither ausschliesslich die Seiten-Navigation der
+Landingpage und laeuft ebenfalls auf dem gemeinsamen `Sheet` (Schublade von
+links) statt auf einem eigenen Portal mit eigener Animation, eigener
+Scroll-Sperre und eigenem Fokus-Trap.
+
+**Einzeilige Menuezeilen** (Nutzer-Entscheidung): die Beschreibungstexte unter
+jedem Eintrag entfallen, das Menue ist damit etwa halb so hoch. `titleKey` und
+`descKey` fallen aus `accountSections.js` weg - jeder Bereich traegt jetzt EINE
+Beschriftung, dieselbe in Menue, Seitenleiste, Pillen und Brotkrumen. Die
+uebersetzten Beschreibungen bleiben in `i18n/account.js` erhalten.
+
+**Kopf mit Name und E-Mail ist jetzt immer sichtbar** - im Desktop-Menue fehlte
+er bisher ganz, man sah dort nirgends, als wer man angemeldet ist.
+
+**Neue Sprachzeile** im Menue mit dem aktuellen Wert rechts ("Sprache …
+Deutsch"), wie im Vorbild. Sie fuehrt in den Bereich "Einstellungen", wo die
+Auswahl liegt - bewusst kein zweiter Umschalter.
+
+**Kontobereich:** Brotkrumen (Haus › Konto › Bereich) ueber dem Inhalt. Die
+Desktop-Seitenleiste markiert den aktiven Bereich jetzt mit getoenter Flaeche
+und einem senkrechten Balken statt eines vollen orangen Rahmens.
+
+**Bugfix Mobile:** Der Kontobereich hatte auf dem Handy ueberhaupt keine
+Navigation - wer von "Profil" nach "Zahlungen" wollte, musste ueber das ←
+zurueck ins Menue und von dort neu hinein. Jetzt steht dort eine waagerecht
+scrollende Pillen-Leiste (dasselbe Muster wie im Admin-Bereich).
+
+**Bugfix Landingpage:** Der ☰-Knopf gab es nur fuer nicht angemeldete
+Besucher, weil er sich das Menue mit dem Avatar teilte. Fuer angemeldete
+Besucher war die Seiten-Navigation (Rechner / So funktioniert's / Zinsen) auf
+dem Handy damit unerreichbar: die Links im Kopf sind ab 880px ausgeblendet,
+und das Kontomenue fuehrt nur in den Kontobereich. Der Burger erscheint jetzt
+fuer alle; `menuOpen` (Avatar) und `navOpen` (☰) sind wieder getrennt.
+
+**Emoji und Unicode-Zeichen aus dem Kontobereich entfernt.** Neu gezeichnet in
+`accountIcons.jsx`: Chevrons, Schliessen, Burger, Pfeile, externer Link,
+Download, Haus, Sprache, Beleg, Brief, Idee, Schloss, Funkeln. Ersetzt `▼ ✕ ›
+← → ↗ ↓` sowie `💳 🧾 ✉ 💡 🔒 ✨` in Zahlungen, Support, Einstellungen, Konto,
+der Rechner-Sperre und zwei Admin-Ansichten. Die Flaggen der Sprachwahl
+bleiben Emoji - das ist eine bewusste Nutzer-Entscheidung vom 2026-08-11.
+
+**Bewusst NICHT umgesetzt:** der Dunkelmodus-Schalter aus dem Vorbild. Dafuer
+fehlt jedes Fundament - alle Farben sind feste Werte in einer einzigen
+Helligkeit, quer durch die App.
+
+**Verifiziert:** 360 Tests gruen (19 neue zu Beschriftungen, Rollenfilter und
+Gruppierung des Menues), ESLint im Kontobereich sauber, Build erfolgreich.
+Seiten-Navigation als Schublade im Browser geprueft. **Nicht visuell
+geprueft:** Kontomenue und Kontobereich im angemeldeten Zustand - dafuer
+braeuchte es den laufenden Worker und ein echtes Konto; das Projekt hat weder
+jsdom noch Testing-Library fuer einen Komponententest.
+
+## 2026-08-17 (1.13.0)
+
+### Checkout: Kaufstrecke nach Referenz-Vorbild neu gebaut
+
+**Neue Preis-Sektion auf der Landingpage** (`PricingSection.jsx`, eingehaengt
+nach dem USP-Abschnitt): Vertrauens-Zeile (14 Tage Geld-zurueck / 7 Tage
+kostenlos / jederzeit kuendbar), Laufzeit-Umschalter Monatlich|Jaehrlich und
+zwei Karten Free vs. Pro mit "Am beliebtesten"-Ribbon, Streichpreis,
+Ersparnis-Badge und Feature-Vergleich. Die Vergleichstexte lagen bereits
+uebersetzt in `i18n/account.js` (`compareRow*Free/Pro`), wurden aber nirgends
+angezeigt. Die gewaehlte Laufzeit wird als `initialPlan` an den Assistenten
+uebergeben, damit sie nicht zweimal getroffen werden muss.
+
+**Laufzeit-Schritt (`PricingStep.jsx`) neu**: grosse Auswahl-Karten mit
+Streichpreis, Ersparnis-Badge und Preis-Chip statt zwei schmaler Zeilen,
+darunter eine echte Kostenbox (Position, Gutscheincode als aufklappbarer
+Link, Gesamt, Rechtstext mit AGB-/Datenschutz-Link). Abschluss wie im
+Vorbild mit "Abbrechen" als Textbutton neben "Weiter".
+
+**Zahlung laeuft jetzt eingebettet statt im Fremd-Overlay**: `startCheckout()`
+nimmt einen `frameTarget` entgegen und oeffnet Paddle im Inline-Modus, sodass
+das Zahlungsformular innerhalb der Kaufstrecke liegt und die Bestelluebersicht
+daneben stehen bleibt. Bleibt der Rahmen 9 s stumm (typisch bei
+Tracking-Blockern), oeffnet automatisch wieder Paddles Overlay - lieber ein
+Bruch in der Optik als ein Nutzer, der nicht bezahlen kann.
+
+**§ 312j BGB:** Die Widerrufs-Zustimmung wird jetzt VOR dem Einbetten
+eingeholt - Paddles Bezahl-Button sitzt im Rahmen und laesst sich von aussen
+nicht sperren. Vorher schaltete die Checkbox nur unseren eigenen Button frei.
+
+**Bestelluebersicht** zeigt statt einer Feature-Liste Geld: Position, Gesamt,
+"inkl. MwSt.". Keine getrennte Steuerzeile - Paddle ist Merchant of Record und
+bestimmt die Steuer nach dem Land des Kaeufers; der Ausweis gehoert auf die
+Rechnung. Sobald der Inline-Checkout laedt, ersetzen Paddles echte Betraege
+die Vorab-Berechnung (`normalizePaddleCheckoutAmount` faengt dabei die
+dokumentierte Cent-/Dezimal-Inkonsistenz zwischen API und Checkout-Events ab).
+
+**Bugfix Mobile:** Die Bestelluebersicht war auf dem Handy komplett
+ausgeblendet (`showSummary = isDesktop && ...`) - der Nutzer sah dort bis zum
+Bezahlen nie, was ihn erwartet. Sie steht jetzt immer, auf dem Desktop
+daneben, auf dem Handy darunter.
+
+**Weitere:** Zwischenzustand "Weiterleitung zur Kasse ..." beim Oeffnen der
+Kasse; Fortschritt als duenne Leiste mit "Schritt 2 von 5" statt fuenf
+Nummernkreisen; Dialogbreite je Schritt (Zahlung 1040 px); 30 neue
+i18n-Schluessel in allen fuenf Sprachen.
+
+**Verifiziert:** 341 Frontend-Tests gruen (10 neue zur Preis-/Betragslogik),
+ESLint sauber, Build erfolgreich. Preis-Sektion, Laufzeit-Schritt,
+Gutschein-Aufklappen, Konto-Schritt und das Mobile-Stapeln im Browser
+geprueft. **Nicht verifiziert:** der eingebettete Paddle-Checkout selbst -
+das braucht einen Sandbox-Lauf mit echtem Login, vor einem Prod-Deploy
+zwingend nachzuholen.
+
+## 2026-08-15 (1.12.1)
+
+### Beta-Zugriff entfernt, "Owner/Admin" in "Admin" umbenannt
+
+**Beta-Zugriff (`is_beta`) vollstaendig entfernt** - Pruefung ergab: das
+Flag wurde nirgends im Produkt gelesen, um irgendein Feature freizuschalten,
+nur in der Admin-Console geschrieben/angezeigt. Neue Migration
+`0020_remove_beta.sql` (`ALTER TABLE users DROP COLUMN is_beta`), Spalte,
+Typen und Routen in `worker/src/db.ts`/`routes/admin.ts` bereinigt, Toggle/
+Checkbox/Tag in `AdminUserDrawer.jsx`/`AdminUsersView.jsx` entfernt,
+Audit-Log-Aktion `user.beta_change` faellt weg. **Deploy-Reihenfolge
+wichtig:** erst Worker + Frontend deployen, danach erst die Migration
+anwenden - sonst liefe alter Code gegen eine bereits geloeschte Spalte.
+
+**Rollen-Label "Owner/Admin" → "Admin"** in `adminUiStyles.js`
+(`ROLE_LABELS`, einzige Quelle, wirkt in Tabelle/Dropdown/Filter) sowie zwei
+hartkodierte Fundstellen in `AdminAuditLogView.jsx` und einem Kommentar in
+`entitlement.ts`.
+
+**Verifiziert:** `tsc --noEmit` fehlerfrei, 77 Worker-Tests gruen, 331
+Frontend-Tests gruen, ESLint sauber, Build erfolgreich.
+
 ## 2026-08-15 (1.12.0)
 
 ### Admin-Console: Rollenmodell auf 2 Rollen reduziert + Nutzer direkt anlegen
