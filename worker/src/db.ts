@@ -955,6 +955,52 @@ export async function setUserFlags(
     .run();
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Synthetische Subscription-Zeile fuer einen vom Admin direkt angelegten
+// Testnutzer (Nutzer-Entscheidung 2026-08-1X, "User direkt anlegen") - es
+// gibt dafuer keinen echten Paddle-Checkout, deshalb eine klar erkennbare
+// paddle_*_id ("admin-test:<uuid>") statt einer echten Paddle-ID. Nur ueber
+// die Admin-Route erreichbar und dort an is_test_user=true gebunden, damit
+// keine echten Kundenkonten auf diesem Weg ein Abo ohne Zahlung bekommen.
+// Zeitstempel je Status plausibel gesetzt, damit computeIsPro() (entitlement.ts)
+// dieselbe Logik anwendet wie bei einer echten, per Webhook gespiegelten
+// Subscription - keine Sonderbehandlung fuer Testzeilen.
+export async function createManualSubscriptionForAdmin(
+  db: Env["DB"],
+  userId: string,
+  input: { status: SubscriptionRow["status"]; plan: SubscriptionRow["plan"] },
+): Promise<void> {
+  const now = Date.now();
+  const periodMs = input.plan === "yearly" ? 365 * DAY_MS : 30 * DAY_MS;
+  // 'canceled' heisst "Laufzeit bereits vorbei" - current_period_end liegt
+  // deshalb in der Vergangenheit, nicht in der Zukunft wie bei allen anderen
+  // Zustaenden.
+  const currentPeriodEnd = input.status === "canceled" ? now - DAY_MS : now + periodMs;
+  const syntheticId = `admin-test:${newId()}`;
+  await db
+    .prepare(
+      `INSERT INTO subscriptions
+        (id, user_id, status, plan, paddle_customer_id, paddle_subscription_id, current_period_end,
+         cancel_at_period_end, first_purchase_at, past_due_since, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      newId(),
+      userId,
+      input.status,
+      input.plan,
+      syntheticId,
+      syntheticId,
+      currentPeriodEnd,
+      input.status === "cancel_scheduled" ? 1 : 0,
+      now,
+      input.status === "past_due" ? now : null,
+      now,
+    )
+    .run();
+}
+
 // ═══ Admin Panel — Abos & Zahlungen (Admin-MVP Abschnitt 8, rein lesend) ═══
 // Bewusst keine schreibenden Funktionen: Betrag, Zahlungsstatus, Refund und
 // Abrechnungszyklus gehoeren zu Paddle (Auftrag Abschnitt 8, "keine eigene

@@ -14,10 +14,14 @@ import {
   requireCsrfOrigin,
   type AuthVars,
 } from "../middleware";
-import type { AdminUsersFilter, AdminAuditLogFilter, AdminSubscriptionFilterKey } from "../db";
+import type { AdminUsersFilter, AdminAuditLogFilter, AdminSubscriptionFilterKey, SubscriptionRow } from "../db";
 import {
   getUserById,
+  getUserByEmail,
+  createUser,
+  updateUserName,
   getActiveSubscription,
+  createManualSubscriptionForAdmin,
   listSubscriptionsForAdmin,
   getSubscriptionForAdmin,
   isAdminSubscriptionFilter,
@@ -36,6 +40,7 @@ import {
 } from "../db";
 import { deleteAccountCompletely } from "../accountDeletion";
 import { requestPasswordReset } from "../auth/passwordAuth";
+import { requestMagicLink } from "../auth/magicLink";
 import { ROLE_PERMISSIONS, type Role } from "../entitlement";
 import {
   listDiscounts,
@@ -57,6 +62,14 @@ const VALID_ROLES = Object.keys(ROLE_PERMISSIONS) as Role[];
 // Code ist ein eigener Paddle-Aufruf - ohne Deckel liesse sich der Worker
 // mit einer einzigen Anfrage minutenlang beschaeftigen.
 const MAX_BULK_DISCOUNTS = 100;
+
+// Nutzer direkt anlegen (Nutzer-Entscheidung 2026-08-1X). Gleiches Muster wie
+// in auth/magicLink.ts, hier lokal statt importiert, weil es dort nicht
+// exportiert ist und Validierungs-Konstanten in diesem File ohnehin lokal
+// gehalten werden (siehe VALID_ROLES/MAX_BULK_DISCOUNTS).
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VALID_SUB_STATUSES = ["active", "trialing", "past_due", "cancel_scheduled", "canceled"] as const;
+const VALID_SUB_PLANS = ["monthly", "yearly"] as const;
 
 // Datumsangaben aus der Oberflaeche kommen als "YYYY-MM-DD" (input[type=date]).
 // Paddle erwartet ISO-8601 mit Zeit. Ende des Tages in UTC, damit ein
@@ -200,8 +213,77 @@ adminRoutes.get("/users/:id", requireAuth, requireAdminRead, async (c) => {
   });
 });
 
-// Rolle aendern (Auftrag Abschnitt 6). Nur 'admin' (user.manage) - ein
-// Support-Konto darf sich sonst selbst zum Owner machen.
+// Nutzer direkt anlegen (Nutzer-Entscheidung 2026-08-1X). Zugang laeuft ueber
+// die bestehende Magic-Link-Infrastruktur (Einladungsmail) statt einer vom
+// Admin vergebenen Passwort - konsistent mit dem sonst passwortlosen
+// Grunddesign, kein neuer Auth-Pfad noetig. Eine optionale Test-Subscription
+// gibt es nur bei isTestUser=true: echte Konten bekommen ihr Abo ausschliesslich
+// ueber Paddle, nie manuell durch den Admin gesetzt.
+adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  if (!EMAIL_PATTERN.test(email) || email.length > 254) return c.json({ error: "invalid_email" }, 400);
+
+  const name = typeof body?.name === "string" ? body.name.trim().slice(0, 200) : "";
+  const role = typeof body?.role === "string" ? body.role : "customer";
+  if (!(VALID_ROLES as string[]).includes(role)) return c.json({ error: "invalid_role" }, 400);
+  const isTestUser = body?.isTestUser === true;
+  const isBeta = body?.isBeta === true;
+
+  const rawSub = body?.subscription;
+  let subInput: { status: SubscriptionRow["status"]; plan: SubscriptionRow["plan"] } | null = null;
+  if (rawSub) {
+    // Eine Test-Subscription ohne Testuser-Schalter waere ein Abo ohne
+    // erkennbaren Grund, warum es keinen echten Paddle-Kauf dazu gibt.
+    if (!isTestUser) return c.json({ error: "subscription_requires_test_user" }, 400);
+    const validStatus = (VALID_SUB_STATUSES as readonly string[]).includes(rawSub.status);
+    const validPlan = (VALID_SUB_PLANS as readonly string[]).includes(rawSub.plan);
+    if (!validStatus || !validPlan) return c.json({ error: "invalid_subscription" }, 400);
+    subInput = { status: rawSub.status, plan: rawSub.plan };
+  }
+
+  if (await getUserByEmail(c.env.DB, email)) return c.json({ error: "email_exists" }, 409);
+
+  let user;
+  try {
+    // Zweite Absicherung gegen die vorherige Pruefung: users.email ist
+    // UNIQUE (Migration 0001) - bei einer Race zwischen Check und Insert
+    // schlaegt der D1-Constraint statt eines unklaren 500ers zu.
+    user = await createUser(c.env.DB, email);
+  } catch {
+    return c.json({ error: "email_exists" }, 409);
+  }
+  if (role !== "customer") await setUserRole(c.env.DB, user.id, role);
+  if (name) await updateUserName(c.env.DB, user.id, name);
+  if (isTestUser || isBeta) await setUserFlags(c.env.DB, user.id, { isTestUser, isBeta });
+  if (subInput) await createManualSubscriptionForAdmin(c.env.DB, user.id, subInput);
+
+  // Best-effort: ein fehlgeschlagener Mailversand soll die bereits angelegte
+  // Nutzerzeile nicht ungeschehen machen - der Admin sieht am Ergebnis, ob die
+  // Einladung rausging, und kann bei Bedarf ueber "Passwort-Reset senden"
+  // bzw. erneutes Anlegen der Mail nachhelfen.
+  let inviteSent = true;
+  try {
+    const result = await requestMagicLink(c.env, new URL(c.req.url).origin, email);
+    inviteSent = result.ok;
+  } catch (err) {
+    console.error("admin_create_user_invite_failed", err instanceof Error ? err.message : "unknown");
+    inviteSent = false;
+  }
+
+  await logAdminAction(c.env.DB, {
+    adminUserId: c.var.userId,
+    adminEmail: c.var.user.email,
+    action: "user.create",
+    targetType: "user",
+    targetId: user.id,
+    details: { email, role, isTestUser, isBeta, subscription: subInput },
+  });
+
+  return c.json({ id: user.id, email, role, isTestUser, isBeta, inviteSent });
+});
+
+// Rolle aendern (Auftrag Abschnitt 6). Nur 'admin' (user.manage).
 adminRoutes.post("/users/:id/role", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json().catch(() => null);
@@ -274,8 +356,7 @@ adminRoutes.post("/users/:id/flags", requireAuth, requireAdmin, requireCsrfOrigi
   });
 });
 
-// Support-Notiz (Auftrag Abschnitt 6/7). Auch fuer die Rolle 'support' - das
-// ist deren Kernaufgabe, siehe Abschnitt 13.
+// Support-Notiz (Auftrag Abschnitt 6/7).
 adminRoutes.post(
   "/users/:id/notes",
   requireAuth,

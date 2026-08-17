@@ -54,12 +54,12 @@ describe("parseAdminUsersQuery (Such-Sanitizing fuer GET /admin/users)", () => {
 describe("parseAdminUsersQuery — Filter und Sortierung (Whitelist)", () => {
   it("uebernimmt gueltige Rollen", () => {
     expect(parseAdminUsersQuery(new URLSearchParams({ role: "admin" })).filter.role).toBe("admin");
-    expect(parseAdminUsersQuery(new URLSearchParams({ role: "support" })).filter.role).toBe("support");
     expect(parseAdminUsersQuery(new URLSearchParams({ role: "customer" })).filter.role).toBe("customer");
   });
 
-  it("verwirft unbekannte Rollen (auch die abgeschaffte 'test_user') und SQL-Versuche", () => {
+  it("verwirft unbekannte Rollen (auch die abgeschafften 'test_user'/'support') und SQL-Versuche", () => {
     expect(parseAdminUsersQuery(new URLSearchParams({ role: "test_user" })).filter.role).toBeNull();
+    expect(parseAdminUsersQuery(new URLSearchParams({ role: "support" })).filter.role).toBeNull();
     expect(parseAdminUsersQuery(new URLSearchParams({ role: "' OR 1=1--" })).filter.role).toBeNull();
   });
 

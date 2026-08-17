@@ -94,11 +94,9 @@ export const mutedTextStyle = { color: "var(--ch)", fontSize: 12.5 };
 // ── Beschriftungen ──────────────────────────────────────────────────
 // Rollennamen erscheinen an mehreren Stellen (Tabelle, Drawer-Dropdown,
 // Filter) - eine Quelle, damit sie nicht auseinanderlaufen. Die Werte sind
-// die DB-Rollen aus entitlement.ts, die Beschriftungen die aus dem Auftrag
-// (Abschnitt 6).
+// die DB-Rollen aus entitlement.ts.
 export const ROLE_LABELS = {
   customer: "Customer",
-  support: "Admin/Support",
   admin: "Owner/Admin",
 };
 
@@ -136,6 +134,10 @@ const ERROR_TEXTS = {
   cannot_delete_self: "Du kannst dein eigenes Konto hier nicht löschen.",
   no_password_account: "Dieses Konto hat kein Passwort (Google/Apple/Passkey) – ein Reset ist nicht möglich.",
   delete_failed_try_again: "Löschen fehlgeschlagen. Die Paddle-Kündigung lief nicht durch – bitte erneut versuchen.",
+  invalid_email: "Ungültige E-Mail-Adresse.",
+  email_exists: "Ein Konto mit dieser E-Mail-Adresse existiert bereits.",
+  invalid_subscription: "Ungültiger Abo-Status oder -Plan.",
+  subscription_requires_test_user: "Ein Abo-Zustand lässt sich nur für Testuser direkt setzen.",
   request_failed: "Die Aktion ist fehlgeschlagen.",
 };
 

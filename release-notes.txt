@@ -1,3 +1,46 @@
+## 2026-08-15 (1.12.0)
+
+### Admin-Console: Rollenmodell auf 2 Rollen reduziert + Nutzer direkt anlegen
+
+**Rollen 3→2:** Die dritte Rolle 'support' (Admin-MVP 2026-08-13) wurde
+wieder entfernt - nur noch 'customer' und 'admin'. Betroffen:
+`worker/src/entitlement.ts` (Role-Type, ROLE_PERMISSIONS), `middleware.ts`
+(Kommentare), `routes/admin.ts` (Kommentare), `adminUiStyles.js`
+(ROLE_LABELS), `accountSections.js` (rolesAllowed), `AdminSection.jsx`
+(isSupportOnly-Zweig entfernt), `AdminDiscountsView.jsx` (Kommentar). Keine
+Datenmigration noetig - in der einzigen bestehenden D1-Datenbank
+(immofuchs-dev) hatte kein Nutzer die Rolle 'support' (verifiziert per
+`wrangler d1 execute --remote`). Tests in `entitlement.test.ts` und
+`admin.test.ts` entsprechend angepasst.
+
+**Neu: Nutzer direkt in der Admin-Console anlegen.** Bisher konnte ein Admin
+nur bestehende Nutzer bearbeiten (Rolle, Status, Flags), aber keine neuen
+Konten erstellen - Zugang lief ausschliesslich ueber die Self-Service-Flows
+(OAuth/Magic-Link/Passkey/Passwort-Registrierung). Neue Route
+`POST /admin/users` (`worker/src/routes/admin.ts`, admin-only) legt einen
+Nutzer mit E-Mail, optionalem Namen, Rolle und Testuser-/Beta-Flags an und
+verschickt eine Einladung ueber die bestehende Magic-Link-Infrastruktur
+(`auth/magicLink.ts`) - kein neuer Auth-Pfad, konsistent mit dem
+passwortlosen Grunddesign. Bei Testusern laesst sich zusaetzlich optional ein
+Abo-Zustand (Status + Plan) direkt setzen, ohne echten Paddle-Kauf - neue
+Funktion `createManualSubscriptionForAdmin` in `worker/src/db.ts`, deutlich
+erkennbar an synthetischen `paddle_*_id`-Werten ("admin-test:..."), nur bei
+`isTestUser=true` erreichbar. Neues Formular in `AdminUsersView.jsx`
+("+ Nutzer anlegen"), neue Funktion `createUser()` in `adminApi.js`, neuer
+Audit-Log-Eintrag `user.create` (Label in `AdminAuditLogView.jsx`).
+
+**Hinweis (nicht Teil dieser Aenderung):** `entitlement.ts` hat bereits eine
+3-Tage-Kulanzfrist bei fehlgeschlagener Zahlung (`PAST_DUE_GRACE_MS`, Status
+`past_due` bleibt bis zu 3 Tage weiter "pro"). Das weicht von der zuletzt
+besprochenen Testuser-Matrix ("Zahlung fehlgeschlagen -> sofort sperren") ab
+- bewusst NICHT geaendert, da das echte Entitlement-Logik fuer zahlende
+Kunden betrifft und nicht Teil des genehmigten Auftrags war.
+
+**Verifiziert:** `tsc --noEmit` (Worker) fehlerfrei, 77 Worker-Tests gruen,
+331 Frontend-Tests gruen, `eslint` auf den geaenderten Dateien fehlerfrei,
+Frontend-Build erfolgreich. Manuelle Browser-Verifikation noch offen (siehe
+Rueckfrage).
+
 ## 2026-08-14 (1.11.0)
 
 ### Neu: "Nebenkosten mitfinanzieren" in Renditerechner & Kreditrechner

@@ -1,21 +1,44 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchUsers } from "./adminApi.js";
+import { createUser, fetchUsers } from "./adminApi.js";
 import { AdminUserDrawer } from "./AdminUserDrawer.jsx";
+import { useAdminToast } from "./AdminToast.jsx";
 import {
   PLAN_LABELS,
   ROLE_LABELS,
   ROLE_OPTIONS,
   SUB_STATUS_LABELS,
+  cardStyle,
   errorText,
   formatDate,
   labelStyle,
   mutedTextStyle,
+  primaryBtnStyle,
   secondaryBtnStyle,
   selectStyle,
   tableStyle,
   tdStyle,
+  textInputStyle,
   thStyle,
 } from "./adminUiStyles.js";
+
+// Abo-Zustaende, die sich beim Direkt-Anlegen ohne echten Paddle-Kauf setzen
+// lassen - nur relevant, wenn "Testuser" angehakt ist (siehe createUser in
+// adminApi.js). Eigene Liste statt SUB_STATUS_LABELS direkt zu mappen, weil
+// "kein Abo" (Free) als Auswahlwert dazukommt und keinen Server-Wert hat.
+const CREATE_SUB_STATUS_OPTIONS = [
+  { value: "", label: "Kein Abo (Free)" },
+  ...Object.entries(SUB_STATUS_LABELS).map(([value, label]) => ({ value, label })),
+];
+
+const EMPTY_CREATE_FORM = {
+  email: "",
+  name: "",
+  role: "customer",
+  isTestUser: false,
+  isBeta: false,
+  subStatus: "",
+  subPlan: "monthly",
+};
 
 const SORT_OPTIONS = [
   { value: "created_desc", label: "Neueste zuerst" },
@@ -38,6 +61,17 @@ export function AdminUsersView({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+
+  // "User direkt anlegen" (Nutzer-Entscheidung 2026-08-1X) - nur fuer 'admin'
+  // sichtbar, analog zu AdminUserDrawer/AdminDiscountsView. Mit nur noch zwei
+  // Rollen ist das aktuell immer wahr (nur 'admin' erreicht diesen Bereich
+  // ueberhaupt, siehe accountSections.js), bleibt aber als explizite Pruefung
+  // bestehen statt sich implizit darauf zu verlassen.
+  const canManage = currentUser?.role === "admin";
+  const toast = useAdminToast();
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState(EMPTY_CREATE_FORM);
+  const [createBusy, setCreateBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,12 +107,180 @@ export function AdminUsersView({ currentUser }) {
     setFilters(EMPTY_FILTERS);
   }
 
+  async function handleCreateSubmit(e) {
+    e.preventDefault();
+    const email = createForm.email.trim();
+    if (!email) return;
+    setCreateBusy(true);
+    try {
+      const payload = {
+        email,
+        name: createForm.name.trim(),
+        role: createForm.role,
+        isTestUser: createForm.isTestUser,
+        isBeta: createForm.isBeta,
+      };
+      // "Kein Abo" (leerer Wert) heisst: gar kein subscription-Feld schicken,
+      // nicht mit leerem Status - der Worker unterscheidet "nicht mitgeschickt"
+      // (kein Abo) von einer ungueltigen Angabe.
+      if (createForm.isTestUser && createForm.subStatus) {
+        payload.subscription = { status: createForm.subStatus, plan: createForm.subPlan };
+      }
+      const res = await createUser(payload);
+      toast.success(
+        res.inviteSent
+          ? "Nutzer angelegt, Einladungsmail wurde verschickt."
+          : "Nutzer angelegt, Einladungsmail konnte aber nicht verschickt werden.",
+      );
+      setCreateForm(EMPTY_CREATE_FORM);
+      setShowCreate(false);
+      setPage(1);
+      await load();
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
+      setCreateBusy(false);
+    }
+  }
+
   const hasFilters =
     filters.q || filters.role || filters.status || filters.subscription || filters.sort !== "created_desc";
   const totalPages = Math.max(1, Math.ceil(result.total / (result.pageSize || 20)));
 
   return (
     <div>
+      {canManage && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <button type="button" onClick={() => setShowCreate((v) => !v)} style={secondaryBtnStyle}>
+            {showCreate ? "Abbrechen" : "+ Nutzer anlegen"}
+          </button>
+        </div>
+      )}
+
+      {canManage && showCreate && (
+        <form
+          onSubmit={handleCreateSubmit}
+          style={{ ...cardStyle, marginBottom: 16, display: "flex", flexDirection: "column", gap: 12 }}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+              <label style={labelStyle} htmlFor="create-email">
+                E-Mail *
+              </label>
+              <input
+                id="create-email"
+                type="email"
+                required
+                value={createForm.email}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                style={{ ...textInputStyle, width: "100%" }}
+              />
+            </div>
+            <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+              <label style={labelStyle} htmlFor="create-name">
+                Name
+              </label>
+              <input
+                id="create-name"
+                type="text"
+                value={createForm.name}
+                onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                style={{ ...textInputStyle, width: "100%" }}
+              />
+            </div>
+            <div style={{ flex: "0 1 160px" }}>
+              <label style={labelStyle} htmlFor="create-role">
+                Rolle
+              </label>
+              <select
+                id="create-role"
+                value={createForm.role}
+                onChange={(e) => setCreateForm((f) => ({ ...f, role: e.target.value }))}
+                style={selectStyle}
+              >
+                {ROLE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={createForm.isTestUser}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, isTestUser: e.target.checked, subStatus: e.target.checked ? f.subStatus : "" }))
+                }
+                style={{ width: 18, height: 18, accentColor: "var(--ca)", cursor: "pointer" }}
+              />
+              <span>Testuser</span>
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={createForm.isBeta}
+                onChange={(e) => setCreateForm((f) => ({ ...f, isBeta: e.target.checked }))}
+                style={{ width: 18, height: 18, accentColor: "var(--ca)", cursor: "pointer" }}
+              />
+              <span>Beta-Zugriff</span>
+            </label>
+          </div>
+
+          {/* Ein Abo direkt setzen geht nur bei Testusern - fuer echte Konten
+              gibt es dafuer nur den Weg ueber Paddle (siehe adminApi.js). */}
+          {createForm.isTestUser && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <div style={{ flex: "0 1 220px" }}>
+                <label style={labelStyle} htmlFor="create-sub-status">
+                  Abo-Status (optional, nur Testuser)
+                </label>
+                <select
+                  id="create-sub-status"
+                  value={createForm.subStatus}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, subStatus: e.target.value }))}
+                  style={selectStyle}
+                >
+                  {CREATE_SUB_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {createForm.subStatus && (
+                <div style={{ flex: "0 1 160px" }}>
+                  <label style={labelStyle} htmlFor="create-sub-plan">
+                    Plan
+                  </label>
+                  <select
+                    id="create-sub-plan"
+                    value={createForm.subPlan}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, subPlan: e.target.value }))}
+                    style={selectStyle}
+                  >
+                    {Object.entries(PLAN_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div>
+            <button type="submit" disabled={createBusy || !createForm.email.trim()} style={primaryBtnStyle}>
+              Nutzer anlegen
+            </button>
+          </div>
+        </form>
+      )}
+
       <form
         onSubmit={handleSearchSubmit}
         style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end", marginBottom: 16 }}

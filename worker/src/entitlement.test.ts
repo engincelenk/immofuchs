@@ -104,27 +104,8 @@ describe("hasPermission (Konzept-Dok 8.2, Rollenmodell customer/support/admin)",
   });
 });
 
-// Admin-MVP Abschnitt 13: der springende Punkt der Support-Rolle ist, was sie
-// NICHT darf - deshalb hier jede kritische Aktion einzeln als Negativ-Test.
-// "UI-Verstecken alleine reicht nicht": diese Matrix ist die serverseitige
-// Wahrheit, die requirePermission() in middleware.ts durchsetzt.
-describe("hasPermission — Support-Rolle (Admin-MVP, Auftrag Abschnitt 13)", () => {
-  it("support darf ansehen und Support-Notizen schreiben", () => {
-    expect(hasPermission({ role: "support" }, "user.read")).toBe(true);
-    expect(hasPermission({ role: "support" }, "user.note")).toBe(true);
-    expect(hasPermission({ role: "support" }, "subscription.read")).toBe(true);
-    expect(hasPermission({ role: "support" }, "discount.read")).toBe(true);
-  });
-
-  it("support darf NICHT aendern, loeschen oder Gutscheine verwalten", () => {
-    expect(hasPermission({ role: "support" }, "user.manage")).toBe(false);
-    expect(hasPermission({ role: "support" }, "user.delete")).toBe(false);
-    expect(hasPermission({ role: "support" }, "discount.manage")).toBe(false);
-    expect(hasPermission({ role: "support" }, "subscription.manage")).toBe(false);
-    expect(hasPermission({ role: "support" }, "security.manage")).toBe(false);
-  });
-
-  it("admin darf alles, was support darf, und zusaetzlich die kritischen Aktionen", () => {
+describe("hasPermission — Admin-Permissions vs. Customer", () => {
+  it("admin hat alle Nutzerverwaltungs-Permissions", () => {
     expect(hasPermission({ role: "admin" }, "user.read")).toBe(true);
     expect(hasPermission({ role: "admin" }, "user.note")).toBe(true);
     expect(hasPermission({ role: "admin" }, "user.delete")).toBe(true);
@@ -138,8 +119,9 @@ describe("hasPermission — Support-Rolle (Admin-MVP, Auftrag Abschnitt 13)", ()
     expect(hasPermission({ role: "customer" }, "discount.read")).toBe(false);
   });
 
-  it("'test_user' ist keine Rolle mehr (Migration 0019) und hat daher keine Rechte", () => {
+  it("'test_user' und 'support' sind keine Rollen mehr und haben daher keine Rechte", () => {
     expect(hasPermission({ role: "test_user" }, "user.read")).toBe(false);
     expect(hasPermission({ role: "test_user" }, "calculator.use")).toBe(false);
+    expect(hasPermission({ role: "support" }, "user.read")).toBe(false);
   });
 });

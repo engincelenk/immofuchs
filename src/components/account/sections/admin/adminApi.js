@@ -59,6 +59,13 @@ export function fetchUserDetail(id) {
   return request(`/admin/users/${encodeURIComponent(id)}`);
 }
 
+// input: {email, name?, role, isTestUser?, isBeta?, subscription?: {status, plan}}
+// subscription ist nur zusammen mit isTestUser:true gueltig (Worker lehnt es
+// sonst ab) - es gibt dafuer keinen echten Paddle-Kauf.
+export function createUser(input) {
+  return post("/admin/users", input);
+}
+
 export function setUserStatus(id, status) {
   return post(`/admin/users/${encodeURIComponent(id)}/status`, { status });
 }

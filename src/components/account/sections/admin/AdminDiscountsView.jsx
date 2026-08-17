@@ -51,10 +51,6 @@ const STATUS_LABELS = { active: "Aktiv", archived: "Deaktiviert", expired: "Abge
 const STATUS_COLORS = { active: "#22c55e", archived: "#8A8A80", expired: "#8A8A80" };
 
 export function AdminDiscountsView({ currentUser }) {
-  // Auftrag Abschnitt 13: 'support' darf Gutscheine ansehen, aber nicht
-  // anlegen, bearbeiten oder umschalten. Der Worker lehnt es ohnehin mit 403
-  // ab (discount.manage) - hier werden die Bedienelemente zusaetzlich
-  // ausgeblendet, damit Support gar nicht erst in einen Fehler laeuft.
   const canManage = currentUser?.role === "admin";
   const toast = useAdminToast();
 

@@ -26,16 +26,12 @@ export const SECTION_META = [
   // um Vertrag und Daten, darunter Hilfe/Sicherheit/Verwaltung.
   { key: "support", labelKey: "navSupport", descKey: "menuSupportDesc", Icon: IconSupport, groupStart: true },
   { key: "konto", labelKey: "navSicherheit", descKey: "menuSicherheitDesc", Icon: IconSicherheit },
-  // Seit dem Admin-MVP (2026-08-13) auch fuer die Rolle 'support' sichtbar -
-  // sie darf ansehen und Support-Notizen schreiben (Auftrag Abschnitt 13).
-  // Was sie NICHT darf, blendet AdminSection aus und der Worker lehnt es mit
-  // 403 ab; die Sichtbarkeit des Bereichs selbst ist keine Schutzmassnahme.
   {
     key: "admin",
     labelKey: "navAdmin",
     descKey: "menuAdminDesc",
     Icon: IconAdmin,
-    rolesAllowed: ["admin", "support"],
+    rolesAllowed: ["admin"],
   },
 ];
 

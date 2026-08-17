@@ -55,9 +55,8 @@ export const requirePro = createMiddleware<{ Bindings: Env; Variables: Entitleme
 // Admin Panel (Paket 7): baut auf requireAuth auf (c.var.user muss gesetzt
 // sein), 403 falls die Rolle die verlangte Permission nicht hat. Bewusst
 // permission-basiert statt "if role === 'admin'" (Neue-Phase-Konsolidiert.md
-// Abschnitt 8.2, verbindliche technische Vorgabe) - genau deshalb liess sich
-// die SUPPORT-Rolle im Admin-MVP rein additiv ergaenzen, ohne diese
-// Middleware umzubauen.
+// Abschnitt 8.2, verbindliche technische Vorgabe) - eine kuenftige weitere
+// Rolle liesse sich additiv ergaenzen, ohne diese Middleware umzubauen.
 export function requirePermission(permission: Permission) {
   return createMiddleware<{ Bindings: Env; Variables: AuthVars }>(async (c, next) => {
     if (!hasPermission(c.var.user, permission)) return c.json({ error: "forbidden" }, 403);
@@ -65,12 +64,15 @@ export function requirePermission(permission: Permission) {
   });
 }
 
-// Zwei benannte Stufen fuer die Admin-Routen (Auftrag Abschnitt 13):
-//  - requireAdminRead: ansehen, darf auch die Rolle 'support'
-//  - requireAdmin:     aendern, nur 'admin' (Owner)
-// Kritische Aktionen tragen ihre eigene, engere Permission (user.delete,
-// discount.manage) - "UI-Verstecken alleine reicht nicht", jede Route prueft
-// serverseitig selbst.
+// Zwei benannte Stufen fuer die Admin-Routen:
+//  - requireAdminRead: ansehen (user.read)
+//  - requireAdmin:     aendern (user.manage)
+// Mit nur noch zwei Rollen (customer/admin) fallen beide aktuell auf
+// dieselbe Rolle 'admin' zurueck - bleiben aber als eigene Permissions
+// bestehen, damit eine kuenftige Rolle mit reinem Leserecht additiv
+// ergaenzt werden kann. Kritische Aktionen tragen ihre eigene, engere
+// Permission (user.delete, discount.manage) - "UI-Verstecken alleine reicht
+// nicht", jede Route prueft serverseitig selbst.
 export const requireAdminRead = requirePermission("user.read");
 export const requireAdmin = requirePermission("user.manage");
 

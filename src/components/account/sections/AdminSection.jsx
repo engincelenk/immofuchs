@@ -27,20 +27,13 @@ export function AdminSection({ t, account, onBack }) {
   const [activeKey, setActiveKey] = useState("dashboard");
   const active = TABS.find((tab) => tab.key === activeKey) || TABS[0];
   const ActiveTab = active.Component;
-  // Rolle des ANGEMELDETEN Admins (nicht die des betrachteten Nutzers) - die
-  // Unteransichten blenden damit aus, was 'support' laut Auftrag Abschnitt 13
-  // nicht darf. Der Worker lehnt es zusaetzlich mit 403 ab; die UI-Regel ist
-  // Bequemlichkeit, nicht der Schutz (Auftrag Abschnitt 16).
   const currentUser = account?.me || null;
-  const isSupportOnly = currentUser?.role === "support";
 
   return (
     <AdminToastProvider>
       <SectionTitle title={t.navAdmin} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>
-        {isSupportOnly
-          ? "Nutzer, Kennzahlen und Audit-Log ansehen. Änderungen an Rollen, Status und Gutscheinen sind Owner/Admin vorbehalten."
-          : "Nutzerverwaltung, Kennzahlen und Audit-Log - nur für Administrator-Konten sichtbar."}
+        Nutzerverwaltung, Kennzahlen und Audit-Log - nur für Administrator-Konten sichtbar.
       </p>
 
       <div

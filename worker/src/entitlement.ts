@@ -11,10 +11,13 @@ const ENTITLEMENT_COOKIE = "if_entitlement";
 
 // Admin-MVP 2026-08-13: 'test_user' ist keine Rolle mehr, sondern ein
 // unabhaengiger Schalter (users.is_test_user, Migration 0019) - ein Nutzer
-// kann jetzt gleichzeitig Kunde und Testnutzer sein. Dafuer kommt auf der
-// Rollen-Ebene 'support' dazu (Auftrag Abschnitt 13: Admin/Support darf
-// lesen und Notizen schreiben, aber nichts Kritisches aendern).
-export type Role = "customer" | "support" | "admin";
+// kann gleichzeitig Kunde und Testnutzer sein.
+//
+// Nutzer-Entscheidung 2026-08-1X: die dritte Rolle 'support' (Admin-MVP
+// 2026-08-13) wurde wieder entfernt - nur noch zwei Rollen ('customer',
+// 'admin'). Aktuell 0 Nutzer mit role='support' in der einzigen bestehenden
+// D1-Datenbank (immofuchs-dev), daher keine Datenmigration noetig.
+export type Role = "customer" | "admin";
 
 export function hasRole(user: Pick<UserRow, "role">, role: Role): boolean {
   if (role === "customer") return true; // jeder authentifizierte Nutzer ist mindestens 'customer'
@@ -23,18 +26,14 @@ export function hasRole(user: Pick<UserRow, "role">, role: Role): boolean {
 
 // Access-Management-Fundament (Konzept-Dok "Neue Phase" Abschnitt 8.2,
 // verbindlich entschieden 2026-08-08). Rollennamen bleiben in der DB klein
-// geschrieben ('customer'/'support'/'admin'), wie bisher schon fuer
-// 'customer'/'admin' in Migration 0001 - das Dokument beschreibt die Rollen
-// konzeptionell in Grossschreibung, keine erzwungene DB-Konvention. `role`
-// ist eine reine TEXT-Spalte ohne CHECK-Constraint (Migration 0001), daher
-// braucht auch 'support' keine Schema-Aenderung.
+// geschrieben ('customer'/'admin'), wie seit Migration 0001. `role` ist eine
+// reine TEXT-Spalte ohne CHECK-Constraint, Gueltigkeit wird ausschliesslich
+// hier im Code geprueft.
 //
 // Wichtig (Dok 7.1/8.2, technische Vorgabe des Auftraggebers): Rechte-
 // pruefungen im Code basieren auf diesen granularen Permission-Strings,
 // NICHT auf direkten Rollennamen-Vergleichen (`if role === 'admin'`) - macht
-// eine spaetere Aufteilung in weitere Rollen (z. B. eigene FINANCE-Rolle)
-// additiv statt eines Rewrites. Genau das hat sich beim Admin-MVP schon
-// ausgezahlt: 'support' liess sich rein additiv ergaenzen.
+// eine spaetere Aufteilung in weitere Rollen additiv statt eines Rewrites.
 //
 // 'test.access' entfaellt als Permission: Testnutzer ist seit Migration 0019
 // keine Rolle mehr, sondern der Schalter users.is_test_user - ein Merkmal
@@ -56,11 +55,9 @@ export type Permission =
   | "profile.manage"
   | "invoice.read";
 
-// Auftrag Abschnitt 13: Owner/Admin hat Vollzugriff, Admin/Support darf
-// ansehen und Support-Notizen schreiben, aber keine kritischen Aenderungen
-// (keine Rollen, kein Sperren, kein Loeschen, keine Gutschein-Aenderung).
-// Bewusst weiterhin keine Vererbung zwischen den Rollen - jede Rolle listet
-// ihre Rechte vollstaendig auf, das macht die Matrix beim Lesen eindeutig.
+// Owner/Admin hat Vollzugriff, Customer nur die eigenen Kundenrechte. Bewusst
+// keine Vererbung zwischen den Rollen - jede Rolle listet ihre Rechte
+// vollstaendig auf, das macht die Matrix beim Lesen eindeutig.
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   admin: [
     "user.read",
@@ -75,7 +72,6 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "product.manage",
     "security.manage",
   ],
-  support: ["user.read", "user.note", "subscription.read", "discount.read"],
   customer: ["calculator.use", "ai.use", "profile.manage", "invoice.read"],
 };
 

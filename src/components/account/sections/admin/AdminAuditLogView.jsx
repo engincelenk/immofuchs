@@ -7,6 +7,7 @@ import { errorText, labelStyle, mutedTextStyle, secondaryBtnStyle, selectStyle }
 // Aktion dazu, faellt sie in der Liste als roher Schluessel auf statt still
 // unbeschriftet zu bleiben (siehe Fallback unten).
 const ACTION_LABELS = {
+  "user.create": "Nutzer angelegt",
   "user.suspend": "Nutzer gesperrt",
   "user.unsuspend": "Nutzer entsperrt",
   "user.role_change": "Rolle geändert",
