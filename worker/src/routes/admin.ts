@@ -161,7 +161,6 @@ adminRoutes.get("/users", requireAuth, requireAdminRead, async (c) => {
       createdAt: u.created_at,
       lastLoginAt: u.last_login_at,
       isTestUser: Boolean(u.is_test_user),
-      isBeta: Boolean(u.is_beta),
       subscription: u.sub_status ? { status: u.sub_status, plan: u.sub_plan } : null,
     })),
     total,
@@ -188,7 +187,6 @@ adminRoutes.get("/users/:id", requireAuth, requireAdminRead, async (c) => {
     lastLoginAt: user.last_login_at,
     emailVerified: Boolean(user.email_verified_at),
     isTestUser: Boolean(user.is_test_user),
-    isBeta: Boolean(user.is_beta),
     // Ohne password_hash gibt es keinen Reset-Weg (reines OAuth-/Passkey-
     // Konto) - die UI soll den Knopf dann gar nicht erst anbieten, statt ihn
     // ins Leere laufen zu lassen. Der Hash selbst wird NIE ausgeliefert.
@@ -228,7 +226,6 @@ adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (
   const role = typeof body?.role === "string" ? body.role : "customer";
   if (!(VALID_ROLES as string[]).includes(role)) return c.json({ error: "invalid_role" }, 400);
   const isTestUser = body?.isTestUser === true;
-  const isBeta = body?.isBeta === true;
 
   const rawSub = body?.subscription;
   let subInput: { status: SubscriptionRow["status"]; plan: SubscriptionRow["plan"] } | null = null;
@@ -255,7 +252,7 @@ adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (
   }
   if (role !== "customer") await setUserRole(c.env.DB, user.id, role);
   if (name) await updateUserName(c.env.DB, user.id, name);
-  if (isTestUser || isBeta) await setUserFlags(c.env.DB, user.id, { isTestUser, isBeta });
+  if (isTestUser) await setUserFlags(c.env.DB, user.id, { isTestUser });
   if (subInput) await createManualSubscriptionForAdmin(c.env.DB, user.id, subInput);
 
   // Best-effort: ein fehlgeschlagener Mailversand soll die bereits angelegte
@@ -277,10 +274,10 @@ adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (
     action: "user.create",
     targetType: "user",
     targetId: user.id,
-    details: { email, role, isTestUser, isBeta, subscription: subInput },
+    details: { email, role, isTestUser, subscription: subInput },
   });
 
-  return c.json({ id: user.id, email, role, isTestUser, isBeta, inviteSent });
+  return c.json({ id: user.id, email, role, isTestUser, inviteSent });
 });
 
 // Rolle aendern (Auftrag Abschnitt 6). Nur 'admin' (user.manage).
@@ -313,23 +310,18 @@ adminRoutes.post("/users/:id/role", requireAuth, requireAdmin, requireCsrfOrigin
   return c.json({ ok: true, role });
 });
 
-// Testuser-/Beta-Schalter (Auftrag Abschnitt 6). Beide optional, damit ein
-// Umschalten den jeweils anderen Wert nicht mit ueberschreibt.
+// Testuser-Schalter (Auftrag Abschnitt 6).
 adminRoutes.post("/users/:id/flags", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json().catch(() => null);
   const isTestUser = typeof body?.isTestUser === "boolean" ? body.isTestUser : undefined;
-  const isBeta = typeof body?.isBeta === "boolean" ? body.isBeta : undefined;
-  if (isTestUser === undefined && isBeta === undefined) return c.json({ error: "invalid_flags" }, 400);
+  if (isTestUser === undefined) return c.json({ error: "invalid_flags" }, 400);
 
   const user = await getUserById(c.env.DB, id);
   if (!user) return c.json({ error: "not_found" }, 404);
 
-  await setUserFlags(c.env.DB, id, { isTestUser, isBeta });
-  // Zwei getrennte Audit-Eintraege statt eines gemeinsamen: der Auftrag
-  // (Abschnitt 10) listet "Testuser geaendert" und "Beta-Zugriff geaendert"
-  // als eigene, einzeln filterbare Aktionen.
-  if (isTestUser !== undefined && Boolean(user.is_test_user) !== isTestUser) {
+  await setUserFlags(c.env.DB, id, { isTestUser });
+  if (Boolean(user.is_test_user) !== isTestUser) {
     await logAdminAction(c.env.DB, {
       adminUserId: c.var.userId,
       adminEmail: c.var.user.email,
@@ -339,21 +331,7 @@ adminRoutes.post("/users/:id/flags", requireAuth, requireAdmin, requireCsrfOrigi
       details: { to: isTestUser, targetEmail: user.email },
     });
   }
-  if (isBeta !== undefined && Boolean(user.is_beta) !== isBeta) {
-    await logAdminAction(c.env.DB, {
-      adminUserId: c.var.userId,
-      adminEmail: c.var.user.email,
-      action: "user.beta_change",
-      targetType: "user",
-      targetId: id,
-      details: { to: isBeta, targetEmail: user.email },
-    });
-  }
-  return c.json({
-    ok: true,
-    isTestUser: isTestUser ?? Boolean(user.is_test_user),
-    isBeta: isBeta ?? Boolean(user.is_beta),
-  });
+  return c.json({ ok: true, isTestUser });
 });
 
 // Support-Notiz (Auftrag Abschnitt 6/7).

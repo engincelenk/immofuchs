@@ -55,7 +55,7 @@ export type Permission =
   | "profile.manage"
   | "invoice.read";
 
-// Owner/Admin hat Vollzugriff, Customer nur die eigenen Kundenrechte. Bewusst
+// Admin hat Vollzugriff, Customer nur die eigenen Kundenrechte. Bewusst
 // keine Vererbung zwischen den Rollen - jede Rolle listet ihre Rechte
 // vollstaendig auf, das macht die Matrix beim Lesen eindeutig.
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {

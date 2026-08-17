@@ -97,7 +97,7 @@ export const mutedTextStyle = { color: "var(--ch)", fontSize: 12.5 };
 // die DB-Rollen aus entitlement.ts.
 export const ROLE_LABELS = {
   customer: "Customer",
-  admin: "Owner/Admin",
+  admin: "Admin",
 };
 
 export const ROLE_OPTIONS = Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }));

@@ -250,18 +250,6 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                       )
                     }
                   />
-                  <Toggle
-                    label="Beta-Zugriff"
-                    checked={detail.isBeta}
-                    busy={busy === "flags"}
-                    onChange={(next) =>
-                      run(
-                        "flags",
-                        () => setUserFlags(effectiveUserId, { isBeta: next }),
-                        next ? "Beta-Zugriff aktiviert." : "Beta-Zugriff deaktiviert.",
-                      )
-                    }
-                  />
                 </div>
               )}
             </Block>

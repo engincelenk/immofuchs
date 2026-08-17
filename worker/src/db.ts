@@ -34,11 +34,10 @@ export interface UserRow {
   // Rechner kombiniert, einmal gesetzt nie zurueckgesetzt - unabhaengig von
   // trial_used_at (das ist der bezahlte 7-Tage-Paddle-Trial).
   calculator_trial_used_at: number | null;
-  // Admin-MVP (Migration 0019): Merkmale quer zur Rolle, vom Admin-Panel
-  // umschaltbar. is_test_user hat die frueherer Rolle 'test_user' abgeloest,
-  // damit ein Nutzer gleichzeitig Kunde UND Testnutzer sein kann.
+  // Admin-MVP (Migration 0019): Merkmal quer zur Rolle, vom Admin-Panel
+  // umschaltbar. Hat die frueherer Rolle 'test_user' abgeloest, damit ein
+  // Nutzer gleichzeitig Kunde UND Testnutzer sein kann.
   is_test_user: number;
-  is_beta: number;
 }
 
 export interface SessionRow {
@@ -128,7 +127,6 @@ export async function createUser(db: Env["DB"], email: string): Promise<UserRow>
     marketing_emails_enabled: 0,
     calculator_trial_used_at: null,
     is_test_user: 0,
-    is_beta: 0,
   };
 }
 
@@ -253,7 +251,6 @@ export async function createUserWithPassword(
     marketing_emails_enabled: 0,
     calculator_trial_used_at: null,
     is_test_user: 0,
-    is_beta: 0,
   };
 }
 
@@ -839,7 +836,6 @@ export interface AdminUserSummary {
   created_at: number;
   last_login_at: number | null;
   is_test_user: number;
-  is_beta: number;
   // Aus dem LEFT JOIN auf subscriptions - NULL, wenn der Nutzer kein
   // laufendes Abo hat (Free). Der Auftrag verlangt "Abo" als Spalte und als
   // Filter in der Nutzerliste (Abschnitt 4).
@@ -909,7 +905,7 @@ export async function listUsersForAdmin(
     db
       .prepare(
         `SELECT users.id, users.email, users.role, users.account_status, users.created_at,
-                users.last_login_at, users.is_test_user, users.is_beta,
+                users.last_login_at, users.is_test_user,
                 sub.status AS sub_status, sub.plan AS sub_plan
          ${from} ${whereSql}
          ORDER BY ${ADMIN_USER_SORT_SQL[filter.sort]} LIMIT ? OFFSET ?`,
@@ -930,28 +926,15 @@ export async function setUserRole(db: Env["DB"], userId: string, role: string): 
   await db.prepare("UPDATE users SET role = ? WHERE id = ?").bind(role, userId).run();
 }
 
-// Beide Schalter in einem Statement, aber einzeln optional: das Admin-Panel
-// schickt nur den umgeschalteten Wert, nicht beide - sonst wuerde ein
-// Doppelklick auf "Beta" den Testuser-Schalter mit zuruecksetzen.
 export async function setUserFlags(
   db: Env["DB"],
   userId: string,
-  flags: { isTestUser?: boolean; isBeta?: boolean },
+  flags: { isTestUser?: boolean },
 ): Promise<void> {
-  const sets: string[] = [];
-  const params: unknown[] = [];
-  if (flags.isTestUser !== undefined) {
-    sets.push("is_test_user = ?");
-    params.push(flags.isTestUser ? 1 : 0);
-  }
-  if (flags.isBeta !== undefined) {
-    sets.push("is_beta = ?");
-    params.push(flags.isBeta ? 1 : 0);
-  }
-  if (sets.length === 0) return;
+  if (flags.isTestUser === undefined) return;
   await db
-    .prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`)
-    .bind(...params, userId)
+    .prepare("UPDATE users SET is_test_user = ? WHERE id = ?")
+    .bind(flags.isTestUser ? 1 : 0, userId)
     .run();
 }
 

@@ -35,7 +35,6 @@ const EMPTY_CREATE_FORM = {
   name: "",
   role: "customer",
   isTestUser: false,
-  isBeta: false,
   subStatus: "",
   subPlan: "monthly",
 };
@@ -118,7 +117,6 @@ export function AdminUsersView({ currentUser }) {
         name: createForm.name.trim(),
         role: createForm.role,
         isTestUser: createForm.isTestUser,
-        isBeta: createForm.isBeta,
       };
       // "Kein Abo" (leerer Wert) heisst: gar kein subscription-Feld schicken,
       // nicht mit leerem Status - der Worker unterscheidet "nicht mitgeschickt"
@@ -218,15 +216,6 @@ export function AdminUsersView({ currentUser }) {
                 style={{ width: 18, height: 18, accentColor: "var(--ca)", cursor: "pointer" }}
               />
               <span>Testuser</span>
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={createForm.isBeta}
-                onChange={(e) => setCreateForm((f) => ({ ...f, isBeta: e.target.checked }))}
-                style={{ width: 18, height: 18, accentColor: "var(--ca)", cursor: "pointer" }}
-              />
-              <span>Beta-Zugriff</span>
             </label>
           </div>
 
@@ -378,7 +367,6 @@ export function AdminUsersView({ currentUser }) {
                         selten gesetzt, zwei fast immer leere Spalten waeren
                         verschwendete Tabellenbreite. */}
                     {u.isTestUser && <Tag text="Test" />}
-                    {u.isBeta && <Tag text="Beta" />}
                   </div>
                 </td>
                 <td style={tdStyle}>{formatDate(u.createdAt)}</td>
