@@ -1,3 +1,26 @@
+## 2026-08-18 (1.20.2)
+
+### QA: wiederholbare API-E2E-Suite gegen den echten dev-Worker (worker/e2e/)
+
+Neue, jederzeit per `npm run test:e2e` (worker-Ordner) startbare Testsuite —
+läuft nicht gegen Mocks, sondern gegen den echten deployten dev-Worker, über
+Session-IDs der drei Testuser (test.free/monatlich/jaehrlich@immofuchs.info)
+statt Passwort-Login. Getrennt von `npm test` (eigene vitest.e2e.config.ts),
+damit CI/der normale Testlauf nicht plötzlich Netzwerk/Secrets braucht.
+
+Deckt ab: Entitlement-Zustand (`/me`) für alle drei Testuser, alle
+Billing-Fehlerpfade ohne aktives Abo (404/400 je Route), sowie einen
+Regressionstest für die Checkout-Transaktionserzeugung, der bewusst rot
+bleibt, bis `PADDLE_PRICE_ID_MONTHLY`/`_YEARLY`/`PADDLE_API_KEY` auf dev
+korrigiert sind (siehe 1.20.1-Befund). Lebenszyklus-Tests an einem echten
+Sandbox-Abo (Kündigen/Reaktivieren/Rechnung) sind vorbereitet, aber
+übersprungen, bis ein solches Test-Abo existiert (`E2E_SESSION_REAL_PRO`).
+Details und bewusste Nicht-Abdeckung (Checkout-Overlay, Webhook-Zustellung,
+Plan-Wechsel, Rückerstattung) in `worker/e2e/README.md`.
+
+Erster Lauf: 10/12 grün, 2/12 rot (Checkout-Bug), 3 übersprungen (fehlendes
+Sandbox-Abo-Fixture) - erwartetes Bild für den aktuellen Stand.
+
 ## 2026-08-18 (1.20.1)
 
 ### QA: Testuser-Mails auf dev umleitbar + Webhook-Geschäftslogik jetzt automatisiert getestet
