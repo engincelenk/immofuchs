@@ -10,35 +10,32 @@ import {
 
 // Oeffentliche Preis-Sektion der Landingpage (Neugestaltung 2026-08-17 nach
 // den Referenz-Screenshots, auf 3 gleichzeitig sichtbare Kacheln umgebaut
-// 2026-08-18 nach Nutzer-Vorgabe).
-//
-// Vorher gab es sie gar nicht: die Planwahl steckte ausschliesslich im
-// Kauf-Assistenten, ein Besucher konnte also erst nach dem Oeffnen eines
-// Dialogs sehen, was ImmoFuchs kostet und was Pro von Free unterscheidet. Die
-// Vergleichstexte dafuer lagen bereits vollstaendig uebersetzt in
-// i18n/account.js (compareRow*Free/Pro), wurden aber nirgends angezeigt.
+// 2026-08-18 nach Nutzer-Vorgabe, Free-Kachel entfernt 2026-08-18 nach
+// Nutzer-Vorgabe - nur noch Monatlich/Jaehrlich).
 //
 // Umschalter entfernt (Nutzer-Vorgabe 2026-08-18): frueher wechselte eine
 // einzelne Pro-Karte per Monatlich/Jaehrlich-Umschalter ihren Preis. Jetzt
-// stehen alle 3 Angebote gleichzeitig als eigene, gleich hohe Kachel da -
-// kein Klick noetig, um den Jahrespreis zu sehen. "Am beliebtesten"-Ribbon
-// ist damit ebenfalls weg, es gibt keine einzelne hervorgehobene Karte mehr.
+// stehen beide Angebote gleichzeitig als eigene, gleich hohe Kachel da - kein
+// Klick noetig, um den Jahrespreis zu sehen. "Am beliebtesten"-Ribbon ist
+// damit ebenfalls weg, es gibt keine einzelne hervorgehobene Karte mehr.
 //
 // `onChoosePlan(plan)` oeffnet den Kauf-Assistenten mit vorgewaehlter
-// Laufzeit, `onStartFree()` fuehrt in den kostenlosen Ersttest.
+// Laufzeit. Die kostenlose Nutzung ohne Abo (3 Berechnungen/Rechner etc.)
+// bleibt bestehen, wird hier aber nicht mehr als eigenes Produkt beworben -
+// deshalb kein onStartFree-CTA mehr in dieser Sektion.
 //
 // `lang` kommt bewusst als Prop und nicht ueber useApp(): diese Sektion steht
 // im Rumpf der Landingpage, und dort gibt es den AppContext nicht - er umgibt
 // nur die Dialoge (siehe landingCtxValue in Landing.jsx). Ein useApp() an
 // dieser Stelle wuerde beim Rendern der Seite abstuerzen.
 const FEATURES = [
-  ["compareRowRechner", "compareRowRechnerFree", "compareRowRechnerPro"],
-  ["compareRowExpose", "compareRowExposeFree", "compareRowExposePro"],
-  ["compareRowFinn", "compareRowFinnFree", "compareRowFinnPro"],
-  ["compareRowMerkliste", "compareRowMerklisteFree", "compareRowMerklistePro"],
+  ["compareRowRechner", "compareRowRechnerPro"],
+  ["compareRowExpose", "compareRowExposePro"],
+  ["compareRowFinn", "compareRowFinnPro"],
+  ["compareRowMerkliste", "compareRowMerklistePro"],
 ];
 
-export function PricingSection({ lang, onChoosePlan, onStartFree }) {
+export function PricingSection({ lang, onChoosePlan }) {
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const locale = LANG_LOCALE[lang] || "de-DE";
 
@@ -46,7 +43,7 @@ export function PricingSection({ lang, onChoosePlan, onStartFree }) {
   const yearlyNote = t.planYearlyNote
     .replace("{total}", formatMoney(PLAN_AMOUNTS.yearly, locale))
     .replace("{perMonth}", formatMoney(YEARLY_PER_MONTH_AMOUNT, locale));
-  const proFeatures = FEATURES.map(([labelKey, , proKey]) => ({
+  const proFeatures = FEATURES.map(([labelKey, proKey]) => ({
     label: t[labelKey],
     value: t[proKey],
   }));
@@ -94,7 +91,7 @@ export function PricingSection({ lang, onChoosePlan, onStartFree }) {
         <TrustRow t={t} />
 
         {/* alignItems:stretch (Grid-Standard) statt "start" (Nutzer-Vorgabe
-            2026-08-18): alle 3 Kacheln sollen unabhaengig von ihrer
+            2026-08-18): beide Kacheln sollen unabhaengig von ihrer
             Textlaenge exakt gleich hoch sein - stretch zieht jede Kachel auf
             die Hoehe der jeweils hoechsten in ihrer Zeile. */}
         <div
@@ -102,23 +99,11 @@ export function PricingSection({ lang, onChoosePlan, onStartFree }) {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
             gap: 18,
-            maxWidth: 960,
+            maxWidth: 640,
             margin: "0 auto",
             alignItems: "stretch",
           }}
         >
-          <PlanCard
-            name={t.planFreeName}
-            tagline={t.planFreeTagline}
-            price={t.planFreePrice}
-            note={t.planFreeNote}
-            ctaLabel={t.planFreeCta}
-            onCta={onStartFree}
-            features={FEATURES.map(([labelKey, freeKey]) => ({
-              label: t[labelKey],
-              value: t[freeKey],
-            }))}
-          />
           <PlanCard
             highlighted
             name="ImmoFuchs Pro"
@@ -152,7 +137,7 @@ export function PricingSection({ lang, onChoosePlan, onStartFree }) {
 }
 
 // Vertrauens-Zeile ueber den Karten (Vorbild). Alle drei Zusagen sind gedeckt:
-// Rueckerstattung binnen 14 Tagen, siebentaegiger kostenloser Test und
+// Rueckerstattung binnen 14 Tagen, dreitaegiger kostenloser Test und
 // Kuendigung zum Periodenende sind im Worker umgesetzt.
 function TrustRow({ t }) {
   const items = [
@@ -269,10 +254,6 @@ function PlanCard({
       >
         {features.map((feature) => (
           <li key={feature.label} style={{ display: "flex", gap: 9, fontSize: 12.5, lineHeight: 1.45 }}>
-            {/* Haekchen nur auf den Pro-Karten: die Free-Zeilen nennen
-                ueberwiegend Grenzen ("1 Gratis-Berechnung, danach
-                gesperrt") - ein Haekchen davor liese sich als Zusage
-                missverstehen. */}
             <span aria-hidden="true" style={{ color: highlighted ? "var(--ca)" : "var(--ch)", flexShrink: 0 }}>
               {highlighted ? "✓" : "·"}
             </span>

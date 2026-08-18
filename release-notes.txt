@@ -1,3 +1,54 @@
+## 2026-08-18 (1.20.14)
+
+### Free-Produkt aus Preistabelle entfernt, Trial 7 -> 3 Tage (Paddle-Vorgabe)
+
+Nutzer-Vorgabe: Free-Kachel abschaffen (Paddle-Trial bereits auf 3 Tage
+umgestellt) und alle "7 Tage"-Angaben im Code auf 3 Tage nachziehen.
+
+**Geaendert - `src/components/checkout/PricingSection.jsx`:** Free-Kachel aus
+der Preistabelle entfernt (`#preise` auf der Landingpage), es stehen nur noch
+die beiden Pro-Kacheln (Monatlich/Jaehrlich). `onStartFree`-Prop entfernt,
+Grid-Maxbreite auf 640px verkleinert (vorher 960px fuer 3 Kacheln).
+
+**Geaendert - `src/pages/Landing.jsx`:** `onStartFree`-Aufrufstelle an
+PricingSection entfernt (ungenutzt geworden). Die kostenlose Nutzung ohne
+Abo (3 Berechnungen/Rechner, 3x Exposé-Scan, 3x Finn-Anfragen, 1 Objekt
+lokal) bleibt technisch unveraendert bestehen - nur die Vermarktung als
+eigenes waehlbares Produkt auf der Preistabelle ist weg.
+
+**Geaendert - `src/i18n/account.js`:** `planFreeName/Tagline/Price/Cta/Note`
+und `compareRowRechnerFree/ExposeFree/FinnFree/MerklisteFree` in allen 5
+Sprachen (de/en/tr/zh/hi) entfernt. `pricingTrialBadge`, `paymentTrialNotice`,
+`summaryTrialNote`, `welcomeSubtitleTrial`, `trialLockedBody`, `supportFaq2Q`
+in allen 5 Sprachen von 7 auf 3 Tage geaendert.
+
+**Geaendert - `worker/src/scheduled.ts`:** Vorlauf-Fenster der
+"Trial endet bald"-Erinnerungsmail von 2 auf 1 Tag verkuerzt (`ONE_DAY_MS`
+statt `TWO_DAYS_MS`) - bei einem 3-Tage-Trial haette ein 2-Tage-Vorlauf die
+Mail schon an Tag 1 ausgeloest, direkt nach dem Willkommens-Screen.
+
+**Geaendert - `worker/src/notifications.ts`:** E-Mail-Betreff "Deine
+ImmoFuchs-Testphase endet in 2 Tagen" -> "... endet in 1 Tag" (an neues
+Vorlauf-Fenster angepasst).
+
+**Geaendert - Kommentare (kein Verhalten):** `worker/src/db.ts`,
+`worker/src/paddle/webhook.ts`, `worker/e2e/README.md` - Erwaehnungen von
+"7-Tage-Trial" auf "3-Tage-Trial" aktualisiert.
+
+**Nicht geaendert:** `worker/e2e/reset-test-free.ps1` zeigt per Default noch
+auf die Session-ID des inzwischen vom Nutzer geloeschten tes.free-Testkontos
+- separat zu klaeren, kein Teil dieser Aenderung.
+
+**Hinweis:** `worker/e2e/manuelle-testfaelle.md` enthaelt lokal denselben
+Kommentar-Fix, ist aber Teil einer parallel laufenden, noch nicht
+committeten Aenderung an anderen Dateien (`worker/e2e/setup.ts`,
+`e2e-dashboard/`, neue e2e-Testdateien) und bewusst nicht Teil dieses Pushs.
+
+**Betroffene Dateien:** src/components/checkout/PricingSection.jsx,
+src/pages/Landing.jsx, src/i18n/account.js, worker/src/scheduled.ts,
+worker/src/notifications.ts, worker/src/db.ts, worker/src/paddle/webhook.ts,
+worker/e2e/README.md
+
 ## 2026-08-18 (1.20.10)
 
 ### Feature: Logo in E-Mail-Header + expliziter Trialphasen-Hinweis im Checkout

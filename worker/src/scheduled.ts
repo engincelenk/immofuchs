@@ -12,9 +12,6 @@ import { dispatchNotification } from "./notifications";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-// Kuerzer als beim Jahresabo: bei einem 7-Tage-Trial wuerde ein 7-Tage-Vorlauf
-// die Mail sofort beim Trial-Start ausloesen (Phase 3).
-const TWO_DAYS_MS = 2 * ONE_DAY_MS;
 
 export async function handleScheduled(env: Env): Promise<void> {
   // Datenminimierung fuer den Brute-Force-Schutz des Passwort-Wegs (4.13,
@@ -47,9 +44,12 @@ export async function handleScheduled(env: Env): Promise<void> {
   }
 
   // Trial-Erinnerung (Phase 3) - eigener Durchlauf statt Erweiterung der
-  // Renewal-Abfrage: anderer Vorlauf (2 statt 7 Tage), anderer Text, eigene
-  // Merk-Spalte. Beide Plaene betroffen, nicht nur der Jahresplan.
-  const trialsEnding = await listTrialsEndingSoon(env.DB, TWO_DAYS_MS);
+  // Renewal-Abfrage: anderer Vorlauf (1 statt 7 Tage), anderer Text, eigene
+  // Merk-Spalte. Beide Plaene betroffen, nicht nur der Jahresplan. Ein Tag
+  // Vorlauf statt zwei (Trial auf 3 Tage verkuerzt, 2026-08-18
+  // Nutzer-Vorgabe): bei zwei Tagen Vorlauf wuerde die Mail schon an Tag 1
+  // feuern, direkt nach dem Willkommens-Screen, der dasselbe bereits sagt.
+  const trialsEnding = await listTrialsEndingSoon(env.DB, ONE_DAY_MS);
   for (const sub of trialsEnding) {
     try {
       await dispatchNotification(env, {

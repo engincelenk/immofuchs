@@ -32,7 +32,7 @@ export interface UserRow {
   marketing_emails_enabled: number;
   // Neuer Login-/Test-Flow (Migration 0018): kostenloser Ersttest aller 6
   // Rechner kombiniert, einmal gesetzt nie zurueckgesetzt - unabhaengig von
-  // trial_used_at (das ist der bezahlte 7-Tage-Paddle-Trial).
+  // trial_used_at (das ist der bezahlte 3-Tage-Paddle-Trial).
   calculator_trial_used_at: number | null;
   // Admin-MVP (Migration 0019): Merkmal quer zur Rolle, vom Admin-Panel
   // umschaltbar. Hat die frueherer Rolle 'test_user' abgeloest, damit ein
@@ -584,10 +584,10 @@ export async function markRenewalReminderSent(db: Env["DB"], subscriptionId: str
 }
 
 // Trial-Erinnerung (Phase 3): der Nutzer hat beim Trial-Start eine
-// Zahlungsmethode hinterlegt und wird nach 7 Tagen automatisch belastet -
+// Zahlungsmethode hinterlegt und wird nach 3 Tagen automatisch belastet -
 // ohne Vorwarnung waere das eine unangenehme Ueberraschung. Bewusst kuerzeres
-// Fenster als beim Jahresabo (2 statt 7 Tage): bei einem 7-Tage-Trial wuerde
-// ein 7-Tage-Vorlauf die Mail sofort beim Trial-Start ausloesen, direkt nach
+// Fenster als beim Jahresabo (1 statt 7 Tage): bei einem 3-Tage-Trial wuerde
+// ein laengerer Vorlauf die Mail zu nah am Trial-Start ausloesen, direkt nach
 // dem Willkommens-Screen, der dasselbe bereits sagt.
 export async function listTrialsEndingSoon(
   db: Env["DB"],

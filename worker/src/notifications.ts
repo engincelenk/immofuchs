@@ -150,14 +150,16 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
     // Sicherheitshinweis, kein Marketing (4.13): geht immer raus, auch wenn der
     // Nutzer die Aenderung selbst ausgeloest hat - genau das macht ihn zum
     // Warnsignal, falls es jemand anderes war.
-    // Vorwarnung vor der ersten Abbuchung nach dem 7-Tage-Trial (Phase 3):
+    // Vorwarnung vor der ersten Abbuchung nach dem 3-Tage-Trial (Phase 3):
     // der Nutzer hat die Zahlungsmethode beim Trial-Start hinterlegt, die
-    // Belastung kaeme sonst unangekuendigt.
+    // Belastung kaeme sonst unangekuendigt. Versandfenster ist 1 Tag vor
+    // Trial-Ende (siehe scheduled.ts, ONE_DAY_MS), Betreff entsprechend
+    // angepasst.
     case "trial_ending": {
       const datum = String(intent.payload.periodEndDate ?? "");
       const betrag = String(intent.payload.amount ?? "");
       return {
-        subject: "Deine ImmoFuchs-Testphase endet in 2 Tagen",
+        subject: "Deine ImmoFuchs-Testphase endet in 1 Tag",
         html: `<p>Deine kostenlose Testphase endet am ${datum}. Danach werden ${betrag} abgebucht und dein Pro-Zugang laeuft normal weiter.</p>
                <p>Wenn du nicht weitermachen moechtest, kannst du bis dahin jederzeit im Konto-Bereich kuendigen - es entstehen dann keine Kosten.</p>`,
       };

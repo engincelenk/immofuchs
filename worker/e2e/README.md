@@ -70,7 +70,7 @@ powershell -File worker\e2e\reset-test-free.ps1
 ```
 
 Kündigt das Abo sofort (nicht erst zum Periodenende) und setzt `trial_used_at`
-zurück (voller 7-Tage-Trial beim nächsten Checkout wieder verfügbar). Nutzt
+zurück (voller 3-Tage-Trial beim nächsten Checkout wieder verfügbar). Nutzt
 `POST /billing/test-reset`, das serverseitig nur für `is_test_user=1`-Konten
 funktioniert (403 bei jedem echten Kundenkonto).
 

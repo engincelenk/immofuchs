@@ -1429,10 +1429,6 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           setCheckoutPlan(plan);
           setOpenMode("checkout");
         }}
-        // Free-Weg: wer schon angemeldet ist, geht direkt in den Rechner -
-        // fuer alle anderen ist der Login der erste Schritt (dieselbe
-        // Verzweigung wie beim "Anmelden"-Knopf in der Kopfzeile).
-        onStartFree={() => (account?.isLoggedIn ? onStart("haupt") : setOpenMode("login"))}
       />
 
       {/* ═══════════ DATEN-ABSCHNITT ═══════════ */}
