@@ -35,11 +35,19 @@ function parseFrom(raw: string): { email: string; name?: string } {
 // Literale statt CSS-Variablen, weil E-Mail-Clients externe/vererbte CSS-
 // Custom-Properties nicht zuverlaessig unterstuetzen - inline-Styles sind
 // der einzige robuste Weg.
-function wrapEmailHtml(bodyHtml: string): string {
+function wrapEmailHtml(env: Env, bodyHtml: string): string {
+  // Logo als echte, gehostete URL statt eingebettet (E-Mail-Clients
+  // blockieren/kappen eingebettete Bilder oft) - dieselbe APP_BASE_URL wie
+  // bei Magic-Link-/Reset-Links (auth/magicLink.ts, auth/passwordAuth.ts).
+  // Transparente Variante (docs/images/immofuchs-png-transparent.png),
+  // passend zur weissen Kopfzeile - die weisse Variante haette dort einen
+  // sichtbaren Kasten erzeugt. Auf 480x160 verkleinert (sharp), im Markup
+  // auf 160px Anzeigebreite begrenzt (scharf auf Retina-Displays).
+  const base = env.APP_BASE_URL || "https://immofuchs.info";
   return `<div style="background-color:#F5F5F0;padding:32px 16px;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
   <div style="max-width:480px;margin:0 auto;background-color:#FFFFFF;border:1px solid #E5E5DC;border-radius:12px;">
     <div style="padding:22px 28px;border-bottom:1px solid #E5E5DC;">
-      <span style="font-size:19px;font-weight:700;color:#1A1A1A;">immo<span style="color:#E8600A;">fuchs</span></span>
+      <img src="${base}/email-logo.png" alt="ImmoFuchs" width="160" style="display:block;width:160px;height:auto;border:0;" />
     </div>
     <div style="padding:28px;color:#1A1A1A;font-size:14px;line-height:1.65;">
       ${bodyHtml}
@@ -70,7 +78,7 @@ export async function sendEmail(
   html: string,
 ): Promise<void> {
   const from = parseFrom(env.MAGIC_LINK_FROM_EMAIL || DEFAULT_FROM);
-  html = wrapEmailHtml(html);
+  html = wrapEmailHtml(env, html);
   const text = htmlToText(html);
 
   // ═══ 1. Cloudflare Email Sending (Binding) ═══

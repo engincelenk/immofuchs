@@ -2,7 +2,8 @@
 // ein Mock-D1 wie worker/src/**/*.test.ts, sondern gegen einen echten
 // deployten Worker (Standard: dev) - siehe README.md in diesem Ordner fuer
 // die noetigen Umgebungsvariablen und was hier bewusst NICHT automatisiert
-// ist (Paddle-Checkout-Overlay, Webhook-Zustellung, Plan-Wechsel, Refund).
+// ist (Paddle-Checkout-Overlay, Webhook-Zustellung, Plan-Wechsel, Refund,
+// Passwort-Login/-Registrierung, OAuth, Passkey).
 //
 // Die drei Testuser-Sessions kommen NICHT aus einem Passwort-Login - sie
 // wurden direkt als Zeile in der D1 `sessions`-Tabelle angelegt (kein
@@ -31,6 +32,14 @@ export const sessions = {
 // das brauchen, ueberspringen sich selbst statt rot zu laufen, solange das
 // Fixture fehlt (siehe billing-lifecycle.e2e.test.ts).
 export const realProSessionId = process.env.E2E_SESSION_REAL_PRO;
+
+// Optional (2026-08-18): Session-ID eines Accounts mit role='admin'. Wie
+// E2E_SESSION_REAL_PRO ueberspringen sich Tests, die das brauchen, selbst
+// statt rot zu laufen, solange das Fixture fehlt (siehe
+// admin-lifecycle.e2e.test.ts) - kein Test darf eine der drei
+// Basis-Sessions (free/monatlich/jaehrlich) zur Admin-Rolle machen, das
+// wuerde deren fest erwarteten Zustand fuer alle anderen Tests zerstoeren.
+export const adminSessionId = process.env.E2E_SESSION_ADMIN;
 
 export async function apiFetch(sessionId: string, path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);

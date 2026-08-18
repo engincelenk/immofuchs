@@ -1,3 +1,73 @@
+## 2026-08-18 (1.20.10)
+
+### Feature: Logo in E-Mail-Header + expliziter Trialphasen-Hinweis im Checkout
+
+`worker/src/email.ts` — Text-Wortmarke im E-Mail-Header durch echtes Logo
+ersetzt (`public/email-logo.png`, aus `docs/images/immofuchs-png-transparent.png`,
+mit sharp auf 480×160px verkleinert für sinnvolle E-Mail-Dateigröße). URL über
+`APP_BASE_URL` (dieselbe Variable wie bei Magic-Link-/Reset-Links), damit
+dev/qa/prod automatisch auf ihre eigene Domain zeigen.
+
+Nutzer-Befund: "0,00 €" im Bestellübersicht-Kärtchen (Checkout Schritt 3)
+wirkte wie ein Fehler statt wie der Testphasen-Hinweis, der es ist.
+`src/components/checkout/OrderSummary.jsx` zeigt jetzt bei einem von Paddle
+live gemeldeten Betrag von 0 € einen expliziten Text ("Heute 0,00 € – 7 Tage
+kostenlos testen. Danach automatisch {price} …") statt der normalen
+Verlängerungs-Notiz — neuer i18n-Key `summaryTrialNote` in allen 5 Sprachen.
+
+## 2026-08-18 (1.20.9)
+
+### Test: E2E-Abdeckung fuer bisher ungetestete Use Cases (worker/e2e/)
+
+Luecken-Analyse ergab: von ~55 HTTP-Endpunkten waren nur 7 (GET /me + Teile
+von /billing/*) e2e-getestet. Acht neue Testdateien ergaenzt, alle
+zustandsneutral fuer die geteilten Fixtures test.free/monatlich/jaehrlich:
+
+- `objects.e2e.test.ts` - voller CRUD-Zyklus + IDOR-Schutz (fremdes
+  Pro-Konto darf ein Objekt weder aendern noch loeschen) + requirePro-Sperre
+  fuer Free-Konten. Bisher nur per Unit-Test (`isOwnedBy`) abgedeckt, nie
+  ueber die echte HTTP-Kette.
+- `devices.e2e.test.ts` - Push-Token registrieren/entfernen + Validierung.
+- `consent.e2e.test.ts` - KI-Assistent-Consent (GET/POST), von dem
+  /api/assistant und /api/expose-extract direkt abhaengen.
+- `account.e2e.test.ts` - Name, Mail-Benachrichtigung, E-Mail-Kollision
+  (Anti-Enumeration), DSGVO-Export, Validierungsfehler. Bewusst NICHT der
+  Erfolgspfad von /account/password oder die tatsaechliche Ausfuehrung von
+  /account/delete (wuerde die Fixture-Konten dauerhaft veraendern).
+- `billing-gaps.e2e.test.ts` - Kundenportal, IDOR-Schutz bei
+  Rechnungs-PDFs, ungueltiger Rabattcode, already_on_plan.
+- `assistant-gating.e2e.test.ts` - Validierung + Consent-Gate von
+  /api/assistant und /api/expose-extract, OHNE Modell-Aufruf (kein
+  Kosten-Impact pro Testlauf).
+- `admin-permissions.e2e.test.ts` - verifiziert erstmals fuer ALLE ~19
+  Admin-Routen, dass ein Nicht-Admin-Konto ueberall 403 bekommt. Kein
+  Admin-Fixture noetig.
+- `admin-lifecycle.e2e.test.ts` (optional, neue Env-Variable
+  `E2E_SESSION_ADMIN`, uebersprungen statt rot ohne sie) - Selbstschutz-
+  Guards (cannot_demote_self/cannot_suspend_self/cannot_delete_self) direkt
+  am Admin-Konto, voller Nutzer-Lebenszyklus an einem eigens angelegten
+  Wegwerf-Testkonto, Discount-CRUD mit Aufraeumen (archivieren).
+
+`e2e/setup.ts` um `adminSessionId` (Pattern wie `realProSessionId`) ergaenzt,
+`e2e/README.md` um Tabelle aller Testdateien und einen expliziten Abschnitt
+aktualisiert, was weiterhin bewusst NICHT automatisiert ist.
+
+**Bewusst NICHT ergaenzt (Architekturentscheidung, keine eigenmaechtige
+Aenderung):** Passwort-Login/-Registrierung/-Reset, Google/Apple-OAuth,
+Passkey/WebAuthn und der signierte Paddle-Webhook-Versand. Alle vier wuerden
+entweder Passwort-Handling in den Testcode einfuehren (widerspricht der
+bestehenden Entscheidung aus 1.20.1) oder eine echte WebAuthn-/OAuth-
+Ceremonie bzw. das Webhook-Secret in der Testumgebung erfordern - das sind
+eigene Architekturfragen, die vor einer Umsetzung abgestimmt werden sollten.
+
+**Betroffene Dateien:** worker/e2e/setup.ts, worker/e2e/README.md,
+worker/e2e/objects.e2e.test.ts, worker/e2e/devices.e2e.test.ts,
+worker/e2e/consent.e2e.test.ts, worker/e2e/account.e2e.test.ts,
+worker/e2e/billing-gaps.e2e.test.ts, worker/e2e/assistant-gating.e2e.test.ts,
+worker/e2e/admin-permissions.e2e.test.ts, worker/e2e/admin-lifecycle.e2e.test.ts
+
+**Breaking Changes:** keine.
+
 ## 2026-08-18 (1.20.8)
 
 ### Fix: Tarifwechsel während der Testphase schlug fehl (502)

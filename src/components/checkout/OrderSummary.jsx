@@ -7,6 +7,7 @@ import {
   YEARLY_LIST_AMOUNT,
   formatMoney,
   formatPaddleAmount,
+  normalizePaddleCheckoutAmount,
 } from "./planPricing.js";
 
 // Kostenuebersicht - die eine Stelle, an der im Checkout Geld dargestellt wird
@@ -55,6 +56,16 @@ export function OrderSummary({
     ? formatPaddleAmount(paddleTotals.total, paddleTotals.currencyCode, locale, amount)
     : null;
   const totalText = liveTotal || formatMoney(amount, locale);
+
+  // Nutzer-Befund 2026-08-18: "0,00 €" allein wirkte wie ein Fehler statt wie
+  // der Testphasen-Hinweis, der er ist - Paddle meldet den heute faelligen
+  // Betrag erst mit dem echten Checkout-Event (paddleTotals), nicht vorher.
+  // Erkennt sowohl den regulaeren Trial als auch einen 100%-Gutschein (in
+  // beiden Faellen ist "heute 0 €" die zutreffende, ehrliche Aussage).
+  const liveAmountValue = paddleTotals
+    ? normalizePaddleCheckoutAmount(paddleTotals.total, amount)
+    : null;
+  const isFreeToday = liveAmountValue === 0;
 
   const wrapperStyle =
     variant === "box" ? summaryBoxStyle : { ...cardStyle, position: "sticky", top: 20 };
@@ -201,7 +212,7 @@ export function OrderSummary({
 
       {showRenewal && (
         <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 10 }}>
-          {t.summaryRenewalNote.replace(
+          {(isFreeToday ? t.summaryTrialNote : t.summaryRenewalNote).replace(
             "{price}",
             plan === "yearly" ? t.planYearlyPrice : t.planMonthlyPrice,
           )}
