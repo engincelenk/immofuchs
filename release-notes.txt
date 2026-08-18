@@ -1,3 +1,22 @@
+## 2026-08-18 (1.20.3)
+
+### Fix: Paddle-Sandbox-Checkout im Browser durch CSP blockiert
+
+Beim ersten echten Durchklicken des Checkout-Overlays (dev, PADDLE_ENV=sandbox)
+blockierte die Content-Security-Policy in `index.html` zwei Paddle-Sandbox-
+Domains, die bei den bisherigen Tests nie zum Tragen kamen (die liefen alle
+serverseitig gegen die Paddle-API, nie durchs Overlay):
+- `style-src` kannte nur `fonts.googleapis.com`, keine Paddle-Domain -
+  Paddles Checkout-Stylesheet (`sandbox-cdn.paddle.com`) wurde geblockt.
+- `frame-src` kannte nur die Produktions-Domains
+  (`checkout-service.paddle.com`, `buy.paddle.com`) - das eigentliche
+  Checkout-iFrame (`sandbox-buy.paddle.com`) wurde geblockt, Zahlungsmethode
+  ließ sich nicht auswählen.
+
+Beide Sandbox-Domains ergänzt (additiv, Produktions-Domains bleiben
+unverändert) - betrifft nur dev (qa/prod fragen zur Laufzeit nie eine
+`sandbox-*`-URL an).
+
 ## 2026-08-18 (1.20.2)
 
 ### QA: wiederholbare API-E2E-Suite gegen den echten dev-Worker (worker/e2e/)
