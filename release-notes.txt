@@ -1,3 +1,34 @@
+## 2026-08-18 (1.17.0)
+
+### Free-Limits auf "pro Rechner" umgestellt, Checkout-/Konto-Fixes, Bugfix Testuser-Löschung
+
+**Free-Kontingente laufen jetzt je Rechnertyp statt kombiniert/pauschal**
+(Nutzer-Vorgabe): Gratis-Berechnung 1x kombiniert über alle 6 Rechner -> 3x
+je Rechner (neue Tabelle `calculator_trial_usage`, Migration 0022). Finn
+5x/Tag global -> 3x insgesamt je Rechner, kein Tages-Reset mehr (neue
+`checkAndIncrementLifetime`-Zählweise im SessionRateLimiter DO). Exposé-Scan
+1x pro Gerät -> 3x (Migration 0021, `expose_trial_used` jetzt mit
+count-Spalte). Merkliste 3 Objekte gesamt -> 1 Objekt je Rechnertyp
+(rein Frontend, Free-Merkliste ist lokal). Pro bleibt in allen vier Fällen
+unverändert (unbegrenzt bzw. 50 Finn-Anfragen/Tag).
+
+**Bugfix: Testuser mit Fake-Abo ließen sich nicht löschen (502).**
+`deleteAccountCompletely` versuchte immer, das Abo bei der echten Paddle-API
+zu kündigen - bei synthetischen Test-Abos (`admin-test:…`, sowohl aus der
+Admin-"Nutzer anlegen"-Maske als auch aus per Skript angelegten Testusern)
+gibt es dort nichts zu kündigen, der Aufruf schlug fehl. Wird jetzt erkannt
+und übersprungen.
+
+**Kontomenü-Sidebar:** störende Trennstriche zwischen den Menüpunkten
+entfernt - Ursache war ein `undefined`-CSS-Wert, den der Browser nicht als
+"kein Rand" übernimmt, sondern auf den Standard-Button-Rahmen zurückfällt.
+
+**Checkout:** "Weiter"-Button in der Laufzeit-Auswahl wuchs durch
+`flex:"1 1 auto"` auf ~400px Breite - jetzt normal am Inhalt orientiert.
+Der "✓ Angemeldet als …"-Banner im Zahlungsschritt entfernt - Zahlung ist
+nur eingeloggt erreichbar, der Hinweis bestätigte also immer nur einen
+bereits offensichtlichen Zustand.
+
 ## 2026-08-18 (1.16.0)
 
 ### Preise-Sektion umgebaut, Navigations-Link ergaenzt, Layout-Bugfixes

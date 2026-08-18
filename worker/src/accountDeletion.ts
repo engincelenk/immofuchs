@@ -4,13 +4,18 @@
 // muessen exakt dieselben Nebenwirkungen ausloesen, sonst driftet der
 // Loeschvorgang je nach Kontotyp auseinander.
 import type { Env } from "./types";
-import { deleteUserCompletely, getActiveSubscription } from "./db";
+import { ADMIN_TEST_SUBSCRIPTION_PREFIX, deleteUserCompletely, getActiveSubscription } from "./db";
 import { dispatchNotification } from "./notifications";
 import { cancelImmediately } from "./paddle/checkout";
 
 export async function deleteAccountCompletely(env: Env, userId: string, email: string): Promise<void> {
   const sub = await getActiveSubscription(env.DB, userId);
-  if (sub && sub.status !== "canceled") {
+  // Synthetische Test-Abos (admin-test:<uuid>, siehe createManualSubscriptionForAdmin
+  // in db.ts) haben keine echte Paddle-Gegenstelle - der Kuendigungsaufruf
+  // schlug dafuer immer fehl (502 "delete_failed_try_again", Bugreport
+  // 2026-08-18) und machte solche Testuser dauerhaft unloeschbar.
+  const isSyntheticTestSub = sub?.paddle_subscription_id?.startsWith(ADMIN_TEST_SUBSCRIPTION_PREFIX);
+  if (sub && sub.status !== "canceled" && !isSyntheticTestSub) {
     // "Löschen" ist ein expliziter Endgültigkeits-Wunsch - sofortige
     // Kündigung, nicht zum Periodenende (Kap. 4.5, im Unterschied zu 4.2/4.4).
     try {

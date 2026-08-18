@@ -17,6 +17,7 @@ import { useSavedObjects, Merkliste } from "./components/shell/Merkliste.jsx";
 import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
 import { ProHeaderButton } from "./components/account/ProHeaderButton.jsx";
 import { CalculatorTrialGate } from "./components/account/CalculatorTrialGate.jsx";
+import { tabZuRechner } from "./utils/assistantContext.js";
 import { useAccountCtx } from "./context/AccountContext.jsx";
 import { hideSplashScreen, tabSwitchHaptic } from "./utils/nativeInit.js";
 
@@ -650,32 +651,32 @@ export default function App() {
         </div>
         <div className="content">
           {tab === "haupt" && (
-            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate rechner={tabZuRechner("haupt")} onDismiss={() => setTab("saved")}>
               <Haupt />
             </CalculatorTrialGate>
           )}
           {tab === "kredit" && (
-            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate rechner={tabZuRechner("kredit")} onDismiss={() => setTab("saved")}>
               <Kredit />
             </CalculatorTrialGate>
           )}
           {tab === "miete" && (
-            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate rechner={tabZuRechner("miete")} onDismiss={() => setTab("saved")}>
               <Miete />
             </CalculatorTrialGate>
           )}
           {tab === "sanier" && (
-            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate rechner={tabZuRechner("sanier")} onDismiss={() => setTab("saved")}>
               <Sanier />
             </CalculatorTrialGate>
           )}
           {tab === "steuer6" && (
-            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate rechner={tabZuRechner("steuer6")} onDismiss={() => setTab("saved")}>
               <SteuerTrick />
             </CalculatorTrialGate>
           )}
           {tab === "vfe" && (
-            <CalculatorTrialGate onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate rechner={tabZuRechner("vfe")} onDismiss={() => setTab("saved")}>
               <Vorfaelligkeit />
             </CalculatorTrialGate>
           )}

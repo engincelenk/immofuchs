@@ -8,15 +8,18 @@ import { IconFunkeln, IconSchloss } from "./accountIcons.jsx";
 
 // Wrapper auf Tab-Ebene (App.jsx) statt Aenderungen in den sechs Rechner-
 // Komponenten selbst - kein einziger bestehender Rechner wird angefasst.
+// `rechner` ist der Worker-Rechnerwert (siehe utils/assistantContext.js
+// tabZuRechner) des jeweils umschlossenen Rechners.
 // Zwei Sperr-Zustaende (Stufe A/B/C, Nutzer-Konzept 2026-08-11):
 //  - isLocked: nicht eingeloggt - wie bisher, Login-/Registrierungs-CTA.
-//  - isPaywalled: eingeloggt, kombinierter Ersttest ueber alle 6 Rechner
-//    bereits verbraucht, kein Pro-Abo - neue Verkaufs-/Upgrade-Maske statt
-//    einer technischen Fehlermeldung.
-export function CalculatorTrialGate({ children, onDismiss }) {
+//  - isPaywalled: eingeloggt, Gratis-Kontingent DIESES Rechners (seit
+//    2026-08-18: 3x je Rechner statt 1x kombiniert) bereits verbraucht,
+//    kein Pro-Abo - neue Verkaufs-/Upgrade-Maske statt einer technischen
+//    Fehlermeldung.
+export function CalculatorTrialGate({ rechner, children, onDismiss }) {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
-  const { isLocked, isPaywalled, isTrialRun, loading } = useCalculatorTrial();
+  const { isLocked, isPaywalled, isTrialRun, remaining, loading } = useCalculatorTrial(rechner);
   const [showLogin, setShowLogin] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
@@ -87,7 +90,7 @@ export function CalculatorTrialGate({ children, onDismiss }) {
           <span aria-hidden="true" style={{ display: "flex", flexShrink: 0, color: "var(--ca-dk)" }}>
             <IconFunkeln size={16} />
           </span>
-          <span>{t.trialRunNotice}</span>
+          <span>{t.trialRunNotice.replace("{n}", String(remaining))}</span>
         </div>
       )}
       {children}

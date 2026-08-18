@@ -122,7 +122,10 @@ export function PricingStep({
             {t.wizardCancel}
           </button>
         )}
-        <button onClick={onContinue} style={{ ...primaryBtnStyle, width: "auto", flex: "1 1 auto" }}>
+        {/* flex:"0 0 auto" statt "1 1 auto" (Nutzer-Korrektur 2026-08-18):
+            der Button wuchs dadurch auf fast die volle Dialogbreite (~400px)
+            statt sich wie ein normaler CTA am Inhalt zu orientieren. */}
+        <button onClick={onContinue} style={{ ...primaryBtnStyle, width: "auto", flex: "0 0 auto" }}>
           {t.pricingContinue} →
         </button>
       </div>

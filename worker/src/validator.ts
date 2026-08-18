@@ -8,7 +8,7 @@ import type {
   VergleichsObjekt,
 } from "./types";
 
-const RECHNER_VALUES: ReadonlySet<Rechner> = new Set([
+export const RECHNER_VALUES: ReadonlySet<Rechner> = new Set([
   "renditerechner",
   "finanzierung",
   "miete",

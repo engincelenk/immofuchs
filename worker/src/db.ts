@@ -287,13 +287,35 @@ export async function markTrialUsedForUser(db: Env["DB"], userId: string): Promi
     .run();
 }
 
-// Neuer Login-/Test-Flow (Migration 0018) - idempotent wie markTrialUsedForUser:
-// erster Rechner mit gueltigem Ergebnis verbraucht den kombinierten Ersttest,
-// jeder weitere Aufruf ist folgenlos (WHERE ... IS NULL greift nur einmal).
-export async function markCalculatorTrialUsedForUser(db: Env["DB"], userId: string): Promise<void> {
+// Login-/Test-Flow (Migration 0018, seit 0022 pro Rechner statt kombiniert
+// ueber alle 6 - Nutzer-Vorgabe 2026-08-18: 1x kombiniert -> 3x je Rechner).
+// getCalculatorTrialUsage liefert die bisher verbrauchten Versuche je
+// Rechner - der Aufrufer (routes/account.ts /me) vergleicht das selbst gegen
+// sein Limit, damit die Zahl 3 an einer einzigen Stelle im Code steht.
+export async function getCalculatorTrialUsage(
+  db: Env["DB"],
+  userId: string,
+): Promise<Record<string, number>> {
+  const { results } = await db
+    .prepare("SELECT rechner, count FROM calculator_trial_usage WHERE user_id = ?")
+    .bind(userId)
+    .all<{ rechner: string; count: number }>();
+  const usage: Record<string, number> = {};
+  for (const row of results) usage[row.rechner] = row.count;
+  return usage;
+}
+
+export async function incrementCalculatorTrialUsage(
+  db: Env["DB"],
+  userId: string,
+  rechner: string,
+): Promise<void> {
   await db
-    .prepare("UPDATE users SET calculator_trial_used_at = ? WHERE id = ? AND calculator_trial_used_at IS NULL")
-    .bind(Date.now(), userId)
+    .prepare(
+      `INSERT INTO calculator_trial_usage (user_id, rechner, count) VALUES (?, ?, 1)
+       ON CONFLICT(user_id, rechner) DO UPDATE SET count = count + 1`,
+    )
+    .bind(userId, rechner)
     .run();
 }
 
@@ -725,14 +747,23 @@ export async function deleteObject(db: Env["DB"], id: string): Promise<void> {
 // Dauerhaftes "schon einmal benutzt"-Flag, getrennt von den taeglichen
 // Durable-Object-Kostenschranken (siehe Migration 0006).
 
-export async function hasUsedExposeTrial(db: Env["DB"], sessionId: string): Promise<boolean> {
-  const row = await db.prepare("SELECT 1 FROM expose_trial_used WHERE session_id = ?").bind(sessionId).first();
-  return row !== null;
+// Zaehler statt Boolean-Flag (Nutzer-Vorgabe 2026-08-18: 1x -> 3x Free-
+// Kontingent). Der Aufrufer (assistant.ts) vergleicht den Rueckgabewert
+// selbst gegen sein Limit, damit die Zahl an einer einzigen Stelle steht.
+export async function getExposeTrialCount(db: Env["DB"], sessionId: string): Promise<number> {
+  const row = await db
+    .prepare("SELECT count FROM expose_trial_used WHERE session_id = ?")
+    .bind(sessionId)
+    .first<{ count: number }>();
+  return row?.count ?? 0;
 }
 
 export async function markExposeTrialUsed(db: Env["DB"], sessionId: string): Promise<void> {
   await db
-    .prepare("INSERT OR IGNORE INTO expose_trial_used (session_id, used_at) VALUES (?, ?)")
+    .prepare(
+      `INSERT INTO expose_trial_used (session_id, used_at, count) VALUES (?, ?, 1)
+       ON CONFLICT(session_id) DO UPDATE SET count = count + 1, used_at = excluded.used_at`,
+    )
     .bind(sessionId, Date.now())
     .run();
 }
@@ -940,6 +971,14 @@ export async function setUserFlags(
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// Praefix synthetischer paddle_*_id-Werte fuer vom Admin direkt angelegte
+// Testnutzer (siehe createManualSubscriptionForAdmin) - auch in
+// accountDeletion.ts genutzt, um bei der Loeschung zu erkennen, dass es
+// keine echte Paddle-Subscription zu kuendigen gibt (Bugreport 2026-08-18:
+// 502 beim Loeschen eines Testusers mit Fake-Abo, weil cancelImmediately()
+// diese ID unbesehen an die echte Paddle-API schickte).
+export const ADMIN_TEST_SUBSCRIPTION_PREFIX = "admin-test:";
+
 // Synthetische Subscription-Zeile fuer einen vom Admin direkt angelegten
 // Testnutzer (Nutzer-Entscheidung 2026-08-1X, "User direkt anlegen") - es
 // gibt dafuer keinen echten Paddle-Checkout, deshalb eine klar erkennbare
@@ -960,7 +999,7 @@ export async function createManualSubscriptionForAdmin(
   // deshalb in der Vergangenheit, nicht in der Zukunft wie bei allen anderen
   // Zustaenden.
   const currentPeriodEnd = input.status === "canceled" ? now - DAY_MS : now + periodMs;
-  const syntheticId = `admin-test:${newId()}`;
+  const syntheticId = `${ADMIN_TEST_SUBSCRIPTION_PREFIX}${newId()}`;
   await db
     .prepare(
       `INSERT INTO subscriptions

@@ -524,20 +524,27 @@ export function useAccount() {
     return { ok: false, error: body.error || "invalid_name" };
   }, [refresh]);
 
-  // Neuer Login-/Test-Flow (Stufe A/B, Nutzer-Konzept 2026-08-11): wird von
-  // CalculatorTrialGate genau einmal aufgerufen, sobald ein Rechner offen ist
-  // und Ergebnisse gezeigt hat - verbraucht den kombinierten Ersttest ueber
-  // alle 6 Rechner. Server ist idempotent (siehe markCalculatorTrialUsedForUser),
-  // der refresh() danach spiegelt den neuen Status in account.me fuer alle
+  // Login-/Test-Flow (Stufe A/B, Nutzer-Konzept 2026-08-11; seit 2026-08-18
+  // pro Rechner statt kombiniert, Nutzer-Vorgabe): wird von CalculatorTrialGate
+  // genau einmal je Rechner aufgerufen, sobald dieser Rechner offen ist und
+  // Ergebnisse gezeigt hat - erhoeht den Zaehler fuer GENAU diesen Rechner.
+  // Der refresh() danach spiegelt den neuen Stand in account.me fuer alle
   // NEUEN Gate-Mounts, ohne die gerade laufende Session zu unterbrechen.
-  const consumeCalculatorTrial = useCallback(async () => {
-    try {
-      await apiFetch("/calculator-trial/consume", { method: "POST" });
-    } catch (err) {
-      console.error("[account] calculator-trial/consume fehlgeschlagen:", err);
-    }
-    await refresh();
-  }, [refresh]);
+  const consumeCalculatorTrial = useCallback(
+    async (rechner) => {
+      try {
+        await apiFetch("/calculator-trial/consume", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rechner }),
+        });
+      } catch (err) {
+        console.error("[account] calculator-trial/consume fehlgeschlagen:", err);
+      }
+      await refresh();
+    },
+    [refresh],
+  );
 
   // Passwort aendern bzw. erstmalig setzen (Phase 2, 4.13). currentPassword
   // ist nur Pflicht, wenn das Konto bereits eines hat - reine OAuth-/Passkey-
@@ -612,7 +619,7 @@ export function useAccount() {
     me,
     isLoggedIn: Boolean(me),
     isPro: Boolean(me?.isPro),
-    calculatorTrialUsed: Boolean(me?.calculatorTrialUsed),
+    calculatorTrialUsage: me?.calculatorTrialUsage || {},
     consumeCalculatorTrial,
     error,
     oauthEmailTakenProviders,

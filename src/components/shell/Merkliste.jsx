@@ -46,9 +46,12 @@ const searchChipStyle = {
   whiteSpace: "nowrap",
 };
 const searchChipActiveStyle = { ...searchChipStyle, background: "var(--ca)", color: "#fff", borderColor: "var(--ca)" };
-// Free-Limit (Spec 4.0a): 3 Objekte, lokal, kein Sync - Pro: unbegrenzt,
-// serverseitig. War frueher pauschal 50 fuer alle Nutzer (Vor-Kommerzialisierung).
-const FREE_OBJECT_LIMIT = 3;
+// Free-Limit (Nutzer-Vorgabe 2026-08-18: 3 Objekte gesamt -> 1 Objekt PRO
+// RECHNER, lokal, kein Sync - Pro: unbegrenzt, serverseitig). Gilt je Eintrag
+// in RECHNER_TABS (aktuell 4 Rechner mit Merkliste-Unterstuetzung), macht
+// also insgesamt bis zu 4 gespeicherte Objekte fuer Free-Nutzer moeglich -
+// aber nie mehr als eines je Rechnertyp.
+const FREE_OBJECT_LIMIT_PER_RECHNER = 1;
 const LOCAL_STORAGE_KEY = "if_saved_v1";
 const PRO_MIRROR_KEY = "if_saved_pro_mirror_v1"; // Offline-Spiegelung (4.17)
 
@@ -221,7 +224,14 @@ export function useSavedObjects(setData) {
         return;
       }
       setSavedList((prev) => {
-        const next = [obj, ...prev].slice(0, FREE_OBJECT_LIMIT);
+        // Pro Rechnertyp hoechstens FREE_OBJECT_LIMIT_PER_RECHNER Objekte:
+        // ein neuer Speicherstand fuer denselben Rechner ersetzt die
+        // aeltesten dieses Typs, statt den insgesamt aeltesten Eintrag
+        // (moeglicherweise eines anderen Rechners) zu verdraengen.
+        const sameTab = prev.filter((o) => o.tab === tab);
+        const others = prev.filter((o) => o.tab !== tab);
+        const keptSameTab = sameTab.slice(0, Math.max(0, FREE_OBJECT_LIMIT_PER_RECHNER - 1));
+        const next = [obj, ...keptSameTab, ...others];
         writeLocalList(next);
         return next;
       });
@@ -257,7 +267,7 @@ export function useSavedObjects(setData) {
     [setData],
   );
 
-  return { savedList, saveObj, delObj, loadObj, isPro, freeLimit: FREE_OBJECT_LIMIT };
+  return { savedList, saveObj, delObj, loadObj, isPro, freeLimit: FREE_OBJECT_LIMIT_PER_RECHNER };
 }
 
 // Gemeinsames Sheet-Bauteil statt eigenem Backdrop/Panel (UX-Audit
@@ -337,9 +347,10 @@ export function SaveBtn({ tab }) {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const hasData = d.kaufpreis || d.vergleichsmiete;
   if (!hasData) return null;
-  // Free-Limit erreicht (Spec 4.0a): ab dem 4. Objekt Upgrade-Hinweis statt
-  // stillschweigendem Verdraengen des aeltesten Eintrags.
-  const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
+  // Free-Limit pro Rechner erreicht (Nutzer-Vorgabe 2026-08-18): Upgrade-
+  // Hinweis statt stillschweigendem Verdraengen des bisherigen Eintrags
+  // DIESES Rechners - andere Rechnertypen sind davon unberuehrt.
+  const limitReached = !isProSavedObjects && savedList.filter((o) => o.tab === tab).length >= savedObjectsFreeLimit;
   // Strasse und Hausnummer voranstellen, sobald sie bekannt sind (aus dem
   // Expose oder von Hand): zwei Wohnungen in derselben Stadt sind sonst beide
   // nur "Ingersheim · 199.000 €" und in der Merkliste nicht auseinanderzuhalten.
@@ -501,7 +512,12 @@ export function Merkliste() {
   // Rechner") - "alle" statt null, damit der Vergleich in filtered() ohne
   // Sonderfall auskommt.
   const [rechnerFilter, setRechnerFilter] = useState("alle");
-  const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
+  // Gesamt-Kontingent = Free-Limit je Rechner * Anzahl unterstuetzter
+  // Rechnertypen (Nutzer-Vorgabe 2026-08-18) - diese Uebersicht zeigt alle
+  // Rechner zusammen, "erreicht" heisst hier also: bei JEDEM Rechnertyp
+  // bereits das Limit ausgeschoepft.
+  const freeTotalLimit = savedObjectsFreeLimit * RECHNER_TABS.length;
+  const limitReached = !isProSavedObjects && savedList.length >= freeTotalLimit;
   const [compareIds, setCompareIds] = useState([]);
   const [compareSheetOpen, setCompareSheetOpen] = useState(false);
   // Die Sprechblase verspricht "ich vergleiche" - damit das eingeloest wird,
@@ -646,7 +662,7 @@ export function Merkliste() {
     <div style={{ padding: "16px 16px 100px" }}>
       <div style={{ fontSize: 13, color: "var(--ch)", marginBottom: 12, fontWeight: 500 }}>
         {savedList.length}
-        {!isProSavedObjects ? `/${savedObjectsFreeLimit}` : ""}{" "}
+        {!isProSavedObjects ? `/${freeTotalLimit}` : ""}{" "}
         {savedList.length === 1
           ? t.countSingular || "Objekt gespeichert"
           : t.countPlural || "Objekte gespeichert"}

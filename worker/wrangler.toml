@@ -85,10 +85,14 @@ WEBAUTHN_ORIGIN = "https://immofuchs.info"
 # Soft-Cap gegen Objekt-Flut (4.9): 500 ist eine Produktentscheidung, kein
 # Sicherheitslimit - ueber das Dashboard ohne Redeploy anpassbar.
 OBJECTS_SOFT_CAP = "500"
-# Free-vs-Pro (4.0a/4.18.3, Sprint 5): Vorschlag 5/Tag fuer Free, vor Sprint-5-
-# Start final zu bestaetigen (siehe docs/kommerzialisierung-spec.md 4.0b).
-FINN_FREE_DAILY_LIMIT = "5"
+# Pro: taegliches Limit (4.0a/4.18.3, Sprint 5).
 FINN_PRO_DAILY_LIMIT = "50"
+# Free: seit 2026-08-18 kein Tageslimit mehr (vorher 5/Tag), sondern
+# insgesamt 3x pro Rechnertyp (dauerhafter Zaehler je Session+Rechner, siehe
+# SessionRateLimiter.checkAndIncrementLifetime).
+FINN_FREE_TRIAL_LIMIT = "3"
+# Kostenloser Exposé-Scan pro Gerät (2026-08-18: 1x -> 3x).
+EXPOSE_FREE_TRIAL_LIMIT = "3"
 FINN_FREE_MAX_TOKENS = "350"
 FINN_PRO_MAX_TOKENS = "700"
 # Pro-Reservierung im globalen Kontingent (4.18.4/S5-5): ab diesem Anteil von
@@ -189,8 +193,9 @@ MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
 # weil hier gar kein Wert mehr definiert ist.
 WEBAUTHN_RP_NAME = "ImmoFuchs (Dev)"
 OBJECTS_SOFT_CAP = "500"
-FINN_FREE_DAILY_LIMIT = "5"
 FINN_PRO_DAILY_LIMIT = "50"
+FINN_FREE_TRIAL_LIMIT = "3"
+EXPOSE_FREE_TRIAL_LIMIT = "3"
 FINN_FREE_MAX_TOKENS = "350"
 FINN_PRO_MAX_TOKENS = "700"
 FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
@@ -253,8 +258,9 @@ WEBAUTHN_RP_ID = "qa.immofuchs.info"
 WEBAUTHN_RP_NAME = "ImmoFuchs (QA)"
 WEBAUTHN_ORIGIN = "https://qa.immofuchs.info"
 OBJECTS_SOFT_CAP = "500"
-FINN_FREE_DAILY_LIMIT = "5"
 FINN_PRO_DAILY_LIMIT = "50"
+FINN_FREE_TRIAL_LIMIT = "3"
+EXPOSE_FREE_TRIAL_LIMIT = "3"
 FINN_FREE_MAX_TOKENS = "350"
 FINN_PRO_MAX_TOKENS = "700"
 FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"

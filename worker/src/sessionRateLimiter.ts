@@ -57,4 +57,33 @@ export class SessionRateLimiter extends DurableObject<Env> {
     await this.ctx.storage.put("window", state);
     return { allowed: true, remaining: limit - state.count };
   }
+
+  // Dauerhafter, NIE zuruecksetzender Zaehler (Nutzer-Vorgabe 2026-08-18:
+  // Finn-Free-Kontingent von "5/Tag" auf "3x insgesamt je Rechner" umgestellt -
+  // der Aufrufer nutzt dafuer eine eigene DO-Instanz pro sessionId+rechner,
+  // sodass ein und derselbe Zaehler automatisch nur diese Kombination
+  // betrifft. Eigener Storage-Key ("lifetime"), damit dieselbe DO-Instanz
+  // nicht mit "state" (taeglich) oder "window" (rollierend) kollidiert, falls
+  // ein Name je fuer mehrere Zwecke genutzt wuerde.
+  async checkAndIncrementLifetime(limit: number): Promise<{ allowed: boolean; remaining: number }> {
+    const stored = await this.ctx.storage.get<{ count: number }>("lifetime");
+    const state = stored ?? { count: 0 };
+
+    if (state.count >= limit) {
+      return { allowed: false, remaining: 0 };
+    }
+
+    state.count += 1;
+    await this.ctx.storage.put("lifetime", state);
+    return { allowed: true, remaining: limit - state.count };
+  }
+
+  // Gegenstueck zu decrement() (taeglich) fuer den dauerhaften Zaehler -
+  // gebraucht, wenn ein bereits gezaehlter Request danach doch scheitert.
+  async decrementLifetime(): Promise<void> {
+    const stored = await this.ctx.storage.get<{ count: number }>("lifetime");
+    if (!stored) return;
+    stored.count = Math.max(0, stored.count - 1);
+    await this.ctx.storage.put("lifetime", stored);
+  }
 }

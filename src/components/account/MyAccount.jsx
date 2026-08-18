@@ -448,7 +448,12 @@ function NavItem({ label, Icon, active, groupStart, onClick }) {
         // Menue, beide kommen aus accountSections.js.
         marginTop: groupStart ? 10 : 0,
         paddingTop: groupStart ? 16 : 10,
-        borderTop: groupStart ? "1px solid var(--cb)" : undefined,
+        // Explizit "none" statt undefined (Bugreport 2026-08-18): ein
+        // undefined-Wert wird von React beim Setzen der Inline-Styles
+        // uebersprungen statt border-top zurueckzusetzen - der Browser-
+        // Standardrahmen des <button> blieb dadurch auf allen Items ausser
+        // dem groupStart-Eintrag sichtbar ("Zwischenstriche").
+        borderTop: groupStart ? "1px solid var(--cb)" : "none",
         borderTopLeftRadius: groupStart ? 0 : 10,
         borderTopRightRadius: groupStart ? 0 : 10,
       }}

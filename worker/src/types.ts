@@ -243,11 +243,16 @@ export interface Env {
 
   // Feature-Gating (4.0a, 4.18, 4.9)
   OBJECTS_SOFT_CAP?: string;
-  FINN_FREE_DAILY_LIMIT?: string;
   FINN_PRO_DAILY_LIMIT?: string;
+  // Free-Kontingent seit 2026-08-18 kein Tageslimit mehr, sondern insgesamt
+  // N Anfragen je Rechnertyp (dauerhaft, siehe SessionRateLimiter).
+  FINN_FREE_TRIAL_LIMIT?: string;
   FINN_FREE_MAX_TOKENS?: string;
   FINN_PRO_MAX_TOKENS?: string;
   FINN_FREE_GLOBAL_CUTOFF_RATIO?: string;
+  // Kostenloser Exposé-Scan pro Gerät (2026-08-18: 1x -> Nx, siehe
+  // getExposeTrialCount in db.ts).
+  EXPOSE_FREE_TRIAL_LIMIT?: string;
 
   // ═══ Native Push (Phase D, S7-1) — zweiter Notification-Kanal neben E-Mail ═══
   // Ohne diese Werte bleibt Push ein No-Op (kein Crash) - siehe push.ts.

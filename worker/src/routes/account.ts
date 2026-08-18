@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
 import { isProUncached } from "../entitlement";
+import { RECHNER_VALUES } from "../validator";
 import {
   listLinkedProviders,
   getActiveSubscription,
@@ -16,7 +17,8 @@ import {
   deleteOtherSessionsForUser,
   setUserPasswordHash,
   setMarketingEmailsEnabled,
-  markCalculatorTrialUsedForUser,
+  getCalculatorTrialUsage,
+  incrementCalculatorTrialUsage,
 } from "../db";
 import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/password";
 import { sendEmail } from "../email";
@@ -27,10 +29,11 @@ import { buildClearSessionCookie, extractSessionId, logout } from "../auth/sessi
 export const accountRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
 
 accountRoutes.get("/me", requireAuth, async (c) => {
-  const [isPro, providers, sub] = await Promise.all([
+  const [isPro, providers, sub, calculatorTrialUsage] = await Promise.all([
     isProUncached(c.env, c.var.userId),
     listLinkedProviders(c.env.DB, c.var.userId),
     getActiveSubscription(c.env.DB, c.var.userId),
+    getCalculatorTrialUsage(c.env.DB, c.var.userId),
   ]);
   return c.json({
     id: c.var.user.id,
@@ -39,7 +42,10 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     role: c.var.user.role,
     emailVerified: Boolean(c.var.user.email_verified_at),
     hasUsedTrial: Boolean(c.var.user.trial_used_at),
-    calculatorTrialUsed: Boolean(c.var.user.calculator_trial_used_at),
+    // Seit Migration 0022 pro Rechner statt eines einzelnen kombinierten
+    // Flags (Nutzer-Vorgabe 2026-08-18) - Map rechner -> bereits verbrauchte
+    // Gratis-Versuche, das Frontend vergleicht das selbst gegen sein Limit.
+    calculatorTrialUsage,
     marketingEmailsEnabled: Boolean(c.var.user.marketing_emails_enabled),
     linkedProviders: providers,
     isPro,
@@ -55,17 +61,23 @@ accountRoutes.get("/me", requireAuth, async (c) => {
   });
 });
 
-// Neuer Login-/Test-Flow (Stufe A, Nutzer-Konzept 2026-08-11): wird vom
-// Frontend genau einmal aufgerufen, sobald irgendein Rechner zum ersten Mal
-// ein gueltiges Ergebnis anzeigt (debounced, siehe Stufe B) - verbraucht den
-// kombinierten Ersttest ueber alle 6 Rechner hinweg. Idempotent: weitere
-// Aufrufe (z.B. bei jedem Rechner-Wechsel) aendern nichts mehr, siehe
-// markCalculatorTrialUsedForUser. Absichtlich ohne Pro-Check hier - ob der
-// Status ueberhaupt etwas sperrt, entscheidet ausschliesslich die Gate-Logik
-// im Frontend/an anderer Stelle (isPro gewinnt immer).
+// Login-/Test-Flow (Stufe A, Nutzer-Konzept 2026-08-11; seit 2026-08-18 pro
+// Rechner statt kombiniert, Migration 0022): wird vom Frontend genau einmal
+// pro Rechner-Ansicht aufgerufen, sobald der jeweilige Rechner zum ersten
+// Mal ein gueltiges Ergebnis anzeigt (debounced, siehe useCalculatorTrial.js
+// Stufe B) - erhoeht den Zaehler fuer GENAU diesen Rechner. Absichtlich ohne
+// Pro-Check und ohne Limit-Pruefung hier - ob der Status ueberhaupt etwas
+// sperrt, entscheidet ausschliesslich die Gate-Logik im Frontend (isPro
+// gewinnt immer); der Debounce dort verhindert, dass ein einzelner Testlauf
+// den Zaehler mehrfach erhoeht.
 accountRoutes.post("/calculator-trial/consume", requireAuth, requireCsrfOrigin, async (c) => {
-  await markCalculatorTrialUsedForUser(c.env.DB, c.var.userId);
-  return c.json({ calculatorTrialUsed: true });
+  const body = await c.req.json().catch(() => null);
+  const rechner = typeof body?.rechner === "string" ? body.rechner : "";
+  if (!(RECHNER_VALUES as ReadonlySet<string>).has(rechner)) {
+    return c.json({ error: "invalid_rechner" }, 400);
+  }
+  await incrementCalculatorTrialUsage(c.env.DB, c.var.userId, rechner);
+  return c.json({ ok: true });
 });
 
 accountRoutes.get("/account/devices", requireAuth, async (c) => {

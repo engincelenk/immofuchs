@@ -164,34 +164,12 @@ export function PaymentStep({
     <div style={{ position: "relative" }}>
       <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 14 }}>{t.paymentMethodTitle}</div>
 
-      {account?.me?.email && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
-            background: "#E3F1E6",
-            border: "1px solid #2F9E52",
-            borderRadius: 8,
-            padding: "8px 12px",
-            fontSize: 12,
-            color: "#1E6B34",
-            marginBottom: 14,
-          }}
-        >
-          <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
-            ✓ {t.loggedInAs} <strong>{account.me.email}</strong>
-          </span>
-          <button
-            onClick={account.logout}
-            style={{ background: "none", border: "none", padding: 0, fontSize: 11.5, color: "#1E6B34", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
-          >
-            {t.logout}
-          </button>
-        </div>
-      )}
-
+      {/* Kein "✓ Angemeldet als ..."-Banner mehr hier (Nutzer-Korrektur
+          2026-08-18): dieser Schritt ist nur eingeloggt erreichbar, der
+          Hinweis bestaetigte also immer nur einen bereits offensichtlichen
+          Zustand. Der Login-Schritt selbst wird fuer bereits eingeloggte
+          Nutzer schon an anderer Stelle uebersprungen (CheckoutWizard.jsx,
+          Auto-Advance-Effekt). */}
       {error === "email_not_verified" ? (
         <div style={errorBannerStyle}>
           {t.loginErrorEmailNotVerified}
