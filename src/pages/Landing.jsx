@@ -77,15 +77,37 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
     setTabExt: (id) => onStart(id),
   };
 
+  // Bugfix 2026-08-18 ("Links im Menü funktionieren nicht"): aus der
+  // Seiten-Navigation in der Schublade (Sheet variant="left") heraus
+  // aufgerufen, scrollte diese Funktion sofort - aber useScrollLock haelt
+  // <body> waehrend der Schublade offen ist auf position:fixed, ein Scroll
+  // schlaegt in diesem Zustand ins Leere. Schliesst die Schublade danach UND
+  // stellt beim Entsperren die scrollY-Position von VOR dem Oeffnen wieder
+  // her (siehe Sheet.jsx/useScrollLock.js) - das hat den Scroll-Versuch also
+  // zusaetzlich rueckgaengig gemacht, sobald die Schliess-Animation fertig
+  // war. Kommt der Aufruf aus einer offenen Schublade, deshalb erst
+  // schliessen und NACH der Ausstiegs-Animation scrollen. 300ms erwiesen
+  // sich per Live-Messung (window.scrollTo-Aufrufe mit Zeitstempel
+  // protokolliert) als zu knapp: Sheet.jsx schliesst nach MOTION_MS.left=
+  // 260ms, der Entsperren-Restore feuerte dabei ~1ms NACH diesem Scroll und
+  // hat ihn wieder auf 0 zurueckgesetzt - 500ms lassen sicheren Abstand.
+  // Direkt von der Kopfzeile aus (keine Schublade offen) bleibt es beim
+  // sofortigen Scroll, damit Desktop-Klicks nicht unnoetig verzoegert werden.
   const scrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 80;
-      window.scrollTo({ top: y, behavior: "smooth" });
-      // Beide Menues schliessen: aufgerufen wird das sowohl aus der
-      // Seiten-Navigation in der Schublade als auch aus den Links im Kopf.
-      setMenuOpen(false);
-      setNavOpen(false);
+    const wasInSheet = menuOpen || navOpen;
+    setMenuOpen(false);
+    setNavOpen(false);
+    const doScroll = () => {
+      const el = document.getElementById(id);
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+    };
+    if (wasInSheet) {
+      setTimeout(doScroll, 500);
+    } else {
+      doScroll();
     }
   };
 
@@ -275,6 +297,10 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               open={navOpen}
               isLoggedIn={Boolean(account?.isLoggedIn)}
               onClose={() => setNavOpen(false)}
+              onLogoClick={() => {
+                setNavOpen(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
               navItems={[
                 { key: "rechner", label: l.navRechner, onSelect: () => scrollTo("rechner") },
                 { key: "preise", label: l.navPreise, onSelect: () => scrollTo("preise") },

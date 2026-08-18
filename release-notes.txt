@@ -1,3 +1,33 @@
+## 2026-08-18 (1.18.0)
+
+### Menü-Links-Bugfix, Logo-Verlinkung, Paywall-Textkorrektur
+
+**Bugfix: Links im mobilen Seiten-Menü scrollten nicht zur Zielsektion.**
+Ursache: Die Schublade schliesst sich per Scroll-Sperre (`position:fixed`
+auf `<body>`), die beim Entsperren die scrollY-Position von VOR dem Öffnen
+wiederherstellt (siehe `useScrollLock.js`) - der sofortige `scrollTo()`-Aufruf
+beim Klick lief entweder ins Leere (Body noch fixiert) oder wurde von diesem
+Restore direkt wieder rückgängig gemacht. Per Zeitstempel-Messung bestätigt
+und behoben: der Scroll zur Zielsektion wartet jetzt, bis die
+Schließ-Animation der Schublade (260ms) plus Puffer vorbei ist.
+
+**Chevron ">" in der Seiten-Navigation entfernt** - die Einträge sind reine
+Scroll-Anker ohne Unterkategorie, der Pfeil suggerierte fälschlich mehr Tiefe.
+
+**Logo+Schriftzug verlinken jetzt überall zur Landingpage** - vorher nicht
+klickbar im mobilen Seiten-Menü und im Kopf von "Mein Konto".
+
+**Textkorrektur:** Die Paywall-Meldung nach Verbrauch des Gratis-Kontingents
+sprach noch von "deiner EINEN Gratis-Berechnung" (Rest aus dem alten,
+kombinierten 1x-Modell) - jetzt korrekt "3 Gratis-Berechnungen für diesen
+Rechner" (alle 5 Sprachen).
+
+**Hinweis zur gemeldeten "Sperre klappt nur bei Rendite"-Beobachtung:** live
+gegen dev.immofuchs.info nachgetestet (Rendite, Kredit, §6-Trick,
+Vorfälligkeit je auf 3/3 gesetzt, Miete auf 0/3) - alle sperren bzw. zeigen
+den Testlauf-Hinweis korrekt und rechnerspezifisch. Vermutlich ein alter,
+zwischengespeicherter Service-Worker-Bundle-Stand vor dem letzten Deploy.
+
 ## 2026-08-18 (1.17.0)
 
 ### Free-Limits auf "pro Rechner" umgestellt, Checkout-/Konto-Fixes, Bugfix Testuser-Löschung

@@ -6,6 +6,7 @@ import { ACCOUNT_T } from "../../i18n/account.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { useScrollLock } from "../../hooks/useScrollLock.js";
+import { goToLandingPage } from "../../utils/helpers.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
 import { IconArrowLeft, IconChevronRight, IconHome } from "./accountIcons.jsx";
@@ -183,10 +184,29 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
         <div className="ma-hdr-bar">
         <div className="ma-hdr">
           <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
-            <div className="ma-brand" style={{ minWidth: 0, display: "flex", alignItems: "center" }}>
+            {/* Logo+Schriftzug fuehren zur Landingpage (Nutzer-Vorgabe
+                2026-08-18) - ueber goToLandingPage() statt onClose(), weil
+                dieser Bereich sowohl von der Landingpage als auch aus dem
+                eingeloggten Rechner-Bereich (ProHeaderButton.jsx) geoeffnet
+                wird und "onClose" je nach Herkunft etwas anderes bedeutet. */}
+            <button
+              onClick={goToLandingPage}
+              aria-label="immofuchs.info"
+              className="ma-brand"
+              style={{
+                minWidth: 0,
+                display: "flex",
+                alignItems: "center",
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
               <img
                 src="/icon-192.png"
-                alt="Immofuchs"
+                alt=""
                 className="ma-logo"
                 style={{ objectFit: "contain", flexShrink: 0 }}
               />
@@ -197,7 +217,7 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
                 immo<span style={{ color: "var(--ca)" }}>fuchs</span>
                 <span style={{ fontWeight: 700 }}>.info</span>
               </span>
-            </div>
+            </button>
             {/* Nutzer-Vorgabe 2026-08-13: "Zurueck" ist eine globale
                 Verlassen-Aktion (zurueck in die App), kein Bereich der
                 Sidebar - deshalb hier neben dem Logo statt im rechten

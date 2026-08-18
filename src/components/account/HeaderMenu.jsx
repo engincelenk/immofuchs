@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Sheet } from "../ui/Sheet.jsx";
-import { IconChevronRight, IconClose } from "./accountIcons.jsx";
+import { IconClose } from "./accountIcons.jsx";
 
 // Seiten-Navigation der Landingpage als Schublade von links (Vorbild:
 // Referenz-Screenshot des Burger-Menues).
@@ -25,6 +25,7 @@ export function HeaderMenu({
   langSelector, // Sprachwahl - nur fuer nicht angemeldete Besucher (sonst in "Einstellungen")
   isLoggedIn,
   onLogin,
+  onLogoClick, // Nutzer-Vorgabe 2026-08-18: Logo+Schriftzug fuehrt wie ueberall in der App zur Landingpage
 }) {
   return (
     <Sheet open={open} onClose={onClose} variant="left" label={t.siteNavAria} size="min(320px, 86vw)">
@@ -52,7 +53,21 @@ export function HeaderMenu({
             borderBottom: "1px solid var(--cb)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <button
+            onClick={onLogoClick}
+            aria-label="immofuchs.info"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              minWidth: 0,
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
             <img
               src="/icon-192.png"
               alt=""
@@ -66,7 +81,7 @@ export function HeaderMenu({
               immo<span style={{ color: "var(--ca)" }}>fuchs</span>
               <span style={{ fontWeight: 700 }}>.info</span>
             </span>
-          </div>
+          </button>
           <button
             onClick={onClose}
             aria-label={t.close}
@@ -146,19 +161,11 @@ function NavRow({ label, onClick }) {
         transition: "background .1s",
       }}
     >
+      {/* Kein Chevron mehr (Nutzer-Korrektur 2026-08-18): die Zeilen hier
+          sind reine Scroll-Anker ohne Unterkategorie - der Pfeil suggerierte
+          faelschlich, dass sich noch etwas oeffnet. Nur echte Untermenues
+          sollten hier kuenftig einen Chevron bekommen. */}
       <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600 }}>{label}</span>
-      <span
-        aria-hidden="true"
-        style={{
-          display: "flex",
-          color: "var(--ch)",
-          flexShrink: 0,
-          transform: pressed ? "translateX(2px)" : "translateX(0)",
-          transition: "transform .1s",
-        }}
-      >
-        <IconChevronRight size={17} />
-      </span>
     </button>
   );
 }
