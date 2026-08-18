@@ -1,3 +1,22 @@
+## 2026-08-18 (1.20.6)
+
+### Fix: CSP blockierte Paddle-Sourcemap-Abruf in der Konsole
+
+`connect-src` um `https://cdn.paddle.com` ergänzt - Paddle.js versucht beim
+Laden seine eigene Sourcemap (`paddle.js.map`) nachzuladen, was die CSP
+bisher blockierte (Konsolenfehler, aber rein kosmetisch - blockierte keine
+Funktion). Rein additiv, betrifft nur die Konsolenausgabe.
+
+### Untersucht (kein Bug): 0-€-Rechnung ohne PDF während der Testphase
+
+Live gegen die echte Paddle-API verifiziert: Die erste Transaktion eines
+neuen Abos ist während der 7-Tage-Testphase eine 0-€-Autorisierung
+(`status: completed, amount: "0"`). Der PDF-Abruf dafür liefert einen
+echten `404` direkt von Paddle - Paddle stellt für 0-€-Transaktionen kein
+Dokument aus, weil nichts abgerechnet wurde. Kein Code-Fehler; die erste
+echte, PDF-fähige Rechnung entsteht erst mit der ersten tatsächlichen
+Abbuchung nach Ende der Testphase.
+
 ## 2026-08-18 (1.20.5)
 
 ### Fix: Landing-Page-Bundle riss bei manchen Verbindungen mitten in der Auslieferung ab
