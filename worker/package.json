@@ -10,9 +10,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "db:migrate:dev": "wrangler d1 migrations apply immofuchs-dev --env dev",
-    "db:migrate:qa": "wrangler d1 migrations apply immofuchs-qa --env qa",
-    "db:migrate:prod": "wrangler d1 migrations apply immofuchs-prod"
+    "db:migrate:dev": "wrangler d1 migrations apply immofuchs-dev --env dev --remote",
+    "db:migrate:qa": "wrangler d1 migrations apply immofuchs-qa --env qa --remote",
+    "db:migrate:prod": "wrangler d1 migrations apply immofuchs-prod --remote",
+    "db:migrate:dev:local": "wrangler d1 migrations apply immofuchs-dev --env dev",
+    "db:migrate:qa:local": "wrangler d1 migrations apply immofuchs-qa --env qa",
+    "db:migrate:prod:local": "wrangler d1 migrations apply immofuchs-prod"
   },
   "dependencies": {
     "hono": "^4.6.0",

@@ -1,3 +1,24 @@
+## 2026-08-18 (1.20.1)
+
+### QA: Testuser-Mails auf dev umleitbar + Webhook-Geschäftslogik jetzt automatisiert getestet
+
+**Feature: E-Mail-Umleitung für Testkonten (nur dev)**
+`is_test_user`-Konten (z. B. test.free@immofuchs.info) behalten ihre echten
+Adressen für Login/Entitlement, aber ausgehende Transaktionsmails
+(Zahlung erfolgreich, Kündigung bestätigt, etc.) landen bei gesetztem
+`TEST_EMAIL_REDIRECT_TO` (nur `env.dev.vars`) an dieser Adresse statt am
+nicht existierenden Test-Postfach, mit `[TEST <ursprüngliche Adresse>]`-
+Präfix im Betreff. qa/prod unverändert (Variable dort nicht gesetzt).
+
+**Tests: Paddle-Webhook-Geschäftslogik erstmals automatisiert abgedeckt**
+`worker/src/paddle/webhook.test.ts` deckte bisher nur Signaturprüfung und
+Idempotenz-Primitiven ab. Neu: 11 Tests gegen echte Event-Payloads
+(subscription.created/updated/canceled, transaction.completed) prüfen
+Status-/Plan-Mapping, dass Zahlungs-/Dunning-Mails nur beim tatsächlichen
+Statuswechsel ausgelöst werden (nicht bei jeder erneuten Zustellung), sowie
+Edge Cases (fehlende user_id, unbekannte Preis-ID, unbekannter Event-Typ,
+doppelt zugestelltes Event). 88/88 Worker-Tests grün, Typecheck sauber.
+
 ## 2026-08-18 (1.20.0)
 
 ### Admin-angelegte Konten bekommen jetzt eine Passwort-Einladung statt eines stillen Magic-Link-Logins

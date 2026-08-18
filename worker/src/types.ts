@@ -240,6 +240,13 @@ export interface Env {
   // siehe paddle/transactions.ts, wo auch steht, warum das ueberschreibbar
   // sein muss (Paddle dokumentiert den Deep-Link-Pfad nicht).
   PADDLE_DASHBOARD_BASE_URL?: string;
+  // QA-Hilfsmittel (2026-08-18): Mails an is_test_user-Konten (siehe
+  // db.ts, setUserFlags) landen bei gesetztem Wert hier statt an die
+  // Test-Adresse - so lassen sich echte Test-E-Mail-Adressen (test.free@...)
+  // fuer Login/Entitlement verwenden, ohne dass echte Mails an nicht
+  // existierende Postfaecher gehen. Nur in [env.dev.vars] gesetzt, siehe
+  // notifications.ts.
+  TEST_EMAIL_REDIRECT_TO?: string;
 
   // Feature-Gating (4.0a, 4.18, 4.9)
   OBJECTS_SOFT_CAP?: string;
