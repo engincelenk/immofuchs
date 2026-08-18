@@ -35,6 +35,22 @@ $env:E2E_SESSION_JAEHRLICH = "..."
 npm run test:e2e
 ```
 
+## Testkonto zurücksetzen (echter Sandbox-Kauf)
+
+Nach einem echten Checkout-Durchlauf über die UI (Testkarte 4242...) hat ein
+Testuser ein echtes Paddle-Abo, keinen synthetischen Zustand mehr. Um denselben
+Account wiederholt von "kein Abo" aus testen zu können, ohne jedes Mal einen
+neuen Nutzer anzulegen:
+
+```powershell
+powershell -File worker\e2e\reset-test-free.ps1
+```
+
+Kündigt das Abo sofort (nicht erst zum Periodenende) und setzt `trial_used_at`
+zurück (voller 7-Tage-Trial beim nächsten Checkout wieder verfügbar). Nutzt
+`POST /billing/test-reset`, das serverseitig nur für `is_test_user=1`-Konten
+funktioniert (403 bei jedem echten Kundenkonto).
+
 ## Was hier bewusst NICHT automatisiert ist
 
 - **Checkout-Abschluss über Paddles gehostetes Overlay** (Kartendaten
