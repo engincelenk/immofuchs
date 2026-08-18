@@ -193,6 +193,12 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
               onClick={goToLandingPage}
               aria-label="immofuchs.info"
               className="ma-brand"
+              // tabIndex -1 (Bugfix 2026-08-18, gleiche Ursache wie im
+              // mobilen Seiten-Menue): useFocusTrap fokussiert automatisch
+              // das erste fokussierbare Element, sonst zeigt dieser Button
+              // beim Oeffnen einen unschoenen blauen Fokusring. Per Maus/
+              // Touch bleibt er normal klickbar.
+              tabIndex={-1}
               style={{
                 minWidth: 0,
                 display: "flex",

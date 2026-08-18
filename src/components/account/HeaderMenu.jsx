@@ -56,6 +56,13 @@ export function HeaderMenu({
           <button
             onClick={onLogoClick}
             aria-label="immofuchs.info"
+            // tabIndex -1 (Bugfix 2026-08-18, sichtbarer blauer Fokusring
+            // beim Oeffnen): useFocusTrap fokussiert automatisch das erste
+            // fokussierbare Element im Sheet - vor diesem Button war das der
+            // "Schliessen"-Knopf, jetzt sonst dieser Logo-Button. Per Maus/
+            // Touch bleibt er ganz normal klickbar, nur aus dem
+            // Tab-Fokus-Zyklus und damit dem Auto-Fokus ausgenommen.
+            tabIndex={-1}
             style={{
               display: "flex",
               alignItems: "center",

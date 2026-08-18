@@ -78,6 +78,22 @@ export function AccountMenu({
 // Avatar-Knopf, der das Menue oeffnet (Entwurf: Kreis + Name + Chevron).
 // Auf dem Handy nur der Kreis - Name und E-Mail stehen dort im Kopf des
 // Sheets, und der Kopfbereich ist bei 375px schon ohne Namen gut gefuellt.
+// Initialen aus Name (oder ersatzweise E-Mail) fuer den Avatar - nur auf
+// Mobile genutzt (Nutzer-Vorgabe 2026-08-18). Auf dem Desktop bleibt es beim
+// Personen-Symbol: der Grund von 2026-08-12 gilt dort weiterhin, zwei
+// Grossbuchstaben neben der Sprachauswahl lasen sich wie ein Sprachcode
+// ("EN" wie die englische Sprachfassung) - auf Mobile steht die
+// Sprachauswahl nicht direkt daneben, das Risiko besteht dort also nicht.
+function initialsFor(me) {
+  const name = (me?.name || "").trim();
+  if (name) {
+    const parts = name.split(/\s+/).filter(Boolean);
+    const initials = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0][0];
+    return initials.toUpperCase();
+  }
+  return (me?.email || "").trim().charAt(0).toUpperCase();
+}
+
 export function AccountAvatarButton({ t, me, open, onToggle, innerRef, showChip = false }) {
   const isDesktop = useIsDesktop();
   return (
@@ -100,10 +116,12 @@ export function AccountAvatarButton({ t, me, open, onToggle, innerRef, showChip 
         minHeight: 38,
       }}
     >
-      {/* Personen-Symbol statt Initialen (Nutzer-Entwurf 2026-08-12): zwei
+      {/* Desktop: Personen-Symbol (Nutzer-Entwurf 2026-08-12) - zwei
           Grossbuchstaben im Kreis lasen sich im Kopf als Sprachcode - "EN"
           wirkte wie die englische Sprachfassung, zumal die Sprachwahl
-          daneben genau dieses Format nutzt. */}
+          daneben genau dieses Format nutzt. Mobile: Initialen (Nutzer-
+          Vorgabe 2026-08-18) - dort steht die Sprachauswahl nicht direkt
+          daneben, das Verwechslungsrisiko besteht also nicht. */}
       <span
         style={{
           display: "inline-flex",
@@ -115,9 +133,11 @@ export function AccountAvatarButton({ t, me, open, onToggle, innerRef, showChip 
           background: "var(--ca-bg)",
           color: "var(--ca-dk)",
           flexShrink: 0,
+          fontSize: 12.5,
+          fontWeight: 700,
         }}
       >
-        <IconAvatar size={17} />
+        {isDesktop ? <IconAvatar size={17} /> : initialsFor(me)}
       </span>
       {isDesktop && (
         <>

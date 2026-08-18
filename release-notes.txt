@@ -1,3 +1,19 @@
+## 2026-08-18 (1.18.1)
+
+### Fokusring-Bugfix, Avatar-Initialen auf Mobile
+
+**Bugfix: Blauer Fokusring um das Logo** im mobilen Seiten-Menü und in "Mein
+Konto" nach dem letzten Update - useFocusTrap fokussiert automatisch das
+erste fokussierbare Element im Overlay, das war jetzt der neue Logo-Button.
+Per `tabIndex={-1}` aus dem Auto-Fokus genommen, per Maus/Touch weiter ganz
+normal klickbar.
+
+**Avatar zeigt auf Mobile jetzt Initialen statt Personen-Symbol** - die
+frühere Entscheidung fürs Symbol (2026-08-12) galt wegen der Verwechslung
+mit einem Sprachcode ("EN") neben der Sprachauswahl im Kopf; auf Mobile
+steht die Sprachauswahl nicht direkt daneben, das Risiko entfällt dort.
+Desktop bleibt unverändert beim Symbol.
+
 ## 2026-08-18 (1.18.0)
 
 ### Menü-Links-Bugfix, Logo-Verlinkung, Paywall-Textkorrektur
