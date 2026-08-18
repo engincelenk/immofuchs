@@ -88,25 +88,32 @@ export async function revokeScheduledCancellation(
 // stellt sicher, dass HEUTE nichts abgebucht/anteilig verrechnet wird - die
 // Differenz landet erst auf der naechsten reguraeren Rechnung, statt wie zuvor
 // mit "prorated_immediately" sofort separat berechnet zu werden.
-// Einschraenkung (ehrlich benannt, nicht live gegen Paddle-Sandbox verifiziert):
-// ob Paddle bei diesem Modus den Tarif-Wechsel selbst (welcher Preis in
-// `items` steht) ebenfalls erst zur naechsten Periode vollzieht oder nur die
-// BILLING dorthin verschiebt, war aus der Doku allein nicht zweifelsfrei zu
-// klaeren - vor Produktivbetrieb mit einem echten Sandbox-Tarifwechsel
-// gegenpruefen. Der D1-Datensatz wird hier BEWUSST NICHT angefasst: Paddle
-// schickt im Anschluss ein subscription.updated-Webhook, das der bestehende
-// Handler bereits verarbeitet und das plan/current_period_end konsistent
-// nachzieht (gleiche Begruendung wie beim Checkout-Flow).
+// Befund 2026-08-18 (live gegen Sandbox verifiziert, erster echter
+// Tarifwechsel an einem trialing-Abo): Paddle lehnt "prorated_next_billing_period"
+// waehrend der Testphase hart ab - 400 subscription_new_items_not_valid,
+// "when changing the billing cycle of a trialing subscription only
+// do_not_bill option is allowed". Nachvollziehbar: waehrend des Trials wurde
+// noch nichts abgerechnet, "zur naechsten Rechnung verschieben" hat dort
+// keine Grundlage. Deshalb jetzt statusabhaengig - "do_not_bill" waehrend
+// trialing (der neue Plan gilt ab Trial-Ende, ohne heute etwas zu berechnen),
+// sonst weiterhin "prorated_next_billing_period". Der D1-Datensatz wird hier
+// BEWUSST NICHT angefasst: Paddle schickt im Anschluss ein
+// subscription.updated-Webhook, das der bestehende Handler bereits
+// verarbeitet und das plan/current_period_end konsistent nachzieht (gleiche
+// Begruendung wie beim Checkout-Flow).
 export async function changeSubscriptionPlan(
   env: Env,
   paddleSubscriptionId: string,
   plan: Plan,
+  currentStatus: string,
 ): Promise<void> {
+  const prorationBillingMode =
+    currentStatus === "trialing" ? "do_not_bill" : "prorated_next_billing_period";
   const result = await paddleFetch(env, `/subscriptions/${paddleSubscriptionId}`, {
     method: "PATCH",
     body: {
       items: [{ price_id: priceIdFor(env, plan), quantity: 1 }],
-      proration_billing_mode: "prorated_next_billing_period",
+      proration_billing_mode: prorationBillingMode,
     },
   });
   if (!result.ok) {

@@ -140,7 +140,7 @@ billingRoutes.post("/change-plan", requireAuth, requireCsrfOrigin, async (c) => 
   if (sub.plan === plan) return c.json({ error: "already_on_plan" }, 400);
 
   try {
-    await changeSubscriptionPlan(c.env, sub.paddle_subscription_id, plan);
+    await changeSubscriptionPlan(c.env, sub.paddle_subscription_id, plan, sub.status);
     return c.json({ ok: true });
   } catch (err) {
     console.error("billing_change_plan_failed", err instanceof Error ? err.message : "unknown");

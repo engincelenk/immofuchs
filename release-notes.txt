@@ -1,3 +1,15 @@
+## 2026-08-18 (1.20.8)
+
+### Fix: Tarifwechsel während der Testphase schlug fehl (502)
+
+Volltext des zuvor gekürzten Paddle-Fehlers (siehe 1.20.7) live abgerufen:
+"when changing the billing cycle of a trialing subscription only do_not_bill
+option is allowed". `changeSubscriptionPlan()` (worker/src/paddle/checkout.ts)
+nutzt jetzt `proration_billing_mode: "do_not_bill"`, solange die Subscription
+noch `trialing` ist, sonst weiterhin `"prorated_next_billing_period"` wie
+zuvor. Live gegen den ersten echten Tarifwechsel an einem trialing-Abo
+verifiziert.
+
 ## 2026-08-18 (1.20.7)
 
 ### Feature: E-Mail-Markenrahmen für alle ausgehenden Mails
