@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  formatPeriodEndDate,
-  formatPlanLabel,
-  isWithinRefundWindow,
-} from "../../../utils/accountEntitlement.js";
+import { formatPeriodEndDate, formatPlanLabel } from "../../../utils/accountEntitlement.js";
 import { errorBannerStyle, primaryBtnStyle, warnBannerStyle } from "../../checkout/checkoutStyles.js";
 import { CancelFlow } from "../CancelFlow.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
@@ -12,7 +8,6 @@ import {
   blockCardStyle,
   blockHintStyle,
   blockTitleStyle,
-  inlineLinkBtnStyle,
   labelStyle,
   labelValueRowStyle,
   sectionIntroStyle,
@@ -170,20 +165,6 @@ export function AbonnementSection({ t, account, onUpgrade, onBack }) {
               ) : (
                 <button onClick={() => setShowCancel(true)} style={actionBtnStyle}>
                   {t.accountCancel}
-                </button>
-              )}
-              {isWithinRefundWindow(subscription) && (
-                // Bewusst kein gleichgewichtiger Hauptbutton neben Kuendigen/
-                // Reaktivieren (Konzept-Dok 3.4/3.16): "Geld zurueck" als
-                // eigener Button wirkte wie eine automatische Sofort-
-                // erstattung. Ein zurueckhaltender Link vermeidet das
-                // Missverstaendnis, ohne die Funktion zu verstecken.
-                <button
-                  onClick={() => run("refund", account.refundSubscription)}
-                  disabled={busy === "refund"}
-                  style={{ ...inlineLinkBtnStyle, marginTop: 4, alignSelf: "flex-start" }}
-                >
-                  {t.accountRefund}
                 </button>
               )}
             </div>

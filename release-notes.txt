@@ -1,3 +1,37 @@
+## 2026-08-18 (1.20.7)
+
+### Feature: E-Mail-Markenrahmen für alle ausgehenden Mails
+
+`worker/src/email.ts` — `sendEmail()` umschließt jetzt jede ausgehende Mail
+(Magic-Link, Passwort-Reset, E-Mail-Änderung, alle Benachrichtigungen aus
+notifications.ts) mit einem gemeinsamen HTML-Rahmen: „immofuchs"-Wortmarke
+(Fuchs-Orange), Karten-Optik, Fußzeile mit Link zu immofuchs.info - konsistent
+mit den bestehenden App-Design-Tokens. Ein einziger Wrap-Punkt statt Änderung
+an allen 9 Versandstellen.
+
+### Fix: 502-Fehler beim Tarifwechsel - Diagnose vorbereitet
+
+`worker/src/paddle/checkout.ts`/`discounts.ts` - Paddle-Fehlertexte im Log
+waren auf 300 Zeichen gekürzt, das verdeckte die eigentliche Ursache
+(`subscription_new_items_not_valid` bei `proration_billing_mode`). Limit auf
+1000 Zeichen erhöht, um die volle Meldung beim nächsten Versuch zu sehen -
+die eigentliche Ursache wird im nächsten Schritt behoben.
+
+### Entfernt: "Erstattung anfragen"-Button im Konto-Bereich
+
+`src/components/account/sections/AbonnementSection.jsx` - Selbstständige
+Rückerstattung ist als Kundenaktion nicht mehr gewünscht. Die Backend-Route
+(`POST /billing/refund`) bleibt bestehen, nur der UI-Einstieg ist weg.
+
+### QA: Testkonto-Reset-Route
+
+`POST /billing/test-reset` (nur `worker/src/routes/billing.ts`) - kündigt das
+Paddle-Abo eines `is_test_user`-Kontos sofort und setzt Subscription +
+`trial_used_at` in D1 zurück, damit sich derselbe Testaccount (z. B.
+test.free@immofuchs.info) beliebig oft von "kein Abo" aus neu durchspielen
+lässt. Lehnt bei echten Kundenkonten sofort mit 403 ab, unabhängig vom
+sonstigen Zustand.
+
 ## 2026-08-18 (1.20.6)
 
 ### Fix: CSP blockierte Paddle-Sourcemap-Abruf in der Konsole

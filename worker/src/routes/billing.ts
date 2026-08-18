@@ -6,7 +6,7 @@ import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
 import { createCheckoutTransaction, cancelAtPeriodEnd, cancelImmediately, revokeScheduledCancellation, refundLatestTransaction, createPortalSession, changeSubscriptionPlan, listTransactions, getInvoicePdfUrl } from "../paddle/checkout";
 import { findUsableDiscountByCode } from "../paddle/discounts";
 import { handlePaddleWebhook, verifyPaddleSignature } from "../paddle/webhook";
-import { getActiveSubscription, getLatestSubscriptionForUser } from "../db";
+import { getActiveSubscription, getLatestSubscriptionForUser, resetTestUserSubscription, ADMIN_TEST_SUBSCRIPTION_PREFIX } from "../db";
 import { dispatchNotification } from "../notifications";
 
 export const billingRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
@@ -208,4 +208,27 @@ billingRoutes.post("/refund", requireAuth, requireCsrfOrigin, async (c) => {
     console.error("billing_refund_failed", err instanceof Error ? err.message : "unknown");
     return c.json({ error: "refund_failed" }, 502);
   }
+});
+
+// QA: Testkonto-Reset (2026-08-18) - NUR fuer is_test_user-Konten, damit sich
+// derselbe Testaccount beliebig oft von "kein Abo" aus neu durchspielen laesst
+// (Checkout -> Trial -> Kuendigen -> Reset -> von vorne), ohne bei jedem
+// Durchlauf einen neuen Nutzer anzulegen. Lehnt bei echten Kundenkonten sofort
+// ab (403), unabhaengig vom sonstigen Abo-Zustand - siehe requireAuth/is_test_user
+// oben. Synthetische Admin-Test-Abos (admin-test:-Praefix) werden nicht an
+// Paddle gemeldet, dieselbe Absicherung wie in accountDeletion.ts (Bugreport
+// 2026-08-18: 502 beim Loeschen eines Testusers mit Fake-Abo).
+billingRoutes.post("/test-reset", requireAuth, requireCsrfOrigin, async (c) => {
+  if (!c.var.user.is_test_user) return c.json({ error: "not_a_test_user" }, 403);
+  const sub = await getLatestSubscriptionForUser(c.env.DB, c.var.userId);
+  if (sub && !sub.paddle_subscription_id.startsWith(ADMIN_TEST_SUBSCRIPTION_PREFIX)) {
+    try {
+      await cancelImmediately(c.env, sub.paddle_subscription_id);
+    } catch (err) {
+      console.error("billing_test_reset_failed", err instanceof Error ? err.message : "unknown");
+      return c.json({ error: "test_reset_failed" }, 502);
+    }
+  }
+  await resetTestUserSubscription(c.env.DB, c.var.userId);
+  return c.json({ ok: true });
 });

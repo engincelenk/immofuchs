@@ -1410,6 +1410,21 @@ export async function listAuditLogAdmins(db: Env["DB"]): Promise<string[]> {
   return rows.results.map((r) => r.admin_email);
 }
 
+// ═══ QA: Testkonto-Reset (2026-08-18) ═══
+// Ausschliesslich fuer is_test_user-Konten (Aufrufer in routes/billing.ts
+// prueft das VOR jedem Aufruf) - loescht die Subscription-Zeile(n) und setzt
+// trial_used_at zurueck, damit sich derselbe Testaccount beliebig oft von
+// "kein Abo" aus neu durchspielen laesst (Checkout -> Trial -> Kuendigen ->
+// Reset -> von vorne), ohne bei jedem Durchlauf einen neuen Nutzer anzulegen.
+// Die Paddle-seitige Kuendigung passiert VOR diesem Aufruf beim aufrufenden
+// Endpunkt (analog zu deleteUserCompletely) - reine D1-Aufraeumfunktion.
+export async function resetTestUserSubscription(db: Env["DB"], userId: string): Promise<void> {
+  await db.batch([
+    db.prepare("DELETE FROM subscriptions WHERE user_id = ?").bind(userId),
+    db.prepare("UPDATE users SET trial_used_at = NULL WHERE id = ?").bind(userId),
+  ]);
+}
+
 // ═══ Art. 17 — Konto vollständig löschen ═══
 // Reihenfolge wichtig: erst abhängige Zeilen, dann users selbst (D1/SQLite
 // erzwingt hier keine FK-Kaskade). Paddle-Kündigung passiert VOR diesem

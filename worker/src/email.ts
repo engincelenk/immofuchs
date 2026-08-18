@@ -25,6 +25,32 @@ function parseFrom(raw: string): { email: string; name?: string } {
   return { email: raw.trim() };
 }
 
+// Markenrahmen um jede ausgehende Mail (2026-08-18, Nutzer-Feedback: Mails
+// wirkten wie unformatierter Text) - hier statt in notifications.ts, weil
+// auch magicLink.ts/passwordAuth.ts/routes/account.ts sendEmail() direkt
+// aufrufen, ohne ueber dispatchNotification zu laufen; ein einziger Wrap-
+// Punkt deckt so wirklich jede Mail ab. div- statt table-basiert, damit
+// htmlToText() (s.u.) weiterhin sinnvolle Zeilenumbrueche erzeugt. Farben/
+// Radius aus den bestehenden App-Design-Tokens (CLAUDE.md), hier als
+// Literale statt CSS-Variablen, weil E-Mail-Clients externe/vererbte CSS-
+// Custom-Properties nicht zuverlaessig unterstuetzen - inline-Styles sind
+// der einzige robuste Weg.
+function wrapEmailHtml(bodyHtml: string): string {
+  return `<div style="background-color:#F5F5F0;padding:32px 16px;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+  <div style="max-width:480px;margin:0 auto;background-color:#FFFFFF;border:1px solid #E5E5DC;border-radius:12px;">
+    <div style="padding:22px 28px;border-bottom:1px solid #E5E5DC;">
+      <span style="font-size:19px;font-weight:700;color:#1A1A1A;">immo<span style="color:#E8600A;">fuchs</span></span>
+    </div>
+    <div style="padding:28px;color:#1A1A1A;font-size:14px;line-height:1.65;">
+      ${bodyHtml}
+    </div>
+    <div style="padding:16px 28px;border-top:1px solid #E5E5DC;color:#8A8A80;font-size:11px;">
+      ImmoFuchs · Diese E-Mail wurde automatisch versendet · <a href="https://immofuchs.info" style="color:#8A8A80;">immofuchs.info</a>
+    </div>
+  </div>
+</div>`;
+}
+
 // Reine Text-Variante aus dem HTML (Skill-Hinweis: immer beide Formate senden -
 // manche Clients zeigen nur Text, und es verbessert die Spam-Bewertung).
 function htmlToText(html: string): string {
@@ -44,6 +70,7 @@ export async function sendEmail(
   html: string,
 ): Promise<void> {
   const from = parseFrom(env.MAGIC_LINK_FROM_EMAIL || DEFAULT_FROM);
+  html = wrapEmailHtml(html);
   const text = htmlToText(html);
 
   // ═══ 1. Cloudflare Email Sending (Binding) ═══

@@ -59,7 +59,7 @@ export async function listDiscounts(env: Env): Promise<PaddleDiscount[]> {
     { method: "GET" },
   );
   if (!result.ok) {
-    console.error("paddle_list_discounts_failed", result.status, JSON.stringify(result.data).slice(0, 300));
+    console.error("paddle_list_discounts_failed", result.status, JSON.stringify(result.data).slice(0, 1000));
     throw new Error(`paddle_list_discounts_failed_${result.status}`);
   }
   const data = result.data as { data?: RawDiscount[] };
@@ -91,7 +91,7 @@ export async function createDiscount(env: Env, input: DiscountInput): Promise<Pa
   if (input.expiresAt) body.expires_at = input.expiresAt;
   const result = await paddleFetch(env, "/discounts", { method: "POST", body });
   if (!result.ok) {
-    console.error("paddle_create_discount_failed", result.status, JSON.stringify(result.data).slice(0, 300));
+    console.error("paddle_create_discount_failed", result.status, JSON.stringify(result.data).slice(0, 1000));
     throw new Error(`paddle_create_discount_failed_${result.status}`);
   }
   return mapDiscount((result.data as { data: RawDiscount }).data);
@@ -128,7 +128,7 @@ export async function updateDiscount(
 
   const result = await paddleFetch(env, `/discounts/${discountId}`, { method: "PATCH", body });
   if (!result.ok) {
-    console.error("paddle_update_discount_failed", result.status, JSON.stringify(result.data).slice(0, 300));
+    console.error("paddle_update_discount_failed", result.status, JSON.stringify(result.data).slice(0, 1000));
     throw new Error(`paddle_update_discount_failed_${result.status}`);
   }
   return mapDiscount((result.data as { data: RawDiscount }).data);
@@ -165,7 +165,7 @@ export function generateDiscountCode(prefix: string): string {
 export async function findUsableDiscountByCode(env: Env, code: string): Promise<PaddleDiscount | null> {
   const result = await paddleFetch(env, `/discounts?code=${encodeURIComponent(code)}`, { method: "GET" });
   if (!result.ok) {
-    console.error("paddle_lookup_discount_failed", result.status, JSON.stringify(result.data).slice(0, 300));
+    console.error("paddle_lookup_discount_failed", result.status, JSON.stringify(result.data).slice(0, 1000));
     throw new Error(`paddle_lookup_discount_failed_${result.status}`);
   }
   const data = result.data as { data?: RawDiscount[] };
