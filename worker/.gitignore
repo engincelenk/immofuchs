@@ -2,3 +2,4 @@ node_modules/
 dist/
 .wrangler/
 .dev.vars
+e2e/last-report.html

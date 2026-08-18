@@ -1,3 +1,14 @@
+## 2026-08-18 (1.20.4)
+
+### QA: Ein-Befehl-Starter für die E2E-Suite mit automatischem HTML-Report
+
+`worker/e2e/run.ps1` — setzt die drei Testuser-Session-IDs, lässt
+`npm run test:e2e:report` laufen und öffnet den generierten Report
+automatisch im Browser. Der Report (`worker/e2e/last-report.html`, nicht
+committet) wird von `worker/e2e/generate-report.mjs` aus Vitests
+eingebautem JSON-Reporter erzeugt — keine zusätzliche Abhängigkeit
+(kein @vitest/ui nötig).
+
 ## 2026-08-18 (1.20.3)
 
 ### Fix: Paddle-Sandbox-Checkout im Browser durch CSP blockiert

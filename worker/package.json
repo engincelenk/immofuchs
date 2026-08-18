@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:e2e:report": "node e2e/generate-report.mjs",
     "db:migrate:dev": "wrangler d1 migrations apply immofuchs-dev --env dev --remote",
     "db:migrate:qa": "wrangler d1 migrations apply immofuchs-qa --env qa --remote",
     "db:migrate:prod": "wrangler d1 migrations apply immofuchs-prod --remote",
