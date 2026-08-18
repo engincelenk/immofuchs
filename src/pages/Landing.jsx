@@ -194,6 +194,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             <button onClick={() => scrollTo("rechner")} style={navLink}>
               {l.navRechner}
             </button>
+            <button onClick={() => scrollTo("preise")} style={navLink}>
+              {l.navPreise}
+            </button>
             <button onClick={() => scrollTo("funktioniert")} style={navLink}>
               {l.navHow}
             </button>
@@ -274,6 +277,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               onClose={() => setNavOpen(false)}
               navItems={[
                 { key: "rechner", label: l.navRechner, onSelect: () => scrollTo("rechner") },
+                { key: "preise", label: l.navPreise, onSelect: () => scrollTo("preise") },
                 { key: "funktioniert", label: l.navHow, onSelect: () => scrollTo("funktioniert") },
                 { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
               ]}
@@ -1373,6 +1377,23 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         </div>
       </section>
 
+      {/* ═══════════ PREISE ═══════════ */}
+      {/* Steht bewusst direkt hinter der Rechner-Uebersicht (Nutzer-Vorgabe
+          2026-08-18): wer sieht, was ImmoFuchs kann, soll gleich danach
+          sehen, was es kostet, statt erst durch Daten-/USP-Abschnitte zu
+          scrollen. */}
+      <PricingSection
+        lang={lang}
+        onChoosePlan={(plan) => {
+          setCheckoutPlan(plan);
+          setOpenMode("checkout");
+        }}
+        // Free-Weg: wer schon angemeldet ist, geht direkt in den Rechner -
+        // fuer alle anderen ist der Login der erste Schritt (dieselbe
+        // Verzweigung wie beim "Anmelden"-Knopf in der Kopfzeile).
+        onStartFree={() => (account?.isLoggedIn ? onStart("haupt") : setOpenMode("login"))}
+      />
+
       {/* ═══════════ DATEN-ABSCHNITT ═══════════ */}
       <section
         style={{
@@ -1595,22 +1616,6 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           </div>
         </div>
       </section>
-
-      {/* ═══════════ PREISE ═══════════ */}
-      {/* Steht bewusst NACH dem USP-Abschnitt: erst der Nutzen, dann der
-          Preis. Vorher gab es hier gar nichts - wer wissen wollte, was
-          ImmoFuchs kostet, musste den Kauf-Assistenten oeffnen. */}
-      <PricingSection
-        lang={lang}
-        onChoosePlan={(plan) => {
-          setCheckoutPlan(plan);
-          setOpenMode("checkout");
-        }}
-        // Free-Weg: wer schon angemeldet ist, geht direkt in den Rechner -
-        // fuer alle anderen ist der Login der erste Schritt (dieselbe
-        // Verzweigung wie beim "Anmelden"-Knopf in der Kopfzeile).
-        onStartFree={() => (account?.isLoggedIn ? onStart("haupt") : setOpenMode("login"))}
-      />
 
       {/* ═══════════ ZINSEN — discreet ticker section ═══════════ */}
       <section id="zinsen" style={{ padding: "clamp(30px,4vw,50px) 24px" }}>

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { LANG_LOCALE } from "../../utils/helpers.js";
 import { saveBadgeStyle, strikePriceStyle } from "./checkoutStyles.js";
@@ -10,13 +9,20 @@ import {
 } from "./planPricing.js";
 
 // Oeffentliche Preis-Sektion der Landingpage (Neugestaltung 2026-08-17 nach
-// den Referenz-Screenshots).
+// den Referenz-Screenshots, auf 3 gleichzeitig sichtbare Kacheln umgebaut
+// 2026-08-18 nach Nutzer-Vorgabe).
 //
 // Vorher gab es sie gar nicht: die Planwahl steckte ausschliesslich im
 // Kauf-Assistenten, ein Besucher konnte also erst nach dem Oeffnen eines
 // Dialogs sehen, was ImmoFuchs kostet und was Pro von Free unterscheidet. Die
 // Vergleichstexte dafuer lagen bereits vollstaendig uebersetzt in
 // i18n/account.js (compareRow*Free/Pro), wurden aber nirgends angezeigt.
+//
+// Umschalter entfernt (Nutzer-Vorgabe 2026-08-18): frueher wechselte eine
+// einzelne Pro-Karte per Monatlich/Jaehrlich-Umschalter ihren Preis. Jetzt
+// stehen alle 3 Angebote gleichzeitig als eigene, gleich hohe Kachel da -
+// kein Klick noetig, um den Jahrespreis zu sehen. "Am beliebtesten"-Ribbon
+// ist damit ebenfalls weg, es gibt keine einzelne hervorgehobene Karte mehr.
 //
 // `onChoosePlan(plan)` oeffnet den Kauf-Assistenten mit vorgewaehlter
 // Laufzeit, `onStartFree()` fuehrt in den kostenlosen Ersttest.
@@ -35,15 +41,15 @@ const FEATURES = [
 export function PricingSection({ lang, onChoosePlan, onStartFree }) {
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const locale = LANG_LOCALE[lang] || "de-DE";
-  const [term, setTerm] = useState("yearly");
-  const isYearly = term === "yearly";
 
-  const proAmount = isYearly ? YEARLY_PER_MONTH_AMOUNT : PLAN_AMOUNTS.monthly;
-  const proNote = isYearly
-    ? t.planYearlyNote
-        .replace("{total}", formatMoney(PLAN_AMOUNTS.yearly, locale))
-        .replace("{perMonth}", formatMoney(YEARLY_PER_MONTH_AMOUNT, locale))
-    : t.planMonthlyNote.replace("{total}", formatMoney(PLAN_AMOUNTS.monthly, locale));
+  const monthlyNote = t.planMonthlyNote.replace("{total}", formatMoney(PLAN_AMOUNTS.monthly, locale));
+  const yearlyNote = t.planYearlyNote
+    .replace("{total}", formatMoney(PLAN_AMOUNTS.yearly, locale))
+    .replace("{perMonth}", formatMoney(YEARLY_PER_MONTH_AMOUNT, locale));
+  const proFeatures = FEATURES.map(([labelKey, , proKey]) => ({
+    label: t[labelKey],
+    value: t[proKey],
+  }));
 
   return (
     <section
@@ -87,16 +93,18 @@ export function PricingSection({ lang, onChoosePlan, onStartFree }) {
 
         <TrustRow t={t} />
 
-        <TermToggle t={t} term={term} onChange={setTerm} />
-
+        {/* alignItems:stretch (Grid-Standard) statt "start" (Nutzer-Vorgabe
+            2026-08-18): alle 3 Kacheln sollen unabhaengig von ihrer
+            Textlaenge exakt gleich hoch sein - stretch zieht jede Kachel auf
+            die Hoehe der jeweils hoechsten in ihrer Zeile. */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))",
+            gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
             gap: 18,
-            maxWidth: 880,
+            maxWidth: 960,
             margin: "0 auto",
-            alignItems: "start",
+            alignItems: "stretch",
           }}
         >
           <PlanCard
@@ -113,25 +121,29 @@ export function PricingSection({ lang, onChoosePlan, onStartFree }) {
           />
           <PlanCard
             highlighted
-            ribbon={t.planPopular}
             name="ImmoFuchs Pro"
-            tagline={t.planProTagline}
-            price={formatMoney(proAmount, locale)}
+            tagline={t.planMonthly}
+            price={formatMoney(PLAN_AMOUNTS.monthly, locale)}
             perMonth={t.planPerMonth}
-            strikePrice={isYearly ? formatMoney(PLAN_AMOUNTS.monthly, locale) : null}
-            badge={
-              isYearly
-                ? t.planSaveBadge.replace("{percent}", String(YEARLY_SAVINGS_PERCENT))
-                : null
-            }
-            note={proNote}
+            note={monthlyNote}
             trialBadge={t.pricingTrialBadge}
             ctaLabel={t.planProCta}
-            onCta={() => onChoosePlan(term)}
-            features={FEATURES.map(([labelKey, , proKey]) => ({
-              label: t[labelKey],
-              value: t[proKey],
-            }))}
+            onCta={() => onChoosePlan("monthly")}
+            features={proFeatures}
+          />
+          <PlanCard
+            highlighted
+            name="ImmoFuchs Pro"
+            tagline={t.planYearly}
+            price={formatMoney(YEARLY_PER_MONTH_AMOUNT, locale)}
+            perMonth={t.planPerMonth}
+            strikePrice={formatMoney(PLAN_AMOUNTS.monthly, locale)}
+            badge={t.planSaveBadge.replace("{percent}", String(YEARLY_SAVINGS_PERCENT))}
+            note={yearlyNote}
+            trialBadge={t.pricingTrialBadge}
+            ctaLabel={t.planProCta}
+            onCta={() => onChoosePlan("yearly")}
+            features={proFeatures}
           />
         </div>
       </div>
@@ -155,7 +167,7 @@ function TrustRow({ t }) {
         flexWrap: "wrap",
         justifyContent: "center",
         gap: "10px 26px",
-        marginBottom: 22,
+        marginBottom: 26,
       }}
     >
       {items.map(([icon, label]) => (
@@ -167,69 +179,6 @@ function TrustRow({ t }) {
           {label}
         </span>
       ))}
-    </div>
-  );
-}
-
-function TermToggle({ t, term, onChange }) {
-  const options = [
-    ["monthly", t.planMonthly],
-    ["yearly", t.planYearly],
-  ];
-  return (
-    <div
-      role="radiogroup"
-      aria-label={t.planTitle}
-      style={{
-        display: "flex",
-        gap: 4,
-        background: "var(--cro)",
-        border: "1px solid var(--cb)",
-        borderRadius: 999,
-        padding: 4,
-        width: "fit-content",
-        maxWidth: "100%",
-        margin: "0 auto 26px",
-      }}
-    >
-      {options.map(([value, label]) => {
-        const active = term === value;
-        return (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(value)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 7,
-              padding: "9px 18px",
-              borderRadius: 999,
-              border: "none",
-              background: active ? "var(--cc)" : "transparent",
-              boxShadow: active ? "0 1px 3px rgba(0,0,0,.10)" : "none",
-              color: active ? "var(--ct)" : "var(--ch)",
-              fontWeight: active ? 700 : 600,
-              fontSize: 14,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {label}
-            {/* Der Hinweis wirbt fuer die noch nicht gewaehlte Jahres-Option.
-                Ist sie bereits gewaehlt, traegt ihn die Karte selbst - dann
-                stuende dieselbe Zahl zweimal nebeneinander. */}
-            {value === "yearly" && term !== "yearly" && (
-              <span style={{ ...saveBadgeStyle, fontSize: 10.5, padding: "2px 7px" }}>
-                {t.planSaveBadge.replace("{percent}", String(YEARLY_SAVINGS_PERCENT))}
-              </span>
-            )}
-          </button>
-        );
-      })}
     </div>
   );
 }
@@ -247,117 +196,93 @@ function PlanCard({
   onCta,
   features,
   highlighted,
-  ribbon,
 }) {
   return (
-    <div style={{ position: "relative", paddingTop: ribbon ? 16 : 0 }}>
-      {ribbon && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 16,
-            right: 16,
-            background: "var(--ca)",
-            color: "#fff",
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: 0.6,
-            textTransform: "uppercase",
-            textAlign: "center",
-            padding: "5px 10px 12px",
-            borderRadius: "12px 12px 0 0",
-          }}
-        >
-          {ribbon}
+    <div
+      style={{
+        position: "relative",
+        background: "var(--cc)",
+        border: `${highlighted ? 2 : 1}px solid ${highlighted ? "var(--ca)" : "var(--cb)"}`,
+        borderRadius: 14,
+        padding: "20px 20px 22px",
+        height: "100%",
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {badge && (
+        <div style={{ position: "absolute", top: 14, right: 16 }}>
+          <span style={saveBadgeStyle}>{badge}</span>
         </div>
       )}
-      <div
+
+      <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3 }}>{name}</div>
+      <div style={{ fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>{tagline}</div>
+
+      <div style={{ marginTop: 16, minHeight: 58 }}>
+        {strikePrice && <div style={strikePriceStyle}>{strikePrice}</div>}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
+          <span style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.05 }}>
+            {price}
+          </span>
+          {perMonth && <span style={{ fontSize: 15, color: "var(--ch)" }}>{perMonth}</span>}
+        </div>
+      </div>
+
+      <button
+        onClick={onCta}
         style={{
-          position: "relative",
-          background: "var(--cc)",
-          border: `${highlighted ? 2 : 1}px solid ${highlighted ? "var(--ca)" : "var(--cb)"}`,
-          borderRadius: 14,
-          padding: "20px 20px 22px",
-          height: "100%",
-          boxSizing: "border-box",
-          display: "flex",
-          flexDirection: "column",
+          width: "100%",
+          marginTop: 16,
+          padding: "13px",
+          fontSize: 15,
+          fontWeight: 700,
+          borderRadius: 10,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          background: highlighted ? "var(--ca)" : "var(--cc)",
+          color: highlighted ? "#fff" : "var(--ct)",
+          border: highlighted ? "1px solid var(--ca)" : "1px solid var(--cb)",
         }}
       >
-        {badge && (
-          <div style={{ position: "absolute", top: 14, right: 16 }}>
-            <span style={saveBadgeStyle}>{badge}</span>
-          </div>
-        )}
+        {ctaLabel}
+      </button>
 
-        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3 }}>{name}</div>
-        <div style={{ fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>{tagline}</div>
+      <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 10, lineHeight: 1.5 }}>{note}</div>
 
-        <div style={{ marginTop: 16, minHeight: 58 }}>
-          {strikePrice && <div style={strikePriceStyle}>{strikePrice}</div>}
-          <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
-            <span style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.05 }}>
-              {price}
+      {trialBadge && (
+        <div style={{ ...saveBadgeStyle, marginTop: 10, alignSelf: "flex-start" }}>{trialBadge}</div>
+      )}
+
+      <ul
+        style={{
+          listStyle: "none",
+          padding: 0,
+          margin: "18px 0 0",
+          borderTop: "1px solid var(--cb)",
+          paddingTop: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: 9,
+        }}
+      >
+        {features.map((feature) => (
+          <li key={feature.label} style={{ display: "flex", gap: 9, fontSize: 12.5, lineHeight: 1.45 }}>
+            {/* Haekchen nur auf den Pro-Karten: die Free-Zeilen nennen
+                ueberwiegend Grenzen ("1 Gratis-Berechnung, danach
+                gesperrt") - ein Haekchen davor liese sich als Zusage
+                missverstehen. */}
+            <span aria-hidden="true" style={{ color: highlighted ? "var(--ca)" : "var(--ch)", flexShrink: 0 }}>
+              {highlighted ? "✓" : "·"}
             </span>
-            {perMonth && <span style={{ fontSize: 15, color: "var(--ch)" }}>{perMonth}</span>}
-          </div>
-        </div>
-
-        <button
-          onClick={onCta}
-          style={{
-            width: "100%",
-            marginTop: 16,
-            padding: "13px",
-            fontSize: 15,
-            fontWeight: 700,
-            borderRadius: 10,
-            cursor: "pointer",
-            fontFamily: "inherit",
-            background: highlighted ? "var(--ca)" : "var(--cc)",
-            color: highlighted ? "#fff" : "var(--ct)",
-            border: highlighted ? "1px solid var(--ca)" : "1px solid var(--cb)",
-          }}
-        >
-          {ctaLabel}
-        </button>
-
-        <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 10, lineHeight: 1.5 }}>{note}</div>
-
-        {trialBadge && (
-          <div style={{ ...saveBadgeStyle, marginTop: 10, alignSelf: "flex-start" }}>{trialBadge}</div>
-        )}
-
-        <ul
-          style={{
-            listStyle: "none",
-            padding: 0,
-            margin: "18px 0 0",
-            borderTop: "1px solid var(--cb)",
-            paddingTop: 16,
-            display: "flex",
-            flexDirection: "column",
-            gap: 9,
-          }}
-        >
-          {features.map((feature) => (
-            <li key={feature.label} style={{ display: "flex", gap: 9, fontSize: 12.5, lineHeight: 1.45 }}>
-              {/* Haekchen nur auf der Pro-Karte: die Free-Zeilen nennen
-                  ueberwiegend Grenzen ("1 Gratis-Berechnung, danach
-                  gesperrt") - ein Haekchen davor laese sich als Zusage
-                  missverstehen. */}
-              <span aria-hidden="true" style={{ color: highlighted ? "var(--ca)" : "var(--ch)", flexShrink: 0 }}>
-                {highlighted ? "✓" : "·"}
-              </span>
-              <span>
-                <strong>{feature.label}:</strong>{" "}
-                <span style={{ color: "var(--cl)" }}>{feature.value}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+            <span>
+              <strong>{feature.label}:</strong>{" "}
+              <span style={{ color: "var(--cl)" }}>{feature.value}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

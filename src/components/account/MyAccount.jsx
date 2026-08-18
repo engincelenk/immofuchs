@@ -214,7 +214,6 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
                 (SectionTitle.jsx / onBack), auf Hoehe von z.B. "Profil". */}
             {isDesktop && (
               <>
-                <span aria-hidden="true" style={{ width: 1, height: 20, background: "var(--cb)", margin: "0 16px", flexShrink: 0 }} />
                 <button
                   onClick={onClose}
                   aria-label={t.wizardBack}
@@ -233,6 +232,7 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
                     padding: "6px 2px",
                     whiteSpace: "nowrap",
                     flexShrink: 0,
+                    marginLeft: 16,
                   }}
                 >
                   <IconArrowLeft size={16} />
@@ -318,11 +318,11 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
                   <IconHome size={16} />
                 </button>
               </li>
-              <li aria-hidden="true" style={{ display: "flex", color: "var(--cb)" }}>
+              <li aria-hidden="true" style={{ display: "flex", color: "var(--ch)" }}>
                 <IconChevronRight size={14} />
               </li>
               <li style={{ color: "var(--ch)" }}>{t.accountTitle}</li>
-              <li aria-hidden="true" style={{ display: "flex", color: "var(--cb)" }}>
+              <li aria-hidden="true" style={{ display: "flex", color: "var(--ch)" }}>
                 <IconChevronRight size={14} />
               </li>
               <li style={{ fontWeight: 700, color: "var(--ct)" }} aria-current="page">

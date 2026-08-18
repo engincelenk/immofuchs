@@ -439,7 +439,7 @@ export default function App() {
   if (!landed)
     return (
       <>
-        <style>{`${FONT_CSS}${ROOT_TOKENS_CSS}html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y}*{box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased;position:relative}section,footer,header{min-width:0;max-width:100%}`}</style>
+        <style>{`${FONT_CSS}${ROOT_TOKENS_CSS}html{overflow-y:scroll}html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y;scrollbar-gutter:stable}*{box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased;position:relative}section,footer,header{min-width:0;max-width:100%}`}</style>
         <Landing onStart={startApp} zinsen={zinsen} lang={lang} setLang={setLang} />
         {!isOnline && <OfflineBanner bottom={"calc(16px + env(safe-area-inset-bottom))"} />}
       </>
@@ -476,7 +476,8 @@ export default function App() {
     >
       <style>
         {`${FONT_CSS}${ROOT_TOKENS_CSS}
-      html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;-webkit-text-size-adjust:100%}body{position:relative}
+      html{overflow-y:scroll}
+      html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;-webkit-text-size-adjust:100%;scrollbar-gutter:stable}body{position:relative}
       *{box-sizing:border-box}
       body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased}
       input,select,button,textarea{font-family:inherit;font-size:16px}

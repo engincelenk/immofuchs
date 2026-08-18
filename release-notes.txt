@@ -1,3 +1,30 @@
+## 2026-08-18 (1.16.0)
+
+### Preise-Sektion umgebaut, Navigations-Link ergaenzt, Layout-Bugfixes
+
+**Preise-Sektion zeigt jetzt 3 gleich hohe Kacheln gleichzeitig** (Free /
+Monatlich / Jaehrlich) statt einer einzelnen Pro-Karte mit
+Monatlich/Jaehrlich-Umschalter (Nutzer-Vorgabe). "Am beliebtesten"-Ribbon
+entfernt - es gibt keine einzelne hervorgehobene Karte mehr, alle 3 stehen
+gleichwertig nebeneinander. Die Sektion sitzt jetzt direkt hinter "Waehlen
+Sie Ihren Rechner" statt weiter unten nach dem USP-Block.
+
+**"Preise" als vierter Link in Desktop-Nav und mobilem Menue** ergaenzt
+(`navPreise` in allen 5 Sprachen).
+
+**Bugfix: Seite sprang beim Oeffnen eines Sheets (z. B. "Alle Rechner") nach
+rechts.** Ursache: `useScrollLock` sperrte `html`/`body` per
+`overflow:hidden`, wodurch der Scrollbalken verschwand und der Viewport um
+dessen Breite breiter wurde - alles mit `position:fixed` (Kopfzeile,
+Tab-Leiste) rutschte sichtbar zur Seite. Jetzt bleibt `html` immer
+scrollbar (`overflow-y:scroll`), gesperrt wird stattdessen `body` per
+`position:fixed`, ohne dass sich die Scrollbalken-Sichtbarkeit je aendert.
+
+**Bugfix: Kontokopf (Mein Konto/Admin).** Unpassend wirkender 1px-Trennstrich
+zwischen Logo und "Zurueck" entfernt. Die "›"-Pfeile im Breadcrumb waren mit
+`var(--cb)` kaum sichtbar (fast wie der Hintergrund) - jetzt `var(--ch)`,
+gleiche Farbe wie das Home-Icon daneben.
+
 ## 2026-08-17 (1.15.0)
 
 ### Anmeldemasken nach Referenz-Vorbild neu gebaut

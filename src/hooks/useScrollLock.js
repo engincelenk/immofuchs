@@ -18,14 +18,29 @@ import { useEffect } from "react";
 export function useScrollLock(active) {
   useEffect(() => {
     if (!active) return;
-    const html = document.documentElement;
-    const prevHtml = html.style.overflow;
-    const prevBody = document.body.style.overflow;
-    html.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    // body auf position:fixed statt html/body auf overflow:hidden
+    // (Bugfix 2026-08-18): overflow:hidden entfernt den Scrollbalken von
+    // <html> komplett - der Viewport wird dadurch um die Scrollbalkenbreite
+    // breiter, alles mit position:fixed (Kopfzeile, Tab-Leiste, zentrierte
+    // Container) sprang sichtbar nach rechts (Bugreport: Seite verschiebt
+    // sich beim Oeffnen des "Alle Rechner"-Sheets). scrollbar-gutter:stable
+    // (siehe App.jsx/index.html) haelt den Scrollbalken-Platz nur dann
+    // konstant reserviert, wenn der Overflow-Wert NICHT auf "hidden"
+    // wechselt - <html> bleibt hier deshalb unangetastet. position:fixed auf
+    // <body> nimmt es aus dem normalen Fluss (macht es dadurch unscrollbar),
+    // ohne dass <html> seinen Overflow-Wert je wechselt.
+    const scrollY = window.scrollY;
+    const prevPosition = document.body.style.position;
+    const prevTop = document.body.style.top;
+    const prevWidth = document.body.style.width;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
     return () => {
-      html.style.overflow = prevHtml;
-      document.body.style.overflow = prevBody;
+      document.body.style.position = prevPosition;
+      document.body.style.top = prevTop;
+      document.body.style.width = prevWidth;
+      window.scrollTo(0, scrollY);
     };
   }, [active]);
 }
