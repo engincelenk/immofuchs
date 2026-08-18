@@ -1,3 +1,31 @@
+## 2026-08-18 (1.19.1)
+
+### Anbieteradresse in der Widerrufsbelehrung ergänzt
+
+Platzhalter in public/agb.html (Widerrufsbelehrung + Muster-Widerrufsformular)
+durch die tatsächliche Anschrift ersetzt. Restlicher Entwurfs-Hinweis (nicht
+anwaltlich geprüft) bleibt bestehen.
+
+## 2026-08-18 (1.19.0)
+
+### Widerrufsbelehrung + Muster-Widerrufsformular ergänzt (AGB-Entwurf)
+
+**public/agb.html Abschnitt 7** war bislang nur ein Platzhalter ("wird vor
+Aufnahme des Bezahlbetriebs ergänzt"). Jetzt eine vollständige Widerrufs-
+belehrung nach der gesetzlichen Musterbelehrung (Anlage 1/2 zu
+Art. 246a § 1 Abs. 2 EGBGB), an ImmoFuchs Pro angepasst: Widerrufsfrist,
+Rechtsfolgen, eine konkrete Wertersatz-Beispielrechnung mit den echten
+Preisen (4,99 €/49,99 €) sowie das Muster-Widerrufsformular. Wie der Rest
+der Datei klar als nicht anwaltlich geprüfter Entwurf markiert. Die
+Anbieteradresse ist als Platzhalter markiert (in der Anwendung nicht
+bekannt) und muss vor Veröffentlichung ergänzt werden - Pflichtangabe nach
+Art. 246a § 1 Abs. 1 Nr. 2 EGBGB.
+
+Bereits vorher vorhanden und bei dieser Gelegenheit geprüft: die
+Widerrufs-Zustimmungs-Checkbox im Checkout (PaymentStep.jsx) und der
+Kündigungsbutton nach § 312k BGB (CancelFlow.jsx) erfüllen die
+gesetzlichen Anforderungen bereits.
+
 ## 2026-08-18 (1.18.1)
 
 ### Fokusring-Bugfix, Avatar-Initialen auf Mobile
