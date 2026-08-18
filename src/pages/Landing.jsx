@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, lazy, Suspense } from "react";
 import { TL } from "../i18n/translations.js";
 import { MARKET_RATES } from "../data.js";
 import { LANG_LOCALE } from "../utils/helpers.js";
@@ -8,14 +8,27 @@ import { LandingMascot } from "../components/assistant/LandingMascot.jsx";
 import { useAccountCtx } from "../context/AccountContext.jsx";
 import { Ctx } from "../context/AppContext.jsx";
 import { ACCOUNT_T } from "../i18n/account.js";
-import { CheckoutWizard } from "../components/checkout/CheckoutWizard.jsx";
 import { PricingSection } from "../components/checkout/PricingSection.jsx";
-import { MyAccount } from "../components/account/MyAccount.jsx";
+
+// Lazy statt statischem Import (Befund 2026-08-18: der Landing-Page-Bundle
+// riss bei manchen Verbindungen mitten in der Auslieferung ab, vermutlich
+// Groessen-/Uebertragungs-Problem bei sehr grossen komprimierten Antworten -
+// siehe release-notes.txt). CheckoutWizard/MyAccount (inkl. dem darin
+// verschachtelten Admin-Bereich) werden erst geladen, wenn openMode das
+// tatsaechlich braucht - auf der reinen Landingpage (openMode === null)
+// vorher nie gerendert, gehoeren also nicht ins initiale Bundle.
+const CheckoutWizard = lazy(() =>
+  import("../components/checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+);
+const MyAccount = lazy(() =>
+  import("../components/account/MyAccount.jsx").then((m) => ({ default: m.MyAccount })),
+);
 import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
 import { AccountAvatarButton, AccountMenu } from "../components/account/AccountMenu.jsx";
 import { HeaderMenu } from "../components/account/HeaderMenu.jsx";
 import { IconMenu } from "../components/account/accountIcons.jsx";
 import { useSavedObjects } from "../components/shell/Merkliste.jsx";
+import { LazyPanelFallback } from "../components/ui/LazyPanelFallback.jsx";
 
 const navLink = {
   background: "none",
@@ -392,6 +405,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       </header>
 
       {(openMode === "checkout" || openMode === "login" || openMode === "account") && (
+        <Suspense fallback={<LazyPanelFallback />}>
         <Ctx.Provider value={landingCtxValue}>
           {openMode === "checkout" && (
             <CheckoutWizard
@@ -435,6 +449,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             />
           )}
         </Ctx.Provider>
+        </Suspense>
       )}
       {/* Bugfund 2026-08-11: Passwort-/Passkey-Login ueber "Anmelden" auf
           dieser Seite schliesst den Wizard automatisch und kehrt hierher

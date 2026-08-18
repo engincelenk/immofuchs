@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
@@ -10,14 +10,21 @@ import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_FIELDS, tabZuRechner } from "../../utils/assistantContext.js";
 import { apiFetch } from "../../utils/apiBase.js";
-import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
+import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
 import { ObjektDetail } from "../dashboard/ObjektDetail.jsx";
 import { scoreBadgeColor, scoreBadgeText } from "../dashboard/dashboardUtils.js";
 import { computeRendite } from "../../utils/rendite.js";
 import { buildMP } from "../../utils/mietprognose.js";
 import { computeKreditVorschau } from "../../utils/kreditKennzahlen.js";
 import { isK15 } from "../../data/plzData.js";
+
+// Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
+// Merkliste haengt auf jeder Rechner-Seite, CheckoutWizard aber nur bei
+// showUpgrade tatsaechlich sichtbar.
+const CheckoutWizard = lazy(() =>
+  import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+);
 
 const MAX_COMPARE = 5;
 // Gueltige Rechner-Tab-Ids (spiegelt tabLabel/tabColor unten) - als Konstante
@@ -397,7 +404,11 @@ export function SaveBtn({ tab }) {
         </svg>
         {limitReached ? `👑 ${at.trialLockedCta}` : t.saveBtnLabel || "Speichern"}
       </button>
-      {showUpgrade && <CheckoutWizard onClose={() => setShowUpgrade(false)} />}
+      {showUpgrade && (
+        <Suspense fallback={<LazyPanelFallback />}>
+          <CheckoutWizard onClose={() => setShowUpgrade(false)} />
+        </Suspense>
+      )}
       {/* Immer gemountet statt `{open && ...}` - `open` steuert die
           Sichtbarkeit, nur so kann Sheet.jsx die Ausstiegs-Animation zeigen
           (siehe SaveModal). */}
@@ -738,7 +749,11 @@ export function Merkliste() {
           👑 {acct.trialLockedBody}
         </button>
       )}
-      {showUpgrade && <CheckoutWizard onClose={() => setShowUpgrade(false)} />}
+      {showUpgrade && (
+        <Suspense fallback={<LazyPanelFallback />}>
+          <CheckoutWizard onClose={() => setShowUpgrade(false)} />
+        </Suspense>
+      )}
       {filtered.length === 0 && (
         <div style={{ textAlign: "center", padding: "32px 20px", color: "var(--ch)", fontSize: 13 }}>
           Keine Objekte gefunden.

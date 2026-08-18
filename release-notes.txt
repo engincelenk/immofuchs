@@ -1,3 +1,36 @@
+## 2026-08-18 (1.20.5)
+
+### Fix: Landing-Page-Bundle riss bei manchen Verbindungen mitten in der Auslieferung ab
+
+Nutzer-Befund: "Uncaught SyntaxError: Invalid or unexpected token" auf der
+Landingpage. Ursache: der Haupt-Bundle (~1,25 MB) kam bei mindestens einer
+Verbindung nur zu 44 % an (493.538 von 1.125.385 Zeichen, mitten in einem
+JSX-Aufruf abgerissen) - kein Code-Fehler (Datei per Node/UTF-8-Check
+vollstaendig valide, kein kaputter CDN-Cache: Cache-Bypass lieferte ueber
+curl immer die volle Datei). Wahrscheinlichste Ursache: Uebertragungsproblem
+bei sehr grossen Brotli-komprimierten Antworten, moeglicherweise HTTP/3-
+bezogen (Server kuendigt h3 per alt-svc an).
+
+Da die genaue Server-/CDN-Ursache ausserhalb des Codes liegt, als Gegenmass-
+nahme: CheckoutWizard und MyAccount (inkl. des darin verschachtelten Admin-
+Bereichs) sind jetzt per `React.lazy()` statt statischem Import eingebunden
+(Landing.jsx, CalculatorTrialGate.jsx, ProHeaderButton.jsx, Merkliste.jsx -
+alle vier rendern sie ohnehin nur bedingt). Reduziert das initiale Bundle
+von 1.245 KB auf 1.132 KB (zwei neue Chunks: CheckoutWizard 35,5 KB,
+MyAccount 79,2 KB, jeweils erst beim tatsaechlichen Oeffnen geladen).
+Gemeinsamer Suspense-Fallback: `src/components/ui/LazyPanelFallback.jsx`.
+
+Hinweis: verkleinert das Risiko, behebt es aber je nach tatsaechlicher
+Ursache moeglicherweise nicht vollstaendig - nur live auf dev verifizierbar.
+
+### QA: worker/e2e/** aus dem normalen Root-Testlauf ausgeschlossen
+
+`npm test` im Projekt-Wurzelverzeichnis erfasste bisher auch
+`worker/e2e/*.e2e.test.ts` mit und liess diese ohne gesetzte Session-Env-Vars
+fehlschlagen - jetzt in `vite.config.js` analog zum bestehenden
+`worker/vitest.config.ts` ausgeschlossen. Eigener Befehl bleibt
+`npm run test:e2e` im worker-Ordner.
+
 ## 2026-08-18 (1.20.4)
 
 ### QA: Ein-Befehl-Starter für die E2E-Suite mit automatischem HTML-Report

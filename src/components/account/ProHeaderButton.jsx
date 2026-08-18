@@ -1,11 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
-import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
-import { MyAccount } from "./MyAccount.jsx";
 import { LoginSuccessToast } from "./LoginSuccessToast.jsx";
 import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
+import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
+
+// Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
+// ProHeaderButton haengt fest in der Kopfzeile jeder Seite, CheckoutWizard/
+// MyAccount aber nur bei openMode !== null tatsaechlich sichtbar.
+const CheckoutWizard = lazy(() =>
+  import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+);
+const MyAccount = lazy(() => import("./MyAccount.jsx").then((m) => ({ default: m.MyAccount })));
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
 // NICHT in Statusleiste.jsx). Label "Pro" mit Kroenchen-Icon, Fuchs-Orange.
@@ -151,29 +158,33 @@ export function ProHeaderButton() {
           onDone={account.dismissAccountDeleted}
         />
       )}
-      {openMode === "account" && (
-        <MyAccount
-          onClose={handleClose}
-          // Handy: ← fuehrt zurueck ins Menue statt raus in die App
-          // (Nutzer-Korrektur 2026-08-13) - Bereich → ← → Menue → ✕ → App.
-          onBackToMenu={() => {
-            setOpenMode(null);
-            setMenuOpen(true);
-          }}
-          initialSection={sectionKey}
-        />
+      {(openMode === "account" || openMode === "login" || openMode === "checkout") && (
+        <Suspense fallback={<LazyPanelFallback />}>
+          {openMode === "account" && (
+            <MyAccount
+              onClose={handleClose}
+              // Handy: ← fuehrt zurueck ins Menue statt raus in die App
+              // (Nutzer-Korrektur 2026-08-13) - Bereich → ← → Menue → ✕ → App.
+              onBackToMenu={() => {
+                setOpenMode(null);
+                setMenuOpen(true);
+              }}
+              initialSection={sectionKey}
+            />
+          )}
+          {openMode === "login" && <CheckoutWizard onClose={handleClose} entryPoint="login" />}
+          {openMode === "checkout" &&
+            (resumesCheckout ? (
+              <CheckoutWizard
+                onClose={handleClose}
+                entryPoint="payment"
+                initialPlan={account.pendingCheckout?.plan}
+              />
+            ) : (
+              <CheckoutWizard onClose={handleClose} />
+            ))}
+        </Suspense>
       )}
-      {openMode === "login" && <CheckoutWizard onClose={handleClose} entryPoint="login" />}
-      {openMode === "checkout" &&
-        (resumesCheckout ? (
-          <CheckoutWizard
-            onClose={handleClose}
-            entryPoint="payment"
-            initialPlan={account.pendingCheckout?.plan}
-          />
-        ) : (
-          <CheckoutWizard onClose={handleClose} />
-        ))}
     </>
   );
 }

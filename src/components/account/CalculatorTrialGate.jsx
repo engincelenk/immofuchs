@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useCalculatorTrial } from "../../hooks/useCalculatorTrial.js";
 import { ACCOUNT_T } from "../../i18n/account.js";
-import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
+import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
 import { IconFunkeln, IconSchloss } from "./accountIcons.jsx";
+
+// Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
+// CalculatorTrialGate haengt auf jeder Rechner-Seite, CheckoutWizard aber
+// nur bei showLogin/showUpgrade tatsaechlich sichtbar.
+const CheckoutWizard = lazy(() =>
+  import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+);
 
 // Wrapper auf Tab-Ebene (App.jsx) statt Aenderungen in den sechs Rechner-
 // Komponenten selbst - kein einziger bestehender Rechner wird angefasst.
@@ -37,7 +44,11 @@ export function CalculatorTrialGate({ rechner, children, onDismiss }) {
         <button onClick={() => setShowLogin(true)} style={primaryBtnStyle}>
           <BrandIcon size={18} style={{ marginRight: 4, verticalAlign: "-4px" }} /> {t.loginRequiredCta}
         </button>
-        {showLogin && <CheckoutWizard onClose={() => setShowLogin(false)} entryPoint="login" />}
+        {showLogin && (
+          <Suspense fallback={<LazyPanelFallback />}>
+            <CheckoutWizard onClose={() => setShowLogin(false)} entryPoint="login" />
+          </Suspense>
+        )}
       </GatePanel>
     );
   }
@@ -57,7 +68,11 @@ export function CalculatorTrialGate({ rechner, children, onDismiss }) {
         </div>
         {/* entryPoint bewusst "pricing" (Standard): eingeloggte Nutzer landen
             dort dank Stufe E direkt auf der Plan-Auswahl, nicht auf "Konto". */}
-        {showUpgrade && <CheckoutWizard onClose={() => setShowUpgrade(false)} />}
+        {showUpgrade && (
+          <Suspense fallback={<LazyPanelFallback />}>
+            <CheckoutWizard onClose={() => setShowUpgrade(false)} />
+          </Suspense>
+        )}
       </GatePanel>
     );
   }

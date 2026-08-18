@@ -36,6 +36,10 @@ export default defineConfig({
     sourcemap: false,
   },
   test: {
-    exclude: ["**/node_modules/**", "**/dist/**"],
+    // worker/e2e/**: eigene Suite gegen den echten dev-Worker (Session-Env-
+    // Vars noetig, siehe worker/e2e/README.md) - soll den normalen Testlauf
+    // nicht mit erwartbaren Fehlern verunreinigen. Eigener Befehl:
+    // `npm run test:e2e` im worker-Ordner.
+    exclude: ["**/node_modules/**", "**/dist/**", "worker/e2e/**"],
   },
 });
