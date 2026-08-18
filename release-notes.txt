@@ -1,3 +1,37 @@
+## 2026-08-18 (1.20.0)
+
+### Admin-angelegte Konten bekommen jetzt eine Passwort-Einladung statt eines stillen Magic-Link-Logins
+
+**Bugfix: Nutzer ließen sich nicht löschen** ("Löschen fehlgeschlagen. Die
+Paddle-Kündigung lief nicht durch") - betraf zwei unabhängige Ursachen, die
+zufällig dieselbe Meldung zeigten:
+- `deleteUserCompletely()` (worker/src/db.ts) löschte nicht aus
+  `push_tokens` und `calculator_trial_usage` vor `DELETE FROM users` -
+  beide Tabellen haben `FOREIGN KEY REFERENCES users(id)`, D1 erzwingt
+  `foreign_keys=ON`. Jeder Nutzer mit mind. einer Rechner-Nutzung (Free-Tier-
+  Zähler seit 1.19.0/Migration 0022) oder einem registrierten Push-Token
+  ließ sich dadurch nicht mehr löschen, unabhängig von Paddle. Jetzt werden
+  beide Tabellen mit gelöscht.
+- Der Admin-Delete-Endpunkt (`POST /users/:id/delete`) zeigte für JEDEN
+  Fehler dieselbe Paddle-spezifische Meldung. Zeigt jetzt nur noch bei einem
+  echten Paddle-Kündigungsfehler diesen Text, sonst die neutrale
+  "Aktion fehlgeschlagen"-Meldung.
+- Testkonto testpro@immofuchs.info hatte eine von Hand gesetzte
+  `paddle_subscription_id` ("test_subscription_manual") ohne das
+  `admin-test:`-Präfix, das der bestehende Synthetic-Test-Bypass prüft -
+  dadurch versuchte der Code, ein bei Paddle nicht existierendes Abo zu
+  kündigen. In der Dev-Datenbank korrigiert.
+
+**Feature: Vom Admin angelegte Nutzer (Admin-Panel → Nutzer anlegen)**
+bekommen jetzt eine E-Mail mit einem Link, der sie zwingt, beim ersten
+Login ein Passwort zu setzen - genau derselbe Screen wie bei "Passwort
+vergessen" (PasswordResetFlow.jsx, kein neuer Frontend-Code nötig). Vorher
+verschickte der Endpunkt einen Magic-Link, der sofort einloggte, ohne je
+ein Passwort zu verlangen - admin-angelegte Konten blieben dadurch
+dauerhaft passwortlos. Neue Funktion `sendPasswordSetupInvite()` in
+worker/src/auth/passwordAuth.ts, wiederverwendet die bestehende
+`password_reset_tokens`-Infrastruktur.
+
 ## 2026-08-18 (1.19.1)
 
 ### Anbieteradresse in der Widerrufsbelehrung ergänzt

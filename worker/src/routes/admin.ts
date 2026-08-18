@@ -39,8 +39,7 @@ import {
   listAuditLogAdmins,
 } from "../db";
 import { deleteAccountCompletely } from "../accountDeletion";
-import { requestPasswordReset } from "../auth/passwordAuth";
-import { requestMagicLink } from "../auth/magicLink";
+import { requestPasswordReset, sendPasswordSetupInvite } from "../auth/passwordAuth";
 import { ROLE_PERMISSIONS, type Role } from "../entitlement";
 import {
   listDiscounts,
@@ -259,10 +258,14 @@ adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (
   // Nutzerzeile nicht ungeschehen machen - der Admin sieht am Ergebnis, ob die
   // Einladung rausging, und kann bei Bedarf ueber "Passwort-Reset senden"
   // bzw. erneutes Anlegen der Mail nachhelfen.
+  // Bewusst sendPasswordSetupInvite() statt requestMagicLink() (bis
+  // 2026-08-18 hier verwendet): ein Magic-Link loggt sofort ein, ohne je ein
+  // Passwort zu verlangen - admin-angelegte Konten blieben dadurch dauerhaft
+  // passwortlos. Der Invite-Link fuehrt stattdessen in denselben
+  // Passwort-setzen-Screen wie "Passwort vergessen" (PasswordResetFlow.jsx).
   let inviteSent = true;
   try {
-    const result = await requestMagicLink(c.env, new URL(c.req.url).origin, email);
-    inviteSent = result.ok;
+    await sendPasswordSetupInvite(c.env, user);
   } catch (err) {
     console.error("admin_create_user_invite_failed", err instanceof Error ? err.message : "unknown");
     inviteSent = false;
@@ -450,8 +453,15 @@ adminRoutes.post(
     });
     try {
       await deleteAccountCompletely(c.env, id, user.email);
-    } catch {
-      return c.json({ error: "delete_failed_try_again" }, 502);
+    } catch (err) {
+      // Nur ein echter Paddle-Kuendigungsfehler (accountDeletion.ts wirft dafuer
+      // "cancel_failed_try_again") bekommt die Paddle-spezifische Meldung - alles
+      // andere (z.B. ein D1-Constraint-Fehler in deleteUserCompletely) landete
+      // vorher faelschlich ebenfalls unter "Paddle-Kuendigung lief nicht durch"
+      // und fuehrte bei der Fehlersuche auf die falsche Spur (Befund 2026-08-18).
+      const isPaddleFailure = err instanceof Error && err.message === "cancel_failed_try_again";
+      console.error("admin_delete_user_failed", err instanceof Error ? err.message : "unknown");
+      return c.json({ error: isPaddleFailure ? "delete_failed_try_again" : "request_failed" }, 502);
     }
     return c.json({ ok: true });
   },

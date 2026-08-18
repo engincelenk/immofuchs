@@ -277,6 +277,30 @@ export async function requestPasswordReset(env: Env, emailRaw: string): Promise<
   return { ok: true };
 }
 
+// Einladung fuer vom Admin angelegte Konten (POST /users in routes/admin.ts):
+// createUser() setzt dort nie einen password_hash, das Konto waere ohne
+// diesen Weg dauerhaft passwortlos und nur ueber einen spaeteren manuellen
+// Reset erreichbar. Anders als requestPasswordReset() oben PRUEFT diese
+// Funktion bewusst NICHT auf ein vorhandenes password_hash - das ist hier
+// genau der erwuenschte Fall (frisches Konto, erstes Passwort). Deshalb kein
+// oeffentlicher Endpunkt, nur aus dem admin-gesicherten Erstellungs-Handler
+// aufrufbar - sonst waere es der in der Doku oben erwaehnte unbeaufsichtigte
+// Weg, einem fremden OAuth-/Passkey-Konto ein Passwort unterzuschieben.
+export async function sendPasswordSetupInvite(env: Env, user: Pick<UserRow, "id" | "email">): Promise<void> {
+  const rawToken = crypto.randomUUID();
+  await createPasswordResetToken(env.DB, user.id, await hashToken(rawToken));
+  const base = env.APP_BASE_URL || "https://immofuchs.info";
+  const link = `${base}/?reset_token=${rawToken}`;
+  await sendEmail(
+    env,
+    user.email,
+    "Dein ImmoFuchs-Konto wurde angelegt",
+    `<p>Für dich wurde ein ImmoFuchs-Konto angelegt. Setze mit einem Klick dein Passwort, um dich anzumelden (60 Minuten gültig):</p>
+     <p><a href="${link}">${link}</a></p>
+     <p>Falls du das nicht erwartet hast, kannst du diese E-Mail ignorieren.</p>`,
+  );
+}
+
 function providerDisplayName(provider: string): string {
   if (provider === "google") return "Google";
   if (provider === "apple") return "Apple";

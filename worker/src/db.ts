@@ -1429,6 +1429,14 @@ export async function deleteUserCompletely(db: Env["DB"], userId: string): Promi
     // verschwinden mit ihm. Der admin_audit_log bleibt bewusst stehen - er
     // dokumentiert, WER geloescht hat, und muss die Loeschung ueberleben.
     db.prepare("DELETE FROM user_support_notes WHERE user_id = ?").bind(userId),
+    // push_tokens (Migration 0010) und calculator_trial_usage (Migration 0022)
+    // haben FOREIGN KEY REFERENCES users(id), D1 erzwingt foreign_keys=ON -
+    // ohne diese beiden Zeilen schlaegt DELETE FROM users darunter mit einem
+    // FK-Constraint-Fehler fehl (Befund 2026-08-18: useforai@web.de liess sich
+    // deswegen nicht loeschen, obwohl gar kein Abo/Paddle involviert war - der
+    // Admin-Endpunkt zeigte faelschlich die Paddle-Fehlermeldung).
+    db.prepare("DELETE FROM push_tokens WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM calculator_trial_usage WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM users WHERE id = ?").bind(userId),
   ]);
 }
