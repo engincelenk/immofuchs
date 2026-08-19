@@ -3,3 +3,6 @@ dist/
 .wrangler/
 .dev.vars
 e2e/last-report.html
+e2e/reports/
+e2e/.sessions.json
+e2e/.login-cooldown.json

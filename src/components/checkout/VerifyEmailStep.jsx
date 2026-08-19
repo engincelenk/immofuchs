@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { ErrorBanner, MailGlyph } from "./CheckoutShared.jsx";
 import { secondaryBtnStyle } from "./checkoutStyles.js";
 
+// Poll-Intervall als Fallback zu visibilitychange, siehe Kommentar unten.
+const VERIFY_POLL_MS = 4000;
+
 // 60-Sek.-Cooldown fuer "Bestaetigung erneut senden" - startet bei jedem
 // Eintritt in diesen Schritt (frische Registrierung UND jeder manuelle
 // Resend-Klick).
@@ -15,6 +18,31 @@ export function VerifyEmailStep({ t, account, email }) {
     const interval = setInterval(() => setResendCooldown((s) => (s > 0 ? s - 1 : 0)), 1000);
     return () => clearInterval(interval);
   }, [email]);
+
+  // Bugreport 19.08.: der Bestaetigungslink aus der Mail oeffnet auf dem
+  // Handy fast immer einen NEUEN Tab (Mail-App -> Standardbrowser) statt des
+  // Tabs, in dem dieser Schritt offen ist. Der Worker setzt das
+  // Session-Cookie dort erfolgreich (siehe routes/auth.ts, /verify-email),
+  // dieser Tab bekommt davon aber nichts mit - useAccount.js laedt den
+  // Kontostatus nur einmal beim Mount neu, nicht automatisch bei Ereignissen
+  // in einem anderen Tab. Cookie ist same-origin und damit browserweit
+  // gueltig, sobald der Nutzer hierher zurueckkommt muss also nur erneut
+  // GET /me laufen. visibilitychange deckt den Rueckweg aus der Mail-App ab;
+  // der Poll daneben faengt In-App-Browser (z.B. Gmail) ab, die dieses Event
+  // nicht zuverlaessig feuern.
+  useEffect(() => {
+    const checkVerified = () => {
+      if (document.visibilityState === "visible") account.refresh();
+    };
+    document.addEventListener("visibilitychange", checkVerified);
+    window.addEventListener("focus", checkVerified);
+    const poll = setInterval(checkVerified, VERIFY_POLL_MS);
+    return () => {
+      document.removeEventListener("visibilitychange", checkVerified);
+      window.removeEventListener("focus", checkVerified);
+      clearInterval(poll);
+    };
+  }, [account.refresh]);
 
   async function handleResend() {
     setBusy(true);

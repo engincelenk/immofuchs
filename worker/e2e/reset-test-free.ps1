@@ -1,24 +1,17 @@
-# Setzt test.free@immofuchs.info sofort auf "kein Abo" zurueck (kuendigt ein
-# evtl. laufendes echtes Paddle-Sandbox-Abo sofort, setzt trial_used_at
-# zurueck) - fuer wiederholte Checkout-Tests, ohne auf den Periodenend-Termin
-# zu warten oder einen neuen Testuser anzulegen. Nutzt POST /billing/test-reset,
-# das serverseitig auf is_test_user=1 geprueft ist (lehnt bei echten
-# Kundenkonten sofort ab).
+# OBSOLET (2026-08-18): test.free@immofuchs.info wurde geloescht und wird
+# nicht mehr verwendet, siehe release-notes.txt. Dieses Skript setzte genau
+# dieses Konto nach einem echten Sandbox-Checkout auf "kein Abo" zurueck -
+# ohne Ersatz-Fixture gibt es dafuer aktuell keinen Anwendungsfall mehr.
 #
-# Aufruf: powershell -File worker\e2e\reset-test-free.ps1
-# Optional fuer einen anderen Testuser: -SessionId "<andere-session-id>"
+# TODO (manuell): diese Datei kann geloescht werden - der
+# device_commit_files-Uebertragungsweg kann keine Dateien entfernen, daher
+# bewusst nicht automatisch entfernt.
+#
+# Falls in Zukunft wieder ein Testkonto mit is_test_user=1 fuer
+# Sandbox-Checkout-Tests gebraucht wird: der Parameter -SessionId war schon
+# immer ueberschreibbar (siehe Git-Historie dieser Datei), das Skript selbst
+# war nicht test.free-spezifisch hart codiert - nur sein Standardwert.
 
-param(
-    [string]$SessionId = "7eb18393-6ad4-4464-b2af-b8c24c0f75a2",
-    [string]$ApiBase = "https://api-dev.immofuchs.info",
-    [string]$Origin = "https://dev.immofuchs.info"
-)
-
-$response = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/v1/billing/test-reset" `
-    -Headers @{ "Cookie" = "if_session=$SessionId"; "Origin" = $Origin }
-
-if ($response.ok) {
-    Write-Host "OK: Testkonto zurueckgesetzt (kein Abo, Trial wieder verfuegbar)." -ForegroundColor Green
-} else {
-    Write-Host "FEHLER: $($response | ConvertTo-Json -Compress)" -ForegroundColor Red
-}
+Write-Host "OBSOLET: test.free wurde geloescht. Dieses Skript hat aktuell kein Ziel-Testkonto mehr." -ForegroundColor Yellow
+Write-Host "Mit -SessionId ein anderes is_test_user=1-Konto angeben, oder diese Datei entfernen." -ForegroundColor Yellow
+exit 1

@@ -3,13 +3,15 @@ import { apiFetch, sessions } from "./setup";
 
 // Permission-Grenze der Admin-Routen (middleware.ts: requireAdminRead /
 // requireAdmin / requirePermission) - bisher fuer KEINE einzige Admin-Route
-// verifiziert. Braucht kein Admin-Fixture: alle drei Basis-Sessions haben
+// verifiziert. Braucht kein Admin-Fixture: die Basis-Sessions haben
 // role='customer' (siehe entitlement.ts ROLE_PERMISSIONS), deren
 // Rechte-Set enthaelt keine der Admin-Permissions (user.read/user.manage/
 // user.note/user.delete/subscription.*/discount.*) - jede dieser Routen MUSS
-// daher fuer test.free mit 403 antworten, unabhaengig von Pfad-Parametern
-// oder Body (die Permission-Pruefung liegt in der Middleware-Kette VOR dem
-// eigentlichen Handler, siehe routes/admin.ts).
+// daher fuer test.monatlich mit 403 antworten, unabhaengig von Pfad-
+// Parametern oder Body (die Permission-Pruefung liegt in der Middleware-
+// Kette VOR dem eigentlichen Handler, siehe routes/admin.ts). Die
+// Kontowahl (monatlich statt eines Free-Kontos) spielt fuer dieses Ergebnis
+// keine Rolle - es geht ausschliesslich um role='customer'.
 //
 // Fuer den POSITIV-Fall (ein echtes Admin-Konto darf diese Routen nutzen)
 // siehe admin-lifecycle.e2e.test.ts (optional, braucht E2E_SESSION_ADMIN).
@@ -38,9 +40,9 @@ const ADMIN_ROUTES: Array<{ method: string; path: string; label: string }> = [
   { method: "GET", path: "/api/v1/admin/audit-log", label: "GET /audit-log" },
 ];
 
-describe("Admin-Routen: 403 forbidden fuer Nicht-Admin-Konten (test.free)", () => {
+describe("Admin-Routen: 403 forbidden fuer Nicht-Admin-Konten (test.monatlich)", () => {
   it.each(ADMIN_ROUTES)("$label -> 403 forbidden", async ({ method, path }) => {
-    const res = await apiFetch(sessions.free(), path, {
+    const res = await apiFetch(sessions.monatlich(), path, {
       method,
       body: method === "POST" ? JSON.stringify({}) : undefined,
     });

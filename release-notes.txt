@@ -1,3 +1,283 @@
+## 2026-08-19 (1.20.21)
+
+### Fix: Bestaetigungs-Schritt haengt auf dem Handy fest
+
+Nutzer-Meldung: nach der Registrierung und Klick auf den Bestaetigungslink
+aus der Mail sieht man auf dem Handy weiterhin den "Bestaetige deine
+E-Mail"-Screen im Checkout-Wizard - man muss das Fenster manuell schliessen
+und erneut auf "Anmelden" klicken, obwohl die Verifizierung laengst
+geklappt hat.
+
+Ursache: der Bestaetigungslink oeffnet auf dem Handy fast immer einen NEUEN
+Tab (Mail-App -> Standardbrowser) statt des Tabs, in dem der Wizard mit
+`VerifyEmailStep` offen ist. Der Worker (`routes/auth.ts`, `/verify-email`)
+setzt das Session-Cookie dort korrekt und leitet mit `login_success=1`
+weiter - der urspruengliche Tab bekommt davon aber nichts mit, da
+`useAccount.js` den Kontostatus nur einmal beim Mount laedt und weder auf
+Tab-Wechsel noch auf Zeit reagiert.
+
+**Geaendert - `src/components/checkout/VerifyEmailStep.jsx`:** neuer Effekt
+ruft `account.refresh()` auf, sobald der Tab wieder sichtbar wird
+(`visibilitychange`/`focus` - deckt den Rueckweg aus der Mail-App ab) sowie
+als Fallback alle 4 Sekunden per Poll (faengt In-App-Browser wie Gmail ab,
+die `visibilitychange` nicht zuverlaessig feuern). Das same-origin-Cookie
+ist zu dem Zeitpunkt bereits gueltig, GET /me liefert also sofort den
+verifizierten Status.
+
+**Geaendert - `src/components/checkout/CheckoutWizard.jsx`:** der
+bestehende Auto-Advance-Effekt (springt bei erkanntem Login waehrend des
+Konto-Schritts direkt zur Zahlung) greift jetzt auch waehrend "verify" -
+sobald `account.isLoggedIn` durch den neuen Refresh kippt, springt der
+Wizard automatisch zur Zahlung statt auf der Warteseite haengen zu bleiben.
+Fuer die login-only-Variante ("Anmelden" ohne Kaufabsicht) uebernimmt der
+bereits vorhandene Schliessen-Effekt, der ebenfalls nur auf `isLoggedIn`
+reagiert.
+
+## 2026-08-19 (1.20.20)
+
+### Fix: TEST_EMAIL_REDIRECT_TO griff nur bei 1 von 9 Mail-Aufrufstellen
+
+Nutzer-Meldung: die Weiterleitung von Test-Mails an useforai@web.de
+(TEST_EMAIL_REDIRECT_TO, siehe wrangler.toml env.dev.vars) funktioniert
+nicht - konkret ausgeloest durch die Einladungsmail und die Passwort-
+Reset-Mail fuer das neu angelegte Admin-Testkonto test.admin@immofuchs.info,
+beide landeten an einer Adresse, die niemand liest.
+
+Ursachenanalyse: die Umleitung (`resolveRecipient`) sass in
+`notifications.ts`, aufgerufen ausschliesslich von `dispatchNotification()`.
+Von den 9 Stellen im Code, die `sendEmail()` aufrufen, laeuft aber nur EINE
+darueber. Die anderen acht - Registrierung, Bestaetigungslink erneut senden,
+Passwort-Reset (beide Zweige: mit und ohne vorhandenes Passwort), Passwort-
+Setup-Einladung (`sendPasswordSetupInvite`, genau der Aufloeser fuer den
+gemeldeten Fall), Passwort-Aenderung, E-Mail-Aenderung bestaetigen und Magic
+Link - liefen direkt an `sendEmail()` vorbei an der Umleitung, ohne dass das
+irgendwo sichtbar gewesen waere.
+
+**Geaendert - `worker/src/email.ts`:** `resolveRecipient()` von
+`notifications.ts` hierher verschoben, direkt in `sendEmail()` integriert -
+damit deckt ein einziger Punkt wirklich jede der 9 Aufrufstellen ab, genau
+wie beim Markenrahmen (`wrapEmailHtml`), der aus demselben Grund schon hier
+sitzt (siehe Kommentar dort). Zusaetzlich die vorherige `is_test_user`-
+Pruefung entfernt (Nutzer-Entscheidung 2026-08-19): `TEST_EMAIL_REDIRECT_TO`
+ist ausschliesslich in `env.dev.vars` gesetzt, "auf dev geht alles an mich"
+ist dort ohne Einschraenkung die richtige Regel - zudem war `is_test_user`
+bei der E-Mail-Aenderungs-Bestaetigung ohnehin nicht ermittelbar, weil die
+Zieladresse zu dem Zeitpunkt noch nicht in der DB existiert; diese Mail
+waere sonst auch nach dem Verschieben unerreichbar geblieben.
+
+**Geaendert - `worker/src/notifications.ts`:** `resolveRecipient()` entfernt,
+`dispatchNotification()` ruft `sendEmail()` jetzt direkt mit der echten
+Empfaenger-Adresse auf (Umleitung passiert dort zentral). Ungenutzten Import
+`getUserByEmail` aus `db.ts` entfernt.
+
+**Verhalten in qa/prod unveraendert:** `TEST_EMAIL_REDIRECT_TO` ist dort
+nicht gesetzt, `resolveRecipient()` gibt die echte Adresse unveraendert
+zurueck.
+
+**Manuell noetig:** Deploy nach dev, damit die Aenderung wirkt.
+
+**Betroffene Dateien:** worker/src/email.ts, worker/src/notifications.ts
+
+## 2026-08-19 (1.20.19)
+
+### Fix: E2E-Suite ignoriert Session-IDs, die keine UUID sind
+
+Nutzer-Feedback zu 1.20.18: `.env.local` konnte nicht sofort korrigiert
+werden. Statt darauf zu warten, haerte `worker/e2e/setup.ts` selbst dagegen
+ab: ein `E2E_SESSION_*`-Wert wird nur noch uebernommen, wenn er wie eine
+UUID aussieht (Muster der D1-Tabelle `sessions`). Ein Wert wie die zwei
+Paddle-Preis-IDs aus 1.20.18 (`pri_01kz...`) wird jetzt mit einer Warnung
+ignoriert statt still die per Login geholte Session zu ueberschreiben - genau
+die fehlende Pruefung, die 1.20.18 behoben hat.
+
+**Geaendert - `worker/e2e/setup.ts`:** `SESSION_ID_PATTERN`-Pruefung
+(`envOverride()`) vor jeder Verwendung von `E2E_SESSION_MONATLICH`/
+`E2E_SESSION_JAEHRLICH`/`E2E_SESSION_ADMIN`.
+
+**Betroffene Dateien:** worker/e2e/setup.ts
+
+## 2026-08-19 (1.20.18)
+
+### Test: E2E-Suite holt ihre Sessions selbst per Login (63 rote Tests behoben)
+
+Ausgangslage: Lauf vom 19.08. 08:27 lieferte 28 bestanden / 63 fehlgeschlagen /
+27 uebersprungen. Ursachenanalyse ergab KEINE 63 Bugs, sondern drei Fehler:
+
+1. In `e2e-dashboard/.env.local` standen bei `E2E_SESSION_MONATLICH` und
+   `E2E_SESSION_JAEHRLICH` zwei (identische) Paddle-PREIS-IDs `pri_01kz...`
+   statt Session-IDs. Da `server.js` `process.env.X || Fallback` benutzt,
+   haben diese falschen Werte die funktionierenden fest hinterlegten
+   Session-IDs ueberschrieben -> jeder authentifizierte Request bekam
+   401 not_authenticated (~52 Tests).
+2. Trailing-Slash-Bug in den Tests: `consent.e2e.test.ts` rief
+   `/api/v1/consent/` und `objects.e2e.test.ts` rief `/api/v1/objects/` auf.
+   Hono routet strikt, die Routen heissen ohne Schraegstrich -> 404 not_found
+   (10 Tests). Testseitiger Fehler, kein Produktionsfehler.
+3. `E2E_SESSION_ADMIN` war leer -> `admin-lifecycle.e2e.test.ts` (21 Tests)
+   und 2 Registrierungs-Tests uebersprangen sich still.
+
+Strukturursache dahinter: dieselben Session-IDs standen an DREI Stellen
+(`worker/e2e/run.ps1`, `e2e-dashboard/server.js` als Fallback,
+`e2e-dashboard/.env.local`) und sind zwangslaeufig auseinandergelaufen.
+
+**Neu - `worker/e2e/global-setup.ts`:** Vitest-globalSetup, das zu Laufbeginn
+einmalig `POST /api/v1/auth/login` fuer test.monatlich, test.jaehrlich und
+(optional) test.admin ausfuehrt, die Session-IDs nach `e2e/.sessions.json`
+schreibt und sie im teardown per `POST /auth/logout` wieder abmeldet (damit
+die D1-Tabelle `sessions` nicht mit jedem Lauf waechst). Bewusst eine Datei
+statt `process.env`: globalSetup laeuft im Hauptprozess, die Tests in eigenen
+Worker-Prozessen - eine Datei kommt unabhaengig vom Vitest-Pool-Typ an.
+Enthaelt zusaetzlich eine Abkuehlzeit (`e2e/.login-cooldown.json`): nach einem
+abgelehnten Login wird derselbe Login 15 Minuten lang nicht erneut versucht,
+sonst wuerde ein falsch hinterlegtes Passwort ueber mehrere Laeufe hinweg die
+IP-weite Login-Sperre ausloesen (5 Fehlversuche/15 Min, siehe
+`worker/src/auth/passwordAuth.ts`) und damit auch alle anderen Tests
+lahmlegen.
+
+**Geaendert - `worker/e2e/setup.ts`:** `sessions.monatlich/jaehrlich` und
+`adminSessionId` lesen die Session-IDs aus `.sessions.json`; `E2E_SESSION_*`
+bleibt als bewusste Uebersteuerung moeglich, ist aber nicht mehr noetig. Neu
+exportiert: `SESSIONS_FILE`, Typ `SessionKey`. Signatur von `sessions.*`
+unveraendert - keine der 12 Testdateien musste angefasst werden.
+
+**Geaendert - `worker/vitest.e2e.config.ts`:** `globalSetup: ["./e2e/global-setup.ts"]`.
+
+**Geaendert - `worker/e2e/consent.e2e.test.ts`, `worker/e2e/objects.e2e.test.ts`:**
+Trailing Slash aus den Pfaden entfernt (`/api/v1/consent`, `/api/v1/objects`).
+
+**Geaendert - `worker/e2e/run.ps1`:** fest hinterlegte Session-IDs entfernt;
+laedt stattdessen `e2e-dashboard/.env.local` (gleiche Parsing-Regeln wie
+`server.js`), damit beide Startwege exakt dieselbe Konfigurationsquelle haben.
+
+**Geaendert - `e2e-dashboard/server.js`:** fest hinterlegte Session-IDs als
+Fallback entfernt (kein Fallback = keine stille falsche Quelle).
+`E2E_PASSWORD_ADMIN` ist optional, die beiden Basis-Passwoerter bleiben Pflicht.
+
+**Neu - `e2e-dashboard/env.beispiel.txt`:** die von README/server.js
+referenzierte Vorlage fehlte im Ordner; jetzt vorhanden, inkl. Warnung zu
+`E2E_SESSION_*`.
+
+**Geaendert - `worker/.gitignore`:** `e2e/.sessions.json` und
+`e2e/.login-cooldown.json` ergaenzt (Laufzeitdaten, gehoeren nicht ins Repo).
+
+**Geaendert - `worker/e2e/README.md`:** auf das Login-basierte Setup
+umgeschrieben, Warnung zu `E2E_SESSION_*` und Abschnitt zur Login-Sperre
+ergaenzt; Nutzer-Entscheidung 2026-08-19 festgehalten, dass es keinen Ersatz
+fuer test.free gibt und die 402-Pro-Sperre damit dauerhaft ungetestet bleibt.
+
+**Manuell noetig (nicht im Code):** `E2E_PASSWORD_ADMIN` in
+`e2e-dashboard/.env.local` eintragen und dasselbe Passwort am Konto
+test.admin@immofuchs.info setzen; die falschen `E2E_SESSION_*`-Zeilen dort
+entfernen.
+
+**Breaking Changes:** keine fuer die Anwendung. Fuer die Testsuite: ein Lauf
+ohne `E2E_PASSWORD_MONATLICH`/`E2E_PASSWORD_JAEHRLICH` bricht jetzt sofort mit
+klarer Meldung ab, statt mit 401 durchzulaufen.
+
+**Betroffene Dateien:** worker/e2e/global-setup.ts (neu), worker/e2e/setup.ts,
+worker/vitest.e2e.config.ts, worker/e2e/consent.e2e.test.ts,
+worker/e2e/objects.e2e.test.ts, worker/e2e/run.ps1, worker/e2e/README.md,
+worker/.gitignore, e2e-dashboard/server.js, e2e-dashboard/env.beispiel.txt (neu)
+
+## 2026-08-19 (1.20.17)
+
+### Tooling: E2E-Reports werden zusaetzlich datiert archiviert
+
+Nutzer-Wunsch: jeder Testlauf soll als HTML mit Datum abgespeichert werden,
+nicht nur als last-report.html (wird bei jedem Lauf ueberschrieben).
+
+**Geaendert - `worker/e2e/generate-report.mjs`:** schreibt zusaetzlich zu
+`e2e/last-report.html` eine datierte Kopie nach `e2e/reports/report-<Datum>_<Uhrzeit>.html`
+(Ordner wird bei Bedarf automatisch angelegt).
+
+**Geaendert - `worker/.gitignore`:** `e2e/reports/` ergaenzt (wie
+last-report.html bewusst nicht committet - reine QA-Laufergebnisse).
+
+**Geaendert - `e2e-dashboard/index.html`:** Hinweis auf die archivierten
+Reports unter worker/e2e/reports/ ergaenzt.
+
+**Betroffene Dateien:** worker/e2e/generate-report.mjs, worker/.gitignore,
+e2e-dashboard/index.html
+
+## 2026-08-18 (1.20.16)
+
+### Test: test.free-Fixture aus der E2E-Suite entfernt (Konto geloescht)
+
+Nutzer-Info: test.free@immofuchs.info wurde geloescht und wird nicht mehr
+verwendet. Nutzer-Entscheidung auf Rueckfrage: keine Ersatz-Fixture, echte
+Free-spezifische Testfaelle (die zwingend den "kein Abo"-Zustand brauchten)
+ersatzlos streichen statt auf ein zur Laufzeit registriertes Wegwerf-Konto
+umzustellen.
+
+**Geaendert - `worker/e2e/setup.ts`:** `free` aus `sessions`/`credentials`
+entfernt; `E2E_SESSION_FREE`/`E2E_PASSWORD_FREE` nicht mehr erforderlich.
+
+**Gefahrlos auf test.monatlich umgestellt (kein Coverage-Verlust, testeten
+kein Free-spezifisches Verhalten):** `devices.e2e.test.ts`,
+`account.e2e.test.ts`, `admin-permissions.e2e.test.ts`,
+`billing-checkout.e2e.test.ts`, sowie in `auth-password.e2e.test.ts` der
+Falsches-Passwort-Test, der E-Mail-Kollisions-Test bei der Registrierung,
+der Passwort-Reset-Request-Test und der komplette `/account/password`-
+Erfolgspfad (inkl. Wiederherstellung) - sicher, da `deleteOtherSessionsForUser`
+laut Code nur ANDERE Sessions loescht, nie die aktuell aendernde.
+
+**Zusammengelegt:** `billing-error-paths.e2e.test.ts` (basierte komplett auf
+test.free) - drei Validierungsfaelle, die laut `routes/billing.ts` VOR jedem
+Subscription-Lookup greifen (invalid_plan bei change-plan/checkout,
+not_cancel_scheduled bei reactivate), nach `billing-gaps.e2e.test.ts`
+uebernommen und auf test.monatlich umgestellt. `billing-error-paths.e2e.test.ts`
+selbst ist jetzt ein Stub mit `it.skip` (manuelles Loeschen empfohlen, siehe
+Datei-Kommentar - der Uebertragungsweg kann keine Dateien entfernen).
+
+**Ersatzlos entfallen (echter Coverage-Verlust, Nutzer-Entscheidung):**
+requirePro-402-Sperre fuer Konten ohne Pro-Tarif (`objects.e2e.test.ts`)
+sowie die "kein Abo"-Fehlerpfade bei cancel/refund/change-plan (404
+no_active_subscription) und die leere Rechnungsliste - liessen sich nicht
+gefahrlos auf ein Konto MIT aktivem Abo uebertragen. Dokumentiert in
+`worker/e2e/README.md` unter "Was hier bewusst NICHT automatisiert ist".
+
+**Sonstige Anpassungen:** `worker/e2e/run.ps1` (E2E_SESSION_FREE entfernt),
+`worker/e2e/reset-test-free.ps1` (Stub mit Hinweis, manuelles Loeschen
+empfohlen), `worker/e2e/README.md`, `worker/e2e/admin-lifecycle.e2e.test.ts`
+und `worker/e2e/billing-webhook.e2e.test.ts` (nur Kommentare), sowie das
+lokale E2E-Dashboard (`e2e-dashboard/server.js`, `env.beispiel.txt`,
+`README.md`) - E2E_PASSWORD_FREE nicht mehr erforderlich.
+
+**Betroffene Dateien:** worker/e2e/setup.ts, worker/e2e/me.e2e.test.ts,
+worker/e2e/devices.e2e.test.ts, worker/e2e/account.e2e.test.ts,
+worker/e2e/objects.e2e.test.ts, worker/e2e/admin-permissions.e2e.test.ts,
+worker/e2e/billing-checkout.e2e.test.ts, worker/e2e/billing-gaps.e2e.test.ts,
+worker/e2e/billing-error-paths.e2e.test.ts, worker/e2e/auth-password.e2e.test.ts,
+worker/e2e/admin-lifecycle.e2e.test.ts, worker/e2e/billing-webhook.e2e.test.ts,
+worker/e2e/run.ps1, worker/e2e/reset-test-free.ps1, worker/e2e/README.md,
+e2e-dashboard/server.js, e2e-dashboard/env.beispiel.txt, e2e-dashboard/README.md
+
+## 2026-08-18 (1.20.15)
+
+### Tooling: E2E-Dashboard-Port geaendert (Kollision mit Frontend-Dev-Server behoben)
+
+Fehlerbericht: Port 5199 war bereits durch einen anderen lokal laufenden
+Server belegt (vermutlich Frontend-Dev-Server) - der Browser zeigte beim
+Aufruf von localhost:5199 versehentlich die echte immofuchs.info-Startseite
+statt des Dashboards, obwohl der Node-Prozess selbst fehlerfrei "laeuft"
+meldete (Windows liess offenbar beide Prozesse auf demselben Port lauschen,
+IPv4/IPv6-bedingt).
+
+**Geaendert - `e2e-dashboard/server.js`:** Standardport von 5199 auf 48731
+(unueblicher Port, geringeres Kollisionsrisiko) geaendert; zusaetzlich ein
+`server.on("error", ...)`-Handler, der bei EADDRINUSE eine klare
+Fehlermeldung mit Loesungsvorschlag ausgibt statt stillschweigend zu
+kollidieren.
+
+**Geaendert - `e2e-dashboard/start.ps1`:** oeffnet den Browser jetzt erst
+nach kurzer Verzoegerung (Hintergrundjob), nachdem der Server tatsaechlich
+lauscht, statt sofort beim Skriptstart.
+
+**Geaendert - `e2e-dashboard/README.md`:** Port-Referenzen aktualisiert.
+
+**Betroffene Dateien:** e2e-dashboard/server.js, e2e-dashboard/start.ps1,
+e2e-dashboard/README.md
+
 ## 2026-08-18 (1.20.14)
 
 ### Free-Produkt aus Preistabelle entfernt, Trial 7 -> 3 Tage (Paddle-Vorgabe)
@@ -32,22 +312,176 @@ ImmoFuchs-Testphase endet in 2 Tagen" -> "... endet in 1 Tag" (an neues
 Vorlauf-Fenster angepasst).
 
 **Geaendert - Kommentare (kein Verhalten):** `worker/src/db.ts`,
-`worker/src/paddle/webhook.ts`, `worker/e2e/README.md` - Erwaehnungen von
-"7-Tage-Trial" auf "3-Tage-Trial" aktualisiert.
+`worker/src/paddle/webhook.ts`, `worker/e2e/README.md`,
+`worker/e2e/manuelle-testfaelle.md` - Erwaehnungen von "7-Tage-Trial" auf
+"3-Tage-Trial" aktualisiert.
 
 **Nicht geaendert:** `worker/e2e/reset-test-free.ps1` zeigt per Default noch
 auf die Session-ID des inzwischen vom Nutzer geloeschten tes.free-Testkontos
 - separat zu klaeren, kein Teil dieser Aenderung.
 
-**Hinweis:** `worker/e2e/manuelle-testfaelle.md` enthaelt lokal denselben
-Kommentar-Fix, ist aber Teil einer parallel laufenden, noch nicht
-committeten Aenderung an anderen Dateien (`worker/e2e/setup.ts`,
-`e2e-dashboard/`, neue e2e-Testdateien) und bewusst nicht Teil dieses Pushs.
-
 **Betroffene Dateien:** src/components/checkout/PricingSection.jsx,
 src/pages/Landing.jsx, src/i18n/account.js, worker/src/scheduled.ts,
 worker/src/notifications.ts, worker/src/db.ts, worker/src/paddle/webhook.ts,
-worker/e2e/README.md
+worker/e2e/README.md, worker/e2e/manuelle-testfaelle.md
+
+## 2026-08-18 (1.20.13)
+
+### Tooling: E2E-Dashboard zeigt Testziel sichtbar an
+
+Nutzer-Nachfrage: Unklar, ob das Dashboard tatsaechlich gegen den echten
+dev-Worker testet oder nur lokal. Klarstellung: Der Standardwert war schon
+immer https://api-dev.immofuchs.info (siehe worker/e2e/setup.ts,
+unveraendert seit 1.20.1) - localhost:5199 ist nur die Adresse des lokalen
+Steuerungs-Servers, nicht das Testziel selbst.
+
+**Geaendert - `e2e-dashboard/server.js`:** neuer Endpunkt `GET /config`
+liefert die tatsaechlich verwendete API_BASE_URL (Default oder
+E2E_API_BASE_URL-Override) an die Seite.
+
+**Geaendert - `e2e-dashboard/index.html`:** zeigt das Testziel jetzt
+direkt unter dem Start-Button an ("Testziel: https://api-dev.immofuchs.info
+(echter deployter Worker, nicht dieser lokale Dashboard-Server).").
+
+**Betroffene Dateien:** e2e-dashboard/server.js, e2e-dashboard/index.html
+
+## 2026-08-18 (1.20.12)
+
+### Tooling: Lokales E2E-Dashboard (Knopfdruck-Testrunner mit Report auf derselben Seite)
+
+Nutzer-Wunsch: eigener Ordner unter dem Projekt-Root mit einfachem UI, um die
+automatisierten Tests per Knopfdruck zu starten und das Ergebnis direkt auf
+derselben Seite zu sehen - nur fuer das, was sich automatisieren laesst.
+
+**Neu - `e2e-dashboard/`** (neuer Ordner, Projekt-Root-Ebene): kleiner
+lokaler Webserver ohne zusaetzliche Abhaengigkeiten (nur Node-Bordmittel).
+`server.js` startet auf Knopfdruck denselben Befehl wie das bestehende
+`worker/e2e/run.ps1` (`npm run test:e2e:report` im `worker`-Ordner) und
+liefert den erzeugten HTML-Report an die Seite zurueck; `index.html` zeigt
+Start-Button und Report (eingebettet als iframe) auf einer Seite. Laden
+optionaler Geheimnisse (Test-Passwoerter, E2E_SESSION_ADMIN,
+E2E_PADDLE_WEBHOOK_SECRET) aus einer lokalen, nicht committeten
+`.env.local` (Vorlage: `env.beispiel.txt`, per .gitignore ausgeschlossen).
+
+**Bewusste Entscheidung - keine Testdateien verschoben:** `worker/e2e/*`
+bleibt unveraendert an seinem Platz; das Dashboard ruft die bestehende
+Suite nur von aussen auf. Ein echter Umzug haette
+`worker/vitest.e2e.config.ts`, `worker/package.json`-Scripts und die
+relativen Imports in allen Testdateien angefasst - eine
+Architekturaenderung an funktionierender Infrastruktur, siehe
+Begruendung in `e2e-dashboard/README.md`.
+
+**Umfang:** ausschliesslich die 11 automatisierten `*.e2e.test.ts`-Dateien.
+Die manuellen Testfaelle aus `worker/e2e/manuelle-testfaelle.md` (OAuth,
+logout-all, Account-Loeschung, Login-Sperre) sind hier bewusst nicht
+enthalten.
+
+**Betroffene Dateien (neu):** e2e-dashboard/server.js, e2e-dashboard/index.html,
+e2e-dashboard/env.beispiel.txt, e2e-dashboard/.gitignore,
+e2e-dashboard/start.ps1, e2e-dashboard/README.md
+
+## 2026-08-18 (1.20.11)
+
+### Test: Webhook-Signaturpruefung automatisiert, restliche Luecken als manuelle Testfaelle dokumentiert
+
+Nutzer-Entscheidung 2026-08-18: Webhook-Secret der dev-Paddle-Notification-
+Destination bereitgestellt (E2E_PADDLE_WEBHOOK_SECRET), OAuth/Passkey sowie
+logout-all/account-delete/Login-Sperre werden vom Nutzer selbst manuell
+getestet. Ziel: alles automatisieren, was sich sicher automatisieren laesst -
+den Rest mit einer Schritt-fuer-Schritt-Anleitung dokumentieren.
+
+**Neu automatisiert - `worker/e2e/billing-webhook.e2e.test.ts`** (optional,
+uebersprungen ohne E2E_PADDLE_WEBHOOK_SECRET): signiert Testpayloads exakt
+wie verifyPaddleSignature() es erwartet (node:crypto createHmac statt der
+WebCrypto-Variante im Worker selbst, gleiches HMAC-SHA-256-Ergebnis). Deckt
+ab: fehlende/falsche Signatur (401), kaputtes JSON bei gueltiger Signatur
+(500), subscription.updated ohne custom_data.user_id (200, nichts
+geschrieben), subscription.canceled fuer unbekannte subscription_id (200,
+No-Op), Doppelzustellung derselben event_id (beide 200). Bewusst NICHT
+automatisiert: ein Event, das tatsaechlich eine Subscription-Zeile fuer ein
+reales Konto schreibt - wuerde entweder ein Fixture-Konto veraendern oder
+eine ueber HTTP nicht loeschbare, verwaiste Zeile anlegen.
+
+**Neu - `worker/e2e/manuelle-testfaelle.md`**: 9 Schritt-fuer-Schritt-
+Testfaelle mit erwartetem Ergebnis fuer alles, was bewusst nicht automatisiert
+wird: Google-OAuth (Neuanmeldung, wiederkehrend, E-Mail-Kollision, Loeschung
+via delete-reauth), Apple-OAuth (Verweis analog Google), POST
+/auth/logout-all, POST /account/delete (echte Loeschung), die tatsaechliche
+5x-Login-Sperre (423 locked, inkl. Erklaerung warum das die IP fuer 15
+Minuten sperrt und deshalb nie automatisiert werden sollte) und eine echte
+Paddle-Webhook-Zustellung auf ein reales Konto.
+
+`e2e/setup.ts` um `paddleWebhookSecret` (Pattern wie
+adminSessionId/realProSessionId) ergaenzt. `e2e/README.md`: neue optionale
+Variable E2E_PADDLE_WEBHOOK_SECRET, Verweise auf manuelle-testfaelle.md bei
+jedem der dort beschriebenen Punkte, Duplikate im vorherigen
+"NICHT automatisiert"-Abschnitt bereinigt.
+
+**Betroffene Dateien:** worker/e2e/setup.ts, worker/e2e/README.md,
+worker/e2e/billing-webhook.e2e.test.ts, worker/e2e/manuelle-testfaelle.md
+
+**Breaking Changes:** keine. Sicherheitshinweis: das Webhook-Secret steht
+ausschliesslich in der Umgebungsvariable E2E_PADDLE_WEBHOOK_SECRET, nirgends
+im Code oder in dieser Datei.
+
+## 2026-08-18 (1.20.10)
+
+### Test: E2E-Abdeckung fuer Passwort-Login/-Registrierung (worker/e2e/auth-password.e2e.test.ts)
+
+Nutzer-Vorgabe 2026-08-18: echte Passwoerter der drei Basis-Testkonten
+(E2E_PASSWORD_FREE/MONATLICH/JAEHRLICH) bereitgestellt, um die zuvor bewusst
+ausgeklammerten Passwort-Auth-Use-Cases doch zu testen. Neue Datei deckt ab:
+
+- `POST /auth/login` - Erfolgspfad fuer alle drei Basis-Konten (echte
+  Session entsteht, funktioniert, wird sauber wieder abgemeldet) + genau
+  EIN Fehlerfall (invalid_credentials).
+- `POST /auth/register` - email_taken, invalid_password, invalid_email
+  (fehlende acceptedTerms) sowie der Erfolgspfad (nur mit
+  E2E_SESSION_ADMIN, das den angelegten Wegwerf-Nutzer danach loescht).
+- `POST /auth/resend-verification`, `POST /auth/password-reset/request` -
+  neutrale {ok:true}-Antworten, ohne Seiteneffekt auf echte Konten.
+- `POST /auth/password-reset/confirm`, `GET /auth/verify-email`,
+  `GET /auth/magic-link/verify` - Validierungsfehler bzw. Redirect bei
+  ungueltigem Token (kein gueltiges Token ohne Mail-Postfach-Zugriff
+  verfuegbar, daher kein Erfolgspfad).
+- `POST /account/password` - jetzt der ECHTE Erfolgspfad (vorher nur
+  Validierungsfehler moeglich): aendert das Passwort von test.free und
+  stellt es im selben Testlauf per afterAll wieder her. Schlaegt die
+  Wiederherstellung fehl, bleibt der Testlauf absichtlich rot (kein
+  stillschweigendes Verschlucken).
+
+**Bewusst weiterhin NICHT automatisiert** (auch mit den neuen Passwoertern
+nicht moeglich/sinnvoll):
+- Die tatsaechliche 5x-Login-Sperre (423 locked) - der Fehlversuchs-Zaehler
+  laeuft zusaetzlich pro Client-IP; ein bewusst ausgeloester Lock wuerde
+  fuer 15 Minuten ALLE Logins von der Test-IP aus sperren, auch die eigenen
+  Erfolgstests bei einem erneuten Lauf im selben Fenster.
+- `POST /auth/logout-all` - wuerde alle Sessions des Kontos loeschen,
+  inklusive der Basis-Fixture-Session selbst (E2E_SESSION_FREE etc.), auf
+  der die gesamte uebrige Suite aufbaut.
+- `POST /account/delete` (tatsaechliche Loeschung) - jetzt technisch
+  moeglich, aber wuerde eines der drei geteilten Fixture-Konten
+  unwiderruflich loeschen (Stabilitaetsregel).
+- Google/Apple-OAuth, Passkey/WebAuthn - Passwoerter helfen hier nicht,
+  noetig waere eine echte OAuth-Ceremonie bzw. eine WebAuthn-Signatur
+  (Playwright-Browser-Automatisierung + virtueller Authenticator - neues
+  Werkzeug, keine reine Testcode-Ergaenzung, separat abzustimmen).
+- Paddle-Webhook-Signaturpruefung - unveraendert, braucht das
+  Webhook-Secret in der Testumgebung.
+
+`e2e/setup.ts` um `credentials` (E-Mail+Passwort je Basiskonto),
+`publicFetch()` (fuer Endpunkte ohne Session-Cookie, redirect:"manual") und
+`extractSessionCookie()` (liest die if_session-ID aus einer
+Login-Antwort) ergaenzt. `e2e/README.md` aktualisiert: neue Pflicht-Variablen
+E2E_PASSWORD_*, ueberarbeiteter Abschnitt "Was hier bewusst NICHT
+automatisiert ist".
+
+**Betroffene Dateien:** worker/e2e/setup.ts, worker/e2e/README.md,
+worker/e2e/auth-password.e2e.test.ts
+
+**Breaking Changes:** keine. Sicherheitshinweis: die Passwoerter selbst
+stehen ausschliesslich in Umgebungsvariablen (E2E_PASSWORD_*), nirgends im
+Code oder in dieser Datei.
 
 ## 2026-08-18 (1.20.10)
 

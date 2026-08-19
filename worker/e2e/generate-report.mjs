@@ -5,7 +5,7 @@
 // zusaetzlichen UI-Pakets (@vitest/ui) - eine Abhaengigkeit weniger fuer
 // dieses kleine QA-Skript.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
 
@@ -118,5 +118,21 @@ const html = `<!doctype html>
 const outPath = join(process.cwd(), "e2e", "last-report.html");
 writeFileSync(outPath, html, "utf-8");
 console.log(`\nReport geschrieben: ${outPath}`);
+
+// Zusaetzlich zu last-report.html (wird bei jedem Lauf ueberschrieben) wird
+// jeder Lauf mit Datum/Uhrzeit im Dateinamen archiviert - Nutzer-Wunsch
+// 2026-08-19: Verlauf ueber mehrere Laeufe sichtbar halten statt nur den
+// letzten Stand zu haben. Ordner wird bewusst NICHT committet (siehe
+// .gitignore), damit keine QA-Ergebnisse ins Repo wandern.
+const reportsDir = join(process.cwd(), "e2e", "reports");
+mkdirSync(reportsDir, { recursive: true });
+const stampParts = new Date();
+const pad = (n) => String(n).padStart(2, "0");
+const stamp =
+  `${stampParts.getFullYear()}-${pad(stampParts.getMonth() + 1)}-${pad(stampParts.getDate())}` +
+  `_${pad(stampParts.getHours())}-${pad(stampParts.getMinutes())}-${pad(stampParts.getSeconds())}`;
+const archivedPath = join(reportsDir, `report-${stamp}.html`);
+writeFileSync(archivedPath, html, "utf-8");
+console.log(`Archiviert: ${archivedPath}`);
 
 process.exit(run.status ?? 0);

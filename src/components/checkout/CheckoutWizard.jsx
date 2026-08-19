@@ -134,9 +134,17 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // sonst wuerde dieser Effekt auch beim initialen Mount eines bereits
   // eingeloggten Nutzers feuern und die neue Plan-Auswahl (siehe stepIndex-
   // Default oben) sofort wieder ueberspringen.
+  //
+  // Greift seit Bugreport 19.08. auch auf "verify": der Bestaetigungslink
+  // wird auf dem Handy meist in einem ANDEREN Tab geoeffnet, dieser Wizard
+  // bleibt also auf "verify" stehen. VerifyEmailStep erkennt die
+  // Verifizierung dort per visibilitychange/Poll und ruft account.refresh()
+  // auf - sobald isLoggedIn dadurch kippt, soll der Wizard genauso zur
+  // Zahlung weiterspringen wie beim direkten Login ueber "account", statt
+  // dass der Nutzer auf der Warteseite haengen bleibt.
   useEffect(() => {
     if (variant === "upgrade" || variant === "login-only") return;
-    if (currentKey !== "account") return;
+    if (currentKey !== "account" && currentKey !== "verify") return;
     if (!account?.isLoggedIn || account.isPro) return;
     setVariant("new-customer-no-verify");
     setStepIndex(getWizardSteps("new-customer-no-verify").indexOf("payment"));

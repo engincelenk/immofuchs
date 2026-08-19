@@ -9,7 +9,7 @@ import { apiFetch, sessions } from "./setup";
 // stimmt, und wird genau dadurch gruen - kein manuelles Update noetig.
 describe("POST /billing/checkout — echte Paddle-Sandbox-Transaktion", () => {
   it.each(["monthly", "yearly"] as const)("erzeugt eine Draft-Transaktion fuer Plan=%s", async (plan) => {
-    const res = await apiFetch(sessions.free(), "/api/v1/billing/checkout", {
+    const res = await apiFetch(sessions.monatlich(), "/api/v1/billing/checkout", {
       method: "POST",
       body: JSON.stringify({ plan }),
     });

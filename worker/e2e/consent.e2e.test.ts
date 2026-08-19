@@ -9,13 +9,13 @@ import { apiFetch } from "./setup";
 // Cookie-Header, der hier schlicht ignoriert wird ("unused" reicht).
 describe("Consent: GET/POST /consent", () => {
   it("GET ohne sessionId -> 400 invalid_session_id", async () => {
-    const res = await apiFetch("unused", "/api/v1/consent/");
+    const res = await apiFetch("unused", "/api/v1/consent");
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "invalid_session_id" });
   });
 
   it("GET mit zu kurzer sessionId -> 400 invalid_session_id", async () => {
-    const res = await apiFetch("unused", "/api/v1/consent/?sessionId=kurz");
+    const res = await apiFetch("unused", "/api/v1/consent?sessionId=kurz");
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "invalid_session_id" });
   });
@@ -23,24 +23,24 @@ describe("Consent: GET/POST /consent", () => {
   it("neue sessionId: GET -> consented=false, POST -> ok, GET danach -> consented=true", async () => {
     const sessionId = randomUUID();
 
-    const before = await apiFetch("unused", `/api/v1/consent/?sessionId=${sessionId}`);
+    const before = await apiFetch("unused", `/api/v1/consent?sessionId=${sessionId}`);
     expect(before.status).toBe(200);
     expect(await before.json()).toEqual({ consented: false });
 
-    const post = await apiFetch("unused", "/api/v1/consent/", {
+    const post = await apiFetch("unused", "/api/v1/consent", {
       method: "POST",
       body: JSON.stringify({ sessionId }),
     });
     expect(post.status).toBe(200);
     expect(await post.json()).toEqual({ ok: true });
 
-    const after = await apiFetch("unused", `/api/v1/consent/?sessionId=${sessionId}`);
+    const after = await apiFetch("unused", `/api/v1/consent?sessionId=${sessionId}`);
     expect(after.status).toBe(200);
     expect(await after.json()).toEqual({ consented: true });
   });
 
   it("POST ohne sessionId im Body -> 400 invalid_session_id", async () => {
-    const res = await apiFetch("unused", "/api/v1/consent/", { method: "POST", body: JSON.stringify({}) });
+    const res = await apiFetch("unused", "/api/v1/consent", { method: "POST", body: JSON.stringify({}) });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "invalid_session_id" });
   });

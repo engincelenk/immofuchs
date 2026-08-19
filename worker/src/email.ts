@@ -71,12 +71,42 @@ function htmlToText(html: string): string {
     .trim();
 }
 
+// Dev-Umleitung (2026-08-18, erweitert 2026-08-19): mit gesetztem
+// TEST_EMAIL_REDIRECT_TO (nur env.dev.vars) geht JEDE ausgehende Mail an
+// diese eine Adresse statt an den echten Empfaenger, Betreff bekommt ein
+// Praefix mit der urspruenglichen Adresse, damit im Sammelpostfach erkennbar
+// bleibt, wer ausgeloest hat. Ohne die Variable (Default in qa/prod) aendert
+// sich nichts.
+//
+// Bewusst HIER in sendEmail() statt in notifications.ts/dispatchNotification()
+// (bis 2026-08-19 dort, siehe release-notes.txt 1.20.19): von den 9 Stellen im
+// Code, die sendEmail() aufrufen, laueft nur EINE ueber dispatchNotification -
+// die anderen acht (Registrierung, Passwort-Reset, Passwort-Setup-Einladung,
+// Passwort-Aenderung, E-Mail-Aenderung, Magic Link) liefen an der Umleitung
+// vorbei direkt an die echte, in dev oft nicht erreichbare Adresse. Genau wie
+// beim Markenrahmen oben (wrapEmailHtml) gilt: ein einziger Punkt, durch den
+// wirklich jede Mail muss, statt neun Aufrufstellen einzeln pflegen zu
+// muessen.
+//
+// Bewusst auch OHNE die vorherige is_test_user-Pruefung: die Variable ist
+// ausschliesslich in env.dev.vars gesetzt, "auf dev geht alles an mich" ist
+// dort die richtige Regel. Zusaetzlich war is_test_user bei einer Mail (neue
+// E-Mail-Adresse bestaetigen) ohnehin nicht ermittelbar, weil die Zieladresse
+// noch nicht in der DB existiert - diese Mail waere sonst auch nach dem
+// Verschieben unerreichbar geblieben.
+function resolveRecipient(env: Env, to: string): { to: string; subjectPrefix: string } {
+  if (!env.TEST_EMAIL_REDIRECT_TO) return { to, subjectPrefix: "" };
+  return { to: env.TEST_EMAIL_REDIRECT_TO, subjectPrefix: `[TEST ${to}] ` };
+}
+
 export async function sendEmail(
   env: Env,
-  to: string,
-  subject: string,
+  toRaw: string,
+  subjectRaw: string,
   html: string,
 ): Promise<void> {
+  const { to, subjectPrefix } = resolveRecipient(env, toRaw);
+  const subject = `${subjectPrefix}${subjectRaw}`;
   const from = parseFrom(env.MAGIC_LINK_FROM_EMAIL || DEFAULT_FROM);
   html = wrapEmailHtml(env, html);
   const text = htmlToText(html);

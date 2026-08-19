@@ -41,7 +41,7 @@ describe("Objects-CRUD (test.monatlich, Pro-Konto)", () => {
   it("POST / legt ein neues Objekt an (created=true, 201)", async () => {
     const id = randomUUID();
     createdIds.push(id);
-    const res = await apiFetch(sessions.monatlich(), "/api/v1/objects/", {
+    const res = await apiFetch(sessions.monatlich(), "/api/v1/objects", {
       method: "POST",
       body: JSON.stringify(newInput(id)),
     });
@@ -53,7 +53,7 @@ describe("Objects-CRUD (test.monatlich, Pro-Konto)", () => {
 
   it("POST / mit derselben ID erneut -> created=false, 200 (kein Duplikat)", async () => {
     const id = createdIds[0];
-    const res = await apiFetch(sessions.monatlich(), "/api/v1/objects/", {
+    const res = await apiFetch(sessions.monatlich(), "/api/v1/objects", {
       method: "POST",
       body: JSON.stringify(newInput(id)),
     });
@@ -62,7 +62,7 @@ describe("Objects-CRUD (test.monatlich, Pro-Konto)", () => {
   });
 
   it("POST / mit ungueltigem Body -> 400 invalid_body", async () => {
-    const res = await apiFetch(sessions.monatlich(), "/api/v1/objects/", {
+    const res = await apiFetch(sessions.monatlich(), "/api/v1/objects", {
       method: "POST",
       body: JSON.stringify({ source: "manuell" }), // keine id
     });
@@ -71,7 +71,7 @@ describe("Objects-CRUD (test.monatlich, Pro-Konto)", () => {
   });
 
   it("GET / liefert das angelegte Objekt in der Liste", async () => {
-    const res = await apiFetch(sessions.monatlich(), "/api/v1/objects/");
+    const res = await apiFetch(sessions.monatlich(), "/api/v1/objects");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.objects.some((o: { id: string }) => o.id === createdIds[0])).toBe(true);
@@ -149,21 +149,10 @@ describe("Objects-CRUD (test.monatlich, Pro-Konto)", () => {
   });
 });
 
-// requirePro-Gating (4.9): ein Free-Konto darf keinen der Objects-Endpunkte
-// nutzen, unabhaengig vom Body/von der ID - bisher voellig unverifiziert.
-describe("Objects-Routen: requirePro-Sperre fuer Free-Konten (test.free)", () => {
-  it("GET / -> 402 pro_required", async () => {
-    const res = await apiFetch(sessions.free(), "/api/v1/objects/");
-    expect(res.status).toBe(402);
-    expect(await res.json()).toEqual({ error: "pro_required" });
-  });
-
-  it("POST / -> 402 pro_required", async () => {
-    const res = await apiFetch(sessions.free(), "/api/v1/objects/", {
-      method: "POST",
-      body: JSON.stringify({ id: randomUUID(), source: "manuell" }),
-    });
-    expect(res.status).toBe(402);
-    expect(await res.json()).toEqual({ error: "pro_required" });
-  });
-});
+// requirePro-Gating (4.9): die 402-Sperre fuer Konten ohne Pro-Tarif war
+// bisher ausschliesslich ueber test.free verifiziert. test.free wurde
+// geloescht und wird nicht mehr verwendet (2026-08-18, siehe
+// release-notes.txt) - ohne Ersatz-Fixture ist dieser Fall aktuell NICHT
+// mehr automatisiert abgedeckt (bewusste Entscheidung, kein Wegwerf-Konto
+// zur Laufzeit registriert). Siehe worker/e2e/README.md fuer den vollen
+// Hinweis zu dieser Coverage-Luecke.

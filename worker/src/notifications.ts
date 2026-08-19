@@ -6,7 +6,6 @@
 import type { Env } from "./types";
 import { sendEmail } from "./email";
 import { sendPushToUser } from "./push";
-import { getUserByEmail } from "./db";
 
 export type NotificationEvent =
   | "renewal_reminder"
@@ -29,26 +28,13 @@ export interface NotificationIntent {
   payload: Record<string, unknown>;
 }
 
-// QA-Umleitung (2026-08-18): is_test_user-Konten koennen echte, aber nicht
-// erreichbare Adressen tragen (test.free@immofuchs.info etc.) - ohne
-// TEST_EMAIL_REDIRECT_TO aendert sich nichts (Default in qa/prod), mit
-// gesetztem Wert (nur env.dev.vars) geht die Mail dorthin, Betreff bekommt
-// ein Praefix mit der urspruenglichen Adresse, damit im Sammel-Postfach
-// erkennbar bleibt, welches Testkonto ausgeloest hat.
-async function resolveRecipient(
-  env: Env,
-  recipientEmail: string,
-): Promise<{ to: string; subjectPrefix: string }> {
-  if (!env.TEST_EMAIL_REDIRECT_TO) return { to: recipientEmail, subjectPrefix: "" };
-  const user = await getUserByEmail(env.DB, recipientEmail);
-  if (!user?.is_test_user) return { to: recipientEmail, subjectPrefix: "" };
-  return { to: env.TEST_EMAIL_REDIRECT_TO, subjectPrefix: `[TEST ${recipientEmail}] ` };
-}
-
 export async function dispatchNotification(env: Env, intent: NotificationIntent): Promise<void> {
   const { subject, html } = renderEmail(intent);
-  const { to, subjectPrefix } = await resolveRecipient(env, intent.recipientEmail);
-  await sendEmail(env, to, `${subjectPrefix}${subject}`, html);
+  // Dev-Umleitung (TEST_EMAIL_REDIRECT_TO) sitzt seit 2026-08-19 zentral in
+  // sendEmail() (email.ts) statt hier - siehe dortigen Kommentar. Deckt damit
+  // auch die acht anderen sendEmail()-Aufrufer ab, die nicht ueber diese
+  // Funktion laufen (Registrierung, Passwort-Reset, Magic Link, ...).
+  await sendEmail(env, intent.recipientEmail, subject, html);
 
   if (intent.recipientUserId) {
     const { title, body } = renderPush(intent);

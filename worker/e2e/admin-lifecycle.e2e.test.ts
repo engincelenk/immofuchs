@@ -15,7 +15,7 @@ import { apiFetch, adminSessionId } from "./setup";
 //     Pruefung VOR jeder Mutation greift und den Vorgang ablehnt.
 //  2. Voller Lebenszyklus an einem eigens angelegten Wegwerf-Testnutzer
 //     (E2E-Praefix in der E-Mail) - wird am Ende wieder geloescht, beruehrt
-//     keine der geteilten Fixtures (test.free/monatlich/jaehrlich).
+//     keine der geteilten Fixtures (test.monatlich/jaehrlich).
 //
 // Bewusst NICHT hier: POST /discounts/bulk (mehrere echte Paddle-Aufruf pro
 // Lauf, siehe Kommentar in routes/admin.ts zu Paddle-Ratelimits) - der
