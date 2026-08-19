@@ -34,7 +34,27 @@ export async function dispatchNotification(env: Env, intent: NotificationIntent)
   // sendEmail() (email.ts) statt hier - siehe dortigen Kommentar. Deckt damit
   // auch die acht anderen sendEmail()-Aufrufer ab, die nicht ueber diese
   // Funktion laufen (Registrierung, Passwort-Reset, Magic Link, ...).
-  await sendEmail(env, intent.recipientEmail, subject, html);
+  //
+  // Try/catch bewusst NEU (2026-08-19, Live-Befund via
+  // worker/e2e/billing-lifecycle.e2e.test.ts): dispatchNotification() wird in
+  // routes/billing.ts (cancel/reactivate) und routes/account.ts IMMER erst
+  // NACH dem eigentlichen Paddle-Aufruf + D1-Schreibvorgang aufgerufen - der
+  // fachliche Vorgang ist zu diesem Zeitpunkt bereits abgeschlossen. Ohne
+  // dieses catch liess ein bloss fehlgeschlagener Mailversand (Anbieter-
+  // Ausfall, Rate-Limit, ...) POST /billing/cancel mit 502 cancel_failed
+  // antworten, OBWOHL die Kuendigung bei Paddle und in D1 laengst wirksam
+  // war - der Kunde haette eine falsche Fehlermeldung fuer eine tatsaechlich
+  // erfolgreiche Aktion gesehen. Die "garantierter Weg"-Zusage oben (Spec
+  // 10.0) bezieht sich auf den Versandversuch selbst (E-Mail bleibt Pflicht,
+  // Push bleibt optional), nicht darauf, dass ein Zustellfehler die HTTP-
+  // Antwort des AUSLOESENDEN Vorgangs verfaelschen darf - dieselbe
+  // Guard-Logik wie beim Push-Pfad direkt darunter, nur fuer den bisher
+  // ungeschuetzten E-Mail-Pfad.
+  try {
+    await sendEmail(env, intent.recipientEmail, subject, html);
+  } catch (err) {
+    console.error("email_dispatch_failed", err instanceof Error ? err.message : "unknown");
+  }
 
   if (intent.recipientUserId) {
     const { title, body } = renderPush(intent);

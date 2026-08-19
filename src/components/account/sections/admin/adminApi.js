@@ -59,9 +59,10 @@ export function fetchUserDetail(id) {
   return request(`/admin/users/${encodeURIComponent(id)}`);
 }
 
-// input: {email, name?, role, isTestUser?, subscription?: {status, plan}}
-// subscription ist nur zusammen mit isTestUser:true gueltig (Worker lehnt es
-// sonst ab) - es gibt dafuer keinen echten Paddle-Kauf.
+// input: {email, name?, role, isTestUser?, testEmailRedirectTo?, subscription?: {status, plan}}
+// subscription UND testEmailRedirectTo sind nur zusammen mit isTestUser:true
+// gueltig (Worker lehnt es sonst ab) - es gibt dafuer keinen echten
+// Paddle-Kauf bzw. keinen Grund fuer eine Mail-Umleitung.
 export function createUser(input) {
   return post("/admin/users", input);
 }

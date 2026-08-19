@@ -1,3 +1,531 @@
+## 2026-08-19 (1.20.32)
+
+### Fix: Registrierungs-Test wurde durch das eigene Stundenlimit rot (429 statt 409)
+
+Stand nach 1.20.31: 116 bestanden, 0 uebersprungen, 1 fehlgeschlagen -
+`auth-password.e2e.test.ts` "bereits vergebene E-Mail (test.monatlich) ->
+409 email_taken mit providers" meldete `expected 429 to be 409`.
+
+**WAS:** Der Test schlug fehl, obwohl am Produkt nichts geaendert wurde und
+derselbe Test in den Laeufen davor gruen war.
+
+**WARUM:** `registerWithPassword()` (worker/src/auth/passwordAuth.ts) prueft
+das Stundenlimit `register:<email>` (`REGISTER_HOURLY_LIMIT = 5`) VOR der
+Pruefung auf eine bereits vergebene E-Mail. Der Test verbraucht bei jedem
+Lauf einen der fuenf Versuche fuer test.monatlich. Beim Ordner-Umzug lief
+die Suite 7x innerhalb von 45 Minuten (21:49 bis 22:31) - ab dem 6. Lauf
+antwortete der Endpunkt voellig korrekt mit 429, bevor er zum 409 kam. Kein
+Produktfehler, sondern ein Test, dessen Ergebnis vom Zaehlerstand frueherer
+Laeufe abhaengt - prinzipbedingt instabil, nur bisher nie aufgefallen, weil
+die Suite nie so oft hintereinander lief.
+
+**BESSER:** Bei 429 ueberspringt sich der Fall jetzt mit einer klaren
+Begruendung ("Stundenlimit ausgeschoepft, kein Produktfehler"), statt rot zu
+faerben. Die eigentliche Zusicherung (409 `email_taken` inkl. `providers`)
+bleibt unveraendert streng, sobald wieder Budget vorhanden ist. Bewusst
+NICHT als `expect([409, 429]).toContain(...)` geloest - das wuerde die
+Aussage des Tests dauerhaft aufweichen, statt den Sonderfall sichtbar als
+"diesmal nicht geprueft" auszuweisen.
+
+**Betroffene Dateien:** e2e/auth-password.e2e.test.ts
+
+## 2026-08-19 (1.20.31)
+
+### Fix: letzte fest eingetragene Session-ID entfernt (E2E_SESSION_REAL_PRO -> Login)
+
+Nutzer-Auftrag: "was ist hier los?" - nach dem Ordner-Umzug meldete der
+Report 89 bestanden / 5 fehlgeschlagen / 23 uebersprungen statt wie vorher
+alles gruen. Zwei voneinander UNABHAENGIGE Ursachen, keine davon ein
+Produktfehler und keine davon durch den Umzug selbst verursacht.
+
+**WAS (5 rote Tests):** `billing-lifecycle.e2e.test.ts` (3 Faelle) und zwei
+Faelle in `billing-gaps.e2e.test.ts` liefen mit `401 not_authenticated` rot.
+Sie alle benutzen `E2E_SESSION_REAL_PRO` - die einzige im Projekt noch fest
+in `.env.local` eingetragene Session-ID.
+
+**WARUM:** Per D1-Abfrage gegen dev nachgewiesen: das Konto hinter dem
+echten Paddle-Sandbox-Abo ist `test.realpro@immofuchs.info`, und die in
+`.env.local` hinterlegte Session `7a3a1bfb-…` existiert in der Tabelle
+`sessions` nicht mehr (einzige verbliebene Session dieses Kontos ist eine
+iPhone-Sitzung vom selben Tag). Eine fest eingetragene Session-ID ueberlebt
+weder Logout noch Passwortaenderung noch "alle Geraete abmelden" noch
+Ablauf - genau dieselbe Fehlerklasse wie die 63 roten Tests von damals, nur
+mit dem letzten verbliebenen Vorkommen.
+
+**BESSER:** `test.realpro@immofuchs.info` ist jetzt das vierte Konto in
+`api-global-setup.ts` und wird bei jedem Lauf frisch eingeloggt - wie
+monatlich/jaehrlich/admin. Statt einer Session-ID wird nur noch das
+Passwort `E2E_PASSWORD_REALPRO` gepflegt. Damit gibt es im gesamten Projekt
+keine fest eingetragene Session-ID mehr. `E2E_SESSION_REAL_PRO` bleibt als
+manuelle Uebersteuerung moeglich, ist aber im Normalfall leer.
+
+**WAS (23 uebersprungene Tests):** `admin-lifecycle.e2e.test.ts` (21) und
+zwei Faelle in `auth-password.e2e.test.ts` uebersprangen sich - wie schon in
+den drei Laeufen davor.
+
+**WARUM:** Das Admin-Passwort war in `.env.local` unter dem falschen
+Schluessel eingetragen - `E2E_SESSION_ADMIN` (erwartet eine Session-UUID)
+statt `E2E_PASSWORD_ADMIN`. Die UUID-Pruefung in `setup.ts` verwirft einen
+Nicht-UUID-Wert stillschweigend, der Login wurde deshalb gar nicht erst
+versucht (nachweisbar an der leeren `.login-cooldown.json`). Kein Code-
+Fehler, aber eine Falle, in die man ohne Rueckmeldung hineinlaeuft.
+
+**BESSER:** Neues Diagnose-Skript `e2e/diagnose-env.ps1` - prueft Datei,
+Kodierung, Schluesselnamen, ob die Werte bei Node ankommen, und macht EINEN
+echten Login-Versuch (bewusst nur einen, wegen der 5-Versuche-Sperre). Gibt
+grundsaetzlich keine Werte aus, nur Laengen und Auffaelligkeiten; bei
+`E2E_SESSION_*` zusaetzlich, ob der Wert ueberhaupt wie eine UUID aussieht.
+`env.beispiel.txt` und `api-e2e-README.md` warnen jetzt ausdruecklich vor
+der Verwechslung PASSWORD/SESSION.
+
+**Nebenbefund (nicht geaendert):** Das Abo von test.realpro steht auf
+`cancel_scheduled` (Rest eines abgebrochenen Laufs). Unkritisch:
+`POST /billing/cancel` weist nur `canceled` ab, nicht `cancel_scheduled`
+(routes/billing.ts) - der Cancel-Test laeuft also durch und der
+Reactivate-Test danach setzt wieder auf `active`. Nutzer-Entscheidung:
+durch den naechsten Testlauf selbst reparieren lassen.
+
+**Manuell noetig in `e2e/.env.local`** (nicht automatisiert - enthaelt echte
+Zugangsdaten): `E2E_SESSION_ADMIN=` in `E2E_PASSWORD_ADMIN=` umbenennen,
+`E2E_SESSION_REAL_PRO=` durch `E2E_PASSWORD_REALPRO=<Passwort von
+test.realpro>` ersetzen, und die beiden Zeilen `E2E_SESSION_MONATLICH=`/
+`E2E_SESSION_JAEHRLICH=` loeschen (sie enthielten Paddle-PREIS-IDs
+`pri_…` - dieselbe Falle wie bei den 63 roten Tests, aktuell nur durch die
+UUID-Pruefung entschaerft).
+
+**Sicherheitshinweis:** In einer fruehen Fassung von `diagnose-env.ps1`
+maskierte die Ausgabe nur Schluessel mit "PASSWORD"/"SECRET" im Namen -
+dadurch erschien das unter `E2E_SESSION_ADMIN` eingetragene Admin-Passwort
+im Klartext in der Diagnose-Ausgabe. Behoben (es werden jetzt ALLE Werte
+maskiert); das Passwort von test.admin@immofuchs.info sollte dennoch
+gewechselt werden.
+
+**Betroffene Dateien:** e2e/setup.ts, e2e/api-global-setup.ts,
+e2e/diagnose-env.ps1 (neu), e2e/env.beispiel.txt, e2e/api-e2e-README.md
+
+## 2026-08-19 (1.20.30)
+
+### Feature: pro-Testuser umleitbare E-Mail-Adresse (Admin-Panel)
+
+Nutzer-Auftrag: beim Anlegen von Testkonten mit fiktiver Adresse (z.B.
+`test.admin@immofuchs.info`, existiert real nicht) bisher keine Moeglichkeit,
+direkt im Admin-Panel festzulegen, wohin Mails an diese Adresse tatsaechlich
+gehen sollen - nur die globale, dev-only `TEST_EMAIL_REDIRECT_TO`-Variable
+(siehe 1.20.20) griff, und die leitet ausnahmslos JEDE Mail um, nicht
+gezielt pro Nutzer, und nur auf dev.
+
+**Geaendert - `worker/migrations/0023_test_email_redirect.sql`:** neue
+Spalte `test_email_redirect_to` auf `users`.
+
+**Geaendert - `worker/src/email.ts`:** `resolveRecipient()` schlaegt jetzt
+zusaetzlich zur Env-Var (die weiterhin Vorrang hat) per DB-Lookup nach, ob
+der Zieladresse ein Testuser mit gesetztem `test_email_redirect_to`
+entspricht - greift dadurch auch auf qa/prod, wo die Env-Var nicht gesetzt
+ist.
+
+**Geaendert - `worker/src/db.ts`, `worker/src/routes/admin.ts`:**
+`setUserFlags()` sowie `POST /admin/users` und `POST /admin/users/:id/flags`
+nehmen zusaetzlich `testEmailRedirectTo` an - nur gueltig zusammen mit
+`isTestUser:true` (400 sonst, analog zur bestehenden Test-Subscription-
+Regel), mit Formatpruefung. Der Nutzer-Detail-Endpunkt liefert das Feld mit
+aus.
+
+**Geaendert - `src/components/account/sections/admin/AdminUsersView.jsx`,
+`AdminUserDrawer.jsx`:** neues Feld "Tatsaechliche Empfaenger-E-Mail" im
+"Nutzer anlegen"-Formular sowie im Testuser-Bereich des Nutzer-Detail-
+Drawers - jeweils nur sichtbar, solange der Testuser-Schalter an ist.
+
+## 2026-08-19 (1.20.29)
+
+### Fix: erster echter Testlauf nach dem e2e-Umzug (1.20.28) schlug fehl - zwei Skript-Bugs
+
+Nutzer-Auftrag: `powershell -File run-all-tests.ps1` nach dem Umzug laufen
+lassen (erster echter Test der neuen Struktur). Ergebnis: beide Suiten
+fehlgeschlagen, mit zwei unabhaengigen Ursachen - keine davon ein Fehler im
+eigentlichen Produktcode, beide reine Test-Tooling-Bugs.
+
+**WAS/WARUM (API-Suite):** `vitest run --config e2e/vitest.e2e.config.ts`
+meldete "No test files found" mit `include: *.e2e.test.ts` gegen
+`C:/Projects/ImmofuchsPRO` (Root) statt gegen `e2e/`. Ursache: Vitest loest
+`include` relativ zu `root` auf, und `root` faellt ohne explizite Angabe auf
+`process.cwd()` zurueck - nicht auf den Ordner der Config-Datei. Da
+`test:e2e:report` jetzt vom Projekt-Root aus laeuft (Umzug 1.20.28), zeigte
+das ungeankerte Include-Muster ins Leere.
+
+**BESSER (API-Suite):** `root` in `e2e/vitest.e2e.config.ts` explizit auf
+den Ordner der Config-Datei selbst fixiert
+(`fileURLToPath(new URL(".", import.meta.url))`) - damit ist das Verhalten
+unabhaengig davon, von wo aus vitest aufgerufen wird.
+
+**WAS/WARUM (Browser-Suite):** `npm run test:browser` meldete "Der Befehl
+'playwright' ist entweder falsch geschrieben oder konnte nicht gefunden
+werden", nachdem `npx playwright install chromium` zuvor warnte, es liefe
+ohne vorherige `npm install`. Ursache: `run-browser-e2e.ps1` prueft vor dem
+Playwright-Start nur, OB `node_modules/` ueberhaupt existiert, nicht ob
+`@playwright/test` darin enthalten ist. Da `node_modules/` schon von den
+Frontend-Abhaengigkeiten existierte (aus einer Zeit vor `@playwright/test`
+in `package.json`), wurde `npm install` faelschlich uebersprungen - dies
+war zugleich der allererste echte Lauf der Browser-Suite ueberhaupt.
+
+**BESSER (Browser-Suite):** Der Check in `run-browser-e2e.ps1` prueft jetzt
+gezielt auf `node_modules\@playwright\test` statt nur auf `node_modules`
+allgemein - erkennt damit zuverlaessig, ob das konkret benoetigte Paket
+fehlt, unabhaengig vom sonstigen `node_modules`-Zustand.
+
+**Manuell noetig:** `powershell -File run-all-tests.ps1` erneut laufen
+lassen - der erste Durchlauf installiert jetzt automatisch
+`@playwright/test` nach (einmalig laenger).
+
+**Betroffene Dateien:** e2e/vitest.e2e.config.ts, e2e/run-browser-e2e.ps1
+
+## 2026-08-19 (1.20.28)
+
+### Umbau: drei E2E-Ordner zu einem flachen Ordner `e2e/` zusammengelegt
+
+Nutzer-Auftrag: "das sind die ordner bezüglich der e2e test. ich hätte sie
+gerne in einem ordner. ist das möglich?" - anschliessende Entscheidung auf
+Nachfrage: "Alles in einem Ordner ohne Unterordner" (bewusst FLACH, keine
+Unterordner je Teilsuite).
+
+**WAS:** `worker/e2e/` (API-Suite, Vitest), `browser-e2e/` (Browser-Suite,
+Playwright) und `e2e-dashboard/` (lokales Klick-Dashboard) sind zu einem
+einzigen Ordner `e2e/` im Projekt-Wurzelverzeichnis zusammengelegt - alle
+40 Dateien liegen jetzt flach nebeneinander statt in drei getrennten
+Ordnern mit eigenen Unterordnern (`browser-e2e/lib/`, `browser-e2e/tests/`).
+
+**WARUM:** Rein organisatorischer Nutzerwunsch, alle E2E-Tests an einer
+Stelle zu haben statt verteilt auf drei Ordner an zwei verschiedenen
+Ebenen (`worker/e2e/` lag unter `worker/`, die anderen beiden im
+Wurzelverzeichnis). Kein fachlicher/funktionaler Grund, keine Bug-Fixes in
+diesem Schritt.
+
+**BESSER:** Ein Ordner, ein `README.md` als Einstiegspunkt
+(`e2e/README.md`, neu), gemeinsame `.env.local` fuer alle drei Teile
+weiterhin an einer Stelle. Drei Dateinamen kollidierten durch das Flach-
+Legen (`README.md`, `run.ps1`, `global-setup.ts` gab es je zweimal) und
+wurden mit Praefix eindeutig gemacht:
+- `worker/e2e/README.md` -> `e2e/api-e2e-README.md`
+- `browser-e2e/README.md` -> `e2e/browser-e2e-README.md`
+- `e2e-dashboard/README.md` -> `e2e/dashboard-README.md`
+- `worker/e2e/run.ps1` -> `e2e/run-api-e2e.ps1`
+- `browser-e2e/run.ps1` -> `e2e/run-browser-e2e.ps1`
+- `worker/e2e/global-setup.ts` -> `e2e/api-global-setup.ts`
+- `browser-e2e/global-setup.ts` -> `e2e/browser-global-setup.ts`
+
+Alle anderen Dateien (Testdateien, `lib/*.ts`, `setup.ts`,
+`vitest.e2e.config.ts`, `playwright.config.ts`, `server.js`, `index.html`,
+`start.ps1`, `env.beispiel.txt`, `manuelle-testfaelle.md`) behalten ihre
+bisherigen Namen und wurden nur um die neuen flachen Pfade herum angepasst
+(relative Imports, `AUTH_DIR`, `testDir`, `globalSetup`-Verweise,
+`spawnSync`-Konfigpfade). Inhaltlich/funktional aendert sich nichts - reine
+Pfad-/Namensanpassung. `playwright.config.ts` bekam zusaetzlich ein
+explizites `testMatch: "**/*.spec.ts"`, weil Playwrights Standard-Glob im
+flachen Ordner sonst faelschlich auch die `*.e2e.test.ts`-Dateien der
+API-Suite erfassen wuerde (beide enden auf `.test.ts`).
+
+Auch angepasst, damit der neue Ordner tatsaechlich funktioniert:
+- Root-`package.json`: `test:e2e`/`test:e2e:report` neu (vorher nur in
+  `worker/package.json`), `test:browser`/`test:browser:report` zeigen jetzt
+  auf `e2e/` statt `browser-e2e/`.
+- `worker/package.json`: `test:e2e`/`test:e2e:report` entfernt (nichts
+  E2E-Bezogenes liegt mehr unter `worker/`).
+- Root-`.gitignore`: `browser-e2e/...`-Eintraege auf `e2e/...` umgezogen,
+  neu: `e2e/.env.local` (Geheimnisse, vorher nur durch
+  `e2e-dashboard/.gitignore` gedeckt - dieser Ordner entfaellt, ohne diesen
+  Eintrag waere `.env.local` ungeschuetzt gewesen), sowie die vier
+  API-Suite-Laufzeitdateien (vorher in `worker/.gitignore`).
+- `worker/.gitignore`: die vier e2e-spezifischen Zeilen entfernt (nicht
+  mehr zutreffend).
+- Root-`vite.config.js`: `test.exclude` zeigt jetzt auf `e2e/**` statt
+  `worker/e2e/**` + `browser-e2e/**`.
+- Root-`run-all-tests.ps1`: ruft jetzt `e2e\run-api-e2e.ps1` und
+  `e2e\run-browser-e2e.ps1` auf.
+
+**Manuell noetig (kann von hier aus nicht ausgefuehrt werden):**
+1. Die drei alten Ordner `worker\e2e\`, `browser-e2e\`, `e2e-dashboard\`
+   von Hand loeschen (Explorer oder `git rm -r`) - der neue Ordner `e2e\`
+   ist eine vollstaendige Kopie mit angepassten Pfaden, nichts geht dabei
+   verloren. `worker\e2e\reset-test-free.ps1` war schon vor diesem Umzug
+   obsolet (test.free geloescht, siehe 2026-08-18) und muss nicht extra
+   uebernommen werden.
+2. `.env.local` (echte Test-Passwoerter) von Hand von
+   `e2e-dashboard\.env.local` nach `e2e\.env.local` kopieren - diese Datei
+   wird bewusst nicht automatisiert angefasst (enthaelt echte Zugangsdaten).
+3. Danach zur Bestaetigung `powershell -File run-all-tests.ps1` aus dem
+   Wurzelverzeichnis laufen lassen.
+
+**Betroffene Dateien:** e2e/* (40 Dateien, neu/umbenannt), package.json,
+worker/package.json, .gitignore, worker/.gitignore, vite.config.js,
+run-all-tests.ps1. Alte Ordner worker/e2e/, browser-e2e/, e2e-dashboard/
+noch vorhanden, zur manuellen Loeschung durch den Nutzer vorgesehen.
+
+## 2026-08-19 (1.20.27)
+
+### Fix: E-Mail-Versandfehler liess erfolgreiche Kuendigung/Reaktivierung als 502 melden
+
+Nutzer-Auftrag: E2E_SESSION_REAL_PRO eingerichtet (echter Paddle-Sandbox-
+Kauf) und `worker/e2e/run.ps1` erneut gelaufen lassen - 116 bestanden, 1
+uebersprungen (obsolete Datei), nur noch 1 echter Fehlschlag:
+`billing-lifecycle.e2e.test.ts` "POST /billing/cancel setzt
+cancel_scheduled..." -> `expected 502 to be 200`.
+
+**WAS:** `POST /billing/cancel` (und symmetrisch `POST /billing/reactivate`,
+sowie jeder andere Aufrufer von `dispatchNotification()` - u.a. der
+Erinnerungs-Cron in `scheduled.ts`, Kontoloeschung in `routes/account.ts`)
+antwortete mit 502, obwohl die eigentliche Aktion (Paddle-API-Aufruf + D1-
+Statusaenderung) bereits erfolgreich durchgelaufen war. Live nachvollzogen:
+der direkt danach laufende Reaktivierungs-Test fand die Kuendigung in D1
+bereits als `cancel_scheduled` vor und lief seinerseits gruen.
+
+**WARUM:** In `notifications.ts`s `dispatchNotification()` stand der
+E-Mail-Versand (`sendEmail()`) UNGESCHUETZT im selben Codepfad wie die
+Push-Benachrichtigung direkt darunter - letztere war schon immer per
+try/catch abgesichert ("Push darf die eigentliche Benachrichtigung nie
+verhindern"), die E-Mail nicht. Schlaegt der Mailversand fehl (Anbieter-
+Ausfall, Rate-Limit o.ae.), wirft `sendEmail()` bewusst (siehe `email.ts`,
+"Fehler gehoert sichtbar gemacht, nicht kaschiert") - die Exception lief
+bis in den try/catch von `routes/billing.ts`s cancel/reactivate-Handler
+durch und liess dort die LAENGST ERFOLGREICHE Aktion als `cancel_failed`/
+`reactivate_failed` (502) an den Client melden. Ein echter zahlender
+Nutzer haette in diesem Moment eine falsche Fehlermeldung fuer eine
+tatsaechlich erfolgreiche Kuendigung gesehen.
+
+**BESSER:** E-Mail-Versand in `dispatchNotification()` jetzt genauso per
+try/catch abgesichert wie der Push-Pfad direkt daneben - ein Zustellfehler
+wird geloggt (`email_dispatch_failed`), verhindert aber nicht mehr, dass
+der AUSLOESENDE Vorgang (Kuendigung, Reaktivierung, Kontoloeschung,
+Erinnerungs-Cron, ...) seinen eigentlichen Erfolg korrekt zurückmeldet.
+Die "garantierter Weg"-Zusage aus dem Datei-Kommentar (Spec 10.0) betrifft
+den VersandVERSUCH selbst (E-Mail bleibt Pflichtkanal, Push bleibt
+optional), nicht die Kopplung an die HTTP-Antwort eines bereits
+abgeschlossenen fachlichen Vorgangs.
+
+**Geaendert - `worker/src/notifications.ts`:** `sendEmail()`-Aufruf in
+`dispatchNotification()` in try/catch.
+
+**Manuell noetig:** `npx wrangler deploy --env dev`, danach
+`worker/e2e/run.ps1` zur Bestaetigung erneut laufen lassen.
+
+**Betroffene Dateien:** worker/src/notifications.ts
+
+## 2026-08-19 (1.20.26)
+
+### Fix: PDF-Rechnungs-IDOR-Test lief faelschlich rot (Fixture-Grenze, kein Produktfehler)
+
+Erster echter Testlauf von `worker/e2e/run.ps1` heute (110 bestanden, 3
+fehlgeschlagen, 5 uebersprungen von 118). Zwei der drei Fehlschlaege
+(admin-lifecycle.e2e.test.ts "GET /users findet den Nutzer per
+Suchbegriff", auth-password.e2e.test.ts "Admin findet den neuen ...
+Nutzer" - beide `AssertionError: expected 500 to be 200`) sind der exakte
+Endpunkt aus dem heutigen Fix 1.20.22 (db.ts/admin.ts) - erwartungsgemaess
+rot, solange `npx wrangler deploy --env dev` dafuer noch aussteht.
+
+Der dritte war ein neuer Befund: `billing-gaps.e2e.test.ts` "GET
+/billing/invoices/:transactionId/pdf mit fremder/erfundener ID -> 403
+not_your_transaction" lieferte 502 statt 403
+(`expected 502 to be 403`). Ursache in `routes/billing.ts` (Zeile ~169ff.):
+der Handler ruft `listTransactions()` (echte Paddle-API) auf, BEVOR er
+prueft, ob die uebergebene ID zur Transaktionsliste gehoert. test.monatlich
+hat einen SYNTHETISCHEN Paddle-Kunden (admin-test:-Praefix) - der Aufruf
+scheitert dadurch selbst, die eigentliche ID-Pruefung wird nie erreicht.
+Dieselbe Fixture-Grenze wie beim bereits bekannten GET /billing/portal-Fall
+(siehe 1.20.23) - kein Produktfehler, nur zu spaet erkannt, weil dieser
+Test beim Schreiben noch in der "zustandsneutral"-Gruppe stand statt schon
+damals hinter `E2E_SESSION_REAL_PRO`.
+
+**Geaendert - `worker/e2e/billing-gaps.e2e.test.ts`:** den Test aus der
+"zustandsneutral"-Gruppe in den `describe.skipIf(!realProSessionId)`-Block
+neben GET /billing/portal verschoben (`sessions.monatlich()` ->
+`realProSessionId`) - laeuft jetzt uebersprungen statt rot, bis
+`E2E_SESSION_REAL_PRO` gesetzt ist, danach tatsaechlich gruen.
+
+**Betroffene Dateien:** worker/e2e/billing-gaps.e2e.test.ts
+
+## 2026-08-19 (1.20.25)
+
+### Chore: Ein-Befehl-Starter fuer beide E2E-Suiten (Ausfuehrung selbst weiter Sache des Nutzers)
+
+Nutzer-Auftrag: "tue was noetig ist um alle test zu starten. api und ui
+tests". Ich habe weder auf dem Geraet noch aus der Cloud-Sandbox
+Netzwerkzugriff auf `dev.immofuchs.info`/`api-dev.immofuchs.info` (die
+lokale Geraete-Werkstatt-VM war in diesem Lauf zusaetzlich nicht
+erreichbar - "Workspace unavailable") - die Suiten also selbst zu starten
+war technisch nicht moeglich. Stattdessen das Noetige vorbereitet, damit
+ein einziger Befehl reicht, sobald der Nutzer selbst startet.
+
+**Neu - `browser-e2e/run.ps1`:** Ein-Befehl-Starter analog zu
+`worker/e2e/run.ps1` - laedt dieselben Variablen aus
+`e2e-dashboard/.env.local` (kein zweiter Geheimnis-Satz), holt bei Bedarf
+`npm install`/`npx playwright install chromium` nach, startet
+`npm run test:browser` und oeffnet den HTML-Report automatisch.
+
+**Neu - `run-all-tests.ps1`** (Projekt-Wurzelverzeichnis): startet
+API-Suite und Browser-Suite nacheinander in je einem eigenen
+PowerShell-Prozess (wegen der `Set-Location`-Aufrufe in beiden run.ps1),
+bricht nicht beim ersten Fehlschlag ab und fasst am Ende beide
+Ergebnisse zusammen.
+
+**Bugfix dabei gefunden:** `package.json`s `test:browser:report`
+(`playwright show-report`) zeigte ins Wurzelverzeichnis, der Report landet
+aber unter `browser-e2e/playwright-report/` (Pfade in
+`browser-e2e/playwright.config.ts` werden relativ zu dessen eigenem
+Ordner aufgeloest, nicht zum Wurzelverzeichnis) - Befehl korrigiert auf
+`playwright show-report browser-e2e/playwright-report`. Aus demselben
+Grund griff auch `.gitignore`s root-verankertes `/playwright-report/`
+fuer diese Suite nicht - `browser-e2e/playwright-report/` und
+`browser-e2e/test-results/` ergaenzt, sonst waeren Test-Artefakte
+(Screenshots/Videos/Traces bei Fehlschlaegen) versehentlich committet
+worden.
+
+**Geaendert - `browser-e2e/README.md`:** "Ausfuehren"-Abschnitt um die
+Ein-Befehl-Variante ergaenzt, manuelle env-Var-Variante bleibt als
+Alternative dokumentiert.
+
+**Weiterhin offen (unveraendert seit 1.20.24):** die
+"kein nicht-Pro-Testkonto"-Fixture-Luecke und der
+`invalid_discount_code`-Text in `adminUiStyles.js` - siehe
+`browser-e2e/README.md`.
+
+**Betroffene Dateien:** browser-e2e/run.ps1 (neu), run-all-tests.ps1
+(neu), package.json, .gitignore, browser-e2e/README.md
+
+## 2026-08-19 (1.20.24)
+
+### Feature: Stage 3 gestartet - Browser-E2E-Suite (Playwright) unter browser-e2e/
+
+Nutzer-Auftrag: "alle browser tests... Identifiziere sie. Alle use cases" +
+"Greif an" - vollstaendiger Use-Case-Katalog (96 Browser-Use-Cases, an den
+Nutzer als browser-test-usecases.md geliefert) und erste, echte Umsetzung
+mit /engineering:testing-strategy als Rahmen (Testpyramide: schnelle,
+API-basierte Login-Vorbereitung statt jeden Test ueber den vollen UI-Weg
+laufen zu lassen; die Testpyramide selbst nur dort pruefen, wo sie der
+eigentliche Pruefgegenstand ist).
+
+**Neu - `browser-e2e/`:** eigenstaendige Playwright-Suite, testet IMMER gegen
+das echte dev-Deployment (dieselbe Regel wie `worker/e2e/`), teilt sich
+dessen Testkonten (E2E_PASSWORD_MONATLICH/E2E_PASSWORD_ADMIN, keine neuen
+Secrets). `global-setup.ts` holt sich Sessions per echtem API-Login (gleiches
+Muster wie `worker/e2e/global-setup.ts`, inkl. eigener Login-Sperr-
+Abkuehlzeit) und legt sie als `storageState` ab; Tests, die eine Session
+aktiv beenden (Logout, Registrierung), holen sich bewusst eine ISOLIERTE
+eigene Session statt der geteilten, damit sie keine parallel laufenden
+Tests ausloggen.
+
+14 Tests in 5 Dateien, deckt einen ersten Ausschnitt des Katalogs ab:
+Landingpage + Sprachumschaltung + Login-Sperre (A1-A3), Login/Registrierung/
+Verify-Cooldown (C1/C2/C5/D2), rechnerunabhaengiges Pro-Kontingent (B1/B12),
+Logout/"alle Geraete abmelden" (G5.1/G5.2), sowie zwei direkte
+Regressionstests fuer die heutigen Backend-Fixes aus 1.20.22 (lange
+Admin-Nutzersuche H3, Discount-Code-Formatpruefung H9/H10).
+
+**Bewusst NICHT umgesetzt (Fixture-Luecke, siehe `browser-e2e/README.md`
+"Bekannte Luecke"):** der komplette Checkout-Durchlauf inkl.
+Widerrufsrecht-Checkbox (E1-E9/E13) und die Paywall-Sperre bei verbrauchtem
+Kontingent (B10) brauchen ein eingeloggtes Konto OHNE Pro-Abo - genau die
+Fixture-Kategorie, die mit `test.free` am 18.08. absichtlich geloescht
+wurde. Drei Loesungswege zur Auswahl stehen im README, keiner davon bisher
+umgesetzt.
+
+**Kleiner Befund dabei (kein Code-Fix, nur dokumentiert):** die neue
+`invalid_discount_code`-Fehlermeldung aus 1.20.22 hat noch keinen Eintrag in
+`ERROR_TEXTS` (`adminUiStyles.js`) - Admins sehen im Gutschein-Formular
+aktuell den generischen Text statt einer konkreten Meldung.
+
+**Geaendert - `package.json`:** `@playwright/test` als devDependency,
+Skripte `test:browser`/`test:browser:report`.
+
+**Geaendert - `vite.config.js`:** `test.exclude` um `browser-e2e/**` ergaenzt
+(gleicher Grund wie beim fruehen 1.55.99-Playwright-Setup: Vitests
+Standard-Glob wuerde `*.spec.ts` sonst faelschlich als eigene Tests lesen).
+
+**Geaendert - `.gitignore`:** `browser-e2e/.auth/` (geholte Sessions,
+Cookies - nie committen).
+
+**Manuell noetig:** `npm install` (zieht `@playwright/test`), einmalig
+`npx playwright install chromium`, dann `npm run test:browser` - siehe
+`browser-e2e/README.md` fuer die Umgebungsvariablen.
+
+**Betroffene Dateien:** browser-e2e/ (neu), package.json, vite.config.js,
+.gitignore
+
+## 2026-08-19 (1.20.23)
+
+### Test: GET /billing/portal-Test hinter E2E_SESSION_REAL_PRO geguarded
+
+Ausgangslage: letzter der urspruenglich 8 Fehlschlaege aus 1.20.18-1.20.20
+(siehe 1.20.22). test.monatlich/test.jaehrlich haben einen synthetischen
+Paddle-Kunden (admin-test:-Praefix), GET /billing/portal ruft aber die echte
+Paddle-API auf und scheiterte damit zuverlaessig (paddle_portal_session_failed_404,
+per wrangler tail bestaetigt). Kein Produktfehler, sondern eine Fixture-Grenze.
+
+Nutzer-Entscheidung auf Rueckfrage (Paddle-Sandbox-Zugriff vorhanden): Test
+erstmal nur skippen statt sofort ein echtes Sandbox-Abo einzurichten - das
+folgt bei Gelegenheit separat.
+
+**Geaendert - `worker/e2e/billing-gaps.e2e.test.ts`:** Portal-Test in einen
+eigenen `describe.skipIf(!realProSessionId)`-Block verschoben (identisches
+Muster zu `billing-lifecycle.e2e.test.ts`), laeuft jetzt gegen
+`realProSessionId` statt `sessions.monatlich()`. Uebersprungen, solange
+`E2E_SESSION_REAL_PRO` nicht gesetzt ist - sobald ein echter Sandbox-Kauf
+existiert, laeuft er tatsaechlich gruen statt rot.
+
+**Damit Stage 1 abgeschlossen:** alle 8 urspruenglichen Fehlschlaege aus dem
+Lauf nach 1.20.18-1.20.20 sind behoben oder (dieser eine Fall) sauber
+uebersprungen statt rot.
+
+**Betroffene Dateien:** worker/e2e/billing-gaps.e2e.test.ts
+
+## 2026-08-19 (1.20.22)
+
+### Fix: 4 der 8 verbliebenen E2E-Fehlschlaege nach 1.20.18-1.20.20 behoben
+
+Ausgangslage: nach den Session-/Routing-/Fixture-Fixes (1.20.18-1.20.20) lief
+die Suite bei 106 bestanden / 8 fehlgeschlagen / 4 uebersprungen. Root-Cause-
+Analyse per `wrangler tail --format json` waehrend eines vollen Testlaufs
+ergab 4 verschiedene Ursachen, wovon 2 echte (kleinere) Produktfehler waren
+und 2 Testfehler.
+
+1. `GET /admin/users?q=<lange E-Mail+UUID>` -> 500 unhandled_worker_error
+   (`SQLITE_ERROR: LIKE or GLOB pattern too complex`). D1 hat ein
+   undokumentiertes Laengenlimit fuer LIKE-Muster, das ein 73 Zeichen langer
+   escapeter Suchbegriff ueberschritt.
+2. Discount-Erstellung im E2E-Test schlug mit 502 create_discount_failed
+   fehl, weil der generierte Testcode (`E2E-XXXXXXXX`) einen Bindestrich
+   enthielt - Paddle akzeptiert nur `^[a-zA-Z0-9]{1,32}$`. Dadurch blieb
+   `discountId` undefined, die nachfolgenden update-/archive-Tests liefen
+   gegen `/admin/discounts/undefined` (404) - 3 Tests kaskadierten aus einer
+   Ursache.
+3. Derselbe Paddle-Format-Fehler war serverseitig NICHT vorab geprueft -
+   ein echter Admin haette denselben nichtssagenden 502 statt eines
+   verstaendlichen 400 gesehen (kleiner echter Produktfehler, nicht nur
+   Testfehler).
+
+**Geaendert - `worker/src/db.ts` (`listUsersForAdmin`):** Suchpraedikat von
+`users.email LIKE ? ESCAPE '\\'` auf `instr(lower(users.email), lower(?)) > 0`
+umgestellt - kein Wildcard-Mechanismus, daher kein Escaping noetig und kein
+Musterlaengen-Limit wie bei LIKE.
+
+**Geaendert - `worker/src/routes/admin.ts` (`parseAdminUsersQuery`):** das
+bisherige Escaping von `%`/`_` im Suchbegriff entfernt (war nur fuer LIKE
+noetig, instr() kennt diese Zeichen nicht als Platzhalter).
+
+**Geaendert - `worker/src/routes/admin.ts` (`POST /discounts`):** neue
+Format-Pruefung `DISCOUNT_CODE_PATTERN` (`^[A-Z0-9]{1,32}$`, nach dem
+bestehenden `.toUpperCase()`) vor dem Paddle-Aufruf - liefert jetzt
+`400 invalid_discount_code` statt eines opaken `502 create_discount_failed`.
+
+**Geaendert - `worker/e2e/admin-lifecycle.e2e.test.ts`:** generierter
+Testcode ohne Bindestrich (`E2E${randomUUID()...}` statt `E2E-${...}`).
+
+**Noch offen (bewusst nicht Teil dieser Aenderung):** 1-2 der urspruenglich
+8 Fehlschlaege haengen mit dem synthetischen (nicht-echten) Paddle-Kunden
+von test.monatlich zusammen (`GET /billing/portal`, siehe
+`billing-gaps.e2e.test.ts`) - Klaerung mit dem Nutzer zur Paddle-Sandbox
+noch ausstehend, folgt in einer separaten Aenderung.
+
+**Betroffene Dateien:** worker/src/db.ts, worker/src/routes/admin.ts,
+worker/e2e/admin-lifecycle.e2e.test.ts
+
 ## 2026-08-19 (1.20.21)
 
 ### Fix: Bestaetigungs-Schritt haengt auf dem Handy fest

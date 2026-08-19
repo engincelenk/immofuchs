@@ -62,6 +62,13 @@ const VALID_ROLES = Object.keys(ROLE_PERMISSIONS) as Role[];
 // mit einer einzigen Anfrage minutenlang beschaeftigen.
 const MAX_BULK_DISCOUNTS = 100;
 
+// Paddles eigenes Format fuer Discount-Codes (Live-Befund 19.08. via
+// wrangler tail: ein Code mit Bindestrich wurde von Paddle mit
+// "Does not match pattern '^[a-zA-Z0-9]{1,32}$'" abgelehnt, kam beim Admin
+// aber nur als 502 create_discount_failed an). Vorab hier geprueft statt den
+// Paddle-Fehler durchzureichen.
+const DISCOUNT_CODE_PATTERN = /^[A-Z0-9]{1,32}$/;
+
 // Nutzer direkt anlegen (Nutzer-Entscheidung 2026-08-1X). Gleiches Muster wie
 // in auth/magicLink.ts, hier lokal statt importiert, weil es dort nicht
 // exportiert ist und Validierungs-Konstanten in diesem File ohnehin lokal
@@ -83,11 +90,9 @@ export function parseExpiryDate(value: unknown): string | null | undefined {
   return new Date(ms).toISOString();
 }
 
-// LIKE-Wildcards (%/_) im Nutzer-Suchbegriff sind sonst ungewollte Platzhalter
-// (z.B. wuerde die Suche nach "max_50" auch "maxX50" treffen) - deshalb hier
-// escaped, mit '\' als ESCAPE-Zeichen (siehe listUsersForAdmin in db.ts).
-// Der Backslash selbst muss zuerst escaped werden, sonst wuerde ein
-// nutzereingegebener Backslash das Escaping der nachfolgenden Zeichen stoeren.
+// Kein Wildcard-Escaping mehr noetig (19.08., IMP-12-Nachtrag): listUsersForAdmin
+// (db.ts) nutzt seither instr() statt LIKE fuer die E-Mail-Suche - instr() kennt
+// %/_ nicht als Platzhalter, der Suchbegriff geht daher unveraendert durch.
 //
 // Alle Filter-/Sortierwerte werden gegen eine Whitelist geprueft und fallen
 // sonst auf "kein Filter" bzw. den Standard zurueck - ein manipulierter
@@ -95,8 +100,7 @@ export function parseExpiryDate(value: unknown): string | null | undefined {
 export function parseAdminUsersQuery(
   query: URLSearchParams,
 ): { filter: AdminUsersFilter; page: number } {
-  const rawSearch = (query.get("q") || "").trim();
-  const search = rawSearch.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+  const search = (query.get("q") || "").trim();
   const rawPage = parseInt(query.get("page") || "1", 10);
   const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
 
@@ -186,6 +190,7 @@ adminRoutes.get("/users/:id", requireAuth, requireAdminRead, async (c) => {
     lastLoginAt: user.last_login_at,
     emailVerified: Boolean(user.email_verified_at),
     isTestUser: Boolean(user.is_test_user),
+    testEmailRedirectTo: user.test_email_redirect_to,
     // Ohne password_hash gibt es keinen Reset-Weg (reines OAuth-/Passkey-
     // Konto) - die UI soll den Knopf dann gar nicht erst anbieten, statt ihn
     // ins Leere laufen zu lassen. Der Hash selbst wird NIE ausgeliefert.
@@ -226,6 +231,20 @@ adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (
   if (!(VALID_ROLES as string[]).includes(role)) return c.json({ error: "invalid_role" }, 400);
   const isTestUser = body?.isTestUser === true;
 
+  // Pro-Nutzer-Umleitung fuer fiktive Testadressen (Migration 0023) - gleiche
+  // Regel wie bei der Test-Subscription: nur zusammen mit isTestUser, sonst
+  // waere die Umleitung an einem Merkmal befestigt, das es fuer dieses Konto
+  // gar nicht gibt.
+  const rawRedirect = typeof body?.testEmailRedirectTo === "string" ? body.testEmailRedirectTo.trim() : "";
+  let testEmailRedirectTo: string | null = null;
+  if (rawRedirect) {
+    if (!isTestUser) return c.json({ error: "redirect_requires_test_user" }, 400);
+    if (!EMAIL_PATTERN.test(rawRedirect) || rawRedirect.length > 254) {
+      return c.json({ error: "invalid_redirect_email" }, 400);
+    }
+    testEmailRedirectTo = rawRedirect.toLowerCase();
+  }
+
   const rawSub = body?.subscription;
   let subInput: { status: SubscriptionRow["status"]; plan: SubscriptionRow["plan"] } | null = null;
   if (rawSub) {
@@ -251,7 +270,7 @@ adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (
   }
   if (role !== "customer") await setUserRole(c.env.DB, user.id, role);
   if (name) await updateUserName(c.env.DB, user.id, name);
-  if (isTestUser) await setUserFlags(c.env.DB, user.id, { isTestUser });
+  if (isTestUser) await setUserFlags(c.env.DB, user.id, { isTestUser, testEmailRedirectTo });
   if (subInput) await createManualSubscriptionForAdmin(c.env.DB, user.id, subInput);
 
   // Best-effort: ein fehlgeschlagener Mailversand soll die bereits angelegte
@@ -277,10 +296,10 @@ adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (
     action: "user.create",
     targetType: "user",
     targetId: user.id,
-    details: { email, role, isTestUser, subscription: subInput },
+    details: { email, role, isTestUser, testEmailRedirectTo, subscription: subInput },
   });
 
-  return c.json({ id: user.id, email, role, isTestUser, inviteSent });
+  return c.json({ id: user.id, email, role, isTestUser, testEmailRedirectTo, inviteSent });
 });
 
 // Rolle aendern (Auftrag Abschnitt 6). Nur 'admin' (user.manage).
@@ -318,13 +337,30 @@ adminRoutes.post("/users/:id/flags", requireAuth, requireAdmin, requireCsrfOrigi
   const id = c.req.param("id");
   const body = await c.req.json().catch(() => null);
   const isTestUser = typeof body?.isTestUser === "boolean" ? body.isTestUser : undefined;
-  if (isTestUser === undefined) return c.json({ error: "invalid_flags" }, 400);
+  const redirectProvided = typeof body?.testEmailRedirectTo === "string";
+  if (isTestUser === undefined && !redirectProvided) return c.json({ error: "invalid_flags" }, 400);
 
   const user = await getUserById(c.env.DB, id);
   if (!user) return c.json({ error: "not_found" }, 404);
 
-  await setUserFlags(c.env.DB, id, { isTestUser });
-  if (Boolean(user.is_test_user) !== isTestUser) {
+  // Massgeblich fuer die Testuser-Regel ist der Stand NACH dieser Aenderung,
+  // nicht der vorherige - sonst liesse sich hier ein Redirect setzen, waehrend
+  // isTestUser im selben Aufruf gerade auf false wechselt.
+  const effectiveIsTestUser = isTestUser !== undefined ? isTestUser : Boolean(user.is_test_user);
+  let testEmailRedirectTo: string | null | undefined;
+  if (redirectProvided) {
+    const raw = body.testEmailRedirectTo.trim();
+    if (raw) {
+      if (!effectiveIsTestUser) return c.json({ error: "redirect_requires_test_user" }, 400);
+      if (!EMAIL_PATTERN.test(raw) || raw.length > 254) return c.json({ error: "invalid_redirect_email" }, 400);
+      testEmailRedirectTo = raw.toLowerCase();
+    } else {
+      testEmailRedirectTo = null;
+    }
+  }
+
+  await setUserFlags(c.env.DB, id, { isTestUser, testEmailRedirectTo });
+  if (isTestUser !== undefined && Boolean(user.is_test_user) !== isTestUser) {
     await logAdminAction(c.env.DB, {
       adminUserId: c.var.userId,
       adminEmail: c.var.user.email,
@@ -334,7 +370,7 @@ adminRoutes.post("/users/:id/flags", requireAuth, requireAdmin, requireCsrfOrigi
       details: { to: isTestUser, targetEmail: user.email },
     });
   }
-  return c.json({ ok: true, isTestUser });
+  return c.json({ ok: true, isTestUser: effectiveIsTestUser, testEmailRedirectTo: testEmailRedirectTo !== undefined ? testEmailRedirectTo : user.test_email_redirect_to });
 });
 
 // Support-Notiz (Auftrag Abschnitt 6/7).
@@ -624,6 +660,12 @@ adminRoutes.post(
     const usageLimit = Number.isInteger(body?.usageLimit) && body.usageLimit > 0 ? body.usageLimit : null;
     const expiresAt = parseExpiryDate(body?.expiresAt) ?? null;
     if (!code || !description || !type || !amount) return c.json({ error: "invalid_discount" }, 400);
+    // Paddle akzeptiert als Code-Format nur ^[a-zA-Z0-9]{1,32}$ (Live-Befund
+    // 19.08. via wrangler tail: ein Code mit Bindestrich scheiterte serverseitig
+    // bei Paddle und kam nur als nichtssagender 502 create_discount_failed
+    // zurueck). Hier vorab geprueft, damit ein Admin sofort einen verstaendlichen
+    // 400 statt eines Paddle-502 sieht.
+    if (!DISCOUNT_CODE_PATTERN.test(code)) return c.json({ error: "invalid_discount_code" }, 400);
 
     try {
       const discount = await createDiscount(c.env, { code, description, type, amount, usageLimit, expiresAt });

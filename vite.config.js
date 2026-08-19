@@ -36,10 +36,16 @@ export default defineConfig({
     sourcemap: false,
   },
   test: {
-    // worker/e2e/**: eigene Suite gegen den echten dev-Worker (Session-Env-
-    // Vars noetig, siehe worker/e2e/README.md) - soll den normalen Testlauf
-    // nicht mit erwartbaren Fehlern verunreinigen. Eigener Befehl:
-    // `npm run test:e2e` im worker-Ordner.
-    exclude: ["**/node_modules/**", "**/dist/**", "worker/e2e/**"],
+    // e2e/**: alle drei E2E-Testebenen (API-Suite *.e2e.test.ts, Browser-
+    // Suite *.spec.ts, Dashboard) leben seit 2026-08-19 in einem flachen
+    // Ordner e2e/ im Wurzelverzeichnis (vorher worker/e2e/ + browser-e2e/ +
+    // e2e-dashboard/, siehe e2e/README.md). Beide Suiten laufen gegen den
+    // echten dev-Worker (Session-Env-Vars noetig) und sollen den normalen
+    // Testlauf nicht mit erwartbaren Fehlern verunreinigen; *.spec.ts dort
+    // sind zudem KEINE Vitest-Dateien, Vitests Standard-Glob wuerde sie
+    // sonst faelschlich aufgreifen (dasselbe Muster wie beim fruehen
+    // 1.55.99-Playwright-Setup, siehe dessen release-notes.txt-Eintrag).
+    // Eigene Befehle: `npm run test:e2e` / `npm run test:browser`.
+    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
   },
 });

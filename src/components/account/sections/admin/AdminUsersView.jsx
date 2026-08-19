@@ -35,6 +35,7 @@ const EMPTY_CREATE_FORM = {
   name: "",
   role: "customer",
   isTestUser: false,
+  testEmailRedirectTo: "",
   subStatus: "",
   subPlan: "monthly",
 };
@@ -118,6 +119,9 @@ export function AdminUsersView({ currentUser }) {
         role: createForm.role,
         isTestUser: createForm.isTestUser,
       };
+      if (createForm.isTestUser && createForm.testEmailRedirectTo.trim()) {
+        payload.testEmailRedirectTo = createForm.testEmailRedirectTo.trim();
+      }
       // "Kein Abo" (leerer Wert) heisst: gar kein subscription-Feld schicken,
       // nicht mit leerem Status - der Worker unterscheidet "nicht mitgeschickt"
       // (kein Abo) von einer ungueltigen Angabe.
@@ -211,13 +215,39 @@ export function AdminUsersView({ currentUser }) {
                 type="checkbox"
                 checked={createForm.isTestUser}
                 onChange={(e) =>
-                  setCreateForm((f) => ({ ...f, isTestUser: e.target.checked, subStatus: e.target.checked ? f.subStatus : "" }))
+                  setCreateForm((f) => ({
+                    ...f,
+                    isTestUser: e.target.checked,
+                    subStatus: e.target.checked ? f.subStatus : "",
+                    testEmailRedirectTo: e.target.checked ? f.testEmailRedirectTo : "",
+                  }))
                 }
                 style={{ width: 18, height: 18, accentColor: "var(--ca)", cursor: "pointer" }}
               />
               <span>Testuser</span>
             </label>
           </div>
+
+          {/* Fuer Testuser mit fiktiver E-Mail (z.B. test.admin@immofuchs.info,
+              existiert real nicht): echte Adresse, an die die Einladungs- und
+              alle Folgemails stattdessen gehen sollen (Migration 0023). Ohne
+              Eintrag verhaelt es sich wie bisher - nur die dev-only
+              TEST_EMAIL_REDIRECT_TO-Variable greift, sonst nichts. */}
+          {createForm.isTestUser && (
+            <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+              <label style={labelStyle} htmlFor="create-test-redirect">
+                Tatsächliche Empfänger-E-Mail (optional)
+              </label>
+              <input
+                id="create-test-redirect"
+                type="email"
+                placeholder="useforai@web.de"
+                value={createForm.testEmailRedirectTo}
+                onChange={(e) => setCreateForm((f) => ({ ...f, testEmailRedirectTo: e.target.value }))}
+                style={{ ...textInputStyle, width: "100%" }}
+              />
+            </div>
+          )}
 
           {/* Ein Abo direkt setzen geht nur bei Testusern - fuer echte Konten
               gibt es dafuer nur den Weg ueber Paddle (siehe adminApi.js). */}

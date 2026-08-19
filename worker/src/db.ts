@@ -38,6 +38,11 @@ export interface UserRow {
   // umschaltbar. Hat die frueherer Rolle 'test_user' abgeloest, damit ein
   // Nutzer gleichzeitig Kunde UND Testnutzer sein kann.
   is_test_user: number;
+  // Migration 0023: pro-Nutzer-Alternative zur globalen, dev-only
+  // TEST_EMAIL_REDIRECT_TO (siehe email.ts) - nur wirksam bei
+  // is_test_user=1, faengt Mails an fiktive Testadressen (z.B.
+  // test.admin@immofuchs.info) auch auf qa/prod ab.
+  test_email_redirect_to: string | null;
 }
 
 export interface SessionRow {
@@ -127,6 +132,7 @@ export async function createUser(db: Env["DB"], email: string): Promise<UserRow>
     marketing_emails_enabled: 0,
     calculator_trial_used_at: null,
     is_test_user: 0,
+    test_email_redirect_to: null,
   };
 }
 
@@ -251,6 +257,7 @@ export async function createUserWithPassword(
     marketing_emails_enabled: 0,
     calculator_trial_used_at: null,
     is_test_user: 0,
+    test_email_redirect_to: null,
   };
 }
 
@@ -901,20 +908,25 @@ const ADMIN_USER_SORT_SQL: Record<AdminUsersFilter["sort"], string> = {
 // getActiveSubscription (db.ts) und computeIsPro (entitlement.ts).
 const LIVE_SUB_STATUSES = "'active','trialing','cancel_scheduled','past_due'";
 
-// ESCAPE '\' passend zum Escaping in routes/admin.ts (parseAdminUsersQuery) -
-// ohne ESCAPE-Klausel wuerden % und _ im Suchbegriff als SQL-LIKE-Wildcards
-// statt als Literalzeichen interpretiert.
+// instr() statt LIKE (Live-Befund 19.08., IMP-12-Nachtrag): D1 wirft ab einer
+// gewissen (undokumentierten) Musterlaenge "SQLITE_ERROR: LIKE or GLOB pattern
+// too complex" - traf bei langen E-Mail-Suchbegriffen (z.B. eine komplette
+// UUID-Adresse aus der Admin-Oberflaeche) zuverlaessig zu 500ern. instr()
+// braucht kein Escaping fuer %/_ (kein Wildcard-Mechanismus, reine Teilstring-
+// Suche) und hat kein Musterlaengen-Limit - deckt den bisherigen Zweck
+// (Teilstring, gross-/kleinschreibungsunabhaengig) ohne die Einschraenkung ab.
+// parseAdminUsersQuery (routes/admin.ts) escaped den Suchbegriff seit diesem
+// Wechsel bewusst nicht mehr - das war nur fuer LIKE noetig.
 export async function listUsersForAdmin(
   db: Env["DB"],
   filter: AdminUsersFilter,
   page: number,
   pageSize: number,
 ): Promise<{ users: AdminUserSummary[]; total: number }> {
-  const like = `%${filter.search}%`;
   const offset = (page - 1) * pageSize;
 
-  const where: string[] = ["users.email LIKE ? ESCAPE '\\'"];
-  const params: unknown[] = [like];
+  const where: string[] = ["instr(lower(users.email), lower(?)) > 0"];
+  const params: unknown[] = [filter.search];
   if (filter.role) {
     where.push("users.role = ?");
     params.push(filter.role);
@@ -960,13 +972,20 @@ export async function setUserRole(db: Env["DB"], userId: string, role: string): 
 export async function setUserFlags(
   db: Env["DB"],
   userId: string,
-  flags: { isTestUser?: boolean },
+  flags: { isTestUser?: boolean; testEmailRedirectTo?: string | null },
 ): Promise<void> {
-  if (flags.isTestUser === undefined) return;
-  await db
-    .prepare("UPDATE users SET is_test_user = ? WHERE id = ?")
-    .bind(flags.isTestUser ? 1 : 0, userId)
-    .run();
+  if (flags.isTestUser !== undefined) {
+    await db
+      .prepare("UPDATE users SET is_test_user = ? WHERE id = ?")
+      .bind(flags.isTestUser ? 1 : 0, userId)
+      .run();
+  }
+  if (flags.testEmailRedirectTo !== undefined) {
+    await db
+      .prepare("UPDATE users SET test_email_redirect_to = ? WHERE id = ?")
+      .bind(flags.testEmailRedirectTo, userId)
+      .run();
+  }
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -9,6 +9,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "vitest run --config e2e/vitest.e2e.config.ts",
+    "test:e2e:report": "node e2e/generate-report.mjs",
+    "test:browser": "playwright test --config=e2e/playwright.config.ts",
+    "test:browser:report": "playwright show-report e2e/playwright-report",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write .",
@@ -26,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.62.0",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",

@@ -94,9 +94,22 @@ function htmlToText(html: string): string {
 // E-Mail-Adresse bestaetigen) ohnehin nicht ermittelbar, weil die Zieladresse
 // noch nicht in der DB existiert - diese Mail waere sonst auch nach dem
 // Verschieben unerreichbar geblieben.
-function resolveRecipient(env: Env, to: string): { to: string; subjectPrefix: string } {
-  if (!env.TEST_EMAIL_REDIRECT_TO) return { to, subjectPrefix: "" };
-  return { to: env.TEST_EMAIL_REDIRECT_TO, subjectPrefix: `[TEST ${to}] ` };
+//
+// Zweite Stufe (Migration 0023, Nutzer-Entscheidung 2026-08-19): die
+// Env-Var deckt nur dev ab und leitet ausnahmslos ALLES um. Fuer vom Admin
+// angelegte Testuser mit fiktiver Adresse (z.B. test.admin@immofuchs.info,
+// existiert real nicht) braucht es eine pro-Nutzer-Umleitung, die auch auf
+// qa/prod greift - dafuer der DB-Lookup auf test_email_redirect_to, nur bei
+// is_test_user=1. Ein zusaetzlicher SELECT pro Mail ist hier unkritisch:
+// sendEmail() macht ohnehin einen Netzwerk-Call zum Mail-Anbieter.
+async function resolveRecipient(env: Env, to: string): Promise<{ to: string; subjectPrefix: string }> {
+  if (env.TEST_EMAIL_REDIRECT_TO) return { to: env.TEST_EMAIL_REDIRECT_TO, subjectPrefix: `[TEST ${to}] ` };
+  const row = await env.DB
+    .prepare("SELECT test_email_redirect_to FROM users WHERE email = ? AND is_test_user = 1")
+    .bind(to)
+    .first<{ test_email_redirect_to: string | null }>();
+  if (row?.test_email_redirect_to) return { to: row.test_email_redirect_to, subjectPrefix: `[TEST ${to}] ` };
+  return { to, subjectPrefix: "" };
 }
 
 export async function sendEmail(
@@ -105,7 +118,7 @@ export async function sendEmail(
   subjectRaw: string,
   html: string,
 ): Promise<void> {
-  const { to, subjectPrefix } = resolveRecipient(env, toRaw);
+  const { to, subjectPrefix } = await resolveRecipient(env, toRaw);
   const subject = `${subjectPrefix}${subjectRaw}`;
   const from = parseFrom(env.MAGIC_LINK_FROM_EMAIL || DEFAULT_FROM);
   html = wrapEmailHtml(env, html);

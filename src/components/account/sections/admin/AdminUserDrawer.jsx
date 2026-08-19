@@ -60,6 +60,11 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
   const [busy, setBusy] = useState(null);
   const [confirm, setConfirm] = useState(null); // "suspend" | "delete" | null
   const [note, setNote] = useState("");
+  // Eigenes Eingabefeld statt bei jedem Tastenanschlag zu speichern (Migration
+  // 0023) - haelt den vom Server geladenen Stand nach, damit ein Wechsel des
+  // Nutzers im Drawer nicht den zuvor eingetippten Wert eines anderen stehen
+  // laesst.
+  const [redirectInput, setRedirectInput] = useState("");
 
   // Der Auftrag (Abschnitt 13) verlangt, dass Support nur ansehen und
   // Notizen schreiben darf. Der Worker setzt das durch (403), die UI
@@ -87,6 +92,13 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
   useEffect(() => {
     if (open) load();
   }, [open, load]);
+
+  // Haelt das Eingabefeld mit dem geladenen Stand synchron - auch nach einem
+  // erfolgreichen Speichern (bestaetigt den Server-Wert) und beim Wechsel auf
+  // einen anderen Nutzer im Drawer.
+  useEffect(() => {
+    setRedirectInput(detail?.testEmailRedirectTo || "");
+  }, [effectiveUserId, detail?.testEmailRedirectTo]);
 
   // Einheitlicher Ablauf fuer jede schreibende Aktion (Auftrag Abschnitt 11):
   // Backend speichern -> Erfolg melden -> Detail neu laden (damit die
@@ -250,6 +262,42 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                       )
                     }
                   />
+                  {/* Fuer fiktive Testadressen (z.B. test.admin@immofuchs.info,
+                      existiert real nicht): echte Adresse, an die Mails
+                      stattdessen gehen sollen (Migration 0023). Nur wirksam,
+                      solange Testuser oben angehakt ist. */}
+                  {detail.isTestUser && (
+                    <div>
+                      <label style={labelStyle} htmlFor="admin-test-redirect">
+                        Tatsächliche Empfänger-E-Mail
+                      </label>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                          id="admin-test-redirect"
+                          type="email"
+                          placeholder="useforai@web.de"
+                          value={redirectInput}
+                          disabled={busy === "flags"}
+                          onChange={(e) => setRedirectInput(e.target.value)}
+                          style={{ ...textInputStyle, flex: 1, minWidth: 0 }}
+                        />
+                        <button
+                          type="button"
+                          disabled={busy === "flags" || redirectInput.trim() === (detail.testEmailRedirectTo || "")}
+                          onClick={() =>
+                            run(
+                              "flags",
+                              () => setUserFlags(effectiveUserId, { testEmailRedirectTo: redirectInput.trim() }),
+                              "Empfänger-E-Mail gespeichert.",
+                            )
+                          }
+                          style={secondaryBtnStyle}
+                        >
+                          Speichern
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </Block>
