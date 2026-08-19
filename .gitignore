@@ -21,3 +21,34 @@ mobile/ios/DerivedData/
 /playwright-report/
 /test-results/
 __pycache__/
+
+# e2e/ (Ordner-Umzug 2026-08-19, vorher worker/e2e/ + browser-e2e/ +
+# e2e-dashboard/, siehe e2e/README.md): Laufzeit-/Report-Ausgabe beider
+# Suiten, erzeugt sich bei jedem Lauf neu, nie committen.
+#
+# API-Suite (vorher worker/.gitignore, jetzt hier - nichts E2E-bezogenes
+# liegt mehr unter worker/):
+e2e/last-report.html
+e2e/reports/
+e2e/.sessions.json
+e2e/.login-cooldown.json
+
+# Browser-Suite: geholte Sessions (Cookies!) und die Login-Abkuehlzeit.
+e2e/.auth/
+
+# playwright.config.ts liegt in e2e/, nicht im Wurzelverzeichnis -
+# outputFolder/outputDir werden deshalb relativ zu e2e/ aufgeloest und NICHT
+# von den root-verankerten /playwright-report/ und /test-results/ oben
+# erfasst (2026-08-19, beim Anlegen von browser-e2e/run.ps1 urspruenglich
+# bemerkt, gilt nach dem Umzug unveraendert fort).
+e2e/playwright-report/
+e2e/test-results/
+
+# Gemeinsame Geheimnisse beider Suiten + Dashboard (echte Test-Passwoerter,
+# vorher e2e-dashboard/.gitignore - dieser Ordner entfaellt, die Regel muss
+# deshalb hierher wandern, sonst droht ein versehentlicher Commit).
+# Wildcard statt exaktem Dateinamen (Befund 2026-08-19): fix-env-local.ps1
+# legt vor jeder Aenderung ein .bak an - e2e/.env.local.bak enthielt beim
+# Pruefen echte Test-Passwoerter + den Paddle-Webhook-Secret und war NICHT
+# von der bisherigen Regel erfasst.
+e2e/.env.local*

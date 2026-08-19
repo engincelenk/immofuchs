@@ -1,0 +1,1 @@
+powershell -File browser-e2e\run.ps1

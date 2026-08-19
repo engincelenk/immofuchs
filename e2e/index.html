@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>ImmoFuchs · E2E-Dashboard</title>
+<style>
+  :root { --ink:#1a2330; --muted:#6b6a63; --paper:#f6f4ef; --paper-raised:#fff; --line:#e4e0d6; --accent:#e8600a; --ok:#1e7a46; --fail:#c22b1e; --shadow:0 1px 2px rgba(26,35,48,.06),0 8px 24px -12px rgba(26,35,48,.18); }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#edeae2; --muted:#9d998d; --paper:#161a21; --paper-raised:#1d222b; --line:#2b313c; --accent:#f0792c; --ok:#3fc27f; --fail:#ff7566; --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 28px -14px rgba(0,0,0,.6); }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; padding:clamp(20px,4vw,48px); }
+  .sheet { max-width:1000px; margin:0 auto; }
+  header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding-bottom:18px; border-bottom:3px solid var(--accent); margin-bottom:24px; }
+  .kicker { font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700; margin:0 0 6px; }
+  h1 { font-size:1.6rem; margin:0; letter-spacing:-.01em; }
+  button { font:inherit; font-weight:700; font-size:.95rem; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:12px 22px; cursor:pointer; box-shadow:var(--shadow); }
+  button:disabled { opacity:.55; cursor:not-allowed; }
+  #status { margin:16px 0; color:var(--muted); font-size:.9rem; min-height:1.2em; }
+  #status.err { color:var(--fail); font-weight:600; }
+  #reportBox { border:1px solid var(--line); border-radius:10px; overflow:hidden; box-shadow:var(--shadow); background:var(--paper-raised); }
+  #reportFrame { width:100%; height:75vh; border:0; display:block; }
+  .hint { color:var(--muted); font-size:.85rem; margin-top:10px; }
+  .empty { padding:40px; text-align:center; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <div>
+      <p class="kicker">ImmoFuchs · QA</p>
+      <h1>E2E-Testrunner</h1>
+    </div>
+    <button id="runBtn">Tests starten</button>
+  </header>
+
+  <div id="targetBanner" class="hint" style="margin-bottom:16px;"></div>
+
+  <div id="status"></div>
+
+  <div id="reportBox">
+    <iframe id="reportFrame" title="Testreport"></iframe>
+  </div>
+  <p class="hint">
+    Nur automatisierte Tests (e2e/*.e2e.test.ts). Manuelle Testfaelle
+    (OAuth, Logout-all, Account-Loeschung, Login-Sperre) stehen separat in
+    e2e/manuelle-testfaelle.md und laufen hier nicht mit.
+  </p>
+  <p class="hint">
+    Jeder Lauf wird zusaetzlich mit Datum/Uhrzeit archiviert unter
+    <code>e2e/reports/</code> (nicht Teil dieser Seite, per Explorer
+    einsehbar).
+  </p>
+</div>
+
+<script>
+  const runBtn = document.getElementById("runBtn");
+  const statusEl = document.getElementById("status");
+  const frame = document.getElementById("reportFrame");
+
+  function showEmpty(msg) {
+    frame.srcdoc = `<div style="font-family:sans-serif;padding:40px;color:#6b6a63;">${msg}</div>`;
+  }
+
+  async function loadLastReport() {
+    try {
+      const res = await fetch("/last-report");
+      if (res.ok) {
+        frame.srcdoc = await res.text();
+      } else {
+        showEmpty("Noch kein Report vorhanden. Auf „Tests starten“ klicken.");
+      }
+    } catch {
+      showEmpty("Noch kein Report vorhanden.");
+    }
+  }
+
+  async function runTests() {
+    runBtn.disabled = true;
+    statusEl.className = "";
+    statusEl.textContent = "Tests laufen … das kann je nach Anzahl Testfaelle 30–90 Sekunden dauern.";
+
+    try {
+      const res = await fetch("/run", { method: "POST" });
+      const data = await res.json();
+
+      if (!data.ok) {
+        statusEl.className = "err";
+        if (data.error === "missing_env") {
+          statusEl.textContent =
+            "Fehlende Umgebungsvariablen: " + data.missing.join(", ") +
+            " — siehe env.beispiel.txt im e2e-Ordner.";
+        } else if (data.error === "already_running") {
+          statusEl.textContent = "Es laeuft bereits ein Testlauf. Bitte warten.";
+        } else {
+          statusEl.textContent = "Start fehlgeschlagen: " + (data.message || data.error);
+        }
+        runBtn.disabled = false;
+        return;
+      }
+
+      statusEl.className = data.exitCode === 0 ? "" : "err";
+      statusEl.textContent =
+        (data.exitCode === 0 ? "Fertig — alle Tests bestanden." : "Fertig — es gibt Fehlschlaege, siehe Report unten.") ;
+
+      if (data.html) {
+        frame.srcdoc = data.html;
+      } else {
+        showEmpty("Report konnte nicht gelesen werden. Log:\n\n" + (data.log || ""));
+      }
+    } catch (err) {
+      statusEl.className = "err";
+      statusEl.textContent = "Fehler: " + err.message;
+    } finally {
+      runBtn.disabled = false;
+    }
+  }
+
+  async function loadTarget() {
+    const banner = document.getElementById("targetBanner");
+    try {
+      const res = await fetch("/config");
+      const data = await res.json();
+      banner.innerHTML = "Testziel: <strong>" + data.apiBaseUrl + "</strong> (echter deployter Worker, nicht dieser lokale Dashboard-Server).";
+    } catch {
+      banner.textContent = "Testziel konnte nicht ermittelt werden.";
+    }
+  }
+
+  runBtn.addEventListener("click", runTests);
+  loadTarget();
+  loadLastReport();
+</script>
+</body>
+</html>
