@@ -88,8 +88,6 @@ export function PricingSection({ lang, onChoosePlan }) {
           </p>
         </div>
 
-        <TrustRow t={t} />
-
         {/* alignItems:stretch (Grid-Standard) statt "start" (Nutzer-Vorgabe
             2026-08-18): beide Kacheln sollen unabhaengig von ihrer
             Textlaenge exakt gleich hoch sein - stretch zieht jede Kachel auf
@@ -133,38 +131,6 @@ export function PricingSection({ lang, onChoosePlan }) {
         </div>
       </div>
     </section>
-  );
-}
-
-// Vertrauens-Zeile ueber den Karten (Vorbild). Alle drei Zusagen sind gedeckt:
-// Rueckerstattung binnen 14 Tagen, dreitaegiger kostenloser Test und
-// Kuendigung zum Periodenende sind im Worker umgesetzt.
-function TrustRow({ t }) {
-  const items = [
-    [<ShieldIcon key="i" />, t.trustRefund],
-    [<ClockIcon key="i" />, t.pricingTrialBadge],
-    [<CycleIcon key="i" />, t.trustCancel],
-  ];
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        justifyContent: "center",
-        gap: "10px 26px",
-        marginBottom: 26,
-      }}
-    >
-      {items.map(([icon, label]) => (
-        <span
-          key={label}
-          style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, color: "var(--cl)" }}
-        >
-          {icon}
-          {label}
-        </span>
-      ))}
-    </div>
   );
 }
 
@@ -268,42 +234,3 @@ function PlanCard({
   );
 }
 
-const iconProps = {
-  width: 16,
-  height: 16,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "var(--ca)",
-  strokeWidth: 2,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-  "aria-hidden": "true",
-  style: { flexShrink: 0 },
-};
-
-function ShieldIcon() {
-  return (
-    <svg {...iconProps}>
-      <path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6l7-3z" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg {...iconProps}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
-    </svg>
-  );
-}
-
-function CycleIcon() {
-  return (
-    <svg {...iconProps}>
-      <path d="M3 12a9 9 0 0114.6-7M21 12a9 9 0 01-14.6 7" />
-      <path d="M17 2v4h-4M7 22v-4h4" />
-    </svg>
-  );
-}
