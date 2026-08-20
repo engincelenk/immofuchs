@@ -510,8 +510,12 @@ export default function App() {
          sichtbaren Bereich. Mobile-first kompakt, ab 480px die volle Groesse
          (gleiches Muster wie .mob-toggle/.if-row weiter unten). */
       .hdr-brand-btn{gap:8px!important;min-width:0}
-      .hdr-logo-img{width:38px!important;height:38px!important}
-      .hdr-wordmark{font-size:17px!important}
+      /* Seit 2026-08-20 ein Schriftzug-Bild (3:1) statt Quadrat-Icon +
+         HTML-Text: nur noch die Hoehe steuern, die Breite folgt dem
+         Seitenverhaeltnis. Hoehen bewusst kleiner als die frueheren
+         Icon-Kantenlaengen (38/54), da das Bild den Schriftzug mitbringt
+         und dadurch deutlich breiter baut. */
+      .hdr-logo-img{height:30px!important;width:auto!important}
       .lang-label{display:none!important}
       /* Konto-Knopf: unter 480px die Kurzform "Konto", darueber "Mein Konto"
          (UX-Audit 2026-08-11). Volle Beschriftung PLUS Tarif-Chip passt auf
@@ -522,8 +526,7 @@ export default function App() {
       .acct-label-short{display:inline}
       @media(min-width:480px){
         .hdr-brand-btn{gap:14px!important}
-        .hdr-logo-img{width:54px!important;height:54px!important}
-        .hdr-wordmark{font-size:24px!important}
+        .hdr-logo-img{height:44px!important;width:auto!important}
         .lang-label{display:inline!important}
         .acct-label-full{display:inline}
         .acct-label-short{display:none}
@@ -616,26 +619,15 @@ export default function App() {
                 minWidth: 0,
               }}
             >
+              {/* Ein Bild statt Icon + HTML-Schriftzug (Nutzer-Vorgabe
+                  2026-08-20, app-weit nur ein Logo-File): der Schriftzug
+                  steckt jetzt im Bild selbst, siehe BrandIcon.jsx. */}
               <img
-                src="/icon-192.png"
-                alt="Immofuchs"
+                src="/logo-wordmark.png"
+                alt="immofuchs.info"
                 className="hdr-logo-img"
-                style={{ width: 54, height: 54, objectFit: "contain", flexShrink: 0 }}
+                style={{ height: 44, width: "auto", objectFit: "contain", flexShrink: 0 }}
               />
-              <div
-                className="hdr-wordmark"
-                style={{
-                  fontSize: 24,
-                  fontWeight: 800,
-                  letterSpacing: -0.5,
-                  lineHeight: 1,
-                  color: "var(--ct)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                immo<span style={{ color: "var(--ca)" }}>fuchs</span>
-                <span style={{ color: "var(--ct)", fontWeight: 700 }}>.info</span>
-              </div>
             </button>
             {/* Nutzer-Vorgabe 2026-08-12: Die Sprachwahl gehoert fuer
                 eingeloggte Nutzer ausschliesslich in "Einstellungen" - im Kopf

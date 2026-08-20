@@ -428,12 +428,12 @@ export function useAccount() {
     );
   }, []);
 
-  const openBillingPortal = useCallback(async () => {
-    const res = await apiFetch("/billing/portal");
-    if (!res.ok) throw new Error("portal_failed");
-    const { url } = await res.json();
-    window.open(url, "_blank");
-  }, []);
+  // openBillingPortal() ist am 2026-08-20 entfallen (Nutzer-Entscheidung):
+  // im Paddle-Kundenportal liessen sich neben der Zahlungsart auch Kuendigung
+  // und Rechnungsdaten aendern - Wege, die es hier bereits gibt bzw. die
+  // bewusst nicht selbstbedient sein sollen. Die Worker-Route /billing/portal
+  // bleibt bestehen (von der e2e-Suite abgedeckt), hat aber keine
+  // Bedienoberflaeche mehr.
 
   const cancelSubscription = useCallback(async () => {
     const res = await apiFetch("/billing/cancel", { method: "POST" });
@@ -644,7 +644,6 @@ export function useAccount() {
     logout,
     logoutAllDevices,
     startCheckout,
-    openBillingPortal,
     cancelSubscription,
     reactivateSubscription,
     refundSubscription,

@@ -169,12 +169,12 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
           .ma-hdr-bar{position:sticky;top:0;z-index:5;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);padding-top:env(safe-area-inset-top)}
           .ma-hdr{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px}
           .ma-body{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
-          .ma-logo{width:38px;height:38px}
-          .ma-wordmark{font-size:17px}
+          /* Schriftzug-Bild seit 2026-08-20 (app-weit ein Logo-File): nur
+             die Hoehe steuern, Werte wie .hdr-logo-img in App.jsx. */
+          .ma-logo{height:30px;width:auto}
           .ma-brand{gap:8px}
           @media(min-width:480px){
-            .ma-logo{width:54px;height:54px}
-            .ma-wordmark{font-size:24px}
+            .ma-logo{height:44px;width:auto}
             .ma-brand{gap:14px}
           }
           @media(min-width:700px){
@@ -216,18 +216,11 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
               }}
             >
               <img
-                src="/icon-192.png"
-                alt=""
+                src="/logo-wordmark.png"
+                alt="immofuchs.info"
                 className="ma-logo"
                 style={{ objectFit: "contain", flexShrink: 0 }}
               />
-              <span
-                className="ma-wordmark"
-                style={{ fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: "var(--ct)", whiteSpace: "nowrap" }}
-              >
-                immo<span style={{ color: "var(--ca)" }}>fuchs</span>
-                <span style={{ fontWeight: 700 }}>.info</span>
-              </span>
             </button>
             {/* Nutzer-Vorgabe 2026-08-13: "Zurueck" ist eine globale
                 Verlassen-Aktion (zurueck in die App), kein Bereich der

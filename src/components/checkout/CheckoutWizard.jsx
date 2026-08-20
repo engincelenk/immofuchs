@@ -390,8 +390,10 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
             <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
               {/* "Pro" nur im Kauf-Flow (Stufe Nutzer-Konzept 2026-08-11) -
                   eine reine Anmeldung fuer den kostenlosen Test hat mit Pro
-                  noch nichts zu tun. */}
-              <BrandIcon size={20} /> ImmoFuchs {variant !== "login-only" && <span style={{ color: "var(--ca-dk)" }}>Pro</span>}
+                  noch nichts zu tun. Der Markenname selbst steht seit
+                  2026-08-20 im Bild (BrandIcon zeigt den Schriftzug), der
+                  frueher danebenstehende Text "ImmoFuchs" entfaellt deshalb. */}
+              <BrandIcon size={22} /> {variant !== "login-only" && <span style={{ color: "var(--ca-dk)" }}>Pro</span>}
             </div>
           )}
           <button

@@ -191,37 +191,25 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               fontFamily: "inherit",
             }}
           >
-            <img
-              src="/icon-192.png"
-              alt="Immofuchs"
-              className="lp-logo-icon"
-              style={{
-                width: 54,
-                height: 54,
-                objectFit: "contain",
-                flexShrink: 0,
-                borderRadius: 10,
-              }}
-            />
             {/* Einheitliche Logogroesse mit App-/Kontokopf (Nutzer-Korrektur
                 2026-08-14): vorher schrumpfte die Wortmarke bei ≤880px auf
                 36px/16px wegen Platzmangels neben Konto-/Menü-Button
                 (Nutzer-Feedback 2026-08-11) - der Knopf-Bereich bekommt den
                 noetigen Platz jetzt stattdessen ueber .lp-hdr-inner-Gap bzw.
-                die eigene .lp-account-btn-Verkleinerung weiter unten. */}
-            <div
-              className="lp-logo-text"
+                die eigene .lp-account-btn-Verkleinerung weiter unten.
+                Seit 2026-08-20 ein Schriftzug-Bild statt Icon + HTML-Text
+                (app-weit ein Logo-File, siehe BrandIcon.jsx). */}
+            <img
+              src="/logo-wordmark.png"
+              alt="immofuchs.info"
+              className="lp-logo-icon"
               style={{
-                fontSize: 24,
-                fontWeight: 800,
-                letterSpacing: -0.5,
-                lineHeight: 1,
-                color: "var(--ct)",
+                height: 44,
+                width: "auto",
+                objectFit: "contain",
+                flexShrink: 0,
               }}
-            >
-              immo<span style={{ color: "var(--ca)" }}>fuchs</span>
-              <span style={{ color: "var(--ct)", fontWeight: 700 }}>.info</span>
-            </div>
+            />
           </button>
 
           {/* Desktop Nav */}
@@ -1727,16 +1715,10 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <img
-                src="/icon-192.png"
-                alt="Immofuchs"
-                style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 8 }}
+                src="/logo-wordmark.png"
+                alt="immofuchs.info"
+                style={{ height: 30, width: "auto", objectFit: "contain" }}
               />
-              <div
-                style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.3, color: "var(--ct)" }}
-              >
-                immo<span style={{ color: "var(--ca)" }}>fuchs</span>
-                <span style={{ color: "var(--ct)" }}>.info</span>
-              </div>
             </div>
             <div
               style={{
@@ -1823,17 +1805,15 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
          fehlte hier also schlicht. */
       .lp-acct-full{display:none}
       .lp-acct-short{display:inline}
-      /* Logo-Groesse identisch zum Rechner-Kopf (.hdr-logo-img/.hdr-wordmark
-         in App.jsx, Nutzer-Korrektur 2026-08-14): unter 480px 38px/17px,
-         darueber 54px/24px - das war die uebersehene "richtige" Referenz,
-         nicht die zuvor gesetzte feste 54px/24px-Groesse. */
-      .lp-logo-icon{width:38px!important;height:38px!important}
-      .lp-logo-text{font-size:17px!important}
+      /* Logo-Groesse identisch zum Rechner-Kopf (.hdr-logo-img in App.jsx,
+         Nutzer-Korrektur 2026-08-14). Seit 2026-08-20 ein Schriftzug-Bild
+         (3:1) statt Quadrat-Icon + HTML-Text - gesteuert wird nur noch die
+         Hoehe, dieselben Werte wie .hdr-logo-img. */
+      .lp-logo-icon{height:30px!important;width:auto!important}
       @media(min-width:480px){
         .lp-acct-full{display:inline}
         .lp-acct-short{display:none}
-        .lp-logo-icon{width:54px!important;height:54px!important}
-        .lp-logo-text{font-size:24px!important}
+        .lp-logo-icon{height:44px!important;width:auto!important}
       }
       @media(max-width:880px){
         .lp-nav{display:none!important}

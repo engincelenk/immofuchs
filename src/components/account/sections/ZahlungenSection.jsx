@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { LANG_LOCALE } from "../../../utils/helpers.js";
 import { errorBannerStyle } from "../../checkout/checkoutStyles.js";
-import { IconBeleg, IconExternal, IconZahlung } from "../accountIcons.jsx";
+import { IconBeleg, IconExternal } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
 import {
-  actionBtnStyle,
   blockCardStyle,
   blockHintStyle,
   blockTitleStyle,
@@ -20,22 +19,6 @@ import {
 // Kartendaten noch Rechnungsadressen.
 export function ZahlungenSection({ t, account, lang, onBack }) {
   const locale = LANG_LOCALE[lang] || "de-DE";
-  const hasSubscription = Boolean(account.me.subscription);
-
-  const [portalBusy, setPortalBusy] = useState(false);
-  const [portalError, setPortalError] = useState(false);
-
-  async function handleOpenPortal() {
-    setPortalBusy(true);
-    setPortalError(false);
-    try {
-      await account.openBillingPortal();
-    } catch {
-      setPortalError(true);
-    } finally {
-      setPortalBusy(false);
-    }
-  }
 
   const [invoices, setInvoices] = useState(null); // null = laedt noch
   const [invoiceError, setInvoiceError] = useState(null);
@@ -91,6 +74,16 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
   // laut Paddle-Query ohnehin nur diese beiden Werte (checkout.ts:167) - PDF
   // Konzept-Dok 4.3 wollte "Bezahlt" als Status, das gilt aber nicht pauschal
   // fuer jeden Eintrag.
+  // Trial-Buchungen laufen bei Paddle als Transaktion ueber 0,00 EUR - dafuer
+  // stellt Paddle KEINE Rechnung aus (verifiziert 2026-08-20 via wrangler
+  // tail: GET /transactions/{id}/invoice antwortet 404, unser Endpunkt machte
+  // daraus die generische Meldung "Das PDF konnte nicht geoeffnet werden").
+  // Der Link erscheint deshalb erst, wenn tatsaechlich Geld geflossen ist -
+  // also ab der ersten Abbuchung nach Ende der Testphase.
+  function hasInvoicePdf(invoice) {
+    return Number(invoice.amount) > 0;
+  }
+
   function statusLabel(invoice) {
     if (invoice.status === "completed") return { text: t.rechnungenStatusCompleted, color: "#22c55e" };
     if (invoice.status === "billed") return { text: t.rechnungenStatusBilled, color: "#f59e0b" };
@@ -102,32 +95,14 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
       <SectionTitle title={t.navZahlung} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>{t.zahlungBody}</p>
 
-      {portalError && <div style={errorBannerStyle}>{t.zahlungError}</div>}
-
-      <div style={blockCardStyle}>
-        {hasSubscription ? (
-          <button
-            onClick={handleOpenPortal}
-            disabled={portalBusy}
-            style={{ ...actionBtnStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <IconZahlung size={18} />
-              {t.zahlungCta}
-            </span>
-            <span aria-hidden="true" style={{ display: "flex", color: "var(--ch)" }}>
-              <IconExternal size={16} />
-            </span>
-          </button>
-        ) : (
-          <p style={{ ...blockHintStyle, margin: 0, display: "flex", alignItems: "flex-start", gap: 8 }}>
-            <span aria-hidden="true" style={{ display: "flex", flexShrink: 0, marginTop: 1 }}>
-              <IconZahlung size={16} />
-            </span>
-            <span>{t.zahlungFreeHint}</span>
-          </p>
-        )}
-      </div>
+      {/* Der Verweis ins Paddle-Kundenportal ist hier bewusst entfernt
+          (Nutzer-Entscheidung 2026-08-20): dort liessen sich neben der
+          Zahlungsart auch Kuendigung und Rechnungsdaten aendern - Wege, die
+          es in dieser Oberflaeche bereits gibt bzw. die bewusst nicht
+          selbstbedient sein sollen. Bei Bedarf uebernimmt der Betreiber das
+          direkt im Paddle-Dashboard. Die Worker-Route /billing/portal bleibt
+          bestehen (von der e2e-Suite abgedeckt), ist ohne diese
+          Bedienoberflaeche aber nicht mehr erreichbar. */}
 
       <div style={blockCardStyle}>
         <div style={{ ...blockTitleStyle, display: "flex", alignItems: "center", gap: 8 }}>
@@ -179,21 +154,27 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
                     {status.text}
                   </span>
                 )}
-                <button
-                  onClick={() => handlePdf(invoice.id)}
-                  aria-label={t.rechnungenPdfAria.replace("{date}", formatDate(invoice))}
-                  style={{
-                    ...inlineLinkBtnStyle,
-                    fontSize: 12.5,
-                    flexShrink: 0,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  {t.rechnungenPdf}
-                  <IconExternal size={14} />
-                </button>
+                {hasInvoicePdf(invoice) ? (
+                  <button
+                    onClick={() => handlePdf(invoice.id)}
+                    aria-label={t.rechnungenPdfAria.replace("{date}", formatDate(invoice))}
+                    style={{
+                      ...inlineLinkBtnStyle,
+                      fontSize: 12.5,
+                      flexShrink: 0,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    {t.rechnungenPdf}
+                    <IconExternal size={14} />
+                  </button>
+                ) : (
+                  <span style={{ fontSize: 11.5, color: "var(--ch)", textAlign: "right", maxWidth: 190 }}>
+                    {t.rechnungenTrialNoPdf}
+                  </span>
+                )}
               </div>
             </div>
           );

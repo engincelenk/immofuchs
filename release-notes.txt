@@ -1,3 +1,91 @@
+## 2026-08-20 (1.20.35)
+
+### Fix: Rechner-Kontingent griff nur beim Renditerechner + 4 UX-Korrekturen
+
+**1. Gratis-Kontingent galt faktisch nur fuer Rendite (`useCalculatorTrial.js`)**
+
+Nutzer-Meldung: die Sperre "Deine Gratis-Berechnungen fuer diesen Rechner
+sind aufgebraucht" erschien ausschliesslich beim Renditerechner - die
+uebrigen fuenf liessen sich unbegrenzt nutzen. Live nachgestellt mit einem
+Nicht-Pro-Konto: beim Wechsel auf "Kredit" kam nach ueber 7 Sekunden KEIN
+einziger `POST /calculator-trial/consume` beim Worker an (per `/me`
+gegengeprueft, der Zaehler blieb leer).
+
+Ursache: der Reset-Effect (`[rechner]`-Dependency) lief bei JEDEM Mount,
+auch beim allerersten, und setzte `capturedRef` sofort wieder auf `null` -
+direkt nachdem die Render-Phase ihn korrekt befuellt hatte. Der
+Debounce-Effect prueft `if (capturedRef.current === null) return;` und
+brach dadurch immer ab, der Timer wurde nie gesetzt. Betroffen waren alle
+sechs Rechner; beim Renditerechner rettete ein Zufall: als Standard-Tab
+wird er waehrend des `loading`-Wechsels true->false gerendert, was einen
+zweiten Render nach dem Reset-Effect ausloest, der den Wert erneut korrekt
+einfaengt. Jeder andere Rechner wird per Klick INNERHALB der geladenen App
+erreicht (`loading` laengst false) - dort gab es diesen zweiten Render nie.
+Behoben ueber `prevRechnerRef`: der Reset greift jetzt nur beim echten
+Rechnerwechsel, nicht beim ersten Mount.
+
+**2. Zustimmungs-Vorstufe im Zahlungsschritt zusammengefasst (`PaymentStep.jsx`)**
+
+Der Schritt hiess "Zahlungsmethode auswaehlen", obwohl es dort nichts
+auszuwaehlen gab - er existiert nur, weil Paddles Bezahl-Button im iframe
+sitzt und von aussen nicht sperrbar ist, die Widerrufs-Zustimmung nach
+§ 312j BGB aber VOR dem Einbetten vorliegen muss. Der Zwischenknopf
+("Zahlungsmethoden anzeigen") entfaellt jetzt: das Paddle-Formular wird
+direkt beim Anhaken der Checkbox eingebettet. Die rechtliche Reihenfolge
+bleibt unveraendert, es ist nur ein Bildschirm statt zwei. Titel ->
+"Zahlung abschliessen" (alle 5 Sprachen), `paymentConsentCta` ->
+`paymentRetryCta` (Erneut-Versuchen nach einem Fehlschlag, da das
+onChange-Ereignis dann nicht noch einmal feuert).
+
+**3. Paddle-Kundenportal-Link entfernt (`ZahlungenSection.jsx`, `useAccount.js`)**
+
+Nutzer-Entscheidung: im Portal liessen sich neben der Zahlungsart auch
+Kuendigung und Rechnungsdaten aendern - Wege, die es in der Oberflaeche
+bereits gibt bzw. die bewusst nicht selbstbedient sein sollen; bei Bedarf
+uebernimmt der Betreiber das direkt bei Paddle. UI-Block und
+`openBillingPortal()` entfernt. Die Worker-Route `/billing/portal` bleibt
+bestehen - sie ist von der e2e-Suite abgedeckt (`billing-gaps.e2e.test.ts`),
+hat aber keine Bedienoberflaeche mehr.
+
+**4. Rechnungs-PDF nur noch bei echten Rechnungen (`ZahlungenSection.jsx`)**
+
+Nutzer-Meldung: Klick auf "PDF" ergab "Das PDF konnte nicht geoeffnet
+werden". Ursache verifiziert (wrangler tail, 2026-08-20):
+`billing_invoice_pdf_failed paddle_invoice_pdf_failed_404` - fuer die
+Trial-Buchung ueber 0,00 EUR stellt Paddle gar keine Rechnung aus. Der
+Link erscheint deshalb nur noch bei `amount > 0`, sonst steht dort der
+Hinweis "Fuer die kostenlose Testphase stellt Paddle keine Rechnung aus."
+(neuer Schluessel `rechnungenTrialNoPdf`, alle 5 Sprachen). Ab der ersten
+echten Abbuchung nach Ende der Testphase erscheint der Link von selbst.
+
+**5. Logo app-weit vereinheitlicht (`BrandIcon.jsx` + 5 Kopfzeilen)**
+
+Nutzer-Vorgabe: nur EIN Logo-File in der Oberflaeche. Quelle
+`docs/images/immofuchs-png-transparent.png` (2172x724, 465 KB) auf 600x200
+verkleinert als `public/logo-wordmark.png` (58 KB) - das Original waere
+fuer eine 30-44px hohe Darstellung unverhaeltnismaessig schwer. Da das Bild
+den Schriftzug bereits enthaelt, entfaellt der bisher daneben stehende
+HTML-Schriftzug in App-Kopf, Landingpage (Kopf + Fuss), HeaderMenu,
+MyAccount und Checkout-Kopf; die CSS-Regeln steuern nur noch die Hoehe
+(30px mobil / 44px ab 480px), die Breite folgt dem 3:1-Verhaeltnis.
+`BrandIcon` rendert jetzt diesen Schriftzug, `size` ist dort entsprechend
+die Hoehe statt einer Quadrat-Kantenlaenge.
+
+BEWUSST UNVERAENDERT: `icon-192/512.png` (PWA-Manifest, Homescreen,
+Push-Benachrichtigungen), die Favicons und `email-logo.png` - App-Symbole
+bzw. eigene Formate, die quadratisch bleiben muessen. Auch der
+Installations-Hinweis (`InstallPrompt.jsx`) zeigt weiterhin das
+quadratische App-Icon, da er genau dieses Homescreen-Symbol ankuendigt.
+
+**6. Folgefix zum Testkonto-Abo aus 1.20.34 (`routes/admin.ts`)**
+
+Beim ersten echten Einsatz aufgefallen: stand beim Testkonto bereits eine
+ECHTE, aber schon gekuendigte Paddle-Subscription (`status='canceled'`),
+lief `POST /admin/users/:id/subscription` in einen 502 - Paddle lehnt das
+Kuendigen einer bereits gekuendigten Subscription ab, das Konto war dadurch
+gar nicht mehr zuruecksetzbar. Dieser Status wird jetzt uebersprungen (es
+gibt dort ohnehin nichts mehr zu kuendigen).
+
 ## 2026-08-20 (1.20.34)
 
 ### Feature: Testkonto-Abo direkt im Admin-Panel setzen + Fix doppelter Scrollbalken

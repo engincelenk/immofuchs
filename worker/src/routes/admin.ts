@@ -410,8 +410,17 @@ adminRoutes.post(
     // erkennbar an der paddle_subscription_id OHNE das admin-test:-Praefix)
     // muss zuerst bei Paddle gekuendigt werden - sonst laeuft im Hintergrund
     // eine Sandbox-Subscription weiter, die hier nur aus D1 verschwindet.
+    // status==="canceled" ausgenommen (Befund beim ersten echten Einsatz
+    // 2026-08-20): Paddle lehnt das Kuendigen einer bereits gekuendigten
+    // Subscription ab, wodurch dieser Endpunkt mit 502 abbrach und das Konto
+    // gar nicht mehr zuruecksetzbar war - bei diesem Status gibt es
+    // ohnehin nichts mehr zu kuendigen.
     const existing = await getLatestSubscriptionForUser(c.env.DB, id);
-    if (existing && !existing.paddle_subscription_id.startsWith(ADMIN_TEST_SUBSCRIPTION_PREFIX)) {
+    if (
+      existing &&
+      existing.status !== "canceled" &&
+      !existing.paddle_subscription_id.startsWith(ADMIN_TEST_SUBSCRIPTION_PREFIX)
+    ) {
       try {
         await cancelImmediately(c.env, existing.paddle_subscription_id);
       } catch (err) {

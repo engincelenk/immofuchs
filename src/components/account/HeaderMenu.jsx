@@ -32,14 +32,13 @@ export function HeaderMenu({
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
         {/* Kopfzeile mit dem VOLLEN Logo (Icon + Wortmarke inkl. ".info"),
             identisch zum App-/Seitenkopf (Nutzer-Vorgabe 2026-08-13).
-            Logo-Groesse wie im Rechner-Kopf: unter 480px 38px/17px, darueber
-            54px/24px (Nutzer-Korrektur 2026-08-14). */}
+            Logo-Groesse wie im Rechner-Kopf (Nutzer-Korrektur 2026-08-14);
+            seit 2026-08-20 ein Schriftzug-Bild, daher nur noch die Hoehe -
+            gleiche Werte wie .hdr-logo-img in App.jsx. */}
         <style>{`
-          .hm-logo{width:38px;height:38px}
-          .hm-wordmark{font-size:17px}
+          .hm-logo{height:30px;width:auto}
           @media(min-width:480px){
-            .hm-logo{width:54px;height:54px}
-            .hm-wordmark{font-size:24px}
+            .hm-logo{height:44px;width:auto}
           }
         `}</style>
         <div
@@ -75,19 +74,14 @@ export function HeaderMenu({
               fontFamily: "inherit",
             }}
           >
+            {/* Schriftzug-Bild statt Icon + HTML-Text (2026-08-20, app-weit
+                ein Logo-File - siehe BrandIcon.jsx). */}
             <img
-              src="/icon-192.png"
-              alt=""
+              src="/logo-wordmark.png"
+              alt="immofuchs.info"
               className="hm-logo"
-              style={{ objectFit: "contain", flexShrink: 0, borderRadius: 8 }}
+              style={{ objectFit: "contain", flexShrink: 0 }}
             />
-            <span
-              className="hm-wordmark"
-              style={{ fontWeight: 800, letterSpacing: -0.5, color: "var(--ct)", whiteSpace: "nowrap" }}
-            >
-              immo<span style={{ color: "var(--ca)" }}>fuchs</span>
-              <span style={{ fontWeight: 700 }}>.info</span>
-            </span>
           </button>
           <button
             onClick={onClose}

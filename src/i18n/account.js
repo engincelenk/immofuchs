@@ -87,8 +87,8 @@ export const ACCOUNT_T = {
     redirectingToCheckout: "Weiterleitung zur Kasse …",
 
     // ═══ Zahlungsschritt (Inline-Checkout) ═══
-    paymentMethodTitle: "Zahlungsmethode auswählen",
-    paymentConsentCta: "Zahlungsmethoden anzeigen",
+    paymentMethodTitle: "Zahlung abschließen",
+    paymentRetryCta: "Erneut versuchen",
     paymentInlineFallback:
       "Das eingebettete Zahlungsfenster ließ sich nicht laden. Die sichere Zahlung öffnet sich stattdessen in einem eigenen Fenster.",
     paymentEncrypted: "Verschlüsselte und sichere Zahlung",
@@ -269,6 +269,7 @@ export const ACCOUNT_T = {
     rechnungenPdfAria: "Rechnung vom {date} als PDF öffnen",
     rechnungenError: "Die Rechnungen konnten nicht geladen werden.",
     rechnungenPdfError: "Das PDF konnte nicht geöffnet werden. Bitte später erneut versuchen.",
+    rechnungenTrialNoPdf: "Für die kostenlose Testphase stellt Paddle keine Rechnung aus.",
     zahlungBody: "Karte, PayPal und Rechnungsadresse verwaltet Paddle als Zahlungsdienstleister — wir speichern selbst keine Zahlungsdaten.",
     zahlungCta: "Zahlungsdaten bei Paddle verwalten",
     zahlungError: "Das Kundenportal ließ sich nicht öffnen. Bitte später erneut versuchen.",
@@ -410,8 +411,8 @@ export const ACCOUNT_T = {
     stepCounter: "Step {current} of {total}",
     redirectingToCheckout: "Redirecting to checkout …",
 
-    paymentMethodTitle: "Select a payment method",
-    paymentConsentCta: "Show payment methods",
+    paymentMethodTitle: "Complete payment",
+    paymentRetryCta: "Try again",
     paymentInlineFallback:
       "The embedded payment window could not be loaded. Secure payment will open in a separate window instead.",
     paymentEncrypted: "Encrypted and secure payment",
@@ -587,6 +588,7 @@ export const ACCOUNT_T = {
     rechnungenPdfAria: "Open the invoice from {date} as a PDF",
     rechnungenError: "The invoices couldn't be loaded.",
     rechnungenPdfError: "The PDF couldn't be opened. Please try again later.",
+    rechnungenTrialNoPdf: "Paddle doesn't issue an invoice for the free trial period.",
     zahlungBody: "Card, PayPal and billing address are managed by Paddle as our payment provider — we never store payment details ourselves.",
     zahlungCta: "Manage payment details at Paddle",
     zahlungError: "The customer portal couldn't be opened. Please try again later.",
@@ -728,8 +730,8 @@ export const ACCOUNT_T = {
     stepCounter: "Adım {current} / {total}",
     redirectingToCheckout: "Kasaya yönlendiriliyor …",
 
-    paymentMethodTitle: "Ödeme yöntemi seç",
-    paymentConsentCta: "Ödeme yöntemlerini göster",
+    paymentMethodTitle: "Ödemeyi tamamla",
+    paymentRetryCta: "Tekrar dene",
     paymentInlineFallback:
       "Gömülü ödeme penceresi yüklenemedi. Güvenli ödeme bunun yerine ayrı bir pencerede açılacak.",
     paymentEncrypted: "Şifreli ve güvenli ödeme",
@@ -905,6 +907,7 @@ export const ACCOUNT_T = {
     rechnungenPdfAria: "{date} tarihli faturayı PDF olarak aç",
     rechnungenError: "Faturalar yüklenemedi.",
     rechnungenPdfError: "PDF açılamadı. Lütfen daha sonra tekrar dene.",
+    rechnungenTrialNoPdf: "Ücretsiz deneme süresi için Paddle fatura düzenlemez.",
     zahlungBody: "Kart, PayPal ve fatura adresini ödeme hizmeti sağlayıcısı olarak Paddle yönetir — biz ödeme bilgisi saklamıyoruz.",
     zahlungCta: "Ödeme bilgilerini Paddle'da yönet",
     zahlungError: "Müşteri portalı açılamadı. Lütfen daha sonra tekrar dene.",
@@ -1044,8 +1047,8 @@ export const ACCOUNT_T = {
     stepCounter: "第 {current} 步，共 {total} 步",
     redirectingToCheckout: "正在跳转至结算页 …",
 
-    paymentMethodTitle: "选择支付方式",
-    paymentConsentCta: "显示支付方式",
+    paymentMethodTitle: "完成支付",
+    paymentRetryCta: "重试",
     paymentInlineFallback: "嵌入式支付窗口无法加载。安全支付将改为在单独的窗口中打开。",
     paymentEncrypted: "加密且安全的支付",
 
@@ -1220,6 +1223,7 @@ export const ACCOUNT_T = {
     rechnungenPdfAria: "以 PDF 打开 {date} 的发票",
     rechnungenError: "无法加载发票。",
     rechnungenPdfError: "无法打开 PDF，请稍后再试。",
+    rechnungenTrialNoPdf: "免费试用期 Paddle 不开具发票。",
     zahlungBody: "银行卡、PayPal 和账单地址由支付服务商 Paddle 管理——我们不会自行保存任何支付信息。",
     zahlungCta: "在 Paddle 管理支付信息",
     zahlungError: "无法打开客户门户，请稍后再试。",
@@ -1361,8 +1365,8 @@ export const ACCOUNT_T = {
     stepCounter: "चरण {current} / {total}",
     redirectingToCheckout: "चेकआउट पर भेजा जा रहा है …",
 
-    paymentMethodTitle: "भुगतान विधि चुनें",
-    paymentConsentCta: "भुगतान विधियाँ दिखाएँ",
+    paymentMethodTitle: "भुगतान पूरा करें",
+    paymentRetryCta: "फिर से कोशिश करें",
     paymentInlineFallback:
       "एम्बेडेड भुगतान विंडो लोड नहीं हो सकी। सुरक्षित भुगतान इसके बजाय एक अलग विंडो में खुलेगा।",
     paymentEncrypted: "एन्क्रिप्टेड और सुरक्षित भुगतान",
@@ -1538,6 +1542,7 @@ export const ACCOUNT_T = {
     rechnungenPdfAria: "{date} की इनवॉइस PDF के रूप में खोलें",
     rechnungenError: "इनवॉइस लोड नहीं हो सकीं।",
     rechnungenPdfError: "PDF नहीं खुल सका। कृपया बाद में पुनः प्रयास करें।",
+    rechnungenTrialNoPdf: "निःशुल्क परीक्षण अवधि के लिए Paddle चालान जारी नहीं करता।",
     zahlungBody: "कार्ड, PayPal और बिलिंग पता भुगतान सेवा प्रदाता Paddle संभालता है — हम स्वयं कोई भुगतान डेटा नहीं रखते।",
     zahlungCta: "Paddle पर भुगतान डेटा प्रबंधित करें",
     zahlungError: "ग्राहक पोर्टल नहीं खुल सका। कृपया बाद में पुनः प्रयास करें।",

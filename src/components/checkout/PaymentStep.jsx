@@ -197,48 +197,63 @@ export function PaymentStep({
         error && <div style={errorBannerStyle}>{error}</div>
       )}
 
-      {stage === "consent" && (
-        <>
-          <label
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "flex-start",
-              fontSize: 12,
-              lineHeight: 1.5,
-              color: "var(--ct)",
-              background: "var(--ci)",
-              border: "1px solid var(--cb)",
-              borderRadius: 10,
-              padding: "12px 14px",
-              marginBottom: 14,
-            }}
-          >
-            <input
-              type="checkbox"
-              required
-              checked={withdrawalAccepted}
-              onChange={(e) => setWithdrawalAccepted(e.target.checked)}
-              style={{ marginTop: 2, flexShrink: 0 }}
-            />
-            <span>{t.paymentWithdrawalConsent}</span>
-          </label>
+      {/* Zustimmung bleibt dauerhaft sichtbar (Nutzer-Auftrag 2026-08-20):
+          vorher war sie eine eigene Vorstufe mit eigenem Weiter-Knopf, die
+          sich wie ein zusaetzlicher Schritt anfuehlte ("Zahlungsmethode
+          auswaehlen", obwohl es dort gar nichts auszuwaehlen gab). Jetzt
+          entsteht der Paddle-Rahmen direkt beim Anhaken - ein Bildschirm
+          statt zwei. Die rechtlich noetige Reihenfolge bleibt unveraendert:
+          der Rahmen wird immer noch erst NACH der Zustimmung erzeugt
+          (§ 312j BGB, siehe Kommentar oben), nur ohne Zwischenklick.
+          Nach dem Start nicht mehr aenderbar - eine bereits erteilte
+          Zustimmung laesst sich nicht sinnvoll zurueckziehen, waehrend
+          Paddles Formular schon offen ist. */}
+      <label
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "flex-start",
+          fontSize: 12,
+          lineHeight: 1.5,
+          color: "var(--ct)",
+          background: "var(--ci)",
+          border: "1px solid var(--cb)",
+          borderRadius: 10,
+          padding: "12px 14px",
+          marginBottom: 14,
+          opacity: stage === "consent" ? 1 : 0.7,
+        }}
+      >
+        <input
+          type="checkbox"
+          required
+          checked={withdrawalAccepted}
+          disabled={stage !== "consent" || error === "email_not_verified"}
+          onChange={(e) => {
+            setWithdrawalAccepted(e.target.checked);
+            if (!e.target.checked) return;
+            setError(null);
+            setStage("starting");
+          }}
+          style={{ marginTop: 2, flexShrink: 0 }}
+        />
+        <span>{t.paymentWithdrawalConsent}</span>
+      </label>
 
-          <button
-            onClick={() => {
-              setError(null);
-              setStage("starting");
-            }}
-            disabled={!withdrawalAccepted || error === "email_not_verified"}
-            style={{
-              ...primaryBtnStyle,
-              opacity: withdrawalAccepted && error !== "email_not_verified" ? 1 : 0.5,
-              cursor: withdrawalAccepted && error !== "email_not_verified" ? "pointer" : "not-allowed",
-            }}
-          >
-            {t.paymentConsentCta} →
-          </button>
-        </>
+      {/* Erneut-Versuchen nur nach einem Fehlschlag: fail() setzt stage
+          zurueck auf "consent", die Checkbox ist dann aber bereits angehakt -
+          ohne diesen Knopf gaebe es keinen Weg mehr, den Vorgang neu
+          anzustossen (das onChange-Ereignis feuert nicht erneut). */}
+      {stage === "consent" && withdrawalAccepted && error && error !== "email_not_verified" && (
+        <button
+          onClick={() => {
+            setError(null);
+            setStage("starting");
+          }}
+          style={primaryBtnStyle}
+        >
+          {t.paymentRetryCta}
+        </button>
       )}
 
       {/* Zielcontainer fuer Paddle. Er muss im DOM stehen, BEVOR

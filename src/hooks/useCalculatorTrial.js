@@ -29,6 +29,8 @@ export function useCalculatorTrial(rechner) {
   const account = useAccountCtx();
   const capturedRef = useRef(null);
   const firedRef = useRef(false);
+  // Nur fuer den Reset-Effect unten - siehe dortiger Kommentar.
+  const prevRechnerRef = useRef(rechner);
 
   const loading = account?.loading;
   const isLoggedIn = Boolean(account?.isLoggedIn);
@@ -39,12 +41,26 @@ export function useCalculatorTrial(rechner) {
     capturedRef.current = Number(account?.calculatorTrialUsage?.[rechner] || 0);
   }
 
+  // Bugreport 20.08. ("Sperre greift nur bei Rendite, nie bei den anderen 5
+  // Rechnern"): dieser Effect lief bisher bei JEDEM Mount, auch beim
+  // allerersten - und setzte capturedRef damit sofort wieder auf null,
+  // direkt nachdem die Render-Phase oben ihn gerade korrekt befuellt hatte.
+  // Der Debounce-Effect unten sah dadurch immer capturedRef===null und brach
+  // sofort ab, der Timer wurde nie gesetzt. Bei Rendite (Standard-Tab beim
+  // Seitenaufruf) rettete der Zufall: waehrend loading dort noch von true auf
+  // false wechselt, gibt es einen zweiten Render, der NACH diesem
+  // Reset-Effect erneut korrekt einfaengt. Jeder andere Rechner wird per
+  // Klick INNERHALB der bereits geladenen App erreicht (loading ist da
+  // laengst false) - ohne den rettenden zweiten Render blieb capturedRef fuer
+  // die gesamte Lebensdauer des Mounts bei null haengen.
+  // prevRechnerRef vergleicht daher gegen den TATSAECHLICH vorherigen Wert
+  // (mit useRef(rechner) initialisiert) statt blind bei jedem Lauf zu
+  // resetten - der urspruengliche Zweck (Rechnerwechsel bei einer
+  // wiederverwendeten Hook-Instanz) bleibt erhalten, nur der erste Mount
+  // wird nicht mehr faelschlich mitgetroffen.
   useEffect(() => {
-    // Rechnerwechsel (neuer `rechner`-Wert) muss den eingefrorenen Stand
-    // dieses Hooks neu einfrieren lassen - ohne Reset wuerde bei
-    // React-Wiederverwendung derselben Hook-Instanz (z.B. gleicher
-    // Komponenten-Slot) der Verbrauchsstand des VORHERIGEN Rechners
-    // weiterbestehen.
+    if (prevRechnerRef.current === rechner) return;
+    prevRechnerRef.current = rechner;
     capturedRef.current = null;
     firedRef.current = false;
   }, [rechner]);
