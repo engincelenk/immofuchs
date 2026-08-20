@@ -400,7 +400,7 @@ export function SteuerTrick() {
                 {st.disclaimer}
               </div>
               <SaveBtn tab="steuer6" />
-              <ExportPDF title={(T[lang] || T.de).steuer6Full || (T[lang] || T.de).steuer6} />
+              <ExportPDF title={(T[lang] || T.de).steuer6Full || (T[lang] || T.de).steuer6} rechner="steuertrick" />
 
               {/* ═══ KI-ASSISTENT (Phase 3, Sprint 5 — Konzept Abschnitt 5) ═══ */}
               {/* Kontext wird direkt gebaut statt ueber buildAssistantContext(),

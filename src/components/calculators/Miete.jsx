@@ -340,7 +340,7 @@ export default function Miete() {
                 })()}
               </div>
               <SaveBtn tab="miete" />
-              <ExportPDF title={t.mieteFull || t.miete} />
+              <ExportPDF title={t.mieteFull || t.miete} rechner="miete" />
               <Legal items={LEG.miete} />
             </>
           )}

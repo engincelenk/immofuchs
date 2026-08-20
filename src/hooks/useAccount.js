@@ -192,18 +192,23 @@ export function useAccount() {
   // kein automatisches refresh()/Login hier, das passiert erst nach der
   // Bestaetigung (Worker setzt dabei direkt den Session-Cookie und leitet mit
   // login_success=1 zurueck, siehe redirect-Handling oben).
-  const registerWithPassword = useCallback(async (email, password, acceptedTerms, name) => {
-    const res = await apiFetch("/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, acceptedTerms, name }),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (res.ok) return { ok: true };
-    if (res.status === 409) return { ok: false, error: "email_taken", providers: body.providers || [] };
-    if (res.status === 429) return { ok: false, error: "rate_limited" };
-    return { ok: false, error: body.error || "invalid" };
-  }, []);
+  const registerWithPassword = useCallback(
+    async (email, password, acceptedTerms, name, turnstileToken = "") => {
+      const res = await apiFetch("/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, acceptedTerms, name, turnstileToken }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) return { ok: true };
+      if (res.status === 409) return { ok: false, error: "email_taken", providers: body.providers || [] };
+      if (res.status === 429) return { ok: false, error: "rate_limited" };
+      // 403: Turnstile hat abgelehnt (bot_check_failed).
+      if (res.status === 403) return { ok: false, error: "bot_check_failed" };
+      return { ok: false, error: body.error || "invalid" };
+    },
+    [],
+  );
 
   const resendVerification = useCallback(async (email) => {
     const res = await apiFetch("/auth/resend-verification", {
@@ -619,7 +624,11 @@ export function useAccount() {
     me,
     isLoggedIn: Boolean(me),
     isPro: Boolean(me?.isPro),
-    calculatorTrialUsage: me?.calculatorTrialUsage || {},
+    // Zugangsstufe und Testphase (Preispolitik 2026-08-20). `zugang` ist
+    // "pro" | "trial" | "keiner" - isPro allein kann die Testphase nicht
+    // ausdruecken, die dieselben Funktionen mit kleineren Kontingenten hat.
+    zugang: me?.zugang || "keiner",
+    trial: me?.trial || null,
     consumeCalculatorTrial,
     error,
     oauthEmailTakenProviders,

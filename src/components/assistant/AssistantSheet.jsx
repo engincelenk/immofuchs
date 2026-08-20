@@ -120,7 +120,7 @@ export function AssistantSheet({
   // eigene, deutlich sichtbare Anzeige (nicht ueber offline/online-Logik
   // gesteuert, sondern als eigener Zustand, siehe Nutzer-Klarstellung).
   const statusInfo =
-    status === "limit"
+    status === "limit" || status === "zugang"
       ? { label: t.statusLimited, color: "#f59e0b" }
       : { label: t.assistantTagline, color: "var(--ch)" };
 
@@ -458,6 +458,11 @@ export function AssistantSheet({
               )}
               {status === "limit" && (
                 <ChatBubble role="limit" text={exposeFehler ? xt[exposeFehler] : t.limit} />
+              )}
+              {/* Kein Konto oder keine laufende Testphase - seit der
+                  Preispolitik 2026-08-20 braucht Finn beides. */}
+              {status === "zugang" && (
+                <ChatBubble role="limit" text={exposeFehler ? xt[exposeFehler] : t.zugang} />
               )}
               {status === "offline" && (
                 <ChatBubble role="offline" text={exposeFehler ? xt[exposeFehler] : t.offline} />

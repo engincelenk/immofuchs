@@ -415,7 +415,7 @@ export default function Kredit() {
                 {R.bel >= 80 && R.bel <= 90 && <Ins emoji="🏦" text={t.adv11} type="info" />}
               </div>
               <SaveBtn tab="kredit" />
-              <ExportPDF title={t.kreditFull || t.kredit} />
+              <ExportPDF title={t.kreditFull || t.kredit} rechner="finanzierung" />
               <Legal items={LEG.kredit} />
             </>
           )}

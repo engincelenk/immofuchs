@@ -28,7 +28,17 @@ export async function oeffneDruckdokument(pfad, nutzlast, dateiname = "ImmoFuchs
       // selben Weg (Kauf-Assistent), werden aber getrennt gemeldet, damit die
       // Oberflaeche den Text passend waehlen kann.
       if (res.status === 401) return { ok: false, fehler: "login_noetig" };
-      if (res.status === 402) return { ok: false, fehler: "pro_noetig" };
+      if (res.status === 402) {
+        // 402 hat zwei Ursachen: kein Zugang (Testphase vorbei, kein Abo) und
+        // aufgebrauchtes Kontingent der Testphase. Beide fuehren zum selben
+        // Weg (Kauf-Assistent), werden aber getrennt gemeldet, damit die
+        // Oberflaeche den passenden Text waehlen kann.
+        const body = await res.json().catch(() => ({}));
+        return {
+          ok: false,
+          fehler: body?.error === "trial_limit_reached" ? "kontingent" : "pro_noetig",
+        };
+      }
       return { ok: false, fehler: "dienst" };
     }
 

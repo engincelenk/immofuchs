@@ -249,9 +249,22 @@ authRoutes.post("/register", async (c) => {
   const password = body && typeof body.password === "string" ? body.password : "";
   const acceptedTerms = Boolean(body && body.acceptedTerms === true);
   const name = body && typeof body.name === "string" ? body.name : "";
-  const result = await registerWithPassword(c.env, workerOrigin(c.req.raw), email, password, acceptedTerms, name);
+  // Turnstile-Token und IP wandern durch bis in registerWithPassword - die
+  // Pruefung gehoert vor das Anlegen des Kontos, nicht daneben.
+  const turnstileToken = body && typeof body.turnstileToken === "string" ? body.turnstileToken : "";
+  const result = await registerWithPassword(
+    c.env,
+    workerOrigin(c.req.raw),
+    email,
+    password,
+    acceptedTerms,
+    name,
+    turnstileToken,
+    c.req.header("CF-Connecting-IP") ?? null,
+  );
   if (!result.ok) {
     if (result.error === "rate_limited") return c.json({ error: result.error }, 429);
+    if (result.error === "bot_check_failed") return c.json({ error: result.error }, 403);
     if (result.error === "email_taken") return c.json({ error: result.error, providers: result.providers }, 409);
     return c.json({ error: result.error }, 400);
   }

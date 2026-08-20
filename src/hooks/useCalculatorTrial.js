@@ -7,21 +7,16 @@ import { useAccountCtx } from "../context/AccountContext.jsx";
 // soll den Testlauf noch nicht verbrauchen.
 const CONSUME_DEBOUNCE_MS = 1500;
 
-// Muss mit dem serverseitigen Limit uebereinstimmen - hier nur fuer die
-// Anzeige ("noch X von 3"), die eigentliche Durchsetzung passiert
-// serverseitig (getCalculatorTrialUsage/incrementCalculatorTrialUsage).
-//
-// Seit der Preispolitik 2026-08-20 gilt die Zahl PRO KALENDERMONAT: /me
-// liefert nur noch den Verbrauch der laufenden Periode (Migration 0024,
-// worker/src/periode.ts), der Zaehler faengt am Monatsersten von selbst
-// wieder bei 0 an. Fuer diesen Hook aendert sich dadurch nichts - er
-// vergleicht weiterhin nur die gelieferte Zahl gegen das Limit.
+// Rueckfall, falls /me noch keine Grenzen geliefert hat. Die verbindliche
+// Zahl kommt seit der Preispolitik 2026-08-20 vom Server (trial.limits,
+// worker/src/trialLimits.ts) - hier nur fuer die Anzeige ("noch X von 3"),
+// durchgesetzt wird sie serverseitig.
 export const CALCULATOR_TRIAL_LIMIT = 3;
 
 // Ersetzt die vorherige reine "eingeloggt oder nicht"-Sperre um einen
-// zweiten Zustand: eingeloggt, aber das Gratis-Kontingent DIESES Rechners
-// (3x je Rechner und Monat, siehe Migrationen 0022/0024) ist bereits
-// verbraucht und kein Pro-Abo aktiv - "paywalled" statt "locked".
+// zweiten Zustand: eingeloggt, aber das Kontingent DIESES Rechners aus der
+// Testphase ist verbraucht (oder die Testphase selbst ist abgelaufen) und
+// kein Abo aktiv - "paywalled" statt "locked".
 //
 // capturedRef friert den Verbrauchsstand DIESES Rechners EINMAL ein, sobald
 // er sicher bekannt ist (loading===false) - die laufende Sitzung wird
@@ -38,11 +33,17 @@ export function useCalculatorTrial(rechner) {
 
   const loading = account?.loading;
   const isLoggedIn = Boolean(account?.isLoggedIn);
-  const isPro = Boolean(account?.isPro);
+  // Nur ein Abo rechnet unbegrenzt. Die Testphase darf alles, zaehlt aber
+  // mit; nach ihrem Ende ist "keiner" - dann greift dieselbe Sperre wie bei
+  // verbrauchtem Kontingent.
+  const zugang = account?.zugang || "keiner";
+  const istUnbegrenzt = zugang === "pro";
+  const istTestphase = zugang === "trial";
+  const limit = Number(account?.trial?.limits?.rechner) || CALCULATOR_TRIAL_LIMIT;
   const consumeCalculatorTrial = account?.consumeCalculatorTrial;
 
   if (loading === false && capturedRef.current === null) {
-    capturedRef.current = Number(account?.calculatorTrialUsage?.[rechner] || 0);
+    capturedRef.current = Number(account?.trial?.usage?.[`rechner:${rechner}`] || 0);
   }
 
   // Bugreport 20.08. ("Sperre greift nur bei Rendite, nie bei den anderen 5
@@ -70,23 +71,34 @@ export function useCalculatorTrial(rechner) {
   }, [rechner]);
 
   useEffect(() => {
-    if (loading !== false || !isLoggedIn || isPro) return;
+    if (loading !== false || !isLoggedIn || !istTestphase) return;
     if (capturedRef.current === null) return;
-    if (capturedRef.current >= CALCULATOR_TRIAL_LIMIT || firedRef.current) return;
+    if (capturedRef.current >= limit || firedRef.current) return;
     const timer = setTimeout(() => {
       firedRef.current = true;
       consumeCalculatorTrial?.(rechner);
     }, CONSUME_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [loading, isLoggedIn, isPro, consumeCalculatorTrial, rechner]);
+  }, [loading, isLoggedIn, istTestphase, limit, consumeCalculatorTrial, rechner]);
 
   const used = capturedRef.current;
-  const remaining = used === null ? null : Math.max(0, CALCULATOR_TRIAL_LIMIT - used);
+  const remaining = used === null ? null : Math.max(0, limit - used);
 
   return {
     loading,
     isLocked: loading === false && !isLoggedIn,
-    isPaywalled: loading === false && isLoggedIn && !isPro && used >= CALCULATOR_TRIAL_LIMIT,
+    // Zwei Wege in dieselbe Wand: Kontingent dieses Rechners aufgebraucht,
+    // oder die Testphase ist vorbei.
+    isPaywalled:
+      loading === false &&
+      isLoggedIn &&
+      !istUnbegrenzt &&
+      (!istTestphase || used >= limit),
+    // Nach dem Ende der Testphase bleiben gespeicherte Objekte lesbar
+    // (Nutzer-Entscheidung 2026-08-20) - die Oberflaeche unterscheidet
+    // deshalb zwischen "Kontingent leer" und "Testphase vorbei".
+    trialVorbei: loading === false && isLoggedIn && zugang === "keiner",
+    limit,
     // UX-Audit 2026-08-11 (Punkt 3): Der Testlauf war bisher unsichtbar, bis
     // er weg war - "kostenlos" stand ausschliesslich in der
     // Preis-Vergleichstabelle, der Verbrauch passierte still und die
@@ -95,7 +107,7 @@ export function useCalculatorTrial(rechner) {
     // worum es sich handelt. Bewusst an capturedRef gebunden (nicht am
     // Live-Status): der eingefrorene Wert gilt fuer die gesamte Sitzung, der
     // Hinweis flackert also nicht weg, sobald der Verbrauch gemeldet wurde.
-    isTrialRun: loading === false && isLoggedIn && !isPro && used !== null && used < CALCULATOR_TRIAL_LIMIT,
+    isTrialRun: loading === false && isLoggedIn && istTestphase && used !== null && used < limit,
     remaining,
   };
 }

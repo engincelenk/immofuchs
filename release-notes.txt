@@ -1,3 +1,91 @@
+## 2026-08-20 (1.20.39)
+
+### Free abgeschafft: 7 Tage Testphase ohne Zahlungsdaten
+
+Grundlegende Aenderung des Zugangsmodells. Statt "Free" und "Pro" gibt es
+jetzt "Testphase" und "Pro" - und dazwischen nichts. Anonyme Nutzung ist zu.
+
+**A. Registrierung gehaertet**
+
+Mit dem Wegfall von Free ist die Registrierung die einzige Tuer ins Produkt,
+und dahinter liegt eine kostenlose Woche mit echten Modellkosten. Das
+bisherige Rate-Limit half dagegen nicht: es zaehlte je E-MAIL-Adresse, eine
+neue Adresse hatte also ein frisches Kontingent.
+
+Neu: Cloudflare Turnstile vor der Registrierung (unsichtbar fuer echte
+Nutzer, teuer fuer Massenanlage) und ein zweites Rate-Limit je IP (10/Std.).
+Geprueft wird ausschliesslich im Worker (src/turnstile.ts). Der Site-Key ist
+oeffentlich und steht wie der Paddle-Client-Token im CI-Workflow; das Secret
+liegt im Wrangler-Secret-Store.
+
+**B. Testphase statt Free-Tarif (Migration 0025)**
+
+7 Tage, ohne Zahlungsdaten, startet beim ersten authentifizierten Zugriff
+(/me) - damit greift sie fuer jeden Anmeldeweg an einer Stelle.
+
+Kontingente (Nutzer-Vorgabe, "alles je Rechner"):
+  Rechner   3 Berechnungen je Rechner
+  Finn KI   5 Anfragen je Rechner
+  Exposé    3 Scans insgesamt
+  PDF       1 je Berechnung   (gekoppelt, kein eigener Zaehler)
+  Handout   1 je Scan         (gekoppelt, kein eigener Zaehler)
+  Merkliste 3 Objekte je Rechner
+
+Die Kopplung ist nicht nur einfacher als ein dritter Zaehler, sie ist auch
+dicht: ein Dokument ohne die zugehoerige, teurere Vorleistung kann es nicht
+geben.
+
+Zwei technische Kernpunkte:
+
+1. `Zugang` ("pro" | "trial" | "keiner") loest den Boolean isPro ab. Ein
+   Boolean konnte die Testphase nicht ausdruecken - wer nur "ist Pro" fragt,
+   gaebe einem Testnutzer die Pro-Tageslimits.
+2. Die Zaehler haengen am NUTZER, nicht mehr an der Session. Vorher war das
+   noetig, solange Free anonym war - und hiess zugleich: Cookies loeschen,
+   Kontingent wieder voll.
+
+calculator_trial_usage und expose_trial_used entfallen ersatzlos, trial_usage
+deckt beides ab. Ohne Datenuebernahme, weil es zum Umstellungszeitpunkt keine
+Nutzer gibt (Nutzer-Bestaetigung).
+
+**C. Free abgeschaltet**
+
+/api/assistant und /api/expose-extract verlangen jetzt eine Anmeldung (401)
+und einen gueltigen Zugang (402) - beide waren bis hierher anonym nutzbar.
+Finn antwortet ohne Konto mit einem Hinweis statt einer Fehlermeldung.
+
+Nach dem Ende der Testphase bleiben gespeicherte Objekte lesbar, gerechnet
+wird nicht mehr (Nutzer-Entscheidung).
+
+**D. Landingpage: die Vergleichstabelle ist weg**
+
+Sie verglich Free mit Pro - und Free gibt es nicht mehr. Zwei Spalten, von
+denen eine leer ist, sehen immer schlecht aus. Die Preiskarten bleiben
+unveraendert, darunter steht jetzt eine gemeinsame Leistungsliste (statt
+derselben Aufzaehlung doppelt in beiden Karten) plus die Grenzen der
+Testphase als Fussnote - "7 Tage kostenlos" ohne zu sagen, was drin ist,
+waere unsauber.
+
+Texte in allen fuenf Sprachen nachgezogen: 3 Tage -> 7 Tage, der
+Zahlungshinweis wird "ab heute" statt "3 Tage kostenlos, danach ..." (der
+Kauf ist kein Paddle-Trial mehr), die Free-Schluessel der Tabelle entfallen.
+
+**Aufgeraeumt:** periode.ts und die Monatszaehler im Durable Object (beide
+von heute Vormittag) sind mit dem Wegfall von Free gegenstandslos geworden -
+die Kontingente sind jetzt trial-gebunden statt monatlich. FINN_FREE_TRIAL_-
+LIMIT und EXPOSE_FREE_TRIAL_LIMIT sind aus wrangler.toml raus; die Zahlen
+stehen in src/trialLimits.ts und kommen ueber /me auch ins Frontend.
+
+**Offen / noch zu tun:**
+- TURNSTILE_SECRET ist nur fuer dev gesetzt. qa und prod brauchen es noch
+  (wrangler secret put TURNSTILE_SECRET --env qa bzw. ohne --env fuer prod).
+- In Paddle muss der 3-Tage-Trial aus dem Checkout entfernt werden, sonst
+  verspricht die Kasse etwas anderes als die App.
+- Der Landing-Einstieg fuehrt weiterhin in die App; jeder Rechner zeigt dort
+  ohne Login die bestehende Login-Sperre. Ein eigener Registrierungs-Einstieg
+  auf der Landingpage waere die naechste Verbesserung, ist aber nicht noetig,
+  damit das Modell traegt.
+
 ## 2026-08-20 (1.20.38)
 
 ### Neue Preispolitik, Teil 2+3: Monatskontingente, Handout und PDF nur mit Pro

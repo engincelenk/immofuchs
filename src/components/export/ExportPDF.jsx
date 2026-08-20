@@ -15,7 +15,7 @@ const CheckoutWizard = lazy(() =>
 // nur im DOM dieser Seite), das DOKUMENT baut der Worker hinter requirePro
 // (worker/src/export/rechnerDokument.ts). Ohne Abo gibt es kein Dokument,
 // nicht nur keinen Knopf - der Knopf fuehrt dann in den Kauf-Assistenten.
-export function ExportPDF({ title }) {
+export function ExportPDF({ title, rechner }) {
   const { t, lang } = useApp();
   const account = useAccountCtx();
   const [zeigeUpgrade, setZeigeUpgrade] = useState(false);
@@ -72,13 +72,17 @@ export function ExportPDF({ title }) {
     if (!inhalt) return;
     const ergebnis = await oeffneDruckdokument(
       "/export/rechner",
-      { titel: title, inhalt, lang },
+      { titel: title, inhalt, lang, rechner },
       `ImmoFuchs_${title}`,
     );
     if (!ergebnis.ok) {
       // 401/402 heisst: der Client dachte, es reicht - tut es nicht. Statt
       // einer Fehlermeldung der Weg, der weiterhilft.
-      if (ergebnis.fehler === "pro_noetig" || ergebnis.fehler === "login_noetig") {
+      if (
+        ergebnis.fehler === "pro_noetig" ||
+        ergebnis.fehler === "login_noetig" ||
+        ergebnis.fehler === "kontingent"
+      ) {
         setZeigeUpgrade(true);
         return;
       }

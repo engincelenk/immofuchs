@@ -1355,7 +1355,7 @@ export default function Sanier() {
                 )}
               </div>
               <SaveBtn tab="sanier" />
-              <ExportPDF title={t.sanierFull || t.sanier} />
+              <ExportPDF title={t.sanierFull || t.sanier} rechner="sanierung" />
               <Legal items={LEG.sanier} />
             </>
           )}

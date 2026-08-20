@@ -34,18 +34,18 @@ import {
 // Jetzt eine gemeinsame Tabelle unter den Kacheln, die Kacheln tragen nur
 // noch Preis und CTA.
 //
-// [Zeilen-Label, Free-Wert, Pro-Wert] - Strings sind i18n-Schluessel,
-// Booleans werden als Haken/Kreuz gezeichnet. Die Zahlen in den Free-Werten
-// spiegeln die serverseitigen Kontingente (worker/src/routes/assistant.ts,
-// useCalculatorTrial.js, Merkliste.jsx) - aendern sich die dort, muessen die
-// Sprachdateien mitgezogen werden.
-const COMPARE_ROWS = [
-  ["compareRowRechner", "compareRowRechnerFree", "compareRowRechnerPro"],
-  ["compareRowFinn", "compareRowFinnFree", "compareRowFinnPro"],
-  ["compareRowExpose", "compareRowExposeFree", "compareRowExposePro"],
-  ["compareRowHandout", false, true],
-  ["compareRowPdf", false, true],
-  ["compareRowMerkliste", "compareRowMerklisteFree", "compareRowMerklistePro"],
+// Was in Pro enthalten ist. Frueher stand hier eine Free/Pro-Tabelle - mit dem
+// Wegfall des Free-Tarifs (Preispolitik 2026-08-20) hat die nichts mehr zu
+// vergleichen: es gibt ein Produkt und zwei Laufzeiten. Eine Aufzaehlung
+// beantwortet die verbliebene Frage ("ja oder nein?") besser als zwei
+// Spalten, von denen eine leer waere.
+const LEISTUNGEN = [
+  "compareRowRechner",
+  "compareRowFinn",
+  "compareRowExpose",
+  "compareRowHandout",
+  "compareRowPdf",
+  "compareRowMerkliste",
 ];
 
 export function PricingSection({ lang, onChoosePlan }) {
@@ -136,7 +136,7 @@ export function PricingSection({ lang, onChoosePlan }) {
           />
         </div>
 
-        <ComparisonTable t={t} locale={locale} />
+        <Leistungsliste t={t} />
       </div>
     </section>
   );
@@ -216,83 +216,50 @@ function PlanCard({
   );
 }
 
-// Zwei Wertspalten (Free/Pro) statt der frueheren Pro-Aufzaehlung. Als echte
-// <table>, damit Screenreader Zeile und Spalte zusammenbringen; der Wrapper
-// scrollt horizontal, falls eine lange Uebersetzung die drei Spalten auf
-// schmalen Geraeten sprengt.
-function ComparisonTable({ t, locale }) {
-  const zeilen = [
-    { label: t.compareRowMonthly, free: t.comparePriceFree, pro: formatMoney(PLAN_AMOUNTS.monthly, locale) },
-    { label: t.compareRowYearly, free: t.comparePriceFree, pro: formatMoney(PLAN_AMOUNTS.yearly, locale) },
-    ...COMPARE_ROWS.map(([labelKey, freeWert, proWert]) => ({
-      label: t[labelKey],
-      free: typeof freeWert === "string" ? t[freeWert] : freeWert,
-      pro: typeof proWert === "string" ? t[proWert] : proWert,
-    })),
-  ];
-
+// Eine gemeinsame Liste unter beiden Kacheln statt derselben Aufzaehlung
+// zweimal nebeneinander - dieselben Angaben doppelt zu zeigen macht die
+// Sektion laenger, nicht klarer.
+function Leistungsliste({ t }) {
   return (
-    <div style={{ maxWidth: 640, margin: "26px auto 0", overflowX: "auto" }}>
-      <table
+    <div
+      style={{
+        maxWidth: 640,
+        margin: "22px auto 0",
+        background: "var(--cc)",
+        border: "1px solid var(--cb)",
+        borderRadius: 14,
+        padding: "16px 18px",
+      }}
+    >
+      <div style={{ fontSize: 12.5, color: "var(--ch)", marginBottom: 12, fontWeight: 600 }}>
+        {t.pricingFeaturesTitle}
+      </div>
+      <ul
         style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          background: "var(--cc)",
-          border: "1px solid var(--cb)",
-          borderRadius: 14,
-          overflow: "hidden",
-          fontSize: 13,
+          listStyle: "none",
+          padding: 0,
+          margin: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
         }}
       >
-        <thead>
-          <tr>
-            <th style={{ ...zellStil, textAlign: "left", fontWeight: 800, color: "var(--ct)" }}>
-              ImmoFuchs
-            </th>
-            <th style={{ ...zellStil, fontWeight: 700, color: "var(--ch)" }}>{t.compareColFree}</th>
-            <th style={{ ...zellStil, ...proSpaltenStil, fontWeight: 800, color: "var(--ca-dk)" }}>
-              {t.compareColPro}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {zeilen.map((zeile) => (
-            <tr key={zeile.label} style={{ borderTop: "1px solid var(--cb)" }}>
-              <th
-                scope="row"
-                style={{ ...zellStil, textAlign: "left", fontWeight: 600, color: "var(--cl)" }}
-              >
-                {zeile.label}
-              </th>
-              <td style={{ ...zellStil, color: "var(--ch)" }}>{markiere(zeile.free, t)}</td>
-              <td style={{ ...zellStil, ...proSpaltenStil, fontWeight: 700, color: "var(--ct)" }}>
-                {markiere(zeile.pro, t)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        {LEISTUNGEN.map((key) => (
+          <li key={key} style={{ display: "flex", gap: 10, fontSize: 13.5, lineHeight: 1.45 }}>
+            <span aria-hidden="true" style={{ color: "var(--ca)", flexShrink: 0, fontWeight: 700 }}>
+              ✓
+            </span>
+            <span style={{ color: "var(--ct)" }}>{t[key]}</span>
+          </li>
+        ))}
+      </ul>
+      {/* Die Grenzen der Testphase gehoeren sichtbar auf die Seite: "sieben
+          Tage kostenlos" ohne zu sagen, was drin ist, waere unsauber. Als
+          Fussnote, nicht als Tabelle - es ist Kleingedrucktes, kein
+          Verkaufsargument. */}
+      <div style={{ fontSize: 11.5, lineHeight: 1.55, color: "var(--ch)", marginTop: 14 }}>
+        {t.trialFinePrint}
+      </div>
     </div>
-  );
-}
-
-const zellStil = { padding: "11px 14px", textAlign: "right", whiteSpace: "nowrap" };
-// Pro-Spalte leicht getoent - macht auf einen Blick klar, welche der beiden
-// Wertspalten das Abo ist, ohne eine zweite Rahmenfarbe einzufuehren.
-const proSpaltenStil = { background: "var(--ca-bg)" };
-
-// Booleans werden zum Symbol, Strings bleiben Text. aria-label statt eines
-// nackten Zeichens: "✓" liest ein Screenreader je nach Stimme gar nicht
-// oder als "Haken" vor, ohne zu sagen, was gemeint ist.
-function markiere(wert, t) {
-  if (typeof wert !== "boolean") return wert;
-  return (
-    <span
-      role="img"
-      aria-label={wert ? t.compareYes : t.compareNo}
-      style={{ color: wert ? "var(--ca)" : "var(--ch)", fontSize: 15 }}
-    >
-      {wert ? "✓" : "✕"}
-    </span>
   );
 }

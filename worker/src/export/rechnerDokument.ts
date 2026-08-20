@@ -23,6 +23,9 @@ export interface RechnerAnfrage {
   titel?: unknown;
   inhalt?: unknown;
   lang?: unknown;
+  // Rechner-Id (validator.ts RECHNER_VALUES) - nur fuer die Kontingent-
+  // Zuordnung in der Testphase, im Dokument selbst kommt sie nicht vor.
+  rechner?: unknown;
 }
 
 // Der Inhalt kann nicht maskiert werden - er IST Markup. Stattdessen fliegt

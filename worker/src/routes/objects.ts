@@ -4,6 +4,8 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requirePro, requireCsrfOrigin, type EntitlementVars } from "../middleware";
+import { ermittleZugang } from "../entitlement";
+import { TRIAL_MERKLISTE_GESAMT } from "../trialLimits";
 import {
   countObjectsForUser,
   deleteObject,
@@ -71,7 +73,14 @@ objectsRoutes.get("/", requireAuth, requirePro, async (c) => {
 });
 
 objectsRoutes.post("/", requireAuth, requirePro, requireCsrfOrigin, async (c) => {
-  const softCap = parseInt(c.env.OBJECTS_SOFT_CAP || "", 10) || DEFAULT_SOFT_CAP;
+  // In der Testphase gilt statt des Missbrauchs-Deckels die Kontingentgrenze
+  // (Preispolitik 2026-08-20): 3 Objekte je Rechner, serverseitig als
+  // Gesamtzahl geprueft - siehe TRIAL_MERKLISTE_GESAMT.
+  const zugang = await ermittleZugang(c.env, c.var.userId);
+  const softCap =
+    zugang === "trial"
+      ? TRIAL_MERKLISTE_GESAMT
+      : parseInt(c.env.OBJECTS_SOFT_CAP || "", 10) || DEFAULT_SOFT_CAP;
   const count = await countObjectsForUser(c.env.DB, c.var.userId);
   if (count >= softCap) {
     return c.json({ error: "object_limit_reached", hint: "ungewoehnlich viele Objekte, bitte Support kontaktieren" }, 429);

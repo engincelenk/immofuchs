@@ -97,6 +97,38 @@ export function computeIsPro(sub: SubscriptionRow | null, now: number): boolean 
   return false;
 }
 
+// Drei Zugangsstufen seit der Preispolitik 2026-08-20 (Schritt B). Vorher war
+// es ein Boolean (Pro ja/nein), weil daneben nur "Free" stand - und Free war
+// kein Zugang, sondern die Abwesenheit von Pro.
+//
+// Jetzt ist die Testphase ein eigener Zustand: sie schaltet dieselben
+// FUNKTIONEN frei wie Pro (Handout, PDF, Merkliste, alle Rechner), aber mit
+// eigenen, kleinen Kontingenten. Ein Boolean koennte das nicht ausdruecken -
+// wer nur "ist Pro" fragt, gaebe einem Testnutzer die Pro-Tageslimits.
+export type Zugang = "pro" | "trial" | "keiner";
+
+// Reine Entscheidungsfunktion wie computeIsPro - ohne D1, isoliert testbar.
+export function computeZugang(
+  user: Pick<UserRow, "role" | "app_trial_ends_at">,
+  sub: SubscriptionRow | null,
+  now: number,
+): Zugang {
+  // Admin zaehlt immer als Pro (Nutzer-Entscheidung 2026-08-13).
+  if (user.role === "admin") return "pro";
+  if (computeIsPro(sub, now)) return "pro";
+  if (user.app_trial_ends_at !== null && user.app_trial_ends_at > now) return "trial";
+  return "keiner";
+}
+
+export async function ermittleZugang(env: Env, userId: string): Promise<Zugang> {
+  const [user, sub] = await Promise.all([
+    getUserById(env.DB, userId),
+    getActiveSubscription(env.DB, userId),
+  ]);
+  if (!user) return "keiner";
+  return computeZugang(user, sub, Date.now());
+}
+
 // D1-Pruefung, ohne Cache - Grundwahrheit, immer korrekt, aber ein D1-Read
 // teurer als ein Cookie-Read (siehe Cache-Wrapper unten).
 export async function isProUncached(env: Env, userId: string): Promise<boolean> {
@@ -105,9 +137,7 @@ export async function isProUncached(env: Env, userId: string): Promise<boolean> 
   // Anzeige-Chip (/me) als auch die echte Rechtedurchsetzung (requirePro,
   // Finn/Expose) speist - ein reiner Frontend-Fix haette "Pro" angezeigt,
   // echte Pro-Funktionen fuer Admins aber weiterhin gesperrt.
-  const [user, sub] = await Promise.all([getUserById(env.DB, userId), getActiveSubscription(env.DB, userId)]);
-  if (user?.role === "admin") return true;
-  return computeIsPro(sub, Date.now());
+  return (await ermittleZugang(env, userId)) !== "keiner";
 }
 
 async function hmacKey(secret: string): Promise<CryptoKey> {

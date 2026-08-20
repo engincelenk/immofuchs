@@ -53,11 +53,13 @@ const searchChipStyle = {
   whiteSpace: "nowrap",
 };
 const searchChipActiveStyle = { ...searchChipStyle, background: "var(--ca)", color: "#fff", borderColor: "var(--ca)" };
-// Free-Limit (Preispolitik 2026-08-20: zurueck auf 3 Objekte GESAMT statt
-// 1 je Rechnertyp, lokal, kein Sync - Pro: unbegrenzt, serverseitig). Gilt
-// ueber alle Rechnertypen zusammen: drei gespeicherte Objekte, gleich aus
-// welchem Rechner sie stammen.
-const FREE_OBJECT_LIMIT_TOTAL = 3;
+// Kontingent der Testphase (Preispolitik 2026-08-20, Nutzer-Vorgabe "alles je
+// Rechner"): 3 Objekte JE RECHNERTYP. Pro speichert unbegrenzt.
+//
+// Der Server zieht dieselbe Grenze als Gesamtzahl (TRIAL_MERKLISTE_GESAMT =
+// 3 x 4 Rechner mit Merkliste), weil die objects-Tabelle keinen Rechnerbezug
+// speichert - die Aufteilung je Rechner passiert hier.
+const TRIAL_OBJECT_LIMIT_PER_RECHNER = 3;
 const LOCAL_STORAGE_KEY = "if_saved_v1";
 const PRO_MIRROR_KEY = "if_saved_pro_mirror_v1"; // Offline-Spiegelung (4.17)
 
@@ -230,10 +232,13 @@ export function useSavedObjects(setData) {
         return;
       }
       setSavedList((prev) => {
-        // Insgesamt hoechstens FREE_OBJECT_LIMIT_TOTAL Objekte, rechnerueber-
-        // greifend: ein neuer Speicherstand verdraengt den insgesamt
-        // aeltesten Eintrag, gleich aus welchem Rechner der stammt.
-        const next = [obj, ...prev].slice(0, FREE_OBJECT_LIMIT_TOTAL);
+        // Je Rechnertyp hoechstens TRIAL_OBJECT_LIMIT_PER_RECHNER Objekte: ein
+        // neuer Speicherstand verdraengt den aeltesten DIESES Typs, nicht den
+        // insgesamt aeltesten (der koennte zu einem anderen Rechner gehoeren).
+        const sameTab = prev.filter((o) => o.tab === tab);
+        const others = prev.filter((o) => o.tab !== tab);
+        const keptSameTab = sameTab.slice(0, Math.max(0, TRIAL_OBJECT_LIMIT_PER_RECHNER - 1));
+        const next = [obj, ...keptSameTab, ...others];
         writeLocalList(next);
         return next;
       });
@@ -269,7 +274,7 @@ export function useSavedObjects(setData) {
     [setData],
   );
 
-  return { savedList, saveObj, delObj, loadObj, isPro, freeLimit: FREE_OBJECT_LIMIT_TOTAL };
+  return { savedList, saveObj, delObj, loadObj, isPro, freeLimit: TRIAL_OBJECT_LIMIT_PER_RECHNER };
 }
 
 // Gemeinsames Sheet-Bauteil statt eigenem Backdrop/Panel (UX-Audit
@@ -349,10 +354,11 @@ export function SaveBtn({ tab }) {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const hasData = d.kaufpreis || d.vergleichsmiete;
   if (!hasData) return null;
-  // Free-Limit erreicht (Preispolitik 2026-08-20: 3 Objekte ueber alle
-  // Rechner zusammen): Upgrade-Hinweis statt stillschweigendem Verdraengen
-  // des aeltesten Eintrags.
-  const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
+  // Kontingent dieses Rechners erreicht: Upgrade-Hinweis statt
+  // stillschweigendem Verdraengen des bisherigen Eintrags - andere
+  // Rechnertypen sind davon unberuehrt.
+  const limitReached =
+    !isProSavedObjects && savedList.filter((o) => o.tab === tab).length >= savedObjectsFreeLimit;
   // Strasse und Hausnummer voranstellen, sobald sie bekannt sind (aus dem
   // Expose oder von Hand): zwei Wohnungen in derselben Stadt sind sonst beide
   // nur "Ingersheim · 199.000 €" und in der Merkliste nicht auseinanderzuhalten.
@@ -518,9 +524,10 @@ export function Merkliste() {
   // Rechner") - "alle" statt null, damit der Vergleich in filtered() ohne
   // Sonderfall auskommt.
   const [rechnerFilter, setRechnerFilter] = useState("alle");
-  // Das Free-Kontingent gilt seit der Preispolitik 2026-08-20 rechnerueber-
-  // greifend - die Uebersicht zeigt dieselbe Zahl wie der Speichern-Button.
-  const freeTotalLimit = savedObjectsFreeLimit;
+  // Gesamt-Kontingent = Limit je Rechner x Anzahl unterstuetzter Rechnertypen.
+  // Diese Uebersicht zeigt alle Rechner zusammen, "erreicht" heisst hier also:
+  // bei JEDEM Rechnertyp das Kontingent ausgeschoepft.
+  const freeTotalLimit = savedObjectsFreeLimit * RECHNER_TABS.length;
   const limitReached = !isProSavedObjects && savedList.length >= freeTotalLimit;
   const [compareIds, setCompareIds] = useState([]);
   const [compareSheetOpen, setCompareSheetOpen] = useState(false);

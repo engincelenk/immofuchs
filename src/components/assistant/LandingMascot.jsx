@@ -58,7 +58,7 @@ export function LandingMascot({ onStart, lang }) {
   const showChips = (localLog.length === 0 && messages.length === 0) || chipsForcedOpen;
 
   const statusInfo =
-    status === "limit"
+    status === "limit" || status === "zugang"
       ? { label: t.statusLimited, color: "#f59e0b" }
       : { label: t.assistantTagline, color: "var(--ch)" };
 
@@ -208,6 +208,7 @@ export function LandingMascot({ onStart, lang }) {
                     <ChatBubble role="error" text={t.error} onRetry={retry} retryLabel={t.retry} />
                   )}
                   {status === "limit" && <ChatBubble role="limit" text={t.limit} />}
+                  {status === "zugang" && <ChatBubble role="limit" text={t.zugang} />}
                   {status === "offline" && <ChatBubble role="offline" text={t.offline} />}
                   {status === "disabled" && <ChatBubble role="system" text={t.disabled} />}
                 </div>

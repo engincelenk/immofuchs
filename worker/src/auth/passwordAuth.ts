@@ -3,6 +3,7 @@
 // Registrierungs-Screen - die anderen vier legen das Konto implizit beim
 // Erst-Login an, dieser nicht (Double-Opt-In macht das noetig).
 import type { Env } from "../types";
+import { pruefeTurnstile } from "../turnstile";
 import {
   createEmailVerificationToken,
   createPasswordResetToken,
@@ -27,7 +28,15 @@ const HOUR_MS = 60 * 60 * 1000;
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
 const WARN_AFTER_ATTEMPTS = 3;
 const LOCK_AFTER_ATTEMPTS = 5;
+// Je E-Mail-Adresse. Verhindert nur, dass DIESELBE Adresse mehrfach
+// registriert wird - gegen jemanden mit zwanzig Wegwerf-Adressen ist es
+// wirkungslos, deshalb das IP-Limit darunter (Preispolitik 2026-08-20,
+// Schritt A).
 const REGISTER_HOURLY_LIMIT = 5;
+// Je Client-IP. Hoeher als das E-Mail-Limit, weil sich hinter einer IP echte
+// Haushalte, Firmennetze und Mobilfunk-NAT teilen - es soll die Massenanlage
+// bremsen, nicht die zweite Anmeldung in einer Familie.
+const REGISTER_IP_HOURLY_LIMIT = 10;
 const RESEND_HOURLY_LIMIT = 5;
 const RESET_HOURLY_LIMIT = 5;
 
@@ -63,7 +72,10 @@ function verifyLink(workerOrigin: string, token: string): string {
 
 export type RegisterResult =
   | { ok: true }
-  | { ok: false; error: "invalid_email" | "invalid_password" | "invalid_name" | "rate_limited" }
+  | {
+      ok: false;
+      error: "invalid_email" | "invalid_password" | "invalid_name" | "rate_limited" | "bot_check_failed";
+    }
   | { ok: false; error: "email_taken"; providers: string[] };
 
 // Obergrenze rein zum Schutz vor Missbrauch (z. B. ganze Saetze als "Name") -
@@ -78,6 +90,8 @@ export async function registerWithPassword(
   password: string,
   acceptedTerms: boolean,
   nameRaw: string,
+  turnstileToken: string,
+  ip: string | null,
 ): Promise<RegisterResult> {
   const email = normalizeEmail(emailRaw);
   const name = nameRaw.trim();
@@ -85,8 +99,20 @@ export async function registerWithPassword(
   if (!isValidPasswordLength(password)) return { ok: false, error: "invalid_password" };
   if (!name || name.length > MAX_NAME_LENGTH) return { ok: false, error: "invalid_name" };
 
+  // Reihenfolge mit Absicht: erst die billigen Formatpruefungen, dann die
+  // Zaehler, dann der Netzwerk-Aufruf zu Turnstile. Ein Bot, der schon am
+  // IP-Limit haengt, kostet uns so keinen siteverify-Request.
   if (await rateLimited(env, `register:${email}`, REGISTER_HOURLY_LIMIT)) {
     return { ok: false, error: "rate_limited" };
+  }
+  if (ip && (await rateLimited(env, `register-ip:${ip}`, REGISTER_IP_HOURLY_LIMIT))) {
+    return { ok: false, error: "rate_limited" };
+  }
+
+  const bot = await pruefeTurnstile(env, turnstileToken, ip);
+  if (!bot.ok) {
+    console.warn("turnstile_rejected", (bot.codes ?? []).join(","));
+    return { ok: false, error: "bot_check_failed" };
   }
 
   const existing = await getUserByEmail(env.DB, email);

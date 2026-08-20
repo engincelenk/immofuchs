@@ -62,7 +62,11 @@ export function FinnHandoutPanel({ analyse, t, lang = "de" }) {
       "Finn_Handout",
     );
     if (!ergebnis.ok) {
-      if (ergebnis.fehler === "pro_noetig" || ergebnis.fehler === "login_noetig") {
+      if (
+        ergebnis.fehler === "pro_noetig" ||
+        ergebnis.fehler === "login_noetig" ||
+        ergebnis.fehler === "kontingent"
+      ) {
         setZeigeUpgrade(true);
         return;
       }

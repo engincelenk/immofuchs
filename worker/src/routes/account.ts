@@ -3,7 +3,7 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
-import { isProUncached } from "../entitlement";
+import { ermittleZugang } from "../entitlement";
 import { RECHNER_VALUES } from "../validator";
 import {
   listLinkedProviders,
@@ -17,25 +17,36 @@ import {
   deleteOtherSessionsForUser,
   setUserPasswordHash,
   setMarketingEmailsEnabled,
-  getCalculatorTrialUsage,
-  incrementCalculatorTrialUsage,
+  getTrialUsage,
+  getTrialCount,
+  incrementTrialUsage,
+  startAppTrialIfNew,
 } from "../db";
 import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/password";
 import { sendEmail } from "../email";
 import { dispatchNotification } from "../notifications";
 import { deleteAccountCompletely } from "../accountDeletion";
-import { aktuellePeriode } from "../periode";
+import { TRIAL_DAUER_MS, TRIAL_LIMITS } from "../trialLimits";
 import { buildClearSessionCookie, extractSessionId, logout } from "../auth/session";
 
 export const accountRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
 
 accountRoutes.get("/me", requireAuth, async (c) => {
-  const [isPro, providers, sub, calculatorTrialUsage] = await Promise.all([
-    isProUncached(c.env, c.var.userId),
+  // Die Testphase startet beim ersten authentifizierten Zugriff, nicht schon
+  // bei der Registrierung: so bekommt sie jeder Anmeldeweg (Passwort, Google,
+  // Apple, Passkey) an einer einzigen Stelle, und wer sein Konto nie benutzt,
+  // verbraucht sie nicht. Das UPDATE setzt nur, wenn noch nichts gesetzt ist.
+  const frisch = await startAppTrialIfNew(c.env.DB, c.var.userId, TRIAL_DAUER_MS);
+  const trialEndsAt = frisch ? frisch.endsAt : c.var.user.app_trial_ends_at;
+  const trialStart = frisch ? frisch.startedAt : c.var.user.app_trial_started_at;
+
+  const [zugang, providers, sub, trialUsage] = await Promise.all([
+    ermittleZugang(c.env, c.var.userId),
     listLinkedProviders(c.env.DB, c.var.userId),
     getActiveSubscription(c.env.DB, c.var.userId),
-    getCalculatorTrialUsage(c.env.DB, c.var.userId, aktuellePeriode()),
+    trialStart ? getTrialUsage(c.env.DB, c.var.userId, trialStart) : Promise.resolve({}),
   ]);
+  const isPro = zugang !== "keiner";
   return c.json({
     id: c.var.user.id,
     email: c.var.user.email,
@@ -43,11 +54,18 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     role: c.var.user.role,
     emailVerified: Boolean(c.var.user.email_verified_at),
     hasUsedTrial: Boolean(c.var.user.trial_used_at),
-    // Seit Migration 0022 pro Rechner statt eines einzelnen kombinierten
-    // Flags (Nutzer-Vorgabe 2026-08-18) - Map rechner -> im LAUFENDEN MONAT
-    // verbrauchte Gratis-Versuche (Preispolitik 2026-08-20, Migration 0024),
-    // das Frontend vergleicht das selbst gegen sein Limit.
-    calculatorTrialUsage,
+    // Zugang und Testphase (Preispolitik 2026-08-20): `zugang` unterscheidet
+    // "pro" von "trial", was isPro allein nicht kann - beide duerfen dieselben
+    // Funktionen, aber mit unterschiedlichen Kontingenten.
+    //
+    // `trialUsage` ist eine Map "feature:rechner" -> verbraucht, `trialLimits`
+    // sind die zugehoerigen Obergrenzen. Beides kommt vom Server, damit die
+    // Zahlen nicht an zwei Orten gepflegt werden muessen. Durchgesetzt werden
+    // sie ohnehin nur hier - die Anzeige darf sie zeigen, nie entscheiden.
+    zugang,
+    trial: trialEndsAt
+      ? { endsAt: trialEndsAt, active: zugang === "trial", usage: trialUsage, limits: TRIAL_LIMITS }
+      : null,
     marketingEmailsEnabled: Boolean(c.var.user.marketing_emails_enabled),
     linkedProviders: providers,
     isPro,
@@ -78,7 +96,18 @@ accountRoutes.post("/calculator-trial/consume", requireAuth, requireCsrfOrigin, 
   if (!(RECHNER_VALUES as ReadonlySet<string>).has(rechner)) {
     return c.json({ error: "invalid_rechner" }, 400);
   }
-  await incrementCalculatorTrialUsage(c.env.DB, c.var.userId, rechner, aktuellePeriode());
+  const zugang = await ermittleZugang(c.env, c.var.userId);
+  // Pro verbraucht nichts, ohne Zugang gibt es nichts zu verbrauchen - nur
+  // die Testphase zaehlt. Die Sperre selbst entscheidet das Frontend anhand
+  // von /me; hier wird nur gezaehlt, und die eigentliche Durchsetzung liegt
+  // bei den Funktionen, die etwas kosten (Finn, Exposé, Dokumente).
+  if (zugang !== "trial") return c.json({ ok: true });
+  const trialStart = c.var.user.app_trial_started_at;
+  if (trialStart === null) return c.json({ ok: true });
+
+  const verbraucht = await getTrialCount(c.env.DB, c.var.userId, trialStart, "rechner", rechner);
+  if (verbraucht >= TRIAL_LIMITS.rechner) return c.json({ error: "trial_limit_reached" }, 402);
+  await incrementTrialUsage(c.env.DB, c.var.userId, trialStart, "rechner", rechner);
   return c.json({ ok: true });
 });
 

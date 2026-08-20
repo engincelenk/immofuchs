@@ -19,14 +19,18 @@ const CheckoutWizard = lazy(() =>
 // tabZuRechner) des jeweils umschlossenen Rechners.
 // Zwei Sperr-Zustaende (Stufe A/B/C, Nutzer-Konzept 2026-08-11):
 //  - isLocked: nicht eingeloggt - wie bisher, Login-/Registrierungs-CTA.
-//  - isPaywalled: eingeloggt, Gratis-Kontingent DIESES Rechners (seit
+//  - trialVorbei: eingeloggt, Testphase abgelaufen - gespeicherte Objekte
+//    bleiben lesbar, gerechnet wird nicht mehr (Nutzer-Entscheidung
+//    2026-08-20). Eigener Text, sonst wie isPaywalled.
+//  - isPaywalled: eingeloggt, Kontingent DIESES Rechners (seit
 //    2026-08-18: 3x je Rechner statt 1x kombiniert) bereits verbraucht,
 //    kein Pro-Abo - neue Verkaufs-/Upgrade-Maske statt einer technischen
 //    Fehlermeldung.
 export function CalculatorTrialGate({ rechner, children, onDismiss }) {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
-  const { isLocked, isPaywalled, isTrialRun, remaining, loading } = useCalculatorTrial(rechner);
+  const { isLocked, isPaywalled, isTrialRun, trialVorbei, remaining, limit, loading } =
+    useCalculatorTrial(rechner);
   const [showLogin, setShowLogin] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
@@ -58,7 +62,11 @@ export function CalculatorTrialGate({ rechner, children, onDismiss }) {
 
   if (isPaywalled) {
     return (
-      <GatePanel icon={<BrandIcon size={48} />} title={t.trialLockedTitle} body={t.trialLockedBody}>
+      <GatePanel
+        icon={<BrandIcon size={48} />}
+        title={trialVorbei ? t.trialOverTitle : t.trialLockedTitle}
+        body={trialVorbei ? t.trialOverBody : t.trialLockedBody}
+      >
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
           <button onClick={() => setShowUpgrade(true)} style={primaryBtnStyle}>
             {t.trialLockedCta}
@@ -108,7 +116,7 @@ export function CalculatorTrialGate({ rechner, children, onDismiss }) {
           <span aria-hidden="true" style={{ display: "flex", flexShrink: 0, color: "var(--ca-dk)" }}>
             <IconFunkeln size={16} />
           </span>
-          <span>{t.trialRunNotice.replace("{n}", String(remaining))}</span>
+          <span>{t.trialRunNotice.replace("{n}", String(remaining)).replace("{limit}", String(limit))}</span>
         </div>
       )}
       {children}

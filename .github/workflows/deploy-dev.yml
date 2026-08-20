@@ -35,6 +35,10 @@ jobs:
           # VITE_ASSISTANT_URL oben als Klartext statt als GitHub-Secret.
           VITE_PADDLE_CLIENT_TOKEN: test_e412470bb9a7d8288b3e29fe71b
           VITE_PADDLE_ENV: sandbox
+          # Turnstile-Site-Key der Registrierung (Preispolitik 2026-08-20):
+          # oeffentlich wie der Paddle-Client-Token - das Geheimnis ist allein
+          # TURNSTILE_SECRET im Worker-Secret-Store.
+          VITE_TURNSTILE_SITE_KEY: 0x4AAAAAAEW18bBEyl_o5nTS
         run: |
           npm ci
           npm run build

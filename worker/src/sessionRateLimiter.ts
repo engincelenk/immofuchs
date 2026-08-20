@@ -58,43 +58,4 @@ export class SessionRateLimiter extends DurableObject<Env> {
     return { allowed: true, remaining: limit - state.count };
   }
 
-  // Monatszaehler fuer das Finn-Free-Kontingent (Preispolitik 2026-08-20:
-  // "5/Monat je Rechner"; davor 3x dauerhaft, davor 5/Tag). Der Aufrufer
-  // nutzt eine eigene DO-Instanz pro sessionId+rechner, sodass derselbe
-  // Zaehler automatisch nur diese Kombination betrifft.
-  //
-  // Die Periode kommt als Argument statt sie hier zu berechnen: derselbe
-  // Wert entscheidet in D1 ueber Rechner- und Exposé-Kontingent (siehe
-  // periode.ts), und ein Request soll nicht auf halber Strecke die Periode
-  // wechseln, wenn er die Monatsgrenze zufaellig ueberschreitet.
-  //
-  // Eigener Storage-Key ("month"), damit dieselbe DO-Instanz nicht mit
-  // "state" (taeglich) oder "window" (rollierend) kollidiert. Der alte
-  // "lifetime"-Key wird nicht mehr gelesen - bestehende Zaehler laufen damit
-  // ins Leere, jeder Free-Nutzer startet mit vollem Monatskontingent.
-  async checkAndIncrementMonth(
-    limit: number,
-    periode: string,
-  ): Promise<{ allowed: boolean; remaining: number }> {
-    const stored = await this.ctx.storage.get<{ count: number; periode: string }>("month");
-    const state = stored && stored.periode === periode ? stored : { count: 0, periode };
-
-    if (state.count >= limit) {
-      return { allowed: false, remaining: 0 };
-    }
-
-    state.count += 1;
-    await this.ctx.storage.put("month", state);
-    return { allowed: true, remaining: limit - state.count };
-  }
-
-  // Gegenstueck zu decrement() (taeglich) fuer den Monatszaehler - gebraucht,
-  // wenn ein bereits gezaehlter Request danach doch scheitert. Ueber die
-  // Monatsgrenze hinaus wird nichts abgezogen (neue Periode/leerer Zaehler).
-  async decrementMonth(periode: string): Promise<void> {
-    const stored = await this.ctx.storage.get<{ count: number; periode: string }>("month");
-    if (!stored || stored.periode !== periode) return;
-    stored.count = Math.max(0, stored.count - 1);
-    await this.ctx.storage.put("month", stored);
-  }
 }

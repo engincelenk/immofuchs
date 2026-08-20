@@ -35,7 +35,7 @@ export function useAssistant() {
   const [messages, setMessages] = useState([]);
   // uploading/extracting kommen aus dem Expose-Upload (Spec 8, Phase 1/2) -
   // gleiche State-Machine, keine zweite Philosophie.
-  const [status, setStatus] = useState("idle"); // idle | loading | uploading | extracting | error | limit | offline | disabled
+  const [status, setStatus] = useState("idle"); // idle | loading | uploading | extracting | error | limit | zugang | offline | disabled
   const [uploadFortschritt, setUploadFortschritt] = useState({ fertig: 0, gesamt: 0 });
   const [exposeFehler, setExposeFehler] = useState(null);
   // Unterscheidet zwei Fehlerarten im Chat (Nutzerwunsch 2026-08-03, siehe
@@ -88,6 +88,13 @@ export function useAssistant() {
         }
         if (res.status === 429) {
           setStatus("limit");
+          return;
+        }
+        // Seit der Preispolitik 2026-08-20 braucht Finn ein Konto (401) und
+        // eine laufende Testphase oder ein Abo (402). Vorher war er anonym
+        // nutzbar - beide Faelle gab es deshalb hier noch nicht.
+        if (res.status === 401 || res.status === 402) {
+          setStatus("zugang");
           return;
         }
         if (res.status === 503) {
@@ -221,6 +228,11 @@ export function useAssistant() {
       if (res.status === 429) {
         setExposeFehler("fehlerLimit");
         setStatus("limit");
+        return;
+      }
+      if (res.status === 401 || res.status === 402) {
+        setExposeFehler("fehlerZugang");
+        setStatus("zugang");
         return;
       }
       if (res.status === 503) {

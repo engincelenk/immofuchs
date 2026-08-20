@@ -28,6 +28,11 @@ export interface UserRow {
   // "hatte schon mal ein Trial", auch nachdem eine Subscription-Zeile von
   // 'trialing' auf 'active'/'canceled' gewechselt ist (Migration 0013).
   trial_used_at: number | null;
+  // Kartenfreie Testphase (Migration 0025): 7 Tage ab der ersten
+  // authentifizierten Anfrage, ohne Zahlungsdaten und ohne Paddle-Zeile.
+  // Nicht zu verwechseln mit trial_used_at (bezahlter Paddle-Trial).
+  app_trial_started_at: number | null;
+  app_trial_ends_at: number | null;
   // Kap. 4.7 (Migration 0014): einziger abschaltbarer Mail-Kanal, alle
   // anderen (Zahlungsfehler, Kuendigung, Trial-Ende, ...) sind Pflicht.
   marketing_emails_enabled: number;
@@ -130,6 +135,8 @@ export async function createUser(db: Env["DB"], email: string): Promise<UserRow>
     password_set_at: null,
     email_verified_at: null,
     trial_used_at: null,
+    app_trial_started_at: null,
+    app_trial_ends_at: null,
     marketing_emails_enabled: 0,
     calculator_trial_used_at: null,
     is_test_user: 0,
@@ -255,6 +262,8 @@ export async function createUserWithPassword(
     password_set_at: now,
     email_verified_at: null,
     trial_used_at: null,
+    app_trial_started_at: null,
+    app_trial_ends_at: null,
     marketing_emails_enabled: 0,
     calculator_trial_used_at: null,
     is_test_user: 0,
@@ -297,47 +306,88 @@ export async function markTrialUsedForUser(db: Env["DB"], userId: string): Promi
 
 // Login-/Test-Flow (Migration 0018, seit 0022 pro Rechner statt kombiniert
 // ueber alle 6 - Nutzer-Vorgabe 2026-08-18: 1x kombiniert -> 3x je Rechner).
-// getCalculatorTrialUsage liefert die im laufenden Monat verbrauchten
-// Versuche je Rechner - der Aufrufer (routes/account.ts /me) vergleicht das
-// selbst gegen sein Limit, damit die Zahl 3 an einer einzigen Stelle im Code
-// steht.
+// ═══ Verbrauch der Testphase (Migration 0025) ═══
 //
-// Zeilen aus einem frueheren Monat werden hier gar nicht erst gelesen
-// (Migration 0024): sie zaehlen als 0 und werden beim naechsten Verbrauch
-// ueberschrieben - siehe worker/src/periode.ts.
-export async function getCalculatorTrialUsage(
+// Ersetzt calculator_trial_usage (0022/0024) und expose_trial_used
+// (0006/0021/0024). Ein Tabellenschema fuer alle Kontingente statt zwei
+// Sonderfaelle, und an den Nutzer gebunden statt an die Session - siehe
+// Kommentar in der Migration.
+
+export type TrialFeature = "rechner" | "finn" | "expose" | "pdf" | "handout";
+
+// Alle Zaehler der laufenden Testphase, als "feature:rechner" -> count.
+// Zeilen aelterer Testphasen (anderes trial_start) werden nicht gelesen und
+// zaehlen damit als 0.
+export async function getTrialUsage(
   db: Env["DB"],
   userId: string,
-  periode: string,
+  trialStart: number,
 ): Promise<Record<string, number>> {
   const { results } = await db
-    .prepare("SELECT rechner, count FROM calculator_trial_usage WHERE user_id = ? AND period = ?")
-    .bind(userId, periode)
-    .all<{ rechner: string; count: number }>();
+    .prepare("SELECT feature, rechner, count FROM trial_usage WHERE user_id = ? AND trial_start = ?")
+    .bind(userId, trialStart)
+    .all<{ feature: string; rechner: string; count: number }>();
   const usage: Record<string, number> = {};
-  for (const row of results) usage[row.rechner] = row.count;
+  for (const row of results) usage[`${row.feature}:${row.rechner}`] = row.count;
   return usage;
 }
 
-export async function incrementCalculatorTrialUsage(
+export async function getTrialCount(
   db: Env["DB"],
   userId: string,
-  rechner: string,
-  periode: string,
+  trialStart: number,
+  feature: TrialFeature,
+  rechner = "",
+): Promise<number> {
+  const row = await db
+    .prepare(
+      "SELECT count FROM trial_usage WHERE user_id = ? AND feature = ? AND rechner = ? AND trial_start = ?",
+    )
+    .bind(userId, feature, rechner, trialStart)
+    .first<{ count: number }>();
+  return row?.count ?? 0;
+}
+
+// Der CASE ist der Wechsel der Testphase: gehoert die vorhandene Zeile noch
+// zur laufenden, wird hochgezaehlt - sonst faengt der Zaehler bei 1 an. Ein
+// Aufraeumjob alter Zeilen eruebrigt sich dadurch.
+export async function incrementTrialUsage(
+  db: Env["DB"],
+  userId: string,
+  trialStart: number,
+  feature: TrialFeature,
+  rechner = "",
 ): Promise<void> {
-  // Der CASE ist der Monatswechsel: gehoert die vorhandene Zeile noch zur
-  // laufenden Periode, wird hochgezaehlt - sonst faengt der Zaehler bei 1
-  // wieder an. Ein separates DELETE alter Zeilen braucht es dadurch nicht.
   await db
     .prepare(
-      `INSERT INTO calculator_trial_usage (user_id, rechner, count, period) VALUES (?, ?, 1, ?)
-       ON CONFLICT(user_id, rechner) DO UPDATE SET
-         count = CASE WHEN calculator_trial_usage.period = excluded.period
-                      THEN calculator_trial_usage.count + 1 ELSE 1 END,
-         period = excluded.period`,
+      `INSERT INTO trial_usage (user_id, feature, rechner, count, trial_start) VALUES (?, ?, ?, 1, ?)
+       ON CONFLICT(user_id, feature, rechner) DO UPDATE SET
+         count = CASE WHEN trial_usage.trial_start = excluded.trial_start
+                      THEN trial_usage.count + 1 ELSE 1 END,
+         trial_start = excluded.trial_start`,
     )
-    .bind(userId, rechner, periode)
+    .bind(userId, feature, rechner, trialStart)
     .run();
+}
+
+// Startet die Testphase beim ersten authentifizierten Zugriff. Das UPDATE
+// setzt nur, wenn noch nichts gesetzt ist - zwei gleichzeitige Anfragen
+// koennen die Phase also nicht zweimal starten oder verlaengern.
+export async function startAppTrialIfNew(
+  db: Env["DB"],
+  userId: string,
+  dauerMs: number,
+): Promise<{ startedAt: number; endsAt: number } | null> {
+  const jetzt = Date.now();
+  const ergebnis = await db
+    .prepare(
+      `UPDATE users SET app_trial_started_at = ?, app_trial_ends_at = ?
+       WHERE id = ? AND app_trial_started_at IS NULL`,
+    )
+    .bind(jetzt, jetzt + dauerMs, userId)
+    .run();
+  if (!ergebnis.meta.changes) return null;
+  return { startedAt: jetzt, endsAt: jetzt + dauerMs };
 }
 
 // Kap. 4.7 (Migration 0014).
@@ -771,38 +821,6 @@ export async function deleteObject(db: Env["DB"], id: string): Promise<void> {
 // Zaehler statt Boolean-Flag (Nutzer-Vorgabe 2026-08-18: 1x -> 3x Free-
 // Kontingent). Der Aufrufer (assistant.ts) vergleicht den Rueckgabewert
 // selbst gegen sein Limit, damit die Zahl an einer einzigen Stelle steht.
-// Wie beim Rechner-Kontingent zaehlt nur der laufende Monat (Migration
-// 0024): ein Zaehler aus einem frueheren Monat liefert 0.
-export async function getExposeTrialCount(
-  db: Env["DB"],
-  sessionId: string,
-  periode: string,
-): Promise<number> {
-  const row = await db
-    .prepare("SELECT count FROM expose_trial_used WHERE session_id = ? AND period = ?")
-    .bind(sessionId, periode)
-    .first<{ count: number }>();
-  return row?.count ?? 0;
-}
-
-export async function markExposeTrialUsed(
-  db: Env["DB"],
-  sessionId: string,
-  periode: string,
-): Promise<void> {
-  await db
-    .prepare(
-      `INSERT INTO expose_trial_used (session_id, used_at, count, period) VALUES (?, ?, 1, ?)
-       ON CONFLICT(session_id) DO UPDATE SET
-         count = CASE WHEN expose_trial_used.period = excluded.period
-                      THEN expose_trial_used.count + 1 ELSE 1 END,
-         used_at = excluded.used_at,
-         period = excluded.period`,
-    )
-    .bind(sessionId, Date.now(), periode)
-    .run();
-}
-
 // ═══ Push-Tokens (4.11, 10.0, S7-1) ═══
 
 export interface PushTokenRow {
@@ -1492,14 +1510,14 @@ export async function deleteUserCompletely(db: Env["DB"], userId: string): Promi
     // verschwinden mit ihm. Der admin_audit_log bleibt bewusst stehen - er
     // dokumentiert, WER geloescht hat, und muss die Loeschung ueberleben.
     db.prepare("DELETE FROM user_support_notes WHERE user_id = ?").bind(userId),
-    // push_tokens (Migration 0010) und calculator_trial_usage (Migration 0022)
+    // push_tokens (Migration 0010) und trial_usage (Migration 0025)
     // haben FOREIGN KEY REFERENCES users(id), D1 erzwingt foreign_keys=ON -
     // ohne diese beiden Zeilen schlaegt DELETE FROM users darunter mit einem
     // FK-Constraint-Fehler fehl (Befund 2026-08-18: useforai@web.de liess sich
     // deswegen nicht loeschen, obwohl gar kein Abo/Paddle involviert war - der
     // Admin-Endpunkt zeigte faelschlich die Paddle-Fehlermeldung).
     db.prepare("DELETE FROM push_tokens WHERE user_id = ?").bind(userId),
-    db.prepare("DELETE FROM calculator_trial_usage WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM trial_usage WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM users WHERE id = ?").bind(userId),
   ]);
 }

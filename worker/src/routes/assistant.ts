@@ -15,30 +15,40 @@ import { filterOutput } from "../outputFilter";
 import { EXPOSE_JSON_SCHEMA, EXPOSE_SYSTEM_PROMPT } from "../exposePrompt";
 import { parseExposeOutput } from "../exposeOutput";
 import { authenticate } from "../auth/session";
-import { getEntitlement } from "../entitlement";
+import { ermittleZugang, type Zugang } from "../entitlement";
 import { hasConsent } from "../consent";
-import { getExposeTrialCount, markExposeTrialUsed } from "../db";
-import { aktuellePeriode } from "../periode";
+import { getTrialCount, getUserById, incrementTrialUsage, type UserRow } from "../db";
+import { TRIAL_LIMITS } from "../trialLimits";
 
-// Preispolitik 2026-08-20: 3x dauerhaft -> 2x pro Kalendermonat und Geraet.
-const DEFAULT_EXPOSE_FREE_TRIAL_LIMIT = 2;
-
-// Preispolitik 2026-08-20: Free-Kontingent fuer Finn 5x pro Kalendermonat
-// JE RECHNERTYP (vorher 3x dauerhaft je Rechnertyp, davor 5/Tag) - siehe
-// SessionRateLimiter.checkAndIncrementMonth und periode.ts.
-const DEFAULT_FINN_FREE_TRIAL_LIMIT = 5;
 const DEFAULT_FINN_PRO_DAILY_LIMIT = 50;
 const DEFAULT_FINN_FREE_MAX_TOKENS = 350;
 const DEFAULT_FINN_PRO_MAX_TOKENS = 700;
 const DEFAULT_GLOBAL_CUTOFF_RATIO = 0.7;
 
-// Optionale Authentifizierung - Finn/Exposé bleiben auch anonym nutzbar
-// (4.0: "Free bleibt komplett loginfrei"), Pro-Status wird nur mitgelesen,
-// wenn ein gueltiges Session-Cookie/Bearer-Token vorhanden ist.
-async function resolveIsPro(request: Request, env: Env): Promise<{ isPro: boolean; setCookie: string | null }> {
+// Authentifizierung ist seit der Preispolitik 2026-08-20 Pflicht. Vorher
+// waren Finn und der Exposé-Scan anonym nutzbar ("Free bleibt komplett
+// loginfrei", 4.0) - mit dem Wegfall von Free gibt es keinen anonymen Zugang
+// mehr, und die Kontingente haengen am Nutzer statt an der Session. Damit
+// reicht "Cookies loeschen" nicht mehr fuer ein frisches Kontingent.
+//
+// Bewusst ohne den Entitlement-Cookie-Cache (getEntitlement): der speichert
+// ein Boolean und koennte "Testphase" nicht von "Pro" unterscheiden. Ein
+// D1-Read je Anfrage ist gegenueber dem Modell-Aufruf, der gleich folgt,
+// nicht messbar.
+interface Zugriff {
+  user: UserRow;
+  zugang: Zugang;
+}
+
+async function resolveZugriff(request: Request, env: Env): Promise<Zugriff | null> {
   const ctx = await authenticate(request, env);
-  if (!ctx) return { isPro: false, setCookie: null };
-  return getEntitlement(request, env, ctx.session.user_id);
+  if (!ctx) return null;
+  const [user, zugang] = await Promise.all([
+    getUserById(env.DB, ctx.session.user_id),
+    ermittleZugang(env, ctx.session.user_id),
+  ]);
+  if (!user) return null;
+  return { user, zugang };
 }
 
 export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Response> {
@@ -55,8 +65,10 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
     return c.json({ error: "invalid_json" }, 400);
   }
 
-  const { isPro, setCookie } = await resolveIsPro(c.req.raw, env);
-  if (setCookie) c.header("Set-Cookie", setCookie, { append: true });
+  const zugriff = await resolveZugriff(c.req.raw, env);
+  if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
+  if (zugriff.zugang === "keiner") return c.json({ error: "pro_required" }, 402);
+  const isPro = zugriff.zugang === "pro";
 
   const freeMaxTokens = parseInt(env.FINN_FREE_MAX_TOKENS || "", 10) || DEFAULT_FINN_FREE_MAX_TOKENS;
   const proMaxTokens = parseInt(env.FINN_PRO_MAX_TOKENS || "", 10) || DEFAULT_FINN_PRO_MAX_TOKENS;
@@ -82,30 +94,25 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
   // Drei gestaffelte Schranken (siehe docs/code-review-2026-07-23.md, Punkt 1):
   //   1. global  - hartes Tages-Cap ueber alle Nutzer, deckelt die Kosten.
   //   2. ip      - pro CF-Connecting-IP.
-  //   3. session - Free/Pro-abhaengiges Komfort-Limit pro Browser-Session.
-  //                Pro: taeglich (S5-3, unveraendert). Free: seit 2026-08-20
-  //                ein Monatskontingent JE RECHNERTYP (Preispolitik) - eigene
-  //                DO-Instanz pro sessionId+rechner statt nur sessionId,
-  //                siehe unten.
+  //   3. Kontingent - Pro: Tageslimit je Session (S5-3, unveraendert).
+  //                    Testphase: festes Kontingent JE RECHNER fuer die
+  //                    ganze Phase, am Nutzer haengend (Migration 0025).
   const proDailyLimit = parseInt(env.FINN_PRO_DAILY_LIMIT || "", 10) || DEFAULT_FINN_PRO_DAILY_LIMIT;
-  const freeTrialLimit = parseInt(env.FINN_FREE_TRIAL_LIMIT || "", 10) || DEFAULT_FINN_FREE_TRIAL_LIMIT;
   const ipLimit = parseInt(env.IP_DAILY_LIMIT || "", 10) || 60;
   const globalLimit = parseInt(env.GLOBAL_DAILY_LIMIT || "", 10) || 2000;
-  // Pro-Reservierung (4.18.4, S5-5): Free-Anfragen pruefen gegen einen
-  // niedrigeren Anteil desselben globalen Zaehlers, Pro gegen das volle Limit -
-  // "ein ausgeschoepftes Free-Kontingent macht Finn fuer Pro nicht unbenutzbar".
+  // Pro-Reservierung (4.18.4, S5-5): Anfragen aus der Testphase pruefen gegen
+  // einen niedrigeren Anteil desselben globalen Zaehlers, Pro gegen das volle
+  // Limit - ein ausgeschoepftes Testkontingent macht Finn fuer zahlende
+  // Nutzer nicht unbenutzbar.
   const cutoffRatio = parseFloat(env.FINN_FREE_GLOBAL_CUTOFF_RATIO || "") || DEFAULT_GLOBAL_CUTOFF_RATIO;
   const effectiveGlobalLimit = isPro ? globalLimit : Math.floor(globalLimit * cutoffRatio);
 
   const ip = c.req.header("CF-Connecting-IP") || "unknown";
   const globalLimiter = env.RATE_LIMITER_DO.getByName("global");
   const ipLimiter = env.RATE_LIMITER_DO.getByName(`ip:${ip}`);
-  // Free-Nutzer bekommen eine eigene DO-Instanz je (Session, Rechner) - ein
-  // ausgeschoepftes Kontingent bei "renditerechner" sperrt "finanzierung"
-  // also nicht mit. Pro bleibt bei einer Instanz pro Session (unveraendert).
-  const sessionLimiter = env.RATE_LIMITER_DO.getByName(
-    isPro ? req.sessionId : `${req.sessionId}:${req.rechner}`,
-  );
+  // Nur noch Pro braucht den Session-Zaehler (Tageslimit). Das Kontingent der
+  // Testphase liegt in D1 am Nutzer, siehe unten.
+  const sessionLimiter = env.RATE_LIMITER_DO.getByName(req.sessionId);
 
   const globalRl = await globalLimiter.checkAndIncrement(effectiveGlobalLimit);
   if (!globalRl.allowed) {
@@ -116,15 +123,25 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
     await globalLimiter.decrement();
     return c.json({ error: "rate_limit_exceeded" }, 429);
   }
-  // Eine Periode fuer den gesamten Request - sonst koennte ein Aufruf exakt
-  // auf der Monatsgrenze gegen den alten Monat pruefen und im neuen abziehen.
-  const periode = aktuellePeriode();
-  const sessionRl = isPro
-    ? await sessionLimiter.checkAndIncrement(proDailyLimit)
-    : await sessionLimiter.checkAndIncrementMonth(freeTrialLimit, periode);
-  if (!sessionRl.allowed) {
-    await Promise.all([globalLimiter.decrement(), ipLimiter.decrement()]);
-    return c.json({ error: "rate_limit_exceeded" }, 429);
+  const trialStart = zugriff.user.app_trial_started_at;
+  if (isPro) {
+    const sessionRl = await sessionLimiter.checkAndIncrement(proDailyLimit);
+    if (!sessionRl.allowed) {
+      await Promise.all([globalLimiter.decrement(), ipLimiter.decrement()]);
+      return c.json({ error: "rate_limit_exceeded" }, 429);
+    }
+  } else {
+    // Testphase: Kontingent je Rechner, in D1 am Nutzer. Geprueft wird vorher,
+    // gezaehlt erst nach einer erfolgreichen Antwort (siehe unten) - ein
+    // Modell-Fehler soll kein Kontingent kosten.
+    const verbraucht =
+      trialStart === null
+        ? TRIAL_LIMITS.finn
+        : await getTrialCount(env.DB, zugriff.user.id, trialStart, "finn", req.rechner);
+    if (verbraucht >= TRIAL_LIMITS.finn) {
+      await Promise.all([globalLimiter.decrement(), ipLimiter.decrement()]);
+      return c.json({ error: "trial_limit_reached" }, 402);
+    }
   }
 
   const systemPrompt = buildSystemPrompt(req.lang);
@@ -143,13 +160,19 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
     await Promise.all([
       globalLimiter.decrement(),
       ipLimiter.decrement(),
-      isPro ? sessionLimiter.decrement() : sessionLimiter.decrementMonth(periode),
+      isPro ? sessionLimiter.decrement() : Promise.resolve(),
     ]);
     return c.json({ error: "model_call_failed" }, 502);
   }
 
   const antwort = filterOutput(rawAnswer, req.lang);
   const tier = extractTier(req.kontext);
+
+  // Kontingent der Testphase erst nach der erfolgreichen Antwort erhoehen -
+  // gleiche Haltung wie beim Exposé-Scan weiter unten.
+  if (!isPro && trialStart !== null) {
+    await incrementTrialUsage(env.DB, zugriff.user.id, trialStart, "finn", req.rechner);
+  }
 
   const responseBody: AssistantResponse = { antwort, tier };
   return c.json(responseBody, 200);
@@ -174,24 +197,28 @@ export async function handleExposeExtract(c: Context<{ Bindings: Env }>): Promis
   }
   const req = validation.data;
 
-  const { isPro, setCookie } = await resolveIsPro(c.req.raw, env);
-  if (setCookie) c.header("Set-Cookie", setCookie, { append: true });
+  const zugriff = await resolveZugriff(c.req.raw, env);
+  if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
+  if (zugriff.zugang === "keiner") return c.json({ error: "pro_required" }, 402);
+  const isPro = zugriff.zugang === "pro";
+  const trialStart = zugriff.user.app_trial_started_at;
 
   if (!(await hasConsent(env, req.sessionId))) {
     return c.json({ error: "consent_required" }, 412);
   }
 
-  // Monatsgate fuer Free-Nutzer (4.8, 4.0a, S5-2; seit 2026-08-20 2x pro
-  // Kalendermonat statt 3x dauerhaft) - Pro hat kein Pro-Gate mehr, bleibt
-  // aber den Fair-Use-Limits unten unterworfen.
-  const exposeFreeTrialLimit =
-    parseInt(env.EXPOSE_FREE_TRIAL_LIMIT || "", 10) || DEFAULT_EXPOSE_FREE_TRIAL_LIMIT;
-  const periode = aktuellePeriode();
-  if (
-    !isPro &&
-    (await getExposeTrialCount(env.DB, req.sessionId, periode)) >= exposeFreeTrialLimit
-  ) {
-    return c.json({ error: "expose_trial_used" }, 403);
+  // Kontingent der Testphase (Migration 0025): der Scan gehoert zum OBJEKT,
+  // nicht zum Rechner - ein Exposé wird einmal gelesen und fliesst danach in
+  // jeden Rechner. Deshalb ein gemeinsames Kontingent statt eines je Rechner.
+  // Pro unterliegt nur den Fair-Use-Limits unten.
+  if (!isPro) {
+    const verbraucht =
+      trialStart === null
+        ? TRIAL_LIMITS.expose
+        : await getTrialCount(env.DB, zugriff.user.id, trialStart, "expose");
+    if (verbraucht >= TRIAL_LIMITS.expose) {
+      return c.json({ error: "trial_limit_reached" }, 402);
+    }
   }
 
   const dailyLimit = parseInt(env.EXPOSE_DAILY_LIMIT || "", 10) || 5;
@@ -252,9 +279,9 @@ export async function handleExposeExtract(c: Context<{ Bindings: Env }>): Promis
   }
 
   // Zaehler erst NACH erfolgreicher Extraktion erhoehen - ein gescheiterter
-  // Versuch soll keinen der kostenlosen Versuche verbrauchen.
-  if (!isPro) {
-    await markExposeTrialUsed(env.DB, req.sessionId, periode);
+  // Versuch soll kein Kontingent verbrauchen.
+  if (!isPro && trialStart !== null) {
+    await incrementTrialUsage(env.DB, zugriff.user.id, trialStart, "expose");
   }
 
   return c.json(ergebnis, 200);

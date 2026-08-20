@@ -202,6 +202,10 @@ export interface Env {
 
   // Auth/Session (4.5, 10.0 Bearer-Token-Vorbereitung fuer Capacitor)
   SESSION_SIGNING_SECRET?: string; // HMAC-Key fuer den Entitlement-TTL-Cache im Cookie (4.9)
+  // Turnstile-Secret der Registrierung (Schritt A der Preispolitik 2026-08-20).
+  // Liegt im Wrangler-Secret-Store, nie in wrangler.toml. Fehlt es, laesst
+  // pruefeTurnstile() durch und warnt im Log - siehe src/turnstile.ts.
+  TURNSTILE_SECRET?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   APPLE_CLIENT_ID?: string; // Services-ID, z.B. "info.immofuchs.web"
@@ -253,13 +257,11 @@ export interface Env {
   FINN_PRO_DAILY_LIMIT?: string;
   // Free-Kontingent seit 2026-08-18 kein Tageslimit mehr, sondern insgesamt
   // N Anfragen je Rechnertyp (dauerhaft, siehe SessionRateLimiter).
-  FINN_FREE_TRIAL_LIMIT?: string;
   FINN_FREE_MAX_TOKENS?: string;
   FINN_PRO_MAX_TOKENS?: string;
   FINN_FREE_GLOBAL_CUTOFF_RATIO?: string;
   // Kostenloser Exposé-Scan pro Gerät (2026-08-18: 1x -> Nx, siehe
   // getExposeTrialCount in db.ts).
-  EXPOSE_FREE_TRIAL_LIMIT?: string;
 
   // ═══ Native Push (Phase D, S7-1) — zweiter Notification-Kanal neben E-Mail ═══
   // Ohne diese Werte bleibt Push ein No-Op (kein Crash) - siehe push.ts.

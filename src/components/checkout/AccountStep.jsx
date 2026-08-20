@@ -1,4 +1,5 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { TurnstileFeld } from "./TurnstileFeld.jsx";
 import {
   AuthFooterLink,
   AuthHeading,
@@ -49,6 +50,9 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [emailTakenProviders, setEmailTakenProviders] = useState(null);
+  // Turnstile-Loesung. In einer Ref statt im State: sie fliesst nur in den
+  // Absenden-Aufruf, ein Render deswegen waere ueberfluessig.
+  const turnstileToken = useRef("");
   const [oauthOnlyProviders, setOauthOnlyProviders] = useState(null);
 
   useEffect(() => {
@@ -78,7 +82,13 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
     setBusy("register");
     setInlineError(null);
     setEmailTakenProviders(null);
-    const result = await account.registerWithPassword(regEmail, regPassword, acceptedTerms, regName);
+    const result = await account.registerWithPassword(
+      regEmail,
+      regPassword,
+      acceptedTerms,
+      regName,
+      turnstileToken.current,
+    );
     setBusy(null);
     if (!result.ok) {
       if (result.error === "email_taken") {
@@ -186,6 +196,10 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
               .
             </span>
           </label>
+          {/* Turnstile sitzt zwischen Zustimmung und Absenden: der Nutzer
+              soll die Pruefung sehen, bevor er klickt, nicht danach eine
+              Fehlermeldung bekommen. Meist laeuft sie unsichtbar durch. */}
+          <TurnstileFeld onToken={(token) => (turnstileToken.current = token || "")} />
           <button type="submit" disabled={busy === "register"} style={primaryBtnStyle}>
             {t.registerSubmit}
           </button>

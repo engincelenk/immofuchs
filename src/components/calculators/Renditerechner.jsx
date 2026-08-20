@@ -1436,7 +1436,7 @@ export default function Haupt() {
               })()}
 
               <SaveBtn tab="haupt" />
-              <ExportPDF title={t.hauptFull || t.haupt} />
+              <ExportPDF title={t.hauptFull || t.haupt} rechner="renditerechner" />
               <Legal items={LEG.rendite} />
             </>
           )}

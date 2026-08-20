@@ -690,7 +690,7 @@ export function Vorfaelligkeit() {
                 {vt.disclaimer}
               </div>
               <SaveBtn tab="vfe" />
-              <ExportPDF title={t.vfeFull || t.vfe} />
+              <ExportPDF title={t.vfeFull || t.vfe} rechner="vorfaelligkeit" />
             </>
           )}
         </div>

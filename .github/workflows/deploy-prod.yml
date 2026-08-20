@@ -27,6 +27,10 @@ jobs:
           # Prod-Worker immofuchs-assistant wie qa - siehe worker/wrangler.toml,
           # immofuchs.info ist in ALLOWED_ORIGIN.
           VITE_ASSISTANT_URL: https://immofuchs-assistant.engincelenk.workers.dev/api/assistant
+          # Turnstile-Site-Key der Registrierung (Preispolitik 2026-08-20):
+          # oeffentlich wie der Paddle-Client-Token - das Geheimnis ist allein
+          # TURNSTILE_SECRET im Worker-Secret-Store.
+          VITE_TURNSTILE_SITE_KEY: 0x4AAAAAAEW18bBEyl_o5nTS
         run: |
           npm ci
           npm run build
