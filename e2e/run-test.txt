@@ -1,1 +1,2 @@
-powershell -File browser-e2e\run.ps1
+cd C:\Projects\ImmofuchsPRO
+powershell -File run-all-tests.ps1

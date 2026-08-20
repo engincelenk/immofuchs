@@ -118,13 +118,19 @@ describe.skipIf(!adminSessionId)("Admin-Lifecycle (E2E_SESSION_ADMIN)", () => {
       expect(body.users.some((u: { id: string }) => u.id === userId)).toBe(true);
     });
 
+    // Antwort seit 1.20.30 (testEmailRedirectTo-Feature, siehe
+    // release-notes.txt) um `testEmailRedirectTo` erweitert - liefert hier
+    // `null`, weil der Nutzer ohne dieses Feld angelegt wurde (siehe "POST
+    // /users legt den Wegwerf-Nutzer an" oben) und dieser Aufruf es nicht
+    // mitschickt. Alter Response-Shape ohne dieses Feld war vor 1.20.30
+    // korrekt, ist es seither nicht mehr - kein Test-Tooling-Bug.
     it("POST /users/:id/flags setzt isTestUser=true", async () => {
       const res = await apiFetch(sessionId, `/api/v1/admin/users/${userId}/flags`, {
         method: "POST",
         body: JSON.stringify({ isTestUser: true }),
       });
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true, isTestUser: true });
+      expect(await res.json()).toEqual({ ok: true, isTestUser: true, testEmailRedirectTo: null });
     });
 
     it("POST /users/:id/notes fuegt eine Support-Notiz hinzu", async () => {
