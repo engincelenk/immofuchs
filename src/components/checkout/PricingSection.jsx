@@ -28,11 +28,24 @@ import {
 // im Rumpf der Landingpage, und dort gibt es den AppContext nicht - er umgibt
 // nur die Dialoge (siehe landingCtxValue in Landing.jsx). Ein useApp() an
 // dieser Stelle wuerde beim Rendern der Seite abstuerzen.
-const FEATURES = [
-  ["compareRowRechner", "compareRowRechnerPro"],
-  ["compareRowExpose", "compareRowExposePro"],
-  ["compareRowFinn", "compareRowFinnPro"],
-  ["compareRowMerkliste", "compareRowMerklistePro"],
+// Free/Pro-Vergleich (Preispolitik 2026-08-20). Frueher standen dieselben
+// Angaben als Aufzaehlung in beiden Pro-Kacheln - ohne Free-Spalte war daran
+// aber nicht ablesbar, was das Abo gegenueber der Gratis-Nutzung bringt.
+// Jetzt eine gemeinsame Tabelle unter den Kacheln, die Kacheln tragen nur
+// noch Preis und CTA.
+//
+// [Zeilen-Label, Free-Wert, Pro-Wert] - Strings sind i18n-Schluessel,
+// Booleans werden als Haken/Kreuz gezeichnet. Die Zahlen in den Free-Werten
+// spiegeln die serverseitigen Kontingente (worker/src/routes/assistant.ts,
+// useCalculatorTrial.js, Merkliste.jsx) - aendern sich die dort, muessen die
+// Sprachdateien mitgezogen werden.
+const COMPARE_ROWS = [
+  ["compareRowRechner", "compareRowRechnerFree", "compareRowRechnerPro"],
+  ["compareRowFinn", "compareRowFinnFree", "compareRowFinnPro"],
+  ["compareRowExpose", "compareRowExposeFree", "compareRowExposePro"],
+  ["compareRowHandout", false, true],
+  ["compareRowPdf", false, true],
+  ["compareRowMerkliste", "compareRowMerklisteFree", "compareRowMerklistePro"],
 ];
 
 export function PricingSection({ lang, onChoosePlan }) {
@@ -43,11 +56,6 @@ export function PricingSection({ lang, onChoosePlan }) {
   const yearlyNote = t.planYearlyNote
     .replace("{total}", formatMoney(PLAN_AMOUNTS.yearly, locale))
     .replace("{perMonth}", formatMoney(YEARLY_PER_MONTH_AMOUNT, locale));
-  const proFeatures = FEATURES.map(([labelKey, proKey]) => ({
-    label: t[labelKey],
-    value: t[proKey],
-  }));
-
   return (
     <section
       id="preise"
@@ -112,7 +120,6 @@ export function PricingSection({ lang, onChoosePlan }) {
             trialBadge={t.pricingTrialBadge}
             ctaLabel={t.planProCta}
             onCta={() => onChoosePlan("monthly")}
-            features={proFeatures}
           />
           <PlanCard
             highlighted
@@ -126,9 +133,10 @@ export function PricingSection({ lang, onChoosePlan }) {
             trialBadge={t.pricingTrialBadge}
             ctaLabel={t.planProCta}
             onCta={() => onChoosePlan("yearly")}
-            features={proFeatures}
           />
         </div>
+
+        <ComparisonTable t={t} locale={locale} />
       </div>
     </section>
   );
@@ -145,7 +153,6 @@ function PlanCard({
   trialBadge,
   ctaLabel,
   onCta,
-  features,
   highlighted,
 }) {
   return (
@@ -205,32 +212,87 @@ function PlanCard({
       {trialBadge && (
         <div style={{ ...saveBadgeStyle, marginTop: 10, alignSelf: "flex-start" }}>{trialBadge}</div>
       )}
-
-      <ul
-        style={{
-          listStyle: "none",
-          padding: 0,
-          margin: "18px 0 0",
-          borderTop: "1px solid var(--cb)",
-          paddingTop: 16,
-          display: "flex",
-          flexDirection: "column",
-          gap: 9,
-        }}
-      >
-        {features.map((feature) => (
-          <li key={feature.label} style={{ display: "flex", gap: 9, fontSize: 12.5, lineHeight: 1.45 }}>
-            <span aria-hidden="true" style={{ color: highlighted ? "var(--ca)" : "var(--ch)", flexShrink: 0 }}>
-              {highlighted ? "✓" : "·"}
-            </span>
-            <span>
-              <strong>{feature.label}:</strong>{" "}
-              <span style={{ color: "var(--cl)" }}>{feature.value}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
 
+// Zwei Wertspalten (Free/Pro) statt der frueheren Pro-Aufzaehlung. Als echte
+// <table>, damit Screenreader Zeile und Spalte zusammenbringen; der Wrapper
+// scrollt horizontal, falls eine lange Uebersetzung die drei Spalten auf
+// schmalen Geraeten sprengt.
+function ComparisonTable({ t, locale }) {
+  const zeilen = [
+    { label: t.compareRowMonthly, free: t.comparePriceFree, pro: formatMoney(PLAN_AMOUNTS.monthly, locale) },
+    { label: t.compareRowYearly, free: t.comparePriceFree, pro: formatMoney(PLAN_AMOUNTS.yearly, locale) },
+    ...COMPARE_ROWS.map(([labelKey, freeWert, proWert]) => ({
+      label: t[labelKey],
+      free: typeof freeWert === "string" ? t[freeWert] : freeWert,
+      pro: typeof proWert === "string" ? t[proWert] : proWert,
+    })),
+  ];
+
+  return (
+    <div style={{ maxWidth: 640, margin: "26px auto 0", overflowX: "auto" }}>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          background: "var(--cc)",
+          border: "1px solid var(--cb)",
+          borderRadius: 14,
+          overflow: "hidden",
+          fontSize: 13,
+        }}
+      >
+        <thead>
+          <tr>
+            <th style={{ ...zellStil, textAlign: "left", fontWeight: 800, color: "var(--ct)" }}>
+              ImmoFuchs
+            </th>
+            <th style={{ ...zellStil, fontWeight: 700, color: "var(--ch)" }}>{t.compareColFree}</th>
+            <th style={{ ...zellStil, ...proSpaltenStil, fontWeight: 800, color: "var(--ca-dk)" }}>
+              {t.compareColPro}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {zeilen.map((zeile) => (
+            <tr key={zeile.label} style={{ borderTop: "1px solid var(--cb)" }}>
+              <th
+                scope="row"
+                style={{ ...zellStil, textAlign: "left", fontWeight: 600, color: "var(--cl)" }}
+              >
+                {zeile.label}
+              </th>
+              <td style={{ ...zellStil, color: "var(--ch)" }}>{markiere(zeile.free, t)}</td>
+              <td style={{ ...zellStil, ...proSpaltenStil, fontWeight: 700, color: "var(--ct)" }}>
+                {markiere(zeile.pro, t)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const zellStil = { padding: "11px 14px", textAlign: "right", whiteSpace: "nowrap" };
+// Pro-Spalte leicht getoent - macht auf einen Blick klar, welche der beiden
+// Wertspalten das Abo ist, ohne eine zweite Rahmenfarbe einzufuehren.
+const proSpaltenStil = { background: "var(--ca-bg)" };
+
+// Booleans werden zum Symbol, Strings bleiben Text. aria-label statt eines
+// nackten Zeichens: "✓" liest ein Screenreader je nach Stimme gar nicht
+// oder als "Haken" vor, ohne zu sagen, was gemeint ist.
+function markiere(wert, t) {
+  if (typeof wert !== "boolean") return wert;
+  return (
+    <span
+      role="img"
+      aria-label={wert ? t.compareYes : t.compareNo}
+      style={{ color: wert ? "var(--ca)" : "var(--ch)", fontSize: 15 }}
+    >
+      {wert ? "✓" : "✕"}
+    </span>
+  );
+}

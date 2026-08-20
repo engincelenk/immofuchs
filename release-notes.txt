@@ -1,3 +1,60 @@
+## 2026-08-20 (1.20.37)
+
+### Neue Preispolitik, Teil 1: Preise, Merkliste, Free/Pro-Vergleich
+
+Nutzer-Vorgabe 2026-08-20 (Vergleichstabelle als Vorlage). Umsetzung in drei
+Schritten - das hier ist Schritt 1 (Anzeige und lokale Limits). Schritt 2
+(monatliche Kontingente statt dauerhafter) und Schritt 3 (Handout und
+PDF-Erzeugung serverseitig Pro-only) folgen separat.
+
+**1. Preise 4,99 -> 6,99 EUR/Monat und 49,99 -> 59,99 EUR/Jahr**
+
+`planPricing.js` traegt die Zahlen, alles andere leitet sich daraus ab: der
+Streichpreis steigt auf 83,88 EUR (12 Monatspreise), die Ersparnis des
+Jahresplans auf 28 % (vorher 17 %), der rechnerische Monatspreis auf
+5,00 EUR. Die Preis-Strings in `i18n/account.js` sind in allen fuenf
+Sprachen nachgezogen, ebenso das Jahres-Badge. `planPricing.test.js` nagelt
+die abgeleiteten Werte weiterhin fest.
+
+Paddle bleibt die verbindliche Quelle des abgerechneten Betrags - die neuen
+Preise werden dort manuell gesetzt. Solange das nicht geschehen ist, zeigt
+die App einen anderen Betrag an als die Kasse abrechnet.
+
+**2. Merkliste: 3 Objekte gesamt statt 1 je Rechner (`Merkliste.jsx`)**
+
+Das Free-Kontingent galt seit 2026-08-18 je Rechnertyp (1 Objekt x 4
+Rechner mit Merkliste-Unterstuetzung = bis zu 4 Objekte). Jetzt wieder ein
+rechneruebergreifendes Gesamtlimit von 3. Ein neuer Speicherstand verdraengt
+damit den insgesamt aeltesten Eintrag statt des aeltesten desselben
+Rechners; der Speichern-Button zeigt den Upgrade-Hinweis, sobald drei
+Objekte liegen, unabhaengig davon, aus welchem Rechner sie stammen.
+
+Nebeneffekt: der Hinweis im Konto ("Free: {limit} Objekte") stand vorher auf
+"1 Objekte" und passt jetzt wieder zum FAQ-Text, der schon immer von drei
+gespeicherten Objekten sprach.
+
+**3. Free/Pro-Vergleichstabelle auf der Landingpage (`PricingSection.jsx`)**
+
+Die Preis-Sektion zeigte dieselbe Pro-Aufzaehlung zweimal - einmal je
+Kachel - und keine Free-Spalte; woran man den Unterschied zum Gratis-Konto
+ablesen sollte, stand nirgends. Die Aufzaehlung ist aus den Kacheln raus
+(die tragen jetzt nur noch Preis und Kaufen-Knopf), darunter steht eine
+gemeinsame Tabelle mit zwei Wertspalten und acht Zeilen: Monatlich,
+Jaehrlich, 6 Rechner, Finn KI, Exposé-Scan mit KI, Besichtigungs-Handout,
+PDF-Generierung, Merkliste/Objekte.
+
+Echte `<table>` mit `scope="row"`, die Haken/Kreuz-Zeilen tragen ein
+`aria-label` statt eines nackten Zeichens. Die Pro-Spalte ist mit `--ca-bg`
+leicht getoent; keine neuen Farben. Neue i18n-Schluessel in allen fuenf
+Sprachen (`account.test.js` prueft die Deckungsgleichheit).
+
+**Noch nicht durchgesetzt:** Die Tabelle nennt bereits die Ziel-Kontingente
+(Finn 5/Monat, Exposé 2/Monat, Rechner 3/Monat) und Handout/PDF als
+Pro-Funktionen. Serverseitig gelten bis Schritt 2 bzw. 3 weiterhin die
+alten Werte (Finn 3x und Exposé 3x dauerhaft statt monatlich) und
+Handout/PDF sind fuer alle nutzbar. Vor einem Prod-Deploy sollten die
+Schritte 2 und 3 stehen.
+
 ## 2026-08-20 (1.20.36)
 
 ### Nacharbeit zu 1.20.35: Zustimmungs-Zwischenschritt weg, Logo zu klein

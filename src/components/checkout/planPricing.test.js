@@ -14,16 +14,16 @@ import {
 
 describe("abgeleitete Plan-Preise", () => {
   it("nimmt als Jahres-Listenpreis zwoelf Monatspreise", () => {
-    expect(YEARLY_LIST_AMOUNT).toBeCloseTo(59.88, 2);
+    expect(YEARLY_LIST_AMOUNT).toBeCloseTo(83.88, 2);
   });
 
-  it("weist dieselbe Ersparnis aus wie das Jahres-Badge (17 %)", () => {
-    expect(YEARLY_SAVINGS_PERCENT).toBe(17);
+  it("weist dieselbe Ersparnis aus wie das Jahres-Badge (28 %)", () => {
+    expect(YEARLY_SAVINGS_PERCENT).toBe(28);
   });
 
   it("rechnet den Jahresplan auf einen Monatspreis herunter", () => {
-    expect(YEARLY_PER_MONTH_AMOUNT).toBeCloseTo(4.1658, 3);
-    expect(formatMoney(YEARLY_PER_MONTH_AMOUNT, "de-DE")).toBe("4,17 €");
+    expect(YEARLY_PER_MONTH_AMOUNT).toBeCloseTo(4.9992, 3);
+    expect(formatMoney(YEARLY_PER_MONTH_AMOUNT, "de-DE")).toBe("5,00 €");
   });
 
   it("haelt den Jahrespreis unter dem Listenpreis", () => {
@@ -35,15 +35,15 @@ describe("Betraege aus Paddles Checkout-Events", () => {
   const jahr = PLAN_AMOUNTS.yearly;
 
   it("nimmt Dezimalwerte unveraendert", () => {
-    expect(normalizePaddleCheckoutAmount("49.99", jahr)).toBeCloseTo(49.99, 2);
+    expect(normalizePaddleCheckoutAmount("59.99", jahr)).toBeCloseTo(59.99, 2);
   });
 
   it("erkennt Cent-Werte an der Groessenordnung und rechnet sie um", () => {
-    expect(normalizePaddleCheckoutAmount("4999", jahr)).toBeCloseTo(49.99, 2);
+    expect(normalizePaddleCheckoutAmount("5999", jahr)).toBeCloseTo(59.99, 2);
   });
 
   it("laesst Steueraufschlaege bis 50 Prozent durch", () => {
-    expect(normalizePaddleCheckoutAmount("59.49", jahr)).toBeCloseTo(59.49, 2);
+    expect(normalizePaddleCheckoutAmount("71.39", jahr)).toBeCloseTo(71.39, 2);
   });
 
   it("akzeptiert rabattierte Betraege bis hinunter zu null", () => {
@@ -61,6 +61,6 @@ describe("Betraege aus Paddles Checkout-Events", () => {
     expect(normalizePaddleCheckoutAmount(undefined, jahr)).toBeNull();
     expect(normalizePaddleCheckoutAmount("abc", jahr)).toBeNull();
     expect(normalizePaddleCheckoutAmount("-5", jahr)).toBeNull();
-    expect(normalizePaddleCheckoutAmount("49.99", 0)).toBeNull();
+    expect(normalizePaddleCheckoutAmount("59.99", 0)).toBeNull();
   });
 });
