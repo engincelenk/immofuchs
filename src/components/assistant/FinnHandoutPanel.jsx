@@ -10,11 +10,17 @@
 // Findings geloest, nicht als Badge je Zeile: automatisiert erkannt ist hier
 // *alles*, eine Wiederholung an jeder Zeile wuerde nur abstumpfen.
 
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { fmtE, fmt } from "../../utils/helpers.js";
 import { fuelle } from "../../i18n/expose.js";
-import { erzeugeHandoutPdf } from "../../utils/finnHandoutPdf.js";
+import { oeffneDruckdokument } from "../../utils/druckdokument.js";
+import { useAccountCtx } from "../../context/AccountContext.jsx";
+import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
 import { exposeSchluessel, ladeAuswahl, speichereAuswahl } from "../../utils/finnAuswahl.js";
+
+const CheckoutWizard = lazy(() =>
+  import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+);
 
 // Die Auswahl ueberlebt Reload und erneuten Upload desselben Exposes
 // (finnAuswahl.js). Beim ersten Mal greift die Vorauswahl aus dem
@@ -32,10 +38,37 @@ function useAuswahl(analyse) {
   return [auswahl, setzen];
 }
 
-export function FinnHandoutPanel({ analyse, t }) {
+export function FinnHandoutPanel({ analyse, t, lang = "de" }) {
   const [offen, setOffen] = useState(false);
   const [auswahl, setAuswahl] = useAuswahl(analyse);
+  const [zeigeUpgrade, setZeigeUpgrade] = useState(false);
+  const [fehler, setFehler] = useState(null);
+  const account = useAccountCtx();
   const h = t.handout;
+
+  // Das Handout ist seit der Preispolitik 2026-08-20 eine Pro-Funktion. Das
+  // Dokument baut der Worker hinter requirePro (worker/src/routes/export.ts) -
+  // ohne Abo kommt eine 402 zurueck, hier fuehrt der Knopf dann in den
+  // Kauf-Assistenten statt in eine Fehlermeldung.
+  const handoutOeffnen = async () => {
+    if (!account?.isPro) {
+      setZeigeUpgrade(true);
+      return;
+    }
+    setFehler(null);
+    const ergebnis = await oeffneDruckdokument(
+      "/export/handout",
+      { analyse, auswahl: [...auswahl], labels: h, lang },
+      "Finn_Handout",
+    );
+    if (!ergebnis.ok) {
+      if (ergebnis.fehler === "pro_noetig" || ergebnis.fehler === "login_noetig") {
+        setZeigeUpgrade(true);
+        return;
+      }
+      setFehler(t.fehlerDienst);
+    }
+  };
 
   // Vor-Ort-Fragen stehen im Handout unten als eigener Block: sie sind beim
   // Termin abzuhaken, nicht dem Makler zu stellen (Fragenkatalog, Abschnitt 11).
@@ -206,11 +239,17 @@ export function FinnHandoutPanel({ analyse, t }) {
             type="button"
             className="if-hnd-pdf"
             disabled={auswahl.size === 0}
-            onClick={() => erzeugeHandoutPdf(analyse, auswahl, t)}
+            onClick={handoutOeffnen}
           >
-            {auswahl.size === 0 ? h.pdfLeer : h.pdfBtn}
+            {auswahl.size === 0 ? h.pdfLeer : `${account?.isPro ? "" : "👑 "}${h.pdfBtn}`}
           </button>
+          {fehler && <div className="if-hnd-fehler">{fehler}</div>}
         </div>
+      )}
+      {zeigeUpgrade && (
+        <Suspense fallback={<LazyPanelFallback />}>
+          <CheckoutWizard onClose={() => setZeigeUpgrade(false)} />
+        </Suspense>
       )}
     </div>
   );

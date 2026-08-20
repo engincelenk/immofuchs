@@ -1,3 +1,97 @@
+## 2026-08-20 (1.20.38)
+
+### Neue Preispolitik, Teil 2+3: Monatskontingente, Handout und PDF nur mit Pro
+
+Abschluss der Umstellung aus 1.20.37. Die Vergleichstabelle dort nannte
+bereits die Zielwerte - ab jetzt gelten sie auch serverseitig.
+
+**1. Free-Kontingente laufen je Kalendermonat (Migration 0024)**
+
+Bis hierher waren alle drei Gratis-Kontingente dauerhaft: einmal verbraucht,
+nie wieder. Neu sind es Monatskontingente - Rechner 3/Monat je Rechner,
+Finn 5/Monat je Rechner (vorher 3x dauerhaft), Exposé 2/Monat je Gerät
+(vorher 3x dauerhaft).
+
+Umgesetzt als Periodenschluessel ("2026-08", worker/src/periode.ts), nicht
+als Cron: jeder Zaehler traegt die Periode, in der er gefuellt wurde, und
+wird beim ersten Zugriff einer neuen Periode auf 0 gesetzt. Kein
+Hintergrundjob ueber alle Zeilen, und kein Zeitfenster, in dem ein noch
+nicht zurueckgesetzter Zaehler faelschlich sperrt. Kalendermonat statt
+rollierender 30 Tage, weil genau das in der Preistabelle steht.
+
+Betroffen: calculator_trial_usage und expose_trial_used bekommen eine
+period-Spalte (Migration 0024, DEFAULT '' - bestehende Zeilen gelten als
+abgelaufen, niemand verliert durch die Umstellung ein Kontingent). Der
+Finn-Zaehler im Durable Object wechselt von checkAndIncrementLifetime auf
+checkAndIncrementMonth; der alte "lifetime"-Key wird nicht mehr gelesen.
+
+Die Texte sind mitgezogen: "3 kostenlose Berechnungen fuer diesen Rechner"
+heisst jetzt "... in diesem Monat", und die Limit-Meldungen von Finn und
+Exposé sagten seit 2026-08-18 faelschlich "morgen wieder" (das galt nur
+zur Zeit der Tageslimits) - jetzt "bei Free am Monatsersten, bei Pro
+morgen". Alle fuenf Sprachen.
+
+**2. Besichtigungs-Handout und PDF-Erzeugung sind Pro-Funktionen**
+
+Beide Dokumente entstanden vollstaendig im Browser (finnHandoutPdf.js,
+ExportPDF.jsx). Eine Sperre haette dort nur den Knopf versteckt - deshalb
+liegt die VORLAGE jetzt im Worker hinter requireAuth + requirePro
+(worker/src/export/, POST /api/v1/export/handout und /rechner). Ohne
+aktives Abo antwortet die Route mit 402, und es gibt kein Dokument; der
+Knopf fuehrt dann in den Kauf-Assistenten.
+
+Antwort ist JSON ({ html }), nicht text/html: der Client schreibt den
+Inhalt in sein Druckfenster, niemand navigiert direkt auf die Route - als
+text/html waere das eine Route, die auf eigener Herkunft ein vom Aufrufer
+bestimmtes Dokument ausliefert.
+
+Handout: Vorlage 1:1 portiert, Layout unveraendert. Analyse und
+Beschriftungen kommen weiter aus dem Client (die Analyse entsteht dort,
+die Labels stehen in i18n/expose.js) - alles davon wird im Worker maskiert
+und in der Laenge begrenzt. finnHandoutPdf.js ist entfallen, seine Tests
+sind als worker/src/export/handoutDokument.test.ts uebernommen.
+
+Rechner-PDF: Kopfleiste, Druck-CSS und Fusszeile kommen jetzt vom Server,
+der gerenderte Ergebnisbereich weiterhin aus dem DOM der Seite - er steht
+ohnehin auf dem Bildschirm, und Strg+P druckt jede sichtbare Seite. Was
+serverseitig durchsetzbar ist, ist damit die FUNKTION (Export als
+gestaltetes Dokument), nicht die Kenntnis der Zahlen. Der gelieferte
+Inhalt wird entschaerft (script/iframe/Event-Handler/javascript:), bevor
+er ins Dokument geht.
+
+Ein vollstaendig serverseitig gerendertes Ergebnis - der Worker rechnet aus
+den Eingaben neu und besitzt auch das Layout - waere die naechste Stufe.
+Das sind sechs Ergebnis-Layouts inklusive Diagramme und gehoert in ein
+eigenes Vorhaben.
+
+**3. Nachtrag zu 1.20.37: die Preise standen auch im Worker**
+
+Beim Durchgehen der Tabelle aufgefallen: 1.20.37 hat nur die Anzeige im
+Frontend umgestellt. Der Worker trug die alten Betraege an fuenf weiteren
+Stellen - Admin-Dashboard (MRR-Hochrechnung), Paddle-Webhook
+("Zahlung erfolgreich"), Renewal-Erinnerung, Trial-Ende-Erinnerung und der
+Rueckfallwert im E-Mail-Text. Kunden haetten also 6,99/59,99 auf der Seite
+gesehen und 4,99/49,99 in der Mail.
+
+Alle fuenf laufen jetzt ueber src/preise.ts. Der bisherige Kommentar in
+db.ts ("zwei Zahlen an zwei Stellen, eine eigene Datei nicht wert") hat sich
+bei der ersten echten Preisaenderung als falsch erwiesen - es waren fuenf.
+
+Offen und bewusst nicht geloest: die Erinnerungsmails nennen immer den
+LISTENpreis. Wer ein Altabo zu 4,99/49,99 behaelt, bekaeme dort den neuen
+Betrag genannt. Die Tabelle subscriptions speichert keinen Betrag; ihn zur
+Cron-Laufzeit bei Paddle nachzuschlagen waere ein eigener Umbau. Solange
+Altabos in Paddle mit umgestellt werden, stimmt die Anzeige.
+
+**4. Ehrlichkeit der Aussenwirkung**
+
+Der Landing-USP versprach "Alle Ergebnisse als PDF speicherbar" - jetzt
+"Mit Pro alle Ergebnisse als PDF speicherbar", in allen fuenf Sprachen.
+
+**Deploy-Reihenfolge:** Migration 0024 muss VOR dem Worker laufen
+(npm run db:migrate:dev im Ordner worker), sonst laufen die Zaehler-Queries
+gegen eine Tabelle ohne period-Spalte. Frontend danach.
+
 ## 2026-08-20 (1.20.37)
 
 ### Neue Preispolitik, Teil 1: Preise, Merkliste, Free/Pro-Vergleich

@@ -180,6 +180,7 @@ export const ASSISTANT_SHEET_CSS = `
   .if-hnd-pdf{flex:none;width:100%;background:var(--ca);color:#fff;border:none;border-radius:12px;padding:11px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;min-height:44px}
   .if-hnd-pdf:disabled{opacity:.5;cursor:default}
   .if-hnd-pdf:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
+  .if-hnd-fehler{flex:none;font-size:11.5px;line-height:1.4;color:var(--ca-dk)}
   .if-hnd-merken{font-size:10.5px;color:var(--ch);text-align:center;margin-top:6px;line-height:1.45}
 
   @media (prefers-reduced-motion: reduce){

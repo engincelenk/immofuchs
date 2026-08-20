@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { analysiereExpose } from "./finnAnalyse.js";
-import { erzeugeHandoutPdf } from "./finnHandoutPdf.js";
 import { exposeSchluessel, ladeAuswahl, speichereAuswahl } from "./finnAuswahl.js";
 import { INGERSHEIM, MURR } from "./finnFixtures.js";
 import { EXPOSE_T, loeseTextKey, handoutAnsage } from "../i18n/expose.js";
+
+// Die Tests des Handout-DOKUMENTS liegen seit der Preispolitik 2026-08-20
+// nicht mehr hier: das Dokument baut der Worker hinter requirePro, die
+// Vorlage und ihre Tests stehen in worker/src/export/handoutDokument*.ts.
+// Hier bleibt, was clientseitig geblieben ist - Auswahl, Ansagen, i18n.
 
 const t = EXPOSE_T.de;
 const SPRACHEN = ["de", "en", "tr", "zh", "hi"];
@@ -70,111 +74,6 @@ describe("Auswahl-Persistenz", () => {
     expect(exposeSchluessel(null)).toBeNull();
     expect(ladeAuswahl(null)).toBeNull();
     expect(() => speichereAuswahl(null, new Set(["1.1"]))).not.toThrow();
-  });
-});
-
-describe("PDF-Handout", () => {
-  let geschrieben;
-  let openAufgerufen;
-
-  beforeEach(() => {
-    stubStorage();
-    geschrieben = "";
-    openAufgerufen = false;
-    vi.stubGlobal("window", {
-      open: () => {
-        openAufgerufen = true;
-        return {
-          document: {
-            open: () => {},
-            write: (html) => {
-              geschrieben += html;
-            },
-            close: () => {},
-          },
-        };
-      },
-    });
-    // Ohne Logo-Fetch: der Abruf faellt sauber auf "nur Schriftzug" zurueck.
-    vi.stubGlobal("fetch", () => Promise.reject(new Error("kein Netz im Test")));
-  });
-
-  afterEach(() => vi.unstubAllGlobals());
-
-  async function bauePdf(fixture, auswahl) {
-    const analyse = analysiereExpose(fixture);
-    await erzeugeHandoutPdf(analyse, auswahl ?? new Set(analyse.vorauswahl), t);
-    return { analyse, html: geschrieben };
-  }
-
-  it("traegt den GR-01-Hinweis und den Disclaimer im Footer", async () => {
-    const { html } = await bauePdf(INGERSHEIM);
-    expect(html).toContain(t.handout.automatisiert);
-    expect(html).toContain("Keine Rechts- oder Anlageberatung");
-    expect(html).toContain("Erstellt mit Finn · immofuchs.info");
-  });
-
-  it("zeigt dieselben Zahlen wie das Panel", async () => {
-    const { analyse, html } = await bauePdf(INGERSHEIM);
-    // 4.156 EUR/m2 real, 214.000 EUR all-in - nicht die handgerundeten
-    // Prototyp-Werte 4.157 / 4.471.
-    expect(html).toContain("4.156 €");
-    expect(html).toContain("214.000 €");
-    expect(html).not.toContain("4.157 €");
-    expect(analyse.preistabelle.some((z) => z.real === "4.156 €")).toBe(true);
-  });
-
-  it("nimmt nur die ausgewaehlten Fragen auf", async () => {
-    const analyse = analysiereExpose(MURR);
-    await erzeugeHandoutPdf(analyse, new Set(["5.1"]), t);
-    const nichtGewaehlt = analyse.checkliste.find((c) => c.id === "5.2");
-    expect(geschrieben).toContain("Instandhaltungsrücklage der gesamten");
-    expect(geschrieben).not.toContain(nichtGewaehlt.frage);
-  });
-
-  it("maskiert spitze Klammern aus dem Expose-Text", async () => {
-    const boesartig = {
-      ...INGERSHEIM,
-      objekt: { ...INGERSHEIM.objekt, strasse: "<script>alert(1)</script>" },
-    };
-    const analyse = analysiereExpose(boesartig);
-    await erzeugeHandoutPdf(analyse, new Set(analyse.vorauswahl), t);
-    expect(geschrieben).not.toContain("<script>alert(1)</script>");
-    expect(geschrieben).toContain("&lt;script&gt;");
-  });
-
-  it("oeffnet das Druckfenster VOR dem ersten await", async () => {
-    // iOS Safari blockt window.open, sobald ein await dazwischenliegt - das
-    // Logo wird deshalb erst nach dem Oeffnen geladen. Hier bewusst nicht
-    // awaiten: der Aufruf muss schon vor dem ersten Microtask erfolgt sein.
-    const analyse = analysiereExpose(INGERSHEIM);
-    const lauf = erzeugeHandoutPdf(analyse, new Set(analyse.vorauswahl), t);
-    expect(openAufgerufen).toBe(true);
-    expect(geschrieben).toBe("");
-    await lauf;
-    expect(geschrieben).not.toBe("");
-  });
-
-  it("bindet das Logo als data-URI ein, wenn es abrufbar ist", async () => {
-    vi.stubGlobal("fetch", () =>
-      Promise.resolve({ ok: true, blob: () => Promise.resolve("blob-stub") }),
-    );
-    vi.stubGlobal(
-      "FileReader",
-      class {
-        readAsDataURL() {
-          this.onload({ target: { result: "data:image/png;base64,STUB" } });
-        }
-      },
-    );
-    const { html } = await bauePdf(INGERSHEIM);
-    expect(html).toContain('<img src="data:image/png;base64,STUB"');
-  });
-
-  it("faellt ohne Logo auf den Schriftzug zurueck, statt zu scheitern", async () => {
-    const { html } = await bauePdf(INGERSHEIM);
-    expect(html).not.toContain("<img src=");
-    expect(html).toContain("immo<span");
   });
 });
 

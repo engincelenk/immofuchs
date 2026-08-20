@@ -3070,7 +3070,7 @@ export const TL = {
     usp5P:
       "Alle Berechnungen laufen im Browser. Keine Server, kein Tracking, keine Werbung.",
     usp6H: "5 Sprachen · PDF-Export",
-    usp6P: "DE, EN, TR, ZH, HI verfügbar. Alle Ergebnisse als PDF speicherbar.",
+    usp6P: "DE, EN, TR, ZH, HI verfügbar. Mit Pro alle Ergebnisse als PDF speicherbar.",
     uspAiH: "Persönlicher KI-Assistent",
     uspAiP:
       "Finn beantwortet deine Fragen zu Rendite, Finanzierung und Recht — direkt auf der Seite, jederzeit erreichbar.",
@@ -3284,7 +3284,7 @@ export const TL = {
     usp5H: "100 % private",
     usp5P: "All calculations run in the browser. No server, no tracking, no ads.",
     usp6H: "5 languages · PDF export",
-    usp6P: "DE, EN, TR, ZH, HI available. All results saveable as PDF.",
+    usp6P: "DE, EN, TR, ZH, HI available. With Pro, all results saveable as PDF.",
     uspAiH: "Personal AI assistant",
     uspAiP:
       "Finn answers your questions on yield, financing and law — right on the page, always available.",
@@ -3495,7 +3495,7 @@ export const TL = {
     usp5H: "%100 özel",
     usp5P: "Tüm hesaplamalar tarayıcıda çalışır. Sunucu, takip veya reklam yok.",
     usp6H: "5 dil · PDF dışa aktarma",
-    usp6P: "DE, EN, TR, ZH, HI mevcut. Tüm sonuçlar PDF olarak kaydedilebilir.",
+    usp6P: "DE, EN, TR, ZH, HI mevcut. Pro ile tüm sonuçlar PDF olarak kaydedilebilir.",
     uspAiH: "Kişisel yapay zeka asistanı",
     uspAiP:
       "Finn; getiri, finansman ve hukukla ilgili sorularını sayfada, her zaman hazır şekilde yanıtlar.",
@@ -3695,7 +3695,7 @@ export const TL = {
     usp5H: "100% 私密",
     usp5P: "所有计算仅在浏览器中运行。没有服务器、跟踪或广告。",
     usp6H: "5种语言 · PDF导出",
-    usp6P: "提供DE、EN、TR、ZH、HI。所有结果可保存为PDF。",
+    usp6P: "提供DE、EN、TR、ZH、HI。Pro 版可将所有结果保存为PDF。",
     uspAiH: "专属AI助手",
     uspAiP: "Finn随时在页面上解答您关于收益、融资和法律的问题。",
     badgeNeu: "新",
@@ -3898,7 +3898,7 @@ export const TL = {
     usp5H: "100% निजी",
     usp5P: "सभी गणनाएं ब्राउज़र में चलती हैं। कोई सर्वर, ट्रैकिंग या विज्ञापन नहीं।",
     usp6H: "5 भाषाएं · PDF निर्यात",
-    usp6P: "DE, EN, TR, ZH, HI उपलब्ध। सभी परिणाम PDF के रूप में सहेजे जा सकते हैं।",
+    usp6P: "DE, EN, TR, ZH, HI उपलब्ध। Pro के साथ सभी परिणाम PDF के रूप में सहेजे जा सकते हैं।",
     uspAiH: "व्यक्तिगत एआई सहायक",
     uspAiP:
       "Finn रिटर्न, वित्तपोषण और कानून से जुड़े आपके सवालों का जवाब सीधे पेज पर, हर समय देता है।",

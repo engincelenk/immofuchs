@@ -24,6 +24,7 @@ import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/pas
 import { sendEmail } from "../email";
 import { dispatchNotification } from "../notifications";
 import { deleteAccountCompletely } from "../accountDeletion";
+import { aktuellePeriode } from "../periode";
 import { buildClearSessionCookie, extractSessionId, logout } from "../auth/session";
 
 export const accountRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
@@ -33,7 +34,7 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     isProUncached(c.env, c.var.userId),
     listLinkedProviders(c.env.DB, c.var.userId),
     getActiveSubscription(c.env.DB, c.var.userId),
-    getCalculatorTrialUsage(c.env.DB, c.var.userId),
+    getCalculatorTrialUsage(c.env.DB, c.var.userId, aktuellePeriode()),
   ]);
   return c.json({
     id: c.var.user.id,
@@ -43,8 +44,9 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     emailVerified: Boolean(c.var.user.email_verified_at),
     hasUsedTrial: Boolean(c.var.user.trial_used_at),
     // Seit Migration 0022 pro Rechner statt eines einzelnen kombinierten
-    // Flags (Nutzer-Vorgabe 2026-08-18) - Map rechner -> bereits verbrauchte
-    // Gratis-Versuche, das Frontend vergleicht das selbst gegen sein Limit.
+    // Flags (Nutzer-Vorgabe 2026-08-18) - Map rechner -> im LAUFENDEN MONAT
+    // verbrauchte Gratis-Versuche (Preispolitik 2026-08-20, Migration 0024),
+    // das Frontend vergleicht das selbst gegen sein Limit.
     calculatorTrialUsage,
     marketingEmailsEnabled: Boolean(c.var.user.marketing_emails_enabled),
     linkedProviders: providers,
@@ -76,7 +78,7 @@ accountRoutes.post("/calculator-trial/consume", requireAuth, requireCsrfOrigin, 
   if (!(RECHNER_VALUES as ReadonlySet<string>).has(rechner)) {
     return c.json({ error: "invalid_rechner" }, 400);
   }
-  await incrementCalculatorTrialUsage(c.env.DB, c.var.userId, rechner);
+  await incrementCalculatorTrialUsage(c.env.DB, c.var.userId, rechner, aktuellePeriode());
   return c.json({ ok: true });
 });
 

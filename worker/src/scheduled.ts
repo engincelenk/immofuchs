@@ -1,6 +1,7 @@
 // Cloudflare Cron Trigger (Spec 4.11, S4-4) - bisher hat der Worker nur einen
 // fetch()-Handler. Nur Jahresplan, 7 Tage vor current_period_end.
 import type { Env } from "./types";
+import { preisText } from "./preise";
 import {
   cleanupOldLoginAttempts,
   listSubscriptionsDueForRenewalReminder,
@@ -31,7 +32,7 @@ export async function handleScheduled(env: Env): Promise<void> {
         recipientUserId: sub.user_id,
         payload: {
           periodEndDate: new Date(sub.current_period_end).toLocaleDateString("de-DE"),
-          amount: "49,99 €",
+          amount: preisText(sub.plan),
         },
       });
       await markRenewalReminderSent(env.DB, sub.id);
@@ -58,7 +59,7 @@ export async function handleScheduled(env: Env): Promise<void> {
         recipientUserId: sub.user_id,
         payload: {
           periodEndDate: new Date(sub.current_period_end).toLocaleDateString("de-DE"),
-          amount: sub.plan === "monthly" ? "4,99 €" : "49,99 €",
+          amount: preisText(sub.plan),
         },
       });
       await markTrialReminderSent(env.DB, sub.id);

@@ -4,6 +4,7 @@
 // Trigger-Logik neu zu schreiben. Fürs Erste ist E-Mail der einzige Kanal
 // (4.11: "Push-Aufbau nicht nötig, E-Mail reicht").
 import type { Env } from "./types";
+import { preisText } from "./preise";
 import { sendEmail } from "./email";
 import { sendPushToUser } from "./push";
 
@@ -97,7 +98,7 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
   switch (intent.event) {
     case "renewal_reminder": {
       const datum = String(intent.payload.periodEndDate ?? "");
-      const betrag = String(intent.payload.amount ?? "49,99 €");
+      const betrag = String(intent.payload.amount ?? preisText("yearly"));
       return {
         subject: "Dein ImmoFuchs-Pro-Abo verlängert sich bald",
         html: `<p>Dein Jahresabo verlängert sich am ${datum} automatisch (${betrag}).</p>

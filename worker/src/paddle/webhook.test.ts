@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { preisText } from "../preise";
 import { handlePaddleWebhook, verifyPaddleSignature } from "./webhook";
 import { isWebhookEventProcessed, markWebhookEventProcessed } from "../db";
 import { dispatchNotification } from "../notifications";
@@ -301,7 +302,7 @@ describe("handlePaddleWebhook — Status-/Plan-Mapping und Mail-Trigger", () => 
       expect.objectContaining({
         event: "payment_succeeded",
         recipientEmail: "kunde@example.com",
-        payload: expect.objectContaining({ plan: "monthly", amount: "4,99 €" }),
+        payload: expect.objectContaining({ plan: "monthly", amount: preisText("monthly") }),
       }),
     );
   });

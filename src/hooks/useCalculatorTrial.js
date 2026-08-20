@@ -7,17 +7,21 @@ import { useAccountCtx } from "../context/AccountContext.jsx";
 // soll den Testlauf noch nicht verbrauchen.
 const CONSUME_DEBOUNCE_MS = 1500;
 
-// Muss mit dem serverseitigen Limit uebereinstimmen (worker/wrangler.toml
-// CALCULATOR_TRIAL_LIMIT bzw. der Default in routes/account.ts) - hier nur
-// fuer die Anzeige ("noch X von 3"), die eigentliche Durchsetzung passiert
+// Muss mit dem serverseitigen Limit uebereinstimmen - hier nur fuer die
+// Anzeige ("noch X von 3"), die eigentliche Durchsetzung passiert
 // serverseitig (getCalculatorTrialUsage/incrementCalculatorTrialUsage).
+//
+// Seit der Preispolitik 2026-08-20 gilt die Zahl PRO KALENDERMONAT: /me
+// liefert nur noch den Verbrauch der laufenden Periode (Migration 0024,
+// worker/src/periode.ts), der Zaehler faengt am Monatsersten von selbst
+// wieder bei 0 an. Fuer diesen Hook aendert sich dadurch nichts - er
+// vergleicht weiterhin nur die gelieferte Zahl gegen das Limit.
 export const CALCULATOR_TRIAL_LIMIT = 3;
 
 // Ersetzt die vorherige reine "eingeloggt oder nicht"-Sperre um einen
 // zweiten Zustand: eingeloggt, aber das Gratis-Kontingent DIESES Rechners
-// (seit 2026-08-18: 3x je Rechner statt 1x kombiniert ueber alle 6, siehe
-// Migration 0022) ist bereits verbraucht und kein Pro-Abo aktiv -
-// "paywalled" statt "locked".
+// (3x je Rechner und Monat, siehe Migrationen 0022/0024) ist bereits
+// verbraucht und kein Pro-Abo aktiv - "paywalled" statt "locked".
 //
 // capturedRef friert den Verbrauchsstand DIESES Rechners EINMAL ein, sobald
 // er sicher bekannt ist (loading===false) - die laufende Sitzung wird

@@ -3,6 +3,7 @@
 // liefert Events "at least once" - ein doppelt geliefertes Event darf nichts
 // mehr aendern, siehe worker/src/paddle/webhook.test.ts).
 import type { Env } from "../types";
+import { preisText } from "../preise";
 import { getUserById, isWebhookEventProcessed, markTrialUsedForUser, markWebhookEventProcessed, newId } from "../db";
 import { dispatchNotification } from "../notifications";
 import { PAST_DUE_GRACE_MS } from "../entitlement";
@@ -203,7 +204,7 @@ async function upsertSubscriptionFromPaddle(env: Env, data: Record<string, unkno
           recipientUserId: userId,
           payload: {
             plan,
-            amount: plan === "monthly" ? "4,99 €" : "49,99 €",
+            amount: preisText(plan),
             periodEndDate: new Date(periodEnd).toLocaleDateString("de-DE"),
           },
         });

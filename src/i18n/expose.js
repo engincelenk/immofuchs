@@ -47,7 +47,7 @@ export const EXPOSE_T = {
     fehlerDienst: "Ich konnte das Exposé gerade nicht auswerten. Bitte versuch es gleich noch einmal.",
     fehlerUnlesbar:
       "Aus dem Exposé konnte ich nichts auslesen. Bei Fotos hilft eine höhere Auflösung, bei PDFs eines mit echtem Text statt eingescannter Seiten.",
-    fehlerLimit: "Für heute war's das mit Exposés — morgen wieder.",
+    fehlerLimit: "Dein Exposé-Kontingent ist gerade aufgebraucht — bei Free gibt es am Monatsersten neue, bei Pro morgen.",
     fehlerDeaktiviert: "Die Exposé-Auswertung ist gerade nicht verfügbar.",
     fehlerOffline: "Dafür brauche ich kurz Internet.",
     fehlerZuVieleBilder: "Maximal 15 Bilder pro Exposé.",
@@ -183,7 +183,7 @@ export const EXPOSE_T = {
     fehlerDienst: "I couldn't analyse the listing just now. Please try again in a moment.",
     fehlerUnlesbar:
       "I couldn't read anything from the listing. For photos, a higher resolution helps; for PDFs, one with real text rather than scanned pages.",
-    fehlerLimit: "That's it for listings today — back tomorrow.",
+    fehlerLimit: "Your listing quota is used up for now — Free gets new ones on the 1st, Pro tomorrow.",
     fehlerDeaktiviert: "Listing analysis is currently unavailable.",
     fehlerOffline: "I need an internet connection for this.",
     fehlerZuVieleBilder: "Maximum 15 images per listing.",
@@ -316,7 +316,7 @@ export const EXPOSE_T = {
     fehlerDienst: "İlanı şu anda değerlendiremedim. Lütfen birazdan tekrar dene.",
     fehlerUnlesbar:
       "İlandan hiçbir şey okuyamadım. Fotoğraflarda daha yüksek çözünürlük, PDF'lerde ise taranmış sayfalar yerine gerçek metin içeren bir dosya yardımcı olur.",
-    fehlerLimit: "Bugünlük ilan değerlendirmesi bitti — yarın devam.",
+    fehlerLimit: "İlan kontenjanın şimdilik doldu — Free'de ayın 1'inde, Pro'da yarın yenileniyor.",
     fehlerDeaktiviert: "İlan değerlendirmesi şu anda kullanılamıyor.",
     fehlerOffline: "Bunun için kısa süreliğine internete ihtiyacım var.",
     fehlerZuVieleBilder: "İlan başına en fazla 15 görsel.",
@@ -444,7 +444,7 @@ export const EXPOSE_T = {
     fehlerDienst: "刚才没能解析这个房源，请稍后再试一次。",
     fehlerUnlesbar:
       "没能从房源中读出任何内容。照片请提供更高分辨率；PDF 请使用含真实文字的文件，而非扫描页面。",
-    fehlerLimit: "今天的房源解析次数已用完 — 明天再来。",
+    fehlerLimit: "房源解析额度暂时用完了 — 免费版每月 1 日恢复，Pro 版明天恢复。",
     fehlerDeaktiviert: "房源解析目前不可用。",
     fehlerOffline: "这需要联网。",
     fehlerZuVieleBilder: "每个房源最多 15 张图片。",
@@ -573,7 +573,7 @@ export const EXPOSE_T = {
     fehlerDienst: "मैं अभी लिस्टिंग का विश्लेषण नहीं कर सका। कृपया थोड़ी देर बाद फिर कोशिश करें।",
     fehlerUnlesbar:
       "लिस्टिंग से कुछ भी नहीं पढ़ा जा सका। फ़ोटो के लिए अधिक रिज़ॉल्यूशन मदद करता है; PDF के लिए स्कैन किए पन्नों के बजाय असली टेक्स्ट वाली फ़ाइल दें।",
-    fehlerLimit: "आज के लिए लिस्टिंग विश्लेषण समाप्त — कल फिर।",
+    fehlerLimit: "आपका लिस्टिंग कोटा फ़िलहाल समाप्त — Free में हर महीने की 1 तारीख को, Pro में कल नए मिलते हैं।",
     fehlerDeaktiviert: "लिस्टिंग विश्लेषण फ़िलहाल उपलब्ध नहीं है।",
     fehlerOffline: "इसके लिए इंटरनेट चाहिए।",
     fehlerZuVieleBilder: "प्रति लिस्टिंग अधिकतम 15 छवियाँ।",

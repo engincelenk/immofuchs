@@ -411,7 +411,7 @@ export function AssistantSheet({
                         {/* Finn ordnet ein, bevor das Handout kommt: was er
                             gefunden hat und wofuer das Ding gut ist. */}
                         <ChatBubble role="assistant" text={handoutAnsage(m.analyse, xt)} />
-                        <FinnHandoutPanel analyse={m.analyse} t={xt} />
+                        <FinnHandoutPanel analyse={m.analyse} t={xt} lang={lang} />
                       </>
                     )}
                   </div>

@@ -2,6 +2,7 @@
 // Stelle, damit Auth-/Payment-/Objekt-Module keine rohen Queries verstreuen
 // (Konvention: kleine, fokussierte Dateien, analog zum bestehenden Worker-Stil).
 import type { Env } from "./types";
+import { PLAN_PREIS_EUR } from "./preise";
 
 export interface UserRow {
   id: string;
@@ -296,16 +297,22 @@ export async function markTrialUsedForUser(db: Env["DB"], userId: string): Promi
 
 // Login-/Test-Flow (Migration 0018, seit 0022 pro Rechner statt kombiniert
 // ueber alle 6 - Nutzer-Vorgabe 2026-08-18: 1x kombiniert -> 3x je Rechner).
-// getCalculatorTrialUsage liefert die bisher verbrauchten Versuche je
-// Rechner - der Aufrufer (routes/account.ts /me) vergleicht das selbst gegen
-// sein Limit, damit die Zahl 3 an einer einzigen Stelle im Code steht.
+// getCalculatorTrialUsage liefert die im laufenden Monat verbrauchten
+// Versuche je Rechner - der Aufrufer (routes/account.ts /me) vergleicht das
+// selbst gegen sein Limit, damit die Zahl 3 an einer einzigen Stelle im Code
+// steht.
+//
+// Zeilen aus einem frueheren Monat werden hier gar nicht erst gelesen
+// (Migration 0024): sie zaehlen als 0 und werden beim naechsten Verbrauch
+// ueberschrieben - siehe worker/src/periode.ts.
 export async function getCalculatorTrialUsage(
   db: Env["DB"],
   userId: string,
+  periode: string,
 ): Promise<Record<string, number>> {
   const { results } = await db
-    .prepare("SELECT rechner, count FROM calculator_trial_usage WHERE user_id = ?")
-    .bind(userId)
+    .prepare("SELECT rechner, count FROM calculator_trial_usage WHERE user_id = ? AND period = ?")
+    .bind(userId, periode)
     .all<{ rechner: string; count: number }>();
   const usage: Record<string, number> = {};
   for (const row of results) usage[row.rechner] = row.count;
@@ -316,13 +323,20 @@ export async function incrementCalculatorTrialUsage(
   db: Env["DB"],
   userId: string,
   rechner: string,
+  periode: string,
 ): Promise<void> {
+  // Der CASE ist der Monatswechsel: gehoert die vorhandene Zeile noch zur
+  // laufenden Periode, wird hochgezaehlt - sonst faengt der Zaehler bei 1
+  // wieder an. Ein separates DELETE alter Zeilen braucht es dadurch nicht.
   await db
     .prepare(
-      `INSERT INTO calculator_trial_usage (user_id, rechner, count) VALUES (?, ?, 1)
-       ON CONFLICT(user_id, rechner) DO UPDATE SET count = count + 1`,
+      `INSERT INTO calculator_trial_usage (user_id, rechner, count, period) VALUES (?, ?, 1, ?)
+       ON CONFLICT(user_id, rechner) DO UPDATE SET
+         count = CASE WHEN calculator_trial_usage.period = excluded.period
+                      THEN calculator_trial_usage.count + 1 ELSE 1 END,
+         period = excluded.period`,
     )
-    .bind(userId, rechner)
+    .bind(userId, rechner, periode)
     .run();
 }
 
@@ -757,21 +771,35 @@ export async function deleteObject(db: Env["DB"], id: string): Promise<void> {
 // Zaehler statt Boolean-Flag (Nutzer-Vorgabe 2026-08-18: 1x -> 3x Free-
 // Kontingent). Der Aufrufer (assistant.ts) vergleicht den Rueckgabewert
 // selbst gegen sein Limit, damit die Zahl an einer einzigen Stelle steht.
-export async function getExposeTrialCount(db: Env["DB"], sessionId: string): Promise<number> {
+// Wie beim Rechner-Kontingent zaehlt nur der laufende Monat (Migration
+// 0024): ein Zaehler aus einem frueheren Monat liefert 0.
+export async function getExposeTrialCount(
+  db: Env["DB"],
+  sessionId: string,
+  periode: string,
+): Promise<number> {
   const row = await db
-    .prepare("SELECT count FROM expose_trial_used WHERE session_id = ?")
-    .bind(sessionId)
+    .prepare("SELECT count FROM expose_trial_used WHERE session_id = ? AND period = ?")
+    .bind(sessionId, periode)
     .first<{ count: number }>();
   return row?.count ?? 0;
 }
 
-export async function markExposeTrialUsed(db: Env["DB"], sessionId: string): Promise<void> {
+export async function markExposeTrialUsed(
+  db: Env["DB"],
+  sessionId: string,
+  periode: string,
+): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO expose_trial_used (session_id, used_at, count) VALUES (?, ?, 1)
-       ON CONFLICT(session_id) DO UPDATE SET count = count + 1, used_at = excluded.used_at`,
+      `INSERT INTO expose_trial_used (session_id, used_at, count, period) VALUES (?, ?, 1, ?)
+       ON CONFLICT(session_id) DO UPDATE SET
+         count = CASE WHEN expose_trial_used.period = excluded.period
+                      THEN expose_trial_used.count + 1 ELSE 1 END,
+         used_at = excluded.used_at,
+         period = excluded.period`,
     )
-    .bind(sessionId, Date.now())
+    .bind(sessionId, Date.now(), periode)
     .run();
 }
 
@@ -1177,12 +1205,10 @@ export interface AdminDashboardStats {
   newUsersThisMonth: number;
 }
 
-// Gleiche Preise wie im Renewal-/Trial-Ending-Mailing (scheduled.ts) - EINE
-// Quelle fuer diese beiden Werte waere sauberer, aber eine Konstanten-Datei
-// nur dafuer ist fuer zwei Zahlen an zwei Stellen keine Verbesserung wert
-// (Projektregel: keine Abstraktion ohne echten Bedarf).
-const MONTHLY_PRICE_EUR = 4.99;
-const YEARLY_PRICE_EUR = 49.99;
+// Preise seit 2026-08-20 aus src/preise.ts - der frueher hier stehende
+// Kommentar ("zwei Zahlen an zwei Stellen, keine eigene Datei wert") hat sich
+// bei der ersten echten Preisaenderung als falsch erwiesen: es waren fuenf
+// Stellen.
 
 export async function getAdminDashboardStats(db: Env["DB"]): Promise<AdminDashboardStats> {
   const monthStart = (() => {
@@ -1214,7 +1240,10 @@ export async function getAdminDashboardStats(db: Env["DB"]): Promise<AdminDashbo
   let mrr = 0;
   for (const row of planRows.results) {
     activeSubscriptions += row.n;
-    mrr += row.plan === "monthly" ? row.n * MONTHLY_PRICE_EUR : row.n * (YEARLY_PRICE_EUR / 12);
+    mrr +=
+      row.plan === "monthly"
+        ? row.n * PLAN_PREIS_EUR.monthly
+        : row.n * (PLAN_PREIS_EUR.yearly / 12);
   }
 
   return {
