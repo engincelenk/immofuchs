@@ -79,7 +79,12 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
   // nicht nur body). Seit dem UX-Audit 2026-08-13 der gemeinsame Hook statt
   // einer eigenen Kopie, damit Sheet.jsx und dieser Bereich hier dieselbe
   // Logik teilen.
-  useScrollLock(true);
+  // hideHtmlScrollbar (Bugreport 20.08., dritter Anlauf): dieser Bereich hat
+  // einen blickdichten Hintergrund (var(--bg), keine Transparenz) - anders
+  // als Sheet.jsx kann <html>s tote Scrollbar hier also gefahrlos verschwinden,
+  // ohne den 2026-08-18-Sprung-Bug zurueckzuholen. Behebt die zweite,
+  // ueberzaehlige Scroll-Spur bei langen Bereichen (z. B. Admin/Nutzer).
+  useScrollLock(true, { hideHtmlScrollbar: true });
 
   async function handleLogout() {
     setLogoutBusy(true);

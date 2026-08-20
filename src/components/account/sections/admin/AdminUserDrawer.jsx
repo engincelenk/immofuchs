@@ -8,6 +8,7 @@ import {
   setUserFlags,
   setUserRole,
   setUserStatus,
+  setUserSubscription,
   triggerPasswordReset,
 } from "./adminApi.js";
 import { useAdminToast } from "./AdminToast.jsx";
@@ -26,6 +27,14 @@ import {
   selectStyle,
   textInputStyle,
 } from "./adminUiStyles.js";
+
+// Fuer den Testkonto-Abo-Setzen-Block unten - dieselbe Liste wie in
+// AdminUsersView.jsx beim Anlegen ("Kein Abo" hat dort keinen Server-Wert,
+// deshalb eine eigene Liste statt SUB_STATUS_LABELS direkt zu mappen).
+const SET_SUB_STATUS_OPTIONS = [
+  { value: "", label: "Kein Abo (Free)" },
+  ...Object.entries(SUB_STATUS_LABELS).map(([value, label]) => ({ value, label })),
+];
 
 // Nutzer-Detail als Side Drawer (Admin-MVP Abschnitt 5: "Beim Klick auf einen
 // Nutzer soll sich ein Side Drawer oeffnen. Keine neue Seite erforderlich.").
@@ -65,6 +74,11 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
   // Nutzers im Drawer nicht den zuvor eingetippten Wert eines anderen stehen
   // laesst.
   const [redirectInput, setRedirectInput] = useState("");
+  // Testkonto-Abo direkt setzen (Nutzer-Auftrag 2026-08-20) - eigenes
+  // Eingabepaar aus demselben Grund wie redirectInput oben: haelt einen
+  // Entwurf nach, ohne bei jeder Auswahl sofort zu speichern.
+  const [subStatusInput, setSubStatusInput] = useState("");
+  const [subPlanInput, setSubPlanInput] = useState("monthly");
 
   // Der Auftrag (Abschnitt 13) verlangt, dass Support nur ansehen und
   // Notizen schreiben darf. Der Worker setzt das durch (403), die UI
@@ -99,6 +113,11 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
   useEffect(() => {
     setRedirectInput(detail?.testEmailRedirectTo || "");
   }, [effectiveUserId, detail?.testEmailRedirectTo]);
+
+  useEffect(() => {
+    setSubStatusInput(detail?.subscription?.status || "");
+    setSubPlanInput(detail?.subscription?.plan || "monthly");
+  }, [effectiveUserId, detail?.subscription?.status, detail?.subscription?.plan]);
 
   // Einheitlicher Ablauf fuer jede schreibende Aktion (Auftrag Abschnitt 11):
   // Backend speichern -> Erfolg melden -> Detail neu laden (damit die
@@ -320,6 +339,74 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                 </>
               ) : (
                 <p style={{ ...mutedTextStyle, margin: 0 }}>Kein aktives Abo (Free).</p>
+              )}
+
+              {/* Nur fuer Testkonten: erspart das manuelle Kuendigen ueber
+                  den Kontobereich, wenn ein Checkout-Test wiederholt werden
+                  soll (Nutzer-Auftrag 2026-08-20). Nutzt denselben
+                  Bausteinsatz wie der Selbstbedienungs-Reset
+                  (POST /billing/test-reset). */}
+              {canManage && detail.isTestUser && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--cb)" }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>Testkonto: Abo setzen</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end" }}>
+                    <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+                      <label style={labelStyle} htmlFor="admin-sub-status">
+                        Status
+                      </label>
+                      <select
+                        id="admin-sub-status"
+                        value={subStatusInput}
+                        disabled={busy === "subscription"}
+                        onChange={(e) => setSubStatusInput(e.target.value)}
+                        style={selectStyle}
+                      >
+                        {SET_SUB_STATUS_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {subStatusInput && (
+                      <div style={{ flex: "0 1 140px" }}>
+                        <label style={labelStyle} htmlFor="admin-sub-plan">
+                          Plan
+                        </label>
+                        <select
+                          id="admin-sub-plan"
+                          value={subPlanInput}
+                          disabled={busy === "subscription"}
+                          onChange={(e) => setSubPlanInput(e.target.value)}
+                          style={selectStyle}
+                        >
+                          {Object.entries(PLAN_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={busy === "subscription"}
+                      onClick={() =>
+                        run(
+                          "subscription",
+                          () => setUserSubscription(effectiveUserId, { status: subStatusInput, plan: subPlanInput }),
+                          "Abo aktualisiert.",
+                        )
+                      }
+                      style={secondaryBtnStyle}
+                    >
+                      Setzen
+                    </button>
+                  </div>
+                  <p style={{ ...mutedTextStyle, marginTop: 8, marginBottom: 0 }}>
+                    Ein echtes Sandbox-Abo aus einem Checkout-Test wird dabei automatisch bei Paddle gekündigt.
+                  </p>
+                </div>
               )}
             </Block>
 

@@ -21,7 +21,10 @@ import {
   createUser,
   updateUserName,
   getActiveSubscription,
+  getLatestSubscriptionForUser,
   createManualSubscriptionForAdmin,
+  resetTestUserSubscription,
+  ADMIN_TEST_SUBSCRIPTION_PREFIX,
   listSubscriptionsForAdmin,
   getSubscriptionForAdmin,
   isAdminSubscriptionFilter,
@@ -39,6 +42,7 @@ import {
   listAuditLogAdmins,
 } from "../db";
 import { deleteAccountCompletely } from "../accountDeletion";
+import { cancelImmediately } from "../paddle/checkout";
 import { requestPasswordReset, sendPasswordSetupInvite } from "../auth/passwordAuth";
 import { ROLE_PERMISSIONS, type Role } from "../entitlement";
 import {
@@ -372,6 +376,73 @@ adminRoutes.post("/users/:id/flags", requireAuth, requireAdmin, requireCsrfOrigi
   }
   return c.json({ ok: true, isTestUser: effectiveIsTestUser, testEmailRedirectTo: testEmailRedirectTo !== undefined ? testEmailRedirectTo : user.test_email_redirect_to });
 });
+
+// Abo eines Testusers direkt setzen (Nutzer-Auftrag 2026-08-20): wer den
+// Checkout mit einem Testkonto durchspielt, hat danach ein echtes
+// Paddle-Sandbox-Abo, das sich sonst nur ueber "Passwort vergessen" ->
+// Login -> Kontobereich -> Kuendigen zuruecksetzen liesse - fuer wiederholte
+// Checkout-Tests unpraktisch. Nutzt dieselben Bausteine wie der
+// Selbstbedienungs-Reset (POST /billing/test-reset) und das Anlegen mit
+// Test-Subscription (POST /users oben), nur admin-seitig auf ein beliebiges
+// Testkonto anwendbar statt nur auf den eingeloggten Nutzer selbst.
+adminRoutes.post(
+  "/users/:id/subscription",
+  requireAuth,
+  requireAdmin,
+  requireCsrfOrigin,
+  async (c) => {
+    const id = c.req.param("id");
+    const body = await c.req.json().catch(() => null);
+    const status = typeof body?.status === "string" ? body.status : "";
+    if (status && !(VALID_SUB_STATUSES as readonly string[]).includes(status)) {
+      return c.json({ error: "invalid_subscription" }, 400);
+    }
+    const plan = typeof body?.plan === "string" ? body.plan : "monthly";
+    if (status && !(VALID_SUB_PLANS as readonly string[]).includes(plan)) {
+      return c.json({ error: "invalid_subscription" }, 400);
+    }
+
+    const user = await getUserById(c.env.DB, id);
+    if (!user) return c.json({ error: "not_found" }, 404);
+    if (!user.is_test_user) return c.json({ error: "subscription_requires_test_user" }, 400);
+
+    // Echtes Sandbox-Abo (aus einem tatsaechlich durchgespielten Checkout,
+    // erkennbar an der paddle_subscription_id OHNE das admin-test:-Praefix)
+    // muss zuerst bei Paddle gekuendigt werden - sonst laeuft im Hintergrund
+    // eine Sandbox-Subscription weiter, die hier nur aus D1 verschwindet.
+    const existing = await getLatestSubscriptionForUser(c.env.DB, id);
+    if (existing && !existing.paddle_subscription_id.startsWith(ADMIN_TEST_SUBSCRIPTION_PREFIX)) {
+      try {
+        await cancelImmediately(c.env, existing.paddle_subscription_id);
+      } catch (err) {
+        console.error("admin_set_subscription_cancel_failed", err instanceof Error ? err.message : "unknown");
+        return c.json({ error: "cancel_failed_try_again" }, 502);
+      }
+    }
+    await resetTestUserSubscription(c.env.DB, id);
+    if (status) {
+      await createManualSubscriptionForAdmin(c.env.DB, id, {
+        status: status as SubscriptionRow["status"],
+        plan: plan as SubscriptionRow["plan"],
+      });
+    }
+
+    await logAdminAction(c.env.DB, {
+      adminUserId: c.var.userId,
+      adminEmail: c.var.user.email,
+      action: "user.subscription_set",
+      targetType: "user",
+      targetId: id,
+      details: { targetEmail: user.email, status: status || "free", plan: status ? plan : null },
+    });
+
+    const sub = status ? await getActiveSubscription(c.env.DB, id) : null;
+    return c.json({
+      ok: true,
+      subscription: sub ? { status: sub.status, plan: sub.plan } : null,
+    });
+  },
+);
 
 // Support-Notiz (Auftrag Abschnitt 6/7).
 adminRoutes.post(

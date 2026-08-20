@@ -81,6 +81,12 @@ export function setUserFlags(id, flags) {
   return post(`/admin/users/${encodeURIComponent(id)}/flags`, flags);
 }
 
+// input: {status: "" | SubStatus, plan?: Plan} - "" heisst "Kein Abo (Free)",
+// nur fuer isTestUser-Konten gueltig (Worker lehnt es sonst ab).
+export function setUserSubscription(id, input) {
+  return post(`/admin/users/${encodeURIComponent(id)}/subscription`, input);
+}
+
 export function addSupportNote(id, note) {
   return post(`/admin/users/${encodeURIComponent(id)}/notes`, { note });
 }

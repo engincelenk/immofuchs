@@ -1,3 +1,61 @@
+## 2026-08-20 (1.20.34)
+
+### Feature: Testkonto-Abo direkt im Admin-Panel setzen + Fix doppelter Scrollbalken
+
+Nutzer-Auftrag: nach einem Checkout-Test mit einem Testkonto bleibt ein
+echtes Paddle-Sandbox-Abo stehen - fuer einen weiteren Checkout-Testlauf
+musste bisher ein neuer Testuser angelegt werden. Ausserdem: der
+Admin-Bereich (v.a. Admin/Nutzer bei laengerem Inhalt) zeigte zwei
+Scrollbalken statt einem.
+
+**Geaendert - `worker/src/routes/admin.ts`:** neue Route
+`POST /admin/users/:id/subscription` - nur fuer `is_test_user`-Konten
+(400 sonst). Ein bestehendes ECHTES Sandbox-Abo (paddle_subscription_id
+ohne `admin-test:`-Praefix) wird zuerst per Paddle-API sofort gekuendigt
+(derselbe Weg wie `POST /billing/test-reset`), danach alle Abo-Zeilen
+geloescht + `trial_used_at` zurueckgesetzt (`resetTestUserSubscription`),
+danach optional ein neues synthetisches Test-Abo angelegt
+(`createManualSubscriptionForAdmin` - bisher nur beim Anlegen genutzt).
+Keine neue Geschaeftslogik, nur bestehende Bausteine neu kombiniert.
+
+**Geaendert - `src/components/account/sections/admin/AdminUserDrawer.jsx`,
+`adminApi.js`:** im Subscription-Block, nur sichtbar bei `isTestUser`,
+Status- + Plan-Auswahl (dieselbe Liste wie im "Nutzer anlegen"-Formular)
+mit "Setzen"-Knopf.
+
+**Geaendert - `src/hooks/useScrollLock.js`, `MyAccount.jsx`:** Ursache fuer
+die doppelte Scrollbar - `<html>` traegt global `overflow-y:scroll`
+(index.html), permanent fuer `scrollbar-gutter:stable`. Sobald `<body>`
+per Scroll-Lock auf `position:fixed` steht, traegt `<html>` selbst nichts
+mehr zum Scrollen bei, seine Balken-Spur blieb aber sichtbar (leer, tot)
+- direkt neben der echten Scrollbar des Overlays selbst, sobald dessen
+Inhalt laenger als der Viewport ist. `useScrollLock` bekommt eine neue
+Option `hideHtmlScrollbar`, die `<html>`s Overflow waehrend des Locks
+zusaetzlich auf `hidden` setzt. Nur `MyAccount.jsx` (blickdichter
+Hintergrund) setzt sie - `Sheet.jsx` bleibt unveraendert, da dessen
+halbtransparentes Backdrop beim Verschwinden von `<html>`s Scrollbar
+sichtbar nach rechts springen wuerde (Bugfix 2026-08-18, siehe Kommentar
+dort).
+
+## 2026-08-19 (1.20.33)
+
+### Fix: e2e-Test kannte das testEmailRedirectTo-Feld aus 1.20.30 noch nicht
+
+`admin-lifecycle.e2e.test.ts` "POST /users/:id/flags setzt isTestUser=true"
+meldete `AssertionError: expected {...} to deeply equal { ok: true,
+isTestUser: true }`.
+
+**WAS/WARUM:** Kein Bug, kein Test-Tooling-Problem, kein Zusammenhang mit
+dem Ordner-Umzug. In 1.20.30 wurde die Antwort von `POST
+/admin/users/:id/flags` um `testEmailRedirectTo` erweitert (Feature
+"umleitbare Test-E-Mail-Adresse", siehe dortigen Eintrag). Der e2e-Test
+prüfte weiterhin die alte, jetzt zu enge Antwortform per `toEqual`.
+
+**BESSER:** Erwartung um `testEmailRedirectTo: null` ergänzt (der hier
+angelegte Wegwerf-Nutzer hat das Feld nicht gesetzt).
+
+**Betroffene Dateien:** e2e/admin-lifecycle.e2e.test.ts
+
 ## 2026-08-19 (1.20.32)
 
 ### Fix: Registrierungs-Test wurde durch das eigene Stundenlimit rot (429 statt 409)

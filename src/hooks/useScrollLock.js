@@ -15,7 +15,21 @@ import { useEffect } from "react";
 // immer WAEHREND sein Elternbereich noch gesperrt ist und schliesst nie
 // danach) - und genau das ist bei allen Konsumenten dieser App der Fall. Ein
 // Referenzzaehler waere zusaetzliche Komplexitaet ohne echten Nutzen.
-export function useScrollLock(active) {
+//
+// hideHtmlScrollbar (Bugreport 20.08., "2 Scrollbalken" im Admin-Bereich):
+// <html> traegt global overflow-y:scroll (index.html), permanent, damit
+// scrollbar-gutter:stable die Breite auch AUSSERHALB eines Locks konstant
+// haelt. Sobald <body> hier auf position:fixed steht, traegt <html> aber
+// selbst nichts mehr zum Scrollen bei - seine Balken-Spur bleibt trotzdem
+// sichtbar (leer, tot) und steht neben der echten Scrollbar des Overlays
+// (z. B. MyAccount.jsx bei langen Bereichen wie Admin/Nutzer), sobald dessen
+// Inhalt laenger als der Viewport ist. Standardmaessig AUS (false) - der
+// Bugfix vom 2026-08-18 gilt weiter: ein Sheet mit halbtransparentem
+// Backdrop (Kopfzeile/Tab-Leiste bleiben sichtbar) wuerde beim Verschwinden
+// von <html>s Scrollbar sichtbar nach rechts springen. Nur Aufrufer mit
+// blickdichtem Hintergrund (MyAccount.jsx) duerfen true setzen - dahinter
+// ist ohnehin nichts sichtbar, das springen koennte.
+export function useScrollLock(active, { hideHtmlScrollbar = false } = {}) {
   useEffect(() => {
     if (!active) return;
     // body auf position:fixed statt html/body auf overflow:hidden
@@ -36,11 +50,15 @@ export function useScrollLock(active) {
     document.body.style.position = "fixed";
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = "100%";
+    const html = document.documentElement;
+    const prevHtmlOverflowY = html.style.overflowY;
+    if (hideHtmlScrollbar) html.style.overflowY = "hidden";
     return () => {
       document.body.style.position = prevPosition;
       document.body.style.top = prevTop;
       document.body.style.width = prevWidth;
       window.scrollTo(0, scrollY);
+      if (hideHtmlScrollbar) html.style.overflowY = prevHtmlOverflowY;
     };
-  }, [active]);
+  }, [active, hideHtmlScrollbar]);
 }
