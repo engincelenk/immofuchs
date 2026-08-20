@@ -41,8 +41,11 @@ export function CalculatorTrialGate({ rechner, children, onDismiss }) {
         title={t.loginRequiredTitle}
         body={t.loginRequiredBody}
       >
+        {/* Ohne Marken-Bild (2026-08-20): der Schriftzug im Knopf laese sich
+            als "immofuchs.info Kostenlos anmelden" - doppelt und bei dieser
+            Groesse ohnehin unlesbar. */}
         <button onClick={() => setShowLogin(true)} style={primaryBtnStyle}>
-          <BrandIcon size={18} style={{ marginRight: 4, verticalAlign: "-4px" }} /> {t.loginRequiredCta}
+          {t.loginRequiredCta}
         </button>
         {showLogin && (
           <Suspense fallback={<LazyPanelFallback />}>
@@ -55,7 +58,7 @@ export function CalculatorTrialGate({ rechner, children, onDismiss }) {
 
   if (isPaywalled) {
     return (
-      <GatePanel icon={<BrandIcon size={40} />} title={t.trialLockedTitle} body={t.trialLockedBody}>
+      <GatePanel icon={<BrandIcon size={48} />} title={t.trialLockedTitle} body={t.trialLockedBody}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
           <button onClick={() => setShowUpgrade(true)} style={primaryBtnStyle}>
             {t.trialLockedCta}

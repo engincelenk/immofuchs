@@ -515,7 +515,7 @@ export default function App() {
          Seitenverhaeltnis. Hoehen bewusst kleiner als die frueheren
          Icon-Kantenlaengen (38/54), da das Bild den Schriftzug mitbringt
          und dadurch deutlich breiter baut. */
-      .hdr-logo-img{height:30px!important;width:auto!important}
+      .hdr-logo-img{height:40px!important;width:auto!important}
       .lang-label{display:none!important}
       /* Konto-Knopf: unter 480px die Kurzform "Konto", darueber "Mein Konto"
          (UX-Audit 2026-08-11). Volle Beschriftung PLUS Tarif-Chip passt auf
@@ -526,7 +526,7 @@ export default function App() {
       .acct-label-short{display:inline}
       @media(min-width:480px){
         .hdr-brand-btn{gap:14px!important}
-        .hdr-logo-img{height:44px!important;width:auto!important}
+        .hdr-logo-img{height:56px!important;width:auto!important}
         .lang-label{display:inline!important}
         .acct-label-full{display:inline}
         .acct-label-short{display:none}
@@ -626,7 +626,7 @@ export default function App() {
                 src="/logo-wordmark.png"
                 alt="immofuchs.info"
                 className="hdr-logo-img"
-                style={{ height: 44, width: "auto", objectFit: "contain", flexShrink: 0 }}
+                style={{ height: 56, width: "auto", objectFit: "contain", flexShrink: 0 }}
               />
             </button>
             {/* Nutzer-Vorgabe 2026-08-12: Die Sprachwahl gehoert fuer

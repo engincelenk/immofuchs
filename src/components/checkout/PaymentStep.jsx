@@ -35,11 +35,19 @@ export function PaymentStep({
   onDiscountError,
   onTotals,
 }) {
-  // consent  - Zustimmung steht aus, kein Paddle-Kontakt
+  // consent  - Ruhe-/Fehlerzustand, kein Formular eingebettet (nur nach
+  //            einem Fehlschlag erreichbar, siehe fail())
   // starting - Transaktion wird erzeugt, Container ist schon im DOM
   // inline    - Paddle-Formular ist eingebettet
   // fallback  - Einbetten misslungen, Paddles Overlay uebernimmt
-  const [stage, setStage] = useState("consent");
+  //
+  // Startet seit 2026-08-20 direkt bei "starting" statt bei "consent"
+  // (Nutzer-Meldung: die Zustimmung fuehlte sich wie ein eigener,
+  // leerer Zwischenschritt an, und die Checkbox tauchte danach ein zweites
+  // Mal ueber dem Formular auf). Das Formular ist jetzt von Anfang an da,
+  // bis zur Zustimmung aber per `inert` vollstaendig gesperrt - siehe
+  // consentGateRef weiter unten.
+  const [stage, setStage] = useState("starting");
   const [error, setError] = useState(null);
   const [resendBusy, setResendBusy] = useState(false);
   const [resendDone, setResendDone] = useState(false);
@@ -61,6 +69,26 @@ export function PaymentStep({
   onTotalsRef.current = onTotals;
   const frameLoadedRef = useRef(false);
   const startedRef = useRef(false);
+
+  // Sperrt das eingebettete Paddle-Formular, solange die Widerrufs-Zustimmung
+  // aussteht. Ersetzt die fruehere Vorstufe, die das Formular erst NACH der
+  // Zustimmung ueberhaupt erzeugt hat (§ 312j BGB - der Bezahl-Button sitzt
+  // in Paddles iframe und war von aussen nicht sperrbar). `inert` kann genau
+  // das doch: es nimmt den kompletten Teilbaum inklusive iframe aus Maus-,
+  // Tastatur- und Screenreader-Bedienung. Ohne Zustimmung laesst sich also
+  // weiterhin kein Vertrag schliessen, das Formular ist aber schon sichtbar.
+  //
+  // Imperativ per Ref statt als JSX-Attribut: React 18 kennt `inert` noch
+  // nicht als Prop (erst React 19) und wuerde einen Boolean verschlucken bzw.
+  // eine Warnung werfen. pointer-events:none unten bleibt als zweite
+  // Absicherung fuer Browser ohne inert-Unterstuetzung.
+  const consentGateRef = useRef(null);
+  useEffect(() => {
+    const el = consentGateRef.current;
+    if (!el) return;
+    if (withdrawalAccepted) el.removeAttribute("inert");
+    else el.setAttribute("inert", "");
+  }, [withdrawalAccepted, stage]);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -197,17 +225,11 @@ export function PaymentStep({
         error && <div style={errorBannerStyle}>{error}</div>
       )}
 
-      {/* Zustimmung bleibt dauerhaft sichtbar (Nutzer-Auftrag 2026-08-20):
-          vorher war sie eine eigene Vorstufe mit eigenem Weiter-Knopf, die
-          sich wie ein zusaetzlicher Schritt anfuehlte ("Zahlungsmethode
-          auswaehlen", obwohl es dort gar nichts auszuwaehlen gab). Jetzt
-          entsteht der Paddle-Rahmen direkt beim Anhaken - ein Bildschirm
-          statt zwei. Die rechtlich noetige Reihenfolge bleibt unveraendert:
-          der Rahmen wird immer noch erst NACH der Zustimmung erzeugt
-          (§ 312j BGB, siehe Kommentar oben), nur ohne Zwischenklick.
-          Nach dem Start nicht mehr aenderbar - eine bereits erteilte
-          Zustimmung laesst sich nicht sinnvoll zurueckziehen, waehrend
-          Paddles Formular schon offen ist. */}
+      {/* Die Zustimmung ist kein eigener Zwischenschritt mehr, sondern steht
+          direkt ueber dem Formular (Nutzer-Meldung 2026-08-20). Sie bleibt
+          jederzeit bedienbar: wer sie wieder abwaehlt, sperrt das Formular
+          erneut - das ist der ehrlichere Zustand, als eine einmal gesetzte
+          Zustimmung festzunageln. */}
       <label
         style={{
           display: "flex",
@@ -221,30 +243,23 @@ export function PaymentStep({
           borderRadius: 10,
           padding: "12px 14px",
           marginBottom: 14,
-          opacity: stage === "consent" ? 1 : 0.7,
         }}
       >
         <input
           type="checkbox"
           required
           checked={withdrawalAccepted}
-          disabled={stage !== "consent" || error === "email_not_verified"}
-          onChange={(e) => {
-            setWithdrawalAccepted(e.target.checked);
-            if (!e.target.checked) return;
-            setError(null);
-            setStage("starting");
-          }}
+          disabled={error === "email_not_verified"}
+          onChange={(e) => setWithdrawalAccepted(e.target.checked)}
           style={{ marginTop: 2, flexShrink: 0 }}
         />
         <span>{t.paymentWithdrawalConsent}</span>
       </label>
 
       {/* Erneut-Versuchen nur nach einem Fehlschlag: fail() setzt stage
-          zurueck auf "consent", die Checkbox ist dann aber bereits angehakt -
-          ohne diesen Knopf gaebe es keinen Weg mehr, den Vorgang neu
-          anzustossen (das onChange-Ereignis feuert nicht erneut). */}
-      {stage === "consent" && withdrawalAccepted && error && error !== "email_not_verified" && (
+          zurueck auf "consent", das Formular ist dann nicht mehr im DOM -
+          ohne diesen Knopf gaebe es keinen Weg, den Vorgang neu anzustossen. */}
+      {stage === "consent" && error && error !== "email_not_verified" && (
         <button
           onClick={() => {
             setError(null);
@@ -258,12 +273,24 @@ export function PaymentStep({
 
       {/* Zielcontainer fuer Paddle. Er muss im DOM stehen, BEVOR
           Paddle.Checkout.open() laeuft - deshalb schon in der Phase
-          "starting" gerendert und nicht erst bei "inline". */}
+          "starting" gerendert und nicht erst bei "inline".
+          Die Huelle darum traegt die Zustimmungs-Sperre (consentGateRef):
+          sichtbar, aber bis zum Haken oben nicht bedienbar. */}
       {(stage === "starting" || stage === "inline") && (
         <div
-          className={FRAME_CLASS}
-          style={{ minHeight: stage === "inline" ? 460 : 240, width: "100%" }}
-        />
+          ref={consentGateRef}
+          style={{
+            position: "relative",
+            opacity: withdrawalAccepted ? 1 : 0.45,
+            pointerEvents: withdrawalAccepted ? "auto" : "none",
+            transition: "opacity .2s ease",
+          }}
+        >
+          <div
+            className={FRAME_CLASS}
+            style={{ minHeight: stage === "inline" ? 460 : 240, width: "100%" }}
+          />
+        </div>
       )}
 
       {stage === "fallback" && (

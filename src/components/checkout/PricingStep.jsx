@@ -1,6 +1,5 @@
 import { useApp } from "../../context/AppContext.jsx";
 import { LANG_LOCALE } from "../../utils/helpers.js";
-import { BrandIcon } from "../ui/BrandIcon.jsx";
 import { OrderSummary } from "./OrderSummary.jsx";
 import {
   primaryBtnStyle,
@@ -64,7 +63,10 @@ export function PricingStep({
             marginBottom: 16,
           }}
         >
-          <BrandIcon size={14} /> {t.pricingTrialBadge}
+          {/* Ohne Marken-Bild (2026-08-20): seit der Umstellung auf den
+              Schriftzug waere er hier 55x14px gross - unlesbar, und der
+              Badge-Text sagt ohnehin, worum es geht. */}
+          {t.pricingTrialBadge}
         </div>
       )}
 

@@ -432,7 +432,7 @@ export function SteuerTrick() {
             </>
           ) : (
             <div style={{ ...card, textAlign: "center", padding: 32 }}>
-              <BrandIcon size={40} style={{ marginBottom: 8 }} />
+              <BrandIcon size={48} style={{ marginBottom: 8 }} />
               <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ct)", marginBottom: 4 }}>
                 {st.emptyTitle}
               </div>

@@ -204,7 +204,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               alt="immofuchs.info"
               className="lp-logo-icon"
               style={{
-                height: 44,
+                height: 56,
                 width: "auto",
                 objectFit: "contain",
                 flexShrink: 0,
@@ -1717,7 +1717,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               <img
                 src="/logo-wordmark.png"
                 alt="immofuchs.info"
-                style={{ height: 30, width: "auto", objectFit: "contain" }}
+                style={{ height: 40, width: "auto", objectFit: "contain" }}
               />
             </div>
             <div
@@ -1809,11 +1809,11 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
          Nutzer-Korrektur 2026-08-14). Seit 2026-08-20 ein Schriftzug-Bild
          (3:1) statt Quadrat-Icon + HTML-Text - gesteuert wird nur noch die
          Hoehe, dieselben Werte wie .hdr-logo-img. */
-      .lp-logo-icon{height:30px!important;width:auto!important}
+      .lp-logo-icon{height:40px!important;width:auto!important}
       @media(min-width:480px){
         .lp-acct-full{display:inline}
         .lp-acct-short{display:none}
-        .lp-logo-icon{height:44px!important;width:auto!important}
+        .lp-logo-icon{height:56px!important;width:auto!important}
       }
       @media(max-width:880px){
         .lp-nav{display:none!important}

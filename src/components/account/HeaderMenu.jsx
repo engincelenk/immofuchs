@@ -36,9 +36,9 @@ export function HeaderMenu({
             seit 2026-08-20 ein Schriftzug-Bild, daher nur noch die Hoehe -
             gleiche Werte wie .hdr-logo-img in App.jsx. */}
         <style>{`
-          .hm-logo{height:30px;width:auto}
+          .hm-logo{height:40px;width:auto}
           @media(min-width:480px){
-            .hm-logo{height:44px;width:auto}
+            .hm-logo{height:56px;width:auto}
           }
         `}</style>
         <div

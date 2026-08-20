@@ -171,10 +171,10 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
           .ma-body{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
           /* Schriftzug-Bild seit 2026-08-20 (app-weit ein Logo-File): nur
              die Hoehe steuern, Werte wie .hdr-logo-img in App.jsx. */
-          .ma-logo{height:30px;width:auto}
+          .ma-logo{height:40px;width:auto}
           .ma-brand{gap:8px}
           @media(min-width:480px){
-            .ma-logo{height:44px;width:auto}
+            .ma-logo{height:52px;width:auto}
             .ma-brand{gap:14px}
           }
           @media(min-width:700px){

@@ -89,7 +89,7 @@ export function PasswordResetFlow({ t, account, initialStep = "request", onBack 
   if (step === "success") {
     return (
       <div style={{ textAlign: "center", padding: "20px 0" }}>
-        <BrandIcon size={40} style={{ marginBottom: 12 }} />
+        <BrandIcon size={48} style={{ marginBottom: 12 }} />
         <div style={{ fontSize: 14, fontWeight: 700 }}>{t.newPasswordSuccessTitle}</div>
         <button onClick={onBack} style={{ ...primaryBtnStyle, marginTop: 16 }}>
           {t.newPasswordSuccessCta}

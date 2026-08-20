@@ -1,3 +1,57 @@
+## 2026-08-20 (1.20.36)
+
+### Nacharbeit zu 1.20.35: Zustimmungs-Zwischenschritt weg, Logo zu klein
+
+**1. Zahlungsschritt ist jetzt wirklich EIN Bildschirm (`PaymentStep.jsx`)**
+
+Nutzer-Meldung zu 1.20.35: der Zustimmungs-Bildschirm war immer noch als
+eigener Zwischenschritt zu sehen, und dieselbe Checkbox tauchte danach ein
+zweites Mal ueber dem Paddle-Formular auf. Beides stimmte: der leere erste
+Bildschirm war der urspruengliche Gate-Mechanismus (Formular entsteht erst
+nach der Zustimmung), die Doppelung kam aus 1.20.35 (Checkbox blieb
+ausgegraut stehen).
+
+Der Gate existierte, weil Paddles Bezahl-Button im iframe sitzt und "von
+aussen nicht sperrbar" war. Das stimmt so nicht mehr: `inert` nimmt einen
+kompletten Teilbaum inklusive iframe aus Maus-, Tastatur- und
+Screenreader-Bedienung. Das Formular wird deshalb jetzt sofort eingebettet
+und bleibt bis zum Haken gesperrt (zusaetzlich abgedunkelt,
+`pointer-events:none` als zweite Absicherung). § 312j BGB bleibt gewahrt -
+ohne Zustimmung ist nichts bedienbar, es kann also kein Vertrag
+zustandekommen. `inert`-Unterstuetzung im Zielbrowser verifiziert
+(Fokus wird waehrend inert verweigert, danach wieder gewaehrt).
+Die Checkbox laesst sich jederzeit wieder abwaehlen und sperrt das Formular
+dann erneut. `stage` startet dadurch bei "starting" statt "consent";
+"consent" ist nur noch der Fehler-/Ruhezustand nach einem Fehlschlag.
+
+**2. Logo war deutlich zu klein (`public/logo-wordmark.png` + 10 Stellen)**
+
+Nutzer-Meldung mit Vorher/Nachher-Screenshots. Zwei Ursachen:
+
+a) Die Quelldatei hat rundum transparenten Rand - allein oben 22px und
+unten 30px von 200px, also 26% Luft. Bei gleicher CSS-Hoehe wirkte das
+Logo dadurch deutlich kleiner als die frueher hier stehende Kombination aus
+Icon + HTML-Schriftzug. Jetzt auf den sichtbaren Inhalt zugeschnitten:
+600x152 statt 600x200, Seitenverhaeltnis 3,95:1 statt 3:1 (nahe an den
+4,5:1 der alten Kombination).
+
+b) Ueberall dieselbe Hoehe war falsch. Gemessen (alte Icon+Text-Kombination
+-> jetzt): Landing-/Rechner-Kopf 244x54 -> war 132x44, jetzt 221x56 bei
+>=480px bzw. 158x40 mobil. Weitere Hoehen: Handy-Menue 40/56,
+Mein-Konto-Kopf 52 (die Leiste ist auf 78px fest), Landing-Fuss 40,
+Checkout-Kopf 30, zentrierte Marken-Flaechen (Rechner-Sperre, §6-Trick,
+Passwort-Reset-Erfolg) 48.
+
+OHNE Marken-Bild seit dieser Version: der Trial-Badge in `PricingStep`
+(war 14px) und der "Kostenlos anmelden"-Knopf in `CalculatorTrialGate`
+(war 18px). Ein Schriftzug waere dort 55x14 bzw. 71x18 gross - unlesbar,
+und im Knopf laese er sich als "immofuchs.info Kostenlos anmelden". Der
+jeweilige Text sagt ohnehin, worum es geht.
+
+NICHT lokal getestet: der Zahlungsschritt ist auf localhost nicht
+erreichbar (dortiges GET /api/v1/me antwortet 500), geprueft wurden nur
+die Logo-Groessen im Browser und die inert-Unterstuetzung.
+
 ## 2026-08-20 (1.20.35)
 
 ### Fix: Rechner-Kontingent griff nur beim Renditerechner + 4 UX-Korrekturen

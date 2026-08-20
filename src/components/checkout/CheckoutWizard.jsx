@@ -393,7 +393,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
                   noch nichts zu tun. Der Markenname selbst steht seit
                   2026-08-20 im Bild (BrandIcon zeigt den Schriftzug), der
                   frueher danebenstehende Text "ImmoFuchs" entfaellt deshalb. */}
-              <BrandIcon size={22} /> {variant !== "login-only" && <span style={{ color: "var(--ca-dk)" }}>Pro</span>}
+              <BrandIcon size={30} /> {variant !== "login-only" && <span style={{ color: "var(--ca-dk)" }}>Pro</span>}
             </div>
           )}
           <button
