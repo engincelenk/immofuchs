@@ -1605,12 +1605,26 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               gap: 24,
             }}
           >
+            {/* Reihenfolge mit Absicht (Ueberarbeitung 2026-08-20): die drei
+                KI-Funktionen zuerst - sie sind das, was es sonst nirgends
+                gibt. Der Exposé-Scan und das Besichtigungs-Handout standen
+                bisher gar nicht auf der Landingpage, obwohl das Handout die
+                staerkste Unterscheidung zu jedem anderen Rechner ist.
+                Danach die Substanz (Recht, Daten), zuletzt der Einstieg.
+
+                Entfallen: die Kachel "100 % privat" ("Alle Berechnungen
+                laufen im Browser. Keine Server ...") - seit Finn, dem
+                Exposé-Scan und der serverseitigen Dokumenterzeugung stimmt
+                das nicht mehr. Und "Bundesland-spezifisch", das jetzt in der
+                Rechts-Kachel steht, wo es hingehoert. */}
             {[
+              { ic: "📄", h: l.uspScanH, p: l.uspScanP, neu: true },
+              { ic: "📋", h: l.uspHandoutH, p: l.uspHandoutP, neu: true },
+              { ic: "💬", h: l.uspAiH, p: l.uspAiP },
               { ic: "⚖️", h: l.usp2H, p: l.usp2P },
-              { ic: "🔒", h: l.usp5H, p: l.usp5P },
-              { ic: "🌐", h: l.usp6H, p: l.usp6P },
+              { ic: "📊", h: l.usp1H, p: l.usp1P },
               { ic: "💻", h: l.usp4H, p: l.usp4P },
-              { ic: "💬", h: l.uspAiH, p: l.uspAiP, neu: true },
+              { ic: "🌐", h: l.usp6H, p: l.usp6P },
             ].map((u, i) => (
               <div key={i}>
                 <div style={{ fontSize: 28, marginBottom: 12 }}>{u.ic}</div>

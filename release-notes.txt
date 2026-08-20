@@ -1,3 +1,42 @@
+## 2026-08-20 (1.20.40)
+
+### Landingpage: Sektion "Was macht Immofuchs besonders" ueberarbeitet
+
+Auf Nutzerwunsch neu geschnitten - und dabei zwei Befunde mitgenommen.
+
+**Eine Kachel war falsch geworden.** "100 % privat - Alle Berechnungen laufen
+im Browser. Keine Server, kein Tracking" stimmte nicht mehr: Finn und der
+Exposé-Scan laufen ueber Workers AI, Handout und PDF entstehen seit heute im
+Worker, gespeicherte Objekte liegen in D1. Ersatzlos gestrichen (Nutzer-
+Entscheidung) statt halbwahr umformuliert.
+
+**Zwei fertige Argumente lagen ungenutzt herum.** usp1H ("Tagesaktuelle
+Marktdaten") und usp3H ("Bundesland-spezifisch") standen in allen fuenf
+Sprachdateien, wurden aber nirgends gerendert - die Kachelliste in
+Landing.jsx zog nur fuenf der sieben vorhandenen Schluessel.
+
+Neu sieben Kacheln, die drei KI-Funktionen zuerst:
+  1. Exposé-Scan mit KI          (neu - stand nirgends auf der Seite)
+  2. Besichtigungs-Handout       (neu - die staerkste Unterscheidung war
+                                  bisher unsichtbar)
+  3. Finn, der KI-Assistent      (unveraendert)
+  4. Recht und Bundesland        (usp2 + das aufgeloeste usp3)
+  5. Alle Daten aktuell          (usp1, neu formuliert)
+  6. Sofort starten              (ohne "kostenloses Konto", jetzt 7 Tage)
+  7. 5 Sprachen                  (ohne das PDF-Versprechen - PDF steht in
+                                  der Pro-Leistungsliste)
+
+Zur Formulierung von Kachel 5: der Nutzerwunsch war "alle Daten sind aktuell,
+Zinsen, Foerderungen, Statistiken, einfach alles". Der Datenstand wird
+tatsaechlich automatisch aus der Quelle gezogen (scripts/monthly_update.py:
+Bundesbank-API, Dr. Klein/Interhyp/Finanztip, BDEW/Verivox, KfW/BAFA) - aber
+MONATLICH, nicht taeglich. Die Kachel heisst deshalb "Alle Daten aktuell" und
+sagt "werden automatisch aus der Quelle aufgefrischt"; das bisherige
+"Tagesaktuelle Marktdaten" waere gegenueber einem Monats-Cron zu viel
+versprochen gewesen.
+
+Texte in allen fuenf Sprachen. usp3H/P und usp5H/P sind entfallen.
+
 ## 2026-08-20 (1.20.39)
 
 ### Free abgeschafft: 7 Tage Testphase ohne Zahlungsdaten
