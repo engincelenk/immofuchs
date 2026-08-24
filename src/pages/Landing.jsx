@@ -1,4 +1,5 @@
-import { useRef, useState, lazy, Suspense } from "react";
+import { useRef, useState, Suspense } from "react";
+import { lazyWithReload } from "../utils/lazyRetry.js";
 import { TL } from "../i18n/translations.js";
 import { MARKET_RATES } from "../data.js";
 import { LANG_LOCALE } from "../utils/helpers.js";
@@ -17,11 +18,13 @@ import { PricingSection } from "../components/checkout/PricingSection.jsx";
 // verschachtelten Admin-Bereich) werden erst geladen, wenn openMode das
 // tatsaechlich braucht - auf der reinen Landingpage (openMode === null)
 // vorher nie gerendert, gehoeren also nicht ins initiale Bundle.
-const CheckoutWizard = lazy(() =>
-  import("../components/checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+const CheckoutWizard = lazyWithReload(
+  () => import("../components/checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+  "CheckoutWizard",
 );
-const MyAccount = lazy(() =>
-  import("../components/account/MyAccount.jsx").then((m) => ({ default: m.MyAccount })),
+const MyAccount = lazyWithReload(
+  () => import("../components/account/MyAccount.jsx").then((m) => ({ default: m.MyAccount })),
+  "MyAccount",
 );
 import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
 import { AccountAvatarButton, AccountMenu } from "../components/account/AccountMenu.jsx";

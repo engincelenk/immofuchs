@@ -1,4 +1,5 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, Suspense } from "react";
+import { lazyWithReload } from "../../utils/lazyRetry.js";
 import { useApp } from "../../context/AppContext.jsx";
 import { useCalculatorTrial } from "../../hooks/useCalculatorTrial.js";
 import { ACCOUNT_T } from "../../i18n/account.js";
@@ -9,8 +10,9 @@ import { IconFunkeln, IconSchloss } from "./accountIcons.jsx";
 // Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
 // CalculatorTrialGate haengt auf jeder Rechner-Seite, CheckoutWizard aber
 // nur bei showLogin/showUpgrade tatsaechlich sichtbar.
-const CheckoutWizard = lazy(() =>
-  import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+const CheckoutWizard = lazyWithReload(
+  () => import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+  "CheckoutWizard",
 );
 
 // Wrapper auf Tab-Ebene (App.jsx) statt Aenderungen in den sechs Rechner-

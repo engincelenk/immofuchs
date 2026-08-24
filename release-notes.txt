@@ -1,3 +1,355 @@
+## 2026-08-24 (1.20.46)
+
+### Fix: GitHub Actions Node.js-20-Deprecation-Warnung (checkout/setup-python)
+
+GitHub-Actions-Runs (monthly-update.yml, deploy-dev.yml, deploy-qa.yml,
+deploy-prod.yml) zeigten die Warnung "Node.js 20 is deprecated. [...]
+actions/checkout@v4, actions/setup-python@v5 [...] being forced to run on
+Node.js 24" - beide Actions liefen noch auf ihrer alten, node20-basierten
+Version, GitHub erzwingt uebergangsweise node24 darunter.
+
+Fix: `actions/checkout@v4` → `v5` in allen vier Workflow-Dateien,
+`actions/setup-python@v5` → `v6` in monthly-update.yml. Beide Major-Bumps
+laut Release-Notes reine Node-24-Umstellungen ohne funktionale Breaking
+Changes (setup-python@v6 bringt zusaetzlich Pip-Version-Pinning,
+.python-version/Pipfile-Parsing - hier nicht genutzt). `actions/setup-node@v4`
+war bereits node24-faehig, unveraendert gelassen.
+
+**Betroffene Dateien:** .github/workflows/monthly-update.yml,
+.github/workflows/deploy-dev.yml, .github/workflows/deploy-qa.yml,
+.github/workflows/deploy-prod.yml
+
+## 2026-08-24 (1.20.45)
+
+### Fix: Turnstile-Testschluessel in deploy-dev.yml vertauscht (AA/BB) - C5/D2 rot
+
+Browser-Suite-Lauf vom 24.08. zeigte C5 und D2 (Registrierung) weiterhin rot
+mit "Die Sicherheitspruefung ist fehlgeschlagen" im Dialog, obwohl 1.20.43
+den Turnstile-Test-Sitekey fuer dev bereits umgestellt hatte. Ursache: der
+dort gesetzte Sitekey `1x00000000000000000000BB` ist laut Cloudflare-
+Dokumentation "Always blocks" - das genaue Gegenteil dessen, was die
+1.20.43-Notiz behauptete ("unsichtbar, besteht immer"). Jede Registrierung
+auf dev scheiterte dadurch garantiert an der Sicherheitspruefung, unabhaengig
+vom Worker-Secret.
+
+Fix: Sitekey auf `1x00000000000000000000AA` ("Always passes") korrigiert -
+passt jetzt zum bereits gesetzten Worker-Secret
+`1x0000000000000000000000000000000AA`. qa/prod unveraendert (echter Key).
+
+**Haertung: Reload statt totem Zustand bei fehlgeschlagenem Lazy-Import**
+
+G5.1 (account-security.spec.ts) haengte 30s beim "Abmelden"-Klick, Button
+wurde aus dem DOM entfernt, nie ersetzt. Trace-Analyse (0-trace.trace) zeigt
+die Ursache: kurz nach dem Klick auf "Konto & Sicherheit" scheitert der
+dynamische Import des lazy-geladenen MyAccount-Chunks (`net::ERR_FAILED` auf
+`MyAccount-BE6Zg6Wd.js` und `CheckoutWizard-C4hMAFb8.js`, gefolgt von
+"Failed to fetch dynamically imported module"). Vermutlich ein
+Chunk-Hash-Mismatch durch ein Deployment, das waehrend des Testlaufs lief -
+die alte Seite referenzierte einen Chunk-Namen, den der neue Build nicht
+mehr auslieferte. Ohne Fehlerbehandlung reisst das die Kontoseite komplett
+ab, egal ob die Ursache ein Deploy-Zufall oder ein echter Netzwerkfehler
+beim Nutzer ist.
+
+Fix: neuer Helfer `lazyWithReload` (utils/lazyRetry.js) ersetzt alle acht
+`lazy()`-Aufrufstellen fuer `CheckoutWizard`/`MyAccount` (Landing.jsx,
+CalculatorTrialGate.jsx, ProHeaderButton.jsx, ExportPDF.jsx, Merkliste.jsx,
+FinnHandoutPanel.jsx). Schlaegt der Import fehl, laedt die Seite einmalig
+neu (zieht die aktuelle index.html mit gueltigen Chunk-Referenzen) -
+sessionStorage verhindert eine Reload-Schleife, falls der Fehler einen
+anderen Grund hat.
+
+**Weiterhin offen (nicht in diesem Fix):**
+- B1/B12 (freemium-gate.spec.ts): `test.monatlich` zeigte im Lauf vom 24.08.
+  den Testphasen-Hinweis bzw. die Kontingent-Sperre statt der erwarteten
+  Pro-Freischaltung - Verdacht auf ein abgelaufenes/nicht verlaengertes
+  Pro-Abo des geteilten Testkontos in der dev-Datenbank, noch nicht
+  bestaetigt (Admin-Check steht aus).
+
+**Betroffene Dateien:** .github/workflows/deploy-dev.yml,
+src/utils/lazyRetry.js (neu), src/pages/Landing.jsx,
+src/components/account/CalculatorTrialGate.jsx,
+src/components/account/ProHeaderButton.jsx,
+src/components/export/ExportPDF.jsx, src/components/shell/Merkliste.jsx,
+src/components/assistant/FinnHandoutPanel.jsx. Keine Breaking Changes.
+
+## 2026-08-20 (1.20.44)
+
+### Test: Browser-Suite 10/14 - Folgefehler des G5.2-Fixes behoben, tote Assertion ersetzt
+
+Lauf nach 1.20.43: **10 von 14 gruen** (vorher 6). Alle sechs Locator-Fixes
+sitzen - C1, C2, H3, H9, H10, G5.1, G5.2, A1, A2, A3 bestehen.
+
+**Neu rot: B1 und B12 - Folge des eigenen G5.2-Fixes, kein Produktfehler**
+
+Beide meldeten "Anmeldung erforderlich" fuer test.monatlich, obwohl das Konto
+Pro ist. Ursache: G5.2 lief bis 1.20.43 in eine Assertion, BEVOR es
+"Alle Geraete abmelden" ueberhaupt ausloeste - der Test war rot, aber
+harmlos. Seit dem Fix drueckt er den Knopf wirklich, und logout-all beendet
+per Definition JEDE Session des Kontos, auch die, die
+browser-global-setup.ts zu Laufbeginn fuer die geteilten storageState-Dateien
+geholt hat. Die parallel laufenden B1/B12 verloren dadurch mitten im Lauf
+ihre Anmeldung.
+
+Fix: G5.2 laeuft jetzt auf `test.jaehrlich` statt `test.monatlich` - ein
+Konto, das sonst kein Browser-Test benutzt. Ohne gesetztes
+E2E_PASSWORD_JAEHRLICH ueberspringt sich der Test selbst (Muster wie bei den
+Admin-Tests ohne E2E_PASSWORD_ADMIN), statt hart zu scheitern. Merksatz im
+Dateikopf hinterlegt: wer logout-all ausloest, braucht ein Konto fuer sich
+allein.
+
+**Tote Assertion ersetzt (B12)**
+
+`getByText("Deine Gratis-Berechnungen")` - diesen Text gibt es seit dem
+Wegfall von Free (1.20.39) in keiner der fuenf Sprachdateien mehr, die Zeile
+ging also immer durch und prueft nichts. Ersetzt durch den Testphasen-Hinweis
+(`trialRunNotice`, "Noch {n} von {limit} kostenlosen Berechnungen ..."), den
+ein Pro-Konto ebenfalls nie zu sehen bekommt - gleiche Aussage, aber wieder
+mit echter Wirkung.
+
+**Weiterhin rot: C5 und D2 (Registrierung)**
+
+Beide scheitern jetzt an der Stelle, an der es erwartet war: der
+Verify-Screen ("Bestaetige deine E-Mail") erscheint nicht, die Registrierung
+laeuft also in `403 bot_check_failed`. Die beiden Turnstile-Handgriffe aus
+1.20.43 stehen noch aus - ohne sie bleiben die zwei rot, mit ihnen sollten
+sie durchlaufen.
+
+**Betroffene Dateien:** e2e/account-security.spec.ts, e2e/freemium-gate.spec.ts.
+Kein Produktcode, keine Breaking Changes.
+
+**Merkposten fuer die Auswertung:** der HTML-Report wird beim Oeffnen neu
+geschrieben, ohne dass ein Lauf stattgefunden haben muss - Dateidatum allein
+sagt also nichts. Verlaesslich ist die `startTime` im eingebetteten
+report.json.
+
+## 2026-08-20 (1.20.43)
+
+### Test: Browser-Suite 6 -> voraussichtlich 12 von 14 gruen (Locator-Fixes) + Turnstile-Testschluessel fuer dev
+
+Zweiter Lauf nach dem Cookie-Fix aus 1.20.42: 6 bestanden, 8 rot. Alle 8
+Fehler waren Locator-Probleme, keine Produktfehler - und alle acht am
+Playwright-Trace bzw. an der Quelldatei verifiziert, nicht geraten.
+
+**Befund vorweg: diese 14 Tests waren nie gruen.** Sie wurden am 19.08.
+(1.20.24) aus dem Quellcode heraus geschrieben, aber der Cookie-Banner hat
+seither JEDEN von ihnen im ersten Schritt gestoppt - keiner der Locators
+dahinter wurde je gegen die echte Seite geprueft. Was jetzt auffaellt, sind
+deshalb ueberwiegend Erstfehler, nicht Regressionen.
+
+**1. Mehrdeutige Locators (Playwright "strict mode violation") - 6 Faelle**
+
+- `auth.spec.ts` C1/C2: "Anmelden" gibt es zweimal - im Login-Dialog UND als
+  Zeile im Kopfmenue (HeaderMenu.jsx). Neu wird im Dialog gesucht
+  (`role="dialog"` mit `aria-label={t.loginTitle}`, CheckoutWizard.jsx:338).
+- `auth.spec.ts` C5/D2: `getByRole("checkbox")` traf drei Elemente - das
+  AGB-Haekchen UND die zwei Checkboxen des Cookie-Banners, der auch mit
+  gesetztem Consent im DOM steht. Ebenfalls ueber den Dialog eingegrenzt.
+- `admin.spec.ts` H9/H10: `getByLabel("Code")` traf als Teiltreffer auch die
+  Mehrfach-Auswahl "Anzahl Codes" daneben. Das Feld heisst mit Hinweistext
+  "Code (Bei Mehrfach-Codes: Praefix)" - neu am Anfang verankert (`/^Code\b/`),
+  damit ein geaenderter Hinweistext den Test nicht wieder bricht.
+- `account-security.spec.ts` G5.2: `getByText("Alle Geräte abmelden")` traf
+  drei Elemente (Ueberschrift, Hinweissatz, Knopf) - und belegte damit
+  ohnehin nicht, was es sollte. Geprueft wird jetzt der Abbrechen-Knopf: den
+  gibt es NUR im Bestaetigungszustand (KontoSection.jsx logoutAllConfirming).
+
+**2. Geaenderter Bedienelement-Name - 1 Fall**
+
+`landing.spec.ts` A3: der Sprachknopf heisst zugaenglich "DE ▼", nicht "DE" -
+die Flagge davor ist `aria-hidden`, der Aufklapp-Pfeil dahinter nicht (und er
+wechselt beim Oeffnen zu "▲"). Neu am Anfang verankert statt exakt verglichen.
+
+**3. Turnstile blockiert die Registrierungstests (C5/D2) - Entscheidung**
+
+Auch mit richtigem Checkbox-Locator waeren C5/D2 gescheitert: seit 1.20.39
+verlangt `POST /auth/register` einen Turnstile-Token, und ein echtes Widget
+laesst sich in Headless-Chromium nicht loesen (dort kommt die interaktive
+Variante). Damit blieb die Registrierung - seit dem Wegfall von Free die
+EINZIGE Tuer ins Produkt - im Browser komplett ungetestet.
+
+Entscheidung (vom Nutzer delegiert): auf dev Cloudflares dafuer vorgesehene
+Test-Schluessel verwenden.
+  Site-Key (deploy-dev.yml): `1x00000000000000000000BB` (unsichtbar, besteht
+    immer) statt `0x4AAAAAAEW18bBEyl_o5nTS`. Der echte Key steht als
+    Kommentar daneben; qa und prod bleiben unveraendert.
+  Secret (Worker):           `1x0000000000000000000000000000000AA`
+
+Preis, offen benannt: der Bot-Schutz der Registrierung ist auf dev damit aus.
+Als Bremse bleibt dort das IP-Rate-Limit (10 Registrierungen/Std., 1.20.39
+Schritt A). Zurueckdrehen ist ein Zeilentausch plus ein `secret put`.
+
+Wichtig: ein leerer Token wird weiterhin abgelehnt - der Worker prueft die
+Laenge, BEVOR er Cloudflare fragt (turnstile.ts). Der Testfall "ohne
+turnstileToken -> 403 bot_check_failed" aus 1.20.41 bleibt also gueltig.
+
+**Betroffene Dateien:** e2e/auth.spec.ts, e2e/admin.spec.ts,
+e2e/account-security.spec.ts, e2e/landing.spec.ts. Kein Produktcode.
+`.github/workflows/deploy-dev.yml` ist schreibgeschuetzt und muss von Hand
+nachgezogen werden (siehe "Noch zu tun").
+
+**Noch zu tun (zwei Handgriffe, sonst bleiben C5/D2 rot):**
+1. In `.github/workflows/deploy-dev.yml` den Site-Key tauschen (Vorlage liegt
+   vor) und dev neu deployen - erst dann traegt das Frontend den Testschluessel.
+2. `cd worker && npx wrangler secret put TURNSTILE_SECRET --env dev` und
+   `1x0000000000000000000000000000000AA` eingeben.
+
+**Anschluss (noch nicht umgesetzt):** mit dem Test-Secret liesse sich auch die
+API-Suite entsperren - die 3 seit 1.20.41 uebersprungenen Registrierungsfaelle
+brauchen dann nur noch einen beliebigen nicht-leeren `turnstileToken`.
+
+## 2026-08-20 (1.20.42)
+
+### Chore: e2e-Nachlauf zu 1.20.41 - die 2 offenen Faelle geklaert, Browser-Suite erstmals gegen 1.20.24-1.20.40 geprueft (14 rot -> 1 Root-Cause-Fix)
+
+Fortsetzung von 1.20.41: die dort offen gelassenen Punkte 3 und 4 (kein
+Rateversuch, Live-Zugriff fehlte) sind jetzt geklaert, und der Nutzer hat
+zusaetzlich den `e2e/playwright-report/index.html` (Browser-Suite) gepruefen
+haben wollen - seit deren Einfuehrung (1.20.24) nicht mehr gelaufen.
+
+**Punkt 3 (billing-lifecycle 502) - von selbst geloest, kein Fix noetig:**
+Re-Lauf ohne jede Code-Aenderung: `POST /billing/cancel` fuer test.realpro
+war gruen. War ein transienter Paddle/D1-Zustand (vermutlich Nachklang einer
+vorherigen Aktion auf demselben Sandbox-Abo), kein reproduzierbarer Bug -
+nicht angefasst.
+
+**Punkt 4 (me.e2e.test.ts, test.monatlich) - Ursache gefunden, Datenfehler
+statt Testfehler:** `wrangler d1 execute immofuchs-dev --env dev --remote`
+zeigt `test.monatlich`s Subscription auf `status='canceled'` mit einer ECHTEN
+Paddle-Sandbox-ID (`sub_01...`, kein `admin-test:`-Praefix) - die Sandbox-
+Subscription des Fixture-Kontos war schlicht ausgelaufen/gekuendigt, nichts
+in der Test-Suite selbst schreibt diesen Status. Da `is_test_user=1` gesetzt
+ist, liess sich das ueber das Admin-Panel (Testkonto-Abo setzen, 1.20.34)
+reparieren: neues synthetisches Abo (`status=active`, `plan=monthly`) statt
+eines erneuten echten Paddle-Kaufs - fuer eine reine Basis-Fixture wie
+test.monatlich gleichwertig. Re-Lauf danach: 124 bestanden, 0 fehlgeschlagen,
+3 uebersprungen (Turnstile, siehe 1.20.41) von 127. Testcode unveraendert.
+
+**Browser-Suite (Playwright, e2e/*.spec.ts) - erstmals seit 1.20.24 wieder
+gelaufen: alle 14 Tests rot, ein einziger gemeinsamer Grund:**
+
+Jeder der 14 Tests scheiterte identisch mit `locator.click: Test timeout of
+30000ms exceeded` beim Klick auf `.calc-hero-card`. Ursache (im Playwright-
+Trace verifiziert, nicht geraten): das Cookie-Consent-Overlay `#cc-ov`
+(index.html, z-index 9998, "intercepts pointer events") liegt ueber der
+ganzen Seite, solange `localStorage.cc_consent` nicht gesetzt ist - bei
+jedem frischen Playwright-Browserprofil trifft das IMMER zu, der Banner
+kommt nach 600ms und bleibt stehen. Kein Produktbug (der Banner arbeitet wie
+gebaut, siehe frueherer Hinweis "Cookie-Banner bewusst NICHT angefasst") und
+keiner der 14 Tests prueft den Banner selbst - eine reine Test-Infrastruktur-
+Luecke, die seit dem Aufbau der Suite bestand und erst bei diesem ersten
+echten Lauf gegen dev auffiel.
+
+Fix an einer einzigen Stelle statt in 5 Spec-Dateien: `enterApp()`
+(`e2e/uiHelpers.ts`, von allen 14 Tests direkt oder indirekt aufgerufen)
+setzt jetzt per `page.addInitScript()` vor dem allerersten Request
+`cc_consent` in localStorage (Wert entspricht der Nutzerwahl "Nur
+notwendige") - der Banner erscheint dadurch gar nicht erst, der bestehende
+Kommentarblock in der Datei begruendet den Ort der Aenderung bereits
+("...sonst laueft der Uebergang irgendwann in einer Datei anders als in der
+naechsten"). Noch nicht erneut gegen dev verifiziert (Nutzer fuehrt den
+naechsten Lauf aus).
+
+**Automatisierungsvorschlag:** unveraendert zu 1.20.41 (a/b/c dort), noch
+keine Nutzer-Entscheidung.
+
+**Betroffene Dateien:** e2e/uiHelpers.ts. Datenaenderung (kein Code): Abo von
+test.monatlich im Admin-Panel zurueckgesetzt. Keine Breaking Changes.
+
+## 2026-08-20 (1.20.41)
+
+### Chore: e2e-Report (7 rot von 125) gegen 1.20.24-1.20.40 abgeglichen - 4 Faelle repariert, 3 offen
+
+Nutzer-Auftrag: `e2e/last-report.html` pruefen, mit den Aenderungen seit dem
+letzten Abgleich (1.20.24, siehe Projekt-Notiz) vergleichen, veraltete Tests
+aktualisieren, neue Faelle fuer die juengsten Aenderungen ergaenzen und einen
+Automatisierungsvorschlag machen.
+
+**Ausgangslage:** 118 bestanden, 7 fehlgeschlagen. Alle 7 liessen sich auf
+konkrete, im Code nachvollziehbare Ursachen zurueckfuehren - keine geraten,
+jede an der jeweiligen Quelldatei verifiziert.
+
+**Repariert (Tests waren veraltet, Produktverhalten ist Absicht):**
+
+1. `e2e/export.e2e.test.ts`, 2 Faelle ("liefert das Rechner-Dokument...",
+   "laesst kein Skript..."): `POST /export/rechner` verlangt seit 1.20.38
+   (Preispolitik Schritt 3, `routes/export.ts`) ein Pflichtfeld `rechner`
+   (Kontingent-Kopplung PDF <-> Berechnung, `darfDokument()`) - beide Tests
+   schickten es nicht mit, dadurch `400 invalid_rechner` statt `200`. Fix:
+   `rechner:"renditerechner"` (gueltiger Wert aus `validator.ts`
+   RECHNER_VALUES) in beiden Bodies ergaenzt. Neuer Fall dazu: "ohne
+   rechner-Feld -> 400 invalid_rechner" - dokumentiert die neue Pflicht
+   explizit, statt sie nur indirekt ueber die Erfolgsfaelle abzudecken.
+
+2. `e2e/auth-password.e2e.test.ts`, 3 Faelle ("bereits vergebene E-Mail...",
+   "gueltige Registrierung...", das davon abhaengige Admin-Cleanup):
+   `POST /auth/register` prueft seit 1.20.39 (Turnstile-Bot-Schutz,
+   `worker/src/turnstile.ts`) ein Token, BEVOR es ueberhaupt zur
+   email_taken- bzw. Erfolgs-Pruefung kommt. TURNSTILE_SECRET ist auf dev
+   gesetzt (siehe 1.20.39, "Offen"-Abschnitt) - ein Node-Testlauf ohne
+   Browser hat kein echtes Token, die Route antwortet deshalb zuverlaessig
+   mit `403 bot_check_failed`. Fix: alle drei Faelle ueberspringen sich jetzt
+   mit klarer Begruendung (analog zum bestehenden 429-Muster bei
+   REGISTER_HOURLY_LIMIT), statt rot zu laufen. Neuer Fall dazu: "ohne
+   turnstileToken -> 403 bot_check_failed" - testet das tatsaechlich neue
+   Verhalten (den Bot-Schutz selbst), das die drei uebersprungenen Faelle
+   vorher unfreiwillig mitgetestet haben.
+
+**Offen (kein Rateversuch, braucht Live-Zugriff, den diese Session nicht
+hat - weder D1-Abfrage noch `wrangler tail` noch Paddle-Sandbox-Dashboard):**
+
+3. `e2e/billing-lifecycle.e2e.test.ts`, "POST /billing/cancel setzt
+   cancel_scheduled..." (test.realpro, echtes Sandbox-Abo): `502
+   cancel_failed` statt `200`. `dispatchNotification()` ist bereits seit
+   1.20.27 gegen fehlschlagenden E-Mail-Versand abgesichert (try/catch) -
+   der 502 kommt also aus `cancelAtPeriodEnd()` (Paddle-API-Aufruf) selbst
+   oder dem D1-Update. Auffaellig: `worker/src/routes/admin.ts` bekam in
+   1.20.35 (Punkt 6) genau diese Absicherung ("Paddle lehnt das Kuendigen
+   einer bereits gekuendigten Subscription mit 502 ab") fuer die
+   Admin-Testkonto-Route - `routes/billing.ts`s oeffentliche `/cancel`-Route
+   hat diese Absicherung NICHT. Plausible, aber unverifizierte Vermutung:
+   test.realpros Paddle-Subscription steht bei Paddle bereits auf
+   "canceled" (moeglicher Nachklang der in 1.20.31 dokumentierten
+   `cancel_scheduled`-Altlast), und `/billing/cancel` faengt diesen Fall
+   anders als die Admin-Route nicht ab. Naechster Schritt: `wrangler tail
+   --env dev` waehrend eines erneuten Testlaufs, oder die Subscription-Zeile
+   von test.realpro direkt in D1 pruefen. Test unveraendert gelassen - eine
+   blind gelockerte Assertion wuerde einen echten Fehler verdecken statt ihn
+   zu zeigen.
+
+4. `e2e/me.e2e.test.ts`, "test.monatlich: aktives Monats-Abo, isPro=true":
+   `subscription` hat weiterhin die Felder `plan`/`status`/... (routes/
+   account.ts unveraendert seit vor 1.20.24) - der Vergleich scheitert also
+   am WERT von `status`, nicht an der Form. `status` ist nicht "active".
+   Kein Testcode in der Suite aendert test.monatlichs Abo-Status - die
+   Ursache liegt ausserhalb dieser Session (Paddle-Sandbox-Zustand,
+   moeglicherweise ein Nachklang der Preisaenderungen 1.20.37-1.20.39).
+   Gleiches Vorgehen wie oben: nicht geraten, Test unveraendert gelassen,
+   noetig ist ein Blick in D1 (`SELECT status FROM subscriptions WHERE
+   user_id = ...`) oder das Paddle-Sandbox-Dashboard.
+
+**Automatisierungsvorschlag (Nutzerfrage "wie automatisieren, dass Tests bei
+Umsetzungen angepasst werden"), noch NICHT umgesetzt - reine Idee, drei
+Bausteine mit steigendem Aufwand:**
+
+a) Sofort machbar, keine neue Abhaengigkeit: `run-all-tests.ps1` nach jedem
+   `wrangler deploy --env dev` routinemaessig direkt mit anschliessen (statt
+   wie bisher als spaeter manueller Schritt) - der Report waere dann nie
+   aelter als der letzte Deploy, nicht erst beim naechsten Nutzer-Auftrag.
+b) CI-Baustein (GitHub Actions, wie `monthly-update.yml` bereits vorhandenes
+   Muster): Workflow, der bei jedem Push auf einen Feature-Branch, der
+   `worker/src/**` aendert, automatisch `test:e2e:report` gegen dev laufen
+   laesst und den Report als Artefact anhaengt - macht rote Tests VOR dem
+   Merge sichtbar statt erst beim naechsten manuellen Check.
+c) Groesser (neue Bibliothek/Architekturentscheidung, hier bewusst nur
+   benannt, nicht umgesetzt): ein Contract-Test-Ansatz (z. B. Zod-Schema
+   pro Response, von Route UND Test importiert) wuerde Faelle wie 1) und 4)
+   strukturell verhindern - eine Formaenderung an der Response wird dann zum
+   Typfehler im Test, nicht erst zum roten Laufzeit-Fall. Das ist ein
+   Architektur-Entscheid und braucht ausdrueckliche Zustimmung, siehe
+   Projektregeln.
+
+**Betroffene Dateien:** e2e/export.e2e.test.ts, e2e/auth-password.e2e.test.ts
+
 ## 2026-08-20 (1.20.40)
 
 ### Landingpage: Sektion "Was macht Immofuchs besonders" ueberarbeitet

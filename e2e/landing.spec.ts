@@ -27,7 +27,10 @@ test.describe("Landing", () => {
     await enterApp(page);
     // LangSel (src/components/ui/LangSel.jsx): Kopf-Button zeigt das kurze
     // Kuerzel ("DE"), das Dropdown die ausgeschriebenen Namen ("English").
-    await page.getByRole("button", { name: "DE", exact: true }).first().click();
+    // Der zugaengliche Name des Kopf-Knopfes ist "DE ▼": die Flagge davor ist
+    // aria-hidden, der Aufklapp-Pfeil dahinter nicht - und er wechselt beim
+    // Oeffnen zu "▲". Deshalb am Anfang verankert statt exakt vergleichen.
+    await page.getByRole("button", { name: /^DE\b/ }).first().click();
     await page.getByRole("button", { name: "English", exact: true }).click();
     await expect(page.getByRole("button", { name: "Loan", exact: true }).first()).toBeVisible();
   });

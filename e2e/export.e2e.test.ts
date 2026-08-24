@@ -87,6 +87,7 @@ describe("POST /api/v1/export/* — Pro-Konto (test.monatlich)", () => {
         titel: "Renditerechner",
         inhalt: "<div>Nettorendite 4,2 %</div>",
         lang: "de",
+        rechner: "renditerechner",
       }),
     });
     expect(res.status).toBe(200);
@@ -98,9 +99,21 @@ describe("POST /api/v1/export/* — Pro-Konto (test.monatlich)", () => {
   it("weist einen leeren Rechner-Inhalt als ungueltig zurueck", async () => {
     const res = await apiFetch(sessions.monatlich(), "/api/v1/export/rechner", {
       method: "POST",
-      body: JSON.stringify({ titel: "X", inhalt: "   ", lang: "de" }),
+      body: JSON.stringify({ titel: "X", inhalt: "   ", lang: "de", rechner: "renditerechner" }),
     });
     expect(res.status).toBe(400);
+  });
+
+  // 1.20.38 (Preispolitik, Schritt 3): `rechner` ist seither Pflichtfeld -
+  // die Kontingent-Kopplung in der Testphase (darfDokument(), routes/export.ts)
+  // braucht ihn, um das PDF der richtigen Vorleistung (Berechnung) zuzuordnen.
+  it("ohne rechner-Feld -> 400 invalid_rechner", async () => {
+    const res = await apiFetch(sessions.monatlich(), "/api/v1/export/rechner", {
+      method: "POST",
+      body: JSON.stringify({ titel: "X", inhalt: "<div>ok</div>", lang: "de" }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "invalid_rechner" });
   });
 
   it("laesst kein Skript aus dem gelieferten Inhalt ins Dokument", async () => {
@@ -110,6 +123,7 @@ describe("POST /api/v1/export/* — Pro-Konto (test.monatlich)", () => {
         titel: "X",
         inhalt: '<div>ok</div><script>alert(1)</script>',
         lang: "de",
+        rechner: "renditerechner",
       }),
     });
     expect(res.status).toBe(200);

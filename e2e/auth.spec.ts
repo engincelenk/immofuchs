@@ -29,12 +29,25 @@ async function openLoginGate(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Kostenlos anmelden" }).click();
 }
 
+// Der Wizard-Dialog (CheckoutWizard.jsx: role="dialog" aria-label={t.loginTitle},
+// deutsch "Mit Konto anmelden") ist der einzige verlaessliche Rahmen um die
+// Formularelemente. Ohne ihn sind zwei Locators mehrdeutig:
+//   - "Anmelden" gibt es zusaetzlich im Kopfmenue (HeaderMenu.jsx, NavRow mit
+//     t.loginSubmit) - derselbe Text, anderer Zweck.
+//   - Checkboxen bringt das Cookie-Banner aus index.html mit (2 Stueck), es
+//     steht auch mit gesetztem Consent noch im DOM.
+// Beides loest sich auf, sobald im Dialog gesucht wird - stabiler als
+// .first()/.nth(), das nur die Reihenfolge im DOM festschreibt.
+function loginDialog(page: import("@playwright/test").Page) {
+  return page.getByRole("dialog", { name: "Mit Konto anmelden" });
+}
+
 test.describe("Login", () => {
   test("C1 — Login mit E-Mail/Passwort: Erfolg oeffnet den gesperrten Rechner", async ({ page }) => {
     await openLoginGate(page);
     await page.getByLabel("E-Mail-Adresse").fill("test.monatlich@immofuchs.info");
     await page.getByLabel("Passwort", { exact: true }).fill(requireEnv("E2E_PASSWORD_MONATLICH"));
-    await page.getByRole("button", { name: "Anmelden", exact: true }).click();
+    await loginDialog(page).getByRole("button", { name: "Anmelden", exact: true }).click();
     await expect(page.getByText("Anmeldung erforderlich")).not.toBeVisible({ timeout: 10_000 });
   });
 
@@ -42,7 +55,7 @@ test.describe("Login", () => {
     await openLoginGate(page);
     await page.getByLabel("E-Mail-Adresse").fill("test.monatlich@immofuchs.info");
     await page.getByLabel("Passwort", { exact: true }).fill("ganz-sicher-falsch-123");
-    await page.getByRole("button", { name: "Anmelden", exact: true }).click();
+    await loginDialog(page).getByRole("button", { name: "Anmelden", exact: true }).click();
     await expect(page.getByText("E-Mail oder Passwort stimmt nicht.")).toBeVisible();
   });
 });
@@ -58,7 +71,7 @@ test.describe("Registrierung", () => {
       await page.getByLabel("Vollständiger Name").fill("Browser E2E Test");
       await page.getByLabel("E-Mail-Adresse").fill(email);
       await page.getByLabel("Passwort", { exact: true }).fill("ein-ausreichend-langes-passwort-123");
-      await page.getByRole("checkbox").check();
+      await loginDialog(page).getByRole("checkbox").check();
       await page.getByRole("button", { name: "Konto erstellen", exact: true }).click();
       await expect(page.getByText("Bestätige deine E-Mail")).toBeVisible({ timeout: 10_000 });
       await expect(page.getByText(email)).toBeVisible();
@@ -75,7 +88,7 @@ test.describe("Registrierung", () => {
       await page.getByLabel("Vollständiger Name").fill("Browser E2E Test");
       await page.getByLabel("E-Mail-Adresse").fill(email);
       await page.getByLabel("Passwort", { exact: true }).fill("ein-ausreichend-langes-passwort-123");
-      await page.getByRole("checkbox").check();
+      await loginDialog(page).getByRole("checkbox").check();
       await page.getByRole("button", { name: "Konto erstellen", exact: true }).click();
       await expect(page.getByText("Bestätige deine E-Mail")).toBeVisible({ timeout: 10_000 });
       // "Erneut senden" traegt waehrend des Cooldowns die verbleibenden

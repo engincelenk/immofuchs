@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from "react";
+import { lazyWithReload } from "../../utils/lazyRetry.js";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
@@ -22,8 +23,9 @@ import { isK15 } from "../../data/plzData.js";
 // Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
 // Merkliste haengt auf jeder Rechner-Seite, CheckoutWizard aber nur bei
 // showUpgrade tatsaechlich sichtbar.
-const CheckoutWizard = lazy(() =>
-  import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+const CheckoutWizard = lazyWithReload(
+  () => import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+  "CheckoutWizard",
 );
 
 const MAX_COMPARE = 5;

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
+import { lazyWithReload } from "../../utils/lazyRetry.js";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
@@ -9,10 +10,14 @@ import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
 // Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
 // ProHeaderButton haengt fest in der Kopfzeile jeder Seite, CheckoutWizard/
 // MyAccount aber nur bei openMode !== null tatsaechlich sichtbar.
-const CheckoutWizard = lazy(() =>
-  import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+const CheckoutWizard = lazyWithReload(
+  () => import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+  "CheckoutWizard",
 );
-const MyAccount = lazy(() => import("./MyAccount.jsx").then((m) => ({ default: m.MyAccount })));
+const MyAccount = lazyWithReload(
+  () => import("./MyAccount.jsx").then((m) => ({ default: m.MyAccount })),
+  "MyAccount",
+);
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
 // NICHT in Statusleiste.jsx). Label "Pro" mit Kroenchen-Icon, Fuchs-Orange.

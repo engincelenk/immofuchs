@@ -10,7 +10,8 @@
 // Findings geloest, nicht als Badge je Zeile: automatisiert erkannt ist hier
 // *alles*, eine Wiederholung an jeder Zeile wuerde nur abstumpfen.
 
-import { lazy, Suspense, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { lazyWithReload } from "../../utils/lazyRetry.js";
 import { fmtE, fmt } from "../../utils/helpers.js";
 import { fuelle } from "../../i18n/expose.js";
 import { oeffneDruckdokument } from "../../utils/druckdokument.js";
@@ -18,8 +19,9 @@ import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
 import { exposeSchluessel, ladeAuswahl, speichereAuswahl } from "../../utils/finnAuswahl.js";
 
-const CheckoutWizard = lazy(() =>
-  import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+const CheckoutWizard = lazyWithReload(
+  () => import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+  "CheckoutWizard",
 );
 
 // Die Auswahl ueberlebt Reload und erneuten Upload desselben Exposes

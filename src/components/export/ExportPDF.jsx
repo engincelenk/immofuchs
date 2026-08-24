@@ -1,12 +1,14 @@
-import { lazy, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
+import { lazyWithReload } from "../../utils/lazyRetry.js";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { oeffneDruckdokument } from "../../utils/druckdokument.js";
 import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
 
-const CheckoutWizard = lazy(() =>
-  import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+const CheckoutWizard = lazyWithReload(
+  () => import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+  "CheckoutWizard",
 );
 
 // PDF-Export ist seit der Preispolitik 2026-08-20 eine Pro-Funktion.

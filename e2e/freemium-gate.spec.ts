@@ -34,7 +34,13 @@ test.describe("Rechner (eingeloggt, Pro)", () => {
     for (const tab of ["kredit", "miete", "sanier"] as const) {
       await switchTab(page, tab);
       await expect(page.getByText("Anmeldung erforderlich")).not.toBeVisible();
-      await expect(page.getByText("Deine Gratis-Berechnungen")).not.toBeVisible();
+      // Fruehere Fassung suchte "Deine Gratis-Berechnungen" - diesen Text
+      // gibt es seit dem Wegfall von Free (1.20.39) in keiner Sprachdatei
+      // mehr, die Zeile ging also immer durch und pruefte nichts. An seine
+      // Stelle tritt der Testphasen-Hinweis (account.js trialRunNotice,
+      // "Noch {n} von {limit} kostenlosen Berechnungen ..."), den ein
+      // Pro-Konto ebenfalls nie zu sehen bekommt.
+      await expect(page.getByText(/kostenlosen Berechnungen/)).not.toBeVisible();
     }
   });
 });

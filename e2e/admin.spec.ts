@@ -20,6 +20,14 @@ async function openAdminTab(page: import("@playwright/test").Page, tabLabel: str
   await page.getByRole("button", { name: tabLabel, exact: true }).click();
 }
 
+// Das Code-Feld heisst mit Hinweistext "Code (Bei Mehrfach-Codes: Praefix)"
+// (AdminDiscountsView.jsx, Field label+hint stehen zusammen in der
+// Beschriftung). Ein schlichtes getByLabel("Code") sucht als Teiltreffer und
+// findet zusaetzlich die Mehrfach-Auswahl "Anzahl Codes" daneben. Am Anfang
+// verankert trifft es nur das Eingabefeld - und bleibt richtig, falls sich
+// der Hinweistext in Klammern noch einmal aendert.
+const CODE_FELD = /^Code\b/;
+
 test.describe("Admin-Panel", () => {
   // Direkter Regressionstest fuer den instr()-statt-LIKE-Fix (1.20.22): vorher
   // lieferte genau so ein langer Suchbegriff (E-Mail + UUID) einen
@@ -41,7 +49,7 @@ test.describe("Admin-Panel", () => {
     // separater Nachtrag empfohlen, hier bewusst nicht mit umgesetzt.
     test("H10 — Gutschein mit Bindestrich im Code wird abgelehnt", async ({ page }) => {
       await openAdminTab(page, "Gutscheine");
-      await page.getByLabel("Code").fill(`E2E-${randomUUID().slice(0, 6).toUpperCase()}`);
+      await page.getByLabel(CODE_FELD).fill(`E2E-${randomUUID().slice(0, 6).toUpperCase()}`);
       await page.getByLabel("Beschreibung", { exact: true }).fill("Browser-E2E Testcode (ungueltig)");
       await page.getByLabel(/Wert \(%\)/).fill("5");
       await page.getByRole("button", { name: "Gutschein erstellen" }).click();
@@ -51,7 +59,7 @@ test.describe("Admin-Panel", () => {
     test("H9 — Gutschein mit gueltigem Code wird angelegt", async ({ page }) => {
       const code = `E2E${randomUUID().slice(0, 8).toUpperCase()}`;
       await openAdminTab(page, "Gutscheine");
-      await page.getByLabel("Code").fill(code);
+      await page.getByLabel(CODE_FELD).fill(code);
       await page.getByLabel("Beschreibung", { exact: true }).fill("Browser-E2E Testcode");
       await page.getByLabel(/Wert \(%\)/).fill("5");
       await page.getByRole("button", { name: "Gutschein erstellen" }).click();

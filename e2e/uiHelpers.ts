@@ -11,7 +11,22 @@ import type { Page } from "@playwright/test";
 // "calc-hero-card", stabiler als der umgebende Text) fuehrt in den
 // Renditerechner-Tab ("haupt") - von dort aus fuehrt die normale Tableiste
 // zu den anderen fuenf Rechnern.
+//
+// Cookie-Consent-Banner (index.html, #cc-ban): erscheint 600ms nach dem
+// ersten Laden, wenn localStorage keinen "cc_consent"-Eintrag hat - bei
+// jedem frischen Playwright-Browserprofil also immer. #cc-ov (Overlay,
+// z-index 9998) liegt danach ueber der ganzen Seite und blockt jeden Klick,
+// auch auf .calc-hero-card. Consent deshalb per addInitScript VOR dem
+// ersten Request setzen (entspricht der Wahl "Nur notwendige") - simuliert
+// einen wiederkehrenden Besucher, keiner der 14 Tests prueft den Banner
+// selbst.
 export async function enterApp(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "cc_consent",
+      JSON.stringify({ necessary: true, analytics: false, v: 1, ts: Date.now() }),
+    );
+  });
   await page.goto("/");
   await page.locator(".calc-hero-card").click();
   // Tab "Rendite" ist danach aktiv - die Tableiste selbst ist der
