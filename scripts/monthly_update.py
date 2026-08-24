@@ -6,13 +6,14 @@ Updates src/data.js (MARKET_RATES), src/i18n/translations.js (ratesTip
 Stand-Datum) und public/zinsen.json (Live-Datenquelle der Landingpage).
 
 Bauzinsen-Ermittlung (2026-08-24 umgestellt, kein LLM mehr noetig):
-  1. Deutsche Bundesbank: Rendite 10J Bundeswertpapier, aus dem taeglich
+  1. Deutsche Bundesbank: Rendite 10J Bundeswertpapier + 0,75 Aufschlag
+     (Naeherung Bundesanleihe → Hypothekenzins), aus dem taeglich
      aktualisierten PDF "rendbund-data.pdf" (letzter Handelstag).
-  2. Interhyp: Zinstabelle "10 Jahre" Zinsbindung, Durchschnitt der drei
-     Beleihungsauslauf-Klassen <70 / =80 / >90 (Seite ist clientseitig
-     gerendert, daher Playwright statt requests).
-  avg  = Durchschnitt aus 1. und 2.
-  top  = Interhyp-Wert bei Beleihungsauslauf <70 (guenstigster Tarif)
+  2. Interhyp: Zinstabelle "10 Jahre" Zinsbindung, Eigen-Durchschnitt der
+     drei Beleihungsauslauf-Klassen <70 / =80 / >90 (Seite ist
+     clientseitig gerendert, daher Playwright statt requests).
+  avg  = Durchschnitt aus 1. und 2. - die einzige Zinsangabe (kein
+         separater "Topzins" mehr, siehe 2026-08-24 Folge-Anpassung).
 Grund fuer die Umstellung: die vorherigen 7 Marketing-Webseiten liefern
 groesstenteils nur clientseitig gerendertes JS/CSS ohne Zahlenwerte an
 einen simplen requests.get() - das liess Claude fast jeden Monat
@@ -72,17 +73,17 @@ def replace_simple(data_js: str, pattern: str, new_val, label: str, changes: lis
     return data_js[:m.start(1)] + new_str + data_js[m.end(1):]
 
 
-def replace_market_rates_block(data_js: str, stand: str, avg, top, changes: list) -> str:
-    """Ersetzt den kompletten MARKET_RATES-Block (rows[] entfaellt seit
-    2026-08-24 - ein einzelner ermittelter Zins statt 5 benannter Quellen)."""
-    if avg is None or top is None:
+def replace_market_rates_block(data_js: str, stand: str, avg, changes: list) -> str:
+    """Ersetzt den kompletten MARKET_RATES-Block (rows[]/top entfallen seit
+    2026-08-24 - eine einzelne ermittelte Zinsangabe statt 5 benannter
+    Quellen bzw. separatem Topzins)."""
+    if avg is None:
         return data_js
     pattern = re.compile(r"export const MARKET_RATES = \{[\s\S]*?\n\};\n")
     new_block = (
         "export const MARKET_RATES = {\n"
         f'  stand: "{stand}",\n'
         f"  avg: {avg},\n"
-        f"  top: {top},\n"
         "};\n"
     )
     m = pattern.search(data_js)
@@ -91,7 +92,7 @@ def replace_market_rates_block(data_js: str, stand: str, avg, top, changes: list
         return data_js
     if m.group(0) == new_block:
         return data_js
-    changes.append(f"  MARKET_RATES: stand={stand}, avg={avg}, top={top}")
+    changes.append(f"  MARKET_RATES: stand={stand}, avg={avg}")
     return data_js[: m.start()] + new_block + data_js[m.end() :]
 
 
@@ -192,19 +193,20 @@ def main():
 
     print("\nFetching Interhyp 10J-Zinstabelle...")
     interhyp = fetch_interhyp_10j()
-    interhyp_avg = interhyp_lt70 = None
+    interhyp_avg = None
     if interhyp:
-        interhyp_lt70, eq80, gt90 = interhyp
-        interhyp_avg = round((interhyp_lt70 + eq80 + gt90) / 3, 2)
-        print(f"  ✓ Interhyp 10J: <70={interhyp_lt70}  =80={eq80}  >90={gt90}  (Ø {interhyp_avg})")
+        lt70, eq80, gt90 = interhyp
+        interhyp_avg = round((lt70 + eq80 + gt90) / 3, 2)
+        print(f"  ✓ Interhyp 10J: <70={lt70}  =80={eq80}  >90={gt90}  (Ø {interhyp_avg})")
     else:
         print("  ✗ Interhyp 10J nicht verfuegbar")
 
-    final_avg = final_top = None
-    if bbk_10j is not None and interhyp_avg is not None:
-        final_avg = round((bbk_10j + interhyp_avg) / 2, 2)
-        final_top = interhyp_lt70
-        print(f"\n=> Zins (Ø Bundesbank+Interhyp): {final_avg} %  |  Topzins (Interhyp <70): {final_top} %")
+    bbk_adjusted = round(bbk_10j + 0.75, 2) if bbk_10j is not None else None
+
+    final_avg = None
+    if bbk_adjusted is not None and interhyp_avg is not None:
+        final_avg = round((bbk_adjusted + interhyp_avg) / 2, 2)
+        print(f"\n=> Zins (Ø aus Bundesbank+0,75={bbk_adjusted} und Interhyp-Ø={interhyp_avg}): {final_avg} %")
     else:
         print("\n⚠ Mindestens eine Quelle nicht verfuegbar — MARKET_RATES/zinsen.json bleiben unveraendert.")
 
@@ -213,7 +215,7 @@ def main():
     data_js = open(DATA_JS, encoding="utf-8").read()
     changes = []
 
-    data_js = replace_market_rates_block(data_js, new_stand, final_avg, final_top, changes)
+    data_js = replace_market_rates_block(data_js, new_stand, final_avg, changes)
 
     # PFANDBRIEF (separate Datenreihe, unveraendert seit jeher ueber die
     # Bundesbank-API BBK01.WU8148, die momentan Verbindungsfehler wirft)
@@ -293,7 +295,6 @@ def main():
             ("stand", new_zinsen_stand),
             ("hinweis", new_hinweis),
             ("avg", final_avg),
-            ("top", final_top),
             ("bundesanleihe_10j", bbk_10j),
         ):
             if zinsen.get(key) != new_val:
@@ -303,6 +304,10 @@ def main():
         if "quellen" in zinsen:
             del zinsen["quellen"]
             zinsen_changed.append("  quellen[]: entfernt (keine namentlichen Quellen mehr)")
+        # Topzins entfaellt (2026-08-24 Folge-Anpassung) - nur noch eine Zinsangabe
+        if "top" in zinsen:
+            del zinsen["top"]
+            zinsen_changed.append("  top: entfernt (keine separate Topzins-Angabe mehr)")
 
     if zinsen_changed:
         open(ZINSEN_JSON, "w", encoding="utf-8").write(json.dumps(zinsen, indent=2, ensure_ascii=False) + "\n")

@@ -7,13 +7,12 @@
 
 // ── BAUZINSEN ───────────────────────────────────────────────────────────
 // Intervall: monatlich (automatisch via scripts/monthly_update.py)
-// avg = Ø aus Bundesbank-Rendite (10J Bundeswertpapier) und Interhyp-
-//       Zinstabelle (10J, Ø der drei Beleihungsauslauf-Klassen)
-// top = Interhyp-Zins bei Beleihungsauslauf <70 (guenstigster Tarif)
+// avg = Ø aus (Bundesbank-Rendite 10J Bundeswertpapier + 0,75 Aufschlag)
+//       und Interhyp-Zinstabelle (10J, Eigen-Ø der drei Beleihungsauslauf-
+//       Klassen) - einzige Zinsangabe, kein separater Topzins.
 export const MARKET_RATES = {
   stand: "August 2026",
-  avg: 3.61,
-  top: 3.82,
+  avg: 3.99,
 };
 
 // ── GRUNDERWERBSTEUER je Bundesland ─────────────────────────────────────

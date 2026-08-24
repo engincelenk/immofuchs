@@ -1692,8 +1692,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               {l.ratesIntro2}{" "}
               <strong>
                 {l.ratesCompact}: {zinsen?.avg || MARKET_RATES.avg} %
-              </strong>{" "}
-              · {l.ratesShort}: <strong>{zinsen?.top || MARKET_RATES.top} %</strong>
+              </strong>
               {zB && (
                 <>
                   {" "}
