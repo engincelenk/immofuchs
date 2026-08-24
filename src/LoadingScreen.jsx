@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { MARKET_RATES, MIET_P } from "./data.js";
 
 const avg = MARKET_RATES.avg.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const top = MARKET_RATES.top.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const mietP = MIET_P.normal.pA.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 const ITEMS = {
@@ -14,7 +13,7 @@ const ITEMS = {
     { icon: "✅", text: "Alles bereit — deine Rendite kann berechnet werden" },
   ],
   kredit: [
-    { icon: "🏦", text: `Ich hole die aktuellen Bauzinsen — Topzins ab ${top}%` },
+    { icon: "🏦", text: `Ich hole die aktuellen Bauzinsen — Ø ${avg}%` },
     { icon: "📋", text: "Grunderwerbsteuer für dein Bundesland wird geladen..." },
     { icon: "🎯", text: "KfW-Förderprogramme werden geprüft..." },
     { icon: "✅", text: "Alles bereit — deine Finanzierung kann berechnet werden" },
