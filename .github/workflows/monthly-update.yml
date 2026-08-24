@@ -7,6 +7,11 @@ on:
   workflow_dispatch:
     # Manuell auslösbar: GitHub → Actions → Monthly Data Update → Run workflow
 
+# Noetig, damit der Commit-Schritt unten den GITHUB_TOKEN zum Zurueckpushen
+# nutzen darf (Default-Token ist sonst read-only fuer contents).
+permissions:
+  contents: write
+
 jobs:
   update-and-deploy:
     name: Update Market Data & Deploy (${{ matrix.env.name }})
@@ -33,7 +38,8 @@ jobs:
     # Gleiche Gruppe wie im jeweiligen deploy-*.yml fuer dieselbe Umgebung -
     # verhindert, dass dieser Job und ein Push-Deploy gleichzeitig auf
     # denselben Zielordner mirror --delete fahren und sich gegenseitig
-    # ueberschreiben.
+    # ueberschreiben (Ursache des Vorfalls vom 24.08.2026: ein veralteter
+    # main-Lauf hat DEV/QA nach einem frischen Push wieder zurueckgesetzt).
     concurrency:
       group: deploy-${{ matrix.env.slug }}
       cancel-in-progress: true
@@ -69,20 +75,25 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/monthly_update.py
 
-      # ── 4. Änderungen committen (nur lokal im Runner, wie bisher - kein
-      #      Push, damit kein Bot-Commit ungefragt in die Branches landet;
-      #      der Commit dient nur als Grundlage fuer den Build unten) ───────
-      - name: 📝 Änderungen committen
+      # ── 4. Änderungen committen UND zurückpushen - data.js/translations.js/
+      #      zinsen.json bleiben so dauerhaft die Quelle der Wahrheit in Git,
+      #      statt nur einmalig auf dem Runner fuer diesen einen Deploy zu
+      #      existieren und beim naechsten Push auf den Branch wieder auf den
+      #      alten committeten Stand zurueckzufallen (siehe Vorfall
+      #      24.08.2026: main/QA zeigten Monate spaeter noch den Mai-Stand,
+      #      weil hier nie gepusht wurde). ───────────────────────────────────
+      - name: 📝 Änderungen committen & pushen
         run: |
           git config --global user.name "ImmoFuchs Bot"
           git config --global user.email "bot@immofuchs.info"
-          git add src/data.js src/App.jsx
+          git add src/data.js src/i18n/translations.js public/zinsen.json
           if git diff --staged --quiet; then
             echo "Keine Änderungen — kein Commit nötig"
           else
             MONTH=$(date +'%B %Y')
             git commit -m "data: Monatliches Update $MONTH (${{ matrix.env.name }})"
-            echo "✓ Commit erstellt"
+            git push origin HEAD:${{ matrix.env.branch }}
+            echo "✓ Commit erstellt und gepusht"
           fi
 
       # ── 5. Build ─────────────────────────────────────────────────────────
