@@ -48,7 +48,6 @@ const navLink = {
 export function Landing({ onStart, zinsen, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
-  const zB = zinsen?.bundesanleihe_10j;
   // Login-Standard-Flow (Konzept-Dok Abschnitt 2/1.5): "Anmelden" ist bereits
   // auf der Landingpage sichtbar, statt erst beim Klick in einen Rechner.
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
@@ -1693,12 +1692,6 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               <strong>
                 {l.ratesCompact}: {zinsen?.avg || MARKET_RATES.avg} %
               </strong>
-              {zB && (
-                <>
-                  {" "}
-                  · {l.ratesShort3}: <strong>{zB} %</strong>
-                </>
-              )}
             </p>
             <p style={{ margin: 0, fontSize: 11, color: "var(--ch)", lineHeight: 1.5 }}>
               {l.ratesDisclaim}
