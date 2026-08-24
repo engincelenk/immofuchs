@@ -2,6 +2,5 @@
   "stand": "2026-08",
   "hinweis": "Bauzinsen (10J): Durchschnitt aus Bundesbank-Rendite Bundeswertpapiere und Interhyp-Konditionsvergleich. Automatisiert aktualisiert (scripts/monthly_update.py). Stand: August 2026.",
   "bundesanleihe_10j": 3.24,
-  "avg": 3.61,
-  "top": 3.82
+  "avg": 3.99
 }
