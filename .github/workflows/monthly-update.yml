@@ -39,13 +39,13 @@ jobs:
       # dev+qa). Jetzt bekommt jede Umgebung ihren eigenen Branch-Stand,
       # nur die Marktdaten werden aufgefrischt.
       - name: 🚚 Code auschecken (${{ matrix.env.branch }})
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ matrix.env.branch }}
 
       # ── 2. Python einrichten ─────────────────────────────────────────────
       - name: 🐍 Python einrichten
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 

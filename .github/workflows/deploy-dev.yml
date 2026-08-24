@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: 🚚 Code aus GitHub auschecken
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🛠️ Node.js einrichten
         uses: actions/setup-node@v4
