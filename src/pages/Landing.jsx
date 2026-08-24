@@ -11,7 +11,6 @@ const navLinkMobile={...navLink,padding:"12px 4px",fontSize:15,textAlign:"left",
 export function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLang}){
   const l=TL[lang]||TL.de;
   const zD=zinsen&&zinsen.datum?zinsen.datum:null;
-  const zB=zinsen?.bundesanleihe_10j;
   const [tipOpen,setTipOpen]=useState(false);
   const [navOpen,setNavOpen]=useState(false);
 
@@ -275,7 +274,6 @@ export function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLa
           </div>
           <p style={{margin:"0 0 6px",fontSize:13,color:"var(--cl)",lineHeight:1.7}}>
             {l.ratesIntro2} <strong>{l.ratesCompact}: {(zinsen?.avg||MARKET_RATES.avg)} %</strong>
-            {zB&&<> · {l.ratesShort3}: <strong>{zB} %</strong></>}
           </p>
           <p style={{margin:0,fontSize:11,color:"var(--ch)",lineHeight:1.5}}>{l.ratesDisclaim}</p>
           <ZinsAlarm zinsen={zinsen} lang={lang} />
