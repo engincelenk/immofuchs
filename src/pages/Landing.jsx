@@ -277,7 +277,7 @@ export function Landing({onStart,zinsen,openDatenschutz,openImpressum,lang,setLa
             {l.ratesIntro2} <strong>{l.ratesCompact}: {(zinsen?.avg||MARKET_RATES.avg)} %</strong> · {l.ratesShort}: <strong>{(zinsen?.top||MARKET_RATES.top)} %</strong>
             {zB&&<> · {l.ratesShort3}: <strong>{zB} %</strong></>}
           </p>
-          <p style={{margin:0,fontSize:11,color:"var(--ch)",lineHeight:1.5}}>{l.ratesSources}: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank · {l.ratesDisclaim}</p>
+          <p style={{margin:0,fontSize:11,color:"var(--ch)",lineHeight:1.5}}>{l.ratesDisclaim}</p>
           <ZinsAlarm zinsen={zinsen} lang={lang} />
         </div>
       </div>
