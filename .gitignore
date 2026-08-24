@@ -5,5 +5,3 @@ dist/
 CLAUDE.md
 .claude/
 .tmp.driveupload/
-.env
-docs/
