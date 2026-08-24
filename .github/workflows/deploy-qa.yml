@@ -5,6 +5,12 @@ on:
     branches:
       - Immofuchs-qa
 
+# Verhindert Wettrennen mit einem gleichzeitig laufenden monthly-update.yml
+# fuer QA - beide spiegeln mit --delete auf dasselbe Zielverzeichnis.
+concurrency:
+  group: deploy-qa
+  cancel-in-progress: true
+
 jobs:
   web-deploy:
     name: 🔍 Build & Deploy QA

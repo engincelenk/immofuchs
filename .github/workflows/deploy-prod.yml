@@ -5,6 +5,12 @@ on:
     branches:
       - main
 
+# Verhindert Wettrennen mit einem gleichzeitig laufenden monthly-update.yml
+# fuer PROD - beide spiegeln mit --delete auf dasselbe Zielverzeichnis.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: true
+
 jobs:
   web-deploy:
     name: 🎉 Build & Deploy

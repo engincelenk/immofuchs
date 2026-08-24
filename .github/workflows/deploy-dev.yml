@@ -5,6 +5,15 @@ on:
     branches:
       - Immofuchs-dev
 
+# Verhindert, dass dieser Deploy sich mit einem gleichzeitig laufenden
+# monthly-update.yml-Lauf fuer DEV um dev.immofuchs.info "wettrennt" - beide
+# spiegeln mit --delete auf dasselbe Zielverzeichnis, der zuletzt fertige
+# gewinnt sonst unkontrolliert. Ein neuer Push bricht einen laufenden
+# Monats-Job fuer DEV ab statt gegen ihn zu deployen.
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
 jobs:
   web-deploy:
     name: 🔧 Build & Deploy DEV
