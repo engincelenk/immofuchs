@@ -3018,7 +3018,7 @@ export const TL = {
     dse: "Datenschutz",
     ratesCompact: "Bauzinsen Ø",
     ratesTip:
-      "Marktindikation für 10 Jahre Zinsbindung. Quellen: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank. Stand August 2026.",
+      "Marktindikation für 10 Jahre Zinsbindung. Stand August 2026.",
     ratesShort: "Topzins",
     ratesShort3: "BBank 10J",
     tagFull: "Kostenlos · Mit Konto · Aktuell",
@@ -3107,7 +3107,7 @@ export const TL = {
     alarmDenied: "Benachrichtigungen blockiert",
     alarmSaved: "Gespeichert",
     alarmHint:
-      "ImmoFuchs zeigt Durchschnittszinsen anhand öffentlicher Quellen (Bundesbank, Interhyp, Dr. Klein u.a.). Keine Gewähr. Keine Anlageberatung.",
+      "ImmoFuchs zeigt Durchschnittszinsen anhand öffentlicher Quellen. Keine Gewähr. Keine Anlageberatung.",
     notifTitle: "ImmoFuchs Zinsalarm",
     notifBody: "Zinsen bei {avg}% – unter Schwellenwert {threshold}%",
   },
@@ -3229,7 +3229,7 @@ export const TL = {
     dse: "Privacy",
     ratesCompact: "Avg. mortgage rate",
     ratesTip:
-      "Market indication for 10-year fixed periods. Sources: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank. As of August 2026.",
+      "Market indication for 10-year fixed periods. As of August 2026.",
     ratesShort: "Top rate",
     ratesShort3: "BBank 10Y",
     tagFull: "Free · Free account · Live data",
@@ -3318,7 +3318,7 @@ export const TL = {
     alarmDenied: "Notifications blocked",
     alarmSaved: "Saved",
     alarmHint:
-      "ImmoFuchs shows average mortgage rates from public sources (Bundesbank, Interhyp, Dr. Klein, etc.). No guarantee of accuracy. Not financial advice.",
+      "ImmoFuchs shows average mortgage rates from public sources. No guarantee of accuracy. Not financial advice.",
     notifTitle: "ImmoFuchs Rate Alert",
     notifBody: "Rates at {avg}% – below your threshold of {threshold}%",
   },
@@ -3438,7 +3438,7 @@ export const TL = {
     dse: "Gizlilik",
     ratesCompact: "Ort. ipotek faizi",
     ratesTip:
-      "10 yıllık sabit faiz dönemi piyasa göstergesi. Kaynaklar: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank. Ağustos 2026.",
+      "10 yıllık sabit faiz dönemi piyasa göstergesi. Ağustos 2026.",
     ratesShort: "En iyi",
     ratesShort3: "BBank 10Y",
     tagFull: "Ücretsiz · Ücretsiz hesap · Güncel",
@@ -3639,7 +3639,7 @@ export const TL = {
     dse: "隐私",
     ratesCompact: "平均抵押利率",
     ratesTip:
-      "10年固定利率期间市场指示。来源：Dr. Klein、Vergleich.de、Finanztip、Finanzfacts、Interhyp、德国联邦银行。2026 年 8 月。",
+      "10年固定利率期间市场指示。2026 年 8 月。",
     ratesShort: "最优",
     ratesShort3: "联邦债券 10年",
     tagFull: "免费 · 免费账户 · 实时",
@@ -3840,7 +3840,7 @@ export const TL = {
     dse: "गोपनीयता",
     ratesCompact: "औसत होम लोन दर",
     ratesTip:
-      "10 वर्ष निश्चित दर अवधि बाज़ार संकेत। स्रोत: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank। अगस्त 2026।",
+      "10 वर्ष निश्चित दर अवधि बाज़ार संकेत। अगस्त 2026।",
     ratesShort: "सर्वोत्तम",
     ratesShort3: "BBank 10Y",
     tagFull: "मुफ्त · मुफ़्त खाता · वर्तमान",

@@ -24,7 +24,7 @@ export const TIPS = {
       "Liquide Mittel für Kauf. Faustregel: mind. Kaufnebenkosten + 20% des Kaufpreises.",
     nkFinanzieren:
       "Standard (aus): Nebenkosten zahlst du zusätzlich zum Eigenkapital bar, das Darlehen deckt nur den Kaufpreis. AN: Nebenkosten fließen mit ins Darlehen — wie es Banken im Finanzierungsangebot oft rechnen (Finanzierungsbedarf = Kaufpreis + Nebenkosten − Eigenkapital). Erhöht Darlehen, Rate und Beleihungsauslauf.",
-    zinssatz: `Sollzins p.a. (nicht Effektivzins). Aktueller Marktdurchschnitt: ${MARKET_RATES.avg} %. Quellen: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank.`,
+    zinssatz: `Sollzins p.a. (nicht Effektivzins). Aktueller Marktdurchschnitt: ${MARKET_RATES.avg} % (Stand: ${MARKET_RATES.stand}).`,
     tilgung: "Anfängliche Tilgung p.a. Empfehlung: mind. 2-3% für vertretbare Laufzeit.",
     grEst: "Grunderwerbsteuer nach GrEStG - bundeslandabhängig 3,5%-6,5%.",
     notar: "Notar- und Grundbuchkosten, ca. 1,5-2% des Kaufpreises.",
@@ -84,7 +84,7 @@ export const TIPS = {
       "Liquid funds for purchase. Rule of thumb: at least closing costs + 20% of purchase price.",
     nkFinanzieren:
       "Default (off): you pay closing costs in cash on top of your equity, the loan only covers the purchase price. ON: closing costs are added to the loan — as banks often calculate a financing offer (financing need = purchase price + closing costs − equity). Increases loan, rate and loan-to-value.",
-    zinssatz: `Nominal rate p.a. (not APR). Current market average: ${MARKET_RATES.avg}% (as of ${MARKET_RATES.stand}). Sources: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank.`,
+    zinssatz: `Nominal rate p.a. (not APR). Current market average: ${MARKET_RATES.avg}% (as of ${MARKET_RATES.stand}).`,
     tilgung: "Initial annual repayment rate. Recommend: at least 2-3% for reasonable term.",
     grEst: "Real estate transfer tax (GrEStG) — varies 3.5%-6.5% by German state.",
     notar: "Notary and land registry costs, approx. 1.5-2% of purchase price.",
@@ -142,7 +142,7 @@ export const TIPS = {
       "Satın alma için likit fonlar. Kural: en az kapanış maliyetleri + alım fiyatının %20'si.",
     nkFinanzieren:
       "Varsayılan (kapalı): Yan giderleri öz sermayenin üzerine nakit ödersin, kredi sadece alım fiyatını karşılar. AÇIK: Yan giderler krediye eklenir — bankaların finansman teklifinde sık hesapladığı gibi (finansman ihtiyacı = alım fiyatı + yan giderler − öz sermaye). Krediyi, taksiti ve kredi/değer oranını artırır.",
-    zinssatz: `Yıllık nominal faiz (efektif faiz değil). Güncel piyasa ortalaması: %${MARKET_RATES.avg} (${MARKET_RATES.stand} itibariyle). Kaynaklar: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank.`,
+    zinssatz: `Yıllık nominal faiz (efektif faiz değil). Güncel piyasa ortalaması: %${MARKET_RATES.avg} (${MARKET_RATES.stand} itibariyle).`,
     tilgung: "Yıllık başlangıç anapara ödemesi. Tavsiye: makul vade için en az %2-3.",
     grEst: "Almanya'da emlak alım vergisi (GrEStG) - eyalete göre %3,5-6,5.",
     notar: "Noter ve tapu kayıt maliyetleri, satın alma fiyatının yaklaşık %1,5-2'si.",
@@ -198,7 +198,7 @@ export const TIPS = {
     eigenkapital: "购买的流动资金。经验法则：至少交易费用 + 购买价的20%。",
     nkFinanzieren:
       "默认（关）：附加费用需在自有资金之外另付现金，贷款仅覆盖购房价。开：附加费用计入贷款——与银行融资方案的常见算法一致（融资需求 = 购房价 + 附加费用 − 自有资金）。会提高贷款额、月供和贷款成数。",
-    zinssatz: `年度名义利率（非有效利率）。当前市场平均水平：${MARKET_RATES.avg}%（截至 ${MARKET_RATES.stand}）。来源：Dr. Klein、Vergleich.de、Finanztip、Finanzfacts、Interhyp、德国联邦银行。`,
+    zinssatz: `年度名义利率（非有效利率）。当前市场平均水平：${MARKET_RATES.avg}%（截至 ${MARKET_RATES.stand}）。`,
     tilgung: "年度初始还款率。建议：至少2-3%以获得合理期限。",
     grEst: "房地产转让税（GrEStG）- 各州 3.5%-6.5%。",
     notar: "公证和土地登记费用，约购买价的1.5-2%。",
@@ -247,7 +247,7 @@ export const TIPS = {
     eigenkapital: "खरीद के लिए तरल धन। नियम: कम से कम क्लोजिंग लागत + खरीद मूल्य का 20%।",
     nkFinanzieren:
       "डिफ़ॉल्ट (बंद): अतिरिक्त लागत आप स्वपूंजी के ऊपर नकद चुकाते हैं, ऋण केवल खरीद मूल्य को कवर करता है। चालू: अतिरिक्त लागत ऋण में जोड़ी जाती है — जैसा बैंक अक्सर वित्तपोषण प्रस्ताव में गणना करते हैं (वित्तपोषण आवश्यकता = खरीद मूल्य + अतिरिक्त लागत − स्वपूंजी)। इससे ऋण, किस्त और ऋण-मूल्य अनुपात बढ़ जाता है।",
-    zinssatz: `प्रति वर्ष नाममात्र दर (प्रभावी दर नहीं)। वर्तमान बाजार औसत: ${MARKET_RATES.avg}% (${MARKET_RATES.stand} तक)। स्रोत: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche Bundesbank।`,
+    zinssatz: `प्रति वर्ष नाममात्र दर (प्रभावी दर नहीं)। वर्तमान बाजार औसत: ${MARKET_RATES.avg}% (${MARKET_RATES.stand} तक)।`,
     tilgung: "वार्षिक प्रारंभिक चुकौती दर। सिफारिश: उचित अवधि के लिए कम से कम 2-3%।",
     grEst: "रियल एस्टेट हस्तांतरण कर (GrEStG) - जर्मन राज्य के अनुसार 3.5%-6.5%।",
     notar: "नोटरी और भूमि रजिस्ट्री लागत, खरीद मूल्य का लगभग 1.5-2%।",

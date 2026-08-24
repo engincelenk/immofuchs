@@ -6,44 +6,14 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 // ── BAUZINSEN ───────────────────────────────────────────────────────────
-// Intervall: monatlich
-// Quellen: Dr. Klein, Interhyp, Finanztip, Vergleich.de, Bundesbank
+// Intervall: monatlich (automatisch via scripts/monthly_update.py)
+// avg = Ø aus Bundesbank-Rendite (10J Bundeswertpapier) und Interhyp-
+//       Zinstabelle (10J, Ø der drei Beleihungsauslauf-Klassen)
+// top = Interhyp-Zins bei Beleihungsauslauf <70 (guenstigster Tarif)
 export const MARKET_RATES = {
   stand: "August 2026",
-  avg: 3.81,
-  top: 3.69,
-  rows: [
-    {
-      source: "Dr. Klein Topzins (10J)",
-      rate: "3,69 % Sollzins",
-      ref: "Dr. Klein",
-      url: "https://www.drklein.de/aktuelle-bauzinsen.html",
-    },
-    {
-      source: "Interhyp Durchschnitt (10J)",
-      rate: "ca. 3,81 %",
-      ref: "Interhyp",
-      url: "https://www.interhyp.de/zinsen/",
-    },
-    {
-      source: "Finanztip",
-      rate: "3,69 – 4,32 % (effektiv)",
-      ref: "Finanztip",
-      url: "https://www.finanztip.de/baufinanzierung/hypothekenzinsen/",
-    },
-    {
-      source: "Vergleich.de",
-      rate: "3,70 – 4,15 %",
-      ref: "Vergleich.de",
-      url: "https://www.vergleich.de/baufinanzierung.html",
-    },
-    {
-      source: "Bundesanleihe 10J (Referenz)",
-      rate: "3,16 % (10.08.2026)",
-      ref: "Deutsche Bundesbank",
-      url: "https://www.bundesbank.de",
-    },
-  ],
+  avg: 3.61,
+  top: 3.82,
 };
 
 // ── GRUNDERWERBSTEUER je Bundesland ─────────────────────────────────────

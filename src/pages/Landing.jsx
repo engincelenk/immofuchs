@@ -1702,8 +1702,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               )}
             </p>
             <p style={{ margin: 0, fontSize: 11, color: "var(--ch)", lineHeight: 1.5 }}>
-              {l.ratesSources}: Dr. Klein, Vergleich.de, Finanztip, Finanzfacts, Interhyp, Deutsche
-              Bundesbank · {l.ratesDisclaim}
+              {l.ratesDisclaim}
             </p>
             <ZinsAlarm zinsen={zinsen} lang={lang} />
           </div>

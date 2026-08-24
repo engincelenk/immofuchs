@@ -67,12 +67,15 @@ jobs:
           python-version: "3.11"
 
       - name: 📦 Python-Abhängigkeiten installieren
-        run: pip install anthropic requests
+        run: |
+          pip install requests pdfplumber playwright
+          playwright install --with-deps chromium
 
       # ── 3. Marktdaten aktualisieren ──────────────────────────────────────
+      # Seit 2026-08-24 ohne LLM: Bundesbank-PDF (pdfplumber) + Interhyp-
+      # Zinstabelle (Playwright, da clientseitig gerendert) - kein
+      # ANTHROPIC_API_KEY/Guthaben mehr noetig, siehe scripts/monthly_update.py.
       - name: 🔄 Marktdaten aktualisieren
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/monthly_update.py
 
       # ── 4. Änderungen committen UND zurückpushen - data.js/translations.js/

@@ -346,12 +346,10 @@ export default function App() {
         return;
       }
 
-      // 3. Durchschnitt berechnen (nur positive Werte, auto=false ignoriert Bundesbank-Platzhalter)
-      const werte = config.quellen.map((q) => q.wert).filter((v) => v > 0);
-      const avg = werte.reduce((a, b) => a + b, 0) / werte.length;
-      config.avg = Math.round(avg * 20) / 20; // auf 0.05 runden
-      config.top = Math.min(...werte); // bester (niedrigster) Wert
-
+      // 3. avg/top kommen direkt aus zinsen.json (vom Skript berechnet, siehe
+      // scripts/monthly_update.py) - keine clientseitige Neuberechnung mehr
+      // (frueher aus einem quellen[]-Array mit benannten Anbietern, das seit
+      // 2026-08-24 entfaellt).
       setZinsen(config);
       try {
         localStorage.setItem("if_zinsen_v3", JSON.stringify({ ts: Date.now(), data: config }));
