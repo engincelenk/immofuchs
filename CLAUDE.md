@@ -3,16 +3,14 @@ PROJEKT: ImmoFuchs.info — PWA für Immobilieninvestoren
 ═══════════════════════════════════════════════════════
 
 ── DESIGN-TOKEN ───────────────────────
-(Ist-Zustand aus src/App.jsx, ROOT_TOKENS_CSS — am 2026-07-23 an den
-tatsaechlich ausgelieferten, live getesteten Code angeglichen.)
-Accent:    #E8600A  (Fuchs-Orange, CSS-Token --ca; dunkel --ca-dk #C44D00)
-Primary:   #1E3A5F  (Marineblau — Akzent fuer einzelne KPI-/Sektionsfarben)
-Surface:   #F5F5F0  (Seitenhintergrund --bg; Karten #FFFFFF --cc; Input --ci #FAFAF7)
-Text:      #1A1A1A  (--ct; gedaempft --ch #8A8A80)
-Border:    #E5E5DC  (--cb)
+Primary:   #1E3A5F  (Marineblau)
+Accent:    #E8650A  (Fuchs-Orange)
+Surface:   #F8F9FA
+Text:      #1A1A2E
 Radius:    12px
-Font:      'DM Sans' → sans-serif
+Font:      Inter → system-ui → sans-serif
 Mobile:    font-size 16px auf Inputs (iOS-Zoom-Schutz)
+           Input-Höhe: 42px einheitlich
 
 Diese Tokens werden in KEINER Antwort geändert,
 es sei denn, der User fordert es explizit.

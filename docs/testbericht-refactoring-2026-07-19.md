@@ -69,19 +69,16 @@ Durchgängig genutztes Testobjekt: **Eigentumswohnung München, PLZ 80331** — 
 Diese drei Fehler wurden bereits vor dem in diesem Bericht dokumentierten Testlauf gefunden (durch manuelles Testen bzw. Cross-Modul-Audit) und sind im aktuellen Commit-Stand bereits behoben:
 
 ### buildMP nicht exportiert
-
 **`src/components/calculators/Miete.jsx` ↔ `Renditerechner.jsx`**
 Hilfsfunktion war nur intern in `Miete.jsx` definiert, wird aber auch vom Renditerechner für die Mietsteigerungs-Prognose gebraucht → `ReferenceError` beim Öffnen des Renditerechners.
 **Status:** ✓ behoben — exportiert & importiert.
 
 ### MARKET_RATES nicht importiert
-
 **`src/i18n/tips.js`**
 Zinssatz-Tooltip nutzte `MARKET_RATES.avg` direkt im Template-String ohne Import.
 **Status:** ✓ behoben — Import ergänzt.
 
 ### useEffect-Import gefehlt
-
 **`src/components/ui/atoms.jsx`**
 Die `F`-Eingabekomponente nutzt `useEffect` zur Werte-Synchronisation — der Hook war nicht aus React importiert.
 **Status:** ✓ behoben — Import ergänzt.

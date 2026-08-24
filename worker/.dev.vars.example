@@ -1,4 +1,0 @@
-# Kopieren nach ".dev.vars" (wird von wrangler dev automatisch geladen, nicht eingecheckt).
-# Nur fuer lokale Entwicklung - echte Deploy-Secrets kommen ueber `wrangler secret put`.
-
-GEMINI_API_KEY=dein-lokaler-test-key

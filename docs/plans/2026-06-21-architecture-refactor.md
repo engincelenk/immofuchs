@@ -6,15 +6,15 @@
 
 ## Übersicht
 
-|                   | Ist-Zustand           | Ziel-Zustand                 |
-| ----------------- | --------------------- | ---------------------------- |
-| Dateien im `src/` | 5 Dateien             | ~40 Dateien                  |
-| App.jsx Größe     | 656KB / 3.686 Zeilen  | <10KB / ~150 Zeilen          |
-| JS-Bundle (dist)  | **756KB** (ein Chunk) | ~150KB initial + lazy chunks |
-| Babel-Warning     | ja                    | nein                         |
-| Code Splitting    | nein                  | automatisch via Vite         |
-| Lazy Loading      | nicht möglich         | möglich                      |
-| Capacitor-fähig   | schwierig             | sauber                       |
+| | Ist-Zustand | Ziel-Zustand |
+|---|---|---|
+| Dateien im `src/` | 5 Dateien | ~40 Dateien |
+| App.jsx Größe | 656KB / 3.686 Zeilen | <10KB / ~150 Zeilen |
+| JS-Bundle (dist) | **756KB** (ein Chunk) | ~150KB initial + lazy chunks |
+| Babel-Warning | ja | nein |
+| Code Splitting | nein | automatisch via Vite |
+| Lazy Loading | nicht möglich | möglich |
+| Capacitor-fähig | schwierig | sauber |
 
 **Ansatz:** Reine Extraktion. Keine Logik wird verändert, umgeschrieben oder formatiert. Jede Funktion, jede Variable, jede Berechnung wandert 1:1 in die neue Datei.
 
@@ -33,13 +33,13 @@ Verboten: Logik ändern · Variablennamen ändern · Formatierung ändern · Etw
 
 > Dieses Feld nach jedem abgeschlossenen Sprint aktualisieren.
 
-| Phase                    | Sprint   | Status                                                                   | Abgeschlossen am |
-| ------------------------ | -------- | ------------------------------------------------------------------------ | ---------------- |
-| Phase 1 — Foundation     | Sprint 1 | ✅ Abgeschlossen                                                         | 2026-07-18       |
-| Phase 2 — Shared UI      | Sprint 2 | ✅ Abgeschlossen                                                         | 2026-07-18       |
-| Phase 3 — Calculators    | Sprint 3 | ✅ Abgeschlossen                                                         | 2026-07-18       |
-| Phase 4 — Extras & Shell | Sprint 4 | ✅ Abgeschlossen                                                         | 2026-07-18       |
-| Phase 5 — Finalisierung  | Sprint 5 | ✅ Abgeschlossen (ohne manuelle Browser-Kontrolle — siehe Hinweis unten) | 2026-07-18       |
+| Phase | Sprint | Status | Abgeschlossen am |
+|---|---|---|---|
+| Phase 1 — Foundation | Sprint 1 | ✅ Abgeschlossen | 2026-07-18 |
+| Phase 2 — Shared UI | Sprint 2 | ✅ Abgeschlossen | 2026-07-18 |
+| Phase 3 — Calculators | Sprint 3 | ✅ Abgeschlossen | 2026-07-18 |
+| Phase 4 — Extras & Shell | Sprint 4 | ✅ Abgeschlossen | 2026-07-18 |
+| Phase 5 — Finalisierung | Sprint 5 | ✅ Abgeschlossen (ohne manuelle Browser-Kontrolle — siehe Hinweis unten) | 2026-07-18 |
 
 Status-Legende: ⬜ Ausstehend · 🔄 In Arbeit · ✅ Abgeschlossen · ❌ Blockiert
 
@@ -124,18 +124,18 @@ src/
 
 ## Sonderfälle (vor Beginn lesen)
 
-| Datei                                             | Besonderheit                                                                                                                       |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `plzData.js`                                      | `kapp15Set` lädt async via IIFE — Timing bleibt identisch da ES-Module beim ersten Import ausgeführt werden                        |
-| `SelbsttraegerCheck.jsx`                          | Zwei Exports nötig: `export const SelbsttraegerCheck` + `export const BreakEvenCards = SelbsttraegerCheck`                         |
-| `Tip.jsx`                                         | Braucht `import { createPortal } from "react-dom"`                                                                                 |
-| `Merkliste.jsx`                                   | Braucht `import { createPortal } from "react-dom"` + importiert `T` direkt aus `i18n/translations.js`                              |
-| `Miete.jsx`                                       | Enthält `buildMP` (App.jsx Z.497) — außerhalb von Miete definiert, kommt aber nach Miete.jsx                                       |
-| `IC` (icon map, Z.2534–2543)                      | Bleibt in `App.jsx` — wird nur dort für Tab-Definitionen genutzt                                                                   |
-| `LEG` (Z.707–741)                                 | Geht nach `i18n/legal.js` — alle 4 Rechner nutzen `LEG.xxx`                                                                        |
-| `LANG_LOCALE` (Z.106)                             | Neu gefunden — fehlt im ursprünglichen Plan. Geht nach `utils/helpers.js` zusammen mit `fmtDat` (wird von `fmtDat` intern genutzt) |
-| `ExportPDF` (Z.1078)                              | Lädt jsPDF/html2canvas per dynamischem Import zur Laufzeit — extrahiert sauber ohne Änderung                                       |
-| Shell-Komponenten (SaveModal, SaveBtn, Merkliste) | Importieren `T` direkt: `const t = T[lang] \|\| T.de` — brauchen direkten Import aus `translations.js`                             |
+| Datei | Besonderheit |
+|---|---|
+| `plzData.js` | `kapp15Set` lädt async via IIFE — Timing bleibt identisch da ES-Module beim ersten Import ausgeführt werden |
+| `SelbsttraegerCheck.jsx` | Zwei Exports nötig: `export const SelbsttraegerCheck` + `export const BreakEvenCards = SelbsttraegerCheck` |
+| `Tip.jsx` | Braucht `import { createPortal } from "react-dom"` |
+| `Merkliste.jsx` | Braucht `import { createPortal } from "react-dom"` + importiert `T` direkt aus `i18n/translations.js` |
+| `Miete.jsx` | Enthält `buildMP` (App.jsx Z.497) — außerhalb von Miete definiert, kommt aber nach Miete.jsx |
+| `IC` (icon map, Z.2534–2543) | Bleibt in `App.jsx` — wird nur dort für Tab-Definitionen genutzt |
+| `LEG` (Z.707–741) | Geht nach `i18n/legal.js` — alle 4 Rechner nutzen `LEG.xxx` |
+| `LANG_LOCALE` (Z.106) | Neu gefunden — fehlt im ursprünglichen Plan. Geht nach `utils/helpers.js` zusammen mit `fmtDat` (wird von `fmtDat` intern genutzt) |
+| `ExportPDF` (Z.1078) | Lädt jsPDF/html2canvas per dynamischem Import zur Laufzeit — extrahiert sauber ohne Änderung |
+| Shell-Komponenten (SaveModal, SaveBtn, Merkliste) | Importieren `T` direkt: `const t = T[lang] \|\| T.de` — brauchen direkten Import aus `translations.js` |
 
 ---
 
@@ -230,7 +230,6 @@ Jeder Task folgt exakt diesem Schema — keine Abweichungen:
 **Umfang:** 9 Tasks · geschätzte Dauer: ~1,5 Stunden
 
 ### 🏁 Meilenstein 1: Alle Basis-Module isoliert
-
 > Erreichbar nach Task 9. App.jsx enthält danach nur noch UI-Komponenten und Rechner — kein Daten-Code mehr.
 
 ---
@@ -243,7 +242,6 @@ Exporte: `PLZ_RAW`, `PLZ_DB`, `isK15`
 Imports in der neuen Datei: keine (reines JS)
 
 In App.jsx ersetzen durch:
-
 ```js
 import { PLZ_DB, isK15 } from "./data/plzData.js";
 ```
@@ -261,7 +259,6 @@ Build + Commit: `"refactor: extract PLZ data to src/data/plzData.js"`
 Exporte: `Ctx`, `useApp`
 
 Neue Datei:
-
 ```jsx
 import { createContext, useContext } from "react";
 export const Ctx = createContext();
@@ -269,11 +266,9 @@ export const useApp = () => useContext(Ctx);
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import { Ctx, useApp } from "./context/AppContext.jsx";
 ```
-
 `createContext` + `useContext` aus dem React-Import in Z.1 entfernen.
 
 Build + Commit: `"refactor: extract Context to src/context/AppContext.jsx"`
@@ -288,7 +283,6 @@ Exporte: `T`, `TL`, `LANGS`
 Imports: keine
 
 In App.jsx ersetzen durch:
-
 ```js
 import { T, TL, LANGS } from "./i18n/translations.js";
 ```
@@ -305,7 +299,6 @@ Exporte: `TIPS`
 Imports: keine
 
 In App.jsx ersetzen durch:
-
 ```js
 import { TIPS } from "./i18n/tips.js";
 ```
@@ -322,7 +315,6 @@ Exporte: `LEG`
 Imports: keine
 
 In App.jsx ersetzen durch:
-
 ```js
 import { LEG } from "./i18n/legal.js";
 ```
@@ -339,7 +331,6 @@ Exporte: `STEUER_T`
 Imports: keine
 
 In App.jsx ersetzen durch:
-
 ```js
 import { STEUER_T } from "./i18n/steuerTrick.js";
 ```
@@ -356,7 +347,6 @@ Exporte: `VFE_T`
 Imports: keine
 
 In App.jsx ersetzen durch:
-
 ```js
 import { VFE_T } from "./i18n/vorfaelligkeit.js";
 ```
@@ -375,7 +365,6 @@ Imports: keine
 `LANG_LOCALE` (Z.106) war im ursprünglichen Plan nicht erfasst — muss mit extrahiert werden, da `fmtDat` es intern nutzt und `Merkliste` es direkt referenziert.
 
 In App.jsx ersetzen durch:
-
 ```js
 import { fmt, fmtE, fmtP, tf, LANG_LOCALE, fmtDat, addM, addY, tpl } from "./utils/helpers.js";
 ```
@@ -392,7 +381,6 @@ Exporte: `AMPEL`, `BANDS`, `rate`, `vrd`
 Imports: keine
 
 In App.jsx ersetzen durch:
-
 ```js
 import { AMPEL, BANDS, rate, vrd } from "./utils/bands.js";
 ```
@@ -400,7 +388,6 @@ import { AMPEL, BANDS, rate, vrd } from "./utils/bands.js";
 Build + Commit: `"refactor: extract bands/rating to src/utils/bands.js"`
 
 ### 🏁 Meilenstein 1 erreicht
-
 ```
 Messung nach Sprint 1:
   App.jsx Größe:   ~250KB (war 652KB)  ✓
@@ -424,7 +411,6 @@ Messung nach Sprint 1:
 **Umfang:** 10 Tasks · geschätzte Dauer: ~2 Stunden
 
 ### 🏁 Meilenstein 2: Alle geteilten Komponenten isoliert
-
 > Erreichbar nach Task 19. App.jsx enthält danach nur noch die 4 Rechner, Extras und Shell.
 
 ---
@@ -436,7 +422,6 @@ Messung nach Sprint 1:
 Exporte: `Dot`, `F`, `Sel`, `Row`, `Sec`, `KPI`, `Ins`, `AmpelKPI`, `NeutralKPI`, `VT`
 
 Imports (am Code verifizieren — alle referenzierten Symbole importieren):
-
 ```js
 import { useState, useRef, useCallback } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -444,7 +429,6 @@ import { fmt } from "../../utils/helpers.js";
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import { Dot, F, Sel, Row, Sec, KPI, Ins, AmpelKPI, NeutralKPI, VT }
   from "./components/ui/atoms.jsx";
@@ -461,14 +445,12 @@ Build + Commit: `"refactor: extract UI atoms to src/components/ui/atoms.jsx"`
 Exporte: `AccordionSection`, `SectionExplain`
 
 Imports:
-
 ```js
 import { useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import { AccordionSection, SectionExplain }
   from "./components/ui/AccordionSection.jsx";
@@ -485,7 +467,6 @@ Build + Commit: `"refactor: extract AccordionSection to src/components/ui/"`
 Exporte: `PLZSearch`
 
 Imports:
-
 ```js
 import { useState, useRef } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -493,7 +474,6 @@ import { PLZ_DB } from "../../data/plzData.js";
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import { PLZSearch } from "./components/ui/PLZSearch.jsx";
 ```
@@ -509,7 +489,6 @@ Build + Commit: `"refactor: extract PLZSearch to src/components/ui/PLZSearch.jsx
 Exporte: `Tip`
 
 Imports (**createPortal beachten**):
-
 ```js
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
@@ -517,7 +496,6 @@ import { useApp } from "../../context/AppContext.jsx";
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import { Tip } from "./components/ui/Tip.jsx";
 ```
@@ -533,7 +511,6 @@ Build + Commit: `"refactor: extract Tip to src/components/ui/Tip.jsx"`
 Exporte: `LangSel`, `Legal` (UI-Atom, nicht `LEG`)
 
 Imports:
-
 ```js
 import { useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -541,7 +518,6 @@ import { LANGS } from "../../i18n/translations.js";
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import { LangSel, Legal } from "./components/ui/LangSel.jsx";
 ```
@@ -557,14 +533,12 @@ Build + Commit: `"refactor: extract LangSel to src/components/ui/LangSel.jsx"`
 Exporte: `RBar`
 
 Imports:
-
 ```js
 import { useApp } from "../../context/AppContext.jsx";
 import { AMPEL } from "../../utils/bands.js";
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import { RBar } from "./components/charts/RBar.jsx";
 ```
@@ -580,16 +554,13 @@ Build + Commit: `"refactor: extract RBar to src/components/charts/RBar.jsx"`
 Exporte: `LineChart`
 
 Imports:
-
 ```js
 import { useApp } from "../../context/AppContext.jsx";
 import { fmt, fmtE } from "../../utils/helpers.js";
 ```
-
 (am Code verifizieren)
 
 In App.jsx ersetzen durch:
-
 ```js
 import { LineChart } from "./components/charts/LineChart.jsx";
 ```
@@ -605,16 +576,13 @@ Build + Commit: `"refactor: extract LineChart to src/components/charts/LineChart
 Exporte: `YearTable`
 
 Imports:
-
 ```js
 import { useApp } from "../../context/AppContext.jsx";
 import { fmt, fmtP } from "../../utils/helpers.js";
 ```
-
 (am Code verifizieren)
 
 In App.jsx ersetzen durch:
-
 ```js
 import { YearTable } from "./components/tables/YearTable.jsx";
 ```
@@ -630,16 +598,13 @@ Build + Commit: `"refactor: extract YearTable to src/components/tables/YearTable
 Exporte: `Detail`
 
 Imports:
-
 ```js
 import { useApp } from "../../context/AppContext.jsx";
 import { fmt, fmtE } from "../../utils/helpers.js";
 ```
-
 (am Code verifizieren)
 
 In App.jsx ersetzen durch:
-
 ```js
 import { Detail } from "./components/tables/Detail.jsx";
 ```
@@ -657,7 +622,6 @@ Exporte: `ExportPDF`
 Imports: React-Hooks + `useApp` + alle referenzierten Symbole (am Code ablesen)
 
 In App.jsx ersetzen durch:
-
 ```js
 import { ExportPDF } from "./components/export/ExportPDF.jsx";
 ```
@@ -665,7 +629,6 @@ import { ExportPDF } from "./components/export/ExportPDF.jsx";
 Build + Commit: `"refactor: extract ExportPDF to src/components/export/ExportPDF.jsx"`
 
 ### 🏁 Meilenstein 2 erreicht
-
 ```
 Messung nach Sprint 2:
   App.jsx Größe:   ~200KB (war 652KB)  ✓
@@ -689,7 +652,6 @@ Messung nach Sprint 2:
 **Umfang:** 5 Tasks · geschätzte Dauer: ~1,5 Stunden
 
 ### 🏁 Meilenstein 3: Alle Rechner isoliert — Code Splitting aktiv
-
 > Erreichbar nach Task 24. Vite erzeugt automatisch separate Chunks pro Rechner.
 
 ---
@@ -699,7 +661,6 @@ Messung nach Sprint 2:
 **Quelle:** App.jsx Z.169–269
 
 Exporte (**beide erforderlich**):
-
 ```js
 export const SelbsttraegerCheck = /* Z.169–268 */;
 export const BreakEvenCards = SelbsttraegerCheck;
@@ -708,7 +669,6 @@ export const BreakEvenCards = SelbsttraegerCheck;
 Imports: React-Hooks + `useApp` + alle referenzierten Symbole
 
 In App.jsx Z.169–269 ersetzen durch:
-
 ```js
 import { SelbsttraegerCheck, BreakEvenCards }
   from "./components/calculators/SelbsttraegerCheck.jsx";
@@ -725,7 +685,6 @@ Build + Commit: `"refactor: extract SelbsttraegerCheck to src/components/calcula
 Export: `export default function Haupt()`
 
 Vollständige Import-Liste:
-
 ```js
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -751,7 +710,6 @@ import { SelbsttraegerCheck, BreakEvenCards }
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import Haupt from "./components/calculators/Renditerechner.jsx";
 ```
@@ -767,7 +725,6 @@ Build + Commit: `"refactor: extract Renditerechner to src/components/calculators
 Export: `export default function Kredit()`
 
 Imports (am Code verifizieren):
-
 ```js
 import { useState, useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -780,7 +737,6 @@ import { YearTable } from "../tables/YearTable.jsx";
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import Kredit from "./components/calculators/Finanzierung.jsx";
 ```
@@ -798,7 +754,6 @@ Export: `export default function Miete()`
 `buildMP` ist im Original auf Z.497 — kommt als nicht-exportierte Funktion in Miete.jsx.
 
 Imports (am Code verifizieren):
-
 ```js
 import { useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -811,11 +766,9 @@ import { PLZSearch } from "../ui/PLZSearch.jsx";
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import Miete from "./components/calculators/Miete.jsx";
 ```
-
 Außerdem: Z.497 (buildMP) in App.jsx entfernen.
 
 Build + Commit: `"refactor: extract Miete to src/components/calculators/"`
@@ -831,7 +784,6 @@ Export: `export default function Sanier()`
 EC_O, EC_C, kw2ec, TierSel sind Sanier-spezifisch — kommen ohne Export in dieselbe Datei.
 
 Imports (am Code verifizieren):
-
 ```js
 import { useState, useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -845,7 +797,6 @@ import { AccordionSection } from "../ui/AccordionSection.jsx";
 ```
 
 In App.jsx ersetzen durch:
-
 ```js
 import Sanier from "./components/calculators/Sanier.jsx";
 ```
@@ -853,7 +804,6 @@ import Sanier from "./components/calculators/Sanier.jsx";
 Build + Commit: `"refactor: extract Sanier to src/components/calculators/"`
 
 ### 🏁 Meilenstein 3 erreicht
-
 ```
 Messung nach Sprint 3:
   App.jsx Größe:   ~80KB (war 652KB)   ✓
@@ -878,7 +828,6 @@ Messung nach Sprint 3:
 **Umfang:** 9 Tasks · geschätzte Dauer: ~1,5 Stunden
 
 ### 🏁 Meilenstein 4: App.jsx auf < 200 Zeilen
-
 > Erreichbar nach Task 33. App.jsx ist nur noch Routing + Provider.
 
 ---
@@ -890,7 +839,6 @@ Messung nach Sprint 3:
 Exporte: `SteuerTrick` (InfoTooltip bleibt intern)
 
 Imports:
-
 ```js
 import { useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -899,11 +847,9 @@ import { T } from "../../i18n/translations.js";
 import { fmt } from "../../utils/helpers.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 ```
-
 (am Code verifizieren)
 
 In App.jsx ersetzen durch:
-
 ```js
 import { SteuerTrick } from "./components/extras/SteuerTrick.jsx";
 ```
@@ -921,7 +867,6 @@ Exporte: `Vorfaelligkeit`
 Achtung: `IC` (Z.2546–2557) **bleibt in App.jsx** — nicht kopieren.
 
 Imports:
-
 ```js
 import { useState, useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -930,11 +875,9 @@ import { PFANDBRIEF } from "../../data.js";
 import { fmt, fmtDat, addM } from "../../utils/helpers.js";
 import { F, Sel, Row, Sec, KPI } from "../ui/atoms.jsx";
 ```
-
 (am Code verifizieren)
 
 In App.jsx ersetzen durch:
-
 ```js
 import { Vorfaelligkeit } from "./components/extras/Vorfaelligkeit.jsx";
 ```
@@ -952,7 +895,6 @@ Exporte: `Landing`
 Imports: React-Hooks + `useApp` + `TL` aus `i18n/translations.js` + weitere (am Code ablesen)
 
 In App.jsx ersetzen durch:
-
 ```js
 import { Landing } from "./pages/Landing.jsx";
 ```
@@ -972,7 +914,6 @@ Style-Konstanten (lmH3, lmP, lmUl, lmA) kommen ohne Export in dieselbe Datei.
 Imports: React-Hooks + `useApp`
 
 In App.jsx ersetzen durch:
-
 ```js
 import { LegalModal } from "./components/shell/LegalModal.jsx";
 ```
@@ -989,7 +930,6 @@ Build + Commit: `"refactor: extract LegalModal to src/components/shell/"`
 Beide < 15 Zeilen → ein Task.
 
 In App.jsx ersetzen durch:
-
 ```js
 import { Statusleiste } from "./components/shell/Statusleiste.jsx";
 import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
@@ -1006,12 +946,10 @@ Build + Commit: `"refactor: extract Statusleiste + OfflineBanner to src/componen
 Exporte: `useSavedObjects`, `SaveModal`, `SaveBtn`, `Merkliste`
 
 Besonderheiten (**beide beachten**):
-
 - `import { createPortal } from "react-dom"` nötig
 - `import { T } from "../../i18n/translations.js"` — direkter Import, nicht via useApp
 
 In App.jsx ersetzen durch:
-
 ```js
 import { useSavedObjects, SaveModal, SaveBtn, Merkliste }
   from "./components/shell/Merkliste.jsx";
@@ -1030,7 +968,6 @@ Exporte: `ZinsAlarm` (showAlarmNotification bleibt intern)
 Imports: React-Hooks + `useApp` + weitere (am Code ablesen)
 
 In App.jsx ersetzen durch:
-
 ```js
 import { ZinsAlarm } from "./components/shell/ZinsAlarm.jsx";
 ```
@@ -1038,7 +975,6 @@ import { ZinsAlarm } from "./components/shell/ZinsAlarm.jsx";
 Build + Commit: `"refactor: extract ZinsAlarm to src/components/shell/"`
 
 ### 🏁 Meilenstein 4 erreicht
-
 ```
 Messung nach Sprint 4:
   App.jsx Zeilen:  < 200 Zeilen        ✓
@@ -1061,7 +997,6 @@ Messung nach Sprint 4:
 **Umfang:** 2 Tasks · geschätzte Dauer: ~45 Minuten
 
 ### 🏁 Meilenstein 5 (Final): Refactoring abgeschlossen
-
 > App.jsx < 200 Zeilen · Bundle < 200KB initial · alle Funktionen verifiziert.
 
 ---
@@ -1069,7 +1004,6 @@ Messung nach Sprint 4:
 ### Task 32 — App.jsx finalisieren
 
 Nach allen vorherigen Tasks enthält App.jsx nur noch:
-
 - Imports (~25 Zeilen)
 - `IC` icon map (Z.2534–2543, bleibt hier)
 - `TAB_LABELS` (Z.3525)
@@ -1078,13 +1012,11 @@ Nach allen vorherigen Tasks enthält App.jsx nur noch:
 **Schritt 1:** Alle Zeilen entfernen die durch Imports ersetzt wurden.
 
 **Schritt 2:**
-
 ```powershell
 npm run build
 ```
 
 **Schritt 3: Bundle-Messung**
-
 ```powershell
 # Größe aller generierten Chunks anzeigen
 Get-ChildItem dist/assets/ | Select-Object Name, @{N='KB';E={[math]::Round($_.Length/1KB,1)}} | Sort-Object KB -Descending
@@ -1111,7 +1043,6 @@ Alle folgenden Punkte müssen fehlerfrei funktionieren:
 ```
 
 **Schritt 5:**
-
 ```powershell
 (Get-Content src/App.jsx).Count
 git add src/App.jsx
@@ -1138,13 +1069,11 @@ Architektur-Refactoring: App.jsx Modularisierung
 ```
 
 **Schritt 2:**
-
 ```powershell
 git push origin refactor/modular-architecture
 ```
 
 ### 🏁 Meilenstein 5 (Final) erreicht
-
 ```
 Finale Messung:
   App.jsx Zeilen:      < 200 Zeilen          ✓
@@ -1161,13 +1090,13 @@ Finale Messung:
 
 ## Gesamtübersicht
 
-| Phase                    | Sprint        | Tasks        | Dauer      | Meilenstein                  |
-| ------------------------ | ------------- | ------------ | ---------- | ---------------------------- |
-| Phase 1 — Foundation     | Sprint 1      | Task 1–9     | ~1,5 Std   | App.jsx von 652KB auf 250KB  |
-| Phase 2 — Shared UI      | Sprint 2      | Task 10–19   | ~2 Std     | Alle UI-Komponenten isoliert |
-| Phase 3 — Calculators    | Sprint 3      | Task 20–24   | ~1,5 Std   | Code Splitting aktiv         |
-| Phase 4 — Extras & Shell | Sprint 4      | Task 25–31   | ~1,5 Std   | App.jsx < 200 Zeilen         |
-| Phase 5 — Finalisierung  | Sprint 5      | Task 32–33   | ~0,75 Std  | Refactoring abgeschlossen    |
-| **Gesamt**               | **5 Sprints** | **33 Tasks** | **~7 Std** | **Bundle: 774KB → ~150KB**   |
+| Phase | Sprint | Tasks | Dauer | Meilenstein |
+|---|---|---|---|---|
+| Phase 1 — Foundation | Sprint 1 | Task 1–9 | ~1,5 Std | App.jsx von 652KB auf 250KB |
+| Phase 2 — Shared UI | Sprint 2 | Task 10–19 | ~2 Std | Alle UI-Komponenten isoliert |
+| Phase 3 — Calculators | Sprint 3 | Task 20–24 | ~1,5 Std | Code Splitting aktiv |
+| Phase 4 — Extras & Shell | Sprint 4 | Task 25–31 | ~1,5 Std | App.jsx < 200 Zeilen |
+| Phase 5 — Finalisierung | Sprint 5 | Task 32–33 | ~0,75 Std | Refactoring abgeschlossen |
+| **Gesamt** | **5 Sprints** | **33 Tasks** | **~7 Std** | **Bundle: 774KB → ~150KB** |
 
 > **Empfehlung:** Jeden Sprint an einem eigenen Tag durchführen. Nicht zwei Sprints hintereinander ohne Pause.

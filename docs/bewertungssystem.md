@@ -1,10 +1,10 @@
 # Bewertungssystem (BANDS) — Spec für Renditerechner-Bullets & Ampel-Karten
 
-> Status: **freigegeben** am 2026-06-18. Umfang **Scope B** (Bullets _und_ AmpelKPI-Karten lesen aus zentraler `BANDS`-Config). Umsetzung in frischer Session, weil großer Umbau (~200 Zeilen, 7 Sektionen) + OneDrive-Sync den Sandbox-Build unzuverlässig macht. Nach Umbau: `npm run build` auf der Maschine verifizieren (settled OneDrive).
+> Status: **freigegeben** am 2026-06-18. Umfang **Scope B** (Bullets *und* AmpelKPI-Karten lesen aus zentraler `BANDS`-Config). Umsetzung in frischer Session, weil großer Umbau (~200 Zeilen, 7 Sektionen) + OneDrive-Sync den Sandbox-Build unzuverlässig macht. Nach Umbau: `npm run build` auf der Maschine verifizieren (settled OneDrive).
 
 ## Ziel
 
-Die Bullet-Points in den `SectionExplain`-Blöcken sollen nicht mehr nur _erklären, was eine Kennzahl ist_, sondern _einordnen, wo der Nutzer steht_ — Wert + Bewertungsband + Verdikt. Die ausführlichen Erklärtexte darunter bleiben **unverändert** (die sind gut). Die `AmpelKPI`-Karten ziehen ihre Schwellen künftig aus derselben Quelle → eine einzige Bewertungs-Wahrheit, keine Doppel-Schwellen mehr.
+Die Bullet-Points in den `SectionExplain`-Blöcken sollen nicht mehr nur *erklären, was eine Kennzahl ist*, sondern *einordnen, wo der Nutzer steht* — Wert + Bewertungsband + Verdikt. Die ausführlichen Erklärtexte darunter bleiben **unverändert** (die sind gut). Die `AmpelKPI`-Karten ziehen ihre Schwellen künftig aus derselben Quelle → eine einzige Bewertungs-Wahrheit, keine Doppel-Schwellen mehr.
 
 ## Architektur
 
@@ -49,23 +49,23 @@ Beispiel-Bullet (Cashflow, Nein-Fall):
 
 ## Das Bewertungssystem (freigegebene Bänder)
 
-| Kennzahl                | Einheit        | Richtung  | ✓ grün            | ~ gelb    | ⚠ rot                  | Quelle              |
-| ----------------------- | -------------- | --------- | ----------------- | --------- | ---------------------- | ------------------- |
-| Bruttorendite           | %              | ↑         | ≥ 5,0             | 4,0–4,9   | < 4,0                  | Code                |
-| Nettorendite            | %              | ↑         | ≥ 3,5             | 2,5–3,4   | < 2,5                  | Code-Karte          |
-| Netto vs. Zins          | —              | ↑         | nR ≥ Zins+1       | nR ≥ Zins | nR < Zins              | neu                 |
-| Kaufpreisfaktor         | × Jahresmiete  | ↓         | ≤ 25              | 25–30     | > 30                   | Code-Text → fixiert |
-| Cashflow o. Steuer      | €/Mon          | ↑         | ≥ 0               | −150…0    | < −150                 | geändert (war −100) |
-| Cashflow m. Steuer      | €/Mon          | ↑         | ≥ 0               | −150…0    | < −150                 | geändert + Caveat   |
-| Beleihungsauslauf       | %              | ↓         | ≤ 70              | 70–85     | > 85                   | Code                |
-| EK-Quote                | %              | ↑         | ≥ 20              | 10–20     | < 10                   | neu                 |
-| Laufzeit                | Jahre          | ↓         | ≤ 25              | 25–35     | > 35 / ∞               | Code                |
-| Steuerersparnis         | €/Mon          | ↑         | > 150             | 75–150    | < 75                   | Code                |
-| NK-Amortisation         | Jahre          | ↓         | ≤ 10              | 10–15     | > 15                   | Code                |
-| EK-Rendite p.a.         | %              | ↑         | ≥ 6               | 3–6       | < 3                    | vereinheitlicht     |
-| Gesamtsaldo             | €              | ↑         | > 0               | 0…+5 % EK | < 0                    | Code + gelb-Stufe   |
-| Wertsteigerungs-Annahme | % p.a.         | Realismus | ≤ 2,5             | 2,5–4,0   | > 4,0                  | neu (Plausibilität) |
-| Spekulationsfrist       | Jahre gehalten | ↑         | > 10 (steuerfrei) | —         | ≤ 10 (steuerpflichtig) | Code                |
+| Kennzahl | Einheit | Richtung | ✓ grün | ~ gelb | ⚠ rot | Quelle |
+|---|---|---|---|---|---|---|
+| Bruttorendite | % | ↑ | ≥ 5,0 | 4,0–4,9 | < 4,0 | Code |
+| Nettorendite | % | ↑ | ≥ 3,5 | 2,5–3,4 | < 2,5 | Code-Karte |
+| Netto vs. Zins | — | ↑ | nR ≥ Zins+1 | nR ≥ Zins | nR < Zins | neu |
+| Kaufpreisfaktor | × Jahresmiete | ↓ | ≤ 25 | 25–30 | > 30 | Code-Text → fixiert |
+| Cashflow o. Steuer | €/Mon | ↑ | ≥ 0 | −150…0 | < −150 | geändert (war −100) |
+| Cashflow m. Steuer | €/Mon | ↑ | ≥ 0 | −150…0 | < −150 | geändert + Caveat |
+| Beleihungsauslauf | % | ↓ | ≤ 70 | 70–85 | > 85 | Code |
+| EK-Quote | % | ↑ | ≥ 20 | 10–20 | < 10 | neu |
+| Laufzeit | Jahre | ↓ | ≤ 25 | 25–35 | > 35 / ∞ | Code |
+| Steuerersparnis | €/Mon | ↑ | > 150 | 75–150 | < 75 | Code |
+| NK-Amortisation | Jahre | ↓ | ≤ 10 | 10–15 | > 15 | Code |
+| EK-Rendite p.a. | % | ↑ | ≥ 6 | 3–6 | < 3 | vereinheitlicht |
+| Gesamtsaldo | € | ↑ | > 0 | 0…+5 % EK | < 0 | Code + gelb-Stufe |
+| Wertsteigerungs-Annahme | % p.a. | Realismus | ≤ 2,5 | 2,5–4,0 | > 4,0 | neu (Plausibilität) |
+| Spekulationsfrist | Jahre gehalten | ↑ | > 10 (steuerfrei) | — | ≤ 10 (steuerpflichtig) | Code |
 
 ## Inkonsistenzen im jetzigen Code, die das System heilt
 
@@ -82,22 +82,22 @@ Beispiel-Bullet (Cashflow, Nein-Fall):
 
 ## KPI → Code-Variable (Mapping für die Umsetzung)
 
-| BANDS-Key   | Wert im Code                                                                         | Sektion          |
-| ----------- | ------------------------------------------------------------------------------------ | ---------------- |
-| bruttoR     | `R.bR`                                                                               | 1                |
-| nettoR      | `R.nR` (vs. `+d.zinssatz`)                                                           | 1                |
-| kpFaktor    | `R.gKP / ((+d.kaltmiete                                                              |                  | 1)*12)` | 1   |
-| cfOhne      | `R.cf2OhneSt`                                                                        | 2 / Selbstträger |
-| cfMit       | `R.cf2MitSt`                                                                         | 2 / Selbstträger |
-| bel         | `R.bel`                                                                              | 3                |
-| ekQuote     | `R.ekQ`                                                                              | 3                |
-| laufzeit    | `R.lz` (`isFinite` prüfen)                                                           | 3                |
-| steuerErsM  | `R.sSt/R.j/12`                                                                       | 4                |
-| nkAmort     | `R.beJ`                                                                              | 4                |
-| ekRendite   | mit Steuer `R.g/(+d.eigenkapital)/R.j*100`; ohne `R.gOhne/(+d.eigenkapital)/R.j*100` | 6                |
-| gesamtSaldo | `R.g` (`R.gOhne` für ohne-Steuer)                                                    | 6                |
-| wertAnnahme | `+d.wertP`                                                                           | 6 / 7            |
-| spekulation | `R.j > 10`                                                                           | 7                |
+| BANDS-Key | Wert im Code | Sektion |
+|---|---|---|
+| bruttoR | `R.bR` | 1 |
+| nettoR | `R.nR` (vs. `+d.zinssatz`) | 1 |
+| kpFaktor | `R.gKP / ((+d.kaltmiete||1)*12)` | 1 |
+| cfOhne | `R.cf2OhneSt` | 2 / Selbstträger |
+| cfMit | `R.cf2MitSt` | 2 / Selbstträger |
+| bel | `R.bel` | 3 |
+| ekQuote | `R.ekQ` | 3 |
+| laufzeit | `R.lz` (`isFinite` prüfen) | 3 |
+| steuerErsM | `R.sSt/R.j/12` | 4 |
+| nkAmort | `R.beJ` | 4 |
+| ekRendite | mit Steuer `R.g/(+d.eigenkapital)/R.j*100`; ohne `R.gOhne/(+d.eigenkapital)/R.j*100` | 6 |
+| gesamtSaldo | `R.g` (`R.gOhne` für ohne-Steuer) | 6 |
+| wertAnnahme | `+d.wertP` | 6 / 7 |
+| spekulation | `R.j > 10` | 7 |
 
 ## Umsetzungs-Notizen
 
