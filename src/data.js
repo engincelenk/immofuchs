@@ -9,7 +9,7 @@
 // Intervall: monatlich
 // Quellen: Dr. Klein, Interhyp, Finanztip, Vergleich.de, Bundesbank
 export const MARKET_RATES = {
-  stand: "Mai 2026",
+  stand: "August 2026",
   avg: 3.80,
   top: 3.52,
   rows: [
