@@ -1,3 +1,33 @@
+## 2026-08-25 (1.20.51)
+
+### Preise-Sektion an die Design-Vorlage angeglichen + falsche Zahlungsaussage zurueckgenommen
+
+WICHTIG - Rueckname aus 1.20.50: die dortige "Korrektur" von "7 Tage
+kostenlos, ohne Zahlungsdaten" auf "Zahlungsdaten werden vorab hinterlegt"
+war selbst falsch und ist rueckgaengig gemacht (alle 5 Sprachen). Der Code
+belegt das Gegenteil: die 7-Tage-Testphase startet automatisch beim ersten
+authentifizierten Zugriff (startAppTrialIfNew in
+worker/src/routes/account.ts, /me) und verlangt keinerlei Zahlungsdaten -
+genau deshalb ist sie ueber Kontingente gedeckelt (trialLimits.ts). Der
+Paddle-Checkout ist ein davon getrennter Weg zu Pro und rechnet sofort ab.
+Der Key trustPaymentRequired ist entfallen.
+
+Layout an die Vorlage angeglichen (die Umsetzung in 1.20.50 wich davon ab):
+- Kartentitel wieder zweizeilig: "ImmoFuchs" gross, Laufzeit als Unterzeile.
+- Beide CTA-Buttons vollflaechig orange (Monatskarte war weisser
+  Rahmen-Button und las sich als zweitrangige Wahl).
+- Leistungen jetzt sechsspaltig in EINER Reihe mit senkrechten Trennlinien,
+  je Ueberschrift plus graue Unterzeile (vorher einzeilig, brach auf zwei
+  Reihen um). Dafuer neue feat*-Keys in 5 Sprachen - die bestehenden
+  compareRow*-Zeilen bleiben unberuehrt, sie stehen auch im Checkout-Wizard
+  und in "Mein Konto".
+- Kleingedrucktes (trialFinePrint) aus der Leistungsbox entfernt, steht so
+  nicht in der Vorlage.
+- Vertrauens-Zeile ebenfalls zweizeilig mit Trennlinien und eigenen Icons.
+
+**Betroffene Dateien:** src/components/checkout/PricingSection.jsx,
+src/i18n/account.js
+
 ## 2026-08-25 (1.20.50)
 
 ### Preise-Sektion der Landingpage neu gestaltet + falsche Zahlungsaussage korrigiert
