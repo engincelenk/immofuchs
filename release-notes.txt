@@ -1,3 +1,50 @@
+## 2026-08-25 (1.21.3)
+
+### Landingpage: Gestaltung der zusammengelegten Sektion ueberarbeitet
+
+Nach Design-Review (UX-Kritik + Layout-Entwurf) vier Eingriffe an der in
+1.21.2 zusammengelegten Sektion:
+
+1. **Waisenreihen beseitigt.** Die 5 Funktionskarten lagen in
+   `auto-fit,minmax(220px,1fr)`. 5 ist prim - je nach Fensterbreite blieb
+   eine Karte allein (1024-1200px: 4+1, 480-760px: 2+2+1). Jetzt eine
+   gewollte 2+3-Komposition ueber explizite Breakpoints (.usp-grid), wie
+   es .calc-cards-support weiter oben schon macht: 1 / 2+2+1(span) / 2+3.
+   Die beiden NEU-Funktionen (Expose-Scan, Handout) stehen breit oben.
+
+2. **Emoji durch Inline-SVG ersetzt.** 📄 und 📋 sahen bei 28px fast
+   gleich aus - ausgerechnet die zwei NEU-Karten wirkten wie Dubletten.
+   Emoji rendern je Plattform in anderer Farbwelt (Windows grau-blau, iOS
+   bunt) und Screenreader lasen "Seite nach oben zeigend" vor jeder
+   Ueberschrift. Jetzt 5 Inline-SVGs, 20px, stroke=currentColor in einer
+   36x36-Kachel mit --ca-bg. Keine Assets, keine Library.
+
+3. **Chips -> Hairline-Datenblatt.** Die 9 gerahmten Chips standen direkt
+   unter der Preise-CTA und sahen dort nach Knoepfen aus; flex-wrap+center
+   liess die letzte Reihe je Sprache anders ausfransen, auf 390px wurden
+   daraus 6-8 Zeilen. Jetzt ein 3x3-Raster (mobil 2 Spalten, letzte Zelle
+   ueber beide) mit 1px-Fugen - 9 Werte gehen exakt auf, in allen 5
+   Sprachen formstabil.
+
+4. **Kontrast + Orange entlastet.** Gemessen fielen mehrere Stellen durch
+   WCAG AA. Alles mit vorhandenen Tokens geloest, kein Token geaendert:
+   - Fliesstext 13/15px: --ch (#8a8a80, 3,5:1 auf Weiss) -> --cl (#3d3d3a)
+   - Eyebrow/Label klein: --ca (3,4:1) -> --ca-dk (#c44d00, 4,8:1)
+   - "aktiv": gruener Text (2,3:1) -> --ct mit gruenem Punkt davor
+   - NEU-Badge: nackter 9px-Text ueber der Headline (schob sie auf 2 von 5
+     Karten nach unten) -> 10px-Pille neben der Headline, --ca-bg/--ca-dk,
+     identisch zu den Rechner-Karten
+   - Datenwerte in --ct; Orange traegt nur noch den einen Live-Wert
+     (Bauzins), vorher 8 orange Werte gleichzeitig
+   - aria-hidden auf Icons/Punkte, "Datenbasis" als h3, Section per
+     aria-labelledby an die h2, prefers-reduced-motion fuer den Karten-Hover
+
+Karten-Hover analog Rechner-Karten (translateY -2px, Border --ca, Schatten).
+Die Zeile "Alle Werte monatlich geprueft" bleibt - sie gilt fuer alle neun
+Werte, der Ticker weiter unten nur fuer den Bauzins.
+
+Tests: 382 gruen, Build ok. Geaendert: src/pages/Landing.jsx
+
 ## 2026-08-25 (1.21.2)
 
 ### Landingpage: Daten-Sektion und USP-Sektion zusammengelegt

@@ -19,7 +19,10 @@ import { PricingSection } from "../components/checkout/PricingSection.jsx";
 // tatsaechlich braucht - auf der reinen Landingpage (openMode === null)
 // vorher nie gerendert, gehoeren also nicht ins initiale Bundle.
 const CheckoutWizard = lazyWithReload(
-  () => import("../components/checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+  () =>
+    import("../components/checkout/CheckoutWizard.jsx").then((m) => ({
+      default: m.CheckoutWizard,
+    })),
   "CheckoutWizard",
 );
 const MyAccount = lazyWithReload(
@@ -82,7 +85,11 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   // dort), liefert hier also echte, funktionierende Werte statt Dummies.
   // setTabExt fuehrt hier in die App hinein (onStart), statt nur einen
   // App-internen Tab zu wechseln, den es auf der Landingpage nicht gibt.
-  const { savedList, isPro: isProSavedObjects, freeLimit: savedObjectsFreeLimit } = useSavedObjects();
+  const {
+    savedList,
+    isPro: isProSavedObjects,
+    freeLimit: savedObjectsFreeLimit,
+  } = useSavedObjects();
   const landingCtxValue = {
     lang,
     setLang,
@@ -310,9 +317,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 { key: "funktioniert", label: l.navHow, onSelect: () => scrollTo("funktioniert") },
                 { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
               ]}
-              langSelector={
-                account?.isLoggedIn ? null : <LangSel lang={lang} setLang={setLang} />
-              }
+              langSelector={account?.isLoggedIn ? null : <LangSel lang={lang} setLang={setLang} />}
               onLogin={() => {
                 setNavOpen(false);
                 setOpenMode("login");
@@ -391,22 +396,21 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             </button>
           </div>
         </div>
-
       </header>
 
       {(openMode === "checkout" || openMode === "login" || openMode === "account") && (
         <Suspense fallback={<LazyPanelFallback />}>
-        <Ctx.Provider value={landingCtxValue}>
-          {openMode === "checkout" && (
-            <CheckoutWizard
-              onClose={() => {
-                setOpenMode(null);
-                setCheckoutPlan(null);
-              }}
-              initialPlan={checkoutPlan}
-            />
-          )}
-          {/* UX-Audit 2026-08-11 (Punkt 2): Das Login-Ziel haengt bisher von
+          <Ctx.Provider value={landingCtxValue}>
+            {openMode === "checkout" && (
+              <CheckoutWizard
+                onClose={() => {
+                  setOpenMode(null);
+                  setCheckoutPlan(null);
+                }}
+                initialPlan={checkoutPlan}
+              />
+            )}
+            {/* UX-Audit 2026-08-11 (Punkt 2): Das Login-Ziel haengt bisher von
               der gewaehlten Methode ab. Google/Apple verlassen die Seite und
               kommen mit ?login_success=1 zurueck, worauf App.jsx
               (hasAuthRedirectParam) direkt den App-Shell zeigt - der Nutzer
@@ -417,28 +421,28 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               entgegen der Vorgabe in App.jsx ("Login landet immer auf dem
               Dashboard, nie zurueck auf S1"). Jetzt fuehren beide Wege in den
               Rechner - bei Abbruch ohne Anmeldung bleibt alles wie gehabt. */}
-          {openMode === "login" && (
-            <CheckoutWizard
-              onClose={() => {
-                setOpenMode(null);
-                if (account?.isLoggedIn) onStart("haupt");
-              }}
-              entryPoint="login"
-            />
-          )}
-          {openMode === "account" && (
-            <MyAccount
-              onClose={() => setOpenMode(null)}
-              // Handy: ← fuehrt zurueck ins Menue statt raus auf die Seite
-              // (Nutzer-Korrektur 2026-08-13) - siehe MyAccount.jsx.
-              onBackToMenu={() => {
-                setOpenMode(null);
-                setMenuOpen(true);
-              }}
-              initialSection={sectionKey}
-            />
-          )}
-        </Ctx.Provider>
+            {openMode === "login" && (
+              <CheckoutWizard
+                onClose={() => {
+                  setOpenMode(null);
+                  if (account?.isLoggedIn) onStart("haupt");
+                }}
+                entryPoint="login"
+              />
+            )}
+            {openMode === "account" && (
+              <MyAccount
+                onClose={() => setOpenMode(null)}
+                // Handy: ← fuehrt zurueck ins Menue statt raus auf die Seite
+                // (Nutzer-Korrektur 2026-08-13) - siehe MyAccount.jsx.
+                onBackToMenu={() => {
+                  setOpenMode(null);
+                  setMenuOpen(true);
+                }}
+                initialSection={sectionKey}
+              />
+            )}
+          </Ctx.Provider>
         </Suspense>
       )}
       {/* Bugfund 2026-08-11: Passwort-/Passkey-Login ueber "Anmelden" auf
@@ -1102,7 +1106,12 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                     {s.icon}
                   </div>
                   <div
-                    style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ca)", letterSpacing: 0.8 }}
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      color: "var(--ca)",
+                      letterSpacing: 0.8,
+                    }}
                   >
                     STEP {s.n}
                   </div>
@@ -1424,14 +1433,34 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       {/* ═══════════ USP + DATENBASIS ═══════════ */}
       {/* Zusammenlegung 2026-08-25 (Nutzer-Vorgabe): vorher zwei Sektionen —
           "Echte Marktdaten. Durchdachte Rechner." mit neun Wert-Kacheln und
-          "Mehr als nur ein Rechner" mit den USP-Karten. Die Karten "Alle
+          "Mehr als nur ein Rechner" mit sieben USP-Karten. Die Karten "Alle
           Daten aktuell" und "Recht und Bundesland eingebaut" erzaehlten
-          dasselbe wie die Kacheln. Jetzt eine Sektion mit klarer
-          Dramaturgie: was ImmoFuchs kann (Funktionen) -> worauf er basiert
-          (Datenbasis). Die konkreten Werte sind Beleg fuer die Datenbasis
-          und keine eigenen Produktfeatures mehr - deshalb schmale Chips
-          statt neun gleichwertiger Karten. */}
+          dasselbe wie die Kacheln. Jetzt eine Sektion mit der Dramaturgie:
+          was ImmoFuchs kann (Funktionen) -> worauf er basiert (Datenbasis).
+
+          Gestaltung ueberarbeitet 2026-08-25 nach Design-Review:
+          - 2+3-Komposition statt auto-fit. Bei 5 Karten erzeugt
+            auto-fit,minmax(220px,1fr) je nach Fensterbreite eine
+            Waisenreihe (1024-1200px: 4+1, 480-760px: 2+2+1) - 5 ist prim,
+            auto-fit kann das nicht loesen. Explizite Breakpoints wie bei
+            .calc-cards-support weiter oben; die beiden NEU-Funktionen
+            stehen bewusst breit in der ersten Reihe.
+          - Emoji durch Inline-SVG ersetzt: 📄 und 📋 sahen bei 28px fast
+            gleich aus (beides ein weisses Blatt), Emoji rendern je
+            Plattform in anderen Farben (Windows grau-blau, iOS bunt) und
+            Screenreader lasen "Seite nach oben zeigend" vor jeder
+            Ueberschrift.
+          - Die neun Werte als Hairline-Raster statt gerahmter Chips: die
+            Chips standen direkt unter der Preise-CTA und sahen dort nach
+            Knoepfen aus, und flex-wrap+center liess die letzte Reihe in
+            jeder Sprache anders ausfransen. 9 Werte gehen als 3x3 exakt auf.
+          - Kontrast (WCAG AA, alles mit vorhandenen Tokens): Fliesstext
+            --ch (3,5:1 auf Weiss) -> --cl, kleine orange Schrift --ca
+            (3,4:1) -> --ca-dk, gruener Wert-Text (2,3:1) -> --ct mit
+            gruenem Punkt davor. Orange traegt jetzt nur noch den einen
+            Live-Wert (Bauzins) statt acht Werte gleichzeitig. */}
       <section
+        aria-labelledby="usp-heading"
         style={{
           background: "var(--cc)",
           borderTop: "1px solid var(--cb)",
@@ -1446,7 +1475,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 fontSize: 11,
                 letterSpacing: 2.5,
                 textTransform: "uppercase",
-                color: "var(--ca)",
+                color: "var(--ca-dk)",
                 marginBottom: 10,
                 fontWeight: 700,
               }}
@@ -1454,6 +1483,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               {l.uspTitle}
             </div>
             <h2
+              id="usp-heading"
               style={{
                 fontSize: "clamp(26px,3vw,38px)",
                 fontWeight: 800,
@@ -1468,7 +1498,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             <p
               style={{
                 fontSize: 15,
-                color: "var(--ch)",
+                color: "var(--cl)",
                 maxWidth: 600,
                 margin: "0 auto",
                 lineHeight: 1.6,
@@ -1477,13 +1507,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               {l.uspLead}
             </p>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-              gap: 24,
-            }}
-          >
+          <div className="usp-grid">
             {/* Reihenfolge mit Absicht (Ueberarbeitung 2026-08-20): die drei
                 KI-Funktionen zuerst - sie sind das, was es sonst nirgends
                 gibt. Der Exposé-Scan und das Besichtigungs-Handout standen
@@ -1496,36 +1520,134 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 Exposé-Scan und der serverseitigen Dokumenterzeugung stimmt
                 das nicht mehr. "Bundesland-spezifisch" und "Alle Daten
                 aktuell" stehen jetzt in der Datenbasis-Zeile unten, wo sie
-                die Werte tragen statt sie zu doppeln. */}
+                die Werte tragen statt sie zu doppeln.
+
+                Die SVGs sind bewusst inline und ohne Fuellung: sie erben
+                ueber stroke="currentColor" die Akzentfarbe der Icon-Kachel,
+                statt wie Emoji je Plattform eine andere Farbwelt zu haben. */}
             {[
-              { ic: "📄", h: l.uspScanH, p: l.uspScanP, neu: true },
-              { ic: "📋", h: l.uspHandoutH, p: l.uspHandoutP, neu: true },
-              { ic: "💬", h: l.uspAiH, p: l.uspAiP },
-              { ic: "💻", h: l.usp4H, p: l.usp4P },
-              { ic: "🌐", h: l.usp6H, p: l.usp6P },
+              {
+                svg: (
+                  <>
+                    <path d="M13 3H7a2 2 0 0 0-2 2v5" />
+                    <path d="M19 14v5a2 2 0 0 1-2 2h-6" />
+                    <path d="M13 3l6 6" />
+                    <path d="M13 3v6h6" />
+                    <path d="M3 12h18" />
+                  </>
+                ),
+                h: l.uspScanH,
+                p: l.uspScanP,
+                neu: true,
+              },
+              {
+                svg: (
+                  <>
+                    <path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
+                    <path d="M9 3h6v3H9z" />
+                    <path d="M8.5 12.5l2 2 4-4" />
+                    <path d="M8.5 18h7" />
+                  </>
+                ),
+                h: l.uspHandoutH,
+                p: l.uspHandoutP,
+                neu: true,
+              },
+              {
+                svg: (
+                  <>
+                    <path d="M20 12a8 8 0 1 0-3.1 6.3L21 20l-1.2-3.6A7.9 7.9 0 0 0 20 12z" />
+                    <path d="M9 10h6" />
+                    <path d="M9 14h4" />
+                  </>
+                ),
+                h: l.uspAiH,
+                p: l.uspAiP,
+              },
+              {
+                svg: (
+                  <>
+                    <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />
+                  </>
+                ),
+                h: l.usp4H,
+                p: l.usp4P,
+              },
+              {
+                svg: (
+                  <>
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M3 12h18" />
+                    <path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z" />
+                  </>
+                ),
+                h: l.usp6H,
+                p: l.usp6P,
+              },
             ].map((u, i) => (
-              <div key={i}>
-                <div style={{ fontSize: 28, marginBottom: 12 }}>{u.ic}</div>
-                {u.neu && (
-                  <div
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      letterSpacing: 1,
-                      textTransform: "uppercase",
-                      color: "var(--ca)",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {l.badgeNeu}
-                  </div>
-                )}
-                <h3
-                  style={{ fontSize: 15, fontWeight: 700, color: "var(--ct)", margin: "0 0 6px" }}
+              <div key={i} className="usp-card">
+                <div
+                  aria-hidden="true"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "var(--ca-bg)",
+                    color: "var(--ca)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 12,
+                  }}
                 >
-                  {u.h}
-                </h3>
-                <p style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.6, margin: 0 }}>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {u.svg}
+                  </svg>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    marginBottom: 6,
+                  }}
+                >
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--ct)", margin: 0 }}>
+                    {u.h}
+                  </h3>
+                  {u.neu && (
+                    // Gleiche Pille wie bei den Rechner-Karten weiter oben.
+                    // Vorher nackter 9px-Text ueber der Ueberschrift - der
+                    // schob die Headline auf 2 von 5 Karten nach unten und
+                    // liess die Grundlinien der Reihe ausfransen.
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: 1,
+                        textTransform: "uppercase",
+                        color: "var(--ca-dk)",
+                        background: "var(--ca-bg)",
+                        padding: "3px 8px",
+                        borderRadius: 4,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {l.badgeNeu}
+                    </span>
+                  )}
+                </div>
+                <p style={{ fontSize: 13, color: "var(--cl)", lineHeight: 1.6, margin: 0 }}>
                   {u.p}
                 </p>
               </div>
@@ -1541,38 +1663,33 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               textAlign: "center",
             }}
           >
-            <div
+            <h3
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 letterSpacing: 2,
                 textTransform: "uppercase",
-                color: "var(--ca)",
+                color: "var(--ca-dk)",
                 fontWeight: 700,
-                marginBottom: 8,
+                margin: "0 0 8px",
               }}
             >
               {l.dataBasisLabel}
-            </div>
+            </h3>
             <p
               style={{
                 fontSize: 13,
-                color: "var(--ch)",
+                color: "var(--cl)",
                 maxWidth: 640,
-                margin: "0 auto 18px",
+                margin: "0 auto 20px",
                 lineHeight: 1.6,
               }}
             >
               {l.dataBasis}
             </p>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: 8,
-                marginBottom: 18,
-              }}
-            >
+            {/* Hairline-Raster: der Wrapper liefert die Fugenfarbe, die
+                Zellen ueberdecken sie mit --cc. Dadurch genau 1px Trennung
+                ohne doppelte Rahmen an den Beruehrungskanten. */}
+            <div className="data-grid">
               {[
                 {
                   // Bugfix (Nutzer-Feedback 2026-08-11): zeigte bisher immer
@@ -1584,6 +1701,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                   // Prioritaet wie der Ticker (ratesCompact weiter unten).
                   label: l.dc1L,
                   val: `${(zinsen?.avg ?? MARKET_RATES.avg).toLocaleString("de-DE", { minimumFractionDigits: 2 })} %`,
+                  live: true,
                 },
                 { label: l.dc2L, val: "+2,1 %/Jahr" },
                 { label: l.dc3L, val: "+2,0 %/Jahr" },
@@ -1594,28 +1712,44 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 { label: l.dc8L, val: l.dc8V },
                 { label: l.dc9L, val: l.dc9V, green: true },
               ].map((d, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "baseline",
-                    gap: 6,
-                    background: "var(--bg)",
-                    border: "1px solid var(--cb)",
-                    borderRadius: 8,
-                    padding: "6px 12px",
-                  }}
-                >
-                  <span style={{ fontSize: 12, color: "var(--ch)" }}>{d.label}</span>
-                  <span
+                <div key={i} className="data-cell">
+                  <div
                     style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: d.green ? "#22c55e" : "var(--ca)",
+                      fontSize: 11.5,
+                      fontWeight: 500,
+                      color: "var(--ch)",
+                      overflowWrap: "anywhere",
                     }}
                   >
+                    {d.label}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 3,
+                      fontSize: 15,
+                      fontWeight: 700,
+                      lineHeight: 1.2,
+                      color: d.live ? "var(--ca-dk)" : "var(--ct)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {d.green && (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: "#22c55e",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
                     {d.val}
-                  </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1625,11 +1759,13 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 6,
+                marginTop: 16,
                 fontSize: 12,
                 color: "var(--ch)",
               }}
             >
               <span
+                aria-hidden="true"
                 style={{
                   width: 7,
                   height: 7,
@@ -1736,7 +1872,10 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 flexWrap: "wrap",
               }}
             >
-              <a href="/impressum.html" style={{ ...navLink, fontSize: 13, textDecoration: "none" }}>
+              <a
+                href="/impressum.html"
+                style={{ ...navLink, fontSize: 13, textDecoration: "none" }}
+              >
                 {l.imp}
               </a>
               <a
@@ -1745,10 +1884,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               >
                 {l.dse}
               </a>
-              <button
-                onClick={() => window.ccReopen?.()}
-                style={{ ...navLink, fontSize: 13 }}
-              >
+              <button onClick={() => window.ccReopen?.()} style={{ ...navLink, fontSize: 13 }}>
                 Cookie-Einstellungen
               </button>
             </div>
@@ -1801,6 +1937,44 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .calc-cards-support>*{width:100%;min-width:0;box-sizing:border-box}
       @media(min-width:640px){.calc-cards-support{grid-template-columns:repeat(3,1fr)}}
       @media(min-width:900px){.calc-cards-support{grid-template-columns:repeat(5,1fr)}}
+      /* USP-Karten in bewusster 2+3-Komposition (Design-Review
+         2026-08-25). Vorher auto-fit,minmax(220px,1fr): bei 5 Karten - 5
+         ist prim - blieb je nach Fensterbreite eine Karte allein stehen
+         (1024-1200px: 4+1, 480-760px: 2+2+1). Mit expliziten Breakpoints,
+         wie schon bei .calc-cards-support, gibt es in keiner Breite eine
+         Waisenreihe: 1 / 2+2+1(span) / 2+3. Die beiden NEU-Funktionen
+         stehen dabei absichtlich breit in der ersten Reihe. */
+      .usp-grid{display:grid;grid-template-columns:1fr;gap:12px}
+      .usp-grid>*{min-width:0;box-sizing:border-box}
+      @media(min-width:560px){
+        .usp-grid{grid-template-columns:repeat(2,1fr);gap:16px}
+        .usp-grid>*:nth-child(5){grid-column:span 2}
+      }
+      @media(min-width:900px){
+        .usp-grid{grid-template-columns:repeat(6,1fr);gap:18px}
+        .usp-grid>*:nth-child(1),.usp-grid>*:nth-child(2){grid-column:span 3}
+        .usp-grid>*:nth-child(n+3){grid-column:span 2}
+      }
+      .usp-card{background:var(--ci);border:1px solid var(--cb);border-radius:12px;
+        padding:18px 16px;transition:border-color .2s,transform .2s,box-shadow .2s}
+      @media(min-width:900px){.usp-card{padding:20px 18px}}
+      .usp-card:hover{border-color:var(--ca);transform:translateY(-2px);
+        box-shadow:0 8px 20px rgba(232,96,10,.10)}
+      @media(prefers-reduced-motion:reduce){
+        .usp-card{transition:none}
+        .usp-card:hover{transform:none}
+      }
+      /* Datenblatt statt Chip-Wolke: der Wrapper liefert die Fugenfarbe,
+         die Zellen decken sie mit --cc ab (gap:1px). 9 Werte gehen als 3x3
+         exakt auf, mobil 2 Spalten mit der letzten Zelle ueber beide. */
+      .data-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;
+        background:var(--cb);border:1px solid var(--cb);border-radius:12px;overflow:hidden}
+      .data-grid>*:nth-child(9){grid-column:span 2}
+      @media(min-width:560px){
+        .data-grid{grid-template-columns:repeat(3,1fr)}
+        .data-grid>*:nth-child(9){grid-column:auto}
+      }
+      .data-cell{background:var(--cc);padding:12px 14px;text-align:left;min-width:0}
       .how-steps-grid{display:grid;grid-template-columns:1fr;gap:14px}
       @media(min-width:560px){.how-steps-grid{grid-template-columns:repeat(2,1fr)}}
       @media(min-width:860px){.how-steps-grid{grid-template-columns:repeat(4,1fr)}}
