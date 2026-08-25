@@ -1421,150 +1421,16 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         }}
       />
 
-      {/* ═══════════ DATEN-ABSCHNITT ═══════════ */}
-      <section
-        style={{
-          background: "var(--bg)",
-          borderTop: "1px solid var(--cb)",
-          padding: "clamp(40px,5vw,72px) 0",
-        }}
-      >
-        <div className="lp-container">
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div
-              style={{
-                fontSize: 11,
-                letterSpacing: 2.5,
-                textTransform: "uppercase",
-                color: "var(--ca)",
-                marginBottom: 10,
-                fontWeight: 700,
-              }}
-            >
-              {l.dataEyebrow}
-            </div>
-            <h2
-              style={{
-                fontSize: "clamp(24px,3vw,36px)",
-                fontWeight: 800,
-                color: "var(--ct)",
-                margin: "0 0 14px",
-                letterSpacing: -0.5,
-                lineHeight: 1.15,
-              }}
-            >
-              {l.dataTitle}
-            </h2>
-            <p
-              style={{
-                fontSize: 15,
-                color: "var(--ch)",
-                maxWidth: 520,
-                margin: "0 auto",
-                lineHeight: 1.6,
-              }}
-            >
-              {l.dataSub}
-            </p>
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
-              gap: 12,
-              marginBottom: 28,
-            }}
-          >
-            {[
-              {
-                // Bugfix (Nutzer-Feedback 2026-08-11): zeigte bisher immer
-                // den statischen Fallback MARKET_RATES.avg, unabhaengig vom
-                // live geladenen zinsen.json - dadurch wich der Wert vom
-                // Bauzinsen-Ticker weiter unten ab (der zinsen?.avg nutzt,
-                // den ueber alle 5 Quellen live berechneten Durchschnitt,
-                // siehe App.jsx loadZinsen()). Jetzt dieselbe Quelle/
-                // Prioritaet wie der Ticker (ratesCompact weiter unten).
-                ic: "💰",
-                label: l.dc1L,
-                val: `${(zinsen?.avg ?? MARKET_RATES.avg).toLocaleString("de-DE", { minimumFractionDigits: 2 })} %`,
-                sub: l.dc1S,
-              },
-              { ic: "📊", label: l.dc2L, val: "+2,1 %/Jahr", sub: l.dc2S },
-              { ic: "🏠", label: l.dc3L, val: "+2,0 %/Jahr", sub: l.dc3S },
-              { ic: "🏛️", label: l.dc4L, val: l.dc4V, sub: l.dc4S },
-              { ic: "⚖️", label: l.dc5L, val: l.dc5V, sub: l.dc5S },
-              { ic: "🏗️", label: l.dc6L, val: l.dc6V, sub: l.dc6S },
-              { ic: "🌱", label: l.dc7L, val: l.dc7V, sub: l.dc7S },
-              { ic: "📋", label: l.dc8L, val: l.dc8V, sub: l.dc8S },
-              { ic: "💶", label: l.dc9L, val: l.dc9V, sub: l.dc9S, green: true },
-            ].map((d, i) => (
-              <div
-                key={i}
-                style={{
-                  background: "var(--cc)",
-                  borderRadius: 12,
-                  border: "1px solid var(--cb)",
-                  padding: "14px 16px",
-                }}
-              >
-                <div style={{ fontSize: 20, marginBottom: 6 }}>{d.ic}</div>
-                <div style={{ fontSize: 11, color: "var(--ch)", fontWeight: 500, marginBottom: 4 }}>
-                  {d.label}
-                </div>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: d.green ? "#22c55e" : "var(--ca)",
-                    lineHeight: 1.1,
-                    marginBottom: 3,
-                  }}
-                >
-                  {d.val}
-                </div>
-                <div style={{ fontSize: 11, color: "var(--ch)" }}>{d.sub}</div>
-              </div>
-            ))}
-          </div>
-          <div
-            style={{
-              textAlign: "center",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              fontSize: 12,
-              color: "var(--ch)",
-            }}
-          >
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                background: "#22c55e",
-                display: "inline-block",
-                flexShrink: 0,
-              }}
-            />
-            <span>
-              {(() => {
-                const n = new Date();
-                return (
-                  l.dataStand +
-                  " " +
-                  n.toLocaleDateString(LANG_LOCALE[lang] || "de-DE", {
-                    month: "long",
-                    year: "numeric",
-                  })
-                );
-              })()}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ USP ═══════════ */}
+      {/* ═══════════ USP + DATENBASIS ═══════════ */}
+      {/* Zusammenlegung 2026-08-25 (Nutzer-Vorgabe): vorher zwei Sektionen —
+          "Echte Marktdaten. Durchdachte Rechner." mit neun Wert-Kacheln und
+          "Mehr als nur ein Rechner" mit den USP-Karten. Die Karten "Alle
+          Daten aktuell" und "Recht und Bundesland eingebaut" erzaehlten
+          dasselbe wie die Kacheln. Jetzt eine Sektion mit klarer
+          Dramaturgie: was ImmoFuchs kann (Funktionen) -> worauf er basiert
+          (Datenbasis). Die konkreten Werte sind Beleg fuer die Datenbasis
+          und keine eigenen Produktfeatures mehr - deshalb schmale Chips
+          statt neun gleichwertiger Karten. */}
       <section
         style={{
           background: "var(--cc)",
@@ -1592,13 +1458,24 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 fontSize: "clamp(26px,3vw,38px)",
                 fontWeight: 800,
                 color: "var(--ct)",
-                margin: 0,
+                margin: "0 0 14px",
                 letterSpacing: -0.5,
                 lineHeight: 1.15,
               }}
             >
               {l.uspSub}
             </h2>
+            <p
+              style={{
+                fontSize: 15,
+                color: "var(--ch)",
+                maxWidth: 600,
+                margin: "0 auto",
+                lineHeight: 1.6,
+              }}
+            >
+              {l.uspLead}
+            </p>
           </div>
           <div
             style={{
@@ -1612,19 +1489,18 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 gibt. Der Exposé-Scan und das Besichtigungs-Handout standen
                 bisher gar nicht auf der Landingpage, obwohl das Handout die
                 staerkste Unterscheidung zu jedem anderen Rechner ist.
-                Danach die Substanz (Recht, Daten), zuletzt der Einstieg.
+                Danach der Einstieg.
 
                 Entfallen: die Kachel "100 % privat" ("Alle Berechnungen
                 laufen im Browser. Keine Server ...") - seit Finn, dem
                 Exposé-Scan und der serverseitigen Dokumenterzeugung stimmt
-                das nicht mehr. Und "Bundesland-spezifisch", das jetzt in der
-                Rechts-Kachel steht, wo es hingehoert. */}
+                das nicht mehr. "Bundesland-spezifisch" und "Alle Daten
+                aktuell" stehen jetzt in der Datenbasis-Zeile unten, wo sie
+                die Werte tragen statt sie zu doppeln. */}
             {[
               { ic: "📄", h: l.uspScanH, p: l.uspScanP, neu: true },
               { ic: "📋", h: l.uspHandoutH, p: l.uspHandoutP, neu: true },
               { ic: "💬", h: l.uspAiH, p: l.uspAiP },
-              { ic: "⚖️", h: l.usp2H, p: l.usp2P },
-              { ic: "📊", h: l.usp1H, p: l.usp1P },
               { ic: "💻", h: l.usp4H, p: l.usp4P },
               { ic: "🌐", h: l.usp6H, p: l.usp6P },
             ].map((u, i) => (
@@ -1654,6 +1530,129 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 </p>
               </div>
             ))}
+          </div>
+
+          {/* ─── Datenbasis: Beleg, nicht Feature ─── */}
+          <div
+            style={{
+              marginTop: 44,
+              paddingTop: 28,
+              borderTop: "1px solid var(--cb)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: 2,
+                textTransform: "uppercase",
+                color: "var(--ca)",
+                fontWeight: 700,
+                marginBottom: 8,
+              }}
+            >
+              {l.dataBasisLabel}
+            </div>
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--ch)",
+                maxWidth: 640,
+                margin: "0 auto 18px",
+                lineHeight: 1.6,
+              }}
+            >
+              {l.dataBasis}
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: 8,
+                marginBottom: 18,
+              }}
+            >
+              {[
+                {
+                  // Bugfix (Nutzer-Feedback 2026-08-11): zeigte bisher immer
+                  // den statischen Fallback MARKET_RATES.avg, unabhaengig vom
+                  // live geladenen zinsen.json - dadurch wich der Wert vom
+                  // Bauzinsen-Ticker weiter unten ab (der zinsen?.avg nutzt,
+                  // den ueber alle 5 Quellen live berechneten Durchschnitt,
+                  // siehe App.jsx loadZinsen()). Jetzt dieselbe Quelle/
+                  // Prioritaet wie der Ticker (ratesCompact weiter unten).
+                  label: l.dc1L,
+                  val: `${(zinsen?.avg ?? MARKET_RATES.avg).toLocaleString("de-DE", { minimumFractionDigits: 2 })} %`,
+                },
+                { label: l.dc2L, val: "+2,1 %/Jahr" },
+                { label: l.dc3L, val: "+2,0 %/Jahr" },
+                { label: l.dc4L, val: l.dc4V },
+                { label: l.dc5L, val: l.dc5V },
+                { label: l.dc6L, val: l.dc6V },
+                { label: l.dc7L, val: l.dc7V },
+                { label: l.dc8L, val: l.dc8V },
+                { label: l.dc9L, val: l.dc9V, green: true },
+              ].map((d, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "baseline",
+                    gap: 6,
+                    background: "var(--bg)",
+                    border: "1px solid var(--cb)",
+                    borderRadius: 8,
+                    padding: "6px 12px",
+                  }}
+                >
+                  <span style={{ fontSize: 12, color: "var(--ch)" }}>{d.label}</span>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: d.green ? "#22c55e" : "var(--ca)",
+                    }}
+                  >
+                    {d.val}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                fontSize: 12,
+                color: "var(--ch)",
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: "#22c55e",
+                  display: "inline-block",
+                  flexShrink: 0,
+                }}
+              />
+              <span>
+                {(() => {
+                  const n = new Date();
+                  return (
+                    l.dataStand +
+                    " " +
+                    n.toLocaleDateString(LANG_LOCALE[lang] || "de-DE", {
+                      month: "long",
+                      year: "numeric",
+                    })
+                  );
+                })()}
+              </span>
+            </div>
           </div>
         </div>
       </section>

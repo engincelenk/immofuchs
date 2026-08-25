@@ -1,3 +1,36 @@
+## 2026-08-25 (1.21.2)
+
+### Landingpage: Daten-Sektion und USP-Sektion zusammengelegt
+
+Vorher zwei aufeinanderfolgende Sektionen mit inhaltlicher Ueberschneidung:
+"Echte Marktdaten. Durchdachte Rechner." mit neun Wert-Kacheln (Bauzinsen,
+CO2-Preis, AfA-Satz ...) und direkt danach "Mehr als nur ein Rechner" mit
+sieben USP-Karten, darunter "Alle Daten aktuell" und "Recht und Bundesland
+eingebaut" - beide erzaehlten dasselbe wie die Kacheln darueber.
+
+Jetzt eine Sektion mit klarer Dramaturgie: was ImmoFuchs kann (Funktionen)
+-> worauf er basiert (Datenbasis).
+
+- Kopf: Eyebrow "Was macht Immofuchs besonders", H2 "Mehr als nur ein
+  Rechner", neuer Lead-Text (`uspLead`), der Funktionen und Datenbasis
+  verbindet und den alten `dataSub` ersetzt.
+- Funktionen: fuenf Karten statt sieben (Expose-Scan, Handout,
+  KI-Assistent, Sofort starten, 5 Sprachen).
+- Datenbasis als Abschluss, visuell zurueckgenommen: die neun Werte als
+  schmale Chips (Label + Wert) statt als gleichwertige Karten, darueber die
+  Gesetzes-/Bundesland-Zeile (`dataBasis`, Text des alten `usp2P`), darunter
+  unveraendert "Alle Werte monatlich geprueft - Datenstand: <Monat Jahr>".
+  Der Bauzins bleibt live aus zinsen.json (gleiche Quelle wie der Ticker).
+
+Hoehe der Datenwerte damit von ~450 px auf ~90 px reduziert; die Zahlen
+stehen als Beleg fuer die Datenbasis, nicht mehr als neun Produktfeatures.
+
+i18n (alle 5 Sprachen): neu `uspLead`, `dataBasisLabel`, `dataBasis`;
+entfallen `dataEyebrow`, `dataTitle`, `dataSub`, `usp1H`, `usp1P`,
+`usp2H`, `usp2P`.
+
+Geaendert: src/pages/Landing.jsx, src/i18n/translations.js
+
 ## 2026-08-25 (1.21.1)
 
 ### Admin-Suche: veraltete Escaping-Tests korrigiert
