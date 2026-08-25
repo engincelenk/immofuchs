@@ -134,9 +134,13 @@ export function F({
     </div>
   );
 }
-export function Sel({ label, value, onChange, options }) {
+// tip wird nur durchgereicht: das umschliessende F rendert den Tip-Button
+// bereits neben dem Label. Ohne diesen Prop koennten Dropdown-Felder
+// konstruktionsbedingt keine Erklaerung bekommen - bei KfW-Programm oder
+// Abschreibungsart ist die aber genau so noetig wie bei einem Zahlenfeld.
+export function Sel({ label, value, onChange, options, tip }) {
   return (
-    <F label={label}>
+    <F label={label} tip={tip}>
       <select
         value={value}
         onChange={(e) => {

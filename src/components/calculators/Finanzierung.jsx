@@ -274,6 +274,7 @@ export default function Kredit() {
             value={d.zinsbindung}
             onChange={(v) => set("zinsbindung", v)}
             options={[5, 10, 15, 20, 25, 30].map((y) => ({ v: y, l: `${y} J.` }))}
+            tip={tip("zinsbindung")}
           />
 
           {/* ── KfW-Foerderdarlehen ──────────────────────────────────────
@@ -291,6 +292,7 @@ export default function Kredit() {
             onChange={(v) => set("kfwAktiv", v)}
             label={t.kfwAktivLabel}
             sub={t.kfwAktivSub}
+            tip={tip("kfwAktiv")}
           />
           {d.kfwAktiv && (
             <>
@@ -305,6 +307,7 @@ export default function Kredit() {
                   { v: "vermietet", l: t.kfwVermietet },
                   { v: "eigen", l: t.kfwEigen },
                 ]}
+                tip={tip("kfwNutzung")}
               />
               <Sel
                 label={t.kfwProgramm}
@@ -318,6 +321,7 @@ export default function Kredit() {
                       ]
                     : [{ v: "297", l: t.kfwProg297 }]
                 }
+                tip={tip("kfwProgramm")}
               />
               {d.kfwNutzung !== "eigen" && (
                 <div
@@ -338,6 +342,7 @@ export default function Kredit() {
                   onChange={(v) => set("qng", v)}
                   label={t.qngLabel}
                   sub={t.qngSub}
+                  tip={tip("qng")}
                 />
               )}
               <Row>
@@ -345,6 +350,7 @@ export default function Kredit() {
                   label={t.kfwWE}
                   value={d.wohneinheiten || "1"}
                   onChange={(v) => set("wohneinheiten", v)}
+                  tip={tip("wohneinheiten")}
                 />
                 <F
                   label={t.kfwBetrag}
@@ -352,6 +358,7 @@ export default function Kredit() {
                   value={d.kfwBetrag}
                   onChange={(v) => set("kfwBetrag", v)}
                   hint={R ? `${t.kfwMax}: ${fmt(R.kfwDeckel)} €` : ""}
+                  tip={tip("kfwBetrag")}
                 />
               </Row>
               <Row>
@@ -362,12 +369,14 @@ export default function Kredit() {
                   onChange={(v) => set("kfwZins", v)}
                   step="0.05"
                   hint={t.kfwZinsHint}
+                  tip={tip("kfwZins")}
                 />
                 <Sel
                   label={t.kfwTfLabel}
                   value={d.kfwTilgungsfrei || "0"}
                   onChange={(v) => set("kfwTilgungsfrei", v)}
                   options={[0, 1, 2, 3, 4, 5].map((y) => ({ v: y, l: `${y} J.` }))}
+                  tip={tip("kfwTilgungsfrei")}
                 />
               </Row>
               <Sel
@@ -375,6 +384,7 @@ export default function Kredit() {
                 value={d.kfwLaufzeit || "30"}
                 onChange={(v) => set("kfwLaufzeit", v)}
                 options={[10, 15, 20, 25, 30, 35].map((y) => ({ v: y, l: `${y} J.` }))}
+                tip={tip("kfwLaufzeit")}
               />
             </>
           )}

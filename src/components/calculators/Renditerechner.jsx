@@ -256,6 +256,7 @@ export default function Haupt() {
             value={d.zinsbindung}
             onChange={(v) => set("zinsbindung", v)}
             options={[5, 10, 15, 20, 25, 30].map((y) => ({ v: y, l: `${y} J.` }))}
+            tip={tip("zinsbindung")}
           />
           <Sec title={t.stNk} icon="📋" />
           <Row>
@@ -330,12 +331,14 @@ export default function Haupt() {
                   { v: "linear", l: t.nbLinear },
                   { v: "degressiv", l: t.nbDegressiv },
                 ]}
+                tip={tip("afaModus")}
               />
               <Toggle
                 checked={!!d.qng}
                 onChange={(v) => set("qng", v)}
                 label={t.qngLabel}
                 sub={t.qngSub}
+                tip={tip("qng")}
               />
               {d.qng && (
                 <Toggle
@@ -343,6 +346,7 @@ export default function Haupt() {
                   onChange={(v) => set("bauantragAb2023", v)}
                   label={t.nbBauantrag}
                   sub={t.nbBauantragSub}
+                  tip={tip("bauantrag")}
                 />
               )}
               {d.qng && d.bauantragAb2023 && (
@@ -351,6 +355,7 @@ export default function Haupt() {
                   onChange={(v) => set("sonderAfa", v)}
                   label={t.nbSonder}
                   sub={t.nbSonderSub}
+                  tip={tip("sonderAfa")}
                 />
               )}
               <Row>
@@ -362,6 +367,7 @@ export default function Haupt() {
                     v: m,
                     l: String(m),
                   }))}
+                  tip={tip("anschaffungMonat")}
                 />
                 <F
                   label={t.nbKostenQm}
@@ -369,6 +375,7 @@ export default function Haupt() {
                   value={R && isFinite(R.sonderQm) ? fmt(R.sonderQm) : "—"}
                   readOnly
                   hint={`${t.nbGrenze} ${fmt(AFA.sonderKostenGrenzeQm)} €/m²`}
+                  tip={tip("kostenQm")}
                 />
               </Row>
               {/* Grenze gerissen: kein Fehler, kein Rot - nur die Zahl und

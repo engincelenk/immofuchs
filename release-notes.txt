@@ -1,3 +1,76 @@
+## 2026-08-25 (1.22.1)
+
+### FIX: Neubau-AfA und KfW waren unsichtbar - i18n-Schluessel im falschen Objekt
+
+1.22.0 hat die Neubau-Abschreibung und das KfW-Darlehen vollstaendig
+ausgeliefert - Rechenkern, Felder, Defaults, alles vorhanden und verdrahtet.
+Sichtbar war davon trotzdem nichts.
+
+Ursache: translations.js exportiert zwei Objekte. T lesen die Rechner ueber
+useApp(), TL liest ausschliesslich die Landingpage (Landing.jsx und
+ZinsAlarm.jsx). Die 41 neuen Schluessel (nbTitel ... kfwOhne, bank) sind in
+allen fuenf Sprachen in TL gelandet statt in T. Dort lag der komplette Block
+tot - kein Landing-Konsument liest auch nur einen davon.
+
+Folge im Kreditrechner: leere Feldbeschriftungen, leere Dropdown-Eintraege,
+und unter dem KfW-Betrag stand "undefined: 150.000 €" (t.kfwMax war
+undefined). Im Renditerechner kam dazu, dass der Block ohnehin erst ab
+Baujahr 2023 erscheint - bei aelteren Objekten war schlicht nichts da.
+
+Behoben: alle 41 Schluessel je Sprache aus TL nach T verschoben. Die Texte
+sind woertlich dieselben, nur die Ablage aendert sich.
+
+### Tooltips fuer jedes neue Feld
+
+Kein einziges der 15 neuen Felder hatte eine Erklaerung. Bei "degressiv statt
+linear" oder "Programm 297 statt 124" ist ein Dropdown ohne Tooltip nicht
+bedienbar - man muss wissen, was man waehlt.
+
+Neu in TIPS, in allen fuenf Sprachen, im Format der bestehenden Tooltips
+(Fundstelle plus konkrete Zahl):
+
+  Renditerechner  afaModus, qng, bauantrag, sonderAfa, anschaffungMonat,
+                  kostenQm
+  Kreditrechner   kfwAktiv, kfwNutzung, kfwProgramm, wohneinheiten,
+                  kfwBetrag, kfwZins, kfwTilgungsfrei, kfwLaufzeit
+  beide           zinsbindung (war auch vorher schon ohne Erklaerung)
+
+Alle Grenzwerte und Konditionen darin kommen aus data.js (AFA, KFW_KREDIT),
+nicht als Literal im Text - sonst laufen Erklaerung und Rechnung
+auseinander, sobald eine KfW-Kondition nachgepflegt wird.
+
+qng bekommt bewusst EINEN Tooltip fuer beide Rechner, der beide Wirkungen
+nennt: Voraussetzung der Sonder-AfA nach § 7b EStG UND Hebel des
+KfW-Hoechstbetrags von 100.000 auf 150.000 € je Wohneinheit.
+
+Der bj-Tooltip nennt jetzt zusaetzlich, dass ab Baujahr 2023 der Block
+"Neubau-Abschreibung" erscheint - sonst sucht man eine Funktion, die nur
+ueber ein anderes Feld erreichbar ist.
+
+### Sel nimmt jetzt einen tip-Prop
+
+atoms.jsx: Sel reichte keinen tip durch, sieben der neuen Felder sind aber
+Dropdowns und konnten konstruktionsbedingt keine Erklaerung bekommen. Der
+Prop wird nur an das umschliessende F weitergegeben, das den Tip-Button
+neben dem Label ohnehin schon rendert.
+
+### Waechter gegen genau diesen Fehler
+
+vollstaendigkeit.test.js pruefte bisher nur, ob Sprachbloecke in sich
+deckungsgleich sind. T und TL waren das jeweils - der Fehler war nicht die
+Vollstaendigkeit, sondern die ABLAGE. Neue Tests:
+
+  - die 41 Neubau-/KfW-Schluessel liegen in T und NICHT in TL (je Sprache)
+  - zu jedem der 15 neuen Felder existiert ein Tooltip (je Sprache)
+  - Gegenrichtung: jeder in Landing.jsx/ZinsAlarm.jsx als l.X gelesene
+    Schluessel steht in TL (je Sprache)
+
+Gegenprobe gemacht: entfernt man kfwTitel aus T.de, schlaegt der Test fehl.
+
+398 Tests gruen, Build ohne neue Warnungen.
+
+---
+
 ## 2026-08-25 (1.22.0)
 
 ### Neubau-Abschreibung im Renditerechner, KfW im Kreditrechner
