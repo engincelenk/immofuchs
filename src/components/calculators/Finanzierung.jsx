@@ -368,7 +368,6 @@ export default function Kredit() {
                   value={d.kfwZins}
                   onChange={(v) => set("kfwZins", v)}
                   step="0.05"
-                  hint={t.kfwZinsHint}
                   tip={tip("kfwZins")}
                 />
                 <Sel

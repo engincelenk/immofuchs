@@ -85,7 +85,7 @@ const NEUBAU_KFW_KEYS = [
   "nbVerlaufSub", "nbBeste", "nb23Hinweis", "kfwTitel", "kfwAktivLabel",
   "kfwAktivSub", "kfwNutzung", "kfwVermietet", "kfwEigen", "kfwProgramm",
   "kfwProg297", "kfwProg124", "kfwHint124", "kfwWE", "kfwBetrag", "kfwMax",
-  "kfwZinsLabel", "kfwZinsHint", "kfwTfLabel", "kfwLaufzeitLabel",
+  "kfwZinsLabel", "kfwTfLabel", "kfwLaufzeitLabel",
   "kfwRateAb", "kfwMischzins", "kfwOhne", "bank",
 ];
 
