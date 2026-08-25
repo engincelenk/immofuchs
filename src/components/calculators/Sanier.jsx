@@ -211,33 +211,44 @@ export default function Sanier() {
 
     const anbauF = s.anbau === "doppel" ? 0.75 : s.anbau === "mittel" ? 0.5 : 1;
     const oF = (ht === "heizoel" || ht === "gas" || ht === "kohle") && ha === "alt";
-    const hFQ = Math.min(0.3 + (oF ? 0.2 : 0.0), 0.7); // BAFA BEG 2026: 30% Grund + 20% Klimabonus (alte Öl/Gas/Kohle), kein +5% für andere
-    const iB = d.sanIsfp ? 0.05 : 0; // iSFP-Bonus: +5% auf alle BEG-fähigen Maßnahmen
+    // Foerderquoten aus KFW in data.js (Zentralisierung 2026-08-25). Vorher
+    // standen dieselben Zahlen hier als Literale, obwohl KFW importiert war
+    // und bis auf klimaBonus_baujahrGrenze ungenutzt blieb. Die zwei Werte,
+    // die es nur hier gab (30 % Heizungs-Grundfoerderung, 5 % iSFP-Bonus),
+    // sind dafuer nach data.js gewandert. Rechenergebnis unveraendert.
+    const BASIS = KFW.basisfoerderung / 100,
+      MAX_FQ = KFW.maxFoerderung / 100,
+      CAP = KFW.maxInvestition;
+    const hFQ = Math.min(
+      KFW.heizungGrundfoerderung / 100 + (oF ? KFW.klimageschwindigkeitsbonus / 100 : 0),
+      MAX_FQ,
+    ); // BEG 2026: Grundfoerderung + Klimabonus (alte Öl/Gas/Kohle), kein +5% für andere
+    const iB = d.sanIsfp ? KFW.isfpBonus / 100 : 0; // iSFP-Bonus auf alle BEG-fähigen Maßnahmen
 
     const FQ = {
-      fenster: 0.15 + iB,
-      fassade: 0.15 + iB,
-      heizung: Math.min(hFQ + iB, 0.7),
-      dach: 0.15 + iB,
-      tuer: 0.15 + iB,
+      fenster: BASIS + iB,
+      fassade: BASIS + iB,
+      heizung: Math.min(hFQ + iB, MAX_FQ),
+      dach: BASIS + iB,
+      tuer: BASIS + iB,
       pv: 0,
-      keller: 0.15 + iB,
-      ogdecke: 0.15 + iB,
+      keller: BASIS + iB,
+      ogdecke: BASIS + iB,
       batterie: 0,
-      lueftung: 0.15 + iB,
+      lueftung: BASIS + iB,
     };
     // BAFA/KfW Förder-Caps: dynamisch aus FQ (damit iSFP-Bonus automatisch einfliesst)
     const FO_CAP = {
-      fenster: Math.round(30000 * FQ.fenster),
-      fassade: Math.round(30000 * FQ.fassade),
-      heizung: Math.round(30000 * FQ.heizung),
-      dach: Math.round(30000 * FQ.dach),
-      tuer: Math.round(30000 * FQ.tuer),
+      fenster: Math.round(CAP * FQ.fenster),
+      fassade: Math.round(CAP * FQ.fassade),
+      heizung: Math.round(CAP * FQ.heizung),
+      dach: Math.round(CAP * FQ.dach),
+      tuer: Math.round(CAP * FQ.tuer),
       pv: Infinity, // KfW 270: kein Betragscap
-      keller: Math.round(30000 * FQ.keller),
-      ogdecke: Math.round(30000 * FQ.ogdecke),
+      keller: Math.round(CAP * FQ.keller),
+      ogdecke: Math.round(CAP * FQ.ogdecke),
       batterie: Infinity, // Landesförderung: variiert
-      lueftung: Math.round(30000 * FQ.lueftung),
+      lueftung: Math.round(CAP * FQ.lueftung),
     };
     const ES = {
       fenster: { ek: 0.12, co2: 0.1 },

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { MARKET_RATES } from "./data.js";
+import { MARKET_RATES, WERTSTEIGERUNG, AFA } from "./data.js";
 import { berechneNichtUml } from "./utils/rendite.js";
 import { AppProviders } from "./context/AppProviders.jsx";
 import { T } from "./i18n/translations.js";
@@ -176,10 +176,31 @@ function createDefaults() {
     notar: "2.0",
     makler: "3.57",
     steuersatz: "30",
-    afaSatz: "2",
+    // AfA-Satz und Wertsteigerung kommen aus data.js statt als Literal hier
+    // (Zentralisierung 2026-08-25). Die Wertsteigerung ist damit dieselbe
+    // Zahl, die die Landingpage-Datentafel zeigt.
+    afaSatz: String(AFA.standard),
     grundAnteil: "20",
     gebAnteil: "80",
-    wertP: "2",
+    wertP: String(WERTSTEIGERUNG.pA),
+    // ── Neubau-Abschreibung (2026-08-25) ──
+    // Alle Vorbelegungen bilden bewusst den Status quo ab: lineare AfA,
+    // keine Sonderabschreibung, kein Foerderdarlehen. Fuer Bestandsnutzer
+    // aendert sich dadurch nichts, solange sie nichts umstellen.
+    afaModus: "linear",
+    qng: false,
+    sonderAfa: false,
+    bauantragAb2023: false,
+    anschaffungMonat: "1",
+    // ── KfW-Foerderdarlehen ──
+    kfwAktiv: false,
+    kfwNutzung: "vermietet",
+    kfwProg: "297",
+    kfwBetrag: "",
+    kfwZins: "",
+    kfwLaufzeit: "30",
+    kfwTilgungsfrei: "0",
+    wohneinheiten: "1",
     jahre: "10",
     sonder: "3000",
     renovierung: "15000",

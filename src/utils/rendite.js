@@ -1,7 +1,9 @@
-import { GREST, NICHT_UML } from "../data.js";
+import { GREST, NICHT_UML, AFA, KFW_KREDIT } from "../data.js";
 import { isK15 } from "../data/plzData.js";
 import { addY } from "./helpers.js";
 import { buildMP } from "./mietprognose.js";
+import { berechneAfaPlan } from "./afa.js";
+import { berechneKfwPlan, teileFinanzierung } from "./kfwDarlehen.js";
 
 // Nicht umlagefaehige Kosten aus der Wohnflaeche: Richtwertmitte aus data.js
 // (NICHT_UML.mittel) mal Quadratmeter, gerundet auf ganze Euro. Bei einem
@@ -72,13 +74,16 @@ export function computeRendite(d, t) {
     sonderumlage = +d.sonder || 0;
   const renovierung = +d.renovierung || 0,
     vergleichsmiete = +d.vergleichsmiete || 0;
-
-  // ── Renovierung: 15%-Grenze entscheidet Sofortabzug vs. Aktivierung (AfA) ──
-  const renGebaeudeKp = (+d.kaufpreis || 0) * ((+d.gebAnteil || 80) / 100);
-  const ren15Grenze = renGebaeudeKp * 0.15;
-  const renUnterGrenze = renovierung > 0 && renovierung <= ren15Grenze;
-  const renUeberGrenze = renovierung > 0 && renovierung > ren15Grenze;
-  const renAfaJahr = renUeberGrenze ? (renovierung * (+d.afaSatz || 2)) / 100 : 0;
+  // ── Neubau-Abschreibung (2026-08-25) ──
+  // Alle Felder sind optional; fehlen sie, verhaelt sich die Rechnung wie
+  // vor der Erweiterung: lineare AfA mit dem Satz aus dem Formular.
+  const afaModus = d.afaModus === "degressiv" ? "degressiv" : "linear",
+    qng = !!d.qng,
+    sonderAfaGewuenscht = !!d.sonderAfa && qng && !!d.bauantragAb2023,
+    anschaffungMonat = +d.anschaffungMonat || 1;
+  // ── KfW-Foerderdarlehen ──
+  const kfwAktiv = !!d.kfwAktiv,
+    wohneinheiten = Math.max(1, +d.wohneinheiten || 1);
 
   // ── Basiskennzahlen (bei Kaufpreis 0 bewusst Nullwerte statt null, damit die
   //    Ergebnis-Pane sichtbar bleibt) ──
@@ -91,23 +96,82 @@ export function computeRendite(d, t) {
   // Darlehens, das Eigenkapital wirkt nur gegen den Kaufpreis - stattdessen
   // taucht die Nebenkosten-Summe unten als eigene Barauslage in nkCash auf.
   const finanzierungsbasis = nkFinanzieren ? gesamtKaufpreis + nebenkosten : gesamtKaufpreis;
-  const darlehen = Math.max(0, finanzierungsbasis - eigenkapital);
+
+  // ── AfA-Bemessungsgrundlage ────────────────────────────────────────────
+  // Korrektur 2026-08-25: bis dahin rechnete die AfA nur auf den Kaufpreis.
+  // Grunderwerbsteuer, Notar und Maklerprovision sind Anschaffungsneben-
+  // kosten und gehoeren anteilig zur Gebaeude-Bemessungsgrundlage - bei
+  // 10-12 % Nebenkosten fehlten dauerhaft 10-12 % der Abschreibung.
+  const anschaffungskosten = gesamtKaufpreis + nebenkosten;
+  const afaBemessung = anschaffungskosten * (gebaeudeAnteilProz / 100);
+
+  // ── Renovierung: 15%-Grenze entscheidet Sofortabzug vs. Aktivierung ────
+  // Die Grenze bemisst sich nach den Gebaeude-Anschaffungskosten inkl.
+  // anteiliger Nebenkosten (§ 6 Abs. 1 Nr. 1a EStG), nicht nach dem reinen
+  // Kaufpreisanteil - vorher wurde zu frueh aktiviert.
+  const ren15Grenze = afaBemessung * 0.15;
+  const renUnterGrenze = renovierung > 0 && renovierung <= ren15Grenze;
+  const renUeberGrenze = renovierung > 0 && renovierung > ren15Grenze;
+
+  // ── AfA-Plan je Jahr (linear / degressiv / Sonder-AfA § 7b) ────────────
+  const afaPlan = berechneAfaPlan({
+    bemessung: afaBemessung,
+    wohnflaeche: flaeche,
+    jahre: +d.jahre || 10,
+    modus: afaModus,
+    linearSatz: afaProz > 0 ? afaProz : AFA.standard,
+    sonderAfa: sonderAfaGewuenscht,
+    anschaffungMonat,
+    renAktiviert: renUeberGrenze ? renovierung : 0,
+    renJahr: 1,
+  });
+  const afaJahr = afaPlan.afa[0] || 0;
+
+  // ── Finanzierung: Bankdarlehen und KfW-Foerderdarlehen ────────────────
+  // Der Renditerechner bildet ausschliesslich vermietete Objekte ab, daher
+  // kommt nur das Programm 297/298 in Frage - das Wohneigentumsprogramm 124
+  // ist Selbstnutzern vorbehalten (KFW_KREDIT.wohneigentum.vermietbar).
+  const kfwDeckel = kfwAktiv
+    ? (qng ? KFW_KREDIT.kfn.maxProWE_qng : KFW_KREDIT.kfn.maxProWE) * wohneinheiten
+    : 0;
+  const kfwWunsch = kfwAktiv ? (+d.kfwBetrag > 0 ? +d.kfwBetrag : kfwDeckel) : 0;
+  const aufteilung = teileFinanzierung({
+    basis: finanzierungsbasis,
+    eigenkapital,
+    kfwWunsch,
+    kfwDeckel,
+  });
+  const darlehenKfw = aufteilung.kfw;
+  const darlehenBank = aufteilung.bank;
+  const kfwPlan = berechneKfwPlan({
+    betrag: darlehenKfw,
+    zinsProz: +d.kfwZins > 0 ? +d.kfwZins : KFW_KREDIT.kfn.zins,
+    laufzeit: +d.kfwLaufzeit || 30,
+    tilgungsfrei: +d.kfwTilgungsfrei || 0,
+    jahre: +d.jahre || 10,
+  });
+  // "darlehen" bleibt die Gesamtsumme - Beleihungsauslauf und Risikomodell
+  // beziehen sich weiterhin auf die gesamte Fremdfinanzierung.
+  const darlehen = darlehenBank + darlehenKfw;
   // Beleihungsauslauf bleibt bewusst gegen den reinen Kaufpreis (Beleihungswert
   // der Bank), nicht gegen die Finanzierungsbasis - Nebenkosten sind keine
   // Sicherheit und erhoehen die Beleihung dadurch korrekt mit.
   const beleihung = gesamtKaufpreis > 0 ? (darlehen / gesamtKaufpreis) * 100 : 0;
   const monatsZins = zinsProz / 100 / 12;
-  const annuitaetMon = (darlehen * (zinsProz + tilgungProz)) / 100 / 12;
+  // Annuitaet bezieht sich auf das Bankdarlehen: es ist ueber den
+  // Tilgungssatz parametrisiert, das KfW-Darlehen dagegen ueber seine
+  // Laufzeit. Ein gemeinsamer Tilgungssatz waere fachlich falsch.
+  const annuitaetMon = (darlehenBank * (zinsProz + tilgungProz)) / 100 / 12;
 
   // Tilgungsdauer bis Restschuld 0 (Annuitaetenformel; ohne Tilgung: nie → 0 bleibt)
   let laufzeitJahre = 0;
-  if (monatsZins > 0 && annuitaetMon > darlehen * monatsZins) {
+  if (monatsZins > 0 && annuitaetMon > darlehenBank * monatsZins) {
     laufzeitJahre =
-      Math.log(annuitaetMon / (annuitaetMon - darlehen * monatsZins)) /
+      Math.log(annuitaetMon / (annuitaetMon - darlehenBank * monatsZins)) /
       Math.log(1 + monatsZins) /
       12;
   } else if (monatsZins === 0 && annuitaetMon > 0) {
-    laufzeitJahre = darlehen / annuitaetMon / 12;
+    laufzeitJahre = darlehenBank / annuitaetMon / 12;
   }
 
   const analyseMonate = jahre * 12;
@@ -121,7 +185,6 @@ export function computeRendite(d, t) {
     gesamtInvestition + nebenkosten > 0
       ? ((effektivMieteMon * 12 - nichtUmlagbarJahr) / (gesamtInvestition + nebenkosten)) * 100
       : 0;
-  const afaJahr = kaufpreis * (gebaeudeAnteilProz / 100) * (afaProz / 100) + renAfaJahr;
 
   // ── Mietprognose (§ 558 BGB) für die jahresweise Mietentwicklung ──
   const k15 = isK15(d.ort) || d.bundesland === "BE" || d.bundesland === "HH";
@@ -148,7 +211,7 @@ export function computeRendite(d, t) {
   };
 
   // ── Jahresverlauf: Zins/Tilgung, Steuerersparnis, Cashflow ──
-  let restschuld = darlehen,
+  let restschuld = darlehenBank,
     summeSteuer = 0,
     summeCfMitSt = 0,
     summeCfOhneSt = 0;
@@ -160,13 +223,30 @@ export function computeRendite(d, t) {
     const restStart = restschuld;
     const jahresMieteJ = mieteImJahr(jahr) * leerstandsFaktor * 12;
     const zinsJ = restschuld * (zinsProz / 100);
-    const tilgungJ = Math.min(annuitaetMon * 12 - zinsJ, restschuld);
-    const zinsTilgungJ = zinsJ + tilgungJ;
-    const steuerJ =
-      (zinsJ + afaJahr + nichtUmlagbarJahr + (jahr === 1 && renUnterGrenze ? renovierung : 0)) *
-      (steuerProz / 100);
-    const cfOhneStJ = jahresMieteJ - nichtUmlagbarJahr - zinsTilgungJ; // ohne Steuerersparnis
-    const cfJ = cfOhneStJ + steuerJ; // mit Steuerersparnis
+    // Nie negativ: bei Tilgungssatz 0 oder einer Annuitaet unterhalb der
+    // Jahreszinsen wuerde Math.min() sonst einen negativen Wert liefern und
+    // die Restschuld unbemerkt steigen lassen.
+    const tilgungJ = Math.min(Math.max(0, annuitaetMon * 12 - zinsJ), restschuld);
+    const kfwZeile = kfwPlan.rows[jahr - 1] || { zins: 0, tilgung: 0, restStart: 0 };
+    const kfwZinsJ = kfwZeile.zins;
+    const kfwTilgJ = kfwZeile.tilgung;
+    const zinsTilgungJ = zinsJ + tilgungJ + kfwZinsJ + kfwTilgJ;
+    const afaJ = afaPlan.afa[jahr - 1] || 0;
+    const sofortAufwandJ = jahr === 1 && renUnterGrenze ? renovierung : 0;
+
+    // ── Steuerliches Ergebnis nach § 21 EStG ──────────────────────────────
+    // Korrektur 2026-08-25: bis dahin wurden hier nur die Werbungskosten mit
+    // dem Steuersatz multipliziert und das Ergebnis IMMER als Ersparnis
+    // gutgeschrieben - die Mieteinnahmen tauchten in der Steuerrechnung gar
+    // nicht auf. Besteuert wird aber der Ueberschuss der Einnahmen ueber die
+    // Werbungskosten. Bei ueberschiessenden Mieten entsteht deshalb eine
+    // Steuerlast (negatives steuerJ), keine Ersparnis.
+    // Tilgung ist bewusst nicht enthalten: sie ist keine Werbungskosten.
+    const ergebnisJ =
+      jahresMieteJ - zinsJ - kfwZinsJ - nichtUmlagbarJahr - afaJ - sofortAufwandJ;
+    const steuerJ = -ergebnisJ * (steuerProz / 100);
+    const cfOhneStJ = jahresMieteJ - nichtUmlagbarJahr - zinsTilgungJ; // ohne Steuerwirkung
+    const cfJ = cfOhneStJ + steuerJ; // mit Steuerwirkung
     summeSteuer += steuerJ;
     summeCfMitSt += cfJ;
     summeCfOhneSt += cfOhneStJ;
@@ -175,11 +255,18 @@ export function computeRendite(d, t) {
     if (breakEvenJahr === null && summeSteuer >= nebenkosten) breakEvenJahr = jahr;
     yearRows.push({
       j: jahr,
-      rest: Math.max(0, restStart),
+      rest: Math.max(0, restStart) + kfwZeile.restStart,
+      restBank: Math.max(0, restStart),
+      restKfw: kfwZeile.restStart,
       zP: zinsProz,
-      zinsen: zinsJ,
-      tilgB: tilgungJ,
+      zinsen: zinsJ + kfwZinsJ,
+      zinsenBank: zinsJ,
+      zinsenKfw: kfwZinsJ,
+      tilgB: tilgungJ + kfwTilgJ,
+      tilgBank: tilgungJ,
+      tilgKfw: kfwTilgJ,
       zt: zinsTilgungJ,
+      afa: afaJ,
       steuer: steuerJ,
       miete: jahresMieteJ,
       cf: cfJ,
@@ -193,7 +280,29 @@ export function computeRendite(d, t) {
   // ── Verkaufsszenario & Gesamtsaldo ──
   const wertzuwachs = gesamtKaufpreis * (Math.pow(1 + wertsteigerungProz / 100, jahre) - 1);
   const verkaufswert = gesamtKaufpreis + wertzuwachs;
-  const restschuldEnde = restschuld;
+  // Restschuld beider Darlehen. Das KfW-Darlehen ist wegen der tilgungs-
+  // freien Anlaufjahre am Ende des Betrachtungszeitraums ueberproportional
+  // hoch - eine gemeinsame Fortschreibung nach Bankdarlehens-Logik wuerde
+  // den Verkaufserloes deutlich ueberschaetzen.
+  const restschuldEnde = restschuld + kfwPlan.restEnde;
+
+  // ── Veraeusserungsgewinn nach § 23 EStG ────────────────────────────────
+  // Innerhalb der Zehnjahresfrist mindert die in Anspruch genommene AfA -
+  // einschliesslich der Sonder-AfA - die Anschaffungskosten und erhoeht
+  // damit den steuerpflichtigen Gewinn (§ 23 Abs. 3 Satz 4 EStG). Ohne
+  // diese Position erschiene die Sonder-AfA als dauerhafter Vorteil,
+  // obwohl beim Verkauf innerhalb der Frist im Wesentlichen nur der
+  // Zinsvorteil der Steuerstundung bleibt.
+  // Vereinfachung: die Frist laeuft taggenau ab Anschaffung; hier wird auf
+  // volle Jahre gerundet und ohne Verkaufsnebenkosten gerechnet.
+  const kumAfa = afaPlan.afa.reduce((a, b) => a + b, 0);
+  const buchwert = Math.max(0, anschaffungskosten - kumAfa);
+  const veraeusserungsgewinn = verkaufswert - buchwert;
+  const spekulationsfrist = jahre <= 10;
+  const steuer23 =
+    spekulationsfrist && veraeusserungsgewinn > 0
+      ? veraeusserungsgewinn * (steuerProz / 100)
+      : 0;
   // nkFinanzieren AN: Nebenkosten stecken bereits im Darlehen (oben) und sind
   // damit keine zusaetzliche Barauslage mehr - sonst wuerden sie hier ein
   // zweites Mal vom Saldo abgezogen (einmal als hoehere Restschuld/Zins- und
@@ -206,7 +315,8 @@ export function computeRendite(d, t) {
     eigenkapital -
     nkCash -
     sonderumlage -
-    renovierung;
+    renovierung -
+    steuer23;
   const gesamtSaldoOhneSt =
     verkaufswert -
     restschuldEnde +
@@ -217,7 +327,24 @@ export function computeRendite(d, t) {
     renovierung;
 
   // ── Monatlicher Cashflow — Jahr-1-Basis (für KPI-Schnellüberblick) ──
-  const cfMonOhneSt = effektivMieteMon - nichtUmlagbarMon - annuitaetMon;
+  // Monatsrate Jahr 1 inkl. KfW. In den tilgungsfreien Jahren ist sie
+  // niedriger als danach - deshalb wird die Rate nach Ende der
+  // tilgungsfreien Zeit separat ausgewiesen (rateNachTf).
+  const kfwRateMonJ1 = ((kfwPlan.rows[0]?.zins || 0) + (kfwPlan.rows[0]?.tilgung || 0)) / 12;
+  const tfJahre = Math.max(0, Math.round(+d.kfwTilgungsfrei) || 0);
+  const kfwRateMonNachTf =
+    darlehenKfw > 0
+      ? ((kfwPlan.rows[tfJahre]?.zins || 0) + (kfwPlan.rows[tfJahre]?.tilgung || 0)) / 12
+      : 0;
+  const rateMonJ1 = annuitaetMon + kfwRateMonJ1;
+  const rateMonNachTf = annuitaetMon + kfwRateMonNachTf;
+  // Mischzins der Fremdfinanzierung im ersten Jahr.
+  const mischzins =
+    darlehen > 0
+      ? (darlehenBank * zinsProz + darlehenKfw * (+d.kfwZins > 0 ? +d.kfwZins : KFW_KREDIT.kfn.zins)) /
+        darlehen
+      : 0;
+  const cfMonOhneSt = effektivMieteMon - nichtUmlagbarMon - rateMonJ1;
   const cfMonMitSt = cfMonOhneSt + (yearRows[0]?.steuer || 0) / 12;
   const cfMon = cfMonOhneSt;
   const ekQuote = gesamtKaufpreis > 0 ? (eigenkapital / gesamtKaufpreis) * 100 : 0;
@@ -317,6 +444,25 @@ export function computeRendite(d, t) {
     da: darlehen,
     bel: beleihung,
     afJ: afaJahr,
+    afaRows: afaPlan.afa,
+    afaSonder: afaPlan.sonder,
+    afaKum: kumAfa,
+    afaBem: afaBemessung,
+    sonderOk: afaPlan.sonderMoeglich,
+    sonderQm: afaPlan.kostenProQm,
+    sonderBem: afaPlan.bemessungSonder,
+    afaLinearAb: afaPlan.linearAbJahr,
+    kfwDa: darlehenKfw,
+    bankDa: darlehenBank,
+    kfwRows: kfwPlan.rows,
+    kfwAnn: kfwPlan.annuitaet,
+    kfwRestEnde: kfwPlan.restEnde,
+    rateJ1: rateMonJ1,
+    rateNachTf: rateMonNachTf,
+    mzins: mischzins,
+    st23: steuer23,
+    vGewinn: veraeusserungsgewinn,
+    inFrist: spekulationsfrist,
     sSt: summeSteuer,
     g: gesamtSaldoMitSt,
     gOhne: gesamtSaldoOhneSt,
@@ -329,8 +475,8 @@ export function computeRendite(d, t) {
     sCF: summeCfMitSt,
     sCFOhne: summeCfOhneSt,
     beJ: breakEvenJahr,
-    z1: darlehen * monatsZins,
-    t1: annuitaetMon - darlehen * monatsZins,
+    z1: darlehenBank * monatsZins,
+    t1: annuitaetMon - darlehenBank * monatsZins,
     yearRows,
     mehrMiet: mehrMiete,
     kP: kappungsProz,

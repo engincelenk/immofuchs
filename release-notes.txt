@@ -1,3 +1,356 @@
+## 2026-08-25 (1.22.0)
+
+### Neubau-Abschreibung im Renditerechner, KfW im Kreditrechner
+
+Umsetzung von docs/spec-neubau-afa-kfw.md, vollstaendig (alle fuenf offenen
+Entscheidungen E1-E5 auf Nutzer-Vorgabe "setze alles um" bejaht).
+
+**1. KORREKTUR: die Steuerformel rechnete ohne Mieteinnahmen**
+
+rendite.js multiplizierte bisher nur die Werbungskosten mit dem Steuersatz
+und schrieb das Ergebnis IMMER als Ersparnis gut:
+
+    steuerJ = (zinsJ + afaJahr + nichtUmlagbar + ...) * steuersatz/100
+
+Besteuert wird nach § 21 EStG aber der Ueberschuss der Einnahmen ueber die
+Werbungskosten. Bei 12.000 € Miete, 3.000 € Zinsen, 2.500 € AfA, 1.500 €
+nicht umlagefaehig und 42 % waren das 5.040 € Abweichung pro Jahr - der
+Rechner zeigte 2.940 € Ersparnis, korrekt sind 2.100 € Steuerlast.
+Jetzt: ergebnisJ = Miete - Zinsen - nichtUmlagbar - AfA - Sofortaufwand,
+steuerJ = -ergebnisJ * Steuersatz. Ein negativer steuerJ ist eine
+Steuerlast, kein Bonus.
+
+ACHTUNG: Das aendert die Kennzahl "Cashflow nach Steuern" fuer JEDEN
+Bestandsnutzer, in der Regel nach unten.
+
+**2. KORREKTUR: AfA-Basis ohne Kaufnebenkosten**
+
+Grunderwerbsteuer, Notar und Makler sind Anschaffungsnebenkosten und
+gehoeren anteilig zur Gebaeude-Bemessungsgrundlage. Bisher rechnete die AfA
+nur auf den Kaufpreis - bei 10-12 % Nebenkosten fehlten dauerhaft 10-12 %
+der Abschreibung. Beispiel 400.000 € / Bayern / 80 % Gebaeudeanteil:
+Bemessungsgrundlage 349.024 € statt 320.000 €.
+Dieselbe Korrektur greift bei der 15-%-Grenze des anschaffungsnahen
+Aufwands (§ 6 Abs. 1 Nr. 1a EStG) - vorher wurde zu frueh aktiviert.
+
+**3. Neubau-Abschreibung (Renditerechner)**
+
+Neuer Block "Neubau-Abschreibung", sichtbar nur ab Baujahr 2023:
+
+- lineare AfA 3 % (§ 7 Abs. 4 EStG) - Vorbelegung, unveraendertes Verhalten
+- degressive AfA 5 % vom Restbuchwert (§ 7 Abs. 5a EStG), Wahlrecht
+- Sonder-AfA § 7b: +5 % in den Jahren 1-4
+- automatischer Wechsel degressiv -> linear im vorteilhaftesten Jahr
+  (wirkt ab Jahr 15, bei kuerzeren Zeitraeumen folgenlos)
+- § 7a Abs. 9 EStG: nach Jahr 4 bemisst sich die AfA nach dem Restwert.
+  Beispiel: Absturz von 32.000 € auf 8.160 € pro Jahr - sichtbar in der
+  neuen Balkenreihe und in der Jahrestabelle.
+
+Die QNG-Frage steht bewusst VOR der Sonderabschreibung: Effizienzhaus 40
+mit Nachhaltigkeitssiegel ist deren harte Voraussetzung. Ohne QNG kein
+§ 7b - im Briefing fehlte diese Bedingung. Dieselbe Angabe hebt im
+Kreditrechner den KfW-Hoechstbetrag auf 150.000 € je Wohneinheit.
+
+Reisst die Baukostenobergrenze von 5.200 €/m², wird die Sonder-AfA nicht
+gerechnet - ohne Fehlermeldung, nur mit der Zahl und ihrer Bedeutung.
+Der Knopf "Guenstigste Variante" prueft die moeglichen Kombinationen durch
+und uebernimmt die mit der hoechsten Steuerwirkung im eingestellten
+Zeitraum. Laeuft nur auf Klick.
+
+**4. § 23 EStG im Verkaufsszenario**
+
+Bei Verkauf innerhalb der Zehnjahresfrist mindert die in Anspruch genommene
+AfA - einschliesslich Sonder-AfA - die Anschaffungskosten und erhoeht den
+steuerpflichtigen Veraeusserungsgewinn (§ 23 Abs. 3 Satz 4 EStG). Ohne
+diese Position erschiene die Sonder-AfA als dauerhafter Vorteil.
+Der Effekt ist gross: im Standardfall 400.000 €/Bayern/10 Jahre sind das
+53.798 € zusaetzliche Steuer, und der Gesamtsaldo ist mit und ohne
+Sonder-AfA praktisch identisch - der Abschreibungsvorteil ist innerhalb der
+Frist ein reiner Liquiditaets- und Zinsvorteil. Bei 11 Jahren Haltedauer
+springt der Saldo von 23.279 € auf 123.475 €.
+Vereinfachung: volle Jahre statt taggenauer Frist, keine
+Verkaufsnebenkosten.
+
+**5. KfW-Foerderdarlehen (Kreditrechner und Renditerechner)**
+
+Zweites Darlehen neben dem Bankdarlehen, mit eigenem Zins, eigener Laufzeit
+und bis zu 5 tilgungsfreien Anlaufjahren. Bank- und KfW-Darlehen werden
+getrennt gefuehrt und getrennt ausgewiesen (Restschuld, Zinsen, Tilgung),
+Beleihungsauslauf und Gesamtaufwand rechnen mit der Summe.
+
+Programm 124 (Wohneigentumsprogramm) wird Vermietern GAR NICHT ANGEBOTEN -
+es foerdert ausschliesslich Selbstnutzer, vermietete Flaechen sind
+ausdruecklich ausgeschlossen. Statt einer Fehlermeldung nach der Wahl steht
+es bei "Vermietet" schlicht nicht in der Liste, mit einer Zeile darunter,
+die erklaert warum. Im Renditerechner (immer vermietet) gibt es nur 297/298.
+
+Neue Kennzahlen: Mischzins mit Vergleich "ohne KfW", Monatsrate Jahr 1 und
+- der wichtigste Wert gegen den Zahlungsschock - die Rate nach Ende der
+tilgungsfreien Zeit. Beispiel 150.000 € / 2,5 % / 35 J. / 5 tilgungsfrei:
+312,50 €/Monat in den Jahren 1-5, danach 597,24 €/Monat.
+
+**Neue Dateien**
+
+- src/utils/afa.js - AfA-Plan je Jahr, reine Funktion
+- src/utils/kfwDarlehen.js - KfW-Zahlungsplan und Finanzierungsaufteilung
+
+Beide bewusst ohne React und ohne Formular-State, nach dem Muster von
+utils/mietprognose.js - so sind sie isoliert nachrechenbar.
+
+**Geaenderte Dateien**
+
+- src/data.js: AFA um degressiv/Sonder-Parameter erweitert, KFW_KREDIT neu
+- src/utils/rendite.js: AfA-Basis, AfA-Array, Steuerformel, Zwei-Darlehens-
+  Modell, § 23, neue Rueckgabewerte
+- src/components/calculators/Renditerechner.jsx: Neubau-Block
+- src/components/calculators/Finanzierung.jsx: KfW-Sektion, Rate, Mischzins
+- src/App.jsx: 13 neue Vorbelegungen, alle auf dem Status quo
+- src/i18n/translations.js: 40 Schluessel x 5 Sprachen (204 je Sprache,
+  Paritaet geprueft)
+
+**Verifikation**
+
+Die neuen Module wurden gegen die neun Testfaelle der Spec nachgerechnet,
+darunter die drei, an denen eine naive Umsetzung falsch rechnet:
+- 5.200-€-Fallbeil: bei 5.200 €/m² volle Sonder-AfA, bei 5.201 €/m² null
+- degressiv + Sonder: Restbuchwert wird um BEIDE Abschreibungen gemindert.
+  Die geschlossene Form 0,95^(t-1) liefert ueber vier Jahre 5.802 € zu viel
+- Anschaffung im Oktober: lineare AfA zeitanteilig (3/12), Sonder-AfA in
+  voller Jahreshoehe -> 23.000 € statt 8.000 € oder 32.000 €
+Ausserdem: keine negative Tilgung bei Tilgungssatz 0, keine Division durch
+null bei Wohnflaeche 0, kumulierte AfA nie ueber der Bemessungsgrundlage.
+
+**Breaking Changes**
+
+Keine technischen. Fachlich aendern sich drei Kennzahlen fuer alle Nutzer:
+Cashflow nach Steuern (Punkt 1), Hoehe der AfA (Punkt 2) und der
+Gesamtsaldo bei Verkauf innerhalb von 10 Jahren (Punkt 4). Alle drei
+Aenderungen korrigieren Rechenfehler bzw. Luecken.
+
+**Nicht umgesetzt / bewusst offen**
+
+- Tilgungszuschuesse (wuerden die AfA-Basis und die 5.200-€-Pruefung
+  mindern) - im UI ausgeschlossen, nicht stillschweigend weggelassen
+- Sonderumlage als Werbungskosten
+- Zinsbindungsbruch (der Zins gilt ueber den ganzen Zeitraum)
+- monatliche statt jaehrliche Zinsrechnung in rendite.js (Fehler < 1,5 %
+  der Zinssumme, konservativ)
+- Verkaufsnebenkosten und taggenaue Spekulationsfrist
+
+Die Kombination degressive AfA + § 7b und die Behandlung nach § 7a Abs. 9
+sollten von einem Steuerberater gegengelesen werden.
+
+## 2026-08-25 (1.21.6)
+
+### Landingpage: Datenbasis-Sektion entfernt
+
+Nutzer-Vorgabe nach Sichtung auf dev: der komplette Datenbasis-Block unter
+den Funktionsspalten faellt weg - Trennlinie, Ueberschrift "DATENBASIS",
+Gesetzestext, das 8-Werte-Raster und die Zeile "Alle Werte monatlich
+geprueft". Ersatzlos; die Sektion "Mehr als nur ein Rechner" endet jetzt
+nach den fuenf Funktionsspalten.
+
+**Betroffene Dateien**
+
+- src/pages/Landing.jsx: Block (132 Zeilen), CSS .data-grid/.data-cell/
+  .dc-*, Modulkonstanten GREST_MIN/GREST_MAX, die Helfer loc/nf und die
+  nur dafuer geholten Importe (MIET_P, WERTSTEIGERUNG, GREST, KFW, AFA,
+  BAFA, tpl). MARKET_RATES und LANG_LOCALE bleiben - beide werden vom
+  Bauzinsen-Ticker weiter unten und vom Kopfbereich weiter genutzt.
+- src/i18n/translations.js: 135 tot gewordene Schluessel entfernt
+  (dc1L..dc9VOff, dataBasisLabel, dataBasis, dataStand - 27 je Sprache).
+  Schluessel-Paritaet ueber alle 5 Sprachen geprueft: 164 Schluessel je
+  Sprache, keine Abweichung.
+
+**Was bleibt**
+
+Die Zentralisierung aus 1.21.5 bleibt in Kraft und in Gebrauch, nur ohne
+Anzeige auf der Landingpage:
+
+- AFA -> Renditerechner.jsx (afaFromBj) und App.jsx (Vorbelegung afaSatz)
+- KFW -> Sanier.jsx (Foerderquoten und Caps)
+- WERTSTEIGERUNG -> App.jsx (Vorbelegung wertP), weiterhin monatlich aus
+  der GENESIS-API gepflegt
+- MIET_P -> utils/mietprognose.js
+- GREST -> Finanzierung.jsx, utils/rendite.js, utils/kreditKennzahlen.js
+- Bauzinsen-Ticker (section id="zinsen") zeigt den Live-Zins weiterhin
+
+**Breaking Changes:** keine. Keine Rechenlogik beruehrt.
+
+**Offen:** BAFA in data.js hat damit wieder keinen Abnehmer - der Export
+war nur fuer die entfallene Kachel verdrahtet worden. Entweder loeschen
+oder stehen lassen, bis die Foerderquoten im Sanierungsrechner darauf
+umgestellt werden (dort stehen sie bisher nicht als BAFA-Werte, sondern
+kommen ueber KFW).
+
+## 2026-08-25 (1.21.5)
+
+### Marktdaten zentralisiert: data.js ist die Quelle der Datentafel
+
+Nutzer-Vorgabe: alle Marktdaten kommen aus einer zentralen Datei, und diese
+Datei wird vom Monats-Workflow gepflegt. Bestandsaufnahme dazu in
+docs/marktdaten-inventar.md. Vorher wurde von 20 Exporten in data.js genau
+einer automatisch aktualisiert, drei importierte niemand, und die
+Landingpage-Datentafel bezog 8 von 9 Werten aus hartkodierten Strings.
+
+**1. Datentafel liest aus data.js**
+
+Jeder Wert der Landingpage-Tafel stammt jetzt aus data.js bzw. zinsen.json:
+
+| Kachel             | vorher                        | jetzt                      |
+|--------------------|-------------------------------|----------------------------|
+| Bauzinsen          | zinsen.json (unveraendert)    | zinsen.json                |
+| Mietpreisprognose  | "+2,1 %/Jahr" hart im JSX     | MIET_P.normal.pA (2,5 %)   |
+| Wertsteigerung     | "+2,0 %/Jahr" hart im JSX     | WERTSTEIGERUNG.pA (1,4 %)  |
+| Grunderwerbsteuer  | Text "3,5 % – 6,5 %" in i18n  | Spanne aus GREST berechnet |
+| KfW BEG Foerderung | Text "bis 70 %" in i18n       | KFW.maxFoerderung          |
+| AfA-Satz           | Text "2 %" in i18n            | AFA.standard               |
+| BAFA Foerderung    | Text "aktiv" in i18n          | BAFA.aktiv (an/aus)        |
+
+Damit ist ein realer Widerspruch behoben: die Tafel zeigte +2,1 %
+Mietpreisprognose, waehrend buildMP() mit MIET_P rechnet - 2,5 % normal,
+3,5 % in Kappungsstaedten.
+
+**2. CO2-Kachel entfernt** (Nutzer-Vorgabe). Kein Rechner verwendet einen
+CO2-Preis; der Sanierungsrechner arbeitet ausschliesslich in Kilogramm
+(SAN_ENERGIE.co2F). Die Tafel hat jetzt 8 Werte und geht als 2x4 bzw. 4x2
+exakt auf - die Sonderregel fuer die 9. Zelle entfaellt.
+
+**3. Tote Exporte geloescht:** CO2 und ENERGIE - kein Importeur, keine
+Verwendung. BAFA bleibt und ist jetzt verdrahtet: BAFA.aktiv steuert die
+BAFA-Kachel.
+
+**4. Sanier.jsx nutzt KFW.** Der Rechner importierte KFW, las daraus aber
+nur klimaBonus_baujahrGrenze und tippte alle Foerderquoten als Literale ein
+(0.15 siebenmal, 0.2, 0.7 zweimal, 30000 achtmal). Jetzt kommen sie aus
+KFW. Die zwei Werte, die es nur im Rechencode gab, sind nach data.js
+gewandert: heizungGrundfoerderung 30 %, isfpBonus 5 %.
+Rechenergebnis unveraendert - alle vier Kombinationen aus
+Oel-/Gas-/Kohle-Altheizung und iSFP-Bonus liefern dieselben Quoten und
+Caps wie vorher.
+
+**5. AfA-Saetze zentral.** Neu AFA in data.js (2 / 2,5 / 3 % mit den
+Baujahrgrenzen 1925 und 2023). Renditerechner.jsx afaFromBj() und die
+Vorbelegung in App.jsx lesen von dort statt aus Literalen.
+
+**6. Wertsteigerung ist keine Erfindung mehr.** Neu WERTSTEIGERUNG in
+data.js, Quelle: Haeuserpreisindex des Statistischen Bundesamts
+(GENESIS-Tabelle 61262-0002, Veraenderung zum Vorjahresquartal). Der
+Wert speist sowohl die Tafel als auch die Vorbelegung des Eingabefelds
+(App.jsx defaults.wertP, vorher fest "2"). Startwert: 1,4 % (Q1 2026).
+ACHTUNG: das ist die aktuelle Jahresrate, keine Langfristannahme - sie
+schwankt (Q4/2025: +3,0 %) und kann in fallenden Marktphasen negativ
+werden. Das gilt dann auch fuer die Vorbelegung im Renditerechner.
+
+**7. monthly_update.py holt die Wertsteigerung** ueber die GENESIS-REST-API
+und schreibt WERTSTEIGERUNG.pA und .stand. Zugangsdaten kommen aus den
+Secrets GENESIS_USER / GENESIS_PASS (in monthly-update.yml als env
+durchgereicht). Fehlen sie oder schlaegt der Abruf fehl, bleibt der Wert
+unveraendert - dieselbe Fail-Safe-Logik wie bei den Zinsquellen.
+NICHT GETESTET: bei der Einfuehrung lag kein GENESIS-Konto vor. Der erste
+Lauf ist zu pruefen; das Skript gibt Wert und Quartal vor dem Schreiben aus.
+
+**8. Faelligkeitspruefung.** Das Skript meldet am Ende, welche Konstanten
+laut ihrem Pflegeintervall ueberfaellig sind (PFLEGE_INTERVALL). Die
+Intervall-Angaben in data.js waren bisher Kommentare, die niemand geprueft
+hat. Aktuell faellig: PFANDBRIEF (Stand Mai 2026, Intervall 1 Monat - die
+Bundesbank-API BBK01.WU8148 wirft seit laengerem Verbindungsfehler).
+
+**9. i18n.** dc7L/dc7S/dc7V entfallen in allen 5 Sprachen (CO2-Kachel).
+Neu: dc2V, dc3V, dc9VOff. dc4S, dc6V und dc8V sind zu Vorlagen mit
+Platzhaltern geworden, weil Prozentzeichen und Einheit je Sprache anders
+stehen (tuerkisch "%70'e kadar" gegen deutsch "bis 70 %"). Nebenbei
+behoben: das Suffix "/Jahr" stand bisher in allen 5 Sprachen auf Deutsch,
+und der Bauzins wurde immer mit de-DE formatiert - jetzt beides je Sprache.
+Schluesselzahl in allen 5 Sprachen identisch, der
+Vollstaendigkeitstest bleibt gruen.
+
+**Betroffene Dateien**
+
+- src/data.js (WERTSTEIGERUNG + AFA neu, CO2/ENERGIE entfernt, KFW/BAFA/
+  MIET_P um stand bzw. fehlende Quoten ergaenzt)
+- src/pages/Landing.jsx (Datentafel, Raster, Zahlformat)
+- src/i18n/translations.js (5 Sprachen)
+- src/App.jsx (Vorbelegungen afaSatz, wertP)
+- src/components/calculators/Renditerechner.jsx (afaFromBj)
+- src/components/calculators/Sanier.jsx (Foerderquoten)
+- scripts/monthly_update.py
+- .github/workflows/monthly-update.yml
+- docs/marktdaten-inventar.md
+
+**Breaking Changes:** keine im Sinne von Verhaltensaenderungen der Rechner.
+Zwei sichtbare Aenderungen fuer Nutzer: die Vorbelegung "Wertsteigerung" im
+Renditerechner steht jetzt auf 1,4 statt 2,0, und die Tafel zeigt 2,5 %
+statt 2,1 % Mietpreisprognose.
+
+**Offen:** GENESIS-Konto anlegen und GENESIS_USER/GENESIS_PASS als
+GitHub-Secrets hinterlegen - ohne die Secrets bleibt WERTSTEIGERUNG auf dem
+Startwert stehen.
+
+## 2026-08-25 (1.21.4)
+
+### Landingpage: USP-Sektion neu gestaltet (Variante A)
+
+Design-Entwurf mit zwei Varianten vorgelegt (hell / dunkle Datentafel),
+Nutzer-Entscheidung: Variante A (hell), NEU-Pillen entfallen.
+
+**Was geaendert wurde**
+
+1. **Funktionen entrahmt.** Die 5 USP-Karten (.usp-grid/.usp-card,
+   2+3-Komposition aus 1.21.3) sind jetzt rahmenlose Spalten
+   (.fn-row/.fn), getrennt durch Haarlinien: 5 Spalten ab 960px, 2 ab
+   560px, darunter eine Liste. In keiner Breite eine Waisenreihe.
+   Grund: die gerahmten Karten trugen dasselbe visuelle Gewicht wie die
+   Datentafel darunter - zwei Raster, die um dieselbe Aufmerksamkeit
+   konkurrierten.
+
+2. **Werte sind jetzt das groesste Element der Sektion.** Vorher 15px,
+   also kleiner als die Headlines der Funktionskarten - die Zahlen lasen
+   sich als Fussnote unter den Funktionen, obwohl sie das
+   Verkaufsargument sind. Jetzt Label als 11px-Versalzeile darueber,
+   Wert clamp(21px,2.4vw,27px) mit tabular-nums, Quelle als dritte
+   Zeile darunter.
+
+3. **dc1S..dc9S werden endlich gerendert.** Die Quell-/Kontextzeilen
+   ("10 Jahre Zinsbindung", "Umweltbundesamt", "§ 7 EStG", ...) standen
+   seit Einfuehrung in allen 5 Sprachen in translations.js, wurden aber
+   nirgends ausgegeben. Sie belegen jetzt jeden Wert einzeln.
+
+4. **NEU-Pillen entfernt** (Nutzer-Vorgabe) bei Expose-Scan und
+   Handout. Alle 5 Headlines stehen damit auf einer Grundlinie.
+   Der Schluessel badgeNeu bleibt vorerst ungenutzt in translations.js -
+   bewusst nicht geloescht, um nicht in 5 Sprachen anzufassen.
+
+5. **USP-Texte gekuerzt**, 5 Schluessel x 5 Sprachen (uspScanP,
+   uspHandoutP, uspAiP, usp4P, usp6P). In 5 schmalen Spalten erzeugten
+   die bisherigen 2-Satz-Texte bis zu 9 Zeilen und stark ungleiche
+   Spaltenhoehen. Jetzt ein Satz je Funktion. Keine Schluessel
+   hinzugefuegt oder entfernt - i18n-Vollstaendigkeitstest unberuehrt.
+   TR/ZH/HI sind Kuerzungen der bestehenden Texte und sollten von
+   einem Muttersprachler gegengelesen werden.
+
+6. **Kontrast.** Label und Quellzeile der Datenzellen in --cl statt
+   --ch: #8a8a80 kommt auf Weiss nur auf 3,5:1 und faellt unter WCAG AA.
+   Die Hierarchie kommt jetzt aus Groesse und Gewicht statt aus der
+   Farbe. Orange traegt weiterhin nur den einen Live-Wert (Bauzins).
+
+**Betroffene Dateien**
+
+- src/pages/Landing.jsx (Sektion USP+Datenbasis, zugehoeriges CSS)
+- src/i18n/translations.js (25 Strings gekuerzt, keine Schluessel-
+  aenderung)
+
+**Keine Breaking Changes.** Keine Token geaendert, keine neue Library,
+keine Aenderung an Datenquellen oder Berechnungen.
+
+**Offen (bewusst nicht Teil dieser Aenderung)**
+
+Die Datenherkunft der Tafel bleibt unveraendert: nur der Bauzins kommt
+aus zinsen.json/monthly_update.py, Mietpreisprognose (+2,1 %) und
+Wertsteigerung (+2,0 %) stehen hart im JSX, die uebrigen 6 Werte als
+Text in translations.js. Die Zentralisierung nach data.js ist als
+separater Schritt beauftragt.
+
 ## 2026-08-25 (1.21.3)
 
 ### Landingpage: Gestaltung der zusammengelegten Sektion ueberarbeitet

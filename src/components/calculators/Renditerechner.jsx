@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { BL_N, BL_O } from "../../data.js";
+import { BL_N, BL_O, AFA } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP, tpl } from "../../utils/helpers.js";
 import { rate, vrd } from "../../utils/bands.js";
@@ -60,12 +60,44 @@ export default function Haupt() {
   }, [d.kaltmiete, d.flaeche]);
   const R = useMemo(() => computeRendite(d, t), [d, t]);
 
+  // Der Neubau-Block gilt ab dem Baujahr, ab dem die 3-%-AfA greift
+  // (§ 7 Abs. 4 Nr. 2a EStG) - dieselbe Grenze wie in afaFromBj.
+  const istNeubau = (+d.baujahr || 0) >= AFA.grenzeNeubau;
+
+  // Prueft die moeglichen Kombinationen durch und uebernimmt die mit der
+  // hoechsten kumulierten Steuerwirkung im eingestellten Betrachtungs-
+  // zeitraum. Laeuft nur auf Klick, nicht bei jedem Render.
+  const setzeBesteVariante = () => {
+    const kombis = [
+      { afaModus: "linear", sonderAfa: false },
+      { afaModus: "degressiv", sonderAfa: false },
+    ];
+    if (d.qng && d.bauantragAb2023) {
+      kombis.push(
+        { afaModus: "linear", sonderAfa: true },
+        { afaModus: "degressiv", sonderAfa: true },
+      );
+    }
+    let beste = null;
+    for (const k of kombis) {
+      const r = computeRendite({ ...d, ...k }, t);
+      if (!beste || r.sSt > beste.sSt) beste = { ...k, sSt: r.sSt };
+    }
+    if (beste) {
+      set("afaModus", beste.afaModus);
+      set("sonderAfa", beste.sonderAfa);
+    }
+  };
+
+  // Saetze und Baujahrgrenzen aus data.js (Zentralisierung 2026-08-25),
+  // vorher als Literale hier. § 7 EStG aendert sich selten, aber die Werte
+  // stehen auch auf der Landingpage-Datentafel - vorher zwei Quellen.
   const afaFromBj = (bj) => {
     const y = +bj;
     if (!y) return null;
-    if (y < 1925) return "2.5";
-    if (y >= 2023) return "3";
-    return "2";
+    if (y < AFA.grenzeAltbau) return String(AFA.altbau);
+    if (y >= AFA.grenzeNeubau) return String(AFA.neubau);
+    return String(AFA.standard);
   };
 
   return (
@@ -275,6 +307,150 @@ export default function Haupt() {
               tip={tip("gebAnteil")}
             />
           </Row>
+          {/* ── Neubau-Abschreibung (2026-08-25) ────────────────────────
+              Sichtbar nur ab Baujahr 2023 - darunter existiert der Block
+              nicht und die Steuer-Sektion verhaelt sich exakt wie bisher.
+              Alle Schalter starten im Status quo (linear, Sonder-AfA aus),
+              damit sich fuer Bestandsnutzer ohne eigenes Zutun nichts
+              aendert.
+
+              Reihenfolge mit Absicht: QNG steht VOR der Sonderabschreibung,
+              weil es deren harte Voraussetzung ist (Effizienzhaus 40 mit
+              Nachhaltigkeitsklasse, § 7b EStG) - und weil dieselbe Angabe im
+              Kreditrechner den KfW-Hoechstbetrag auf 150.000 € je
+              Wohneinheit hebt. Eine Frage, zwei Wirkungen. */}
+          {istNeubau && (
+            <>
+              <Sec title={t.nbTitel} icon="🏗️" />
+              <Sel
+                label={t.nbModus}
+                value={d.afaModus || "linear"}
+                onChange={(v) => set("afaModus", v)}
+                options={[
+                  { v: "linear", l: t.nbLinear },
+                  { v: "degressiv", l: t.nbDegressiv },
+                ]}
+              />
+              <Toggle
+                checked={!!d.qng}
+                onChange={(v) => set("qng", v)}
+                label={t.qngLabel}
+                sub={t.qngSub}
+              />
+              {d.qng && (
+                <Toggle
+                  checked={!!d.bauantragAb2023}
+                  onChange={(v) => set("bauantragAb2023", v)}
+                  label={t.nbBauantrag}
+                  sub={t.nbBauantragSub}
+                />
+              )}
+              {d.qng && d.bauantragAb2023 && (
+                <Toggle
+                  checked={!!d.sonderAfa}
+                  onChange={(v) => set("sonderAfa", v)}
+                  label={t.nbSonder}
+                  sub={t.nbSonderSub}
+                />
+              )}
+              <Row>
+                <Sel
+                  label={t.nbMonat}
+                  value={d.anschaffungMonat || "1"}
+                  onChange={(v) => set("anschaffungMonat", v)}
+                  options={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => ({
+                    v: m,
+                    l: String(m),
+                  }))}
+                />
+                <F
+                  label={t.nbKostenQm}
+                  unit="€/m²"
+                  value={R && isFinite(R.sonderQm) ? fmt(R.sonderQm) : "—"}
+                  readOnly
+                  hint={`${t.nbGrenze} ${fmt(AFA.sonderKostenGrenzeQm)} €/m²`}
+                />
+              </Row>
+              {/* Grenze gerissen: kein Fehler, kein Rot - nur die Zahl und
+                  was sie bedeutet. */}
+              {d.sonderAfa && d.qng && R && !R.sonderOk && isFinite(R.sonderQm) && (
+                <Ins emoji="ℹ️" type="info" text={tpl(t.nbUeberGrenze, { qm: fmt(R.sonderQm) })} />
+              )}
+              {R && R.sonderOk && (
+                <Ins emoji="✅" type="good" text={tpl(t.nbSonderAktiv, { b: fmtE(R.sonderBem) })} />
+              )}
+              {/* Jahresverlauf der AfA als Balkenreihe: zeigt den Buckel der
+                  ersten vier Jahre und den Absturz danach, noch bevor der
+                  Nutzer zum Ergebnis scrollt. Inline-SVG, keine Library. */}
+              {R && R.afaRows && R.afaRows.length > 1 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: "var(--cl)", marginBottom: 4 }}>
+                    {t.nbVerlauf}
+                  </div>
+                  <svg
+                    width="100%"
+                    height="44"
+                    viewBox={`0 0 ${R.afaRows.length * 10} 44`}
+                    preserveAspectRatio="none"
+                    role="img"
+                    aria-label={t.nbVerlauf}
+                  >
+                    {R.afaRows.map((a, i) => {
+                      const max = Math.max(...R.afaRows, 1);
+                      const h = Math.max(1, (a / max) * 40);
+                      return (
+                        <rect
+                          key={i}
+                          x={i * 10 + 1}
+                          y={42 - h}
+                          width="8"
+                          height={h}
+                          rx="1"
+                          fill={i < AFA.sonderJahre && R.sonderOk ? "var(--ca)" : "var(--ca-bd)"}
+                        />
+                      );
+                    })}
+                  </svg>
+                  <div style={{ fontSize: 10, color: "var(--ch)" }}>
+                    {tpl(t.nbVerlaufSub, {
+                      a: fmtE(R.afaRows[0]),
+                      b: fmtE(R.afaRows[R.afaRows.length - 1]),
+                    })}
+                  </div>
+                </div>
+              )}
+              {/* Nimmt dem Nutzer die Entscheidung ab, ohne sie ihm
+                  wegzunehmen: setzt die Kombination mit der hoechsten
+                  kumulierten Steuerwirkung im eingestellten Zeitraum. */}
+              <button
+                type="button"
+                onClick={setzeBesteVariante}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  marginBottom: 14,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  color: "var(--ca-dk)",
+                  background: "var(--ca-bg)",
+                  border: "1px solid var(--ca-bd)",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+              >
+                {tpl(t.nbBeste, { j: d.jahre || 10 })}
+              </button>
+              {/* Ehrlichkeit an der wichtigsten Stelle: innerhalb der
+                  Zehnjahresfrist mindert die in Anspruch genommene AfA die
+                  Anschaffungskosten und erhoeht den Veraeusserungsgewinn
+                  (§ 23 Abs. 3 Satz 4 EStG). Vom Abschreibungsvorteil bleibt
+                  dann im Wesentlichen der Zinsvorteil der Steuerstundung. */}
+              {R && R.sonderOk && R.inFrist && (
+                <Ins emoji="⚠️" type="warn" text={tpl(t.nb23Hinweis, { j: d.jahre || 10 })} />
+              )}
+            </>
+          )}
           <Sec title={t.wZ} icon="📈" />
           <Row>
             <F

@@ -44,6 +44,32 @@ BUNDESBANK_PDF_URL = (
 )
 INTERHYP_URL = "https://www.interhyp.de/zinsen/"
 
+# GENESIS-Online (Statistisches Bundesamt), Haeuserpreisindex nach Quartalen.
+# Liefert die Wertsteigerung fuer die Landingpage-Datentafel und zugleich die
+# Vorbelegung des Renditerechner-Eingabefelds (data.js WERTSTEIGERUNG).
+GENESIS_URL = "https://www-genesis.destatis.de/genesisWS/rest/2020/data/tablefile"
+GENESIS_TABLE = "61262-0002"
+
+# Faelligkeitspruefung: Konstante -> Pflegeintervall in Monaten. Erfasst sind
+# nur Konstanten mit einem stand-Feld in data.js. Das Skript aktualisiert
+# diese Werte nicht selbst (ausser MARKET_RATES, PFANDBRIEF und
+# WERTSTEIGERUNG), sondern meldet, was ueberfaellig ist - damit die
+# Intervall-Angaben in data.js nicht folgenlos bleiben.
+# Die Quartalsreihen stehen auf 6 Monate statt 3: Destatis und BDEW
+# veroeffentlichen mit rund zwei Monaten Verzug, ein Quartalswert ist also
+# regulaer bis zu ~5 Monate alt. Bei 3 Monaten wuerde die Pruefung jeden
+# Monat Alarm schlagen, ohne dass etwas zu tun waere.
+PFLEGE_INTERVALL = {
+    "MARKET_RATES": 1,
+    "PFANDBRIEF": 1,
+    "WERTSTEIGERUNG": 6,
+    "MIET_P": 6,
+    "KFW": 3,
+    "BAFA": 3,
+    "SAN_ENERGIE": 6,
+    "KFW_KREDIT": 3,
+}
+
 # ── Month name tables ──────────────────────────────────────────────────────
 MONTH_DE = ["Januar","Februar","März","April","Mai","Juni",
             "Juli","August","September","Oktober","November","Dezember"]
@@ -94,6 +120,122 @@ def replace_market_rates_block(data_js: str, stand: str, avg, changes: list) -> 
         return data_js
     changes.append(f"  MARKET_RATES: stand={stand}, avg={avg}")
     return data_js[: m.start()] + new_block + data_js[m.end() :]
+
+
+# ── Quelle 3: Statistisches Bundesamt (GENESIS-Online REST-API) ───────────
+
+def parse_genesis_hpi(text: str):
+    """Aus der ffcsv-Antwort die juengste Jahresveraenderungsrate des
+    Haeuserpreisindex (Wohnimmobilien insgesamt, Deutschland) rechnen.
+
+    Bewusst tolerant und im Zweifel None: lieber keinen Wert schreiben als
+    einen falschen. Erkannt wird die Reihe ueber das Merkmalslabel
+    ("insgesamt"), die Quartale ueber JAHR/QUARTAL-Spalten.
+    """
+    import csv, io as _io
+
+    reihe = {}
+    try:
+        rd = csv.DictReader(_io.StringIO(text), delimiter=";")
+        for row in rd:
+            low = {(k or "").lower(): (v or "").strip() for k, v in row.items()}
+            label = " ".join(v for k, v in low.items() if k.endswith("_label")).lower()
+            if "insgesamt" not in label:
+                continue
+            jahr = next((v for k, v in low.items() if k in ("zeit", "jahr", "time")), "")
+            quartal = next((v for k, v in low.items() if "quartal" in k or k == "zeit_label"), "")
+            wert = next((v for k, v in low.items() if k in ("value", "wert")), "")
+            j = re.search(r"(20\d{2})", str(jahr))
+            q = re.search(r"([1-4])", str(quartal))
+            w = str(wert).replace(",", ".")
+            if not (j and q):
+                continue
+            try:
+                reihe[(int(j.group(1)), int(q.group(1)))] = float(w)
+            except ValueError:
+                continue
+    except Exception as e:
+        print(f"  ✗ GENESIS-Antwort nicht lesbar: {e}")
+        return None
+
+    if len(reihe) < 5:
+        print(f"  ✗ GENESIS: nur {len(reihe)} Quartalswerte erkannt — zu wenig")
+        return None
+
+    jahr, quartal = max(reihe)
+    vorjahr = reihe.get((jahr - 1, quartal))
+    if not vorjahr:
+        print(f"  ✗ GENESIS: Vorjahresquartal Q{quartal}/{jahr - 1} fehlt")
+        return None
+    rate = round((reihe[(jahr, quartal)] / vorjahr - 1) * 100, 1)
+    return rate, f"Q{quartal} {jahr}"
+
+
+def fetch_wertsteigerung():
+    """Jahresveraenderungsrate des Haeuserpreisindex aus GENESIS-Tabelle
+    61262-0002. Zugangsdaten aus GENESIS_USER/GENESIS_PASS (GitHub-Secrets).
+
+    Fehlen die Zugangsdaten oder schlaegt der Abruf fehl, bleibt
+    WERTSTEIGERUNG unveraendert - dieselbe Fail-Safe-Logik wie bei den
+    Zinsquellen.
+
+    ACHTUNG (2026-08-25): Bei der Einfuehrung lag noch kein GENESIS-Konto
+    vor, die Funktion konnte also nicht gegen die echte API getestet werden.
+    Der erste Lauf ist zu pruefen - Wert und Quartal werden vor dem
+    Schreiben ausgegeben.
+    """
+    user, pw = os.environ.get("GENESIS_USER"), os.environ.get("GENESIS_PASS")
+    if not user or not pw:
+        print("  ⚠ GENESIS_USER/GENESIS_PASS nicht gesetzt — WERTSTEIGERUNG bleibt unveraendert")
+        return None
+    try:
+        r = requests.get(
+            GENESIS_URL,
+            params={
+                "username": user,
+                "password": pw,
+                "name": GENESIS_TABLE,
+                "area": "all",
+                "format": "ffcsv",
+                "compress": "false",
+                "language": "de",
+            },
+            headers=HEADERS,
+            timeout=60,
+        )
+        r.raise_for_status()
+        return parse_genesis_hpi(r.text)
+    except Exception as e:
+        print(f"  ✗ GENESIS-Abruf fehlgeschlagen: {e}")
+        return None
+
+
+def pruefe_faelligkeit(data_js: str, now):
+    """Meldet, welche Konstanten laut ihrem Pflegeintervall ueberfaellig sind.
+    Aendert nichts - die Ausgabe landet im Log des Actions-Laufs."""
+    monate = {m: i + 1 for i, m in enumerate(MONTH_DE)}
+    faellig = []
+    for name, intervall in PFLEGE_INTERVALL.items():
+        m = re.search(
+            r"export const " + name + r"\s*=\s*\{[^}]*?stand:\s*\"([^\"]+)\"",
+            data_js,
+            re.DOTALL,
+        )
+        if not m:
+            continue
+        stand = m.group(1)
+        q = re.match(r"Q([1-4])\s+(20\d{2})", stand)
+        mo = re.match(r"(\w+)\s+(20\d{2})", stand)
+        if q:
+            jahr, monat = int(q.group(2)), int(q.group(1)) * 3
+        elif mo and mo.group(1) in monate:
+            jahr, monat = int(mo.group(2)), monate[mo.group(1)]
+        else:
+            continue
+        alter = (now.year - jahr) * 12 + (now.month - monat)
+        if alter > intervall:
+            faellig.append(f"  ⚠ {name}: Stand {stand} — {alter} Monate alt (Intervall {intervall})")
+    return faellig
 
 
 # ── Quelle 1: Deutsche Bundesbank (PDF, taeglich aktualisiert) ─────────────
@@ -238,6 +380,24 @@ def main():
     else:
         print("  ⚠ Pfandbrief yield nicht verfügbar — Wert unverändert")
 
+    # WERTSTEIGERUNG (Haeuserpreisindex). Speist zugleich die Vorbelegung des
+    # Renditerechner-Feldes, siehe App.jsx defaults.wertP.
+    print("\nFetching Haeuserpreisindex from GENESIS (Destatis)...")
+    ws = fetch_wertsteigerung()
+    if ws:
+        ws_rate, ws_stand = ws
+        print(f"  ✓ Wertsteigerung {ws_stand}: {ws_rate} % zum Vorjahresquartal")
+        data_js = replace_simple(
+            data_js,
+            r"(?s)export const WERTSTEIGERUNG[^{]*\{[^}]*pA:\s*(-?[\d.]+)",
+            ws_rate, "WERTSTEIGERUNG.pA", changes
+        )
+        data_js = replace_simple(
+            data_js,
+            r'(?s)export const WERTSTEIGERUNG[^{]*\{[^}]*stand:\s*"([^"]+)"',
+            ws_stand, "WERTSTEIGERUNG.stand", changes
+        )
+
     if data_js != open(DATA_JS, encoding="utf-8").read():
         open(DATA_JS, "w", encoding="utf-8").write(data_js)
         print(f"✓ data.js — {len(changes)} Änderungen:")
@@ -318,6 +478,15 @@ def main():
         print("  zinsen.json — keine Änderungen")
 
     # ── Summary ────────────────────────────────────────────────────────────
+    # ── 5. Faelligkeitspruefung (meldet nur, aendert nichts) ───────────────
+    faellig = pruefe_faelligkeit(open(DATA_JS, encoding="utf-8").read(), now)
+    if faellig:
+        print("\nHandpflege ueberfaellig:")
+        for f in faellig:
+            print(f)
+    else:
+        print("\nHandpflege: alle Werte innerhalb ihres Intervalls")
+
     total = len(changes) + len(i18n_changed) + len(zinsen_changed)
     print(f"\n=== Abgeschlossen — {total} Änderungen gesamt ===")
 

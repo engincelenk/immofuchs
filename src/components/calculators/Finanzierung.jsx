@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { GREST } from "../../data.js";
+import { GREST, KFW_KREDIT } from "../../data.js";
+import { berechneKfwPlan, teileFinanzierung } from "../../utils/kfwDarlehen.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
 import { F, Sel, Row, Sec, KPI, Ins, VT, Toggle } from "../ui/atoms.jsx";
@@ -36,19 +37,54 @@ export default function Kredit() {
     // (Nebenkosten mit im Darlehen), AUS = bisheriges Verhalten (Nebenkosten
     // bleiben ausserhalb, extra bar zu zahlen).
     const finBasis = nkFinanzieren ? gKP + nbk : gKP;
-    const da = Math.max(0, finBasis - ek);
+
+    // ── KfW-Foerderdarlehen (2026-08-25) ───────────────────────────────────
+    // Laeuft als zweites Darlehen neben dem Bankdarlehen, mit eigenem Zins,
+    // eigener Laufzeit und tilgungsfreien Anlaufjahren. Programm 124 ist
+    // Selbstnutzern vorbehalten (KFW_KREDIT.wohneigentum.vermietbar === false)
+    // und wird Vermietern deshalb gar nicht erst angeboten.
+    const kfwAktiv = !!d.kfwAktiv;
+    const eigennutzung = d.kfwNutzung === "eigen";
+    const prog =
+      eigennutzung && d.kfwProg === "124" ? KFW_KREDIT.wohneigentum : KFW_KREDIT.kfn;
+    const we = Math.max(1, +d.wohneinheiten || 1);
+    const kfwDeckel = kfwAktiv ? (d.qng ? prog.maxProWE_qng : prog.maxProWE) * we : 0;
+    const kfwZins = +d.kfwZins > 0 ? +d.kfwZins : prog.zins;
+    const kfwTf = Math.max(0, Math.round(+d.kfwTilgungsfrei) || 0);
+    const auf = teileFinanzierung({
+      basis: finBasis,
+      eigenkapital: ek,
+      kfwWunsch: kfwAktiv ? (+d.kfwBetrag > 0 ? +d.kfwBetrag : kfwDeckel) : 0,
+      kfwDeckel,
+    });
+    const daKfw = auf.kfw;
+    const daBank = auf.bank;
+    // "da" bleibt die Gesamtsumme: Beleihungsauslauf und alle bisherigen
+    // Kennzahlen beziehen sich weiterhin auf die gesamte Fremdfinanzierung.
+    const da = daBank + daKfw;
     // Beleihung bewusst gegen gKP (Beleihungswert), nicht gegen finBasis - siehe rendite.js.
     const bel = gKP > 0 ? (da / gKP) * 100 : 0,
       mz = zP / 100 / 12;
-    const ann = (da * (zP + tP)) / 100 / 12;
+    // Annuitaet und Tilgungsplan beziehen sich auf das Bankdarlehen - es ist
+    // ueber den Tilgungssatz parametrisiert, das KfW-Darlehen ueber seine
+    // Laufzeit.
+    const ann = (daBank * (zP + tP)) / 100 / 12;
     let lz = 0;
-    if (mz > 0 && ann > da * mz) lz = Math.log(ann / (ann - da * mz)) / Math.log(1 + mz) / 12;
-    else if (mz === 0 && ann > 0) lz = da / ann / 12;
-    let rs = da,
+    if (mz > 0 && ann > daBank * mz)
+      lz = Math.log(ann / (ann - daBank * mz)) / Math.log(1 + mz) / 12;
+    else if (mz === 0 && ann > 0) lz = daBank / ann / 12;
+    let rs = daBank,
       sZ = 0,
       rows = [],
-      rZB = da;
+      rZB = daBank;
     const mJ = Math.min(isFinite(lz) ? Math.ceil(lz) + 1 : 60, 60);
+    const kfwPlan = berechneKfwPlan({
+      betrag: daKfw,
+      zinsProz: kfwZins,
+      laufzeit: +d.kfwLaufzeit || 30,
+      tilgungsfrei: kfwTf,
+      jahre: Math.max(mJ, +d.kfwLaufzeit || 30),
+    });
     for (let j = 1; j <= mJ; j++) {
       // Monatliche Iteration: Restschuld sinkt monatlich → korrekte Jahreszinsen
       let z = 0,
@@ -63,9 +99,32 @@ export default function Kredit() {
       }
       sZ += z;
       if (j === zbJ) rZB = rs;
-      rows.push({ j, z, t: t2, rest: rs, isZB: j === zbJ });
-      if (rs <= 0) break;
+      const kz = kfwPlan.rows[j - 1] || { zins: 0, tilgung: 0, restStart: 0 };
+      rows.push({
+        j,
+        z: z + kz.zins,
+        t: t2 + kz.tilgung,
+        rest: rs + Math.max(0, kz.restStart - kz.tilgung),
+        zBank: z,
+        tBank: t2,
+        restBank: rs,
+        zKfw: kz.zins,
+        tKfw: kz.tilgung,
+        restKfw: Math.max(0, kz.restStart - kz.tilgung),
+        isZB: j === zbJ,
+      });
+      if (rs <= 0 && kfwPlan.rows[j - 1] && kfwPlan.rows[j - 1].restStart <= 0) break;
     }
+    // Zinssumme und Raten inklusive KfW
+    const sZKfw = kfwPlan.rows.reduce((a, r) => a + r.zins, 0);
+    const kfwRateJ1 = ((kfwPlan.rows[0]?.zins || 0) + (kfwPlan.rows[0]?.tilgung || 0)) / 12;
+    const kfwRateNachTf =
+      daKfw > 0
+        ? ((kfwPlan.rows[kfwTf]?.zins || 0) + (kfwPlan.rows[kfwTf]?.tilgung || 0)) / 12
+        : 0;
+    const rateJ1 = ann + kfwRateJ1;
+    const rateNachTf = ann + kfwRateNachTf;
+    const mzins = da > 0 ? (daBank * zP + daKfw * kfwZins) / da : 0;
     const z1 = da * mz,
       t1 = ann - z1;
     const sondP = +sondTP || 0,
@@ -106,7 +165,19 @@ export default function Kredit() {
       gP,
       zbJ,
       // nkFinanzieren AN: nbk steckt schon in da (Darlehen) - sonst doppelt gezaehlt.
-      gA: da + sZ + (nkFinanzieren ? 0 : nbk),
+      gA: da + sZ + sZKfw + (nkFinanzieren ? 0 : nbk),
+      daBank,
+      daKfw,
+      kfwZins,
+      kfwTf,
+      kfwAnn: kfwPlan.annuitaet,
+      sZKfw,
+      rateJ1,
+      rateNachTf,
+      mzins,
+      kfwDeckel,
+      eigennutzung,
+      progNr: prog.nr,
       sondP,
       sondE,
       sZ2,
@@ -137,7 +208,17 @@ export default function Kredit() {
               onChange={(v) => set("eigenkapital", v)}
               tip={tip("eigenkapital")}
             />
-            <F label={t.darlehen} unit="€" value={R ? fmt(R.da) : "—"} readOnly />
+            <F
+              label={t.darlehen}
+              unit="€"
+              value={R ? fmt(R.da) : "—"}
+              readOnly
+              hint={
+                R && R.daKfw > 0
+                  ? `${t.bank} ${fmt(R.daBank)} € · KfW ${fmt(R.daKfw)} €`
+                  : ""
+              }
+            />
           </Row>
           <Toggle
             checked={!!d.nkFinanzieren}
@@ -194,6 +275,109 @@ export default function Kredit() {
             onChange={(v) => set("zinsbindung", v)}
             options={[5, 10, 15, 20, 25, 30].map((y) => ({ v: y, l: `${y} J.` }))}
           />
+
+          {/* ── KfW-Foerderdarlehen ──────────────────────────────────────
+              Standardmaessig aus; erst der Schalter blendet die Felder ein,
+              damit der Rechner fuer alle ohne Foerderung unveraendert bleibt.
+
+              Das Wohneigentumsprogramm 124 wird Vermietern nicht angeboten -
+              nicht deaktiviert, nicht durchgestrichen, es steht schlicht
+              nicht in der Liste. Darunter eine Zeile, die erklaert warum.
+              Ausschluss VOR der Wahl statt Fehlermeldung danach: es entsteht
+              nie ein Moment, in dem der Nutzer etwas Falsches getan hat. */}
+          <Sec title={t.kfwTitel} icon="🏛️" />
+          <Toggle
+            checked={!!d.kfwAktiv}
+            onChange={(v) => set("kfwAktiv", v)}
+            label={t.kfwAktivLabel}
+            sub={t.kfwAktivSub}
+          />
+          {d.kfwAktiv && (
+            <>
+              <Sel
+                label={t.kfwNutzung}
+                value={d.kfwNutzung || "vermietet"}
+                onChange={(v) => {
+                  set("kfwNutzung", v);
+                  if (v !== "eigen") set("kfwProg", "297");
+                }}
+                options={[
+                  { v: "vermietet", l: t.kfwVermietet },
+                  { v: "eigen", l: t.kfwEigen },
+                ]}
+              />
+              <Sel
+                label={t.kfwProgramm}
+                value={d.kfwProg || "297"}
+                onChange={(v) => set("kfwProg", v)}
+                options={
+                  d.kfwNutzung === "eigen"
+                    ? [
+                        { v: "297", l: t.kfwProg297 },
+                        { v: "124", l: t.kfwProg124 },
+                      ]
+                    : [{ v: "297", l: t.kfwProg297 }]
+                }
+              />
+              {d.kfwNutzung !== "eigen" && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "var(--cl)",
+                    marginTop: -8,
+                    marginBottom: 14,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {t.kfwHint124}
+                </div>
+              )}
+              {(d.kfwProg || "297") === "297" && (
+                <Toggle
+                  checked={!!d.qng}
+                  onChange={(v) => set("qng", v)}
+                  label={t.qngLabel}
+                  sub={t.qngSub}
+                />
+              )}
+              <Row>
+                <F
+                  label={t.kfwWE}
+                  value={d.wohneinheiten || "1"}
+                  onChange={(v) => set("wohneinheiten", v)}
+                />
+                <F
+                  label={t.kfwBetrag}
+                  unit="€"
+                  value={d.kfwBetrag}
+                  onChange={(v) => set("kfwBetrag", v)}
+                  hint={R ? `${t.kfwMax}: ${fmt(R.kfwDeckel)} €` : ""}
+                />
+              </Row>
+              <Row>
+                <F
+                  label={t.kfwZinsLabel}
+                  unit="% p.a."
+                  value={d.kfwZins}
+                  onChange={(v) => set("kfwZins", v)}
+                  step="0.05"
+                  hint={t.kfwZinsHint}
+                />
+                <Sel
+                  label={t.kfwTfLabel}
+                  value={d.kfwTilgungsfrei || "0"}
+                  onChange={(v) => set("kfwTilgungsfrei", v)}
+                  options={[0, 1, 2, 3, 4, 5].map((y) => ({ v: y, l: `${y} J.` }))}
+                />
+              </Row>
+              <Sel
+                label={t.kfwLaufzeitLabel}
+                value={d.kfwLaufzeit || "30"}
+                onChange={(v) => set("kfwLaufzeit", v)}
+                options={[10, 15, 20, 25, 30, 35].map((y) => ({ v: y, l: `${y} J.` }))}
+              />
+            </>
+          )}
           <button
             className="mob-next-btn"
             onClick={() => {
@@ -221,7 +405,17 @@ export default function Kredit() {
                 <div style={{ fontSize: 10, opacity: 0.8, textTransform: "uppercase" }}>
                   {t.rate}
                 </div>
-                <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4 }}>{fmtE(R.ann)}</div>
+                <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4 }}>
+                  {fmtE(R.rateJ1)}
+                </div>
+                {R.daKfw > 0 && R.rateNachTf > R.rateJ1 + 1 && (
+                  // Der Zahlungsschock am Ende der tilgungsfreien Zeit ist die
+                  // wichtigste Zahl dieses Blocks - vorher zahlt der Nutzer
+                  // nur Zinsen auf den KfW-Anteil.
+                  <div style={{ fontSize: 11, opacity: 0.85, marginTop: 4 }}>
+                    {t.kfwRateAb.replace("{j}", String(R.kfwTf + 1))}: {fmtE(R.rateNachTf)}
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 20, marginTop: 12 }}>
                   <div>
                     <div style={{ fontSize: 9, opacity: 0.6 }}>{t.zins}</div>
@@ -234,7 +428,22 @@ export default function Kredit() {
                 </div>
               </div>
               <div className="if-row" style={{ marginBottom: 14 }}>
-                <KPI label={t.darlehen} value={fmtE(R.da)} sub={`${t.bel}: ${fmtP(R.bel)}`} />
+                <KPI
+                  label={t.darlehen}
+                  value={fmtE(R.da)}
+                  sub={
+                    R.daKfw > 0
+                      ? `${t.bank} ${fmtE(R.daBank)} · KfW ${fmtE(R.daKfw)}`
+                      : `${t.bel}: ${fmtP(R.bel)}`
+                  }
+                />
+                {R.daKfw > 0 && (
+                  <KPI
+                    label={t.kfwMischzins}
+                    value={fmtP(R.mzins)}
+                    sub={`${t.kfwOhne}: ${fmtP(+d.zinssatz || 0)}`}
+                  />
+                )}
                 <KPI label={t.laufzeit} value={isFinite(R.lz) ? `${fmt(R.lz, 1)} J.` : "—"} />
                 <KPI label={t.gZin} value={fmtE(R.sZ)} />
                 <KPI label={t.nbk} value={fmtE(R.nbk)} />

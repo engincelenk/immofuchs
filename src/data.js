@@ -71,8 +71,93 @@ export const PFANDBRIEF = {
 // Intervall: quartalsweise
 // Quelle: Stat. Bundesamt, IW-Institut
 export const MIET_P = {
+  stand: "Q1 2026",
   kapp15: { pA: 3.5, q: "IW-Institut 2025" },
   normal: { pA: 2.5, q: "Stat. Bundesamt 2025" },
+};
+
+// ── WERTSTEIGERUNG WOHNIMMOBILIEN ────────────────────────────────────────
+// Intervall: quartalsweise (automatisch via scripts/monthly_update.py)
+// Quelle: Statistisches Bundesamt, Haeuserpreisindex (GENESIS-Tabelle 61262),
+//         Veraenderung zum Vorjahresquartal.
+// Wird an zwei Stellen gelesen: als Kennzahl auf der Landingpage-Datentafel
+// und als Vorbelegung des Eingabefelds "Wertsteigerung" im Renditerechner
+// (App.jsx defaults.wertP). Bewusst dieselbe Zahl - die Landingpage soll
+// nichts anderes behaupten, als der Rechner voreinstellt.
+// ACHTUNG: Das ist die aktuelle Jahresrate, keine Langfristannahme. Sie
+// schwankt spuerbar (Q4/2025: +3,0 %, Q1/2026: +1,4 %) und kann in einer
+// fallenden Marktphase negativ werden.
+export const WERTSTEIGERUNG = {
+  stand: "Q1 2026",
+  pA: 1.4, // % gegenüber Vorjahresquartal
+};
+
+// ── AFA-SÄTZE § 7 EStG ───────────────────────────────────────────────────
+// Intervall: bei Gesetzänderung
+// Quelle: § 7 Abs. 4 und Abs. 5a EStG
+// Lag bisher nur als Literale in Renditerechner.jsx (afaFromBj) und als
+// Vorbelegung "2" in App.jsx.
+export const AFA = {
+  standard: 2, // % linear, Gebäude ab Baujahr 1925
+  altbau: 2.5, // % linear, Baujahr vor 1925
+  neubau: 3, // % linear, Fertigstellung ab 2023
+  grenzeAltbau: 1925, // Baujahr < grenzeAltbau → altbau
+  grenzeNeubau: 2023, // Baujahr >= grenzeNeubau → neubau
+
+  // Degressive Gebäude-AfA, § 7 Abs. 5a EStG: 5 % vom Restbuchwert statt
+  // linear. Herstellungsbeginn bzw. obligatorischer Kaufvertrag muss im
+  // Förderfenster liegen.
+  degressivSatz: 5, // % vom Restbuchwert
+  degressivVon: 2023, // ab 01.10.2023
+  degressivBis: 2029, // bis 30.09.2029
+
+  // Sonderabschreibung Mietwohnungsneubau, § 7b EStG — zusätzlich zur
+  // linearen oder degressiven AfA in den ersten vier Jahren.
+  // ACHTUNG: setzt Effizienzhaus 40 mit Nachhaltigkeitsklasse voraus,
+  // nachgewiesen durch das Qualitätssiegel Nachhaltiges Gebäude (QNG).
+  // Ohne QNG besteht kein Anspruch — dieselbe Bedingung hebt beim
+  // KfW-Programm 297/298 den Höchstbetrag auf 150.000 € je Wohneinheit.
+  sonderSatz: 5, // % p. a.
+  sonderJahre: 4,
+  sonderKostenGrenzeQm: 5200, // € je m² Wohnfläche — Anspruchsvoraussetzung
+  sonderBemessungsCapQm: 4000, // € je m² Wohnfläche — Deckel der Bemessungsgrundlage
+  sonderVon: 2023, // Bauantrag ab 01.01.2023
+  sonderBis: 2029, // Bauantrag vor 01.10.2029
+};
+
+// ── KFW-FÖRDERKREDITE ────────────────────────────────────────────────────
+// Intervall: quartalsweise (Handpflege — die KfW rendert ihre
+// Konditionentabelle clientseitig, ein automatischer Abruf wie bei
+// Bundesbank/Interhyp ist damit nicht zuverlässig möglich).
+// Quelle: kfw.de, Produktinfos 297/298 und 124.
+// Die Zinssätze hängen von Laufzeit, Zinsbindung und tilgungsfreien Jahren
+// ab und werden erst bei der Zusage festgeschrieben — alles hier sind
+// Richtwerte, die der Nutzer überschreiben kann.
+export const KFW_KREDIT = {
+  stand: "August 2026",
+  kfn: {
+    nr: "297/298",
+    vermietbar: true, // Vermieter sind ausdrücklich antragsberechtigt
+    maxProWE: 100000, // € je Wohneinheit
+    maxProWE_qng: 150000, // € je Wohneinheit mit QNG-Zertifikat
+    zins: 2.0, // % effektiv, Richtwert
+    maxLaufzeit: 35,
+    maxZinsbindung: 10,
+    maxTilgungsfrei: 5,
+  },
+  wohneigentum: {
+    nr: "124",
+    // Nur Selbstnutzer: vermietete oder gewerblich genutzte Flächen sind
+    // ausdrücklich ausgeschlossen. Dieses Flag steuert die Programmauswahl
+    // im Kreditrechner.
+    vermietbar: false,
+    maxProWE: 100000,
+    maxProWE_qng: 100000,
+    zins: 4.2, // % effektiv, Richtwert
+    maxLaufzeit: 35,
+    maxZinsbindung: 10,
+    maxTilgungsfrei: 5,
+  },
 };
 
 // ── ENERGIEAUSWEIS: PLAUSIBILITÄTSGRENZEN ────────────────────────────────
@@ -105,9 +190,12 @@ export const NICHT_UML = {
 // Intervall: quartalsweise
 // Quelle: kfw.de
 export const KFW = {
-  basisfoerderung: 15, // % der Investitionskosten
+  stand: "August 2026",
+  basisfoerderung: 15, // % der Investitionskosten (Einzelmaßnahmen)
+  heizungGrundfoerderung: 30, // % Grundförderung Heizungstausch (BEG 2026)
   einkommensbonus: 30, // % zusätzlich bei niedrigem Einkommen (BEG 2024/2025: zvE ≤ 40.000 €)
   klimageschwindigkeitsbonus: 20, // % beim Heizungstausch (bis 2028)
+  isfpBonus: 5, // % zusätzlich mit individuellem Sanierungsfahrplan
   maxFoerderung: 70, // % maximale Gesamtförderung
   maxInvestition: 30000, // € max. förderfähige Kosten je Wohneinheit
   klimaBonus_baujahrGrenze: 2002, // Klimageschwindigkeitsbonus nur für Gebäude erstmals errichtet vor 01.01.2002
@@ -131,26 +219,10 @@ export const ENERGIE_KLASSEN = [
 // Intervall: quartalsweise
 // Quelle: bafa.de
 export const BAFA = {
-  aktiv: true,
+  stand: "August 2026",
+  aktiv: true, // steuert die Kachel "BAFA Förderung" auf der Landingpage
   basisfoerderung: 15, // % der förderfähigen Kosten
   heizungstauschBonus: 5, // % zusätzlich
-};
-
-// ── CO₂-PREIS ────────────────────────────────────────────────────────────
-// Intervall: jährlich
-// Quelle: Umweltbundesamt, BEHG
-export const CO2 = {
-  preis2026: 55, // €/Tonne CO₂
-  preis2027: 65, // €/Tonne CO₂ (geplant)
-};
-
-// ── ENERGIEPREISE (allgemein) ────────────────────────────────────────────
-// Intervall: quartalsweise
-// Quelle: BDEW, Verbraucherzentrale
-export const ENERGIE = {
-  stromCtKwh: 32.5, // Cent/kWh Haushaltsstrom Ø Deutschland
-  gasCtKwh: 9.8, // Cent/kWh Erdgas Ø Deutschland
-  heizölCtL: 95, // Cent/Liter Heizöl Ø Deutschland
 };
 
 // ── SANIERUNGSRECHNER: ENERGIEDATEN ─────────────────────────────────────

@@ -1507,24 +1507,25 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               {l.uspLead}
             </p>
           </div>
-          <div className="usp-grid">
-            {/* Reihenfolge mit Absicht (Ueberarbeitung 2026-08-20): die drei
-                KI-Funktionen zuerst - sie sind das, was es sonst nirgends
-                gibt. Der Exposé-Scan und das Besichtigungs-Handout standen
-                bisher gar nicht auf der Landingpage, obwohl das Handout die
-                staerkste Unterscheidung zu jedem anderen Rechner ist.
-                Danach der Einstieg.
+          {/* Funktionen als rahmenlose Spalten (Design-Review 2026-08-25,
+              Variante A). Vorher gerahmte Karten in 2+3-Komposition: die
+              trugen dasselbe visuelle Gewicht wie die Datentafel darunter,
+              waehrend die Werte mit 15px kleiner gesetzt waren als die
+              Headlines und sich dadurch als Fussnote lasen. Jetzt ein
+              Gefaelle: Funktionen leicht (Haarlinie statt Rahmen), Zahlen
+              schwer.
 
-                Entfallen: die Kachel "100 % privat" ("Alle Berechnungen
-                laufen im Browser. Keine Server ...") - seit Finn, dem
-                Exposé-Scan und der serverseitigen Dokumenterzeugung stimmt
-                das nicht mehr. "Bundesland-spezifisch" und "Alle Daten
-                aktuell" stehen jetzt in der Datenbasis-Zeile unten, wo sie
-                die Werte tragen statt sie zu doppeln.
+              Die NEU-Pillen bei Expose-Scan und Handout entfallen
+              (Nutzer-Vorgabe 2026-08-25) - damit stehen alle fuenf
+              Headlines auf einer Grundlinie. Der Schluessel l.badgeNeu
+              bleibt vorerst ungenutzt in translations.js stehen.
 
-                Die SVGs sind bewusst inline und ohne Fuellung: sie erben
-                ueber stroke="currentColor" die Akzentfarbe der Icon-Kachel,
-                statt wie Emoji je Plattform eine andere Farbwelt zu haben. */}
+              Reihenfolge unveraendert: die drei KI-Funktionen zuerst - sie
+              sind das, was es sonst nirgends gibt -, danach der Einstieg.
+              Die SVGs sind dieselben wie bisher: inline, ohne Fuellung,
+              stroke="currentColor", damit sie die Akzentfarbe erben statt
+              wie Emoji je Plattform in einer anderen Farbwelt zu landen. */}
+          <div className="fn-row">
             {[
               {
                 svg: (
@@ -1538,7 +1539,6 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 ),
                 h: l.uspScanH,
                 p: l.uspScanP,
-                neu: true,
               },
               {
                 svg: (
@@ -1551,7 +1551,6 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 ),
                 h: l.uspHandoutH,
                 p: l.uspHandoutP,
-                neu: true,
               },
               {
                 svg: (
@@ -1585,210 +1584,25 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 p: l.usp6P,
               },
             ].map((u, i) => (
-              <div key={i} className="usp-card">
-                <div
+              <div key={i} className="fn">
+                <svg
+                  className="fn-ic"
                   aria-hidden="true"
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    background: "var(--ca-bg)",
-                    color: "var(--ca)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 12,
-                  }}
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    {u.svg}
-                  </svg>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: 8,
-                    marginBottom: 6,
-                  }}
-                >
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--ct)", margin: 0 }}>
-                    {u.h}
-                  </h3>
-                  {u.neu && (
-                    // Gleiche Pille wie bei den Rechner-Karten weiter oben.
-                    // Vorher nackter 9px-Text ueber der Ueberschrift - der
-                    // schob die Headline auf 2 von 5 Karten nach unten und
-                    // liess die Grundlinien der Reihe ausfransen.
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: 1,
-                        textTransform: "uppercase",
-                        color: "var(--ca-dk)",
-                        background: "var(--ca-bg)",
-                        padding: "3px 8px",
-                        borderRadius: 4,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {l.badgeNeu}
-                    </span>
-                  )}
-                </div>
-                <p style={{ fontSize: 13, color: "var(--cl)", lineHeight: 1.6, margin: 0 }}>
-                  {u.p}
-                </p>
+                  {u.svg}
+                </svg>
+                <h3 className="fn-h">{u.h}</h3>
+                <p className="fn-p">{u.p}</p>
               </div>
             ))}
-          </div>
-
-          {/* ─── Datenbasis: Beleg, nicht Feature ─── */}
-          <div
-            style={{
-              marginTop: 44,
-              paddingTop: 28,
-              borderTop: "1px solid var(--cb)",
-              textAlign: "center",
-            }}
-          >
-            <h3
-              style={{
-                fontSize: 11,
-                letterSpacing: 2,
-                textTransform: "uppercase",
-                color: "var(--ca-dk)",
-                fontWeight: 700,
-                margin: "0 0 8px",
-              }}
-            >
-              {l.dataBasisLabel}
-            </h3>
-            <p
-              style={{
-                fontSize: 13,
-                color: "var(--cl)",
-                maxWidth: 640,
-                margin: "0 auto 20px",
-                lineHeight: 1.6,
-              }}
-            >
-              {l.dataBasis}
-            </p>
-            {/* Hairline-Raster: der Wrapper liefert die Fugenfarbe, die
-                Zellen ueberdecken sie mit --cc. Dadurch genau 1px Trennung
-                ohne doppelte Rahmen an den Beruehrungskanten. */}
-            <div className="data-grid">
-              {[
-                {
-                  // Bugfix (Nutzer-Feedback 2026-08-11): zeigte bisher immer
-                  // den statischen Fallback MARKET_RATES.avg, unabhaengig vom
-                  // live geladenen zinsen.json - dadurch wich der Wert vom
-                  // Bauzinsen-Ticker weiter unten ab (der zinsen?.avg nutzt,
-                  // den ueber alle 5 Quellen live berechneten Durchschnitt,
-                  // siehe App.jsx loadZinsen()). Jetzt dieselbe Quelle/
-                  // Prioritaet wie der Ticker (ratesCompact weiter unten).
-                  label: l.dc1L,
-                  val: `${(zinsen?.avg ?? MARKET_RATES.avg).toLocaleString("de-DE", { minimumFractionDigits: 2 })} %`,
-                  live: true,
-                },
-                { label: l.dc2L, val: "+2,1 %/Jahr" },
-                { label: l.dc3L, val: "+2,0 %/Jahr" },
-                { label: l.dc4L, val: l.dc4V },
-                { label: l.dc5L, val: l.dc5V },
-                { label: l.dc6L, val: l.dc6V },
-                { label: l.dc7L, val: l.dc7V },
-                { label: l.dc8L, val: l.dc8V },
-                { label: l.dc9L, val: l.dc9V, green: true },
-              ].map((d, i) => (
-                <div key={i} className="data-cell">
-                  <div
-                    style={{
-                      fontSize: 11.5,
-                      fontWeight: 500,
-                      color: "var(--ch)",
-                      overflowWrap: "anywhere",
-                    }}
-                  >
-                    {d.label}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      marginTop: 3,
-                      fontSize: 15,
-                      fontWeight: 700,
-                      lineHeight: 1.2,
-                      color: d.live ? "var(--ca-dk)" : "var(--ct)",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    {d.green && (
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: "50%",
-                          background: "#22c55e",
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
-                    {d.val}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                marginTop: 16,
-                fontSize: 12,
-                color: "var(--ch)",
-              }}
-            >
-              <span
-                aria-hidden="true"
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: "#22c55e",
-                  display: "inline-block",
-                  flexShrink: 0,
-                }}
-              />
-              <span>
-                {(() => {
-                  const n = new Date();
-                  return (
-                    l.dataStand +
-                    " " +
-                    n.toLocaleDateString(LANG_LOCALE[lang] || "de-DE", {
-                      month: "long",
-                      year: "numeric",
-                    })
-                  );
-                })()}
-              </span>
-            </div>
           </div>
         </div>
       </section>
@@ -1937,44 +1751,31 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .calc-cards-support>*{width:100%;min-width:0;box-sizing:border-box}
       @media(min-width:640px){.calc-cards-support{grid-template-columns:repeat(3,1fr)}}
       @media(min-width:900px){.calc-cards-support{grid-template-columns:repeat(5,1fr)}}
-      /* USP-Karten in bewusster 2+3-Komposition (Design-Review
-         2026-08-25). Vorher auto-fit,minmax(220px,1fr): bei 5 Karten - 5
-         ist prim - blieb je nach Fensterbreite eine Karte allein stehen
-         (1024-1200px: 4+1, 480-760px: 2+2+1). Mit expliziten Breakpoints,
-         wie schon bei .calc-cards-support, gibt es in keiner Breite eine
-         Waisenreihe: 1 / 2+2+1(span) / 2+3. Die beiden NEU-Funktionen
-         stehen dabei absichtlich breit in der ersten Reihe. */
-      .usp-grid{display:grid;grid-template-columns:1fr;gap:12px}
-      .usp-grid>*{min-width:0;box-sizing:border-box}
+      /* Funktionen als rahmenlose Spalten (Design-Review 2026-08-25,
+         Variante A). Die gerahmten Karten trugen dasselbe visuelle Gewicht
+         wie die Datentafel darunter - zwei Raster, die um dieselbe
+         Aufmerksamkeit konkurrierten. Haarlinie statt Rahmen nimmt der
+         Reihe das Gewicht, ohne eine Ebene zu verlieren.
+         Kein auto-fit (siehe .calc-cards-support): 5 gleiche Spalten ab
+         960px, darunter 2 Spalten mit waagerechten Trennern, mobil eine
+         Liste. Damit gibt es in keiner Breite eine Waisenreihe. */
+      .fn-row{display:grid;grid-template-columns:1fr;gap:0}
+      .fn-row>*{min-width:0;box-sizing:border-box}
+      .fn{padding:18px 0;border-top:1px solid var(--cb)}
+      .fn:first-child{border-top:0}
       @media(min-width:560px){
-        .usp-grid{grid-template-columns:repeat(2,1fr);gap:16px}
-        .usp-grid>*:nth-child(5){grid-column:span 2}
+        .fn-row{grid-template-columns:repeat(2,1fr);column-gap:28px}
+        .fn:nth-child(2){border-top:0}
       }
-      @media(min-width:900px){
-        .usp-grid{grid-template-columns:repeat(6,1fr);gap:18px}
-        .usp-grid>*:nth-child(1),.usp-grid>*:nth-child(2){grid-column:span 3}
-        .usp-grid>*:nth-child(n+3){grid-column:span 2}
+      @media(min-width:960px){
+        .fn-row{grid-template-columns:repeat(5,1fr);column-gap:26px}
+        .fn{border-top:0;padding:0 0 0 20px;border-left:1px solid var(--cb)}
+        .fn:first-child{padding-left:0;border-left:0}
       }
-      .usp-card{background:var(--ci);border:1px solid var(--cb);border-radius:12px;
-        padding:18px 16px;transition:border-color .2s,transform .2s,box-shadow .2s}
-      @media(min-width:900px){.usp-card{padding:20px 18px}}
-      .usp-card:hover{border-color:var(--ca);transform:translateY(-2px);
-        box-shadow:0 8px 20px rgba(232,96,10,.10)}
-      @media(prefers-reduced-motion:reduce){
-        .usp-card{transition:none}
-        .usp-card:hover{transform:none}
-      }
-      /* Datenblatt statt Chip-Wolke: der Wrapper liefert die Fugenfarbe,
-         die Zellen decken sie mit --cc ab (gap:1px). 9 Werte gehen als 3x3
-         exakt auf, mobil 2 Spalten mit der letzten Zelle ueber beide. */
-      .data-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;
-        background:var(--cb);border:1px solid var(--cb);border-radius:12px;overflow:hidden}
-      .data-grid>*:nth-child(9){grid-column:span 2}
-      @media(min-width:560px){
-        .data-grid{grid-template-columns:repeat(3,1fr)}
-        .data-grid>*:nth-child(9){grid-column:auto}
-      }
-      .data-cell{background:var(--cc);padding:12px 14px;text-align:left;min-width:0}
+      .fn-ic{color:var(--ca);display:block;margin-bottom:12px}
+      .fn-h{font-size:15.5px;font-weight:800;color:var(--ct);margin:0 0 5px;
+        letter-spacing:-.2px;line-height:1.25}
+      .fn-p{font-size:13px;color:var(--cl);line-height:1.55;margin:0}
       .how-steps-grid{display:grid;grid-template-columns:1fr;gap:14px}
       @media(min-width:560px){.how-steps-grid{grid-template-columns:repeat(2,1fr)}}
       @media(min-width:860px){.how-steps-grid{grid-template-columns:repeat(4,1fr)}}
