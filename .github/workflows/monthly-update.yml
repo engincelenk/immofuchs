@@ -123,10 +123,10 @@ jobs:
 
           _Automatisch erzeugt vom Monthly-Data-Update-Workflow._"
             if [ -n "$EXISTING" ]; then
-              gh issue edit "$EXISTING" --repo "${{ github.repository }}" --body "$BODY"
+              gh issue edit "$EXISTING" --repo "${{ github.repository }}" --body "$BODY" --add-assignee "${{ github.repository_owner }}"
               echo "Issue #$EXISTING aktualisiert"
             else
-              gh issue create --repo "${{ github.repository }}" --title "$TITLE" --body "$BODY"
+              gh issue create --repo "${{ github.repository }}" --title "$TITLE" --body "$BODY" --assignee "${{ github.repository_owner }}"
               echo "Neues Issue erstellt"
             fi
           elif [ -n "$EXISTING" ]; then
