@@ -33,6 +33,7 @@ REPO_ROOT       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_JS         = os.path.join(REPO_ROOT, "src", "data.js")
 TRANSLATIONS_JS = os.path.join(REPO_ROOT, "src", "i18n", "translations.js")
 ZINSEN_JSON     = os.path.join(REPO_ROOT, "public", "zinsen.json")
+DATENSTATUS_HTML = os.path.join(REPO_ROOT, "public", "datenstatus.html")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; ImmoFuchsBot/1.0; +https://immofuchs.info)"
@@ -68,6 +69,23 @@ PFLEGE_INTERVALL = {
     "BAFA": 3,
     "SAN_ENERGIE": 6,
     "KFW_KREDIT": 3,
+    "SAN_TIERS": 6,
+}
+
+# Anzeige-Metadaten fuer public/datenstatus.html - rein informativ, steuert
+# nichts an der eigentlichen Pruefung. "automatisiert" = wird von diesem
+# Skript selbst geschrieben (MARKET_RATES/PFANDBRIEF/WERTSTEIGERUNG) oder
+# muss von Hand in data.js gepflegt werden (Rest).
+DATENSTATUS_META = {
+    "MARKET_RATES": {"label": "Bauzinsen", "rechner": "Renditerechner, Kreditrechner", "automatisiert": True},
+    "PFANDBRIEF": {"label": "Wiederanlagezins (Pfandbrief)", "rechner": "Vorfälligkeitsrechner", "automatisiert": True},
+    "WERTSTEIGERUNG": {"label": "Wertsteigerung Wohnimmobilien", "rechner": "Renditerechner, Landingpage", "automatisiert": True},
+    "MIET_P": {"label": "Mietpreisprognose", "rechner": "Mieterhöhungsrechner", "automatisiert": False},
+    "KFW": {"label": "KfW-Förderquoten (BEG)", "rechner": "Sanierungsrechner", "automatisiert": False},
+    "BAFA": {"label": "BAFA-Förderung", "rechner": "Sanierungsrechner", "automatisiert": False},
+    "SAN_ENERGIE": {"label": "Energiepreise & CO₂-Faktoren", "rechner": "Sanierungsrechner", "automatisiert": False},
+    "KFW_KREDIT": {"label": "KfW-Förderkredit-Konditionen", "rechner": "Kreditrechner", "automatisiert": False},
+    "SAN_TIERS": {"label": "Sanierungs-Maßnahmenkosten", "rechner": "Sanierungsrechner", "automatisiert": False},
 }
 
 # ── Month name tables ──────────────────────────────────────────────────────
@@ -210,11 +228,12 @@ def fetch_wertsteigerung():
         return None
 
 
-def pruefe_faelligkeit(data_js: str, now):
-    """Meldet, welche Konstanten laut ihrem Pflegeintervall ueberfaellig sind.
-    Aendert nichts - die Ausgabe landet im Log des Actions-Laufs."""
+def sammle_konstanten_status(data_js: str, now):
+    """Liest fuer jede Konstante in PFLEGE_INTERVALL den stand-Wert aus data.js
+    und berechnet ihr Alter in Monaten. Aendert nichts - reine Auswertung,
+    Basis fuer die Faelligkeitsmeldung UND fuer public/datenstatus.html."""
     monate = {m: i + 1 for i, m in enumerate(MONTH_DE)}
-    faellig = []
+    status = []
     for name, intervall in PFLEGE_INTERVALL.items():
         m = re.search(
             r"export const " + name + r"\s*=\s*\{[^}]*?stand:\s*\"([^\"]+)\"",
@@ -233,9 +252,92 @@ def pruefe_faelligkeit(data_js: str, now):
         else:
             continue
         alter = (now.year - jahr) * 12 + (now.month - monat)
-        if alter > intervall:
-            faellig.append(f"  ⚠ {name}: Stand {stand} — {alter} Monate alt (Intervall {intervall})")
-    return faellig
+        status.append({
+            "name": name,
+            "stand": stand,
+            "alter": alter,
+            "intervall": intervall,
+            "ueberfaellig": alter > intervall,
+            "bald_faellig": alter == intervall,
+            **DATENSTATUS_META.get(name, {"label": name, "rechner": "—", "automatisiert": False}),
+        })
+    return status
+
+
+def render_datenstatus_html(status: list, now) -> str:
+    """Baut public/datenstatus.html - Ampel-Uebersicht aller gepflegten
+    Konstanten, im ImmoFuchs-Look (Tokens aus CLAUDE.md)."""
+    rows = ""
+    for s in sorted(status, key=lambda x: (-x["alter"] / max(x["intervall"], 1))):
+        ampel = "🔴" if s["ueberfaellig"] else "🟡" if s["bald_faellig"] else "🟢"
+        auto = "automatisch" if s["automatisiert"] else "manuell"
+        rows += f"""
+        <tr>
+          <td>{ampel}</td>
+          <td>{s['label']}<br><span class="sub">{s['name']}</span></td>
+          <td>{s['rechner']}</td>
+          <td>{s['stand']}</td>
+          <td>{s['alter']} / {s['intervall']} Monate</td>
+          <td>{auto}</td>
+        </tr>"""
+
+    return f"""<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ImmoFuchs — Datenstatus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {{
+    --ca:#E8600A; --ca-dk:#C44D00; --bg:#F5F5F0; --cc:#FFFFFF;
+    --ct:#1A1A1A; --ch:#8A8A80; --cb:#E5E5DC;
+  }}
+  * {{ box-sizing:border-box; }}
+  body {{
+    margin:0; padding:32px 16px; background:var(--bg); color:var(--ct);
+    font-family:'DM Sans', sans-serif;
+  }}
+  .wrap {{ max-width:900px; margin:0 auto; }}
+  h1 {{ font-size:22px; margin:0 0 4px; }}
+  .meta {{ color:var(--ch); font-size:13px; margin-bottom:24px; }}
+  table {{
+    width:100%; border-collapse:collapse; background:var(--cc);
+    border:1px solid var(--cb); border-radius:12px; overflow:hidden;
+  }}
+  th, td {{ text-align:left; padding:10px 12px; font-size:13px; border-bottom:1px solid var(--cb); }}
+  th {{ background:#FAFAF7; font-weight:600; color:var(--ch); text-transform:uppercase; font-size:11px; letter-spacing:.5px; }}
+  tr:last-child td {{ border-bottom:none; }}
+  .sub {{ color:var(--ch); font-size:11px; }}
+  .legend {{ margin-top:16px; font-size:12px; color:var(--ch); }}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>📊 ImmoFuchs Datenstatus</h1>
+    <div class="meta">Letzter Lauf: {now.strftime('%d.%m.%Y %H:%M')} Uhr · scripts/monthly_update.py</div>
+    <table>
+      <thead>
+        <tr><th></th><th>Konstante</th><th>Rechner</th><th>Stand</th><th>Alter</th><th>Pflege</th></tr>
+      </thead>
+      <tbody>{rows}
+      </tbody>
+    </table>
+    <div class="legend">🟢 aktuell · 🟡 diesen Monat fällig · 🔴 überfällig — automatisch gepflegte Werte werden von diesem Skript geschrieben, manuelle muss ein Mensch in src/data.js aktualisieren.</div>
+  </div>
+</body>
+</html>
+"""
+
+
+def pruefe_faelligkeit(status: list):
+    """Formatiert die ueberfaelligen Eintraege aus sammle_konstanten_status
+    fuer Log-Ausgabe und GitHub-Issue-Text. Aendert nichts."""
+    return [
+        f"  ⚠ {s['name']} ({s['label']}): Stand {s['stand']} — {s['alter']} Monate alt (Intervall {s['intervall']})"
+        for s in status if s["ueberfaellig"]
+    ]
 
 
 # ── Quelle 1: Deutsche Bundesbank (PDF, taeglich aktualisiert) ─────────────
@@ -477,15 +579,29 @@ def main():
     else:
         print("  zinsen.json — keine Änderungen")
 
-    # ── Summary ────────────────────────────────────────────────────────────
-    # ── 5. Faelligkeitspruefung (meldet nur, aendert nichts) ───────────────
-    faellig = pruefe_faelligkeit(open(DATA_JS, encoding="utf-8").read(), now)
+    # ── 5. Faelligkeitspruefung + Datenstatus-Seite (meldet nur, aendert
+    #      an data.js nichts) ────────────────────────────────────────────────
+    status = sammle_konstanten_status(open(DATA_JS, encoding="utf-8").read(), now)
+    faellig = pruefe_faelligkeit(status)
     if faellig:
         print("\nHandpflege ueberfaellig:")
         for f in faellig:
             print(f)
     else:
         print("\nHandpflege: alle Werte innerhalb ihres Intervalls")
+
+    print("\nSchreibe public/datenstatus.html...")
+    open(DATENSTATUS_HTML, "w", encoding="utf-8").write(render_datenstatus_html(status, now))
+    print("  ✓ datenstatus.html aktualisiert")
+
+    # An den Workflow melden, ob ein Faelligkeits-Issue noetig ist. Ohne
+    # GITHUB_OUTPUT (z.B. lokaler Lauf) wird das einfach uebersprungen.
+    gh_output = os.environ.get("GITHUB_OUTPUT")
+    if gh_output:
+        with open(gh_output, "a", encoding="utf-8") as f:
+            f.write("overdue<<EOF_OVERDUE\n")
+            f.write("\n".join(faellig))
+            f.write("\nEOF_OVERDUE\n")
 
     total = len(changes) + len(i18n_changed) + len(zinsen_changed)
     print(f"\n=== Abgeschlossen — {total} Änderungen gesamt ===")

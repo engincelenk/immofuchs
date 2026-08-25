@@ -11,6 +11,7 @@ on:
 # nutzen darf (Default-Token ist sonst read-only fuer contents).
 permissions:
   contents: write
+  issues: write
 
 jobs:
   update-and-deploy:
@@ -76,6 +77,7 @@ jobs:
       # Zinstabelle (Playwright, da clientseitig gerendert) - kein
       # ANTHROPIC_API_KEY/Guthaben mehr noetig, siehe scripts/monthly_update.py.
       - name: 🔄 Marktdaten aktualisieren
+        id: update
         run: python scripts/monthly_update.py
 
       # ── 4. Änderungen committen UND zurückpushen - data.js/translations.js/
@@ -89,7 +91,7 @@ jobs:
         run: |
           git config --global user.name "ImmoFuchs Bot"
           git config --global user.email "bot@immofuchs.info"
-          git add src/data.js src/i18n/translations.js public/zinsen.json
+          git add src/data.js src/i18n/translations.js public/zinsen.json public/datenstatus.html
           if git diff --staged --quiet; then
             echo "Keine Änderungen — kein Commit nötig"
           else
@@ -97,6 +99,41 @@ jobs:
             git commit -m "data: Monatliches Update $MONTH (${{ matrix.env.name }})"
             git push origin HEAD:${{ matrix.env.branch }}
             echo "✓ Commit erstellt und gepusht"
+          fi
+
+      # ── 4b. Faelligkeits-Issue - nur einmal (PROD-Zweig genuegt, die
+      #        Pflegeintervalle sind branch-unabhaengig dieselben Werte) ─────
+      - name: 🔔 Fälligkeits-Issue aktualisieren
+        if: matrix.env.slug == 'prod'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OVERDUE: ${{ steps.update.outputs.overdue }}
+        run: |
+          TITLE="🗓️ Datenpflege überfällig"
+          EXISTING=$(gh issue list --repo "${{ github.repository }}" --search "$TITLE in:title" --state open --json number --jq '.[0].number')
+          if [ -n "$OVERDUE" ]; then
+            BODY="Folgende Konstanten in \`src/data.js\` sind laut ihrem Pflegeintervall überfällig und müssen von Hand aktualisiert werden:
+
+          \`\`\`
+          $OVERDUE
+          \`\`\`
+
+          Übersicht aller Werte: siehe \`public/datenstatus.html\` (mit deployt).
+          Zum Aktualisieren: neuen Wert + Quelle angeben, \`src/data.js\` entsprechend anpassen (\`stand\`-Feld nicht vergessen).
+
+          _Automatisch erzeugt vom Monthly-Data-Update-Workflow._"
+            if [ -n "$EXISTING" ]; then
+              gh issue edit "$EXISTING" --repo "${{ github.repository }}" --body "$BODY"
+              echo "Issue #$EXISTING aktualisiert"
+            else
+              gh issue create --repo "${{ github.repository }}" --title "$TITLE" --body "$BODY"
+              echo "Neues Issue erstellt"
+            fi
+          elif [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --repo "${{ github.repository }}" --comment "Alle Werte sind wieder innerhalb ihres Pflegeintervalls."
+            echo "Issue #$EXISTING geschlossen"
+          else
+            echo "Nichts überfällig, kein offenes Issue vorhanden"
           fi
 
       # ── 5. Build ─────────────────────────────────────────────────────────

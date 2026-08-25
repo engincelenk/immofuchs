@@ -286,6 +286,7 @@ export const SAN_NORMEN = {
 // Intervall: halbjährlich (Baupreisindex)
 // Quelle: BKI Baukosten 2025/26, Handwerksinnungen, Verbraucherzentrale
 export const SAN_TIERS = {
+  stand: "August 2026",
   fenster: {
     s: { p: 800, l: "sTierFenS" },
     g: { p: 1200, l: "sTierFenG" },

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ImmoFuchs — Datenstatus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ca:#E8600A; --ca-dk:#C44D00; --bg:#F5F5F0; --cc:#FFFFFF;
+    --ct:#1A1A1A; --ch:#8A8A80; --cb:#E5E5DC;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:32px 16px; background:var(--bg); color:var(--ct);
+    font-family:'DM Sans', sans-serif;
+  }
+  .wrap { max-width:900px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .meta { color:var(--ch); font-size:13px; margin-bottom:24px; }
+  table {
+    width:100%; border-collapse:collapse; background:var(--cc);
+    border:1px solid var(--cb); border-radius:12px; overflow:hidden;
+  }
+  th, td { text-align:left; padding:10px 12px; font-size:13px; border-bottom:1px solid var(--cb); }
+  th { background:#FAFAF7; font-weight:600; color:var(--ch); text-transform:uppercase; font-size:11px; letter-spacing:.5px; }
+  tr:last-child td { border-bottom:none; }
+  .sub { color:var(--ch); font-size:11px; }
+  .legend { margin-top:16px; font-size:12px; color:var(--ch); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>📊 ImmoFuchs Datenstatus</h1>
+    <div class="meta">Letzter Lauf: 25.08.2026 22:54 Uhr · scripts/monthly_update.py</div>
+    <table>
+      <thead>
+        <tr><th></th><th>Konstante</th><th>Rechner</th><th>Stand</th><th>Alter</th><th>Pflege</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>🔴</td>
+          <td>Wiederanlagezins (Pfandbrief)<br><span class="sub">PFANDBRIEF</span></td>
+          <td>Vorfälligkeitsrechner</td>
+          <td>Mai 2026</td>
+          <td>3 / 1 Monate</td>
+          <td>automatisch</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Wertsteigerung Wohnimmobilien<br><span class="sub">WERTSTEIGERUNG</span></td>
+          <td>Renditerechner, Landingpage</td>
+          <td>Q1 2026</td>
+          <td>5 / 6 Monate</td>
+          <td>automatisch</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Mietpreisprognose<br><span class="sub">MIET_P</span></td>
+          <td>Mieterhöhungsrechner</td>
+          <td>Q1 2026</td>
+          <td>5 / 6 Monate</td>
+          <td>manuell</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Energiepreise & CO₂-Faktoren<br><span class="sub">SAN_ENERGIE</span></td>
+          <td>Sanierungsrechner</td>
+          <td>Q1 2026</td>
+          <td>5 / 6 Monate</td>
+          <td>manuell</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Bauzinsen<br><span class="sub">MARKET_RATES</span></td>
+          <td>Renditerechner, Kreditrechner</td>
+          <td>August 2026</td>
+          <td>0 / 1 Monate</td>
+          <td>automatisch</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>KfW-Förderquoten (BEG)<br><span class="sub">KFW</span></td>
+          <td>Sanierungsrechner</td>
+          <td>August 2026</td>
+          <td>0 / 3 Monate</td>
+          <td>manuell</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>BAFA-Förderung<br><span class="sub">BAFA</span></td>
+          <td>Sanierungsrechner</td>
+          <td>August 2026</td>
+          <td>0 / 3 Monate</td>
+          <td>manuell</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>KfW-Förderkredit-Konditionen<br><span class="sub">KFW_KREDIT</span></td>
+          <td>Kreditrechner</td>
+          <td>August 2026</td>
+          <td>0 / 3 Monate</td>
+          <td>manuell</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Sanierungs-Maßnahmenkosten<br><span class="sub">SAN_TIERS</span></td>
+          <td>Sanierungsrechner</td>
+          <td>August 2026</td>
+          <td>0 / 6 Monate</td>
+          <td>manuell</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="legend">🟢 aktuell · 🟡 diesen Monat fällig · 🔴 überfällig — automatisch gepflegte Werte werden von diesem Skript geschrieben, manuelle muss ein Mensch in src/data.js aktualisieren.</div>
+  </div>
+</body>
+</html>
