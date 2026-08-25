@@ -318,14 +318,21 @@ export type TrialFeature = "rechner" | "finn" | "expose" | "pdf" | "handout";
 // Alle Zaehler der laufenden Testphase, als "feature:rechner" -> count.
 // Zeilen aelterer Testphasen (anderes trial_start) werden nicht gelesen und
 // zaehlen damit als 0.
+// `tag` schraenkt auf einen Kalendertag ein (Tageskontingente seit Migration
+// 0026); '' liefert die Zaehler, die ueber die ganze Phase laufen. Ohne diese
+// Einschraenkung wuerden die Zeilen aller bisherigen Tage aufsummiert und das
+// Tageslimit waere nach dem ersten Tag dauerhaft erschoepft.
 export async function getTrialUsage(
   db: Env["DB"],
   userId: string,
   trialStart: number,
+  tag = "",
 ): Promise<Record<string, number>> {
   const { results } = await db
-    .prepare("SELECT feature, rechner, count FROM trial_usage WHERE user_id = ? AND trial_start = ?")
-    .bind(userId, trialStart)
+    .prepare(
+      "SELECT feature, rechner, count FROM trial_usage WHERE user_id = ? AND trial_start = ? AND tag = ?",
+    )
+    .bind(userId, trialStart, tag)
     .all<{ feature: string; rechner: string; count: number }>();
   const usage: Record<string, number> = {};
   for (const row of results) usage[`${row.feature}:${row.rechner}`] = row.count;
@@ -338,12 +345,13 @@ export async function getTrialCount(
   trialStart: number,
   feature: TrialFeature,
   rechner = "",
+  tag = "",
 ): Promise<number> {
   const row = await db
     .prepare(
-      "SELECT count FROM trial_usage WHERE user_id = ? AND feature = ? AND rechner = ? AND trial_start = ?",
+      "SELECT count FROM trial_usage WHERE user_id = ? AND feature = ? AND rechner = ? AND tag = ? AND trial_start = ?",
     )
-    .bind(userId, feature, rechner, trialStart)
+    .bind(userId, feature, rechner, tag, trialStart)
     .first<{ count: number }>();
   return row?.count ?? 0;
 }
@@ -357,16 +365,17 @@ export async function incrementTrialUsage(
   trialStart: number,
   feature: TrialFeature,
   rechner = "",
+  tag = "",
 ): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO trial_usage (user_id, feature, rechner, count, trial_start) VALUES (?, ?, ?, 1, ?)
-       ON CONFLICT(user_id, feature, rechner) DO UPDATE SET
+      `INSERT INTO trial_usage (user_id, feature, rechner, tag, count, trial_start) VALUES (?, ?, ?, ?, 1, ?)
+       ON CONFLICT(user_id, feature, rechner, tag) DO UPDATE SET
          count = CASE WHEN trial_usage.trial_start = excluded.trial_start
                       THEN trial_usage.count + 1 ELSE 1 END,
          trial_start = excluded.trial_start`,
     )
-    .bind(userId, feature, rechner, trialStart)
+    .bind(userId, feature, rechner, tag, trialStart)
     .run();
 }
 

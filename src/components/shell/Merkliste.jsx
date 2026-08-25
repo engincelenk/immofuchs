@@ -55,13 +55,15 @@ const searchChipStyle = {
   whiteSpace: "nowrap",
 };
 const searchChipActiveStyle = { ...searchChipStyle, background: "var(--ca)", color: "#fff", borderColor: "var(--ca)" };
-// Kontingent der Testphase (Preispolitik 2026-08-20, Nutzer-Vorgabe "alles je
-// Rechner"): 3 Objekte JE RECHNERTYP. Pro speichert unbegrenzt.
+// Kontingent der Testphase (Nutzer-Vorgabe 2026-08-25): 5 Objekte INSGESAMT
+// fuer die ganze Phase. Pro speichert unbegrenzt.
 //
-// Der Server zieht dieselbe Grenze als Gesamtzahl (TRIAL_MERKLISTE_GESAMT =
-// 3 x 4 Rechner mit Merkliste), weil die objects-Tabelle keinen Rechnerbezug
-// speichert - die Aufteilung je Rechner passiert hier.
-const TRIAL_OBJECT_LIMIT_PER_RECHNER = 3;
+// Vorher 3 Objekte je Rechnertyp, vom Server als Gesamtzahl (3 x 4 Rechner)
+// geprueft - die Aufteilung je Rechner passierte nur hier im Frontend. Mit
+// einer glatten Gesamtzahl entfaellt diese Doppelrechnung: Client und Server
+// pruefen jetzt dieselbe Zahl auf dieselbe Weise (TRIAL_MERKLISTE_GESAMT in
+// worker/src/trialLimits.ts).
+const TRIAL_OBJECT_LIMIT_GESAMT = 5;
 const LOCAL_STORAGE_KEY = "if_saved_v1";
 const PRO_MIRROR_KEY = "if_saved_pro_mirror_v1"; // Offline-Spiegelung (4.17)
 
@@ -234,13 +236,13 @@ export function useSavedObjects(setData) {
         return;
       }
       setSavedList((prev) => {
-        // Je Rechnertyp hoechstens TRIAL_OBJECT_LIMIT_PER_RECHNER Objekte: ein
-        // neuer Speicherstand verdraengt den aeltesten DIESES Typs, nicht den
-        // insgesamt aeltesten (der koennte zu einem anderen Rechner gehoeren).
-        const sameTab = prev.filter((o) => o.tab === tab);
-        const others = prev.filter((o) => o.tab !== tab);
-        const keptSameTab = sameTab.slice(0, Math.max(0, TRIAL_OBJECT_LIMIT_PER_RECHNER - 1));
-        const next = [obj, ...keptSameTab, ...others];
+        // Hoechstens TRIAL_OBJECT_LIMIT_GESAMT Objekte insgesamt: ein neuer
+        // Speicherstand verdraengt den insgesamt aeltesten. Bis 2026-08-25 galt
+        // das Kontingent je Rechnertyp, verdraengt wurde deshalb der aelteste
+        // DIESES Typs - mit einer Gesamtgrenze waere diese Sonderbehandlung
+        // falsch: sie koennte ein Objekt loeschen, obwohl insgesamt noch Platz
+        // ist, und zugleich ueber die Gesamtgrenze laufen.
+        const next = [obj, ...prev].slice(0, TRIAL_OBJECT_LIMIT_GESAMT);
         writeLocalList(next);
         return next;
       });
@@ -276,7 +278,7 @@ export function useSavedObjects(setData) {
     [setData],
   );
 
-  return { savedList, saveObj, delObj, loadObj, isPro, freeLimit: TRIAL_OBJECT_LIMIT_PER_RECHNER };
+  return { savedList, saveObj, delObj, loadObj, isPro, freeLimit: TRIAL_OBJECT_LIMIT_GESAMT };
 }
 
 // Gemeinsames Sheet-Bauteil statt eigenem Backdrop/Panel (UX-Audit
@@ -356,11 +358,10 @@ export function SaveBtn({ tab }) {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const hasData = d.kaufpreis || d.vergleichsmiete;
   if (!hasData) return null;
-  // Kontingent dieses Rechners erreicht: Upgrade-Hinweis statt
-  // stillschweigendem Verdraengen des bisherigen Eintrags - andere
-  // Rechnertypen sind davon unberuehrt.
-  const limitReached =
-    !isProSavedObjects && savedList.filter((o) => o.tab === tab).length >= savedObjectsFreeLimit;
+  // Kontingent erreicht: Upgrade-Hinweis statt stillschweigendem Verdraengen
+  // des bisherigen Eintrags. Seit 2026-08-25 die Gesamtzahl ueber alle
+  // Rechnertypen (5), nicht mehr je Rechnertyp.
+  const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
   // Strasse und Hausnummer voranstellen, sobald sie bekannt sind (aus dem
   // Expose oder von Hand): zwei Wohnungen in derselben Stadt sind sonst beide
   // nur "Ingersheim · 199.000 €" und in der Merkliste nicht auseinanderzuhalten.
@@ -526,11 +527,9 @@ export function Merkliste() {
   // Rechner") - "alle" statt null, damit der Vergleich in filtered() ohne
   // Sonderfall auskommt.
   const [rechnerFilter, setRechnerFilter] = useState("alle");
-  // Gesamt-Kontingent = Limit je Rechner x Anzahl unterstuetzter Rechnertypen.
-  // Diese Uebersicht zeigt alle Rechner zusammen, "erreicht" heisst hier also:
-  // bei JEDEM Rechnertyp das Kontingent ausgeschoepft.
-  const freeTotalLimit = savedObjectsFreeLimit * RECHNER_TABS.length;
-  const limitReached = !isProSavedObjects && savedList.length >= freeTotalLimit;
+  // Seit 2026-08-25 ist savedObjectsFreeLimit bereits die Gesamtzahl - die
+  // vorherige Hochrechnung (Limit je Rechner x Anzahl Rechnertypen) entfaellt.
+  const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
   const [compareIds, setCompareIds] = useState([]);
   const [compareSheetOpen, setCompareSheetOpen] = useState(false);
   // Die Sprechblase verspricht "ich vergleiche" - damit das eingeloest wird,
@@ -675,7 +674,7 @@ export function Merkliste() {
     <div style={{ padding: "16px 16px 100px" }}>
       <div style={{ fontSize: 13, color: "var(--ch)", marginBottom: 12, fontWeight: 500 }}>
         {savedList.length}
-        {!isProSavedObjects ? `/${freeTotalLimit}` : ""}{" "}
+        {!isProSavedObjects ? `/${savedObjectsFreeLimit}` : ""}{" "}
         {savedList.length === 1
           ? t.countSingular || "Objekt gespeichert"
           : t.countPlural || "Objekte gespeichert"}
@@ -748,7 +747,7 @@ export function Merkliste() {
             fontFamily: "inherit",
           }}
         >
-          👑 {acct.trialLockedBody}
+          👑 {acct.merklisteTrialVoll.replace("{limit}", String(savedObjectsFreeLimit))}
         </button>
       )}
       {showUpgrade && (

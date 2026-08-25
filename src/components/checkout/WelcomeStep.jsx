@@ -1,9 +1,17 @@
 import { cardStyle, primaryBtnStyle } from "./checkoutStyles.js";
 
-// Erfolgsscreen (Vorbild: Screenshot-Konfetti-Screen, Farbe --ca statt
-// Navy). Trial-Zweig ist bereits vorbereitet fuer Phase 3 (echter
-// Paddle-Trial) - bis dahin ist subscription.status nie "trialing", der
-// Normalfall-Text greift also heute immer.
+// Erfolgsscreen (Vorbild: Screenshot-Konfetti-Screen, Farbe --ca statt Navy).
+//
+// Der Trial-Zweig haengt allein daran, ob PADDLE eine Testphase auf dem Preis
+// hinterlegt hat - dann liefert der Webhook subscription.status "trialing".
+// Der Kommentar hier behauptete bis 25.08.2026, das koenne nie eintreten
+// ("vorbereitet fuer Phase 3"); ein Test am selben Tag zeigte den Trial-Text
+// aber tatsaechlich, weil in Paddle zwischenzeitlich eine Testphase gesetzt
+// war. Ob der Zweig greift, entscheidet sich also ausserhalb dieses Codes.
+//
+// Nicht zu verwechseln mit der App-Testphase (7 Tage, ohne Zahlungsdaten,
+// startAppTrialIfNew in worker/src/routes/account.ts): die laeuft VOR jedem
+// Kauf und hat mit diesem Bildschirm nichts zu tun.
 export function WelcomeStep({ t, account, onDone }) {
   const subscription = account?.me?.subscription;
   const isTrial = subscription?.status === "trialing";

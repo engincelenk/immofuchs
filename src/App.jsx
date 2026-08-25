@@ -219,8 +219,13 @@ const FONT_CSS =
 // Checkout-Wizards auf, den der Fokus-Trap dort automatisch fokussiert -
 // wirkte wie ein UI-Fehler. Fokus bleibt aus Barrierefreiheitsgruenden
 // bestehen, bekommt hier nur die Akzentfarbe statt des Browser-Standards.
+// `--primary` (Marineblau, CLAUDE.md-Designtoken) fehlte hier bislang ganz,
+// obwohl checkoutStyles.js (infoBannerStyle) es seit langem als Rahmen- und
+// Textfarbe benutzt - eine undefinierte Custom Property faellt still auf die
+// Vorgabe der Eigenschaft zurueck, der Info-Banner hatte damit weder den
+// gemeinten Rahmen noch die gemeinte Schriftfarbe (Bugreport 25.08.).
 const ROOT_TOKENS_CSS =
-  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9}" +
+  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f}" +
   ":focus-visible{outline:2px solid var(--ca);outline-offset:2px;border-radius:6px}";
 // Bugreport 07.08.: Ein Bestaetigungslink aus der Registrierungs-E-Mail (oder
 // ein Passwort-Reset-Link) oeffnet fast immer einen NEUEN Tab - dessen

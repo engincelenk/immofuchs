@@ -180,9 +180,7 @@ function PlanCard({
         flexDirection: "column",
       }}
     >
-      {/* EMPFOHLEN-Ribbon mittig auf dem oberen Kartenrand - Marineblau statt
-          Akzentorange, damit er sich vom orangen Ersparnis-Badge daneben
-          abhebt (beide gleichzeitig auf derselben Karte, siehe Referenz). */}
+      {/* EMPFOHLEN-Ribbon mittig auf dem oberen Kartenrand. */}
       {ribbon && (
         <div
           style={{
@@ -190,12 +188,10 @@ function PlanCard({
             top: -12,
             left: "50%",
             transform: "translateX(-50%)",
-            // Marineblau als Literal statt var(--primary): dieses Custom
-            // Property ist nirgends in ROOT_TOKENS_CSS definiert (existiert
-            // nur als bereits vorhandener, gleicher Bug in
-            // infoBannerStyle/checkoutStyles.js) - haette hier sonst keine
-            // sichtbare Farbe ergeben.
-            background: "#1E3A5F",
+            // Marineblau statt Akzentorange, damit sich der Ribbon vom orangen
+            // Ersparnis-Badge daneben abhebt (beide gleichzeitig auf derselben
+            // Karte, siehe Referenz).
+            background: "var(--primary)",
             color: "#fff",
             borderRadius: 20,
             padding: "4px 14px",

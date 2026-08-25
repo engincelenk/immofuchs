@@ -18,7 +18,7 @@ import { authenticate } from "../auth/session";
 import { ermittleZugang, type Zugang } from "../entitlement";
 import { hasConsent } from "../consent";
 import { getTrialCount, getUserById, incrementTrialUsage, type UserRow } from "../db";
-import { TRIAL_LIMITS } from "../trialLimits";
+import { TRIAL_LIMITS, trialTag } from "../trialLimits";
 
 const DEFAULT_FINN_PRO_DAILY_LIMIT = 50;
 const DEFAULT_FINN_FREE_MAX_TOKENS = 350;
@@ -131,13 +131,13 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
       return c.json({ error: "rate_limit_exceeded" }, 429);
     }
   } else {
-    // Testphase: Kontingent je Rechner, in D1 am Nutzer. Geprueft wird vorher,
-    // gezaehlt erst nach einer erfolgreichen Antwort (siehe unten) - ein
-    // Modell-Fehler soll kein Kontingent kosten.
+    // Testphase: Kontingent je Rechner und Tag, in D1 am Nutzer. Geprueft
+    // wird vorher, gezaehlt erst nach einer erfolgreichen Antwort (siehe
+    // unten) - ein Modell-Fehler soll kein Kontingent kosten.
     const verbraucht =
       trialStart === null
         ? TRIAL_LIMITS.finn
-        : await getTrialCount(env.DB, zugriff.user.id, trialStart, "finn", req.rechner);
+        : await getTrialCount(env.DB, zugriff.user.id, trialStart, "finn", req.rechner, trialTag());
     if (verbraucht >= TRIAL_LIMITS.finn) {
       await Promise.all([globalLimiter.decrement(), ipLimiter.decrement()]);
       return c.json({ error: "trial_limit_reached" }, 402);
@@ -171,7 +171,7 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
   // Kontingent der Testphase erst nach der erfolgreichen Antwort erhoehen -
   // gleiche Haltung wie beim Exposé-Scan weiter unten.
   if (!isPro && trialStart !== null) {
-    await incrementTrialUsage(env.DB, zugriff.user.id, trialStart, "finn", req.rechner);
+    await incrementTrialUsage(env.DB, zugriff.user.id, trialStart, "finn", req.rechner, trialTag());
   }
 
   const responseBody: AssistantResponse = { antwort, tier };
@@ -207,15 +207,15 @@ export async function handleExposeExtract(c: Context<{ Bindings: Env }>): Promis
     return c.json({ error: "consent_required" }, 412);
   }
 
-  // Kontingent der Testphase (Migration 0025): der Scan gehoert zum OBJEKT,
-  // nicht zum Rechner - ein Exposé wird einmal gelesen und fliesst danach in
-  // jeden Rechner. Deshalb ein gemeinsames Kontingent statt eines je Rechner.
-  // Pro unterliegt nur den Fair-Use-Limits unten.
+  // Kontingent der Testphase (Migration 0025, seit 0026 je Tag): der Scan
+  // gehoert zum OBJEKT, nicht zum Rechner - ein Exposé wird einmal gelesen und
+  // fliesst danach in jeden Rechner. Deshalb ein gemeinsames Kontingent statt
+  // eines je Rechner. Pro unterliegt nur den Fair-Use-Limits unten.
   if (!isPro) {
     const verbraucht =
       trialStart === null
         ? TRIAL_LIMITS.expose
-        : await getTrialCount(env.DB, zugriff.user.id, trialStart, "expose");
+        : await getTrialCount(env.DB, zugriff.user.id, trialStart, "expose", "", trialTag());
     if (verbraucht >= TRIAL_LIMITS.expose) {
       return c.json({ error: "trial_limit_reached" }, 402);
     }
@@ -281,7 +281,7 @@ export async function handleExposeExtract(c: Context<{ Bindings: Env }>): Promis
   // Zaehler erst NACH erfolgreicher Extraktion erhoehen - ein gescheiterter
   // Versuch soll kein Kontingent verbrauchen.
   if (!isPro && trialStart !== null) {
-    await incrementTrialUsage(env.DB, zugriff.user.id, trialStart, "expose");
+    await incrementTrialUsage(env.DB, zugriff.user.id, trialStart, "expose", "", trialTag());
   }
 
   return c.json(ergebnis, 200);

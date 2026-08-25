@@ -26,14 +26,13 @@ describe("parseAdminUsersQuery (Such-Sanitizing fuer GET /admin/users)", () => {
     expect(result.filter.search).toBe("max@immofuchs.info");
   });
 
-  it("escaped LIKE-Wildcards (% und _) im Suchbegriff, damit sie als Literal gesucht werden", () => {
-    const result = parseAdminUsersQuery(new URLSearchParams({ q: "max_50%" }));
-    expect(result.filter.search).toBe("max\\_50\\%");
-  });
-
-  it("escaped einen literalen Backslash im Suchbegriff", () => {
-    const result = parseAdminUsersQuery(new URLSearchParams({ q: "a\\b" }));
-    expect(result.filter.search).toBe("a\\\\b");
+  // %, _ und \ sind seit dem Wechsel auf instr() (listUsersForAdmin in db.ts,
+  // 19.08., IMP-12-Nachtrag) keine Sonderzeichen mehr - instr() kennt keinen
+  // Wildcard-Mechanismus. Der Suchbegriff muss deshalb unveraendert durchgehen;
+  // ein wieder eingebautes Escaping wuerde die Suche verfaelschen.
+  it("laesst LIKE-Sonderzeichen (%, _, \\) unveraendert durch", () => {
+    expect(parseAdminUsersQuery(new URLSearchParams({ q: "max_50%" })).filter.search).toBe("max_50%");
+    expect(parseAdminUsersQuery(new URLSearchParams({ q: "a\\b" })).filter.search).toBe("a\\b");
   });
 
   it("Seite faellt auf 1 zurueck bei fehlendem/ungueltigem/negativem/nullwertigem Parameter", () => {

@@ -1,3 +1,100 @@
+## 2026-08-25 (1.21.1)
+
+### Admin-Suche: veraltete Escaping-Tests korrigiert
+
+Zwei Tests in `worker/src/routes/admin.test.ts` erwarteten noch, dass
+`parseAdminUsersQuery` LIKE-Wildcards (`%`, `_`) und Backslashes im
+Suchbegriff escaped. Das Escaping wurde am 19.08. (IMP-12-Nachtrag) bewusst
+entfernt, weil `listUsersForAdmin` (db.ts) seither `instr()` statt `LIKE`
+nutzt - `instr()` kennt keinen Wildcard-Mechanismus, der Suchbegriff muss
+unveraendert durchgehen. Verifiziert: auf dem Suchpfad steht kein `LIKE` mehr.
+
+Die beiden Tests sind durch einen ersetzt, der genau dieses Verhalten
+festnagelt (Suchbegriff geht unveraendert durch) - damit ist die Absicht
+weiter durch einen Test gedeckt, statt sie nur ersatzlos zu streichen.
+Kein Produktivcode geaendert.
+
+## 2026-08-25 (1.21.0)
+
+### Testphase neu zugeschnitten: Tageskontingente, unbegrenztes Rechnen
+
+Nutzer-Vorgabe: die 7-taegige Testphase bleibt ohne Zahlungsdaten, erst nach
+ihrem Ablauf ist ein Abo noetig. Innerhalb der Phase gelten neue Grenzen.
+
+| Feature      | bisher                    | neu                        |
+|--------------|---------------------------|----------------------------|
+| Rechner      | 3 je Rechner (gesamt)     | unbegrenzt                 |
+| Finn         | 5 je Rechner (gesamt)     | 10 je Rechner PRO TAG      |
+| Exposé-Scan  | 3 gesamt                  | 3 PRO TAG                  |
+| Handout      | gekoppelt an Exposé       | 3 PRO TAG (eigener Zaehler)|
+| PDF          | gekoppelt an Rechner      | unbegrenzt                 |
+| Merkliste    | 3 je Rechner (= 12)       | 5 Objekte gesamt           |
+
+Warum Tageskontingente: ein Gesamtkontingent war nach zwei Sitzungen
+aufgebraucht, danach lief die Testphase formal weiter, ohne dass sich noch
+etwas ausprobieren liess - sie testete nichts mehr.
+
+**Migration 0026** (`0026_trial_tageskontingente.sql`): trial_usage bekommt
+eine `tag`-Spalte im PRIMARY KEY (SQLite kann den PK nicht per ALTER aendern,
+daher Tabelle neu anlegen, umkopieren, umbenennen). `tag` ist 'YYYY-MM-DD'
+(UTC) fuer Tageskontingente, '' fuer alles, was ueber die ganze Phase zaehlt.
+
+**Nebeneffekt:** `POST /calculator-trial/consume` gab bei erschoepftem
+Rechner-Kontingent 402 "trial_limit_reached" zurueck - genau der Fehler, der
+beim Rechnen in der Konsole auftauchte. Die Route zaehlt und sperrt jetzt
+nicht mehr (Rechnen ist unbegrenzt) und quittiert nur noch; sie bleibt
+bestehen, weil das Frontend sie weiterhin ruft.
+
+**Texte korrigiert (alle 5 Sprachen):**
+- `trialFinePrint` auf die neuen Kontingente.
+- `trialRunNotice` ohne Restzaehler ("noch X von 3" gibt es nicht mehr).
+- `trialLockedTitle`/`trialLockedBody` entfallen - der Zustand "Kontingent
+  dieses Rechners leer, Phase laeuft noch" existiert nicht mehr, der Zweig
+  in CalculatorTrialGate war damit unerreichbar.
+- Neuer Key `merklisteTrialVoll` (Merkliste.jsx nutzte bisher
+  `trialLockedBody` fuer eine ganz andere Aussage).
+- `supportFaq2Q`/`-A`: sagte "3-taegige Testphase" und "danach wird der
+  gewaehlte Tarif erstmals abgebucht". Beides falsch - die App-Testphase
+  laeuft 7 Tage und bucht gar nichts ab, weil sie keine Zahlungsdaten hat.
+- `welcomeSubtitleTrial`: feste Tageszahl entfernt (stand auf "3-taegige").
+  Die Laenge eines etwaigen Paddle-Trials wird in Paddle konfiguriert, nicht
+  im Code; das genaue Ende steht ohnehin als Datum darunter.
+- Veralteten Kommentar in WelcomeStep.jsx korrigiert: behauptete,
+  subscription.status koenne nie "trialing" sein - ein Test am 25.08. zeigte
+  den Trial-Text tatsaechlich, weil in Paddle zwischenzeitlich eine Testphase
+  gesetzt war.
+
+**ACHTUNG Deploy:** Worker + Migration muessen separat deployt werden
+(`npx wrangler deploy --env dev`, Migration einspielen) - push.ps1 deployt
+nur das Frontend.
+
+**Betroffene Dateien:** worker/migrations/0026_trial_tageskontingente.sql,
+worker/src/trialLimits.ts, worker/src/db.ts, worker/src/routes/account.ts,
+worker/src/routes/assistant.ts, worker/src/routes/export.ts,
+worker/src/routes/objects.ts, src/hooks/useCalculatorTrial.js,
+src/components/account/CalculatorTrialGate.jsx,
+src/components/shell/Merkliste.jsx, src/components/checkout/WelcomeStep.jsx,
+src/i18n/account.js
+
+## 2026-08-25 (1.20.52)
+
+### Fix: CSS-Variable --primary war nie definiert
+
+`checkoutStyles.js` (infoBannerStyle) benutzt `var(--primary)` seit langem
+als Rahmen- und Textfarbe, das Custom Property stand aber in keiner
+:root-Regel - ROOT_TOKENS_CSS in App.jsx definierte nur --bg/--cc/--ct/--cl/
+--ch/--cb/--ci/--cro/--ca/--ca-dk/--ca-bg/--ca-bd. Eine undefinierte Custom
+Property faellt still auf die Vorgabe der jeweiligen Eigenschaft zurueck, der
+Info-Banner hatte damit weder den gemeinten Rahmen noch die gemeinte
+Schriftfarbe.
+
+Fix: `--primary:#1e3a5f` (Marineblau, CLAUDE.md-Designtoken) in
+ROOT_TOKENS_CSS ergaenzt. Der EMPFOHLEN-Ribbon der Preis-Sektion nutzt
+jetzt wieder `var(--primary)` statt des dort ersatzweise gesetzten Literals.
+
+**Betroffene Dateien:** src/App.jsx,
+src/components/checkout/PricingSection.jsx
+
 ## 2026-08-25 (1.20.51)
 
 ### Preise-Sektion an die Design-Vorlage angeglichen + falsche Zahlungsaussage zurueckgenommen

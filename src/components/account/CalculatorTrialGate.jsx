@@ -24,15 +24,19 @@ const CheckoutWizard = lazyWithReload(
 //  - trialVorbei: eingeloggt, Testphase abgelaufen - gespeicherte Objekte
 //    bleiben lesbar, gerechnet wird nicht mehr (Nutzer-Entscheidung
 //    2026-08-20). Eigener Text, sonst wie isPaywalled.
-//  - isPaywalled: eingeloggt, Kontingent DIESES Rechners (seit
-//    2026-08-18: 3x je Rechner statt 1x kombiniert) bereits verbraucht,
-//    kein Pro-Abo - neue Verkaufs-/Upgrade-Maske statt einer technischen
-//    Fehlermeldung.
-export function CalculatorTrialGate({ rechner, children, onDismiss }) {
+//  - isPaywalled: eingeloggt, Testphase abgelaufen, kein Pro-Abo -
+//    Verkaufs-/Upgrade-Maske statt einer technischen Fehlermeldung. Seit der
+//    Nutzer-Vorgabe 2026-08-25 der einzige Weg hierher: das frueher zusaetzlich
+//    gepruefte Rechner-Kontingent (3x je Rechner) ist entfallen, gerechnet wird
+//    in der Testphase unbegrenzt.
+//
+// `rechner` wird nicht mehr gebraucht, seit die Sperre nicht mehr je Rechner
+// zaehlt - die Aufrufer uebergeben ihn weiterhin, das Feld bleibt deshalb in
+// der Signatur stehen und wird ignoriert.
+export function CalculatorTrialGate({ children, onDismiss }) {
   const { lang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
-  const { isLocked, isPaywalled, isTrialRun, trialVorbei, remaining, limit, loading } =
-    useCalculatorTrial(rechner);
+  const { isLocked, isPaywalled, isTrialRun, loading } = useCalculatorTrial();
   const [showLogin, setShowLogin] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
@@ -66,8 +70,13 @@ export function CalculatorTrialGate({ rechner, children, onDismiss }) {
     return (
       <GatePanel
         icon={<BrandIcon size={48} />}
-        title={trialVorbei ? t.trialOverTitle : t.trialLockedTitle}
-        body={trialVorbei ? t.trialOverBody : t.trialLockedBody}
+        // Nur noch ein Grund fuer diese Wand: die Testphase ist abgelaufen.
+        // Frueher stand hier ein Ternaer mit trialLockedTitle/-Body fuer den
+        // Fall "Kontingent dieses Rechners leer, Phase laeuft aber noch" - den
+        // gibt es seit 2026-08-25 nicht mehr (Rechnen ist unbegrenzt), der
+        // Zweig war damit unerreichbar.
+        title={t.trialOverTitle}
+        body={t.trialOverBody}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
           <button onClick={() => setShowUpgrade(true)} style={primaryBtnStyle}>
@@ -118,7 +127,7 @@ export function CalculatorTrialGate({ rechner, children, onDismiss }) {
           <span aria-hidden="true" style={{ display: "flex", flexShrink: 0, color: "var(--ca-dk)" }}>
             <IconFunkeln size={16} />
           </span>
-          <span>{t.trialRunNotice.replace("{n}", String(remaining)).replace("{limit}", String(limit))}</span>
+          <span>{t.trialRunNotice}</span>
         </div>
       )}
       {children}

@@ -17,6 +17,7 @@ import type { Env } from "../types";
 import { requireAuth, requirePro, requireCsrfOrigin, type EntitlementVars } from "../middleware";
 import { ermittleZugang } from "../entitlement";
 import { getTrialCount, incrementTrialUsage } from "../db";
+import { TRIAL_LIMITS, trialTag } from "../trialLimits";
 import { RECHNER_VALUES } from "../validator";
 import { baueHandoutDokument, type HandoutAnfrage } from "../export/handoutDokument";
 import { baueRechnerDokument, type RechnerAnfrage } from "../export/rechnerDokument";
@@ -32,28 +33,28 @@ function basisUrl(env: Env, requestUrl: string): string {
   return env.APP_BASE_URL || new URL(requestUrl).origin;
 }
 
-// Handout und PDF haben in der Testphase KEIN eigenes Kontingent: sie haengen
-// an dem, wofuer sie erzeugt werden - je Exposé-Scan ein Handout, je
-// Berechnung ein PDF (Nutzer-Vorgabe 2026-08-20: "PDF-Generierung und
-// Rechnernutzung haengen zusammen"). Das ist nicht nur einfacher als ein
-// dritter Zaehler, es ist auch dicht: ein Dokument ohne die zugehoerige,
-// teurere Vorleistung kann es nicht geben.
+// Nutzer-Vorgabe 2026-08-25: PDF ist in der Testphase unbegrenzt, das Handout
+// hat ein eigenes TAGESkontingent. Vorher hingen beide an ihrer Vorleistung
+// (je Berechnung ein PDF, je Exposé-Scan ein Handout) - das trug nicht mehr,
+// seit die Rechnernutzung selbst unbegrenzt ist: an einem unbegrenzten Zaehler
+// gemessen waere auch das PDF unbegrenzt gewesen, und das Handout haette an
+// einem Kontingent gehangen, das taeglich zurueckgesetzt wird, waehrend es
+// selbst kumulativ zaehlte.
 async function darfDokument(
   c: Context<{ Bindings: Env; Variables: EntitlementVars }>,
   feature: "pdf" | "handout",
-  quelle: "rechner" | "expose",
   rechner: string,
 ): Promise<boolean> {
   const zugang = await ermittleZugang(c.env, c.var.userId);
   if (zugang === "pro") return true;
   const trialStart = c.var.user.app_trial_started_at;
   if (trialStart === null) return false;
-  const [erzeugt, vorleistung] = await Promise.all([
-    getTrialCount(c.env.DB, c.var.userId, trialStart, feature, rechner),
-    getTrialCount(c.env.DB, c.var.userId, trialStart, quelle, rechner),
-  ]);
-  if (erzeugt >= vorleistung) return false;
-  await incrementTrialUsage(c.env.DB, c.var.userId, trialStart, feature, rechner);
+  // PDF: unbegrenzt in der Testphase, kostet nur Rechenzeit.
+  if (feature === "pdf") return true;
+  const tag = trialTag();
+  const erzeugt = await getTrialCount(c.env.DB, c.var.userId, trialStart, feature, rechner, tag);
+  if (erzeugt >= TRIAL_LIMITS.handout) return false;
+  await incrementTrialUsage(c.env.DB, c.var.userId, trialStart, feature, rechner, tag);
   return true;
 }
 
@@ -62,7 +63,7 @@ exportRoutes.post("/handout", requireAuth, requireCsrfOrigin, requirePro, async 
   if (!body || typeof body !== "object" || !body.analyse) {
     return c.json({ error: "invalid_body" }, 400);
   }
-  if (!(await darfDokument(c, "handout", "expose", ""))) {
+  if (!(await darfDokument(c, "handout", ""))) {
     return c.json({ error: "trial_limit_reached" }, 402);
   }
   const html = baueHandoutDokument(body, basisUrl(c.env, c.req.url));
@@ -78,7 +79,7 @@ exportRoutes.post("/rechner", requireAuth, requireCsrfOrigin, requirePro, async 
   if (!(RECHNER_VALUES as ReadonlySet<string>).has(rechner)) {
     return c.json({ error: "invalid_rechner" }, 400);
   }
-  if (!(await darfDokument(c, "pdf", "rechner", rechner))) {
+  if (!(await darfDokument(c, "pdf", rechner))) {
     return c.json({ error: "trial_limit_reached" }, 402);
   }
   const html = baueRechnerDokument(body, basisUrl(c.env, c.req.url));

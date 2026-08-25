@@ -18,15 +18,13 @@ import {
   setUserPasswordHash,
   setMarketingEmailsEnabled,
   getTrialUsage,
-  getTrialCount,
-  incrementTrialUsage,
   startAppTrialIfNew,
 } from "../db";
 import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/password";
 import { sendEmail } from "../email";
 import { dispatchNotification } from "../notifications";
 import { deleteAccountCompletely } from "../accountDeletion";
-import { TRIAL_DAUER_MS, TRIAL_LIMITS } from "../trialLimits";
+import { TRIAL_DAUER_MS, TRIAL_LIMITS, TRIAL_MERKLISTE_GESAMT, trialTag } from "../trialLimits";
 import { buildClearSessionCookie, extractSessionId, logout } from "../auth/session";
 
 export const accountRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
@@ -44,7 +42,10 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     ermittleZugang(c.env, c.var.userId),
     listLinkedProviders(c.env.DB, c.var.userId),
     getActiveSubscription(c.env.DB, c.var.userId),
-    trialStart ? getTrialUsage(c.env.DB, c.var.userId, trialStart) : Promise.resolve({}),
+    // Verbrauch des HEUTIGEN Tages (Tageskontingente seit Migration 0026) -
+    // ohne den Tagesschluessel kaeme hier nur der Rest zurueck, der ueber die
+    // ganze Phase zaehlt, und die Anzeige stuende dauerhaft auf 0.
+    trialStart ? getTrialUsage(c.env.DB, c.var.userId, trialStart, trialTag()) : Promise.resolve({}),
   ]);
   const isPro = zugang !== "keiner";
   return c.json({
@@ -64,7 +65,16 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     // sie ohnehin nur hier - die Anzeige darf sie zeigen, nie entscheiden.
     zugang,
     trial: trialEndsAt
-      ? { endsAt: trialEndsAt, active: zugang === "trial", usage: trialUsage, limits: TRIAL_LIMITS }
+      ? {
+          endsAt: trialEndsAt,
+          active: zugang === "trial",
+          usage: trialUsage,
+          // `limits` sind Tageskontingente, `merkliste` gilt fuer die ganze
+          // Phase - deshalb getrennt statt in einem Objekt, das zwei
+          // verschiedene Bezugsraeume vermischen wuerde.
+          limits: TRIAL_LIMITS,
+          merkliste: TRIAL_MERKLISTE_GESAMT,
+        }
       : null,
     marketingEmailsEnabled: Boolean(c.var.user.marketing_emails_enabled),
     linkedProviders: providers,
@@ -96,18 +106,12 @@ accountRoutes.post("/calculator-trial/consume", requireAuth, requireCsrfOrigin, 
   if (!(RECHNER_VALUES as ReadonlySet<string>).has(rechner)) {
     return c.json({ error: "invalid_rechner" }, 400);
   }
-  const zugang = await ermittleZugang(c.env, c.var.userId);
-  // Pro verbraucht nichts, ohne Zugang gibt es nichts zu verbrauchen - nur
-  // die Testphase zaehlt. Die Sperre selbst entscheidet das Frontend anhand
-  // von /me; hier wird nur gezaehlt, und die eigentliche Durchsetzung liegt
-  // bei den Funktionen, die etwas kosten (Finn, Exposé, Dokumente).
-  if (zugang !== "trial") return c.json({ ok: true });
-  const trialStart = c.var.user.app_trial_started_at;
-  if (trialStart === null) return c.json({ ok: true });
-
-  const verbraucht = await getTrialCount(c.env.DB, c.var.userId, trialStart, "rechner", rechner);
-  if (verbraucht >= TRIAL_LIMITS.rechner) return c.json({ error: "trial_limit_reached" }, 402);
-  await incrementTrialUsage(c.env.DB, c.var.userId, trialStart, "rechner", rechner);
+  // Rechnernutzung ist in der Testphase unbegrenzt (Nutzer-Vorgabe
+  // 2026-08-25) - hier wird deshalb weder gezaehlt noch gesperrt. Die Route
+  // bleibt bestehen, weil das Frontend sie weiterhin ruft (useCalculatorTrial)
+  // und ein 404 dort als Fehler auffiele; sie quittiert jetzt nur noch.
+  // Vorher gab sie bei erschoepftem Kontingent 402 "trial_limit_reached"
+  // zurueck - genau der Fehler, der beim Rechnen auftauchte.
   return c.json({ ok: true });
 });
 

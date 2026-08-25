@@ -74,8 +74,8 @@ objectsRoutes.get("/", requireAuth, requirePro, async (c) => {
 
 objectsRoutes.post("/", requireAuth, requirePro, requireCsrfOrigin, async (c) => {
   // In der Testphase gilt statt des Missbrauchs-Deckels die Kontingentgrenze
-  // (Preispolitik 2026-08-20): 3 Objekte je Rechner, serverseitig als
-  // Gesamtzahl geprueft - siehe TRIAL_MERKLISTE_GESAMT.
+  // (Nutzer-Vorgabe 2026-08-25): 5 Objekte fuer die gesamte Phase, nicht mehr
+  // je Rechner aufgeteilt - siehe TRIAL_MERKLISTE_GESAMT.
   const zugang = await ermittleZugang(c.env, c.var.userId);
   const softCap =
     zugang === "trial"
