@@ -40,7 +40,13 @@ export function useFocusTrap(containerRef, onClose, deps = [], active = true) {
     function focusableElements() {
       return Array.from(
         containerRef.current?.querySelectorAll(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          // Bugreport 25.08.: `:not([tabindex="-1"])` stand bisher nur an der
+          // `[tabindex]`-Klausel - ein <button tabindex="-1"> (z.B. der
+          // Logo-Button in HeaderMenu/AccountMenu, siehe Fokusring-Bugfix
+          // 2026-08-18) matchte trotzdem weiter ueber die `button`-Klausel
+          // und wurde vom Trap manchmal doch als erstes Element fokussiert.
+          // Jetzt an jeder Klausel ausgeschlossen.
+          'button:not([disabled]):not([tabindex="-1"]), [href]:not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])',
         ) || [],
       );
     }

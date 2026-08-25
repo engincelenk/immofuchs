@@ -1,3 +1,78 @@
+## 2026-08-25 (1.20.50)
+
+### Preise-Sektion der Landingpage neu gestaltet + falsche Zahlungsaussage korrigiert
+
+Auf Nutzer-Vorgabe (Referenz-Screenshot) umgebaut:
+- Karten heissen jetzt "ImmoFuchs Monatlich"/"ImmoFuchs Jährlich" in einer
+  Zeile (bisher "ImmoFuchs Pro" + separate Monatlich/Jährlich-Tagline).
+- Jahreskarte bekommt zusätzlich zum Ersparnis-Badge ein "EMPFOHLEN"-Ribbon -
+  reaktiviert den seit der Free-Kachel-Entfernung (2026-08-18) ungenutzten
+  i18n-Key `planPopular` (Wert vorher "Am beliebtesten").
+- Leistungsliste steht jetzt als Icon-Kachel-Reihe (6 Punkte) statt als
+  Checkliste, Text je Punkt unveraendert.
+- Neue Vertrauens-Zeile mit drei Punkten unter der Leistungsbox.
+
+Wichtigste inhaltliche Korrektur: der bisherige Vertrauens-Punkt "Keine
+Zahlungsdaten während der Testphase" (bzw. "7 Tage kostenlos, ohne
+Zahlungsdaten" im Kleingedruckten) stimmte nicht - der Checkout-Wizard
+verlangt die Paddle-Zahlungsdaten bereits beim Start der Testphase,
+abgebucht wird nur erst danach. Text in allen 5 Sprachen entsprechend
+korrigiert (trialFinePrint, neuer Key trustPaymentRequired).
+
+**Betroffene Dateien:** src/components/checkout/PricingSection.jsx,
+src/i18n/account.js
+
+## 2026-08-25 (1.20.49)
+
+### Fix: Schwarzer Browser-Fokusring um Buttons (z.B. Schliessen-Knopf im Checkout-Wizard)
+
+Der native Fokusring von Safari (schwarzes, abgerundetes Rechteck) wirkte
+z.B. um den Schliessen-Knopf des Checkout-Wizards auf Schritt "Fertig" wie
+ein visueller Bug - der Fokus-Trap fokussiert diesen Knopf beim Oeffnen
+automatisch als erstes fokussierbares Element, hatte aber keinen eigenen
+Fokus-Stil.
+
+Fix: globale `:focus-visible`-Regel in ROOT_TOKENS_CSS (App.jsx) ergaenzt,
+die die Fuchs-Akzentfarbe (--ca) statt des Browser-Standards nutzt - gilt
+app-weit fuer alle Buttons/Links, Fokus bleibt aus Barrierefreiheitsgruenden
+bestehen.
+
+**Betroffene Dateien:** src/App.jsx
+
+## 2026-08-25 (1.20.48)
+
+### Fix: Blauer Fokusring im Mobile-Menue tauchte weiterhin gelegentlich auf
+
+Der Fokusring-Bugfix vom 18.08. (tabIndex=-1 auf den Logo-Buttons in
+HeaderMenu/AccountMenu) griff nicht zuverlaessig - useFocusTrap fokussierte
+den Logo-Button manchmal trotzdem automatisch beim Oeffnen. Ursache:
+`focusableElements()` selektierte mit
+`'button:not([disabled]), ..., [tabindex]:not([tabindex="-1"])'` - der
+Ausschluss von tabindex="-1" stand nur an der letzten Klausel. Ein
+`<button tabindex="-1">` matchte weiterhin ueber die fruehere
+`button:not([disabled])`-Klausel und landete trotzdem in der Liste.
+
+Fix: `:not([tabindex="-1"])` jetzt an jeder Klausel des Selektors.
+
+**Betroffene Dateien:** src/hooks/useFocusTrap.js
+
+## 2026-08-25 (1.20.47)
+
+### Fix: Checkout-Assistent blieb bei bereits-Pro-Login auf "Konto" haengen
+
+Meldete sich ein Nutzer mitten im Kauf-Assistenten an, der bereits ein
+Pro-Konto hat, kam nur die "Willkommen"-Rueckmeldung - der Assistent sprang
+nicht weiter und schloss sich auch nicht, der Nutzer sass auf Schritt
+"Konto" fest. Ursache: der Auto-Advance-Effekt in CheckoutWizard sprang nach
+Login nur zur Zahlung, kannte aber keinen Fall fuer bereits-Pro-Nutzer und
+brach dort einfach ab.
+
+Fix: bei bereits eingeloggtem Pro-Nutzer im Konto-/Verify-Schritt schliesst
+sich der Assistent jetzt selbst (wie beim reinen Anmelde-Flow "login-only"),
+statt haengen zu bleiben.
+
+**Betroffene Dateien:** src/components/checkout/CheckoutWizard.jsx
+
 ## 2026-08-24 (1.20.46)
 
 ### Fix: GitHub Actions Node.js-20-Deprecation-Warnung (checkout/setup-python)

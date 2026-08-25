@@ -142,10 +142,26 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // auf - sobald isLoggedIn dadurch kippt, soll der Wizard genauso zur
   // Zahlung weiterspringen wie beim direkten Login ueber "account", statt
   // dass der Nutzer auf der Warteseite haengen bleibt.
+  // Stabile Ref auf onClose (statt onClose direkt in Effekt-Dependencies):
+  // wird schon vom naechsten Effekt (Pro-Kurzschluss unten) gebraucht, bevor
+  // der login-only-Effekt sie sonst erst weiter unten anlegen wuerde.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (variant === "upgrade" || variant === "login-only") return;
     if (currentKey !== "account" && currentKey !== "verify") return;
-    if (!account?.isLoggedIn || account.isPro) return;
+    if (!account?.isLoggedIn) return;
+    // Bugreport 25.08.: ein Nutzer, der bereits Pro ist (z.B. Login mit
+    // vorhandenem Pro-Konto mitten im Kauf-Flow), hat hier nichts mehr zu
+    // kaufen - der Assistent blieb bisher einfach auf "Konto" haengen, weil
+    // dieser Effekt nur den Weg zur Zahlung kannte. Schliesst sich jetzt
+    // stattdessen, wie der login-only-Zweig es fuer die reine Anmeldung
+    // bereits tut.
+    if (account.isPro) {
+      onCloseRef.current();
+      return;
+    }
     setVariant("new-customer-no-verify");
     setStepIndex(getWizardSteps("new-customer-no-verify").indexOf("payment"));
   }, [account?.isLoggedIn, account?.isPro, variant, currentKey]);
@@ -156,8 +172,6 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // beim Kauf-Flow zur Zahlung zu springen. Der Nutzer landet damit wieder
   // auf der Landingpage ("Jetzt rechnen" ist jetzt sichtbar) bzw. im
   // Rechner, aus dem heraus der Login-Bildschirm geoeffnet wurde.
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   useEffect(() => {
     if (variant !== "login-only" || !account?.isLoggedIn) return;
     onCloseRef.current();

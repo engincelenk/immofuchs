@@ -1,6 +1,7 @@
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { LANG_LOCALE } from "../../utils/helpers.js";
 import { saveBadgeStyle, strikePriceStyle } from "./checkoutStyles.js";
+import { IconZahlung, IconSicherheit } from "../account/accountIcons.jsx";
 import {
   PLAN_AMOUNTS,
   YEARLY_PER_MONTH_AMOUNT,
@@ -13,11 +14,22 @@ import {
 // 2026-08-18 nach Nutzer-Vorgabe, Free-Kachel entfernt 2026-08-18 nach
 // Nutzer-Vorgabe - nur noch Monatlich/Jaehrlich).
 //
+// Zweite Neugestaltung 25.08.2026 (Referenz-Screenshot): Kartenname jetzt in
+// einer Zeile ("ImmoFuchs Monatlich"/"ImmoFuchs Jährlich" statt "ImmoFuchs
+// Pro" + separater Tagline-Zeile), Jahreskarte bekommt zusaetzlich zum
+// Ersparnis-Badge ein "EMPFOHLEN"-Ribbon (reaktiviert den seit der
+// Free-Kachel-Entfernung ungenutzten i18n-Key `planPopular`), die
+// Leistungsliste steht jetzt als Icon-Kachel-Reihe statt als Checkliste, und
+// darunter eine Vertrauens-Zeile mit drei Punkten. Der bisherige Punkt "Keine
+// Zahlungsdaten waehrend der Testphase" ist dabei ENTFALLEN - das stimmte
+// nicht: der Checkout-Wizard verlangt die Zahlungsdaten (Paddle-Formular im
+// Zahlungsschritt) bereits beim Einstieg in die Testphase, abgebucht wird nur
+// erst danach. Ersetzt durch eine Zeile, die das korrekt wiedergibt.
+//
 // Umschalter entfernt (Nutzer-Vorgabe 2026-08-18): frueher wechselte eine
 // einzelne Pro-Karte per Monatlich/Jaehrlich-Umschalter ihren Preis. Jetzt
 // stehen beide Angebote gleichzeitig als eigene, gleich hohe Kachel da - kein
-// Klick noetig, um den Jahrespreis zu sehen. "Am beliebtesten"-Ribbon ist
-// damit ebenfalls weg, es gibt keine einzelne hervorgehobene Karte mehr.
+// Klick noetig, um den Jahrespreis zu sehen.
 //
 // `onChoosePlan(plan)` oeffnet den Kauf-Assistenten mit vorgewaehlter
 // Laufzeit. Die kostenlose Nutzung ohne Abo (3 Berechnungen/Rechner etc.)
@@ -28,24 +40,13 @@ import {
 // im Rumpf der Landingpage, und dort gibt es den AppContext nicht - er umgibt
 // nur die Dialoge (siehe landingCtxValue in Landing.jsx). Ein useApp() an
 // dieser Stelle wuerde beim Rendern der Seite abstuerzen.
-// Free/Pro-Vergleich (Preispolitik 2026-08-20). Frueher standen dieselben
-// Angaben als Aufzaehlung in beiden Pro-Kacheln - ohne Free-Spalte war daran
-// aber nicht ablesbar, was das Abo gegenueber der Gratis-Nutzung bringt.
-// Jetzt eine gemeinsame Tabelle unter den Kacheln, die Kacheln tragen nur
-// noch Preis und CTA.
-//
-// Was in Pro enthalten ist. Frueher stand hier eine Free/Pro-Tabelle - mit dem
-// Wegfall des Free-Tarifs (Preispolitik 2026-08-20) hat die nichts mehr zu
-// vergleichen: es gibt ein Produkt und zwei Laufzeiten. Eine Aufzaehlung
-// beantwortet die verbliebene Frage ("ja oder nein?") besser als zwei
-// Spalten, von denen eine leer waere.
 const LEISTUNGEN = [
-  "compareRowRechner",
-  "compareRowFinn",
-  "compareRowExpose",
-  "compareRowHandout",
-  "compareRowPdf",
-  "compareRowMerkliste",
+  { key: "compareRowRechner", Icon: IconRechner },
+  { key: "compareRowFinn", Icon: IconFinn },
+  { key: "compareRowExpose", Icon: IconExpose },
+  { key: "compareRowHandout", Icon: IconHandout },
+  { key: "compareRowPdf", Icon: IconPdf },
+  { key: "compareRowMerkliste", Icon: IconMerkliste },
 ];
 
 export function PricingSection({ lang, onChoosePlan }) {
@@ -111,9 +112,7 @@ export function PricingSection({ lang, onChoosePlan }) {
           }}
         >
           <PlanCard
-            highlighted
-            name="ImmoFuchs Pro"
-            tagline={t.planMonthly}
+            name={`ImmoFuchs ${t.planMonthly}`}
             price={formatMoney(PLAN_AMOUNTS.monthly, locale)}
             perMonth={t.planPerMonth}
             note={monthlyNote}
@@ -123,8 +122,8 @@ export function PricingSection({ lang, onChoosePlan }) {
           />
           <PlanCard
             highlighted
-            name="ImmoFuchs Pro"
-            tagline={t.planYearly}
+            ribbon={t.planPopular}
+            name={`ImmoFuchs ${t.planYearly}`}
             price={formatMoney(YEARLY_PER_MONTH_AMOUNT, locale)}
             perMonth={t.planPerMonth}
             strikePrice={formatMoney(PLAN_AMOUNTS.monthly, locale)}
@@ -137,6 +136,7 @@ export function PricingSection({ lang, onChoosePlan }) {
         </div>
 
         <Leistungsliste t={t} />
+        <Vertrauenszeile t={t} />
       </div>
     </section>
   );
@@ -144,11 +144,11 @@ export function PricingSection({ lang, onChoosePlan }) {
 
 function PlanCard({
   name,
-  tagline,
   price,
   perMonth,
   strikePrice,
   badge,
+  ribbon,
   note,
   trialBadge,
   ctaLabel,
@@ -169,6 +169,35 @@ function PlanCard({
         flexDirection: "column",
       }}
     >
+      {/* EMPFOHLEN-Ribbon mittig auf dem oberen Kartenrand - Marineblau statt
+          Akzentorange, damit er sich vom orangen Ersparnis-Badge daneben
+          abhebt (beide gleichzeitig auf derselben Karte, siehe Referenz). */}
+      {ribbon && (
+        <div
+          style={{
+            position: "absolute",
+            top: -12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            // Marineblau als Literal statt var(--primary): dieses Custom
+            // Property ist nirgends in ROOT_TOKENS_CSS definiert (existiert
+            // nur als bereits vorhandener, gleicher Bug in
+            // infoBannerStyle/checkoutStyles.js) - haette hier sonst keine
+            // sichtbare Farbe ergeben.
+            background: "#1E3A5F",
+            color: "#fff",
+            borderRadius: 20,
+            padding: "4px 14px",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 0.5,
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+          }}
+        >
+          ★ {ribbon}
+        </div>
+      )}
       {badge && (
         <div style={{ position: "absolute", top: 14, right: 16 }}>
           <span style={saveBadgeStyle}>{badge}</span>
@@ -176,9 +205,8 @@ function PlanCard({
       )}
 
       <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3 }}>{name}</div>
-      <div style={{ fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>{tagline}</div>
 
-      <div style={{ marginTop: 16, minHeight: 58 }}>
+      <div style={{ marginTop: 16, minHeight: 46 }}>
         {strikePrice && <div style={strikePriceStyle}>{strikePrice}</div>}
         <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
           <span style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.05 }}>
@@ -216,50 +244,190 @@ function PlanCard({
   );
 }
 
-// Eine gemeinsame Liste unter beiden Kacheln statt derselben Aufzaehlung
-// zweimal nebeneinander - dieselben Angaben doppelt zu zeigen macht die
-// Sektion laenger, nicht klarer.
+// Icon-Kachel-Reihe statt Checkliste (Neugestaltung 25.08.2026, Referenz-
+// Screenshot). Text je Punkt bleibt unveraendert (dieselben compareRow*-Keys
+// wie zuvor in der Checkliste) - nur die Darstellung aendert sich, keine
+// neuen Uebersetzungen noetig.
 function Leistungsliste({ t }) {
   return (
     <div
       style={{
-        maxWidth: 640,
+        maxWidth: 900,
         margin: "22px auto 0",
         background: "var(--cc)",
         border: "1px solid var(--cb)",
         borderRadius: 14,
-        padding: "16px 18px",
+        padding: "22px 20px",
       }}
     >
-      <div style={{ fontSize: 12.5, color: "var(--ch)", marginBottom: 12, fontWeight: 600 }}>
-        {t.pricingFeaturesTitle}
-      </div>
-      <ul
+      <div
         style={{
-          listStyle: "none",
-          padding: 0,
-          margin: 0,
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
+          fontSize: 16,
+          fontWeight: 800,
+          color: "var(--ct)",
+          textAlign: "center",
+          marginBottom: 20,
         }}
       >
-        {LEISTUNGEN.map((key) => (
-          <li key={key} style={{ display: "flex", gap: 10, fontSize: 13.5, lineHeight: 1.45 }}>
-            <span aria-hidden="true" style={{ color: "var(--ca)", flexShrink: 0, fontWeight: 700 }}>
-              ✓
-            </span>
-            <span style={{ color: "var(--ct)" }}>{t[key]}</span>
-          </li>
+        {t.pricingFeaturesTitle}
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))",
+          gap: 20,
+        }}
+      >
+        {LEISTUNGEN.map(({ key, Icon }) => (
+          <div key={key} style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 8 }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                background: "var(--ca-bg)",
+                color: "var(--ca)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Icon size={22} />
+            </div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>{t[key]}</div>
+          </div>
         ))}
-      </ul>
+      </div>
       {/* Die Grenzen der Testphase gehoeren sichtbar auf die Seite: "sieben
           Tage kostenlos" ohne zu sagen, was drin ist, waere unsauber. Als
           Fussnote, nicht als Tabelle - es ist Kleingedrucktes, kein
           Verkaufsargument. */}
-      <div style={{ fontSize: 11.5, lineHeight: 1.55, color: "var(--ch)", marginTop: 14 }}>
+      <div style={{ fontSize: 11.5, lineHeight: 1.55, color: "var(--ch)", marginTop: 18, textAlign: "center" }}>
         {t.trialFinePrint}
       </div>
     </div>
+  );
+}
+
+// Vertrauens-Zeile unter der Leistungsbox (Neugestaltung 25.08.2026). Der
+// Zahlungsdaten-Punkt gibt bewusst NICHT "keine Zahlungsdaten" wieder (das
+// war die vorherige, falsche Aussage) - der Checkout-Wizard verlangt die
+// Paddle-Zahlungsdaten bereits beim Start der Testphase, abgebucht wird erst
+// danach.
+function Vertrauenszeile({ t }) {
+  const items = [
+    { Icon: IconZahlung, text: t.trustPaymentRequired },
+    { Icon: IconKuendbar, text: t.trustCancel },
+    { Icon: IconSicherheit, text: t.trustDsgvo },
+  ];
+  return (
+    <div
+      style={{
+        maxWidth: 900,
+        margin: "18px auto 0",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+        gap: 14,
+      }}
+    >
+      {items.map(({ Icon, text }, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ color: "var(--ca)", flexShrink: 0, display: "flex" }}>
+            <Icon size={20} />
+          </span>
+          <span style={{ fontSize: 13, color: "var(--ct)", lineHeight: 1.4 }}>{text}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══ Icons fuer die Leistungs-Kacheln + Vertrauenszeile (24er-Koordinaten,
+// stroke=currentColor, gleiches Muster wie accountIcons.jsx). Lokal statt in
+// der geteilten Icon-Datei, da sie ausschliesslich hier gebraucht werden. ═══
+function Svg({ size = 20, children }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      {children}
+    </svg>
+  );
+}
+
+function IconRechner({ size }) {
+  return (
+    <Svg size={size}>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M7 7h10" />
+      <path d="M7.5 12h.01M12 12h.01M16.5 12h.01M7.5 16h.01M12 16h.01M16.5 16h.01" />
+    </Svg>
+  );
+}
+
+function IconFinn({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 16H9l-4 4v-4H4a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 4 5z" />
+      <path d="M7.5 9.5h9M7.5 12.5h5.5" />
+    </Svg>
+  );
+}
+
+function IconExpose({ size }) {
+  return (
+    <Svg size={size}>
+      <rect x="4.5" y="3.5" width="12" height="16" rx="1.5" />
+      <path d="M8 8h5M8 11h5M8 14h3" />
+      <circle cx="17" cy="17.5" r="3" />
+      <path d="M19.3 19.8L21.5 22" />
+    </Svg>
+  );
+}
+
+function IconHandout({ size }) {
+  return (
+    <Svg size={size}>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z" />
+      <path d="M8.5 11.5l1.6 1.6 3.4-3.4M8.5 17h7" />
+    </Svg>
+  );
+}
+
+function IconPdf({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+      <path d="M14 3v4h4" />
+      <path d="M12 12v6M9.2 15.2l2.8 2.8 2.8-2.8" />
+    </Svg>
+  );
+}
+
+function IconMerkliste({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.5l-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.5z" />
+    </Svg>
+  );
+}
+
+function IconKuendbar({ size }) {
+  return (
+    <Svg size={size}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 12.5l2.3 2.3 4.7-5" />
+    </Svg>
   );
 }

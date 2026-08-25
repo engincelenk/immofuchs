@@ -214,8 +214,14 @@ function createDefaults() {
 // <style>-Bloecken dupliziert). Die Design-Tokens leben nur noch hier an einer Stelle.
 const FONT_CSS =
   "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');";
+// Bugreport 25.08.: der native Fokusring (in Safari ein schwarzes,
+// abgerundetes Rechteck) fiel z.B. um den Schliessen-Knopf des
+// Checkout-Wizards auf, den der Fokus-Trap dort automatisch fokussiert -
+// wirkte wie ein UI-Fehler. Fokus bleibt aus Barrierefreiheitsgruenden
+// bestehen, bekommt hier nur die Akzentfarbe statt des Browser-Standards.
 const ROOT_TOKENS_CSS =
-  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9}";
+  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9}" +
+  ":focus-visible{outline:2px solid var(--ca);outline-offset:2px;border-radius:6px}";
 // Bugreport 07.08.: Ein Bestaetigungslink aus der Registrierungs-E-Mail (oder
 // ein Passwort-Reset-Link) oeffnet fast immer einen NEUEN Tab - dessen
 // sessionStorage ist leer, "if_landed" also nie gesetzt. Der Nutzer landete
