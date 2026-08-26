@@ -228,8 +228,8 @@ export default function Miete() {
                           padding: "6px 10px",
                           borderRadius: 6,
                           fontSize: 11,
-                          background: jz ? "#E8F8EE" : "#FFF8E6",
-                          color: jz ? "#1a7a3a" : "#8a6d10",
+                          background: jz ? "var(--ok-bg)" : "var(--warn-bg)",
+                          color: jz ? "var(--ok-tx)" : "var(--warn-tx)",
                         }}
                       >
                         {jz ? `✅ ${t.jM}` : `⏳ ${t.ab} ${fmtDat(nx.datum, lang)}`}

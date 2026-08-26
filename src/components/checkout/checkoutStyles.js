@@ -64,7 +64,7 @@ export const linkBtnStyle = {
 };
 
 export const warnBannerStyle = {
-  background: "#FDEBD3",
+  background: "var(--ca-bg)",
   border: "1px solid var(--ca)",
   color: "var(--ca-dk)",
   borderRadius: 8,
@@ -74,17 +74,17 @@ export const warnBannerStyle = {
 };
 
 export const infoBannerStyle = {
-  background: "#E4EAF1",
-  border: "1px solid var(--primary)",
-  color: "var(--primary)",
+  background: "var(--info-bg)",
+  border: "1px solid var(--primary-tx)",
+  color: "var(--primary-tx)",
   borderRadius: 8,
   padding: "8px 12px",
   fontSize: 11.5,
 };
 
 export const errorBannerStyle = {
-  background: "#fff1e8",
-  border: "1px solid #f5cba9",
+  background: "var(--ca-bg)",
+  border: "1px solid var(--ca-bd)",
   borderRadius: 8,
   padding: "8px 12px",
   fontSize: 12,

@@ -126,7 +126,7 @@ export function Tip({ text, label }) {
                 style={{
                   width: "100%",
                   padding: 12,
-                  background: "#1E3A5F",
+                  background: "var(--primary)",
                   color: "#fff",
                   border: "none",
                   borderRadius: 10,

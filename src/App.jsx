@@ -245,8 +245,54 @@ const FONT_CSS =
 // Textfarbe benutzt - eine undefinierte Custom Property faellt still auf die
 // Vorgabe der Eigenschaft zurueck, der Info-Banner hatte damit weder den
 // gemeinten Rahmen noch die gemeinte Schriftfarbe (Bugreport 25.08.).
+// Dark-Varianten (Etappe 1 Light/Dark/System, 2026-08-26): dieselben
+// Token-Namen, nur die Werte wechseln - Komponenten, die bereits var(--bg)
+// usw. nutzen, brauchen dafuer keine Aenderung. Zwei Aktivierungswege:
+// [data-theme="dark"] fuer die explizite Nutzerwahl (siehe ThemeContext.jsx),
+// die Media-Query fuer "System" (nur wenn kein data-theme gesetzt ist - sonst
+// wuerde eine explizite Hell-Wahl auf einem dunklen System ignoriert).
+// --ca bleibt bewusst unveraendert: die Akzentfarbe ist auf beiden
+// Hintergruenden kontrastreich genug (CLAUDE.md-Designtoken, unveraendert).
+// --hdr-bg (halbtransparenter Header-/Sticky-Bar-Hintergrund hinter
+// backdrop-filter:blur): stand vorher an 3 Stellen (App.jsx .hdr,
+// MyAccount.jsx .ma-hdr-bar, Landing.jsx) als hartes rgba(245,245,240,.92)
+// - im Dunkelmodus waere der Kopf sonst app-weit ein heller Balken geblieben.
+// Semantische Status-Tokens (Etappe 2a, 2026-08-26): loesen ~30 leicht
+// unterschiedliche, organisch gewachsene Hex-Werte fuer Gut/Mittel/Kritisch/
+// Info in ueber einem Dutzend Dateien ab (z.B. #15803d neben #1a7a3a fuer
+// denselben "gruener Text auf Karte"-Zweck - beide werden hierdurch auf
+// denselben Wert vereinheitlicht, ein rein visueller Unterschied von Auge
+// nicht wahrnehmbar). Reine Akzentfarben (#22c55e/#f59e0b/#ef4444 als Punkt/
+// Strich/Badge-Flaeche) bleiben bewusst unveraendert und werden NICHT auf
+// diese Tokens umgestellt: sie sind kraeftig genug fuer ausreichend Kontrast
+// auf beiden Hintergruenden, und mehrere Stellen vergleichen exakt gegen
+// diese Literale (z.B. atoms.jsx Dot: `color === "#22c55e"`) - eine
+// Umstellung dort wuerde diese Vergleiche und damit echte App-Logik
+// stillschweigend brechen. Hier geht es nur um die PASTELL-Flaechen
+// (Karten-/Banner-Hintergrund) und die dazu passende dunkle Textfarbe, die
+// auf einem dunklen Kartenhintergrund sonst zu kontrastarm bzw. zu grell
+// waeren. -bd ist der zugehoerige, gedeckte Rahmenton fuer diese Flaechen
+// (separat von der kraeftigen Akzentfarbe).
+// --primary-tx: eigener Text-Token fuer die wenigen Stellen, die --primary
+// (Marineblau) als TEXTFARBE auf Karten-/Seitenhintergrund einsetzen (z.B.
+// SelbsttraegerCheck.jsx Zielkaufpreis, checkoutStyles.js infoBannerStyle) -
+// dort waere das dunkle Marineblau auf dunklem Kartenhintergrund im Dark
+// Mode kaum noch lesbar. --primary selbst bleibt unveraendert: an allen
+// anderen Stellen steht es als FLAECHE (Button-/Ribbon-Hintergrund) mit
+// weissem Text davor, das funktioniert unveraendert auf beiden Themes.
+const STATUS_TOKENS_LIGHT =
+  "--ok-tx:#15803d;--ok-bg:#e8f8ee;--ok-bd:#9fd3ae;--warn-tx:#8a6d10;--warn-bg:#fff8e6;--warn-bd:#f0d38a;--bad-tx:#b91c1c;--bad-bg:#fff0f0;--bad-bd:#f0a5a5;--info-tx:#1a5fa0;--info-bg:#ebf5ff;--info-bd:#a8cdf0;--primary-tx:#1e3a5f;";
+const STATUS_TOKENS_DARK =
+  "--ok-tx:#4ade80;--ok-bg:#16321f;--ok-bd:#2c5c3a;--warn-tx:#fbbf24;--warn-bg:#3a2f10;--warn-bd:#6b551c;--bad-tx:#f87171;--bad-bg:#3a1414;--bad-bd:#6b2626;--info-tx:#7db4f0;--info-bg:#14243a;--info-bd:#2c4666;--primary-tx:#7fb3e0;";
+const DARK_TOKENS =
+  "--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--cro:#202020;--ca-bg:#3a2414;--ca-bd:#5a3a1e;--hdr-bg:rgba(24,24,24,.92);" +
+  STATUS_TOKENS_DARK;
 const ROOT_TOKENS_CSS =
-  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f}" +
+  (":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f;--hdr-bg:rgba(245,245,240,.92);" +
+    STATUS_TOKENS_LIGHT +
+    "}") +
+  `:root[data-theme="dark"]{${DARK_TOKENS}}` +
+  `@media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]){${DARK_TOKENS}}}` +
   ":focus-visible{outline:2px solid var(--ca);outline-offset:2px;border-radius:6px}";
 // Bugreport 07.08.: Ein Bestaetigungslink aus der Registrierungs-E-Mail (oder
 // ein Passwort-Reset-Link) oeffnet fast immer einen NEUEN Tab - dessen
@@ -531,7 +577,7 @@ export default function App() {
          beide dadurch um die Padding-Differenz auseinander. Fix: Padding liegt
          jetzt auf .hdr-inner selbst (gleiches Box-Modell wie .content), .hdr
          traegt nur noch vertikales Padding. */
-      .hdr{position:fixed;top:0;left:0;right:0;z-index:50;padding:10px 0;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);display:flex;justify-content:space-between;align-items:center;height:78px;padding-top:calc(10px + env(safe-area-inset-top))}
+      .hdr{position:fixed;top:0;left:0;right:0;z-index:50;padding:10px 0;background:var(--hdr-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);display:flex;justify-content:space-between;align-items:center;height:78px;padding-top:calc(10px + env(safe-area-inset-top))}
       .hdr{height:calc(78px + env(safe-area-inset-top))}
       .hdr-inner{max-width:1400px;margin:0 auto;padding:0 14px;display:flex;justify-content:space-between;align-items:center;width:100%;box-sizing:border-box}
       /* Header-Ueberlauf-Fix (Bugreport 2026-08-05): Logo+Wortmarke, Pro-Button

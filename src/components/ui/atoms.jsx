@@ -185,7 +185,7 @@ export function Toggle({ checked, onChange, label, sub, tip }) {
         alignItems: "center",
         gap: 8,
         width: "100%",
-        background: checked ? "#dcfce7" : "var(--ci)",
+        background: checked ? "var(--ok-bg)" : "var(--ci)",
         border: `1px solid ${checked ? "#22c55e" : "var(--cb)"}`,
         borderRadius: 8,
         padding: "8px 10px",
@@ -224,7 +224,7 @@ export function Toggle({ checked, onChange, label, sub, tip }) {
           style={{
             fontSize: 12,
             fontWeight: 600,
-            color: checked ? "#15803d" : "var(--ct)",
+            color: checked ? "var(--ok-tx)" : "var(--ct)",
           }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -292,8 +292,8 @@ export function KPI({ label, value, sub, accent }) {
 }
 
 export function Ins({ emoji, text, type = "info" }) {
-  const bg = { info: "#EBF5FF", good: "#E8F8EE", warn: "#FFF8E6", bad: "#FFF0F0" }[type];
-  const tc = { info: "#1a5fa0", good: "#1a7a3a", warn: "#8a6d10", bad: "#9a2020" }[type];
+  const bg = { info: "var(--info-bg)", good: "var(--ok-bg)", warn: "var(--warn-bg)", bad: "var(--bad-bg)" }[type];
+  const tc = { info: "var(--info-tx)", good: "var(--ok-tx)", warn: "var(--warn-tx)", bad: "var(--bad-tx)" }[type];
   return (
     <div
       style={{
@@ -326,7 +326,8 @@ export function AmpelKPI({ label, value, status, statusLabel, tip, color }) {
       : color === "yellow"
         ? "rgba(245,158,11,.15)"
         : "rgba(239,68,68,.15)";
-  const textCol = color === "green" ? "#15803d" : color === "yellow" ? "#b45309" : "#b91c1c";
+  const textCol =
+    color === "green" ? "var(--ok-tx)" : color === "yellow" ? "var(--warn-tx)" : "var(--bad-tx)";
   return (
     <div
       style={{

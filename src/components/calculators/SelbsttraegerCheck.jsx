@@ -21,9 +21,11 @@ export function SelbsttraegerCheck({ R }) {
 
   // Verdikt rein auf Basis Cashflow OHNE Steuervorteil — das ist die ehrliche Antwort.
   const isJa = alreadyOhne;
-  const vColor = isJa ? "#1a7a3a" : "#A32D2D";
-  const vBg = isJa ? "#E8F5EC" : "#FCEBEB";
-  const vBorder = isJa ? "#9FD3AE" : "#F09595";
+  const vColor = isJa ? "var(--ok-tx)" : "var(--bad-tx)";
+  const vBg = isJa ? "var(--ok-bg)" : "var(--bad-bg)";
+  const vBorder = isJa ? "var(--ok-bd)" : "var(--bad-bd)";
+  // vIcon bleibt fixes Akzent-Rot/-Gruen (kein Token): steht hinter weissem
+  // Text als Kreis-Badge, kraeftig genug fuer Kontrast auf beiden Themes.
   const vIcon = isJa ? "#1a7a3a" : "#E24B4A";
   const taxPositive = R.cf2MitSt >= 0;
   const reason = isJa
@@ -34,10 +36,10 @@ export function SelbsttraegerCheck({ R }) {
     : taxPositive
       ? tpl(t.stTaxPos, { cf: fmtE(R.cf2MitSt) })
       : tpl(t.stTaxNeg, { cf: fmtE(Math.abs(R.cf2MitSt)) });
-  const taxBg = isJa ? "#E8F5EC" : taxPositive ? "#FFF6E6" : "#F1EFE8";
-  const taxBorder = isJa ? "#C4E6CF" : taxPositive ? "#F5D88A" : "#D3D1C7";
-  const taxText = isJa ? "#1a6b34" : taxPositive ? "#7a5a10" : "#5F5E5A";
-  const card2Color = alreadyOhne ? "#1a7a3a" : beqJ ? "#854F0B" : "#A32D2D";
+  const taxBg = isJa ? "var(--ok-bg)" : taxPositive ? "var(--warn-bg)" : "var(--ci)";
+  const taxBorder = isJa ? "var(--ok-bd)" : taxPositive ? "var(--warn-bd)" : "var(--cb)";
+  const taxText = isJa ? "var(--ok-tx)" : taxPositive ? "var(--warn-tx)" : "var(--ch)";
+  const card2Color = alreadyOhne ? "var(--ok-tx)" : beqJ ? "var(--warn-tx)" : "var(--bad-tx)";
 
   return (
     <div
@@ -158,7 +160,7 @@ export function SelbsttraegerCheck({ R }) {
             style={{
               fontSize: 22,
               fontWeight: 800,
-              color: "#1E3A5F",
+              color: "var(--primary-tx)",
               fontVariantNumeric: "tabular-nums",
               letterSpacing: -0.5,
             }}
@@ -169,7 +171,7 @@ export function SelbsttraegerCheck({ R }) {
             style={{
               fontSize: 11,
               fontWeight: 600,
-              color: isJa ? "#1a7a3a" : diffKP > 0 ? "var(--ca)" : "#1a7a3a",
+              color: isJa ? "var(--ok-tx)" : diffKP > 0 ? "var(--ca)" : "var(--ok-tx)",
               marginTop: 4,
             }}
           >

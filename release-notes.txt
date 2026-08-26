@@ -1,3 +1,54 @@
+## 2026-08-26 (1.22.2)
+
+### NEU: Darstellung Hell/Dunkel/System (Etappe 1)
+
+Infrastruktur fuer app-weiten Theme-Switch. Umschalter unter "Mein Konto" ->
+"Einstellungen" -> Darstellung (3 Optionen: Hell, Dunkel, System). Wahl wird
+in localStorage gespeichert und wirkt sofort, ohne Reload; "System" folgt
+live dem Farbschema des Betriebssystems.
+
+Umgesetzt:
+  - Dark-Werte fuer alle bestehenden Design-Tokens (--bg, --cc, --ct, --cb
+    usw.) in App.jsx, aktiviert ueber [data-theme] bzw. prefers-color-scheme.
+    Alle Komponenten, die bereits var(--xx) statt Hex-Farben nutzen, zeigen
+    den Dark Mode dadurch automatisch ohne eigene Aenderung.
+  - Neuer Token --hdr-bg fuer den halbtransparenten Header-Hintergrund
+    (vorher 3x als hartes rgba(245,245,240,.92) dupliziert: App.jsx,
+    MyAccount.jsx, Landing.jsx).
+  - ThemeContext.jsx: State, Persistenz, Live-Reaktion auf Systemwechsel,
+    aktualisiert nebenbei die PWA-Statusleistenfarbe (theme-color).
+  - Blocking-Script in index.html verhindert das Aufblitzen des hellen
+    Layouts vor dem ersten Render (gilt fuer App-Inhalt UND Cookie-Banner).
+
+### NEU: Darstellung Hell/Dunkel/System (Etappe 2a — semantische Status-Farben)
+
+Die Voll-Bestandsaufnahme fiel deutlich groesser aus als die erste Schaetzung
+(85 -> 393 Hex-Fundstellen in 55 Dateien). Etappe 2a deckt davon die
+Status-Farben ab (Gut/Mittel/Kritisch/Info als Karten-/Banner-Hintergrund
+plus zugehoerige Textfarbe) - vorher ~30 leicht unterschiedliche Hex-Werte in
+ueber einem Dutzend Dateien, jetzt 4 einheitliche Token-Familien mit
+Dark-Werten in App.jsx: --ok-tx/-bg/-bd, --warn-tx/-bg/-bd, --bad-tx/-bg/-bd,
+--info-tx/-bg/-bd. Dazu --primary-tx als eigener Text-Token fuer die zwei
+Stellen, an denen die Marineblau-Akzentfarbe als Text (statt als Flaeche)
+auf Kartenhintergrund stand - im Dark Mode sonst kaum noch lesbar.
+
+Bewusst NICHT umgestellt: die reinen, kraeftigen Akzentfarben
+(z.B. #22c55e/#f59e0b/#ef4444 als Punkt/Strich/Badge) - sie sind auf beiden
+Hintergruenden kontrastreich genug, und an mehreren Stellen (u.a. atoms.jsx
+`Dot`) haengt echte Vergleichslogik an genau diesen Literalen. Umgestellt:
+atoms.jsx, Tip.jsx, PLZSearch.jsx, Sanier.jsx, Miete.jsx, YearTable.jsx,
+Detail.jsx, Vorfaelligkeit.jsx, SelbsttraegerCheck.jsx, Renditerechner.jsx,
+assistantStyles.js, checkoutStyles.js.
+
+Noch offen:
+  - Etappe 2b (Charts: LineChart, CashflowDarlehenChart, RBar,
+    ExitSzenarioChart, InvestmentCheckRadar, RenditequellenChart) - Achsen/
+    Gitternetz/Tooltip-Hintergrund brauchen noch Tokens.
+  - Admin-Bereich, Checkout-Nebenscreens, einzelne Restdateien mit reinen
+    Akzent-/Kategoriefarben (keine Lesbarkeitsprobleme, niedrige Prioritaet).
+  - PDF-Export (ExportPDF.jsx) bleibt bewusst außen vor - Dokumente zum
+    Drucken/Teilen sollen unabhaengig vom App-Theme immer hell bleiben.
+
 ## 2026-08-25 (1.22.1)
 
 ### FIX: Neubau-AfA und KfW waren unsichtbar - i18n-Schluessel im falschen Objekt

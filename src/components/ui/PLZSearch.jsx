@@ -96,10 +96,10 @@ export function PLZSearch({ showKapp = true } = {}) {
           style={{
             fontSize: 11,
             padding: "6px 10px",
-            background: kp === 15 ? "#FFF0F0" : "#E8F8EE",
+            background: kp === 15 ? "var(--bad-bg)" : "var(--ok-bg)",
             borderRadius: 6,
             marginBottom: 10,
-            color: kp === 15 ? "#9a2020" : "#1a7a3a",
+            color: kp === 15 ? "var(--bad-tx)" : "var(--ok-tx)",
           }}
         >
           {t.kapp}: {kp}% — {kp === 15 ? t.ang : t.std} ({d.ort})

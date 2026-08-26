@@ -502,15 +502,15 @@ export default function Haupt() {
                   borderRadius: 10,
                   marginBottom: 10,
                   marginTop: -4,
-                  background: unterGrenze ? "#F0FAF3" : ueberGrenze ? "#FFF7ED" : "#F8F9FA",
-                  border: `1px solid ${unterGrenze ? "#86EFAC" : ueberGrenze ? "#FBB97D" : "#e5e7eb"}`,
+                  background: unterGrenze ? "var(--ok-bg)" : ueberGrenze ? "var(--warn-bg)" : "var(--ci)",
+                  border: `1px solid ${unterGrenze ? "var(--ok-bd)" : ueberGrenze ? "var(--warn-bd)" : "var(--cb)"}`,
                 }}
               >
                 <div
                   style={{
                     fontSize: 10,
                     fontWeight: 700,
-                    color: unterGrenze ? "#15803d" : ueberGrenze ? "#b45309" : "var(--ct)",
+                    color: unterGrenze ? "var(--ok-tx)" : ueberGrenze ? "var(--warn-tx)" : "var(--ct)",
                     marginBottom: 3,
                   }}
                 >
@@ -1235,7 +1235,7 @@ export default function Haupt() {
                       ? "#22c55e"
                       : stErsCol === "yellow"
                         ? "#f59e0b"
-                        : "#1E3A5F";
+                        : "var(--primary)";
                   return (
                     <AccordionSection
                       question={t.sec4Q}

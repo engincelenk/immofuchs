@@ -34,7 +34,7 @@ export const ASSISTANT_SHEET_CSS = `
   .if-asst-send{flex:none;width:42px;height:42px;border-radius:50%;border:none;background:var(--ca);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
   .if-asst-send:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
   .if-asst-mic{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid var(--cb);background:var(--ci);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-  .if-asst-mic.listening{background:#FDEDED;border-color:#e88;animation:ifAsstMicPulse 1.2s ease infinite}
+  .if-asst-mic.listening{background:var(--bad-bg);border-color:var(--bad-bd);animation:ifAsstMicPulse 1.2s ease infinite}
   @keyframes ifAsstMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(232,60,60,.35)}50%{box-shadow:0 0 0 6px rgba(232,60,60,0)}}
 
   @media (min-width:1024px){
@@ -87,7 +87,7 @@ export const ASSISTANT_SHEET_CSS = `
   .if-exp-start:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
   .if-exp-goto{align-self:stretch;min-height:44px;background:var(--ca);color:#fff;border:none;border-radius:12px;padding:10px 14px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
   .if-exp-goto:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
-  .if-exp-fehler{flex:none;margin:0 14px 8px;font-size:12px;color:#8a2020;background:#FDEDED;border-radius:8px;padding:7px 10px}
+  .if-exp-fehler{flex:none;margin:0 14px 8px;font-size:12px;color:var(--bad-tx);background:var(--bad-bg);border-radius:8px;padding:7px 10px}
 
   .if-exp-progress{align-self:stretch;background:var(--cc);border:1px solid var(--cb);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--cl)}
   .if-exp-progress-text{display:flex;align-items:center;gap:7px}
@@ -111,7 +111,7 @@ export const ASSISTANT_SHEET_CSS = `
   .if-exp-label{font-size:11px;color:var(--ch)}
   .if-exp-wert{font-size:13px;font-weight:600;word-break:break-word}
   .if-exp-konflikt{font-size:11px;color:var(--ca-dk)}
-  .if-exp-warnung{font-size:11px;color:#8a6a20;background:#FFF8E6;border-radius:6px;padding:4px 6px;margin-top:3px}
+  .if-exp-warnung{font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:6px;padding:4px 6px;margin-top:3px}
   .if-exp-hinweis{font-size:11px;color:var(--ca-dk)}
   .if-exp-nurinfo{flex:none;font-size:10px;color:var(--ch);align-self:center}
   .if-exp-toggle{flex:none;align-self:center;display:flex;align-items:center;min-width:24px;min-height:24px;justify-content:center}
@@ -147,7 +147,7 @@ export const ASSISTANT_SHEET_CSS = `
   .if-hnd-find:last-child{border-bottom:none}
   .if-hnd-find-tag{flex:none;width:74px;font-size:10.5px;font-weight:700;line-height:1.4;padding-top:1px}
   .if-hnd-find-tag.critical{color:var(--ca-dk)}
-  .if-hnd-find-tag.warning{color:#8a6a20}
+  .if-hnd-find-tag.warning{color:var(--warn-tx)}
   .if-hnd-find-tag.info{color:var(--ch)}
   .if-hnd-find-txt{flex:1;min-width:0;font-size:12.5px;line-height:1.5;word-break:break-word}
   .if-hnd-find-quellen{font-size:10.5px;color:var(--ch);margin-top:3px}

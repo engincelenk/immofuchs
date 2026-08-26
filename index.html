@@ -2,6 +2,21 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
+
+    <!-- ═══ Theme (Light/Dark/System, Etappe 1, 2026-08-26) ═══
+         Muss VOR jedem Paint laufen (blockierendes <script>, ganz oben im
+         <head>), sonst blitzt bei "dark" bzw. dunklem System-Farbschema kurz
+         das helle Layout auf, bevor React mountet und ThemeContext.jsx
+         reagiert. Derselbe localStorage-Key ("if_theme") wie dort - siehe
+         Kommentar in ThemeContext.jsx fuer die Bedeutung von "system". -->
+    <script>
+      (function () {
+        try {
+          var v = localStorage.getItem("if_theme");
+          if (v === "light" || v === "dark") document.documentElement.setAttribute("data-theme", v);
+        } catch (e) {}
+      })();
+    </script>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
@@ -150,6 +165,31 @@
       .cc-btn{padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;flex:1;min-width:100px}
       .cc-all{background:#e8600a;color:#fff}.cc-all:hover{background:#c44d00}
       .cc-sel{background:#f5f5f0;color:#1a1a1a;border:1px solid #e5e5dc}.cc-sel:hover{background:#e5e5dc}
+      /* Dark-Varianten (Etappe 1, 2026-08-26): dieselben Literalwerte wie
+         DARK_TOKENS in App.jsx, hier absichtlich dupliziert - dieser Block
+         laeuft VOR React (kein Zugriff auf die dortigen CSS-Variablen) und
+         muss trotzdem sofort passen, sonst blitzt beim Start mit
+         data-theme="dark" bzw. dunklem System-Farbschema kurz das helle
+         Layout auf. [data-theme] wird vom Blocking-Script oben im <head>
+         gesetzt; ohne gespeicherte Wahl greift die Media-Query. */
+      html[data-theme="dark"],html[data-theme="dark"] body{background:#181818}
+      html[data-theme="dark"] .cc-banner{background:#232323;border-top-color:#3a3a38}
+      html[data-theme="dark"] .cc-title{color:#f0f0ea}
+      html[data-theme="dark"] .cc-text{color:#9a9a90}
+      html[data-theme="dark"] .cc-opt{color:#d8d8d2}
+      html[data-theme="dark"] .cc-req{color:#9a9a90}
+      html[data-theme="dark"] .cc-sel{background:#2a2a2a;color:#f0f0ea;border-color:#3a3a38}
+      html[data-theme="dark"] .cc-sel:hover{background:#3a3a38}
+      @media(prefers-color-scheme:dark){
+        html:not([data-theme="light"]):not([data-theme="dark"]),html:not([data-theme="light"]):not([data-theme="dark"]) body{background:#181818}
+        html:not([data-theme="light"]):not([data-theme="dark"]) .cc-banner{background:#232323;border-top-color:#3a3a38}
+        html:not([data-theme="light"]):not([data-theme="dark"]) .cc-title{color:#f0f0ea}
+        html:not([data-theme="light"]):not([data-theme="dark"]) .cc-text{color:#9a9a90}
+        html:not([data-theme="light"]):not([data-theme="dark"]) .cc-opt{color:#d8d8d2}
+        html:not([data-theme="light"]):not([data-theme="dark"]) .cc-req{color:#9a9a90}
+        html:not([data-theme="light"]):not([data-theme="dark"]) .cc-sel{background:#2a2a2a;color:#f0f0ea;border-color:#3a3a38}
+        html:not([data-theme="light"]):not([data-theme="dark"]) .cc-sel:hover{background:#3a3a38}
+      }
       .cc-rej{background:transparent;color:#8a8a80;font-weight:400}.cc-rej:hover{color:#1a1a1a}
       @media print{.cc-banner,.cc-overlay{display:none!important}}
     </style>

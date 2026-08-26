@@ -166,7 +166,7 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
              .hdr-inner bzw. .content (max-width 1400 + 14/28/40px Padding je
              Breakpoint) - dadurch beginnen Logo UND Bereichsliste automatisch
              auf derselben senkrechten Kante wie der Inhalt im Rechner. */
-          .ma-hdr-bar{position:sticky;top:0;z-index:5;background:rgba(245,245,240,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);padding-top:env(safe-area-inset-top)}
+          .ma-hdr-bar{position:sticky;top:0;z-index:5;background:var(--hdr-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);padding-top:env(safe-area-inset-top)}
           .ma-hdr{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px}
           .ma-body{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
           /* Schriftzug-Bild seit 2026-08-20 (app-weit ein Logo-File): nur

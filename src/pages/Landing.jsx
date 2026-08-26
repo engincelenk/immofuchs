@@ -155,7 +155,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           left: 0,
           right: 0,
           zIndex: 50,
-          background: "rgba(245,245,240,.92)",
+          background: "var(--hdr-bg)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
           borderBottom: "1px solid var(--cb)",

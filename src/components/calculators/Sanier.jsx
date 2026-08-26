@@ -562,7 +562,7 @@ export default function Sanier() {
               alignItems: "center",
               gap: 8,
               width: "100%",
-              background: d.sanIsfp ? "#dcfce7" : "var(--ci)",
+              background: d.sanIsfp ? "var(--ok-bg)" : "var(--ci)",
               border: `1px solid ${d.sanIsfp ? "#22c55e" : "var(--cb)"}`,
               borderRadius: 8,
               padding: "8px 10px",
@@ -601,7 +601,7 @@ export default function Sanier() {
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: d.sanIsfp ? "#15803d" : "var(--ct)",
+                  color: d.sanIsfp ? "var(--ok-tx)" : "var(--ct)",
                 }}
               >
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -644,7 +644,7 @@ export default function Sanier() {
                 🏠 {t.eKl}: <b style={{ color: "var(--ct)" }}>{getEkl(d.baujahr)}</b>
               </span>
               {+d.baujahr < KFW.klimaBonus_baujahrGrenze ? (
-                <span style={{ color: "#15803d", fontWeight: 600 }}>· ✅ KfW Klimabonus</span>
+                <span style={{ color: "var(--ok-tx)", fontWeight: 600 }}>· ✅ KfW Klimabonus</span>
               ) : (
                 <span style={{ color: "var(--ch)" }}>· KfW Klimabonus: ✗</span>
               )}
@@ -901,13 +901,13 @@ export default function Sanier() {
                     {m.capped && (
                       <span
                         style={{
-                          background: "#FFF8E6",
-                          color: "#8a6d10",
+                          background: "var(--warn-bg)",
+                          color: "var(--warn-tx)",
                           borderRadius: 4,
                           padding: "1px 5px",
                           fontSize: 9,
                           fontWeight: 600,
-                          border: "1px solid #F5E4A8",
+                          border: "1px solid var(--warn-bd)",
                         }}
                       >
                         ⚠ Cap
@@ -988,7 +988,7 @@ export default function Sanier() {
               🏛️ {t.foe} (BAFA/KfW) · {t.check}:{" "}
               <b style={{ color: "var(--ct)" }}>{LAND_F[d.bundesland] || "BEG"}</b>
               {R.tFoLand > 0 && (
-                <span style={{ marginLeft: 8, color: "#3b82f6" }}>
+                <span style={{ marginLeft: 8, color: "var(--info-tx)" }}>
                   + ~{fmtE(R.tFoLand)} {LAND_F[d.bundesland]} Landesbonus*
                 </span>
               )}
@@ -998,20 +998,20 @@ export default function Sanier() {
           {R.gegReq.length > 0 && (
             <div
               style={{
-                background: "#FFF8E6",
+                background: "var(--warn-bg)",
                 borderRadius: 10,
                 padding: "12px",
-                border: "1px solid #F5E4A8",
+                border: "1px solid var(--warn-bd)",
                 marginBottom: 12,
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#8a6d10", marginBottom: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--warn-tx)", marginBottom: 6 }}>
                 ⚖️ {t.mR} — GEG
               </div>
               {R.gegReq.map((g, i) => (
                 <div key={i} style={{ display: "flex", gap: 6, marginBottom: 4, fontSize: 11 }}>
                   <span style={{ flexShrink: 0 }}>{g.sev === "warn" ? "⚠️" : "ℹ️"}</span>
-                  <span style={{ color: "#6b5a10" }}>
+                  <span style={{ color: "var(--warn-tx)" }}>
                     <b>{g.law}:</b> {g.text}
                   </span>
                 </div>
@@ -1074,7 +1074,7 @@ export default function Sanier() {
                           <div style={{ color: "var(--ch)" }}>BAFA/KfW ({r.fq}%)</div>
                           <div style={{ color: "#22c55e", fontWeight: 500 }}>–{fmtE(r.f)}</div>
                           {r.foLand > 0 && (
-                            <div style={{ color: "#3b82f6", fontWeight: 500, marginTop: 1 }}>
+                            <div style={{ color: "var(--info-tx)", fontWeight: 500, marginTop: 1 }}>
                               +BL –{fmtE(r.foLand)}{" "}
                               <span style={{ fontWeight: 400, opacity: 0.8 }}>({r.fqL}%)*</span>
                             </div>
@@ -1239,8 +1239,8 @@ export default function Sanier() {
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    background: "#dcfce7",
-                    border: "1px solid #86efac",
+                    background: "var(--ok-bg)",
+                    border: "1px solid var(--ok-bd)",
                     borderRadius: 8,
                     padding: "6px 10px",
                     marginBottom: 10,
@@ -1248,10 +1248,10 @@ export default function Sanier() {
                   }}
                 >
                   <span style={{ fontSize: 14 }}>📋</span>
-                  <span style={{ fontWeight: 600, color: "#15803d" }}>
+                  <span style={{ fontWeight: 600, color: "var(--ok-tx)" }}>
                     {t.sanIsfpActive.split("—")[0].trim()}
                   </span>
-                  <span style={{ color: "#166534" }}>
+                  <span style={{ color: "var(--ok-tx)" }}>
                     {"— " + (t.sanIsfpActive.split("—")[1] || "").trim()}
                   </span>
                 </div>

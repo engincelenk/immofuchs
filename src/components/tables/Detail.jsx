@@ -115,7 +115,7 @@ export function Detail({ R, d }) {
               style={{
                 fontSize: 19,
                 fontWeight: 800,
-                color: isPosOhne ? "#15803d" : "#b91c1c",
+                color: isPosOhne ? "var(--ok-tx)" : "var(--bad-tx)",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -152,7 +152,7 @@ export function Detail({ R, d }) {
               style={{
                 fontSize: 19,
                 fontWeight: 800,
-                color: isPosMit ? "#15803d" : "#b91c1c",
+                color: isPosMit ? "var(--ok-tx)" : "var(--bad-tx)",
                 fontVariantNumeric: "tabular-nums",
               }}
             >

@@ -105,13 +105,13 @@ export function YearTable({ rows, zbJ }) {
                   key={r.j}
                   style={{
                     borderBottom: "1px solid var(--cb)",
-                    background: isZB ? "#FFF8E6" : "transparent",
+                    background: isZB ? "var(--warn-bg)" : "transparent",
                   }}
                 >
-                  <td style={{ ...stickyJ, background: isZB ? "#FFF8E6" : "var(--ci)" }}>
+                  <td style={{ ...stickyJ, background: isZB ? "var(--warn-bg)" : "var(--ci)" }}>
                     {r.j}
                     {isZB && (
-                      <span style={{ fontSize: 8, color: "#b8860b", marginLeft: 4 }}>◀ ZB</span>
+                      <span style={{ fontSize: 8, color: "var(--warn-tx)", marginLeft: 4 }}>◀ ZB</span>
                     )}
                   </td>
                   <td style={{ ...td, color: "var(--ct)" }}>{fmtE(r.rest)}</td>
@@ -129,8 +129,8 @@ export function YearTable({ rows, zbJ }) {
               );
             })}
             {zbJ && zbJ <= rows.length && (
-              <tr style={{ fontSize: 9, background: "#FFF8E6" }}>
-                <td colSpan={8} style={{ padding: "4px 8px", color: "#b8860b" }}>
+              <tr style={{ fontSize: 9, background: "var(--warn-bg)" }}>
+                <td colSpan={8} style={{ padding: "4px 8px", color: "var(--warn-tx)" }}>
                   {t.zinsbindung} {zbJ} J. — {t.chartRestschuld} {fmtE(rows[zbJ - 1]?.rest || 0)}
                 </td>
               </tr>

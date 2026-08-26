@@ -314,16 +314,16 @@ export function Vorfaelligkeit() {
           ) : R.is489Free ? (
             <div
               style={{
-                background: "#F0FAF3",
-                border: "2px solid #86EFAC",
+                background: "var(--ok-bg)",
+                border: "2px solid var(--ok-bd)",
                 borderRadius: 14,
                 padding: "20px 18px",
               }}
             >
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#15803d", marginBottom: 8 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "var(--ok-tx)", marginBottom: 8 }}>
                 {vt.freeTitle}
               </div>
-              <div style={{ fontSize: 13, color: "#166534", lineHeight: 1.7 }}>
+              <div style={{ fontSize: 13, color: "var(--ok-tx)", lineHeight: 1.7 }}>
                 {vt.freeBodyA.split("{date}")[0]}
                 <strong>{R.freeCancelDate.toLocaleDateString(loc)}</strong>
                 {vt.freeBodyA.split("{date}")[1]}
@@ -378,7 +378,7 @@ export function Vorfaelligkeit() {
                       style={{
                         fontWeight: 600,
                         fontVariantNumeric: "tabular-nums",
-                        color: row.v < 0 ? "#16a34a" : "#dc2626",
+                        color: row.v < 0 ? "var(--ok-tx)" : "var(--bad-tx)",
                       }}
                     >
                       {row.v < 0 ? "−" : "+"}
@@ -412,13 +412,13 @@ export function Vorfaelligkeit() {
               {R.nettovfe < 0 && (
                 <div
                   style={{
-                    background: "#EFF6FF",
-                    border: "1px solid #BFDBFE",
+                    background: "var(--info-bg)",
+                    border: "1px solid var(--info-bd)",
                     borderRadius: 10,
                     padding: "12px 14px",
                     marginBottom: 14,
                     fontSize: 12,
-                    color: "#1e40af",
+                    color: "var(--info-tx)",
                     lineHeight: 1.6,
                   }}
                 >
@@ -428,15 +428,15 @@ export function Vorfaelligkeit() {
               {R.nettovfe >= 0 ? (
                 <div
                   style={{
-                    background: "#FFF7ED",
-                    border: "2px solid #FED7AA",
+                    background: "var(--warn-bg)",
+                    border: "2px solid var(--warn-bd)",
                     borderRadius: 14,
                     padding: "18px 20px",
                     marginBottom: 16,
                   }}
                 >
                   <div
-                    style={{ fontWeight: 700, fontSize: 15, color: "#9a3412", marginBottom: 12 }}
+                    style={{ fontWeight: 700, fontSize: 15, color: "var(--warn-tx)", marginBottom: 12 }}
                   >
                     {vt.explainPosTitle}
                   </div>
@@ -445,7 +445,7 @@ export function Vorfaelligkeit() {
                       key={i}
                       style={{
                         fontSize: 13,
-                        color: "#7c2d12",
+                        color: "var(--warn-tx)",
                         lineHeight: 1.75,
                         margin: i === 0 ? "0 0 10px" : "10px 0 0",
                       }}
@@ -457,15 +457,15 @@ export function Vorfaelligkeit() {
               ) : (
                 <div
                   style={{
-                    background: "#F0FDF4",
-                    border: "2px solid #BBF7D0",
+                    background: "var(--ok-bg)",
+                    border: "2px solid var(--ok-bd)",
                     borderRadius: 14,
                     padding: "18px 20px",
                     marginBottom: 16,
                   }}
                 >
                   <div
-                    style={{ fontWeight: 700, fontSize: 15, color: "#14532d", marginBottom: 12 }}
+                    style={{ fontWeight: 700, fontSize: 15, color: "var(--ok-tx)", marginBottom: 12 }}
                   >
                     {vt.explainNegTitle}
                   </div>
@@ -474,7 +474,7 @@ export function Vorfaelligkeit() {
                       key={i}
                       style={{
                         fontSize: 13,
-                        color: "#166534",
+                        color: "var(--ok-tx)",
                         lineHeight: 1.75,
                         margin: i === 0 ? "0 0 10px" : "10px 0 0",
                       }}
@@ -591,7 +591,7 @@ export function Vorfaelligkeit() {
                               padding: "5px 10px",
                               textAlign: "right",
                               fontVariantNumeric: "tabular-nums",
-                              color: row.zinsverlust < 0 ? "#16a34a" : "#dc2626",
+                              color: row.zinsverlust < 0 ? "var(--ok-tx)" : "var(--bad-tx)",
                             }}
                           >
                             {fmtE(row.zinsverlust)}
@@ -601,7 +601,7 @@ export function Vorfaelligkeit() {
                               padding: "5px 10px",
                               textAlign: "right",
                               fontVariantNumeric: "tabular-nums",
-                              color: row.abgezinst < 0 ? "#16a34a" : "#dc2626",
+                              color: row.abgezinst < 0 ? "var(--ok-tx)" : "var(--bad-tx)",
                             }}
                           >
                             {fmtE(row.abgezinst)}
@@ -665,11 +665,11 @@ export function Vorfaelligkeit() {
                 <div
                   style={{
                     fontSize: 12,
-                    color: "#1e40af",
+                    color: "var(--info-tx)",
                     lineHeight: 1.6,
                     padding: "10px 12px",
-                    background: "#EFF6FF",
-                    border: "1px solid #BFDBFE",
+                    background: "var(--info-bg)",
+                    border: "1px solid var(--info-bd)",
                     borderRadius: 10,
                     marginBottom: 10,
                   }}
