@@ -26,6 +26,24 @@ function toHex(bytes: ArrayBuffer): string {
     .join("");
 }
 
+// Konstante Laufzeit unabhaengig vom Inhalt (SEC-04, Security-Review
+// 2026-08-26) - ein einfacher "===" auf Hex-Strings ist theoretisch ueber
+// einen Timing-Seitenkanal gegen den HMAC angreifbar.
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+// Zeitfenster fuer die Signatur-Frische (SEC-04): verhindert, dass ein alt
+// abgefangener, aber gueltig signierter Payload spaeter erneut eingespielt
+// wird. Der Idempotenz-Check (processed_webhook_events) faengt nur bereits
+// verarbeitete event_ids ab, nicht ein Replay VOR der ersten Verarbeitung.
+const MAX_SIGNATURE_AGE_S = 300;
+
 export async function verifyPaddleSignature(
   env: Env,
   rawBody: string,
@@ -34,6 +52,11 @@ export async function verifyPaddleSignature(
   if (!env.PADDLE_WEBHOOK_SECRET || !signatureHeader) return false;
   const parsed = parseSignatureHeader(signatureHeader);
   if (!parsed) return false;
+
+  const tsNum = Number(parsed.ts);
+  if (!Number.isFinite(tsNum) || Math.abs(Date.now() / 1000 - tsNum) > MAX_SIGNATURE_AGE_S) {
+    return false;
+  }
 
   const key = await crypto.subtle.importKey(
     "raw",
@@ -47,7 +70,7 @@ export async function verifyPaddleSignature(
     key,
     new TextEncoder().encode(`${parsed.ts}:${rawBody}`),
   );
-  return toHex(signed) === parsed.h1;
+  return timingSafeEqualHex(toHex(signed), parsed.h1);
 }
 
 interface PaddleWebhookBody {

@@ -23,7 +23,7 @@ import {
 import { login, logout, extractSessionId, buildClearSessionCookie } from "../auth/session";
 import { deleteAllSessionsForUser, findOrCreateUserForOAuth } from "../db";
 import { deleteAccountCompletely } from "../accountDeletion";
-import { requireAuth, type AuthVars } from "../middleware";
+import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
 
 const OAUTH_STATE_COOKIE = "if_oauth_state";
 // D2 (Spec-v3.0 Kap. 4.5): einmalig, kurzlebig, HttpOnly - der Nachweis, dass
@@ -219,7 +219,7 @@ authRoutes.post("/apple/callback", async (c) => {
 
 // ═══ E-Mail Magic-Link ═══
 
-authRoutes.post("/magic-link/request", async (c) => {
+authRoutes.post("/magic-link/request", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = body && typeof body.email === "string" ? body.email : "";
   const result = await requestMagicLink(c.env, workerOrigin(c.req.raw), email);
@@ -243,7 +243,7 @@ authRoutes.get("/magic-link/verify", async (c) => {
 // Fuenfter Login-Weg. Reihenfolge im Modal bewusst nachrangig (4.3, IMP-14) -
 // die vier passwortlosen Wege bleiben unveraendert die primaeren Buttons.
 
-authRoutes.post("/register", async (c) => {
+authRoutes.post("/register", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = body && typeof body.email === "string" ? body.email : "";
   const password = body && typeof body.password === "string" ? body.password : "";
@@ -281,7 +281,7 @@ authRoutes.get("/verify-email", async (c) => {
   return c.redirect(`${base}/?login_success=1`, 302);
 });
 
-authRoutes.post("/resend-verification", async (c) => {
+authRoutes.post("/resend-verification", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = body && typeof body.email === "string" ? body.email : "";
   const result = await resendVerification(c.env, workerOrigin(c.req.raw), email);
@@ -289,7 +289,7 @@ authRoutes.post("/resend-verification", async (c) => {
   return c.json({ ok: true });
 });
 
-authRoutes.post("/login", async (c) => {
+authRoutes.post("/login", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = body && typeof body.email === "string" ? body.email : "";
   const password = body && typeof body.password === "string" ? body.password : "";
@@ -305,7 +305,7 @@ authRoutes.post("/login", async (c) => {
   return c.json({ ok: true });
 });
 
-authRoutes.post("/password-reset/request", async (c) => {
+authRoutes.post("/password-reset/request", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = body && typeof body.email === "string" ? body.email : "";
   await requestPasswordReset(c.env, email);
@@ -313,7 +313,7 @@ authRoutes.post("/password-reset/request", async (c) => {
   return c.json({ ok: true });
 });
 
-authRoutes.post("/password-reset/confirm", async (c) => {
+authRoutes.post("/password-reset/confirm", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const token = body && typeof body.token === "string" ? body.token : "";
   const newPassword = body && typeof body.newPassword === "string" ? body.newPassword : "";
@@ -324,7 +324,7 @@ authRoutes.post("/password-reset/confirm", async (c) => {
 
 // ═══ Passkey ═══
 
-authRoutes.post("/passkey/register/options", async (c) => {
+authRoutes.post("/passkey/register/options", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = body && typeof body.email === "string" ? body.email : "";
   if (!email) return c.json({ error: "invalid_email" }, 400);
@@ -332,7 +332,7 @@ authRoutes.post("/passkey/register/options", async (c) => {
   return c.json({ options });
 });
 
-authRoutes.post("/passkey/register/verify", async (c) => {
+authRoutes.post("/passkey/register/verify", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body.email !== "string" || !body.response) {
     return c.json({ error: "invalid_body" }, 400);
@@ -354,13 +354,13 @@ authRoutes.post("/passkey/register/verify", async (c) => {
   return c.json({ ok: true, token: session.id });
 });
 
-authRoutes.post("/passkey/login/options", async (c) => {
+authRoutes.post("/passkey/login/options", requireCsrfOrigin, async (c) => {
   const flowId = crypto.randomUUID();
   const options = await startPasskeyLogin(c.env, flowId);
   return c.json({ flowId, options });
 });
 
-authRoutes.post("/passkey/login/verify", async (c) => {
+authRoutes.post("/passkey/login/verify", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body.flowId !== "string" || !body.response) {
     return c.json({ error: "invalid_body" }, 400);
@@ -374,14 +374,14 @@ authRoutes.post("/passkey/login/verify", async (c) => {
 
 // ═══ Logout ═══
 
-authRoutes.post("/logout", async (c) => {
+authRoutes.post("/logout", requireCsrfOrigin, async (c) => {
   const sessionId = extractSessionId(c.req.raw);
   if (sessionId) await logout(c.env, sessionId);
   c.header("Set-Cookie", buildClearSessionCookie(), { append: true });
   return c.json({ ok: true });
 });
 
-authRoutes.post("/logout-all", requireAuth, async (c) => {
+authRoutes.post("/logout-all", requireAuth, requireCsrfOrigin, async (c) => {
   await deleteAllSessionsForUser(c.env.DB, c.var.userId);
   c.header("Set-Cookie", buildClearSessionCookie(), { append: true });
   return c.json({ ok: true });

@@ -1,3 +1,54 @@
+## 2026-08-26 (1.22.3)
+
+### SECURITY: Login-CSRF-Schutz und Paddle-Webhook-Härtung (Security-Review)
+
+Auf Nutzeranfrage durchgeführtes OWASP-Security-Review (Skill
+security-specialist) des Worker-Backends und der Live-Dev-Instanz
+(dev.immofuchs.info) hat zwei umsetzbare Findings ergeben, die behoben
+wurden:
+
+SEC-01 (High, A01 Broken Access Control): worker/src/routes/auth.ts prüfte
+bei /login, /register, /magic-link/request, /resend-verification,
+/password-reset/request, /password-reset/confirm, /passkey/*, /logout und
+/logout-all keinen Origin-Header, obwohl billing.ts/objects.ts das über
+requireCsrfOrigin konsequent tun. Ermöglichte theoretisch Login-CSRF (Opfer
+wird per präpariertem Cross-Site-POST unbemerkt in ein fremdes Konto
+eingeloggt) und Cross-Site-Logout. Fix: requireCsrfOrigin auf alle
+zustandsändernden Auth-Routen ergänzt, analog zum bestehenden Muster in
+billing.ts. OAuth-Callbacks (/google/callback, /apple/callback) und
+GET-Routen bleiben unverändert - dort schützt bereits die
+State-Cookie-Prüfung.
+
+SEC-04 (Medium, A02 Cryptographic Failures): worker/src/paddle/webhook.ts
+verglich die HMAC-Signatur des Paddle-Webhooks mit einfachem "==="
+(theoretisches Timing-Seitenkanal-Risiko) und prüfte den ts-Wert im
+Signatur-Header nicht auf Aktualität (ein alter, aber gültig signierter
+Payload wäre nur über den Idempotenz-Check abgefangen worden, nicht durch
+die Signatur selbst). Fix: konstante-Zeit-Vergleich (timingSafeEqualHex)
+und 5-Minuten-Zeitfenster für die Signatur-Frische ergänzt. Bestehender
+Test-Fall mit fest codiertem ts=1700000000 auf einen aktuellen Zeitstempel
+umgestellt (sonst durch die neue Frische-Prüfung fälschlich abgelehnt) und
+ein neuer Testfall für zu alte Signaturen ergänzt.
+
+Betroffene Dateien: worker/src/routes/auth.ts, worker/src/paddle/webhook.ts,
+worker/src/paddle/webhook.test.ts.
+
+Offen (nicht umgesetzt, bewusst zurückgestellt):
+- SEC-02 (High, A08): Deploy-Workflows (deploy-prod.yml, monthly-update.yml)
+  nutzen StrictHostKeyChecking=no für den SSH/SFTP-Deploy zu IONOS - Fix
+  braucht einen per ssh-keyscan ermittelten Host-Key, den dieses
+  Environment mangels Netzwerkzugriff auf den IONOS-Host nicht selbst
+  ermitteln konnte.
+- SEC-03 (Medium, A05): CSP in index.html erlaubt script-src
+  'unsafe-inline' - Fix erfordert erst Identifikation der betroffenen
+  Inline-Skripte vor einer Umstellung auf Nonce/externe Datei, noch nicht
+  begonnen.
+
+Vollständiger Report als Datei geliefert (security-review-immofuchspro-
+2026-08-26.md).
+
+Breaking Changes: keine.
+
 ## 2026-08-26 (1.22.2)
 
 ### FIX: KfW-Zins-Tooltip zeigte "Stand August 2026"

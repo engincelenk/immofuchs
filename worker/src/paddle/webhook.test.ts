@@ -64,14 +64,14 @@ describe("Paddle-Webhook-Signatur (4.13)", () => {
 
   it("akzeptiert eine korrekt signierte Nutzlast", async () => {
     const body = JSON.stringify({ event_id: "evt_1", event_type: "subscription.created", data: {} });
-    const ts = "1700000000";
+    const ts = String(Math.floor(Date.now() / 1000));
     const h1 = await sign("test-secret", ts, body);
     expect(await verifyPaddleSignature(env, body, `ts=${ts};h1=${h1}`)).toBe(true);
   });
 
   it("lehnt eine manipulierte Nutzlast ab", async () => {
     const body = JSON.stringify({ event_id: "evt_1", event_type: "subscription.created", data: {} });
-    const ts = "1700000000";
+    const ts = String(Math.floor(Date.now() / 1000));
     const h1 = await sign("test-secret", ts, body);
     const tamperedBody = JSON.stringify({ event_id: "evt_1_hacked", event_type: "subscription.created", data: {} });
     expect(await verifyPaddleSignature(env, tamperedBody, `ts=${ts};h1=${h1}`)).toBe(false);
@@ -79,13 +79,20 @@ describe("Paddle-Webhook-Signatur (4.13)", () => {
 
   it("lehnt eine mit falschem Secret signierte Nutzlast ab", async () => {
     const body = JSON.stringify({ event_id: "evt_1", event_type: "subscription.created", data: {} });
-    const ts = "1700000000";
+    const ts = String(Math.floor(Date.now() / 1000));
     const h1 = await sign("wrong-secret", ts, body);
     expect(await verifyPaddleSignature(env, body, `ts=${ts};h1=${h1}`)).toBe(false);
   });
 
   it("lehnt einen fehlenden Signatur-Header ab", async () => {
     expect(await verifyPaddleSignature(env, "{}", null)).toBe(false);
+  });
+
+  it("lehnt eine zu alte Signatur ab (SEC-04, Replay-Schutz)", async () => {
+    const body = JSON.stringify({ event_id: "evt_1", event_type: "subscription.created", data: {} });
+    const ts = String(Math.floor(Date.now() / 1000) - 301);
+    const h1 = await sign("test-secret", ts, body);
+    expect(await verifyPaddleSignature(env, body, `ts=${ts};h1=${h1}`)).toBe(false);
   });
 });
 

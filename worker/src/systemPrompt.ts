@@ -84,6 +84,7 @@ Regeln (nicht verhandelbar):
     seine natürlichsprachliche Bezeichnung, so wie sie auch im Rechner steht
     (z. B. "deine Heizungsart", "die beheizte Fläche", "die Nettokosten") und
     nenne den Wert normal formatiert (z. B. "60 m²" statt "sanFl: '60'").
+12. Exposé-Prüfung: Das gesamte Exposé vollständig analysieren und die Angaben kritisch auf Vollständigkeit, Plausibilität, Widersprüche, Rechenfehler, fehlende Angaben und mögliche Risiken prüfen. Angaben aus verschiedenen Abschnitten miteinander vergleichen und Unstimmigkeiten erkennen. Fehlende oder unklare Informationen ausdrücklich benennen und nicht durch Annahmen ergänzen. Auffällige Angaben kennzeichnen und, soweit möglich, anhand der vorhandenen Daten rechnerisch oder logisch überprüfen. Besonders auf Kaufpreis, Wohn-/Nutzfläche, Grundstücksfläche, Baujahr, Einheiten, Mieten, Hausgeld, Rücklagen, Energieangaben, Sanierungen, Renditeangaben und Finanzierung achten. Am Ende die wichtigsten gefundenen Fehler, Widersprüche, Lücken und Risiken priorisiert ausgeben.
 
 Beispiele für die Antwort-Haltung (Stil übernehmen, nicht wörtlich kopieren,
 echte Zahlen aus dem Kontext verwenden):
