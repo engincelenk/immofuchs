@@ -128,8 +128,15 @@ export const AFA = {
 // ── KFW-FÖRDERKREDITE ────────────────────────────────────────────────────
 // Intervall: quartalsweise (Handpflege — die KfW rendert ihre
 // Konditionentabelle clientseitig, ein automatischer Abruf wie bei
-// Bundesbank/Interhyp ist damit nicht zuverlässig möglich).
-// Quelle: kfw.de, Produktinfos 297/298 und 124.
+// Bundesbank/Interhyp ist damit nicht zuverlässig möglich; recherchiert
+// 2026-08-26, siehe scripts/monthly_update.py PFLEGE_INTERVALL). Der
+// tatsächliche Zins ist ohnehin individuell aus Bonität × Besicherung
+// berechnet und steht erst bei Zusage der Hausbank fest — auch die
+// offizielle KfW-Seite zeigt deshalb keinen pauschalen Tagessatz.
+// Quelle fürs Update: kfw.de, Produktinfos 297/298 und 124 (offizielle
+// Bedingungen/Höchstbeträge), zum schnellen Abgleich der Richtwerte
+// zusätzlich https://www.baufi24.de/foerderung/kfw-297-298-klimafeundlicher-neubau-wohngebaeude/
+// (Drittanbieter-Übersicht, keine Garantie — im Zweifel kfw.de vorziehen).
 // Die Zinssätze hängen von Laufzeit, Zinsbindung und tilgungsfreien Jahren
 // ab und werden erst bei der Zusage festgeschrieben — alles hier sind
 // Richtwerte, die der Nutzer überschreiben kann.

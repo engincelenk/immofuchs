@@ -1,5 +1,24 @@
 ## 2026-08-26 (1.22.2)
 
+### FIX: KfW-Zins-Tooltip zeigte "Stand August 2026"
+
+Bugreport: Tooltip fürs Feld "Zinssatz KfW" im Kreditrechner nannte einen
+fixen Stand ("Stand August 2026") - Aktualitätsangaben zu Marktdaten werden
+aber zentral auf der Landingpage gemacht, nicht verstreut in Tooltips.
+Entfernt aus kfwZins UND kfwAktiv (dieselbe Formulierung, gleiche Ursache),
+in allen 5 Sprachen (i18n/tips.js). Der data.js-Wert KFW_KREDIT.stand selbst
+bleibt unangetastet - wird weiterhin für die Fälligkeitsprüfung gebraucht
+(siehe scripts/monthly_update.py).
+
+Recherchiert, ob sich der KfW-Förderkredit-Zins wie die Bauzinsen
+automatisieren lässt (Nutzerfrage): nein - die offizielle KfW-Seite zeigt
+keinen pauschalen Tagessatz (Zins ist individuell aus Bonität × Besicherung,
+steht erst bei Zusage fest), und eine Google-Suche als Quelle ist weder
+zuverlässig noch ToS-konform. Bleibt bei der bestehenden vierteljährlichen
+Handpflege; data.js KFW_KREDIT hat jetzt einen Link zu einer
+Drittanbieter-Übersicht (baufi24.de) als Schnellabgleich fürs manuelle
+Update.
+
 ### FIX: Seite fror nach "Mein Konto" -> Startseite auf dem Handy ein
 
 Bugreport: Auf dem Handy vom Kontomenue direkt in einen Bereich (z.B.
