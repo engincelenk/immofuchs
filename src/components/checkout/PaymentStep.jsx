@@ -142,10 +142,19 @@ export function PaymentStep({
             billing_details: {
               email: account?.me?.email || undefined,
               name: billingAddress?.company?.trim() || undefined,
+              // Stripe verlangt bei fields.billingDetails.address:"never" im
+              // Payment Element (siehe elements.create() oben) ALLE
+              // Adress-Teilfelder hier, nicht nur die, die wir tatsaechlich
+              // haben - sonst IntegrationError "did not pass ...address.state".
+              // line2/state gibt es in AddressStep.jsx nicht (Deutschland
+              // kennt kein Bundesland-Pflichtfeld auf der Rechnung), deshalb
+              // leer statt weggelassen.
               address: {
                 line1: billingAddress?.street || "",
+                line2: "",
                 postal_code: billingAddress?.zip || "",
                 city: billingAddress?.city || "",
+                state: "",
                 country: "DE",
               },
             },

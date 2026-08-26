@@ -1,4 +1,13 @@
-## 2026-08-27 (1.27.0)
+## 2026-08-27 (1.27.1)
+
+### FIX: Stripe-Zahlung brach mit IntegrationError ab (fehlende Adressfelder)
+
+Live-Befund auf dev nach Aktivierung der echten Stripe-Keys: `stripe.confirmPayment()`
+schlug im Browser mit `IntegrationError` fehl. Ursache: das Payment Element
+wird mit `fields.billingDetails.address:"never"` erzeugt (die Adresse kommt
+schon aus AddressStep.jsx), Stripe verlangt dafür aber ALLE Adress-Teilfelder
+in `confirmParams.payment_method_data.billing_details.address` - `PaymentStep.jsx`
+schickte `state`/`line2` bisher nicht mit. Beide Felder leer ergänzt.
 
 ### NEU: e2e-Suite auf Stripe umgestellt (Schritt 7/8, letzter Code-Schritt des Wechsels)
 
