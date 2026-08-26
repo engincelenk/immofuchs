@@ -121,6 +121,8 @@ export function useAccount() {
     try {
       const res = await apiFetch("/me");
       if (res.status === 401) {
+        // TEMP-DIAGNOSE (2026-08-27, wird nach dem Befund wieder entfernt).
+        console.warn("[DIAG] refresh(): /me antwortete 401 -> setMe(null)");
         setMe(null);
         broadcastIsPro(false);
         noteProStatus(false);

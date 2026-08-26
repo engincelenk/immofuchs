@@ -106,6 +106,8 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     [variant, t],
   );
   const currentKey = steps[stepIndex]?.key;
+  // TEMP-DIAGNOSE (2026-08-27, wird nach dem Befund wieder entfernt).
+  console.warn("[DIAG] CheckoutWizard render", { variant, stepIndex, currentKey, isPro: account?.isPro, meIsNull: account?.me === null });
   // Wo eine Bestelluebersicht sinnvollen Zusatzkontext liefert.
   // "verify"/"welcome"/Passwort-Reset bleiben bewusst ohne - dort gibt es
   // nichts zu bestaetigen. Der Laufzeit-Schritt ebenfalls nicht: dort steht die
@@ -157,6 +159,8 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   onCloseRef.current = onClose;
 
   useEffect(() => {
+    // TEMP-DIAGNOSE (2026-08-27, wird nach dem Befund wieder entfernt).
+    console.warn("[DIAG] auto-advance-effect", { variant, currentKey, isLoggedIn: account?.isLoggedIn, isPro: account?.isPro });
     if (variant === "upgrade" || variant === "login-only") return;
     if (currentKey !== "account" && currentKey !== "verify") return;
     if (!account?.isLoggedIn) return;
@@ -261,7 +265,10 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // Stripe-Webhook noch nicht durchgelaufen ist - blockiert den Wechsel zu
   // WelcomeStep aber nicht.
   const handlePaymentCompleted = useCallback(async () => {
+    // TEMP-DIAGNOSE (2026-08-27, wird nach dem Befund wieder entfernt).
+    console.warn("[DIAG] handlePaymentCompleted: start", { variant, stepIndex, currentKey });
     await account.refresh();
+    console.warn("[DIAG] handlePaymentCompleted: nach refresh", { isPro: account.isPro, zugang: account.zugang, me: account.me });
     // Zwei verzoegerte Nachzuegler statt einem (Live-Befund 2026-08-27,
     // dev-Testkauf): der Stripe-Webhook braucht beobachtet ca. 2-3s ab
     // Zahlungsbestaetigung, bis customer.subscription.updated bei uns
