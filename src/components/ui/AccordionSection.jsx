@@ -81,11 +81,11 @@ export function AccordionSection({ question, hint, color, children, defaultOpen 
 }
 
 // ═══ SECTION EXPLAINER — Bullets + Erklärtext gemeinsam im Toggle ═══
-export function SectionExplain({ bullets, text }) {
+export function SectionExplain({ intro, bullets, text }) {
   const [open, setOpen] = useState(false);
   const { t } = useApp();
   const hasBullets = bullets && bullets.length > 0;
-  if (!hasBullets && !text) return null;
+  if (!intro && !hasBullets && !text) return null;
   return (
     <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
       <button
@@ -124,6 +124,18 @@ export function SectionExplain({ bullets, text }) {
             borderTop: "1px dashed var(--cb)",
           }}
         >
+          {intro && (
+            <div
+              style={{
+                fontSize: 11,
+                color: "var(--ch)",
+                lineHeight: 1.65,
+                marginBottom: 8,
+              }}
+            >
+              {intro}
+            </div>
+          )}
           {hasBullets && (
             <ul style={{ margin: "0 0 8px", padding: 0, listStyle: "none" }}>
               {bullets.map((b, i) => (

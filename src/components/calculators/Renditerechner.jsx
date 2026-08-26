@@ -693,19 +693,10 @@ export default function Haupt() {
                     color={selfHex}
                     sync={{ key: secAllKey, open: secAllOpen }}
                   >
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--ch)",
-                        lineHeight: 1.6,
-                        padding: "12px 4px 10px",
-                      }}
-                    >
-                      {selfIntro}
-                    </div>
                     <div style={{ marginTop: 10 }}>
                       <BreakEvenCards R={R} />
                     </div>
+                    <SectionExplain intro={selfIntro} />
                   </AccordionSection>
                 );
               })()}
@@ -729,16 +720,6 @@ export default function Haupt() {
                     color={ampelHex}
                     sync={{ key: secAllKey, open: secAllOpen }}
                   >
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--ch)",
-                        lineHeight: 1.6,
-                        padding: "12px 4px 10px",
-                      }}
-                    >
-                      {intro}
-                    </div>
                     <div
                       style={{
                         display: "grid",
@@ -804,6 +785,7 @@ export default function Haupt() {
                     )}
                     {lang === "de" && (
                       <SectionExplain
+                        intro={intro}
                         bullets={(() => {
                           const brRat = rate("bruttoR", R.bR);
                           const nrRat = rate("nettoR", R.nR);
@@ -831,6 +813,7 @@ export default function Haupt() {
                     )}
                     {lang !== "de" && t.s1b1 && (
                       <SectionExplain
+                        intro={intro}
                         bullets={[
                           tpl(t.s1b1, {
                             a: fmtE((+d.kaltmiete || 0) * 12),
@@ -890,16 +873,6 @@ export default function Haupt() {
                     color={ampelHex}
                     sync={{ key: secAllKey, open: secAllOpen }}
                   >
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--ch)",
-                        lineHeight: 1.6,
-                        padding: "12px 4px 10px",
-                      }}
-                    >
-                      {intro}
-                    </div>
                     <div
                       style={{
                         display: "grid",
@@ -972,6 +945,7 @@ export default function Haupt() {
                       )}
                     {lang === "de" && (
                       <SectionExplain
+                        intro={intro}
                         bullets={(() => {
                           const cfOR = rate("cfOhne", R.cf2OhneSt);
                           const cfMR = rate("cfMit", R.cf2MitSt);
@@ -996,6 +970,7 @@ export default function Haupt() {
                     )}
                     {lang !== "de" && t.s2b1 && (
                       <SectionExplain
+                        intro={intro}
                         bullets={[
                           tpl(t.s2b1, { a: fmtE(R.cf2OhneSt) }),
                           tpl(t.s2b2, { a: fmtE(R.cf2MitSt), b: fmtE(R.cf2MitSt - R.cf2OhneSt) }),
@@ -1045,16 +1020,6 @@ export default function Haupt() {
                     color={ampelHex}
                     sync={{ key: secAllKey, open: secAllOpen }}
                   >
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--ch)",
-                        lineHeight: 1.6,
-                        padding: "12px 4px 10px",
-                      }}
-                    >
-                      {intro}
-                    </div>
                     <div
                       style={{
                         display: "grid",
@@ -1131,6 +1096,7 @@ export default function Haupt() {
                     )}
                     {lang === "de" && (
                       <SectionExplain
+                        intro={intro}
                         bullets={[
                           `Beleihungsauslauf: ${fmtP(R.bel)} — die Bank finanziert ${fmtP(R.bel)} des Kaufpreises${R.bel < 70 ? " → Topkonditionen möglich" : R.bel < 85 ? " → kleiner Zinsaufschlag üblich" : " → deutlicher Risikoaufschlag der Bank"}`,
                           `Monatliche Rate: ${fmtE(R.ann)} (Zinsen: ${fmtE(R.z1)} + Tilgung: ${fmtE(R.t1)})`,
@@ -1152,6 +1118,7 @@ export default function Haupt() {
                     )}
                     {lang !== "de" && t.s3b1 && (
                       <SectionExplain
+                        intro={intro}
                         bullets={[
                           tpl(t.s3b1, {
                             a: fmtP(R.bel),
@@ -1245,16 +1212,6 @@ export default function Haupt() {
                     >
                       <div
                         style={{
-                          fontSize: 12,
-                          color: "var(--ch)",
-                          lineHeight: 1.6,
-                          padding: "12px 4px 10px",
-                        }}
-                      >
-                        {intro}
-                      </div>
-                      <div
-                        style={{
                           display: "grid",
                           gridTemplateColumns: "repeat(2,minmax(0,1fr))",
                           gap: 10,
@@ -1308,6 +1265,7 @@ export default function Haupt() {
                       )}
                       {lang === "de" && (
                         <SectionExplain
+                          intro={intro}
                           bullets={(() => {
                             const stR = rate("steuerErsM", stErsM);
                             const beR = R.beJ
@@ -1326,6 +1284,7 @@ export default function Haupt() {
                       )}
                       {lang !== "de" && t.s4b1 && (
                         <SectionExplain
+                          intro={intro}
                           bullets={[
                             tpl(t.s4b1, {
                               a: fmtE(Math.round(R.sSt / R.j)),
@@ -1371,19 +1330,10 @@ export default function Haupt() {
                 hint={t.sec5Hint}
                 sync={{ key: secAllKey, open: secAllOpen }}
               >
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--ch)",
-                    lineHeight: 1.6,
-                    padding: "12px 4px 8px",
-                  }}
-                >
-                  {t.sec5Sub}
-                </div>
                 <YearTable rows={R.yearRows} zbJ={+d.zinsbindung || 10} />
                 {lang === "de" && (
                   <SectionExplain
+                    intro={t.sec5Sub}
                     bullets={[
                       `Restschuld: startet bei ${fmtE(R.da)}, fällt durch Tilgung${isFinite(R.lz) ? " und erreicht 0 in Jahr " + Math.ceil(R.lz) : " — wird in ${R.j} Jahren nicht vollständig abbezahlt"}`,
                       `Kum. Cashflow: zeigt wie viel Geld du bis zum jeweiligen Jahr insgesamt raus- oder reingesteckt hast`,
@@ -1396,6 +1346,7 @@ export default function Haupt() {
                 )}
                 {lang !== "de" && t.s5b2 && (
                   <SectionExplain
+                    intro={t.sec5Sub}
                     bullets={[
                       isFinite(R.lz)
                         ? tpl(t.s5b1a, { a: fmtE(R.da), b: Math.ceil(R.lz) })
@@ -1470,6 +1421,7 @@ export default function Haupt() {
                 const ekRpaOhne =
                   +d.eigenkapital > 0 ? ((R.gOhne || 0) / +d.eigenkapital / R.j) * 100 : 0;
                 const ekRCol = rate("ekRendite", ekRpa).color;
+                const sec7Sub = t.sec7Sub.replace(/\{j\}/g, String(R.j));
                 return (
                   <AccordionSection
                     question={t.sec7Q.replace("{j}", String(R.j))}
@@ -1477,16 +1429,6 @@ export default function Haupt() {
                     color={ampelHex}
                     sync={{ key: secAllKey, open: secAllOpen }}
                   >
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--ch)",
-                        lineHeight: 1.6,
-                        padding: "12px 4px 8px",
-                      }}
-                    >
-                      {t.sec7Sub.replace(/\{j\}/g, String(R.j))}
-                    </div>
                     <Detail R={R} d={d} />
                     {R.g >= 0 && (
                       <div style={{ marginTop: 4 }}>
@@ -1565,6 +1507,7 @@ export default function Haupt() {
                     </div>
                     {lang === "de" && (
                       <SectionExplain
+                        intro={sec7Sub}
                         bullets={(() => {
                           const gR = rate("gesamtSaldo", R.g);
                           const ekR = rate("ekRendite", ekRpa);
@@ -1590,6 +1533,7 @@ export default function Haupt() {
                     )}
                     {lang !== "de" && t.s7b1 && (
                       <SectionExplain
+                        intro={sec7Sub}
                         bullets={[
                           tpl(t.s7b1, { j: R.j, vw: fmtE(R.vw), p: fmtP(+d.wertP || 0, 1) }),
                           R.rsEnd > 0

@@ -1,3 +1,17 @@
+## 2026-08-26 (1.22.5)
+
+### UX: Renditerechner - Intro-Sätze der Sections ebenfalls in den Klick-Bereich verschoben
+
+Die farblich codierten Intro-Sätze (grün/gelb/rot je nach Ampel-Wert,
+z. B. "Du zahlst jeden Monat aus eigener Tasche dazu...") standen bislang
+direkt sichtbar oben in jeder geoeffneten Accordion-Section, noch vor den
+KPI-Kacheln. SectionExplain (src/components/ui/AccordionSection.jsx) hat
+dafuer eine neue optionale intro-Prop bekommen, die - wie Bullets und
+Langtext - erst nach Klick auf "Wie kommt das Ergebnis zustande?"
+erscheint. Betrifft Selbsttraeger-Check sowie Section 1-5 und 7 im
+Renditerechner (src/components/calculators/Renditerechner.jsx); Section 6
+(Investment-Check/Radar) hat keinen Intro-Text.
+
 ## 2026-08-26 (1.22.4)
 
 ### UX: Renditerechner - Ergebnis-Erklärtexte erst per Klick sichtbar
