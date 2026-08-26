@@ -193,6 +193,33 @@ async function upsertSubscriptionFromPaddle(env: Env, data: Record<string, unkno
         });
       }
     }
+
+    // Willkommens-Mail nachholen (Bugreport 2026-08-26): wer mit dem 7-Tage-
+    // Trial startet, legt die Subscription-Zeile mit status='trialing' an -
+    // der INSERT-Zweig unten verschickt payment_succeeded bewusst nur bei
+    // status='active' (siehe dortiger Kommentar), weil beim Trial noch nichts
+    // abgebucht wurde. Der spaetere Wechsel auf 'active' (erste echte
+    // Abbuchung nach Trial-Ende) kommt aber als UPDATE-Webhook hier in den
+    // existing-Zweig - der sendete bisher ausschliesslich bei Uebergang zu
+    // past_due eine Mail. Ergebnis: Trial-Nutzer bekamen NIE eine
+    // Zahlungsbestaetigung, weder beim Trial-Start noch bei der ersten
+    // Abbuchung. Fix: denselben Uebergangs-Check wie oben, nur fuer
+    // trialing -> active.
+    if (status === "active" && existing.status === "trialing") {
+      const user = await getUserById(env.DB, userId);
+      if (user) {
+        await dispatchNotification(env, {
+          event: "payment_succeeded",
+          recipientEmail: user.email,
+          recipientUserId: userId,
+          payload: {
+            plan,
+            amount: preisText(plan),
+            periodEndDate: new Date(periodEnd).toLocaleDateString("de-DE"),
+          },
+        });
+      }
+    }
   } else {
     await env.DB.prepare(
       `INSERT INTO subscriptions

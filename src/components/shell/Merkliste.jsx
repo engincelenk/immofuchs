@@ -644,30 +644,6 @@ export function Merkliste() {
         <div style={{ fontSize: 14, color: "var(--ch)", lineHeight: 1.5 }}>
           {t.emptyHint || 'Berechne ein Objekt und tippe auf „Speichern", um es hier zu sichern.'}
         </div>
-        {isProSavedObjects && (
-          <button
-            onClick={() => setTabExt("haupt")}
-            className="no-print"
-            style={{
-              display: "inline-block",
-              textAlign: "left",
-              padding: 16,
-              marginTop: 20,
-              borderRadius: 12,
-              border: "1.5px dashed var(--ca)",
-              background: "var(--ca-bg)",
-              color: "var(--ca-dk)",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              maxWidth: 320,
-            }}
-          >
-            <div style={{ fontSize: 14, fontWeight: 700 }}>📎 Neues Exposé importieren</div>
-            <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>
-              Foto aufnehmen oder Datei hochladen — über den Finn-Assistenten in jedem Rechner
-            </div>
-          </button>
-        )}
       </div>
     );
   return (

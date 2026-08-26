@@ -1,3 +1,35 @@
+## 2026-08-26 (1.22.7)
+
+### FIX: Exposé-Import-Button, Dark-Mode-Textfarbe, fehlende Willkommens-Mail bei Trial
+
+Vier Nutzer-Bugreports (Screenshots):
+
+1) Merkliste.jsx: Leerer-Zustand-Button "Neues Exposé importieren" entfernt -
+er sprang nur zu "Rendite", statt tatsaechlich einen Upload zu oeffnen
+(Beschriftung versprach mehr als er hielt).
+
+2) Dark Mode: In App.jsx fehlte bei der globalen Regel
+input,select,button,textarea die Zeile color:inherit. Dadurch fielen alle
+Texte innerhalb von <button>-Elementen ohne eigene Farbangabe auf die
+Browser-Standardfarbe (praktisch schwarz) zurueck - unsichtbar auf dunklem
+Hintergrund. Betraf u.a. die Preis-Zahlen im Checkout (PricingStep.jsx) und
+das Burgermenue-Symbol in der Tableiste (App.jsx). Ein-Zeilen-Fix behebt
+beide Symptome.
+
+3) worker/src/paddle/webhook.ts: Abos, die mit dem 7-Tage-Test starten
+(Standardfall), bekamen nie eine "Willkommen bei ImmoFuchs Pro"-Mail - weder
+beim Trial-Start noch bei der ersten echten Abbuchung nach Trial-Ende.
+subscription.created legt die Zeile mit Status trialing an,
+payment_succeeded ging dort bewusst nur bei active raus. Der spaetere
+Uebergang trialing -> active (subscription.updated) lief aber ueber den
+UPDATE-Zweig, der bisher nur bei Uebergang zu past_due eine Mail ausloeste.
+Fix: derselbe Uebergangs-Check jetzt zusaetzlich fuer trialing -> active.
+Worker-Tests (18/18) weiterhin gruen.
+
+4) docs/email-uebersicht.md neu angelegt: vollstaendige Tabelle aller
+E-Mail-Ausloeser (Code-Stelle, Betreff, Empfaenger) plus Inhaltsuebersicht
+und Befund zu obigem Bug.
+
 ## 2026-08-26 (1.22.6)
 
 ### FIX: Kachel-Abstand + Layout-Ueberlappung bei quer liegendem Handy

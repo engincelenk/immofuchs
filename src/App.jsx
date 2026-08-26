@@ -560,7 +560,7 @@ export default function App() {
       html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;-webkit-text-size-adjust:100%;scrollbar-gutter:stable}body{position:relative}
       *{box-sizing:border-box}
       body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased}
-      input,select,button,textarea{font-family:inherit;font-size:16px}
+      input,select,button,textarea{font-family:inherit;font-size:16px;color:inherit}
       input[type="number"]::-webkit-inner-spin-button{opacity:.3}
       /* overflow-x:clip statt hidden - hidden zwingt overflow-y still auf auto
          und macht .shell/.content damit zu Scroll-Containern. Das sticky der
