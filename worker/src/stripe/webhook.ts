@@ -29,21 +29,31 @@ export async function verifyStripeSignature(
 
 // Stripe kennt 'trialing', 'active', 'past_due', 'canceled', 'unpaid',
 // 'incomplete', 'incomplete_expired'. Die bestehende Vier-Wert-Logik
-// ('active'/'trialing'/'past_due'/'canceled') bleibt - 'unpaid'/'incomplete*'
-// fallen auf 'canceled' (Spec Abschnitt 3, muss gegen echte Stripe-
-// Testereignisse geprueft werden, siehe Offene Punkte 9.2).
+// ('active'/'trialing'/'past_due'/'canceled') bleibt.
+//
+// Live-Befund (2026-08-27, gegen den echten Stripe-Testmodus verifiziert,
+// siehe Spec Abschnitt 9.2 "muss geprueft werden"): subscriptions.create()
+// mit payment_behavior:"default_incomplete" (stripe/checkout.ts) loest SOFORT
+// ein customer.subscription.created-Event mit Status 'incomplete' aus -
+// lange BEVOR der Kunde ueberhaupt die Kartendaten eingegeben hat. Wurde das
+// wie 'unpaid' auf 'canceled' abgebildet, legte der allererste Webhook eine
+// D1-Zeile mit status='canceled' an; der spaetere echte Uebergang zu
+// 'active'/'trialing' lief dadurch als UPDATE von 'canceled' statt als
+// INSERT bzw. als Uebergang von 'trialing' - und traf keine der beiden
+// Willkommens-Mail-Bedingungen in upsertSubscriptionFromStripe() mehr
+// (siehe dort). 'incomplete'/'incomplete_expired' sind reines
+// Vor-Zahlung-Rauschen ohne jede Entitlement-Bedeutung (kein Kunde hat
+// jemals Zugriff, solange dieser Status steht) und werden deshalb jetzt statt
+// dessen komplett ignoriert (null) - der naechste Webhook mit einem echten
+// Status legt die Zeile dann sauber per INSERT an. 'unpaid' bleibt auf
+// 'canceled' abgebildet: das betrifft eine BEREITS bezahlte Subscription,
+// deren Verlaengerung nach allen Dunning-Versuchen endgueltig fehlschlug -
+// dort existiert die D1-Zeile schon und der Uebergang ist inhaltlich korrekt.
 function statusFromStripe(stripeStatus: unknown): "active" | "trialing" | "past_due" | "canceled" | null {
   if (stripeStatus === "active") return "active";
   if (stripeStatus === "trialing") return "trialing";
   if (stripeStatus === "past_due") return "past_due";
-  if (
-    stripeStatus === "canceled" ||
-    stripeStatus === "unpaid" ||
-    stripeStatus === "incomplete" ||
-    stripeStatus === "incomplete_expired"
-  ) {
-    return "canceled";
-  }
+  if (stripeStatus === "canceled" || stripeStatus === "unpaid") return "canceled";
   return null;
 }
 
@@ -97,7 +107,12 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
   const periodEnd = sub.current_period_end ? sub.current_period_end * 1000 : Date.now();
   const cancelAtPeriodEnd = sub.cancel_at_period_end ? 1 : 0;
 
-  if (!stripeSubscriptionId || !status || !plan) {
+  // Kein Fehler, sondern erwartetes Vor-Zahlung-Rauschen ('incomplete'/
+  // 'incomplete_expired', siehe statusFromStripe) - kein console.error, das
+  // waere bei jedem einzelnen Checkout-Start ein falscher Alarm im Log.
+  if (!status) return;
+
+  if (!stripeSubscriptionId || !plan) {
     console.error("stripe_webhook_incomplete_subscription_data");
     return;
   }

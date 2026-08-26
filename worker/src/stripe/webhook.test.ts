@@ -311,6 +311,70 @@ describe("handleStripeWebhook — Status-/Plan-Mapping und Mail-Trigger", () => 
     );
   });
 
+  // Regressionstest fuer den Live-Befund 2026-08-27 (siehe statusFromStripe-
+  // Kommentar): subscriptions.create() mit payment_behavior:
+  // "default_incomplete" loest SOFORT ein customer.subscription.created-
+  // Event mit Status "incomplete" aus, lange bevor der Kunde bezahlt hat.
+  // Das darf keine D1-Zeile anlegen - sonst legt sich der spaetere echte
+  // INSERT bei "active"/"trialing" faelschlich als UPDATE einer bereits
+  // (falsch) auf "canceled" gemappten Zeile ab und die Willkommens-Mail
+  // feuert nie.
+  it("customer.subscription.created mit status=incomplete legt NICHTS an (reines Vor-Zahlung-Rauschen)", async () => {
+    const { db, subscriptions } = createFakeBillingD1({
+      users: [{ id: "user_1", email: "kunde@example.com", trial_used_at: null }],
+    });
+    const event = subscriptionEvent("evt_incomplete", "customer.subscription.created", {
+      id: "sub_1",
+      customer: "cus_1",
+      status: "incomplete",
+      items: { data: [{ price: { id: "price_monthly_1" } }] },
+      current_period_end: Math.floor(new Date("2026-09-18T00:00:00.000Z").getTime() / 1000),
+      cancel_at_period_end: false,
+      metadata: { user_id: "user_1" },
+    });
+
+    await handleStripeWebhook({ ...billingEnv, DB: db }, event);
+
+    expect(subscriptions.size).toBe(0);
+    expect(dispatchNotification).not.toHaveBeenCalled();
+  });
+
+  // Der volle Ablauf eines echten Checkouts: erst das "incomplete"-Rauschen
+  // (verworfen), dann der echte Uebergang zu "active" bei erfolgreicher
+  // Zahlung - muss trotz des vorherigen No-Ops als sauberer INSERT laufen
+  // und die Willkommens-Mail auslösen.
+  it("incomplete gefolgt von active (echter Checkout-Ablauf) legt eine Zeile an und loest die Willkommens-Mail aus", async () => {
+    const { db, subscriptions } = createFakeBillingD1({
+      users: [{ id: "user_1", email: "kunde@example.com", trial_used_at: null }],
+    });
+    const base = {
+      id: "sub_1",
+      customer: "cus_1",
+      items: { data: [{ price: { id: "price_monthly_1" } }] },
+      current_period_end: Math.floor(new Date("2026-09-18T00:00:00.000Z").getTime() / 1000),
+      cancel_at_period_end: false,
+      metadata: { user_id: "user_1" },
+    };
+
+    await handleStripeWebhook(
+      { ...billingEnv, DB: db },
+      subscriptionEvent("evt_incomplete_2", "customer.subscription.created", { ...base, status: "incomplete" }),
+    );
+    await handleStripeWebhook(
+      { ...billingEnv, DB: db },
+      subscriptionEvent("evt_active", "customer.subscription.updated", { ...base, status: "active" }),
+    );
+
+    expect(subscriptions.size).toBe(1);
+    const row = [...subscriptions.values()][0];
+    expect(row.status).toBe("active");
+    expect(dispatchNotification).toHaveBeenCalledTimes(1);
+    expect(dispatchNotification).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ event: "payment_succeeded", recipientEmail: "kunde@example.com" }),
+    );
+  });
+
   it("customer.subscription.created mit status=trialing legt die Subscription an, markiert den Trial als verbraucht, aber loest KEINE Zahlungs-Mail aus", async () => {
     const { db, subscriptions, users } = createFakeBillingD1({
       users: [{ id: "user_1", email: "kunde@example.com", trial_used_at: null }],

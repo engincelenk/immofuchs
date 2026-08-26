@@ -1,3 +1,29 @@
+## 2026-08-27 (1.27.2)
+
+### FIX: Nach echtem Stripe-Testkauf keine Willkommens-Mail, keine Rechnung sichtbar
+
+Live-Befund direkt nach dem ersten funktionierenden Testkauf auf dev: Pro war
+zwar aktiv, aber weder Willkommens-Mail noch Erfolgs-Toast kamen, und die
+Rechnung fehlte im Kontobereich. Ursache: `stripe.subscriptions.create()`
+(payment_behavior "default_incomplete") loest SOFORT beim Checkout-Start ein
+`customer.subscription.created`-Event mit Status `incomplete` aus - lange
+bevor der Kunde ueberhaupt die Kartendaten eingegeben hat. Das wurde bisher
+wie `unpaid` auf `canceled` gemappt und legte dadurch als ALLERERSTES eine
+D1-Zeile mit `status='canceled'` an. Der spaetere echte Uebergang zu
+`active`/`trialing` lief dadurch als UPDATE einer bereits (falsch)
+gecancelten Zeile statt als sauberer INSERT bzw. als `trialing`→`active`-
+Uebergang - keine der beiden Willkommens-Mail-Bedingungen in
+`stripe/webhook.ts` griff mehr. Fix: `incomplete`/`incomplete_expired`
+werden jetzt als reines Vor-Zahlung-Rauschen komplett ignoriert (keine
+D1-Zeile), `unpaid` bleibt weiterhin auf `canceled` gemappt (betrifft eine
+bereits bezahlte Subscription nach gescheiterter Verlaengerung). Zwei neue
+Regressionstests in `worker/src/stripe/webhook.test.ts`.
+
+Fehlende Rechnung im Kontobereich ist vermutlich ein separates
+Konfigurationsthema: im Stripe-Dashboard muss der Webhook-Endpoint zusaetzlich
+das Event `invoice.payment_succeeded` abonniert haben, sonst wird
+`latest_invoice_id` nie gesetzt.
+
 ## 2026-08-27 (1.27.1)
 
 ### FIX: Stripe-Zahlung brach mit IntegrationError ab (fehlende Adressfelder)
