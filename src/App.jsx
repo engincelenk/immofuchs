@@ -664,6 +664,24 @@ export default function App() {
         .content{padding:28px 40px}
         .hdr-inner{padding-left:40px;padding-right:40px}
       }
+      /* LANDSCAPE-HANDY (Bugreport 2026-08-26, Screenshot): ab 700px Breite
+         greift oben das Desktop-Split-Layout und zeigt Eingabe- und
+         Ergebnis-Spalte gleichzeitig - ein quer liegendes Handy ist aber oft
+         breiter als 700px bei nur ~375-430px Hoehe. Beide Spalten plus fixer
+         Header (78px) und fixe Tableiste (72px) hatten darin keinen Platz
+         mehr, Inhalte/Fuchs-Sprechblase ueberlappten sichtbar. Fix: bei so
+         geringer Hoehe unabhaengig von der Breite auf das bewaehrte
+         Mobile-Verhalten zurueckfallen (Umschalter, nur eine Spalte
+         gleichzeitig) statt das Desktop-Layout zu erzwingen. */
+      @media(min-width:700px) and (max-height:500px){
+        .mob-toggle{display:flex!important}
+        .split{display:block}
+        .inp-pane,.res-pane{display:none!important}
+        .inp-pane.act,.res-pane.act{display:block!important}
+        .res-pane{position:static}
+        .mob-next-btn{display:block}
+        .tbar-wrap{max-width:100%!important;border-radius:0!important;box-shadow:none!important}
+      }
       @media(max-width:699px){
         .inp-pane,.res-pane{display:none}
         .inp-pane.act,.res-pane.act{display:block}

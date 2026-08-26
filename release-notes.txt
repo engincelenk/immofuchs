@@ -1,3 +1,24 @@
+## 2026-08-26 (1.22.6)
+
+### FIX: Kachel-Abstand + Layout-Ueberlappung bei quer liegendem Handy
+
+Zwei Nutzer-Bugreports (Screenshots):
+
+1) Die Accordion-Kacheln (AccordionSection.jsx) standen mit 12px Abstand
+zu dicht aufeinander. marginBottom auf 16px erhoeht.
+
+2) Ab 700px Breite schaltet App.jsx auf das Desktop-Split-Layout um und
+zeigt Eingabe- und Ergebnis-Spalte gleichzeitig nebeneinander. Ein quer
+liegendes Handy ist oft breiter als 700px bei nur ~375-430px Hoehe -
+beide Spalten plus fixer Header (78px) und fixe Tableiste (72px) hatten
+darin keinen Platz mehr, Inhalte und die Fuchs-Assistent-Sprechblase
+ueberlappten sichtbar. Fix: neue Media-Query
+@media(min-width:700px) and (max-height:500px) faellt unabhaengig von
+der Breite auf das bewaehrte Mobile-Verhalten zurueck (Umschalter, nur
+eine Spalte gleichzeitig sichtbar), sobald die Hoehe zu gering ist.
+Konnte mangels Zugriff auf ein echtes Geraet nicht live nachgestellt
+werden - bitte nach Deploy auf einem Handy im Querformat gegenpruefen.
+
 ## 2026-08-26 (1.22.5)
 
 ### UX: Renditerechner - Intro-Sätze der Sections ebenfalls in den Klick-Bereich verschoben

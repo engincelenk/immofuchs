@@ -10,7 +10,7 @@ export function AccordionSection({ question, hint, color, children, defaultOpen 
   return (
     <div
       style={{
-        marginBottom: 12,
+        marginBottom: 16,
         borderRadius: 14,
         border: `1.5px solid ${open ? borderCol : "var(--cb)"}`,
         overflow: "hidden",
