@@ -39,11 +39,11 @@ export async function dispatchNotification(env: Env, intent: NotificationIntent)
   // Try/catch bewusst NEU (2026-08-19, Live-Befund via
   // worker/e2e/billing-lifecycle.e2e.test.ts): dispatchNotification() wird in
   // routes/billing.ts (cancel/reactivate) und routes/account.ts IMMER erst
-  // NACH dem eigentlichen Paddle-Aufruf + D1-Schreibvorgang aufgerufen - der
+  // NACH dem eigentlichen Stripe-Aufruf + D1-Schreibvorgang aufgerufen - der
   // fachliche Vorgang ist zu diesem Zeitpunkt bereits abgeschlossen. Ohne
   // dieses catch liess ein bloss fehlgeschlagener Mailversand (Anbieter-
   // Ausfall, Rate-Limit, ...) POST /billing/cancel mit 502 cancel_failed
-  // antworten, OBWOHL die Kuendigung bei Paddle und in D1 laengst wirksam
+  // antworten, OBWOHL die Kuendigung bei Stripe und in D1 laengst wirksam
   // war - der Kunde haette eine falsche Fehlermeldung fuer eine tatsaechlich
   // erfolgreiche Aktion gesehen. Die "garantierter Weg"-Zusage oben (Spec
   // 10.0) bezieht sich auf den Versandversuch selbst (E-Mail bleibt Pflicht,
@@ -129,17 +129,17 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       const graceEndsDate = String(intent.payload.graceEndsDate ?? "");
       return {
         subject: "Deine Zahlung ist fehlgeschlagen",
-        html: `<p>Die Abbuchung für dein ImmoFuchs-Pro-Abo ist fehlgeschlagen. Paddle versucht es automatisch erneut.</p>
+        html: `<p>Die Abbuchung für dein ImmoFuchs-Pro-Abo ist fehlgeschlagen. Stripe versucht es automatisch erneut.</p>
                <p>Bis ${graceEndsDate} bleibt Pro trotzdem aktiv. Bitte aktualisiere in der Zwischenzeit deine Zahlungsmethode im Konto-Bereich.</p>`,
       };
     }
     // Konzept-Dok "Rechnungserstellung und Versand" Abschnitt 1 ("Zahlung
     // erfolgreich"): ergaenzt eine bisher fehlende Bestaetigung beim
-    // erstmaligen Kauf (siehe paddle/webhook.ts, subscription.created ohne
-    // bestehenden DB-Eintrag). Kein Duplikat zu Paddles eigenem
-    // Zahlungsbeleg - Paddle ist Merchant of Record und verschickt die
-    // rechtliche Rechnung/Quittung selbst; das hier ist eine zusaetzliche
-    // Produkt-/Willkommens-Mail.
+    // erstmaligen Kauf (siehe stripe/webhook.ts, customer.subscription.created
+    // ohne bestehenden DB-Eintrag). Kein Duplikat zur eigentlichen Rechnung -
+    // die stellt seit dem Wechsel weg von Paddle als Merchant of Record
+    // Stripe Invoicing automatisch im Auftrag von ImmoFuchs aus; das hier ist
+    // eine zusaetzliche Produkt-/Willkommens-Mail.
     case "payment_succeeded": {
       const plan = intent.payload.plan === "monthly" ? "monatlich" : "jährlich";
       const amount = String(intent.payload.amount ?? "");
@@ -151,7 +151,7 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
                Abrechnung: ${plan}<br>
                Betrag: ${amount}<br>
                Nächste Verlängerung: ${periodEndDate}</p>
-               <p>Deine Rechnung dazu erhältst du separat direkt von Paddle, unserem Zahlungsdienstleister. Im Konto-Bereich unter "Zahlungen" findest du sie jederzeit wieder.</p>`,
+               <p>Deine Rechnung dazu bekommst du automatisch per E-Mail zugeschickt. Im Konto-Bereich unter "Zahlungen" findest du sie jederzeit wieder.</p>`,
       };
     }
     // Sicherheitshinweis, kein Marketing (4.13): geht immer raus, auch wenn der

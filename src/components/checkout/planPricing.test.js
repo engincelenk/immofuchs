@@ -4,7 +4,6 @@ import {
   YEARLY_LIST_AMOUNT,
   YEARLY_SAVINGS_PERCENT,
   YEARLY_PER_MONTH_AMOUNT,
-  normalizePaddleCheckoutAmount,
   formatMoney,
 } from "./planPricing.js";
 
@@ -28,39 +27,5 @@ describe("abgeleitete Plan-Preise", () => {
 
   it("haelt den Jahrespreis unter dem Listenpreis", () => {
     expect(PLAN_AMOUNTS.yearly).toBeLessThan(YEARLY_LIST_AMOUNT);
-  });
-});
-
-describe("Betraege aus Paddles Checkout-Events", () => {
-  const jahr = PLAN_AMOUNTS.yearly;
-
-  it("nimmt Dezimalwerte unveraendert", () => {
-    expect(normalizePaddleCheckoutAmount("59.99", jahr)).toBeCloseTo(59.99, 2);
-  });
-
-  it("erkennt Cent-Werte an der Groessenordnung und rechnet sie um", () => {
-    expect(normalizePaddleCheckoutAmount("5999", jahr)).toBeCloseTo(59.99, 2);
-  });
-
-  it("laesst Steueraufschlaege bis 50 Prozent durch", () => {
-    expect(normalizePaddleCheckoutAmount("71.39", jahr)).toBeCloseTo(71.39, 2);
-  });
-
-  it("akzeptiert rabattierte Betraege bis hinunter zu null", () => {
-    expect(normalizePaddleCheckoutAmount("0", jahr)).toBe(0);
-    expect(normalizePaddleCheckoutAmount("9.99", jahr)).toBeCloseTo(9.99, 2);
-  });
-
-  it("verwirft Betraege, die in keine der beiden Konventionen passen", () => {
-    // Weder plausibler Dezimalwert noch plausibler Cent-Wert - hier zeigt die
-    // Uebersicht lieber den selbst berechneten Preis als eine falsche Zahl.
-    expect(normalizePaddleCheckoutAmount("999999", jahr)).toBeNull();
-  });
-
-  it("verwirft Unsinn statt ihn anzuzeigen", () => {
-    expect(normalizePaddleCheckoutAmount(undefined, jahr)).toBeNull();
-    expect(normalizePaddleCheckoutAmount("abc", jahr)).toBeNull();
-    expect(normalizePaddleCheckoutAmount("-5", jahr)).toBeNull();
-    expect(normalizePaddleCheckoutAmount("59.99", 0)).toBeNull();
   });
 });

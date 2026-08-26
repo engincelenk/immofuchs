@@ -4,7 +4,7 @@
 GEMINI_API_KEY=dein-lokaler-test-key
 
 # ═══ Kommerzialisierung (2026-08, Sprints 0-5b) ═══
-# Platzhalter-Setup: ohne diese Werte funktionieren OAuth/Magic-Link/Paddle
+# Platzhalter-Setup: ohne diese Werte funktionieren OAuth/Magic-Link/Stripe
 # nicht wirklich, aber der Worker startet und laeuft (kein Crash) - Endpunkte
 # antworten mit *_not_configured-Fehlern statt echten Ergebnissen. Siehe
 # docs/kommerzialisierung-setup.md fuer den vollstaendigen Einrichtungsweg.
@@ -34,12 +34,13 @@ RESEND_API_KEY=
 MAGIC_LINK_FROM_EMAIL=ImmoFuchs <login@immofuchs.info>
 APP_BASE_URL=http://localhost:5173
 
-# Paddle (V-1) - Paddle-Sandbox-Konto, https://sandbox-vendors.paddle.com.
-PADDLE_API_KEY=
-PADDLE_WEBHOOK_SECRET=
-PADDLE_ENV=sandbox
-PADDLE_PRICE_ID_MONTHLY=
-PADDLE_PRICE_ID_YEARLY=
+# Stripe (Wechsel weg von Paddle, siehe
+# docs/plans/2026-08-26-paddle-zu-stripe-migration-spec.md) - Stripe-Testmodus-
+# Konto, https://dashboard.stripe.com/test.
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_ID_MONTHLY=
+STRIPE_PRICE_ID_YEARLY=
 
 # ═══ Nativer Push (Phase D, S7-1) ═══
 # Ohne diese Werte bleibt Push ein stilles No-Op (worker/src/push.ts) - siehe

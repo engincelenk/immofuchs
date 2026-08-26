@@ -125,42 +125,44 @@ export function AdminSubscriptionDrawer({ subscriptionId, onClose }) {
                 </>
               ) : (
                 <p style={{ ...mutedTextStyle, margin: 0 }}>
-                  {detail.latestTransactionId
-                    ? "Zahlungsdaten konnten nicht von Paddle geladen werden. Details siehe Paddle."
+                  {detail.latestInvoiceId
+                    ? "Zahlungsdaten konnten nicht von Stripe geladen werden. Details siehe Stripe."
                     : "Noch keine Zahlung erfasst."}
                 </p>
               )}
             </Block>
 
-            <Block title="Paddle">
+            <Block title="Stripe">
               <IdRow
                 label="Customer ID"
-                value={detail.paddleCustomerId}
-                onCopy={() => copy(detail.paddleCustomerId, "Customer ID")}
+                value={detail.stripeCustomerId}
+                onCopy={() => copy(detail.stripeCustomerId, "Customer ID")}
               />
               <IdRow
                 label="Subscription ID"
-                value={detail.paddleSubscriptionId}
-                onCopy={() => copy(detail.paddleSubscriptionId, "Subscription ID")}
+                value={detail.stripeSubscriptionId}
+                onCopy={() => copy(detail.stripeSubscriptionId, "Subscription ID")}
               />
-              <a
-                href={detail.paddleUrl}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  ...primaryBtnStyle,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 7,
-                  marginTop: 12,
-                  textDecoration: "none",
-                }}
-              >
-                In Paddle öffnen
-                <IconExternal size={16} />
-              </a>
+              {detail.stripeUrl && (
+                <a
+                  href={detail.stripeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    ...primaryBtnStyle,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 7,
+                    marginTop: 12,
+                    textDecoration: "none",
+                  }}
+                >
+                  In Stripe öffnen
+                  <IconExternal size={16} />
+                </a>
+              )}
               <p style={{ ...mutedTextStyle, marginTop: 10, marginBottom: 0 }}>
-                Zahlungsbetrag, Erstattung, Zahlungsart und Abrechnungszyklus werden ausschließlich in Paddle
+                Zahlungsbetrag, Erstattung, Zahlungsart und Abrechnungszyklus werden ausschließlich in Stripe
                 geändert – nicht hier.
               </p>
             </Block>
@@ -171,7 +173,7 @@ export function AdminSubscriptionDrawer({ subscriptionId, onClose }) {
   );
 }
 
-// Paddle liefert Betraege als String in der kleinsten Waehrungseinheit
+// Stripe liefert Betraege als String in der kleinsten Waehrungseinheit
 // ("4990" = 49,90) - dieselbe Umrechnung wie im Kundenbereich (Rechnungen).
 function formatMoney(amount, currency) {
   const value = Number(amount) / 100;
@@ -218,10 +220,10 @@ function Row({ label, value }) {
   );
 }
 
-// IDs bekommen einen Kopieren-Knopf: der "In Paddle oeffnen"-Link fuehrt auf
-// einen Pfad, den Paddle nicht dokumentiert (siehe worker/paddle/transactions.ts).
-// Sollte er ins Leere laufen, kann der Betreiber die ID hiermit greifen und im
-// Dashboard danach suchen.
+// IDs bekommen einen Kopieren-Knopf: falls der "In Stripe oeffnen"-Link
+// (stabiles, dokumentiertes URL-Schema, siehe
+// worker/src/stripe/transactions.ts) doch einmal ins Leere laeuft, kann der
+// Betreiber die ID hiermit greifen und im Dashboard danach suchen.
 function IdRow({ label, value, onCopy }) {
   return (
     <div style={{ padding: "5px 0" }}>

@@ -2,11 +2,11 @@ import { useEffect, useRef } from "react";
 
 // Turnstile-Widget im Registrierungsformular (Preispolitik 2026-08-20,
 // Schritt A). Das Skript wird dynamisch nachgeladen, nicht global im <head> -
-// gleiche Haltung wie bei paddleLoader.js: wer sich nie registriert, laedt es
+// gleiche Haltung wie bei stripeLoader.js: wer sich nie registriert, laedt es
 // auch nie.
 //
 // Der Site-Key ist oeffentlich (steht ohnehin im ausgelieferten Bundle) und
-// kommt wie VITE_PADDLE_CLIENT_TOKEN als Klartext aus der CI. Das Geheimnis
+// kommt wie VITE_STRIPE_PUBLISHABLE_KEY als Klartext aus der CI. Das Geheimnis
 // ist allein TURNSTILE_SECRET im Worker - dort passiert die Pruefung.
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
 const SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";

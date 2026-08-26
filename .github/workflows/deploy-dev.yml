@@ -38,15 +38,17 @@ jobs:
           # Session-Cookie (SameSite=Lax) zwischen Frontend und Worker
           # ueberhaupt ankommt (beide jetzt "same-site" unter immofuchs.info).
           VITE_ASSISTANT_URL: https://api-dev.immofuchs.info/api/assistant
-          # Paddle-Client-Token (Ergaenzung 06.08., Spec 4.6): laeuft im Browser,
-          # ist von Paddle selbst als nicht-geheim eingestuft (client-side token,
-          # landet ohnehin im ausgelieferten Bundle) - deshalb wie
-          # VITE_ASSISTANT_URL oben als Klartext statt als GitHub-Secret.
-          VITE_PADDLE_CLIENT_TOKEN: test_e412470bb9a7d8288b3e29fe71b
-          VITE_PADDLE_ENV: sandbox
+          # Stripe Publishable Key (Wechsel weg von Paddle, siehe
+          # docs/plans/2026-08-26-paddle-zu-stripe-migration-spec.md): laeuft
+          # im Browser, ist von Stripe selbst als nicht-geheim eingestuft
+          # (landet ohnehin im ausgelieferten Bundle) - trotzdem als
+          # GitHub-Secret, damit der Test-/Live-Key sich ohne Code-Aenderung
+          # tauschen laesst. Muss unter Settings > Secrets > Actions als
+          # VITE_STRIPE_PUBLISHABLE_KEY (pk_test_... fuer dev) angelegt werden.
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
           # Turnstile-Site-Key der Registrierung (Preispolitik 2026-08-20):
-          # oeffentlich wie der Paddle-Client-Token - das Geheimnis ist allein
-          # TURNSTILE_SECRET im Worker-Secret-Store.
+          # oeffentlich wie der Stripe Publishable Key - das Geheimnis ist
+          # allein TURNSTILE_SECRET im Worker-Secret-Store.
           VITE_TURNSTILE_SITE_KEY: 0x4AAAAAAEW18bBEyl_o5nTS
         run: |
           npm ci

@@ -42,7 +42,7 @@ import {
   listAuditLogAdmins,
 } from "../db";
 import { deleteAccountCompletely } from "../accountDeletion";
-import { cancelImmediately } from "../paddle/checkout";
+import { cancelImmediately } from "../stripe/checkout";
 import { requestPasswordReset, sendPasswordSetupInvite } from "../auth/passwordAuth";
 import { ROLE_PERMISSIONS, type Role } from "../entitlement";
 import {
@@ -52,8 +52,8 @@ import {
   setDiscountStatus,
   generateDiscountCode,
   type DiscountPatch,
-} from "../paddle/discounts";
-import { getTransactionSummary, paddleDashboardSubscriptionUrl } from "../paddle/transactions";
+} from "../stripe/discounts";
+import { getInvoiceSummary, stripeDashboardSubscriptionUrl } from "../stripe/transactions";
 import { sendEmail } from "../email";
 import { dispatchNotification, type NotificationEvent } from "../notifications";
 
@@ -64,15 +64,16 @@ const PAGE_SIZE = 20;
 const VALID_ROLES = Object.keys(ROLE_PERMISSIONS) as Role[];
 
 // Obergrenze fuer die Mehrfach-Erzeugung (Auftrag nennt 10/50/100). Jeder
-// Code ist ein eigener Paddle-Aufruf - ohne Deckel liesse sich der Worker
+// Code ist ein eigener Stripe-Aufruf - ohne Deckel liesse sich der Worker
 // mit einer einzigen Anfrage minutenlang beschaeftigen.
 const MAX_BULK_DISCOUNTS = 100;
 
-// Paddles eigenes Format fuer Discount-Codes (Live-Befund 19.08. via
-// wrangler tail: ein Code mit Bindestrich wurde von Paddle mit
-// "Does not match pattern '^[a-zA-Z0-9]{1,32}$'" abgelehnt, kam beim Admin
-// aber nur als 502 create_discount_failed an). Vorab hier geprueft statt den
-// Paddle-Fehler durchzureichen.
+// Urspruenglich ein Paddle-spezifisches Format (Live-Befund 19.08.: ein Code
+// mit Bindestrich wurde von Paddle mit "Does not match pattern
+// '^[a-zA-Z0-9]{1,32}$'" abgelehnt, kam beim Admin aber nur als
+// nichtssagender 502 an). Vorab hier geprueft statt einen kryptischen
+// Anbieter-Fehler durchzureichen - dieselbe Vorsicht gilt fuer Stripes eigene
+// Promotion-Code-Formatregeln.
 const DISCOUNT_CODE_PATTERN = /^[A-Z0-9]{1,32}$/;
 
 // Nutzer direkt anlegen (Nutzer-Entscheidung 2026-08-1X). Gleiches Muster wie
@@ -84,8 +85,10 @@ const VALID_SUB_STATUSES = ["active", "trialing", "past_due", "cancel_scheduled"
 const VALID_SUB_PLANS = ["monthly", "yearly"] as const;
 
 // Datumsangaben aus der Oberflaeche kommen als "YYYY-MM-DD" (input[type=date]).
-// Paddle erwartet ISO-8601 mit Zeit. Ende des Tages in UTC, damit ein
-// Gutschein am angegebenen Tag noch gilt und nicht um 00:00 verfaellt.
+// Rueckgabe als ISO-8601-String; stripe/discounts.ts wandelt das beim
+// Erzeugen in den von Stripe erwarteten Unix-Zeitstempel um. Ende des Tages
+// in UTC, damit ein Gutschein am angegebenen Tag noch gilt und nicht um
+// 00:00 verfaellt.
 export function parseExpiryDate(value: unknown): string | null | undefined {
   if (value === null) return null; // ausdruecklich "laeuft nicht ab"
   if (typeof value !== "string" || !value.trim()) return undefined; // nicht mitgeschickt
@@ -208,8 +211,8 @@ adminRoutes.get("/users/:id", requireAuth, requireAdminRead, async (c) => {
           currentPeriodEnd: sub.current_period_end,
           firstPurchaseAt: sub.first_purchase_at,
           cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
-          paddleCustomerId: sub.paddle_customer_id,
-          paddleSubscriptionId: sub.paddle_subscription_id,
+          stripeCustomerId: sub.stripe_customer_id,
+          stripeSubscriptionId: sub.stripe_subscription_id,
         }
       : null,
     supportNotes: notes.map((n) => ({
@@ -226,7 +229,7 @@ adminRoutes.get("/users/:id", requireAuth, requireAdminRead, async (c) => {
 // Admin vergebenen Passwort - konsistent mit dem sonst passwortlosen
 // Grunddesign, kein neuer Auth-Pfad noetig. Eine optionale Test-Subscription
 // gibt es nur bei isTestUser=true: echte Konten bekommen ihr Abo ausschliesslich
-// ueber Paddle, nie manuell durch den Admin gesetzt.
+// ueber Stripe, nie manuell durch den Admin gesetzt.
 adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -255,7 +258,7 @@ adminRoutes.post("/users", requireAuth, requireAdmin, requireCsrfOrigin, async (
   let subInput: { status: SubscriptionRow["status"]; plan: SubscriptionRow["plan"] } | null = null;
   if (rawSub) {
     // Eine Test-Subscription ohne Testuser-Schalter waere ein Abo ohne
-    // erkennbaren Grund, warum es keinen echten Paddle-Kauf dazu gibt.
+    // erkennbaren Grund, warum es keinen echten Stripe-Kauf dazu gibt.
     if (!isTestUser) return c.json({ error: "subscription_requires_test_user" }, 400);
     const validStatus = (VALID_SUB_STATUSES as readonly string[]).includes(rawSub.status);
     const validPlan = (VALID_SUB_PLANS as readonly string[]).includes(rawSub.plan);
@@ -381,7 +384,7 @@ adminRoutes.post("/users/:id/flags", requireAuth, requireAdmin, requireCsrfOrigi
 
 // Abo eines Testusers direkt setzen (Nutzer-Auftrag 2026-08-20): wer den
 // Checkout mit einem Testkonto durchspielt, hat danach ein echtes
-// Paddle-Sandbox-Abo, das sich sonst nur ueber "Passwort vergessen" ->
+// Stripe-Sandbox-Abo, das sich sonst nur ueber "Passwort vergessen" ->
 // Login -> Kontobereich -> Kuendigen zuruecksetzen liesse - fuer wiederholte
 // Checkout-Tests unpraktisch. Nutzt dieselben Bausteine wie der
 // Selbstbedienungs-Reset (POST /billing/test-reset) und das Anlegen mit
@@ -409,22 +412,20 @@ adminRoutes.post(
     if (!user.is_test_user) return c.json({ error: "subscription_requires_test_user" }, 400);
 
     // Echtes Sandbox-Abo (aus einem tatsaechlich durchgespielten Checkout,
-    // erkennbar an der paddle_subscription_id OHNE das admin-test:-Praefix)
-    // muss zuerst bei Paddle gekuendigt werden - sonst laeuft im Hintergrund
+    // erkennbar an der stripe_subscription_id OHNE das admin-test:-Praefix)
+    // muss zuerst bei Stripe gekuendigt werden - sonst laeuft im Hintergrund
     // eine Sandbox-Subscription weiter, die hier nur aus D1 verschwindet.
-    // status==="canceled" ausgenommen (Befund beim ersten echten Einsatz
-    // 2026-08-20): Paddle lehnt das Kuendigen einer bereits gekuendigten
-    // Subscription ab, wodurch dieser Endpunkt mit 502 abbrach und das Konto
-    // gar nicht mehr zuruecksetzbar war - bei diesem Status gibt es
-    // ohnehin nichts mehr zu kuendigen.
+    // status==="canceled" ausgenommen (gleiche Begruendung wie zuvor bei
+    // Stripe): bei diesem Status gibt es ohnehin nichts mehr zu kuendigen.
     const existing = await getLatestSubscriptionForUser(c.env.DB, id);
     if (
       existing &&
       existing.status !== "canceled" &&
-      !existing.paddle_subscription_id.startsWith(ADMIN_TEST_SUBSCRIPTION_PREFIX)
+      existing.stripe_subscription_id &&
+      !existing.stripe_subscription_id.startsWith(ADMIN_TEST_SUBSCRIPTION_PREFIX)
     ) {
       try {
-        await cancelImmediately(c.env, existing.paddle_subscription_id);
+        await cancelImmediately(c.env, existing.stripe_subscription_id);
       } catch (err) {
         console.error("admin_set_subscription_cancel_failed", err instanceof Error ? err.message : "unknown");
         return c.json({ error: "cancel_failed_try_again" }, 502);
@@ -546,7 +547,7 @@ adminRoutes.post(
 
 // Nutzer endgueltig loeschen (Auftrag Abschnitt 7 "Danger Zone"). Nutzt
 // bewusst dieselbe Funktion wie die Selbstloeschung durch den Nutzer
-// (accountDeletion.ts) - inklusive sofortiger Paddle-Kuendigung, sonst liefe
+// (accountDeletion.ts) - inklusive sofortiger Stripe-Kuendigung, sonst liefe
 // ein Abo ohne zugehoeriges Konto weiter. Der Audit-Eintrag wird VOR dem
 // Loeschen geschrieben, sonst gibt es bei einem Fehlschlag mittendrin keine
 // Spur; er ueberlebt die Loeschung bewusst (siehe deleteUserCompletely).
@@ -572,14 +573,15 @@ adminRoutes.post(
     try {
       await deleteAccountCompletely(c.env, id, user.email);
     } catch (err) {
-      // Nur ein echter Paddle-Kuendigungsfehler (accountDeletion.ts wirft dafuer
-      // "cancel_failed_try_again") bekommt die Paddle-spezifische Meldung - alles
+      // Nur ein echter Stripe-Kuendigungsfehler (accountDeletion.ts wirft dafuer
+      // "cancel_failed_try_again") bekommt die Stripe-spezifische Meldung - alles
       // andere (z.B. ein D1-Constraint-Fehler in deleteUserCompletely) landete
-      // vorher faelschlich ebenfalls unter "Paddle-Kuendigung lief nicht durch"
-      // und fuehrte bei der Fehlersuche auf die falsche Spur (Befund 2026-08-18).
-      const isPaddleFailure = err instanceof Error && err.message === "cancel_failed_try_again";
+      // vorher faelschlich ebenfalls unter "Stripe-Kuendigung lief nicht durch"
+      // und fuehrte bei der Fehlersuche auf die falsche Spur (gleiche Absicherung
+      // wie zuvor bei Paddle, Befund 2026-08-18).
+      const isStripeFailure = err instanceof Error && err.message === "cancel_failed_try_again";
       console.error("admin_delete_user_failed", err instanceof Error ? err.message : "unknown");
-      return c.json({ error: isPaddleFailure ? "delete_failed_try_again" : "request_failed" }, 502);
+      return c.json({ error: isStripeFailure ? "delete_failed_try_again" : "request_failed" }, 502);
     }
     return c.json({ ok: true });
   },
@@ -621,7 +623,7 @@ adminRoutes.post("/users/:id/status", requireAuth, requireAdmin, requireCsrfOrig
 
 // ═══ Abos & Zahlungen (Admin-MVP Abschnitt 8) ═══
 // Rein lesend. Betrag, Zahlungsstatus, Refund und Abrechnungszyklus bleiben
-// bei Paddle - es gibt hier bewusst KEINE schreibende Route dafuer.
+// bei Stripe - es gibt hier bewusst KEINE schreibende Route dafuer.
 
 export function parseAdminSubscriptionsQuery(
   query: URLSearchParams,
@@ -632,7 +634,7 @@ export function parseAdminSubscriptionsQuery(
   return { status: isAdminSubscriptionFilter(rawStatus) ? rawStatus : null, page };
 }
 
-// Ohne Paddle-Aufruf pro Zeile - der waere bei 20 Zeilen 20 Anfragen. Der
+// Ohne Stripe-Aufruf pro Zeile - der waere bei 20 Zeilen 20 Anfragen. Der
 // "letzte Zahlungsstatus" der Liste wird deshalb aus dem gespiegelten Status
 // abgeleitet, die echte Transaktion holt erst die Detailansicht.
 function paymentStateFromRow(row: { status: string; past_due_since: number | null }): string {
@@ -669,12 +671,12 @@ adminRoutes.get("/subscriptions", requireAuth, requirePermission("subscription.r
 adminRoutes.get("/subscriptions/:id", requireAuth, requirePermission("subscription.read"), async (c) => {
   const sub = await getSubscriptionForAdmin(c.env.DB, c.req.param("id"));
   if (!sub) return c.json({ error: "not_found" }, 404);
-  // Genau ein Paddle-Aufruf, und nur wenn es ueberhaupt eine Transaktion
-  // gibt. Schlaegt er fehl (kein API-Key lokal, Paddle nicht erreichbar),
-  // liefert der Helfer null - die uebrigen Angaben kommen aus D1 und die
-  // Ansicht bleibt benutzbar.
-  const lastPayment = sub.latest_transaction_id
-    ? await getTransactionSummary(c.env, sub.latest_transaction_id)
+  // Genau ein Stripe-Aufruf, und nur wenn es ueberhaupt eine Rechnung gibt.
+  // Schlaegt er fehl (kein API-Key lokal, Stripe nicht erreichbar), liefert
+  // der Helfer null - die uebrigen Angaben kommen aus D1 und die Ansicht
+  // bleibt benutzbar.
+  const lastPayment = sub.latest_invoice_id
+    ? await getInvoiceSummary(c.env, sub.latest_invoice_id)
     : null;
   return c.json({
     id: sub.id,
@@ -691,11 +693,11 @@ adminRoutes.get("/subscriptions/:id", requireAuth, requirePermission("subscripti
     // Waehrend der Testphase ist current_period_end das Trial-Ende, sonst der
     // naechste Abbuchungstermin (gleiche Unterscheidung wie im Kundenbereich).
     trialEndsAt: sub.status === "trialing" ? sub.current_period_end : null,
-    paddleCustomerId: sub.paddle_customer_id,
-    paddleSubscriptionId: sub.paddle_subscription_id,
-    latestTransactionId: sub.latest_transaction_id,
+    stripeCustomerId: sub.stripe_customer_id,
+    stripeSubscriptionId: sub.stripe_subscription_id,
+    latestInvoiceId: sub.latest_invoice_id,
     lastPayment,
-    paddleUrl: paddleDashboardSubscriptionUrl(c.env, sub.paddle_subscription_id),
+    stripeUrl: sub.stripe_subscription_id ? stripeDashboardSubscriptionUrl(c.env, sub.stripe_subscription_id) : null,
   });
 });
 
@@ -714,10 +716,10 @@ adminRoutes.get("/activity", requireAuth, requireAdminRead, async (c) => {
   return c.json({ entries });
 });
 
-// Gutscheine (Stufe F, Nutzer-Konzept 2026-08-11) - Paddle bleibt einzige
+// Gutscheine (Stufe F, Nutzer-Konzept 2026-08-11) - Stripe bleibt einzige
 // Quelle fuer Rabattdaten, D1 speichert dazu nichts. "amount" ist bei
 // type==="percentage" ein reiner Prozentwert ("10" = 10%), bei "flat" ein
-// Betrag in der kleinsten Waehrungseinheit (Cent) - siehe Paddle-API.
+// Betrag in der kleinsten Waehrungseinheit (Cent) - siehe Stripe-API.
 adminRoutes.get("/discounts", requireAuth, requirePermission("discount.read"), async (c) => {
   try {
     const discounts = await listDiscounts(c.env);
@@ -742,11 +744,9 @@ adminRoutes.post(
     const usageLimit = Number.isInteger(body?.usageLimit) && body.usageLimit > 0 ? body.usageLimit : null;
     const expiresAt = parseExpiryDate(body?.expiresAt) ?? null;
     if (!code || !description || !type || !amount) return c.json({ error: "invalid_discount" }, 400);
-    // Paddle akzeptiert als Code-Format nur ^[a-zA-Z0-9]{1,32}$ (Live-Befund
-    // 19.08. via wrangler tail: ein Code mit Bindestrich scheiterte serverseitig
-    // bei Paddle und kam nur als nichtssagender 502 create_discount_failed
-    // zurueck). Hier vorab geprueft, damit ein Admin sofort einen verstaendlichen
-    // 400 statt eines Paddle-502 sieht.
+    // Vorab geprueft (siehe DISCOUNT_CODE_PATTERN oben, historisch aus einem
+    // Stripe-Befund), damit ein Admin sofort einen verstaendlichen 400 statt
+    // eines kryptischen 502 vom Zahlungsanbieter sieht.
     if (!DISCOUNT_CODE_PATTERN.test(code)) return c.json({ error: "invalid_discount_code" }, 400);
 
     try {
@@ -768,8 +768,8 @@ adminRoutes.post(
 );
 
 // Mehrere Codes auf einmal (Auftrag Abschnitt 9). Jeder Code ist ein eigener
-// Paddle-Aufruf - bewusst nacheinander statt parallel, um nicht in
-// Paddle-Ratelimits zu laufen. Bereits erzeugte Codes bleiben bestehen, wenn
+// Stripe-Aufruf - bewusst nacheinander statt parallel, um nicht in
+// Stripe-Ratelimits zu laufen. Bereits erzeugte Codes bleiben bestehen, wenn
 // einer scheitert: sie sind gueltige Gutscheine, ein Rueckbau waere
 // schlimmer als ein Teilergebnis. Die Antwort meldet beides ehrlich.
 adminRoutes.post(
@@ -810,7 +810,7 @@ adminRoutes.post(
     }
 
     // Ein Audit-Eintrag fuer den ganzen Vorgang statt 100 einzelner - der Log
-    // soll die Aktion des Admins abbilden, nicht jede Paddle-Anfrage.
+    // soll die Aktion des Admins abbilden, nicht jede Stripe-Anfrage.
     if (created.length > 0) {
       await logAdminAction(c.env.DB, {
         adminUserId: c.var.userId,
@@ -826,10 +826,11 @@ adminRoutes.post(
   },
 );
 
-// Bearbeiten (Auftrag Abschnitt 9): Beschreibung, Rabattwert, Ablaufdatum,
-// Nutzungslimit, Status. Code und Rabatt-Typ bewusst nicht - siehe
-// paddle/discounts.ts (ein verteilter Gutschein wuerde sonst still zu einem
-// anderen); dafuer gibt es "Duplizieren".
+// Bearbeiten: nur Beschreibung und Status. Stripe erlaubt bei Coupons/
+// Promotion Codes nach dem Anlegen KEINE Aenderung von Betrag, Nutzungslimit
+// oder Ablaufdatum mehr (offizielle API-Referenz - deutlich enger als Stripe,
+// siehe stripe/discounts.ts). Code und Rabatt-Typ waren schon bei Stripe
+// bewusst nicht aenderbar; dafuer gibt es "Duplizieren".
 adminRoutes.post(
   "/discounts/:id",
   requireAuth,
@@ -843,14 +844,7 @@ adminRoutes.post(
     if (typeof body?.description === "string" && body.description.trim()) {
       patch.description = body.description.trim();
     }
-    if (typeof body?.amount === "string" && body.amount.trim()) patch.amount = body.amount.trim();
     if (body?.status === "active" || body?.status === "archived") patch.status = body.status;
-    // null ist hier eine gueltige Angabe ("unbegrenzt"), deshalb explizit
-    // von "nicht mitgeschickt" unterschieden.
-    if (body?.usageLimit === null) patch.usageLimit = null;
-    else if (Number.isInteger(body?.usageLimit) && body.usageLimit > 0) patch.usageLimit = body.usageLimit;
-    const expiresAt = parseExpiryDate(body?.expiresAt);
-    if (expiresAt !== undefined) patch.expiresAt = expiresAt;
 
     if (Object.keys(patch).length === 0) return c.json({ error: "invalid_discount" }, 400);
 

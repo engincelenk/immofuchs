@@ -75,7 +75,7 @@ if ($hasRealPro) {
 
     if ($realProPw) {
         $out.Add("")
-        $out.Add("# Konto mit ECHTEM Paddle-Sandbox-Abo (ersetzt die frueher hier")
+        $out.Add("# Konto mit ECHTEM Stripe-Testmodus-Abo (ersetzt die frueher hier")
         $out.Add("# eingetragene, inzwischen geloeschte Session-ID E2E_SESSION_REAL_PRO).")
         $out.Add("E2E_PASSWORD_REALPRO=$realProPw")
         $changes += "E2E_PASSWORD_REALPRO ergaenzt ($($realProPw.Length) Zeichen)"

@@ -49,6 +49,6 @@ e2e/test-results/
 # deshalb hierher wandern, sonst droht ein versehentlicher Commit).
 # Wildcard statt exaktem Dateinamen (Befund 2026-08-19): fix-env-local.ps1
 # legt vor jeder Aenderung ein .bak an - e2e/.env.local.bak enthielt beim
-# Pruefen echte Test-Passwoerter + den Paddle-Webhook-Secret und war NICHT
+# Pruefen echte Test-Passwoerter + den Stripe-Webhook-Secret und war NICHT
 # von der bisherigen Regel erfasst.
 e2e/.env.local*

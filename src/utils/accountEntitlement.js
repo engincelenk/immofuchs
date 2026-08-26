@@ -24,7 +24,7 @@ export function formatPeriodEndDate(subscription, locale = "de-DE") {
 // "Abonnement" sichtbar, also einen Klick tief - bei einem Freemium-Produkt
 // ist das die zentrale Information. Diese Ableitung speist den dauerhaft
 // sichtbaren Status-Chip in der Kopfzeile (PlanChip.jsx).
-//   "trial" - Pro-Zugang laeuft, aber als Testphase (Paddle-Status trialing)
+//   "trial" - Pro-Zugang laeuft, aber als Testphase (Stripe-Status trialing)
 //   "pro"   - bezahlter, aktiver Zugang
 //   "free"  - eingeloggt ohne Pro-Zugang
 export function planStatusFromMe(me) {
@@ -34,7 +34,7 @@ export function planStatusFromMe(me) {
 }
 
 // Verbleibende volle Tage der Testphase. Waehrend `trialing` ist
-// currentPeriodEnd das Testphasen-Ende (Paddle setzt die erste Periode auf
+// currentPeriodEnd das Testphasen-Ende (Stripe setzt die erste Periode auf
 // den Trial). Aufgerundet, damit der letzte angebrochene Tag noch als "1 Tag"
 // zaehlt statt als "0" - null, wenn die Frist schon vorbei oder unbekannt ist.
 export function trialDaysRemaining(subscription, now = Date.now()) {

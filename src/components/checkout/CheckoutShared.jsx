@@ -27,10 +27,10 @@ export function ErrorBanner({ t, code }) {
   return <div style={errorBannerStyle}>{map[code] || t.loginErrorOauth}</div>;
 }
 
-// Zwischenzustand beim Oeffnen der Kasse (Referenz-Screenshot "Weiterleitung
-// zur Kasse ..."). Vorher passierte zwischen Klick und Paddle-Fenster sichtbar
-// nichts - bei langsamer Verbindung wirkte der Kauf-Button dadurch kaputt und
-// wurde erneut gedrueckt.
+// Zwischenzustand beim Erzeugen der Kasse (Referenz-Screenshot "Weiterleitung
+// zur Kasse ..."). Vorher passierte zwischen Klick und Zahlungsformular
+// sichtbar nichts - bei langsamer Verbindung wirkte der Kauf-Button dadurch
+// kaputt und wurde erneut gedrueckt.
 export function RedirectOverlay({ label }) {
   return (
     <div

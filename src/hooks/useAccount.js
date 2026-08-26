@@ -70,15 +70,24 @@ export function useAccount() {
   const didHandleRedirectRef = useRef(false);
 
   // Globale Kauf-Bestaetigung (Bugreport 26.08.: nach einem Kauf kam manchmal
-  // gar keine Meldung, weil Paddles checkout.completed-Event ausblieb und der
-  // Wizard dadurch nie zum WelcomeStep wechselte, sondern kommentarlos schloss
-  // - der Nutzer landete zurueck auf der Seite, auf der er vorher war). Dieser
-  // Toast haengt NICHT am Wizard-Event, sondern direkt am tatsaechlichen
-  // Pro-Status aus /me: sobald isPro bei einem Refresh von false auf true
-  // wechselt, wird er gezeigt - unabhaengig davon, ob/wie der Kauf-Dialog das
-  // mitbekommen hat. wasProRef startet bewusst erst nach dem ersten Refresh
-  // (initializedRef), damit ein Reload als bereits bestehender Pro-Nutzer
-  // nicht faelschlich den Toast ausloest.
+  // gar keine Meldung, weil ein Client-Event fuer den Wechsel zum WelcomeStep
+  // fehlte und der Wizard dadurch kommentarlos schloss - der Nutzer landete
+  // zurueck auf der Seite, auf der er vorher war). Dieser Toast haengt NICHT
+  // am Wizard-Event, sondern direkt am tatsaechlichen Status aus /me.
+  //
+  // Zweiter Bugreport (26.08., selber Tag): erste Fassung hier prüfte
+  // `isPro` false->true - das feuert bei so gut wie keinem echten Kauf, weil
+  // `isPro` laut /me-Antwort (worker/src/routes/account.ts) schon waehrend
+  // der kartenfreien 7-Tage-App-Testphase true ist (isPro = zugang !==
+  // "keiner", und "zugang" kennt "pro" UND "trial"). Wer die Testphase
+  // durchlaeuft und danach kauft, hat also nie einen isPro-Wechsel false->true
+  // - `isPro` bleibt die ganze Zeit true. Das eigentliche Kaufsignal ist der
+  // Wechsel von "trial"/"keiner" zu "pro" im Feld `zugang` (einzige Stelle,
+  // die einen echten bezahlten Zugang von der kartenfreien Testphase
+  // unterscheidet, siehe accountEntitlement.js/planStatusFromMe). wasProRef
+  // startet bewusst erst nach dem ersten Refresh (proInitializedRef), damit
+  // ein Reload als bereits bestehender Pro-Nutzer nicht faelschlich den Toast
+  // ausloest.
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const wasProRef = useRef(false);
   const proInitializedRef = useRef(false);
@@ -120,9 +129,11 @@ export function useAccount() {
       if (!res.ok) throw new Error(`me_failed_${res.status}`);
       const json = await res.json();
       setMe(json);
-      const isPro = Boolean(json?.isPro);
-      broadcastIsPro(isPro);
-      noteProStatus(isPro);
+      broadcastIsPro(Boolean(json?.isPro));
+      // Bewusst `zugang === "pro"` statt des `isPro`-Felds fuer die
+      // Kauf-Erkennung (siehe Kommentar bei noteProStatus oben) - "isPro"
+      // ist waehrend der kartenfreien Testphase bereits true.
+      noteProStatus(json?.zugang === "pro");
     } catch (e) {
       console.error("[account] refresh fehlgeschlagen:", e);
       setError("refresh_failed");
@@ -393,22 +404,25 @@ export function useAccount() {
     return { ok };
   }, [broadcastIsPro]);
 
-  // Paddle-Checkout (4.6): erzeugt server-seitig eine Transaktion und oeffnet
-  // sie per dynamisch nachgeladenem Paddle.js (paddleLoader.js).
+  // Stripe-Checkout: erzeugt server-seitig eine Subscription mit offenem
+  // PaymentIntent und liefert dessen clientSecret zurueck - PaymentStep.jsx
+  // baut daraus das eingebettete Stripe Payment Element und ruft
+  // stripe.confirmPayment() selbst auf (kein serverseitig geoeffnetes
+  // Fremd-Overlay mehr wie zuvor bei Paddle).
   // discountCode optional (Stufe F, Nutzer-Konzept 2026-08-11) - wird
-  // server-seitig gegen Paddle aufgeloest, siehe routes/billing.ts.
-  //
-  // `frameTarget` (Checkout-Neugestaltung 2026-08-17): Klassenname des
-  // Containers, in den Paddle sein Zahlungsformular einbettet. Damit laeuft
-  // die Zahlung innerhalb unserer Kaufstrecke - mit eigener Bestelluebersicht
-  // daneben - statt in Paddles bildschirmfuellendem Fremd-Overlay. Ohne diesen
-  // Parameter bleibt das bisherige Overlay-Verhalten, was der Rueckfallweg
-  // ist, wenn der eingebettete Rahmen nicht laedt.
-  const startCheckout = useCallback(async (plan, discountCode, frameTarget) => {
+  // server-seitig gegen Stripe aufgeloest, siehe routes/billing.ts.
+  // billingAddress (Bugreport 26.08.: die Rechnung zeigte bisher nur die
+  // E-Mail-Adresse) landet auf dem Stripe-Kunden, siehe
+  // worker/src/stripe/checkout.ts/findOrCreateCustomer.
+  const startCheckout = useCallback(async (plan, discountCode, billingAddress) => {
     const res = await apiFetch("/billing/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(discountCode ? { plan, discountCode } : { plan }),
+      body: JSON.stringify({
+        plan,
+        ...(discountCode ? { discountCode } : {}),
+        ...(billingAddress ? { address: billingAddress } : {}),
+      }),
     });
     if (!res.ok) {
       // Guard Kap. 3.0 (Spec-v3.0): eigener Fehlercode, damit PaymentStep
@@ -425,46 +439,20 @@ export function useAccount() {
       // Unterscheidbar machen (Bugreport 05.08.): vorher warf jeder Fehlerpfad
       // dieselbe Meldung, und die Oberflaeche zeigte pauschal den
       // Adblocker-Hinweis - auch dann, wenn der Server mit 502
-      // `paddle_not_configured` antwortete und Paddle.js nie geladen wurde.
-      // "checkout_unavailable" heisst: serverseitig nicht moeglich (Paddle
+      // `stripe_not_configured` antwortete und Stripe.js nie geladen wurde.
+      // "checkout_unavailable" heisst: serverseitig nicht moeglich (Stripe
       // nicht eingerichtet oder API-Fehler), NICHT clientseitig blockiert.
       throw new Error("checkout_unavailable");
     }
-    const { transactionId } = await res.json();
-    const { loadPaddle } = await import("../utils/paddleLoader.js");
-    const Paddle = await loadPaddle();
-    // Kein successUrl mehr (Ergaenzung Phase 1 Checkout-Wizard): der Wizard
-    // bleibt jetzt offen und reagiert selbst auf das checkout.completed-Event
-    // (siehe paddleLoader.js/onPaddleCheckoutEvent), damit der neue
-    // WelcomeStep sichtbar wird statt eines Seiten-Neuladens.
-    Paddle.Checkout.open(
-      frameTarget
-        ? {
-            transactionId,
-            settings: {
-              displayMode: "inline",
-              // Paddle erwartet hier einen KLASSEN-Namen, keine ID - der
-              // Container in PaymentStep traegt sie entsprechend als
-              // className, nicht als id.
-              frameTarget,
-              frameInitialHeight: 460,
-              // Transparenter Hintergrund ohne Rahmen: die umgebende Karte
-              // liefert bereits Flaeche und Kante, ein zweiter Rahmen wuerde
-              // doppelt wirken.
-              frameStyle: "width:100%; min-width:312px; background-color:transparent; border:none;",
-              theme: "light",
-            },
-          }
-        : { transactionId },
-    );
+    return res.json(); // { clientSecret }
   }, []);
 
   // openBillingPortal() ist am 2026-08-20 entfallen (Nutzer-Entscheidung):
-  // im Paddle-Kundenportal liessen sich neben der Zahlungsart auch Kuendigung
-  // und Rechnungsdaten aendern - Wege, die es hier bereits gibt bzw. die
-  // bewusst nicht selbstbedient sein sollen. Die Worker-Route /billing/portal
-  // bleibt bestehen (von der e2e-Suite abgedeckt), hat aber keine
-  // Bedienoberflaeche mehr.
+  // im Kundenportal liessen sich neben der Zahlungsart auch Kuendigung und
+  // Rechnungsdaten aendern - Wege, die es hier bereits gibt bzw. die bewusst
+  // nicht selbstbedient sein sollen. Die Worker-Route /billing/portal bleibt
+  // bestehen (von der e2e-Suite abgedeckt), hat aber keine Bedienoberflaeche
+  // mehr.
 
   const cancelSubscription = useCallback(async () => {
     const res = await apiFetch("/billing/cancel", { method: "POST" });
@@ -489,10 +477,11 @@ export function useAccount() {
   }, [refresh]);
 
   // Tarifwechsel monatlich <-> jaehrlich (Phase 2). Der neue Plan landet
-  // NICHT synchron in D1 - Paddle bestaetigt den Wechsel per
-  // subscription.updated-Webhook (siehe routes/billing.ts), der die einzige
-  // Schreibquelle bleibt. Deshalb derselbe Doppel-Refresh wie nach dem
-  // Checkout: einer sofort, einer verzoegert, falls der Webhook noch laeuft.
+  // NICHT synchron in D1 - Stripe bestaetigt den Wechsel per
+  // customer.subscription.updated-Webhook (siehe routes/billing.ts), der die
+  // einzige Schreibquelle bleibt. Deshalb derselbe Doppel-Refresh wie nach
+  // dem Checkout: einer sofort, einer verzoegert, falls der Webhook noch
+  // laeuft.
   const changePlan = useCallback(
     async (plan) => {
       const res = await apiFetch("/billing/change-plan", {
@@ -511,9 +500,9 @@ export function useAccount() {
     [refresh],
   );
 
-  // Rechnungen kommen direkt von Paddle (Merchant of Record) - bewusst kein
-  // State im Hook, die Liste ist nur solange relevant, wie der
-  // Rechnungs-Bereich offen ist.
+  // Rechnungen kommen direkt von Stripe Invoicing - bewusst kein State im
+  // Hook, die Liste ist nur solange relevant, wie der Rechnungs-Bereich
+  // offen ist.
   const listInvoices = useCallback(async () => {
     const res = await apiFetch("/billing/invoices");
     if (!res.ok) throw new Error("invoices_failed");
@@ -523,8 +512,8 @@ export function useAccount() {
 
   // Die PDF-URL ist kurzlebig und signiert, wird deshalb bei jedem Klick
   // frisch geholt statt mit der Liste zwischengespeichert.
-  const openInvoicePdf = useCallback(async (transactionId) => {
-    const res = await apiFetch(`/billing/invoices/${encodeURIComponent(transactionId)}/pdf`);
+  const openInvoicePdf = useCallback(async (invoiceId) => {
+    const res = await apiFetch(`/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`);
     if (!res.ok) throw new Error("invoice_pdf_failed");
     const { url } = await res.json();
     window.open(url, "_blank");

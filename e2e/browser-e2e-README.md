@@ -78,9 +78,9 @@ Sitzung ausloggen.
 Die größte noch offene Lücke: test.monatlich und test.jaehrlich haben
 BEIDE ein aktives Pro-Abo. Für alle Use Cases, die einen eingeloggten
 Nutzer OHNE Pro brauchen - die Paywall-Sperre selbst (B10), der komplette
-Kauf-Durchlauf inkl. Widerrufsrecht-Checkbox und eingebettetem
-Paddle-Formular (E1-E9, E13), der "Upgrade"-Button im Konto (G2.5) - gibt es
-aktuell **kein automatisierbares Testkonto**:
+Kauf-Durchlauf inkl. Widerrufsrecht-Checkbox und eingebettetem Stripe Payment
+Element (E1-E9, E13), der "Upgrade"-Button im Konto (G2.5) - gibt es aktuell
+**kein automatisierbares Testkonto**:
 
 - `test.free` wurde am 18.08. bewusst gelöscht (siehe release-notes.txt,
   Nutzer-Entscheidung).
@@ -137,9 +137,10 @@ Text, nicht den wünschenswerten.
 - Echte OAuth-Logins (Google/Apple) - Redirect zu einem echten Drittanbieter.
 - Passkeys (WebAuthn) - möglich über Playwrights Virtual-Authenticator,
   eigener Umsetzungsaufwand, hier zurückgestellt.
-- Der tatsächliche Kartenkauf im Paddle-Sandbox-Overlay - technisch mit
-  Paddles Test-Kartennummern möglich, aber jeder Lauf erzeugt eine echte
-  Sandbox-Transaktion; bewusst nicht routinemäßig mitlaufen lassen.
+- Der tatsächliche Kartenkauf im eingebetteten Stripe Payment Element -
+  technisch mit Stripes Test-Kartennummern möglich, aber jeder Lauf erzeugt
+  eine echte Testmodus-Subscription; bewusst nicht routinemäßig mitlaufen
+  lassen.
 - Browser-Berechtigungsdialoge (Benachrichtigungen für ZinsAlarm,
   Mikrofon für Finn) - Playwright kann Berechtigungen vorab per
   Context-Option erteilen/verweigern, aber keinen echten Nutzerklick auf den

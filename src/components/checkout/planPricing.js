@@ -7,10 +7,16 @@
 // Zahlen stehen deshalb hier einmal, die Sprachdateien tragen nur noch die
 // Beschriftung drumherum.
 //
-// Diese Werte muessen zu den in Paddle hinterlegten Preisen passen
-// (PADDLE_PRICE_ID_MONTHLY / _YEARLY, siehe worker/src/paddle/checkout.ts).
-// Paddle bleibt die verbindliche Quelle fuer den tatsaechlich abgerechneten
-// Betrag - was hier steht, ist die Anzeige VOR dem Checkout.
+// Diese Werte muessen zu den in Stripe hinterlegten Preisen passen
+// (STRIPE_PRICE_ID_MONTHLY / _YEARLY, siehe worker/src/stripe/checkout.ts).
+// Stripe bleibt die verbindliche Quelle fuer den tatsaechlich abgerechneten
+// Betrag - was hier steht, ist die Anzeige VOR UND WAEHREND des Checkouts:
+// anders als bei Paddle liefert Stripe Payment Element keinen Client-Event
+// mit dem finalen Betrag (der steht serverseitig schon beim Erzeugen der
+// Subscription fest, keine laenderabhaengige Steuer-Unsicherheit mehr, da
+// pauschal 19 % DE) - die Normalisierungsfunktionen fuer unsichere
+// Client-Betraege (normalizePaddleCheckoutAmount/formatPaddleAmount) sind
+// deshalb ersatzlos entfallen.
 export const PLAN_AMOUNTS = {
   monthly: 6.99,
   yearly: 59.99,
@@ -38,44 +44,5 @@ export function formatMoney(amount, locale) {
   return new Intl.NumberFormat(locale || "de-DE", {
     style: "currency",
     currency: PLAN_CURRENCY,
-  }).format(amount);
-}
-
-// Betrag aus einem Paddle.js-Checkout-Event in einen anzeigbaren Betrag
-// umrechnen.
-//
-// Warum das nicht trivial ist: Paddle nutzt zwei Konventionen. Die REST-API
-// liefert Cent-Strings ("5999", siehe worker/src/paddle/checkout.ts), die
-// Checkout-Events der Paddle.js dagegen Dezimalwerte ("59.99"). Welche der
-// beiden im Event ankommt, ist nicht gegen die Sandbox verifiziert - und ein
-// Faktor-100-Fehler an der Kasse waere der teuerste denkbare Anzeigefehler.
-//
-// Deshalb wird nicht geraten, sondern gegen den erwarteten Betrag geprueft:
-//   - plausibel (bis 1,5x erwartet, Puffer fuer Steuer)      -> direkt nehmen
-//   - rund 100x zu gross                                     -> Cent-Wert
-//   - alles andere (auch Rabatt-bedingt kleinere Betraege)   -> pruefen
-// Was in keines der Raster passt, wird verworfen; die Uebersicht zeigt dann
-// weiter den selbst berechneten Betrag statt einer moeglicherweise falschen
-// Zahl. `expectedAmount` ist der Listenpreis des gewaehlten Plans.
-export function normalizePaddleCheckoutAmount(raw, expectedAmount) {
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value < 0) return null;
-  const expected = Number(expectedAmount);
-  if (!Number.isFinite(expected) || expected <= 0) return null;
-
-  // Rabatte duerfen den Betrag bis auf 0 druecken - nach unten wird deshalb
-  // nicht begrenzt, nur nach oben.
-  if (value <= expected * 1.5) return value;
-  const asMinorUnits = value / 100;
-  if (asMinorUnits <= expected * 1.5) return asMinorUnits;
-  return null;
-}
-
-export function formatPaddleAmount(raw, currencyCode, locale, expectedAmount) {
-  const amount = normalizePaddleCheckoutAmount(raw, expectedAmount);
-  if (amount === null) return null;
-  return new Intl.NumberFormat(locale || "de-DE", {
-    style: "currency",
-    currency: currencyCode || PLAN_CURRENCY,
   }).format(amount);
 }

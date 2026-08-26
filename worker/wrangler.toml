@@ -169,7 +169,6 @@ ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://dev.immofu
 # eingehenden Requests zurueck - nach Login landet man dann auf der nackten
 # Worker-Domain statt zurueck im Frontend (Befund 2026-08-04, 1.6.3).
 APP_BASE_URL = "https://dev.immofuchs.info"
-PADDLE_ENV = "sandbox"
 # Absender fuer alle Auth-Mails (Ergaenzung 05.08.). Bewusst die Subdomain
 # send.immofuchs.info: sie ist bei Resend als eigene Sending-Domain registriert
 # (DKIM/SPF/MX liegen dort), waehrend die Wurzeldomain unveraendert auf IONOS
@@ -243,7 +242,7 @@ new_sqlite_classes = ["SessionRateLimiter"]
 # ═══ QA-Umgebung (neu, Kommerzialisierung 2026-08) ═══
 # Bisher teilten sich QA und Prod EINEN physischen Worker (siehe deploy-qa.yml,
 # das bewusst auf die Prod-Worker-URL zeigte) - fuer Zahlungen/Konten braucht
-# QA aber eine eigene D1-Datenbank und einen eigenen Paddle-Sandbox-Kontext,
+# QA aber eine eigene D1-Datenbank und einen eigenen Stripe-Testmodus-Kontext,
 # sonst wuerden QA-Tests echte Prod-Nutzerdaten/-Abos beruehren. Deshalb ab
 # jetzt ein eigener, von Prod komplett unabhaengiger Worker, analog zu
 # [env.dev]. Frontend-CI (deploy-qa.yml) muss VITE_ASSISTANT_URL entsprechend

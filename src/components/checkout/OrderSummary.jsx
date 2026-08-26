@@ -2,13 +2,7 @@ import { useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { LANG_LOCALE } from "../../utils/helpers.js";
 import { summaryBoxStyle, cardStyle, strikePriceStyle, linkBtnStyle } from "./checkoutStyles.js";
-import {
-  PLAN_AMOUNTS,
-  YEARLY_LIST_AMOUNT,
-  formatMoney,
-  formatPaddleAmount,
-  normalizePaddleCheckoutAmount,
-} from "./planPricing.js";
+import { PLAN_AMOUNTS, YEARLY_LIST_AMOUNT, formatMoney } from "./planPricing.js";
 
 // Kostenuebersicht - die eine Stelle, an der im Checkout Geld dargestellt wird
 // (Neugestaltung 2026-08-17 nach den Referenz-Screenshots).
@@ -23,10 +17,15 @@ import {
 // Beide zeigen dieselben Zahlen; sie auseinanderzuziehen waere die sicherste
 // Art, dass Schritt 1 und Schritt 3 irgendwann verschiedene Betraege nennen.
 //
-// Keine MwSt-Zeile (Nutzer-Entscheidung 2026-08-17): Paddle ist Merchant of
-// Record und bestimmt die Steuer erst nach dem Land des Kaeufers - der
-// Ausweis gehoert auf die Rechnung, nicht in die Kaufstrecke. Angezeigt wird
-// der Bruttobetrag mit dem Hinweis "inkl. MwSt.".
+// Keine MwSt-Zeile (Nutzer-Entscheidung 2026-08-17): der Ausweis gehoert auf
+// die von Stripe Invoicing erzeugte Rechnung, nicht in die Kaufstrecke.
+// Angezeigt wird der Bruttobetrag mit dem Hinweis "inkl. MwSt.".
+//
+// Anders als zuvor bei Paddle gibt es hier KEINEN Live-Betrag aus einem
+// Client-Event mehr: Stripe Payment Element liefert den finalen Betrag nicht
+// clientseitig, der steht serverseitig schon beim Erzeugen der Subscription
+// fest (siehe planPricing.js) - angezeigt wird deshalb durchgehend der
+// berechnete Listenpreis.
 export function OrderSummary({
   t,
   plan,
@@ -34,7 +33,6 @@ export function OrderSummary({
   discountCode = "",
   onDiscountCodeChange = null,
   discountError = null,
-  paddleTotals = null,
   showLegal = false,
   showRenewal = false,
 }) {
@@ -46,26 +44,7 @@ export function OrderSummary({
   const planLabel = plan === "yearly" ? t.planYearly : t.planMonthly;
   const listAmount = plan === "yearly" ? YEARLY_LIST_AMOUNT : null;
   const amount = PLAN_AMOUNTS[plan] ?? PLAN_AMOUNTS.yearly;
-
-  // Sobald der Inline-Checkout geladen ist, liefert Paddle die tatsaechlich
-  // faelligen Betraege (inkl. eingeloestem Gutschein und laenderabhaengiger
-  // Steuer). Die stehen dann ueber der oben berechneten Anzeige - sonst haette
-  // der Nutzer im letzten Schritt eine andere Zahl vor sich als die, die
-  // abgebucht wird.
-  const liveTotal = paddleTotals
-    ? formatPaddleAmount(paddleTotals.total, paddleTotals.currencyCode, locale, amount)
-    : null;
-  const totalText = liveTotal || formatMoney(amount, locale);
-
-  // Nutzer-Befund 2026-08-18: "0,00 €" allein wirkte wie ein Fehler statt wie
-  // der Testphasen-Hinweis, der er ist - Paddle meldet den heute faelligen
-  // Betrag erst mit dem echten Checkout-Event (paddleTotals), nicht vorher.
-  // Erkennt sowohl den regulaeren Trial als auch einen 100%-Gutschein (in
-  // beiden Faellen ist "heute 0 €" die zutreffende, ehrliche Aussage).
-  const liveAmountValue = paddleTotals
-    ? normalizePaddleCheckoutAmount(paddleTotals.total, amount)
-    : null;
-  const isFreeToday = liveAmountValue === 0;
+  const totalText = formatMoney(amount, locale);
 
   const wrapperStyle =
     variant === "box" ? summaryBoxStyle : { ...cardStyle, position: "sticky", top: 20 };
@@ -111,7 +90,7 @@ export function OrderSummary({
           ImmoFuchs Pro <span style={{ color: "var(--ch)", fontWeight: 500 }}>({planLabel})</span>
         </span>
         <span style={{ display: "flex", alignItems: "baseline", gap: 7, flexShrink: 0 }}>
-          {listAmount && !liveTotal && (
+          {listAmount && (
             <span style={strikePriceStyle}>{formatMoney(listAmount, locale)}</span>
           )}
           <span style={{ fontWeight: 700 }}>{totalText}</span>
@@ -212,7 +191,7 @@ export function OrderSummary({
 
       {showRenewal && (
         <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 10 }}>
-          {(isFreeToday ? t.summaryTrialNote : t.summaryRenewalNote).replace(
+          {t.summaryRenewalNote.replace(
             "{price}",
             plan === "yearly" ? t.planYearlyPrice : t.planMonthlyPrice,
           )}

@@ -77,7 +77,7 @@ export const requireAdminRead = requirePermission("user.read");
 export const requireAdmin = requirePermission("user.manage");
 
 // CSRF-Schutz (4.5, analog zum bestehenden CORS-Muster) fuer state-changing
-// Routen. Getrennt von requireAuth, weil Webhook-Endpunkte (Paddle-Signatur
+// Routen. Getrennt von requireAuth, weil Webhook-Endpunkte (Stripe-Signatur
 // statt Origin-Pruefung) und OAuth-Callbacks (GET) es nicht brauchen.
 export const requireCsrfOrigin = createMiddleware<{ Bindings: Env }>(async (c, next) => {
   if (!checkCsrfOrigin(c.req.raw, c.env.ALLOWED_ORIGIN)) {

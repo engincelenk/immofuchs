@@ -147,7 +147,7 @@ export function AdminDashboardView() {
         <h3 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 4px" }}>Letzte Aktivitäten</h3>
         <p style={{ ...mutedTextStyle, marginTop: 0, marginBottom: 12 }}>
           Registrierungen, Abo-Abschlüsse, Kündigungen und Admin-Aktionen. Gutschein-Einlösungen erscheinen hier
-          nicht – die finden bei Paddle statt und werden in ImmoFuchs nicht gespeichert.
+          nicht – die finden bei Stripe statt und werden in ImmoFuchs nicht gespeichert.
         </p>
 
         {activity === null && <div style={mutedTextStyle}>Wird geladen …</div>}

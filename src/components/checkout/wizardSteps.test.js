@@ -3,15 +3,28 @@ import { getWizardSteps, STEP_LABEL_KEYS, WIZARD_VARIANTS } from "./wizardSteps.
 
 describe("getWizardSteps", () => {
   it("liefert die volle Neukunden-Schrittfolge inkl. E-Mail-Bestaetigung", () => {
-    expect(getWizardSteps("new-customer")).toEqual(["pricing", "account", "verify", "payment", "welcome"]);
+    expect(getWizardSteps("new-customer")).toEqual([
+      "pricing",
+      "account",
+      "verify",
+      "address",
+      "payment",
+      "welcome",
+    ]);
   });
 
   it("ueberspringt 'verify' bei OAuth/Passkey/Passwort-Login (kein separater Bestaetigungs-Schritt noetig)", () => {
-    expect(getWizardSteps("new-customer-no-verify")).toEqual(["pricing", "account", "payment", "welcome"]);
+    expect(getWizardSteps("new-customer-no-verify")).toEqual([
+      "pricing",
+      "account",
+      "address",
+      "payment",
+      "welcome",
+    ]);
   });
 
-  it("startet Upgrade-Nutzer direkt bei der Zahlung, ohne Preise/Konto erneut abzufragen", () => {
-    expect(getWizardSteps("upgrade")).toEqual(["payment", "welcome"]);
+  it("startet Upgrade-Nutzer direkt bei der Rechnungsadresse, ohne Preise/Konto erneut abzufragen", () => {
+    expect(getWizardSteps("upgrade")).toEqual(["address", "payment", "welcome"]);
   });
 
   it("wirft bei unbekannter Variante einen Fehler statt still ein leeres Array zu liefern", () => {

@@ -41,9 +41,10 @@ test.describe("Admin-Panel", () => {
   });
 
   test.describe("Gutscheine", () => {
-    // Direkter Regressionstest fuer die neue DISCOUNT_CODE_PATTERN-Pruefung
-    // (1.20.22): ein Code mit Bindestrich scheiterte vorher erst bei Paddle
-    // (502 create_discount_failed). Hinweis: die Fehlermeldung ist aktuell
+    // Direkter Regressionstest fuer die DISCOUNT_CODE_PATTERN-Pruefung
+    // (1.20.22): ein Code mit Bindestrich scheiterte urspruenglich erst beim
+    // Zahlungsanbieter (frueher Paddle, dieselbe Vorsicht gilt fuer Stripes
+    // Promotion-Code-Format). Hinweis: die Fehlermeldung ist aktuell
     // noch der generische Text ("Die Aktion ist fehlgeschlagen.") - ERROR_TEXTS
     // in adminUiStyles.js kennt "invalid_discount_code" noch nicht. Kleiner,
     // separater Nachtrag empfohlen, hier bewusst nicht mit umgesetzt.
@@ -66,7 +67,7 @@ test.describe("Admin-Panel", () => {
       await expect(page.getByText("Gutschein erstellt.")).toBeVisible({ timeout: 8_000 });
       // Aufraeumen: den soeben angelegten Testcode wieder deaktivieren, statt
       // ihn als aktiven Gutschein stehen zu lassen (kein Loesch-Endpunkt fuer
-      // Gutscheine vorhanden, Paddle kennt nur aktiv/inaktiv/abgelaufen).
+      // Gutscheine vorhanden, Stripe kennt nur aktiv/inaktiv/abgelaufen).
       const row = page.getByRole("row", { name: new RegExp(code) });
       await row.getByRole("button", { name: "Deaktivieren" }).click();
       await expect(row.getByText("Deaktiviert")).toBeVisible({ timeout: 8_000 });

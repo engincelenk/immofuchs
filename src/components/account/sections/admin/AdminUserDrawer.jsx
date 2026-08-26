@@ -334,8 +334,8 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                     label={detail.subscription.status === "trialing" ? "Testphase endet" : "Nächste Zahlung"}
                     value={formatDate(detail.subscription.currentPeriodEnd)}
                   />
-                  <Row label="Paddle Customer ID" value={detail.subscription.paddleCustomerId} mono />
-                  <Row label="Paddle Subscription ID" value={detail.subscription.paddleSubscriptionId} mono />
+                  <Row label="Stripe Customer ID" value={detail.subscription.stripeCustomerId} mono />
+                  <Row label="Stripe Subscription ID" value={detail.subscription.stripeSubscriptionId} mono />
                 </>
               ) : (
                 <p style={{ ...mutedTextStyle, margin: 0 }}>Kein aktives Abo (Free).</p>
@@ -404,7 +404,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                     </button>
                   </div>
                   <p style={{ ...mutedTextStyle, marginTop: 8, marginBottom: 0 }}>
-                    Ein echtes Sandbox-Abo aus einem Checkout-Test wird dabei automatisch bei Paddle gekündigt.
+                    Ein echtes Testmodus-Abo aus einem Checkout-Test wird dabei automatisch bei Stripe gekündigt.
                   </p>
                 </div>
               )}
@@ -491,7 +491,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: "#c0392b", marginBottom: 6 }}>Danger Zone</div>
                 <p style={{ ...mutedTextStyle, marginTop: 0 }}>
                   Löscht das Konto endgültig samt gespeicherter Objekte und Notizen. Ein laufendes Abo wird sofort
-                  bei Paddle gekündigt. Diese Aktion lässt sich nicht rückgängig machen.
+                  bei Stripe gekündigt. Diese Aktion lässt sich nicht rückgängig machen.
                 </p>
                 {confirm === "delete" ? (
                   <ConfirmBox

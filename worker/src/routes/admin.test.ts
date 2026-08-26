@@ -5,7 +5,7 @@ import {
   parseAdminSubscriptionsQuery,
   parseExpiryDate,
 } from "./admin";
-import { generateDiscountCode } from "../paddle/discounts";
+import { generateDiscountCode } from "../stripe/discounts";
 
 describe("parseAdminUsersQuery (Such-Sanitizing fuer GET /admin/users)", () => {
   it("liefert leere Suche, keine Filter und Seite 1 ohne Parameter", () => {

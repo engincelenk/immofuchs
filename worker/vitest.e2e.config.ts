@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 
 // Eigene Config statt eines zweiten Include-Patterns in vitest.config.ts:
 // diese Tests brauchen laengere Timeouts (echte Netzwerk-Calls gegen den
-// deployten dev-Worker + Paddle-Sandbox) und sollen niemals versehentlich
+// deployten dev-Worker + Stripe-Testmodus) und sollen niemals versehentlich
 // vom normalen `vitest`/`vitest watch` mitgenommen werden.
 export default defineConfig({
   test: {

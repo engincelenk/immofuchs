@@ -43,14 +43,15 @@ geladen von `server.js` und von `run-api-e2e.ps1`/`run-browser-e2e.ps1`:
 | `E2E_PASSWORD_MONATLICH`     | ja      | Passwort von test.monatlich@immofuchs.info                                                             |
 | `E2E_PASSWORD_JAEHRLICH`     | ja      | Passwort von test.jaehrlich@immofuchs.info                                                             |
 | `E2E_PASSWORD_ADMIN`         | nein    | Passwort von test.admin@immofuchs.info — ohne diese Variable überspringen sich die Admin-Tests (21 Fälle) selbst |
-| `E2E_PADDLE_WEBHOOK_SECRET`  | nein    | Secret der dev-Paddle-Notification-Destination                                                          |
-| `E2E_PASSWORD_REALPRO`       | nein    | Passwort von test.realpro@immofuchs.info (einziges Konto mit ECHTEM Paddle-Sandbox-Abo) — ohne diese Variable überspringen sich 5 Billing-Fälle selbst |
+| `E2E_STRIPE_WEBHOOK_SECRET`  | nein    | Signing Secret des dev-Stripe-Webhook-Endpoints                                                         |
+| `E2E_PASSWORD_REALPRO`       | nein    | Passwort von test.realpro@immofuchs.info (einziges Konto mit ECHTEM Stripe-Testmodus-Abo) — ohne diese Variable überspringen sich 4 Billing-Fälle selbst |
 | `E2E_API_BASE_URL`           | nein    | Default `https://api-dev.immofuchs.info`                                                                |
 | `E2E_ORIGIN`                 | nein    | Default `https://dev.immofuchs.info`                                                                    |
 | `E2E_SESSION_*`              | nein    | Übersteuert den Login-Automatismus — nur mit echten UUIDs aus der D1-Tabelle `sessions` befüllen         |
 
 > **Warnung zu `E2E_SESSION_*`:** Genau hier ist die Suite schon zweimal blind
-> geflogen. (1) In `.env.local` standen zwei Paddle-**Preis**-IDs (`pri_…`) statt
+> geflogen. (1) In `.env.local` standen zwei Paddle-**Preis**-IDs (`pri_…`, aus
+> der Zeit vor dem Wechsel zu Stripe) statt
 > Session-IDs; da sie den funktionierenden Standardwert überschrieben,
 > lieferten 63 von 118 Tests `401 not_authenticated`. (2) Am 19.08. starb die
 > fest eingetragene `E2E_SESSION_REAL_PRO` zwischen zwei Läufen (Session war
@@ -93,14 +94,15 @@ npx wrangler d1 execute immofuchs-dev --env dev --remote --command "INSERT INTO 
   Rechnungsliste) — beruhten ausschließlich auf test.free. Das Konto wurde
   gelöscht; Nutzer-Entscheidung 2026-08-19: kein Ersatzkonto. Damit bleibt
   die Pro-Sperre dauerhaft ungetestet — bekannte Lücke.
-- **Checkout-Abschluss über Paddles gehostetes Overlay** (Kartendaten
-  eintippen) — Drittanbieter-UI, von Paddle nicht für Automatisierung
-  vorgesehen.
-- **Webhook-Zustellung nach einem echten Kauf** — kommt von Paddles Servern,
+- **Checkout-Abschluss über das eingebettete Stripe Payment Element**
+  (Kartendaten eintippen) — Drittanbieter-UI (Stripe.js/iframe), nicht für
+  Browser-Automatisierung vorgesehen.
+- **Webhook-Zustellung nach einem echten Kauf** — kommt von Stripes Servern,
   nicht deterministisch in einem Test triggerbar.
 - **Plan wechseln** an einem echten Abo — hängt asynchron vom
-  `subscription.updated`-Webhook ab (siehe `worker/src/paddle/webhook.ts`),
-  keine deterministische Wartezeit ohne Polling.
+  `customer.subscription.updated`-Webhook ab (siehe
+  `worker/src/stripe/webhook.ts`), keine deterministische Wartezeit ohne
+  Polling.
 - **Rückerstattung** — würde das einzige persistente Test-Abo
   (`E2E_SESSION_REAL_PRO`) zerstören, das die Suite für jeden weiteren Lauf
   braucht. Nur manuell zu prüfen.

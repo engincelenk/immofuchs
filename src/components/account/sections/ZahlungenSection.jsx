@@ -15,8 +15,8 @@ import {
 // Spec-v3.0 Kap. 4.1/4.6: "Zahlungen" fasst Zahlungsmethode und Rechnungen in
 // einem Bereich zusammen (vorher zwei separate Tabs: ZahlungsmethodenSection +
 // RechnungenSection, hier zusammengefuehrt). Beide Datenquellen bleiben
-// unveraendert bei Paddle (Merchant of Record) - wir speichern selbst weder
-// Kartendaten noch Rechnungsadressen.
+// unveraendert bei Stripe - wir speichern selbst weder Kartendaten noch
+// Rechnungsadressen.
 export function ZahlungenSection({ t, account, lang, onBack }) {
   const locale = LANG_LOCALE[lang] || "de-DE";
 
@@ -48,19 +48,19 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
     }
   }
 
-  // Paddle liefert Betraege als String in der kleinsten Waehrungseinheit
+  // Stripe liefert Betraege als String in der kleinsten Waehrungseinheit
   // ("7900" = 79,00 EUR) - hier einmal zentral in die Anzeigeform bringen.
   function formatAmount(invoice) {
-    const value = Number(invoice.amount) / 100;
+    const value = Number(invoice.grandTotal) / 100;
     if (!Number.isFinite(value)) return "—";
     try {
       return new Intl.NumberFormat(locale, {
         style: "currency",
-        currency: invoice.currency || "EUR",
+        currency: invoice.currencyCode || "EUR",
       }).format(value);
     } catch {
       // Unbekannter Waehrungscode: lieber roh anzeigen als gar nichts.
-      return `${value.toFixed(2)} ${invoice.currency || ""}`.trim();
+      return `${value.toFixed(2)} ${invoice.currencyCode || ""}`.trim();
     }
   }
 
@@ -69,24 +69,22 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
     return new Date(invoice.billedAt).toLocaleDateString(locale);
   }
 
-  // "completed" = bezahlt/verarbeitet, "billed" = Rechnung gestellt aber noch
-  // nicht beglichen (z.B. Banküberweisung). Die Liste vom Backend enthaelt
-  // laut Paddle-Query ohnehin nur diese beiden Werte (checkout.ts:167) - PDF
-  // Konzept-Dok 4.3 wollte "Bezahlt" als Status, das gilt aber nicht pauschal
-  // fuer jeden Eintrag.
-  // Trial-Buchungen laufen bei Paddle als Transaktion ueber 0,00 EUR - dafuer
-  // stellt Paddle KEINE Rechnung aus (verifiziert 2026-08-20 via wrangler
-  // tail: GET /transactions/{id}/invoice antwortet 404, unser Endpunkt machte
-  // daraus die generische Meldung "Das PDF konnte nicht geoeffnet werden").
-  // Der Link erscheint deshalb erst, wenn tatsaechlich Geld geflossen ist -
-  // also ab der ersten Abbuchung nach Ende der Testphase.
+  // Stripe kennt fuer Invoices die Status "paid" (bezahlt/verarbeitet),
+  // "open" (gestellt, aber noch nicht beglichen, z.B. bei fehlgeschlagener
+  // Abbuchung) sowie "draft"/"uncollectible"/"void" - letztere drei zeigen
+  // hier bewusst keinen Badge, da sie fuer den Kunden keine handlungsrelevante
+  // Aussage haben.
+  // Trial-Buchungen laufen bei Stripe ueber 0,00 EUR; ob Stripe dafuer eine
+  // Rechnung mit PDF ausstellt, haengt vom Preis-/Rechnungskonfig ab - der
+  // Link erscheint deshalb nur, wenn tatsaechlich ein Betrag > 0 fakturiert
+  // wurde.
   function hasInvoicePdf(invoice) {
-    return Number(invoice.amount) > 0;
+    return Number(invoice.grandTotal) > 0;
   }
 
   function statusLabel(invoice) {
-    if (invoice.status === "completed") return { text: t.rechnungenStatusCompleted, color: "#22c55e" };
-    if (invoice.status === "billed") return { text: t.rechnungenStatusBilled, color: "#f59e0b" };
+    if (invoice.status === "paid") return { text: t.rechnungenStatusCompleted, color: "#22c55e" };
+    if (invoice.status === "open") return { text: t.rechnungenStatusBilled, color: "#f59e0b" };
     return null;
   }
 
@@ -95,12 +93,12 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
       <SectionTitle title={t.navZahlung} onBack={onBack} backLabel={t.wizardBack} />
       <p style={sectionIntroStyle}>{t.zahlungBody}</p>
 
-      {/* Der Verweis ins Paddle-Kundenportal ist hier bewusst entfernt
+      {/* Der Verweis ins Kundenportal ist hier bewusst entfernt
           (Nutzer-Entscheidung 2026-08-20): dort liessen sich neben der
           Zahlungsart auch Kuendigung und Rechnungsdaten aendern - Wege, die
           es in dieser Oberflaeche bereits gibt bzw. die bewusst nicht
           selbstbedient sein sollen. Bei Bedarf uebernimmt der Betreiber das
-          direkt im Paddle-Dashboard. Die Worker-Route /billing/portal bleibt
+          direkt im Stripe-Dashboard. Die Worker-Route /billing/portal bleibt
           bestehen (von der e2e-Suite abgedeckt), ist ohne diese
           Bedienoberflaeche aber nicht mehr erreichbar. */}
 

@@ -1,16 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { apiFetch, realProSessionId } from "./setup";
 
-// Braucht einen Account mit einem ECHTEN (nicht synthetischen) Paddle-
-// Sandbox-Abo - existiert erst, nachdem einmal ein echter Sandbox-Kauf
+// Braucht einen Account mit einem ECHTEN (nicht synthetischen) Stripe-
+// Testmodus-Abo - existiert erst, nachdem einmal ein echter Testmodus-Kauf
 // durchgefuehrt wurde (E2E_SESSION_REAL_PRO, siehe README.md). Bis dahin
 // uebersprungen, nicht rot - ein fehlendes Test-Fixture ist kein
 // Produktfehler.
 //
 // Bewusst NICHT enthalten:
 // - Plan wechseln: schreibt den neuen Plan nicht direkt (routes/billing.ts),
-//   sondern wartet auf Paddles subscription.updated-Webhook - asynchron,
-//   ohne Polling nicht deterministisch testbar.
+//   sondern wartet auf Stripes customer.subscription.updated-Webhook -
+//   asynchron, ohne Polling nicht deterministisch testbar.
 // - Rueckerstattung: wuerde das einzige persistente Test-Abo zerstoeren, das
 //   diese Suite fuer jeden weiteren Lauf braucht - nur manuell zu pruefen.
 //
@@ -18,7 +18,7 @@ import { apiFetch, realProSessionId } from "./setup";
 // im selben Request (kein Warten auf einen Webhook noetig) und die Suite
 // verlaesst das Abo danach wieder im Ausgangszustand (aktiv), damit der
 // naechste Lauf ohne manuelles Aufraeumen funktioniert.
-describe.skipIf(!realProSessionId)("Billing-Lifecycle an einem echten Sandbox-Abo", () => {
+describe.skipIf(!realProSessionId)("Billing-Lifecycle an einem echten Stripe-Testmodus-Abo", () => {
   const sessionId = realProSessionId as string;
 
   it("GET /billing/invoices liefert mindestens eine Transaktion", async () => {

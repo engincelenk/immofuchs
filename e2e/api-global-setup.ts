@@ -51,7 +51,7 @@ const ACCOUNTS: Account[] = [
   // Optional: ohne Admin-Passwort ueberspringen sich die Admin-Tests selbst,
   // statt rot zu laufen - genauso wie bisher ueber E2E_SESSION_ADMIN.
   { key: "admin", email: "test.admin@immofuchs.info", passwordEnv: "E2E_PASSWORD_ADMIN", required: false },
-  // Optional (seit 2026-08-19): Konto mit ECHTEM Paddle-Sandbox-Abo. Vorher
+  // Optional (seit 2026-08-19): Konto mit ECHTEM Stripe-Testmodus-Abo. Vorher
   // stand hier nichts - stattdessen wurde eine fest eingetragene Session-ID
   // (E2E_SESSION_REAL_PRO) benutzt, die genau wie die frueheren festen IDs
   // gestorben ist (401 not_authenticated in 5 Tests). Jetzt derselbe

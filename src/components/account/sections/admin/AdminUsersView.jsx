@@ -21,7 +21,7 @@ import {
   thStyle,
 } from "./adminUiStyles.js";
 
-// Abo-Zustaende, die sich beim Direkt-Anlegen ohne echten Paddle-Kauf setzen
+// Abo-Zustaende, die sich beim Direkt-Anlegen ohne echten Stripe-Kauf setzen
 // lassen - nur relevant, wenn "Testuser" angehakt ist (siehe createUser in
 // adminApi.js). Eigene Liste statt SUB_STATUS_LABELS direkt zu mappen, weil
 // "kein Abo" (Free) als Auswahlwert dazukommt und keinen Server-Wert hat.
@@ -250,7 +250,7 @@ export function AdminUsersView({ currentUser }) {
           )}
 
           {/* Ein Abo direkt setzen geht nur bei Testusern - fuer echte Konten
-              gibt es dafuer nur den Weg ueber Paddle (siehe adminApi.js). */}
+              gibt es dafuer nur den Weg ueber Stripe (siehe adminApi.js). */}
           {createForm.isTestUser && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               <div style={{ flex: "0 1 220px" }}>

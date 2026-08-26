@@ -3,7 +3,7 @@ import { fileURLToPath } from "url";
 
 // Eigene Config statt eines zweiten Include-Patterns im Frontend-
 // vitest/vite.config.js: diese Tests brauchen laengere Timeouts (echte
-// Netzwerk-Calls gegen den deployten dev-Worker + Paddle-Sandbox) und sollen
+// Netzwerk-Calls gegen den deployten dev-Worker + Stripe-Testmodus) und sollen
 // niemals versehentlich vom normalen `vitest`/`vitest watch` mitgenommen
 // werden.
 //

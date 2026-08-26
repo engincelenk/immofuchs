@@ -233,17 +233,14 @@ export interface Env {
   };
   APP_BASE_URL?: string; // fuer Magic-Link-/OAuth-Redirect-Ziele, z.B. "https://immofuchs.info"
 
-  // Paddle (4.1, 4.6)
-  PADDLE_API_KEY?: string;
-  PADDLE_WEBHOOK_SECRET?: string;
-  PADDLE_ENV?: string; // "sandbox" | "production"
-  PADDLE_PRICE_ID_MONTHLY?: string;
-  PADDLE_PRICE_ID_YEARLY?: string;
-  // Optional: Basis des Paddle-Verkaeufer-Dashboards fuer den "In Paddle
-  // oeffnen"-Link im Admin-Panel. Ohne Wert wird aus PADDLE_ENV abgeleitet -
-  // siehe paddle/transactions.ts, wo auch steht, warum das ueberschreibbar
-  // sein muss (Paddle dokumentiert den Deep-Link-Pfad nicht).
-  PADDLE_DASHBOARD_BASE_URL?: string;
+  // Stripe (Wechsel weg von Paddle als Merchant of Record, siehe
+  // docs/plans/2026-08-26-paddle-zu-stripe-migration-spec.md - Paddle-Code
+  // und -ENV-Variablen wurden komplett entfernt, kein Parallelbetrieb).
+  // Secret Key verlaesst den Worker nie in Richtung Client.
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PRICE_ID_MONTHLY?: string;
+  STRIPE_PRICE_ID_YEARLY?: string;
   // QA-Hilfsmittel (2026-08-18): Mails an is_test_user-Konten (siehe
   // db.ts, setUserFlags) landen bei gesetztem Wert hier statt an die
   // Test-Adresse - so lassen sich echte Test-E-Mail-Adressen (test.free@...)

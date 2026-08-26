@@ -253,7 +253,7 @@ accountRoutes.get("/account/export", requireAuth, async (c) => {
     listSessionsForUser(c.env.DB, c.var.userId),
   ]);
   // DSGVO Art. 20 - bewusst schlanker Datenfussabdruck: Rechnungs-/
-  // Zahlungsdetails liegen bei Paddle als Merchant of Record, nicht hier (4.10).
+  // Zahlungsdetails liegen bei Stripe, nicht hier.
   const exportData = {
     account: {
       id: c.var.user.id,
@@ -267,7 +267,7 @@ accountRoutes.get("/account/export", requireAuth, async (c) => {
           status: sub.status,
           currentPeriodEnd: sub.current_period_end,
           firstPurchaseAt: sub.first_purchase_at,
-          paddleCustomerIdReference: sub.paddle_customer_id,
+          stripeCustomerIdReference: sub.stripe_customer_id,
         }
       : null,
     sessions: sessions.map((s) => ({ createdAt: s.created_at, lastSeenAt: s.last_seen_at, userAgent: s.user_agent })),

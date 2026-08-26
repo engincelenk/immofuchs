@@ -33,9 +33,13 @@ jobs:
           # Prod-Worker immofuchs-assistant (nicht den Dev-Worker) - siehe
           # worker/wrangler.toml, qa.immofuchs.info ist in ALLOWED_ORIGIN.
           VITE_ASSISTANT_URL: https://immofuchs-assistant.engincelenk.workers.dev/api/assistant
+          # Stripe Publishable Key (Wechsel weg von Paddle, siehe
+          # docs/plans/2026-08-26-paddle-zu-stripe-migration-spec.md) - als
+          # GitHub-Secret VITE_STRIPE_PUBLISHABLE_KEY anzulegen (pk_test_...).
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
           # Turnstile-Site-Key der Registrierung (Preispolitik 2026-08-20):
-          # oeffentlich wie der Paddle-Client-Token - das Geheimnis ist allein
-          # TURNSTILE_SECRET im Worker-Secret-Store.
+          # oeffentlich wie der Stripe Publishable Key - das Geheimnis ist
+          # allein TURNSTILE_SECRET im Worker-Secret-Store.
           VITE_TURNSTILE_SITE_KEY: 0x4AAAAAAEW18bBEyl_o5nTS
         run: |
           npm ci

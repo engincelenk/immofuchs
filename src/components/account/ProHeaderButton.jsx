@@ -164,11 +164,11 @@ export function ProHeaderButton() {
         />
       )}
       {/* Sicherheitsnetz fuer den Kauf-Abschluss (Bugreport 26.08.): reagiert
-          auf den tatsaechlichen Pro-Status statt auf Paddles
-          checkout.completed-Event, das gelegentlich ausbleibt - siehe
-          useAccount.js, noteProStatus. Zeigt die Bestaetigung also auch dann,
-          wenn CheckoutWizard/WelcomeStep davon nichts mitbekommen haben und
-          der Nutzer kommentarlos auf seiner vorherigen Seite landet. */}
+          auf den tatsaechlichen Pro-Status statt auf ein einzelnes
+          Client-Event, das gelegentlich ausbleibt - siehe useAccount.js,
+          noteProStatus. Zeigt die Bestaetigung also auch dann, wenn
+          CheckoutWizard/WelcomeStep davon nichts mitbekommen haben und der
+          Nutzer kommentarlos auf seiner vorherigen Seite landet. */}
       {account.purchaseSuccess && (
         <LoginSuccessToast
           t={t}

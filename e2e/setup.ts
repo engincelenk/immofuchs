@@ -117,9 +117,9 @@ export const credentials = {
   jaehrlich: { email: "test.jaehrlich@immofuchs.info", password: () => requireEnv("E2E_PASSWORD_JAEHRLICH") },
 };
 
-// Optional: ein Account mit einem ECHTEN (nicht synthetischen) Paddle-
-// Sandbox-Abo (test.realpro@immofuchs.info) - existiert erst nach einem
-// echten Sandbox-Kauf. Tests, die das brauchen, ueberspringen sich selbst
+// Optional: ein Account mit einem ECHTEN (nicht synthetischen) Stripe-
+// Testmodus-Abo (test.realpro@immofuchs.info) - existiert erst nach einem
+// echten Testmodus-Kauf. Tests, die das brauchen, ueberspringen sich selbst
 // statt rot zu laufen, solange das Fixture fehlt (siehe
 // billing-lifecycle.e2e.test.ts).
 //
@@ -145,13 +145,13 @@ export const realProSessionId = envOverride("E2E_SESSION_REAL_PRO") || sessionsF
 // deren fest erwarteten Zustand fuer alle anderen Tests zerstoeren.
 export const adminSessionId = envOverride("E2E_SESSION_ADMIN") || sessionsFromFile().admin;
 
-// Optional (2026-08-18): echtes Secret der dev-Paddle-Notification-
-// Destination (siehe Paddle-Dashboard -> Developer Tools -> Notifications),
-// nur fuer billing-webhook.e2e.test.ts. Wie die anderen optionalen Fixtures
-// oben ueberspringen sich die betroffenen Tests selbst, solange die
-// Variable fehlt - der Wert selbst steht bewusst NUR hier als Env-Referenz,
-// nie als Literal im Code.
-export const paddleWebhookSecret = process.env.E2E_PADDLE_WEBHOOK_SECRET;
+// Optional (Wechsel weg von Paddle 2026-08-27, vorher E2E_PADDLE_WEBHOOK_SECRET):
+// echtes Signing Secret des dev-Stripe-Webhook-Endpoints (Stripe-Dashboard ->
+// Entwickler -> Webhooks), nur fuer billing-webhook.e2e.test.ts. Wie die
+// anderen optionalen Fixtures oben ueberspringen sich die betroffenen Tests
+// selbst, solange die Variable fehlt - der Wert selbst steht bewusst NUR
+// hier als Env-Referenz, nie als Literal im Code.
+export const stripeWebhookSecret = process.env.E2E_STRIPE_WEBHOOK_SECRET;
 
 export async function apiFetch(sessionId: string, path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);

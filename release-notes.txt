@@ -1,3 +1,156 @@
+## 2026-08-27 (1.27.0)
+
+### NEU: e2e-Suite auf Stripe umgestellt (Schritt 7/8, letzter Code-Schritt des Wechsels)
+
+`billing-webhook.e2e.test.ts` komplett neu geschrieben: signiert Testpayloads
+jetzt im echten Stripe-Format (`Stripe-Signature: t=<unix>,v1=<hmac>` über
+`${timestamp}.${payload}`, gegen die echte `stripe`-SDK-Verifikation
+gegengeprüft) statt des alten Paddle-Formats, Event-Struktur auf
+`customer.subscription.*`/Stripe-Objektform umgestellt. `E2E_PADDLE_WEBHOOK_SECRET`
+→ `E2E_STRIPE_WEBHOOK_SECRET` (setup.ts, env.beispiel.txt, alle README-Dateien,
+diagnose-env.ps1, fix-env-local.ps1). `billing-checkout.e2e.test.ts` erwartet
+jetzt `clientSecret` (Format `pi_..._secret_...`) statt `transactionId`.
+
+Echter Bugfix nebenbei entdeckt: der IDOR-Test für Rechnungs-PDFs
+(`GET /billing/invoices/:invoiceId/pdf` mit fremder ID) war bisher hinter
+`E2E_SESSION_REAL_PRO` versteckt, weil Paddles Server-Aufruf bei einem
+synthetischen Testkunden schon vor der eigentlichen 403-Prüfung scheiterte.
+Die neue Stripe-Route prüft die Rechnungs-ID jetzt VOR jedem Stripe-Aufruf
+rein gegen die in D1 gespeicherte `latest_invoice_id` (siehe
+`worker/src/routes/billing.ts`) - der Test läuft deshalb jetzt regulär mit
+jedem Testkonto, kein Sandbox-Fixture mehr nötig.
+
+Damit sind alle Code-Schritte des Paddle-zu-Stripe-Wechsels
+(docs/plans/2026-08-26-paddle-zu-stripe-migration-spec.md) abgeschlossen.
+Verbleibt laut Spec Abschnitt 9 nur noch die Verifikation im echten
+Stripe-Testmodus vor dem Go-Live (insbesondere `invoice.payment_failed`
+gegen den bisherigen Paddle-`past_due`-Übergang).
+
+## 2026-08-27 (1.26.0)
+
+### NEU: Admin-Panel auf Stripe umgestellt
+
+Schritt 5/8 des Stripe-Wechsels: Abo-Detail (`AdminSubscriptionDrawer.jsx`)
+und Nutzer-Detail (`AdminUserDrawer.jsx`) zeigen jetzt Stripe-Feldnamen
+(Customer/Subscription ID, "In Stripe öffnen"-Link) statt der alten
+Paddle-Felder. `AdminDiscountsView.jsx`: das Bearbeiten-Formular erlaubt nur
+noch die Beschreibung - Stripe erlaubt bei Coupons/Promotion Codes anders als
+Paddle KEINE nachtraegliche Aenderung von Betrag, Nutzungslimit oder
+Ablaufdatum mehr; dafuer weiterhin "Duplizieren". `ZahlungenSection.jsx`
+(Kundenbereich) auf die tatsaechlichen Stripe-Rechnungsfelder
+(`grandTotal`/`currencyCode` statt `amount`/`currency`) und Stripe-
+Invoice-Status (`paid`/`open` statt `completed`/`billed`) umgestellt - ohne
+diese Korrektur waeren Rechnungsbetraege im Kontobereich als "—" erschienen.
+Alle verbleibenden Paddle-Texte im Admin-Panel und Kontobereich entfernt.
+
+## 2026-08-27 (1.25.0)
+
+### NEU: Checkout-Frontend auf Stripe Payment Element umgestellt
+
+Schritt 4/8 des Stripe-Wechsels: `src/utils/stripeLoader.js` ersetzt
+`paddleLoader.js` (dynamisch nachgeladenes `@stripe/stripe-js`, neue
+Abhaengigkeit). `PaymentStep.jsx` bettet jetzt Stripes Payment Element ein und
+ruft `stripe.confirmPayment()` selbst auf - der Bezahl-Button ist damit ein
+eigenes `<button>` statt in einem fremden iframe zu sitzen, die
+§ 312j-BGB-Zustimmungssperre ist dadurch ein einfaches `disabled` statt des
+frueheren `inert`-Workarounds. `useAccount.js`/`startCheckout` liefert einen
+`clientSecret` statt eine Paddle-`transactionId`, die Rechnungsadresse aus
+AddressStep landet serverseitig auf dem Stripe-Kundendatensatz (fuer eine
+vollstaendige Stripe-Invoicing-Rechnung). `planPricing.js`/`OrderSummary.jsx`
+zeigen durchgehend den berechneten Listenpreis statt eines unsicheren
+Live-Betrags aus einem Client-Event (Stripe legt den finalen Betrag anders als
+Paddle serverseitig fest). CSP in `index.html` von `*.paddle.com` auf
+`js.stripe.com`/`api.stripe.com` umgestellt, `public/agb.html` beschreibt
+Stripe korrekt als reinen Zahlungsdienstleister statt als Merchant of Record.
+Lokal gegen den dev-Worker durchgeklickt (Preis-/Konto-Schritt fehlerfrei) -
+ein echter Zahlungsabschluss ist ohne konfigurierte Stripe-Testmodus-Keys
+lokal nicht pruefbar.
+
+Weiterhin offen: Admin-Panel (`AdminSubscriptionsView.jsx`,
+`AdminDiscountsView.jsx` u.a.) zeigt noch alte Paddle-Feldnamen/-Texte an
+(Schritt 5, separat freizugeben).
+
+## 2026-08-26 (1.24.0)
+
+### NEU: Backend komplett auf Stripe umgestellt, kompletter Paddle-Code entfernt
+
+Nutzer-Entscheidung: harter Schnitt statt des im Spec vorgeschlagenen
+schrittweisen Vorgehens ("Paddle-Spalten/-Code vorerst stehen lassen") - alle
+Paddle-Altlasten im Backend sind jetzt raus, nicht erst in einem spaeteren
+Aufraeum-Schritt. `worker/src/paddle/*` geloescht. `worker/src/routes/billing.ts`
+laeuft vollstaendig auf `worker/src/stripe/*` (Checkout mit Stripe Payment
+Element/PaymentIntent, Kuendigung, Reaktivierung, Tarifwechsel, Refund,
+Customer-Portal, Rabattcodes ueber Stripe Coupons/Promotion Codes). Migration
+`0028_drop_paddle_columns.sql` entfernt `paddle_customer_id`,
+`paddle_subscription_id`, `latest_transaction_id` aus `subscriptions`
+ersatzlos. `routes/admin.ts` und `accountDeletion.ts` auf die neuen
+Stripe-Felder umgestellt, `worker/src/stripe/webhook.test.ts` deckt
+Signaturpruefung, Idempotenz und alle Status-/Mail-Uebergaenge ab (109 Tests
+gruen). E-Mail-Texte (notifications.ts) nicht mehr "Rechnung von Paddle"
+sondern automatischer Versand.
+
+Bewusst NICHT Teil dieses Schritts (folgt separat): Frontend-Checkout
+(`paddleLoader.js`, `PaymentStep.jsx`, `useAccount.js`) laeuft noch auf dem
+alten Paddle-Overlay-Vertrag und ist bis zur Frontend-Umstellung nicht
+funktionsfaehig - ebenso die Admin-Oberflaeche (zeigt bis dahin keine
+Stripe-Kundendaten an) und diverse Paddle-Texte in Admin-UI/AGB.
+
+## 2026-08-26 (1.23.0)
+
+### NEU: Stripe-Backend-Modul (Schritt 2/8, Wechsel weg von Paddle)
+
+Erster Umsetzungsschritt aus docs/plans/2026-08-26-paddle-zu-stripe-migration-spec.md:
+neues Modul `worker/src/stripe/` (client.ts, checkout.ts, webhook.ts,
+discounts.ts, transactions.ts) auf Basis des offiziellen `stripe`-npm-Pakets,
+Migration `0027_stripe_billing.sql` (neue Spalten `stripe_customer_id`,
+`stripe_subscription_id`, `latest_invoice_id` auf `subscriptions`), sowie
+Stripe-Umgebungsvariablen in `worker/src/types.ts`. Der bestehende
+Paddle-Code (`worker/src/paddle/*`, `routes/billing.ts`) laeuft unveraendert
+weiter - die Umstellung darauf folgt in einem eigenen, separat freigegebenen
+Schritt (Spec Abschnitt 10, Schritt 3).
+
+## 2026-08-26 (1.22.11)
+
+### FIX: Erfolgs-Toast feuerte trotz 1.22.10 nie (echter Kauf nach Testphase)
+
+Nachtest von 1.22.10 zeigte: der Toast kam immer noch nicht. Ursache lag
+tiefer als angenommen - `isPro` aus /me (worker/src/routes/account.ts) ist
+bereits waehrend der kartenfreien 7-Tage-App-Testphase `true`
+(`isPro = zugang !== "keiner"`, und `zugang` kennt "trial" UND "pro"). Wer
+zuerst testet und danach kauft, hat also nie einen isPro-Wechsel false->true
+- er bleibt ununterbrochen true. useAccount.js/noteProStatus erkennt den
+Kauf jetzt am Feld `zugang === "pro"` statt an `isPro` - das ist die einzige
+Stelle, die echten bezahlten Zugang von der Testphase unterscheidet.
+
+### FIX: Fehlender Abstand oben in aufgeklappten Akkordeon-Bereichen
+
+Nutzer-Screenshot (Renditerechner, Abschnitt "Was zahle ich der Bank?"):
+Abstand zwischen Kopfzeile und Inhalt fehlte komplett, unten war er da.
+AccordionSection.jsx hatte `padding: "0 12px 14px"` - oben 0px, unten 14px.
+Auf symmetrisches `"14px 12px"` korrigiert (betrifft alle Akkordeons
+app-weit). In SupportSection.jsx einen kompensierenden `paddingTop:10` an
+den FAQ-Antworten entfernt, der durch die Korrektur sonst doppelt gezaehlt
+haette.
+
+### NEU: Rechnungsadresse im Checkout + feste Rechnungssprache
+
+Nutzer-Feedback zur Paddle-Rechnung: keine Kaeufer-Adresse, keine feste
+Sprache. Paddle ist Merchant of Record - Firmenname/Adresse/Steuernummer des
+eigenen Gewerbes koennen deshalb grundsaetzlich NICHT auf der Rechnung
+erscheinen (das ist der Kern des MoR-Modells, keine Einstellung). Umgesetzt
+wurde, was tatsaechlich moeglich ist:
+- Neuer Wizard-Schritt "Rechnungsadresse" (AddressStep.jsx) vor der Zahlung,
+  Pflichtfelder Strasse/PLZ/Ort, Firma optional. Fliesst ueber
+  Paddle.Checkout.open()s `customer.address`/`customer.business` in die
+  Rechnung (useAccount.js/startCheckout, jetzt mit viertem Parameter
+  `checkoutExtras`).
+- Checkout-Sprache fest auf die App-Sprache gesetzt (`settings.locale`) statt
+  auf die Browser-Sprache verlassen - Paddle uebersetzt Rechnungs-PDF und
+  -Mail automatisch mit.
+- KEIN Namensfeld: Paddles Checkout-API kennt fuer Privatpersonen nur E-Mail,
+  keinen Vorname/Nachname-Eintrag - technisch nicht moeglich, unabhaengig vom
+  eigenen Code.
+
 ## 2026-08-26 (1.22.10)
 
 ### FIX: Kein Bestaetigungs-Toast, wenn Paddles checkout.completed-Event ausblieb

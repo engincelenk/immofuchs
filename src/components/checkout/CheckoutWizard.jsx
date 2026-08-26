@@ -12,13 +12,14 @@ import { PricingStep } from "./PricingStep.jsx";
 import { AccountStep } from "./AccountStep.jsx";
 import { VerifyEmailStep } from "./VerifyEmailStep.jsx";
 import { PasswordResetFlow } from "./PasswordResetFlow.jsx";
+import { AddressStep } from "./AddressStep.jsx";
 import { PaymentStep } from "./PaymentStep.jsx";
 import { WelcomeStep } from "./WelcomeStep.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
 
 // Dialogbreite je Schritt (Neugestaltung 2026-08-17). Der Zahlungsschritt
-// bettet Paddles Formular ein und braucht daneben noch Platz fuer die
-// Bestelluebersicht - die uebrigen Schritte wuerden auf dieser Breite
+// bettet das Stripe Payment Element ein und braucht daneben noch Platz fuer
+// die Bestelluebersicht - die uebrigen Schritte wuerden auf dieser Breite
 // auseinanderfallen. Formularschritte bleiben deshalb schmal.
 const PAYMENT_DIALOG_WIDTH = 1040;
 const WIDE_DIALOG_WIDTH = 900;
@@ -70,19 +71,26 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // gewaehlten Plans, z.B. Wiederaufnahme nach OAuth-Redirect) startet
   // weiterhin direkt bei der Zahlung.
   const [stepIndex, setStepIndex] = useState(() =>
-    initialVariant === "upgrade" ? getWizardSteps(initialVariant).indexOf("payment") : 0,
+    initialVariant === "upgrade" ? getWizardSteps(initialVariant).indexOf("address") : 0,
   );
   const [plan, setPlan] = useState(initialPlan || "yearly");
+  // Rechnungsadresse (Bugreport 26.08.): nur im Wizard-State, keine
+  // Persistierung in unserer DB - die Werte werden einmalig beim Erzeugen der
+  // Stripe-Subscription gebraucht (siehe useAccount.js/startCheckout) und
+  // landen von dort direkt auf dem Stripe-Kundendatensatz.
+  const [billingAddress, setBillingAddress] = useState({
+    street: "",
+    zip: "",
+    city: "",
+    company: "",
+  });
   // Gutscheincode liegt seit der Neugestaltung 2026-08-17 im Wizard statt im
   // Zahlungsschritt: eingegeben wird er in der Kostenbox beim Waehlen der
-  // Laufzeit, gebraucht wird er erst beim Erzeugen der Paddle-Transaktion -
+  // Laufzeit, gebraucht wird er erst beim Erzeugen der Stripe-Subscription -
   // zwei Schritte weiter. Der Fehler wandert denselben Weg zurueck, damit er
   // dort erscheint, wo das Eingabefeld steht.
   const [discountCode, setDiscountCode] = useState("");
   const [discountError, setDiscountError] = useState(null);
-  // Echte Betraege aus Paddles Checkout-Events, sobald das eingebettete
-  // Formular geladen ist (siehe PaymentStep).
-  const [paddleTotals, setPaddleTotals] = useState(null);
   const [verifyEmail, setVerifyEmail] = useState(null);
   const [passwordReset, setPasswordReset] = useState(
     account?.resetToken ? { initialStep: "reset" } : null,
@@ -112,7 +120,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   const showSummary =
     !passwordReset &&
     variant !== "login-only" &&
-    (currentKey === "account" || currentKey === "payment");
+    (currentKey === "account" || currentKey === "address" || currentKey === "payment");
   const summaryBeside = showSummary && isDesktop;
 
   const dialogWidth = passwordReset
@@ -163,7 +171,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
       return;
     }
     setVariant("new-customer-no-verify");
-    setStepIndex(getWizardSteps("new-customer-no-verify").indexOf("payment"));
+    setStepIndex(getWizardSteps("new-customer-no-verify").indexOf("address"));
   }, [account?.isLoggedIn, account?.isPro, variant, currentKey]);
 
   // login-only (Stufe Nutzer-Konzept 2026-08-11): Ziel ist ausschliesslich
@@ -209,7 +217,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // diese Pruefung landete ein eingeloggter Nutzer wieder auf der
   // Login-Maske, obwohl die Fortschrittsleiste "Konto ✓" anzeigt.
   const handlePricingContinue = useCallback(
-    () => goToStep(account?.isLoggedIn ? "payment" : "account"),
+    () => goToStep(account?.isLoggedIn ? "address" : "account"),
     [goToStep, account?.isLoggedIn],
   );
   const handleVerificationSent = useCallback(
@@ -236,20 +244,22 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   const backTarget =
     currentKey === "account"
       ? "pricing"
-      : currentKey === "payment"
+      : currentKey === "address"
         ? account?.isLoggedIn
           ? "pricing"
           : "account"
-        : null;
+        : currentKey === "payment"
+          ? "address"
+          : null;
   const canGoBack = !passwordReset && backTarget !== null && steps.some((s) => s.key === backTarget);
   const goBack = useCallback(() => {
     if (backTarget) goToStep(backTarget);
   }, [backTarget, goToStep]);
   // Account-Refresh nach Zahlung (Code-Review Task 9): ohne das bliebe
   // account.isPro faelschlich false, bis zum naechsten manuellen Reload.
-  // Zweiter, verzoegerter Refresh im Hintergrund faengt den Fall ab, dass
-  // der Paddle-Webhook bei checkout.completed noch nicht durchgelaufen ist -
-  // blockiert den Wechsel zu WelcomeStep aber nicht.
+  // Zweiter, verzoegerter Refresh im Hintergrund faengt den Fall ab, dass der
+  // Stripe-Webhook noch nicht durchgelaufen ist - blockiert den Wechsel zu
+  // WelcomeStep aber nicht.
   const handlePaymentCompleted = useCallback(async () => {
     await account.refresh();
     setTimeout(() => account.refresh(), 1500);
@@ -298,12 +308,23 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     );
   } else if (currentKey === "verify") {
     content = <VerifyEmailStep t={t} account={account} email={verifyEmail} />;
+  } else if (currentKey === "address") {
+    content = (
+      <AddressStep
+        t={t}
+        value={billingAddress}
+        onChange={setBillingAddress}
+        onContinue={() => goToStep("payment")}
+      />
+    );
   } else if (currentKey === "payment") {
     content = (
       <PaymentStep
         t={t}
         account={account}
         plan={plan}
+        lang={lang}
+        billingAddress={billingAddress}
         onCompleted={handlePaymentCompleted}
         discountCode={discountCode}
         // Ungueltiger Code: zurueck in den Laufzeit-Schritt, wo das
@@ -313,7 +334,6 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
           setDiscountError(message);
           if (editPlanHandler) editPlanHandler();
         }}
-        onTotals={setPaddleTotals}
       />
     );
   } else if (currentKey === "welcome") {
@@ -451,7 +471,6 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
                 t={t}
                 plan={plan}
                 variant={summaryBeside ? "card" : "box"}
-                paddleTotals={currentKey === "payment" ? paddleTotals : null}
                 showRenewal
               />
               {editPlanHandler && (

@@ -17,8 +17,8 @@ import { apiFetch, adminSessionId } from "./setup";
 //     (E2E-Praefix in der E-Mail) - wird am Ende wieder geloescht, beruehrt
 //     keine der geteilten Fixtures (test.monatlich/jaehrlich).
 //
-// Bewusst NICHT hier: POST /discounts/bulk (mehrere echte Paddle-Aufruf pro
-// Lauf, siehe Kommentar in routes/admin.ts zu Paddle-Ratelimits) - der
+// Bewusst NICHT hier: POST /discounts/bulk (mehrere echte Stripe-Aufrufe pro
+// Lauf, siehe Kommentar in routes/admin.ts zu Stripe-Ratelimits) - der
 // einfache Discount-Test unten deckt denselben Code-Pfad einmal ab.
 describe.skipIf(!adminSessionId)("Admin-Lifecycle (E2E_SESSION_ADMIN)", () => {
   const sessionId = adminSessionId as string;
@@ -181,10 +181,11 @@ describe.skipIf(!adminSessionId)("Admin-Lifecycle (E2E_SESSION_ADMIN)", () => {
   });
 
   describe("Discount-Lebenszyklus (eigens angelegter Testcode)", () => {
-    // Kein Bindestrich (19.08.-Befund via wrangler tail): Paddle akzeptiert nur
-    // ^[a-zA-Z0-9]{1,32}$ als Discount-Code, ein "E2E-XXXXXXXX" scheiterte mit
-    // 502 create_discount_failed - alle nachfolgenden update/archive-Tests
-    // liefen dadurch gegen /admin/discounts/undefined (404).
+    // Kein Bindestrich (urspruenglich ein Paddle-Befund vom 19.08., dieselbe
+    // Vorsicht gilt fuer Stripes Promotion-Code-Format): DISCOUNT_CODE_PATTERN
+    // in routes/admin.ts akzeptiert nur ^[A-Z0-9]{1,32}$, ein "E2E-XXXXXXXX"
+    // waere sonst serverseitig abgelehnt worden - alle nachfolgenden
+    // update/archive-Tests liefen dadurch gegen /admin/discounts/undefined (404).
     const code = `E2E${randomUUID().slice(0, 8).toUpperCase()}`;
     let discountId: string;
 

@@ -206,9 +206,9 @@ Wegwerf-Konto aus einem anderen manuellen Test hier.
 - Ein erneuter Login-Versuch mit derselben E-Mail (egal über welchen Weg)
   verhält sich wie bei einer komplett neuen, unbekannten Adresse (kein
   Hinweis auf das ehemalige Konto, keine Restdaten).
-- Falls das Wegwerf-Konto ein (synthetisches) Abo hatte: in Paddle wird die
+- Falls das Wegwerf-Konto ein (synthetisches) Abo hatte: bei Stripe wird die
   zugehörige Subscription storniert (`deleteAccountCompletely`, siehe
-  `accountDeletion.ts`) — im Paddle-Dashboard prüfbar.
+  `accountDeletion.ts`) — im Stripe-Dashboard prüfbar.
 
 **Negativfall (sicher, auch automatisiert bereits abgedeckt):** Löschung
 ohne Passwort bzw. mit falschem Passwort → `400 current_password_required`
@@ -266,10 +266,10 @@ automatisierte Suite) von derselben IP aus laufen.
 
 ---
 
-## 9. Paddle-Webhook — echte Zustellung auf ein reales Konto
+## 9. Stripe-Webhook — echte Zustellung auf ein reales Konto
 
-**Ziel:** Verifiziert `subscription.created`/`subscription.updated` mit
-einem ECHTEN, von Paddle zugestellten Event (nicht dem selbst signierten
+**Ziel:** Verifiziert `customer.subscription.created`/`customer.subscription.updated`
+mit einem ECHTEN, von Stripe zugestellten Event (nicht dem selbst signierten
 Testpayload aus `billing-webhook.e2e.test.ts`), inkl. der
 Trial-Verbrauchs-Markierung, der Dunning-Mail bei `past_due` und der
 "payment_succeeded"-Mail beim ersten echten Kauf.
@@ -284,17 +284,18 @@ keine HTTP-Route, um eine `subscriptions`-Zeile wieder zu löschen).
 
 **Schritte:**
 1. Mit einem eigenen Wegwerf-Konto (test.free wurde am 18.08. gelöscht,
-   siehe release-notes.txt) einen echten Sandbox-Checkout über die UI
+   siehe release-notes.txt) einen echten Testmodus-Checkout über die UI
    durchlaufen (Testkarte 4242..., siehe `e2e/api-e2e-README.md`).
-2. Im Paddle-Dashboard unter Developer Tools → Notifications → Logs prüfen,
-   dass das `subscription.created`-Event mit Status 200 zugestellt wurde.
+2. Im Stripe-Dashboard unter Entwickler → Webhooks → (Endpoint) → Ereignisse
+   prüfen, dass das `customer.subscription.created`-Event mit Status 200
+   zugestellt wurde.
 
 **Erwartetes Ergebnis:**
 - `GET /api/v1/me` zeigt danach `isPro: true`, `subscription.status:
   "trialing"` (3-Tage-Trial) bzw. `"active"`.
 - `hasUsedTrial: true` bleibt danach dauerhaft gesetzt, auch nach einer
   späteren Kündigung.
-- Bei einem absichtlich fehlschlagenden Testkarten-Zahlungsversuch (Paddle
+- Bei einem absichtlich fehlschlagenden Testkarten-Zahlungsversuch (Stripe
   bietet dafür spezielle Testkartennummern für "declined") sollte die
   Dunning-Mail ("Zahlung schlägt fehl") beim Nutzer ankommen.
 

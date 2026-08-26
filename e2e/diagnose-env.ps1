@@ -83,7 +83,7 @@ foreach ($line in Get-Content $envFile) {
 
 Write-Host "`n=== 4. Pflicht-/Optional-Variablen im Ueberblick ===" -ForegroundColor Cyan
 foreach ($k in @("E2E_PASSWORD_MONATLICH", "E2E_PASSWORD_JAEHRLICH", "E2E_PASSWORD_ADMIN",
-                 "E2E_PADDLE_WEBHOOK_SECRET", "E2E_SESSION_REAL_PRO",
+                 "E2E_STRIPE_WEBHOOK_SECRET", "E2E_SESSION_REAL_PRO",
                  "E2E_SESSION_MONATLICH", "E2E_SESSION_JAEHRLICH", "E2E_SESSION_ADMIN")) {
     if ($psParsed.ContainsKey($k)) {
         $v = $psParsed[$k]

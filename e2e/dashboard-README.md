@@ -44,7 +44,7 @@ Server.
    E2E_PASSWORD_JAEHRLICH=...
    ```
    Optional zusätzlich `E2E_PASSWORD_ADMIN`, `E2E_SESSION_REAL_PRO` und
-   `E2E_PADDLE_WEBHOOK_SECRET`, wenn die entsprechenden Tests mitlaufen
+   `E2E_STRIPE_WEBHOOK_SECRET`, wenn die entsprechenden Tests mitlaufen
    sollen (sonst werden sie automatisch übersprungen — wie bisher).
 2. Starten: `powershell -File e2e\start.ps1`
    (oder direkt: `node e2e\server.js`, dann

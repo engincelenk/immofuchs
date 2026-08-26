@@ -17,7 +17,7 @@ import {
 
 // Abos & Zahlungen (Admin-MVP Abschnitt 8). Reine Uebersicht - hier wird
 // nichts geaendert. Betrag, Zahlungsstatus, Refund und Abrechnungszyklus
-// gehoeren zu Paddle; dafuer gibt es den "In Paddle oeffnen"-Link im Detail.
+// gehoeren zu Stripe; dafuer gibt es den "In Stripe oeffnen"-Link im Detail.
 
 // Genau die vier Filter aus dem Auftrag. "Gekuendigt" umfasst serverseitig
 // sowohl 'canceled' als auch 'cancel_scheduled' - operativ dieselbe Frage.
@@ -64,7 +64,7 @@ export function AdminSubscriptionsView() {
     <div>
       <p style={{ ...mutedTextStyle, marginTop: 0, marginBottom: 16 }}>
         Übersicht der Abos aus der ImmoFuchs-Datenbank. Zahlungen, Erstattungen und Abrechnungszyklus werden
-        ausschließlich in Paddle verwaltet – im Detail führt ein Link direkt dorthin.
+        ausschließlich in Stripe verwaltet – im Detail führt ein Link direkt dorthin.
       </p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end", marginBottom: 16 }}>

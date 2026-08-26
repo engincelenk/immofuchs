@@ -10,7 +10,7 @@
 // e2e/manuelle-testfaelle.md sind hier bewusst NICHT enthalten - die lassen
 // sich nicht per Knopfdruck ausfuehren, siehe dortige Anleitung.
 //
-// Geheimnisse (Passwoerter, Paddle-Secret) stehen NICHT in diesem Repo.
+// Geheimnisse (Passwoerter, Stripe-Secret) stehen NICHT in diesem Repo.
 // Sie werden aus einer lokalen, nicht committeten Datei ".env.local" in
 // diesem Ordner geladen (siehe env.beispiel.txt und dashboard-README.md).
 //

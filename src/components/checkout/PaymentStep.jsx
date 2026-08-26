@@ -2,51 +2,32 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { errorBannerStyle, primaryBtnStyle } from "./checkoutStyles.js";
 import { LockGlyph, RedirectOverlay } from "./CheckoutShared.jsx";
 
-// Klassenname (nicht ID) des Containers, in den Paddle sein Formular einbettet -
-// Paddle.js erwartet an dieser Stelle einen Klassen-Selektor.
-const FRAME_CLASS = "paddle-checkout-frame";
-
-// Laedt der eingebettete Rahmen nach dieser Zeit kein einziges Event, gilt er
-// als blockiert (haeufigster Grund bei dieser Zielgruppe: Tracking-Blocker,
-// die den iframe verschlucken, ohne dass ein Fehler-Event kommt) - dann
-// oeffnet sich stattdessen Paddles eigenes Overlay. Lieber ein Bruch in der
-// Optik als ein Nutzer, der nicht bezahlen kann.
-const INLINE_LOAD_TIMEOUT_MS = 9000;
-
-// Schritt 3: Zahlung (Neugestaltung 2026-08-17 nach den Referenz-Screenshots).
+// Schritt 3: Zahlung (Neugestaltung 2026-08-17, seit 2026-08-26 auf Stripe
+// Payment Element umgestellt statt Paddles eingebettetem iframe-Formular).
 //
-// Frueher loeste dieser Schritt Paddles bildschirmfuellendes Overlay aus - der
-// Nutzer verlor im letzten, wichtigsten Moment die Bestelluebersicht und die
-// vertraute Optik. Jetzt rendert Paddle sein Formular in einen Container
-// innerhalb der Kaufstrecke, die Bestelluebersicht bleibt daneben stehen
-// (CheckoutWizard) bzw. darunter (Handy).
-//
-// Reihenfolge der Zustimmung (§ 312j BGB, Buttonloesung): Paddles Bezahl-Button
-// sitzt INNERHALB des eingebetteten Rahmens und laesst sich von aussen nicht
-// sperren. Die Widerrufs-Zustimmung muss deshalb VOR dem Einbetten eingeholt
-// werden - der Rahmen entsteht erst, nachdem der Nutzer zugestimmt hat. Vorher
-// war die Checkbox nur eine Freischaltung unseres eigenen Buttons.
+// Anders als Paddle sitzt der Bezahl-Button hier NICHT in einem fremden
+// iframe, sondern ist unser eigenes <button>-Element - Stripes Payment
+// Element enthaelt nur die Eingabefelder, den Absende-Klick loesen wir selbst
+// per stripe.confirmPayment() aus. Die Widerrufs-Zustimmung (§ 312j BGB,
+// Buttonloesung) laesst sich dadurch mit einem normalen `disabled` auf
+// unserem Submit-Button durchsetzen - der fruehere `inert`-Workaround (siehe
+// Git-Historie) war nur noetig, weil Paddles Bezahl-Button von aussen nicht
+// sperrbar war.
 export function PaymentStep({
   t,
   account,
   plan,
+  lang,
+  billingAddress,
   onCompleted,
   discountCode,
   onDiscountError,
-  onTotals,
 }) {
-  // consent  - Ruhe-/Fehlerzustand, kein Formular eingebettet (nur nach
-  //            einem Fehlschlag erreichbar, siehe fail())
-  // starting - Transaktion wird erzeugt, Container ist schon im DOM
-  // inline    - Paddle-Formular ist eingebettet
-  // fallback  - Einbetten misslungen, Paddles Overlay uebernimmt
-  //
-  // Startet seit 2026-08-20 direkt bei "starting" statt bei "consent"
-  // (Nutzer-Meldung: die Zustimmung fuehlte sich wie ein eigener,
-  // leerer Zwischenschritt an, und die Checkbox tauchte danach ein zweites
-  // Mal ueber dem Formular auf). Das Formular ist jetzt von Anfang an da,
-  // bis zur Zustimmung aber per `inert` vollstaendig gesperrt - siehe
-  // consentGateRef weiter unten.
+  // starting   - Subscription wird serverseitig erzeugt, Stripe.js laedt
+  // ready      - Payment Element ist eingebettet und bedienbar
+  // processing - stripe.confirmPayment() laeuft
+  // consent    - Ruhe-/Fehlerzustand, kein Formular eingebettet (nur nach
+  //              einem Fehlschlag erreichbar, siehe fail())
   const [stage, setStage] = useState("starting");
   const [error, setError] = useState(null);
   const [resendBusy, setResendBusy] = useState(false);
@@ -56,75 +37,16 @@ export function PaymentStep({
   // onCompleted ueber eine Ref statt als Effect-Dependency (Bugreport 06.08.,
   // "Weiter zur Zahlung friert die App ein"): das account-Objekt aus
   // useAccount() ist nicht memoisiert und wechselt bei JEDEM Render die
-  // Identitaet. Dadurch wechselte auch onCompleted staendig, der Effekt lief
-  // neu - und sein Cleanup rief mitten im Oeffnen Paddle.Checkout.close()
-  // auf. Uebrig blieb Paddles Overlay-Hintergrund ohne Inhalt, der die ganze
-  // Seite blockierte. Mit leerer Dependency-Liste laeuft der Cleanup nur noch
-  // beim echten Unmount, die Ref haelt den Callback trotzdem aktuell.
+  // Identitaet. Mit leerer Dependency-Liste laeuft der Setup-Effekt nur
+  // einmal, die Ref haelt den Callback trotzdem aktuell.
   const onCompletedRef = useRef(onCompleted);
   onCompletedRef.current = onCompleted;
   const onDiscountErrorRef = useRef(onDiscountError);
   onDiscountErrorRef.current = onDiscountError;
-  const onTotalsRef = useRef(onTotals);
-  onTotalsRef.current = onTotals;
-  const frameLoadedRef = useRef(false);
+  const containerRef = useRef(null);
+  const stripeRef = useRef(null);
+  const elementsRef = useRef(null);
   const startedRef = useRef(false);
-
-  // Sperrt das eingebettete Paddle-Formular, solange die Widerrufs-Zustimmung
-  // aussteht. Ersetzt die fruehere Vorstufe, die das Formular erst NACH der
-  // Zustimmung ueberhaupt erzeugt hat (§ 312j BGB - der Bezahl-Button sitzt
-  // in Paddles iframe und war von aussen nicht sperrbar). `inert` kann genau
-  // das doch: es nimmt den kompletten Teilbaum inklusive iframe aus Maus-,
-  // Tastatur- und Screenreader-Bedienung. Ohne Zustimmung laesst sich also
-  // weiterhin kein Vertrag schliessen, das Formular ist aber schon sichtbar.
-  //
-  // Imperativ per Ref statt als JSX-Attribut: React 18 kennt `inert` noch
-  // nicht als Prop (erst React 19) und wuerde einen Boolean verschlucken bzw.
-  // eine Warnung werfen. pointer-events:none unten bleibt als zweite
-  // Absicherung fuer Browser ohne inert-Unterstuetzung.
-  const consentGateRef = useRef(null);
-  useEffect(() => {
-    const el = consentGateRef.current;
-    if (!el) return;
-    if (withdrawalAccepted) el.removeAttribute("inert");
-    else el.setAttribute("inert", "");
-  }, [withdrawalAccepted, stage]);
-
-  useEffect(() => {
-    let unsubscribe = () => {};
-    let cancelled = false;
-    import("../../utils/paddleLoader.js").then(({ onPaddleCheckoutEvent }) => {
-      if (cancelled) return;
-      unsubscribe = onPaddleCheckoutEvent((event) => {
-        if (event?.name === "checkout.loaded" || event?.name === "checkout.updated") {
-          frameLoadedRef.current = true;
-          // Ab jetzt kennt Paddle den tatsaechlich faelligen Betrag (inklusive
-          // eingeloestem Gutschein und laenderabhaengiger Steuer) - die
-          // Bestelluebersicht daneben soll dieselbe Zahl zeigen wie das
-          // Formular, nicht unsere Vorab-Berechnung.
-          const totals = event.data?.totals;
-          if (totals) {
-            onTotalsRef.current?.({
-              total: totals.total,
-              currencyCode: event.data?.currency_code,
-            });
-          }
-        }
-        if (event?.name === "checkout.completed") {
-          window.Paddle?.Checkout?.close?.();
-          onCompletedRef.current();
-        }
-      });
-    });
-    return () => {
-      cancelled = true;
-      unsubscribe();
-      // Nur beim echten Verlassen des Zahlungsschritts: sonst bliebe Paddles
-      // Fenster offen, waehrend darunter schon der Willkommens-Screen oder die
-      // geschlossene App steht.
-      window.Paddle?.Checkout?.close?.();
-    };
-  }, []);
 
   const fail = useCallback(
     (err) => {
@@ -136,8 +58,10 @@ export function PaymentStep({
         // dorthin zurueck, nicht an diese Stelle, wo kein Eingabefeld steht.
         onDiscountErrorRef.current?.(t.discountCodeInvalid);
         setError(t.discountCodeInvalid);
+      } else if (code === "stripe_not_configured" || code === "stripe_script_blocked_or_failed") {
+        setError(t.planCheckoutBlocked);
       } else {
-        setError(code.startsWith("paddle_script") ? t.planCheckoutBlocked : t.planCheckoutUnavailable);
+        setError(t.planCheckoutUnavailable);
       }
       setStage("consent");
       startedRef.current = false;
@@ -145,10 +69,10 @@ export function PaymentStep({
     [t],
   );
 
-  // Kasse oeffnen, sobald der Container im DOM steht. Bewusst in einem Effekt
-  // und nicht direkt im Klick-Handler: Paddle sucht seinen Ziel-Container zum
-  // Zeitpunkt des open()-Aufrufs im Dokument - im Klick-Handler existiert er
-  // noch nicht, weil React erst danach neu rendert.
+  // Subscription serverseitig erzeugen, Stripe.js laden und das Payment
+  // Element in den bereits im DOM stehenden Container einbetten. Bewusst in
+  // einem Effekt statt im Klick-Handler: der Container muss existieren, BEVOR
+  // Stripe ihn mounten kann.
   useEffect(() => {
     if (stage !== "starting" || startedRef.current) return;
     startedRef.current = true;
@@ -156,9 +80,31 @@ export function PaymentStep({
 
     (async () => {
       try {
-        await account.startCheckout(plan, discountCode?.trim() || undefined, FRAME_CLASS);
+        const { clientSecret } = await account.startCheckout(
+          plan,
+          discountCode?.trim() || undefined,
+          billingAddress,
+        );
         if (cancelled) return;
-        setStage("inline");
+
+        const { loadStripeClient } = await import("../../utils/stripeLoader.js");
+        const stripe = await loadStripeClient();
+        if (cancelled) return;
+        stripeRef.current = stripe;
+
+        const elements = stripe.elements({ clientSecret, locale: lang });
+        elementsRef.current = elements;
+        // Billing-Adresse kommt bereits aus AddressStep und landet
+        // serverseitig auf dem Stripe-Kunden (siehe useAccount.js/
+        // startCheckout, worker/src/stripe/checkout.ts) - die eigenen Felder
+        // im Payment Element blieben sonst eine redundante Zweiteingabe.
+        const paymentElement = elements.create("payment", {
+          fields: { billingDetails: { address: "never", name: "never", email: "never" } },
+        });
+        paymentElement.on("ready", () => {
+          if (!cancelled) setStage("ready");
+        });
+        paymentElement.mount(containerRef.current);
       } catch (err) {
         if (!cancelled) fail(err);
       }
@@ -167,37 +113,59 @@ export function PaymentStep({
     return () => {
       cancelled = true;
     };
-    // discountCode/plan bewusst nicht als Dependency: waehrend die Kasse
-    // geoeffnet wird, darf ein Renderwechsel den Vorgang nicht neu anstossen.
+    // discountCode/plan/billingAddress bewusst nicht als Dependency: waehrend
+    // die Kasse erzeugt wird, darf ein Renderwechsel den Vorgang nicht neu
+    // anstossen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage]);
 
-  // Rueckfall auf das Overlay, wenn der eingebettete Rahmen stumm bleibt.
   useEffect(() => {
-    if (stage !== "inline") return;
-    const timer = setTimeout(async () => {
-      if (frameLoadedRef.current) return;
-      setStage("fallback");
-      try {
-        await account.startCheckout(plan, discountCode?.trim() || undefined);
-      } catch (err) {
-        fail(err);
+    return () => {
+      elementsRef.current = null;
+      stripeRef.current = null;
+    };
+  }, []);
+
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      const stripe = stripeRef.current;
+      const elements = elementsRef.current;
+      if (!stripe || !elements || !withdrawalAccepted) return;
+      setStage("processing");
+      setError(null);
+      const { error: confirmError } = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+        confirmParams: {
+          payment_method_data: {
+            billing_details: {
+              email: account?.me?.email || undefined,
+              name: billingAddress?.company?.trim() || undefined,
+              address: {
+                line1: billingAddress?.street || "",
+                postal_code: billingAddress?.zip || "",
+                city: billingAddress?.city || "",
+                country: "DE",
+              },
+            },
+          },
+        },
+      });
+      if (confirmError) {
+        setError(confirmError.message || t.planCheckoutUnavailable);
+        setStage("ready");
+        return;
       }
-    }, INLINE_LOAD_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage]);
+      onCompletedRef.current();
+    },
+    [withdrawalAccepted, account, billingAddress, t],
+  );
 
   return (
     <div style={{ position: "relative" }}>
       <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 14 }}>{t.paymentMethodTitle}</div>
 
-      {/* Kein "✓ Angemeldet als ..."-Banner mehr hier (Nutzer-Korrektur
-          2026-08-18): dieser Schritt ist nur eingeloggt erreichbar, der
-          Hinweis bestaetigte also immer nur einen bereits offensichtlichen
-          Zustand. Der Login-Schritt selbst wird fuer bereits eingeloggte
-          Nutzer schon an anderer Stelle uebersprungen (CheckoutWizard.jsx,
-          Auto-Advance-Effekt). */}
       {error === "email_not_verified" ? (
         <div style={errorBannerStyle}>
           {t.loginErrorEmailNotVerified}
@@ -225,97 +193,87 @@ export function PaymentStep({
         error && <div style={errorBannerStyle}>{error}</div>
       )}
 
-      {/* Die Zustimmung ist kein eigener Zwischenschritt mehr, sondern steht
-          direkt ueber dem Formular (Nutzer-Meldung 2026-08-20). Sie bleibt
-          jederzeit bedienbar: wer sie wieder abwaehlt, sperrt das Formular
-          erneut - das ist der ehrlichere Zustand, als eine einmal gesetzte
-          Zustimmung festzunageln. */}
-      <label
-        style={{
-          display: "flex",
-          gap: 10,
-          alignItems: "flex-start",
-          fontSize: 12,
-          lineHeight: 1.5,
-          color: "var(--ct)",
-          background: "var(--ci)",
-          border: "1px solid var(--cb)",
-          borderRadius: 10,
-          padding: "12px 14px",
-          marginBottom: 14,
-        }}
-      >
-        <input
-          type="checkbox"
-          required
-          checked={withdrawalAccepted}
-          disabled={error === "email_not_verified"}
-          onChange={(e) => setWithdrawalAccepted(e.target.checked)}
-          style={{ marginTop: 2, flexShrink: 0 }}
-        />
-        <span>{t.paymentWithdrawalConsent}</span>
-      </label>
-
-      {/* Erneut-Versuchen nur nach einem Fehlschlag: fail() setzt stage
-          zurueck auf "consent", das Formular ist dann nicht mehr im DOM -
-          ohne diesen Knopf gaebe es keinen Weg, den Vorgang neu anzustossen. */}
-      {stage === "consent" && error && error !== "email_not_verified" && (
-        <button
-          onClick={() => {
-            setError(null);
-            setStage("starting");
-          }}
-          style={primaryBtnStyle}
-        >
-          {t.paymentRetryCta}
-        </button>
-      )}
-
-      {/* Zielcontainer fuer Paddle. Er muss im DOM stehen, BEVOR
-          Paddle.Checkout.open() laeuft - deshalb schon in der Phase
-          "starting" gerendert und nicht erst bei "inline".
-          Die Huelle darum traegt die Zustimmungs-Sperre (consentGateRef):
-          sichtbar, aber bis zum Haken oben nicht bedienbar. */}
-      {(stage === "starting" || stage === "inline") && (
-        <div
-          ref={consentGateRef}
-          style={{
-            position: "relative",
-            opacity: withdrawalAccepted ? 1 : 0.45,
-            pointerEvents: withdrawalAccepted ? "auto" : "none",
-            transition: "opacity .2s ease",
-          }}
-        >
-          <div
-            className={FRAME_CLASS}
-            style={{ minHeight: stage === "inline" ? 460 : 240, width: "100%" }}
-          />
-        </div>
-      )}
-
-      {stage === "fallback" && (
-        <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.55, padding: "20px 0" }}>
-          {t.paymentInlineFallback}
-        </div>
-      )}
-
-      {stage !== "consent" && (
-        <p
+      <form onSubmit={handleSubmit}>
+        {/* Die Zustimmung steht direkt ueber dem Formular (Nutzer-Meldung
+            2026-08-20). Sie bleibt jederzeit bedienbar: wer sie wieder
+            abwaehlt, sperrt den Submit-Button erneut. */}
+        <label
           style={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            fontSize: 11.5,
-            color: "var(--ch)",
-            marginTop: 12,
+            gap: 10,
+            alignItems: "flex-start",
+            fontSize: 12,
+            lineHeight: 1.5,
+            color: "var(--ct)",
+            background: "var(--ci)",
+            border: "1px solid var(--cb)",
+            borderRadius: 10,
+            padding: "12px 14px",
+            marginBottom: 14,
           }}
         >
-          <LockGlyph /> {t.paymentEncrypted}
-        </p>
-      )}
+          <input
+            type="checkbox"
+            required
+            checked={withdrawalAccepted}
+            disabled={error === "email_not_verified"}
+            onChange={(e) => setWithdrawalAccepted(e.target.checked)}
+            style={{ marginTop: 2, flexShrink: 0 }}
+          />
+          <span>{t.paymentWithdrawalConsent}</span>
+        </label>
 
-      {stage === "starting" && <RedirectOverlay label={t.redirectingToCheckout} />}
+        {/* Erneut-Versuchen nur nach einem Fehlschlag beim Erzeugen der
+            Kasse: fail() setzt stage zurueck auf "consent", das Formular ist
+            dann nicht mehr im DOM - ohne diesen Knopf gaebe es keinen Weg,
+            den Vorgang neu anzustossen. */}
+        {stage === "consent" && error && error !== "email_not_verified" && (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setStage("starting");
+            }}
+            style={primaryBtnStyle}
+          >
+            {t.paymentRetryCta}
+          </button>
+        )}
+
+        {/* Zielcontainer fuer das Payment Element. Er muss im DOM stehen,
+            BEVOR elements.create(...).mount() laeuft - deshalb schon in der
+            Phase "starting" gerendert und nicht erst bei "ready". */}
+        {stage !== "consent" && (
+          <div
+            ref={containerRef}
+            style={{ minHeight: stage === "ready" || stage === "processing" ? 220 : 60, width: "100%" }}
+          />
+        )}
+
+        {stage === "ready" && (
+          <button type="submit" disabled={!withdrawalAccepted} style={{ ...primaryBtnStyle, marginTop: 16, width: "100%" }}>
+            {t.paymentPayCta}
+          </button>
+        )}
+
+        {stage !== "consent" && (
+          <p
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              fontSize: 11.5,
+              color: "var(--ch)",
+              marginTop: 12,
+            }}
+          >
+            <LockGlyph /> {t.paymentEncrypted}
+          </p>
+        )}
+      </form>
+
+      {(stage === "starting" || stage === "processing") && <RedirectOverlay label={t.redirectingToCheckout} />}
     </div>
   );
 }

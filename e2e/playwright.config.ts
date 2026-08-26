@@ -6,7 +6,7 @@
 // auf https://dev.immofuchs.info, nicht als "startet einen Dev-Server"-Setup
 // wie das fruehere (inzwischen entfernte) playwright.config.js von 1.55.99 -
 // dort ging es um lokale PWA-Smoke-Tests, hier um echte Nutzerpfade gegen
-// die dev-Umgebung inkl. echter Paddle-Sandbox und echtem Login.
+// die dev-Umgebung inkl. echter Stripe-Testmodus und echtem Login.
 //
 // Ordner-Umzug 2026-08-19 (Nutzerwunsch "alles in einem Ordner"): diese
 // Datei lag vorher in browser-e2e/ mit testDir "./tests" (eigener

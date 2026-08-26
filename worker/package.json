@@ -18,10 +18,11 @@
     "db:migrate:prod:local": "wrangler d1 migrations apply immofuchs-prod"
   },
   "dependencies": {
+    "@simplewebauthn/server": "^11.0.0",
+    "@simplewebauthn/types": "^11.0.0",
     "hono": "^4.6.0",
     "jose": "^5.9.0",
-    "@simplewebauthn/server": "^11.0.0",
-    "@simplewebauthn/types": "^11.0.0"
+    "stripe": "^17.7.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260714.1",

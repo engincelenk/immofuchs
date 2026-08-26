@@ -25,7 +25,7 @@ import {
 // kurzzeitig auf "Zahlungsdaten erforderlich" geaendert worden. Das war
 // falsch - die 7-Tage-Testphase startet automatisch beim ersten Login
 // (startAppTrialIfNew in worker/src/routes/account.ts) und verlangt keine
-// Zahlungsdaten; der Paddle-Checkout ist ein davon getrennter Weg zu Pro.
+// Zahlungsdaten; der Stripe-Checkout ist ein davon getrennter Weg zu Pro.
 //
 // Umschalter entfernt (Nutzer-Vorgabe 2026-08-18): frueher wechselte eine
 // einzelne Pro-Karte per Monatlich/Jaehrlich-Umschalter ihren Preis. Jetzt
@@ -354,7 +354,7 @@ function Leistungsliste({ t }) {
 // Testphase" ist korrekt und bewusst so formuliert: die Testphase startet
 // automatisch beim ersten Login (startAppTrialIfNew in
 // worker/src/routes/account.ts) und verlangt keinerlei Zahlungsdaten - der
-// Paddle-Checkout ist ein davon getrennter Weg zu Pro.
+// Stripe-Checkout ist ein davon getrennter Weg zu Pro.
 function Vertrauenszeile({ t }) {
   return (
     <div className="ps-trust" style={{ maxWidth: 1100, margin: "20px auto 0" }}>

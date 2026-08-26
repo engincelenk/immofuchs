@@ -67,8 +67,8 @@ export interface SubscriptionRow {
   // gleichwertig zu 'active' (siehe entitlement.ts, computeIsPro).
   status: "active" | "trialing" | "past_due" | "cancel_scheduled" | "canceled";
   plan: "monthly" | "yearly";
-  paddle_customer_id: string;
-  paddle_subscription_id: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   current_period_end: number;
   cancel_at_period_end: number;
   first_purchase_at: number;
@@ -77,7 +77,7 @@ export interface SubscriptionRow {
   // Getrennt von renewal_reminder_sent_at (Migration 0012): sonst wuerde die
   // Trial-Erinnerung die spaetere Jahres-Erinnerung desselben Abos blockieren.
   trial_reminder_sent_at: number | null;
-  latest_transaction_id: string | null;
+  latest_invoice_id: string | null;
   updated_at: number;
 }
 
@@ -695,16 +695,6 @@ export async function markTrialReminderSent(db: Env["DB"], subscriptionId: strin
     .run();
 }
 
-export async function getSubscriptionByPaddleId(
-  db: Env["DB"],
-  paddleSubscriptionId: string,
-): Promise<SubscriptionRow | null> {
-  return db
-    .prepare("SELECT * FROM subscriptions WHERE paddle_subscription_id = ?")
-    .bind(paddleSubscriptionId)
-    .first<SubscriptionRow>();
-}
-
 // ═══ Webhook-Idempotenz ═══
 
 export async function isWebhookEventProcessed(db: Env["DB"], eventId: string): Promise<boolean> {
@@ -1055,8 +1045,8 @@ export const ADMIN_TEST_SUBSCRIPTION_PREFIX = "admin-test:";
 
 // Synthetische Subscription-Zeile fuer einen vom Admin direkt angelegten
 // Testnutzer (Nutzer-Entscheidung 2026-08-1X, "User direkt anlegen") - es
-// gibt dafuer keinen echten Paddle-Checkout, deshalb eine klar erkennbare
-// paddle_*_id ("admin-test:<uuid>") statt einer echten Paddle-ID. Nur ueber
+// gibt dafuer keinen echten Stripe-Checkout, deshalb eine klar erkennbare
+// stripe_*_id ("admin-test:<uuid>") statt einer echten Stripe-ID. Nur ueber
 // die Admin-Route erreichbar und dort an is_test_user=true gebunden, damit
 // keine echten Kundenkonten auf diesem Weg ein Abo ohne Zahlung bekommen.
 // Zeitstempel je Status plausibel gesetzt, damit computeIsPro() (entitlement.ts)
@@ -1077,7 +1067,7 @@ export async function createManualSubscriptionForAdmin(
   await db
     .prepare(
       `INSERT INTO subscriptions
-        (id, user_id, status, plan, paddle_customer_id, paddle_subscription_id, current_period_end,
+        (id, user_id, status, plan, stripe_customer_id, stripe_subscription_id, current_period_end,
          cancel_at_period_end, first_purchase_at, past_due_since, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
@@ -1491,7 +1481,7 @@ export async function listAuditLogAdmins(db: Env["DB"]): Promise<string[]> {
 // trial_used_at zurueck, damit sich derselbe Testaccount beliebig oft von
 // "kein Abo" aus neu durchspielen laesst (Checkout -> Trial -> Kuendigen ->
 // Reset -> von vorne), ohne bei jedem Durchlauf einen neuen Nutzer anzulegen.
-// Die Paddle-seitige Kuendigung passiert VOR diesem Aufruf beim aufrufenden
+// Die Stripe-seitige Kuendigung passiert VOR diesem Aufruf beim aufrufenden
 // Endpunkt (analog zu deleteUserCompletely) - reine D1-Aufraeumfunktion.
 export async function resetTestUserSubscription(db: Env["DB"], userId: string): Promise<void> {
   await db.batch([

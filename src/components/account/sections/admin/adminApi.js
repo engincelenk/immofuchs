@@ -62,7 +62,7 @@ export function fetchUserDetail(id) {
 // input: {email, name?, role, isTestUser?, testEmailRedirectTo?, subscription?: {status, plan}}
 // subscription UND testEmailRedirectTo sind nur zusammen mit isTestUser:true
 // gueltig (Worker lehnt es sonst ab) - es gibt dafuer keinen echten
-// Paddle-Kauf bzw. keinen Grund fuer eine Mail-Umleitung.
+// Stripe-Kauf bzw. keinen Grund fuer eine Mail-Umleitung.
 export function createUser(input) {
   return post("/admin/users", input);
 }
@@ -140,9 +140,10 @@ export function setDiscountStatus(id, status) {
   return post(`/admin/discounts/${encodeURIComponent(id)}/status`, { status });
 }
 
-// patch: {description?, amount?, usageLimit?, expiresAt?, status?}
-// usageLimit/expiresAt duerfen ausdruecklich null sein ("unbegrenzt" bzw.
-// "laeuft nicht ab") - weglassen heisst dagegen "unveraendert lassen".
+// patch: {description?, status?} - Stripe erlaubt bei Coupons/Promotion Codes
+// nach dem Anlegen keine Aenderung von Betrag, Nutzungslimit oder
+// Ablaufdatum mehr (siehe worker/src/stripe/discounts.ts, Wechsel weg von
+// Paddle 2026-08-27).
 export function updateDiscount(id, patch) {
   return post(`/admin/discounts/${encodeURIComponent(id)}`, patch);
 }

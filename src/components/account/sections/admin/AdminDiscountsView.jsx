@@ -20,17 +20,23 @@ import {
   thStyle,
 } from "./adminUiStyles.js";
 
-// Gutscheine (Admin-MVP Abschnitt 9). Paddle bleibt die einzige Quelle -
+// Gutscheine (Admin-MVP Abschnitt 9). Stripe bleibt die einzige Quelle -
 // D1 speichert dazu nichts (Nutzer-Entscheidung 2026-08-13, bestaetigt:
-// Paddle setzt den Rabatt beim Checkout durch, eine zweite Wahrheit wuerde
+// Stripe setzt den Rabatt beim Checkout durch, eine zweite Wahrheit wuerde
 // zwangslaeufig auseinanderlaufen).
 //
-// ZWEI FELDER AUS DEM AUFTRAG GIBT ES BEI PADDLE NICHT (offizielle Referenz,
-// 2026-08-13 geprueft) und sie fehlen deshalb bewusst:
-//  - "Startdatum": Paddle kennt nur expires_at; ein Gutschein gilt ab dem
+// ZWEI FELDER AUS DEM AUFTRAG GIBT ES BEI STRIPE NICHT und sie fehlen
+// deshalb bewusst:
+//  - "Startdatum": Stripe kennt nur expires_at; ein Gutschein gilt ab dem
 //    Anlegen. Wer spaeter starten will, legt ihn spaeter an.
-//  - "pro Kunde nur einmal": usage_limit ist ausdruecklich ein GESAMT-Limit,
-//    kein Limit je Kunde.
+//  - "pro Kunde nur einmal": usage_limit (max_redemptions) ist ausdruecklich
+//    ein GESAMT-Limit, kein Limit je Kunde.
+//
+// Bearbeiten ist bei Stripe DEUTLICH enger als es bei Paddle war (Wechsel
+// 2026-08-27): Betrag, Nutzungslimit und Ablaufdatum sind nach dem Anlegen
+// unveraenderlich (siehe worker/src/stripe/discounts.ts) - das
+// Bearbeiten-Formular unten laesst deshalb nur noch die Beschreibung zu, fuer
+// alles andere gibt es "Duplizieren".
 
 const EMPTY_FORM = {
   code: "",
@@ -60,7 +66,7 @@ export function AdminDiscountsView({ currentUser }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [bulkCount, setBulkCount] = useState("");
   const [busy, setBusy] = useState(null);
-  const [editing, setEditing] = useState(null); // {id, description, amount, usageLimit, expiresAt}
+  const [editing, setEditing] = useState(null); // {id, code, description} - siehe Stripe-Einschraenkung oben
 
   const load = useCallback(async () => {
     setError(null);
@@ -149,12 +155,9 @@ export function AdminDiscountsView({ currentUser }) {
     e.preventDefault();
     setBusy("edit");
     try {
-      await updateDiscount(editing.id, {
-        description: editing.description.trim(),
-        amount: editing.amount.trim(),
-        usageLimit: editing.usageLimit ? parseInt(editing.usageLimit, 10) : null,
-        expiresAt: editing.expiresAt || null,
-      });
+      // Nur die Beschreibung ist bei Stripe nachtraeglich aenderbar (siehe
+      // Kommentar oben) - Betrag/Limit/Ablauf gehen nur ueber "Duplizieren".
+      await updateDiscount(editing.id, { description: editing.description.trim() });
       toast.success("Gutschein gespeichert.");
       setEditing(null);
       await load();
@@ -196,8 +199,8 @@ export function AdminDiscountsView({ currentUser }) {
   return (
     <div>
       <p style={{ ...mutedTextStyle, marginTop: 0, marginBottom: 16 }}>
-        Gutscheine werden in Paddle geführt – der Code wird im Zahlungsschritt eingelöst, der abgerechnete Betrag
-        kommt immer von Paddle selbst. Ein Startdatum und ein Limit „pro Kunde nur einmal“ bietet die Paddle-API
+        Gutscheine werden in Stripe geführt – der Code wird im Zahlungsschritt eingelöst, der abgerechnete Betrag
+        kommt immer von Stripe selbst. Ein Startdatum und ein Limit „pro Kunde nur einmal“ bietet die Stripe-API
         nicht an; ein Gutschein gilt ab dem Anlegen, und das Nutzungslimit gilt insgesamt.
       </p>
 
@@ -389,9 +392,10 @@ export function AdminDiscountsView({ currentUser }) {
                     {canManage && (
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {/* Abgelaufene Gutscheine lassen sich nicht mehr
-                            umschalten - der Zustand kommt bei Paddle aus dem
-                            Datum, nicht aus einem Schalter. Bearbeiten geht,
-                            damit ein neues Ablaufdatum gesetzt werden kann. */}
+                            umschalten - der Zustand kommt bei Stripe aus dem
+                            Datum, nicht aus einem Schalter. Ein neues
+                            Ablaufdatum gibt es nur ueber "Duplizieren"
+                            (Stripe erlaubt keine nachtraegliche Aenderung). */}
                         {d.status !== "expired" && (
                           <button
                             onClick={() => handleToggleStatus(d)}
@@ -409,11 +413,7 @@ export function AdminDiscountsView({ currentUser }) {
                             setEditing({
                               id: d.id,
                               code: d.code,
-                              type: d.type,
                               description: d.description,
-                              amount: d.amount,
-                              usageLimit: d.usageLimit ? String(d.usageLimit) : "",
-                              expiresAt: isoToDateInput(d.expiresAt),
                             })
                           }
                           style={smallBtnStyle}
@@ -453,7 +453,7 @@ export function AdminDiscountsView({ currentUser }) {
   );
 }
 
-// Paddle liefert ISO-8601 mit Zeit, input[type=date] will "YYYY-MM-DD".
+// Stripe liefert ISO-8601 mit Zeit, input[type=date] will "YYYY-MM-DD".
 function isoToDateInput(iso) {
   if (!iso) return "";
   const ms = Date.parse(iso);
@@ -494,8 +494,8 @@ function EditDialog({ editing, setEditing, busy, onSubmit, onCancel }) {
       >
         <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>Gutschein bearbeiten</div>
         <p style={{ ...mutedTextStyle, marginTop: 0 }}>
-          Code <code>{editing.code || "–"}</code> und Rabattart lassen sich nicht ändern – ein bereits verteilter
-          Gutschein würde sonst still zu einem anderen. Nutze dafür „Duplizieren“.
+          Code <code>{editing.code || "–"}</code>, Rabattart, Betrag, Nutzungslimit und Ablaufdatum lassen sich bei
+          Stripe nach dem Anlegen nicht mehr ändern. Nutze dafür „Duplizieren“.
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 14 }}>
@@ -504,31 +504,6 @@ function EditDialog({ editing, setEditing, busy, onSubmit, onCancel }) {
               required
               value={editing.description}
               onChange={(e) => setEditing((s) => ({ ...s, description: e.target.value }))}
-              style={textInputStyle}
-            />
-          </Field>
-          <Field label={editing.type === "percentage" ? "Wert (%)" : "Wert (Cent)"}>
-            <input
-              required
-              value={editing.amount}
-              onChange={(e) => setEditing((s) => ({ ...s, amount: e.target.value }))}
-              style={textInputStyle}
-            />
-          </Field>
-          <Field label="Gültig bis" hint="leer = unbegrenzt">
-            <input
-              type="date"
-              value={editing.expiresAt}
-              onChange={(e) => setEditing((s) => ({ ...s, expiresAt: e.target.value }))}
-              style={textInputStyle}
-            />
-          </Field>
-          <Field label="Nutzungslimit" hint="leer = unbegrenzt">
-            <input
-              inputMode="numeric"
-              value={editing.usageLimit}
-              onChange={(e) => setEditing((s) => ({ ...s, usageLimit: e.target.value }))}
-              placeholder="unbegrenzt"
               style={textInputStyle}
             />
           </Field>
