@@ -1,3 +1,21 @@
+## 2026-08-27 (1.27.3)
+
+### FIX: Kontobereich zeigte noch Paddle-Texte, Erfolgs-Toast kam zu spaet
+
+Zwei weitere Live-Befunde nach dem ersten funktionierenden Testkauf:
+
+1. Im Kontobereich (`ZahlungenSection.jsx`) standen trotz der Stripe-Umstellung
+   noch woertliche Paddle-Texte ("Paddle als Vertragspartner", "Paddle als
+   Zahlungsdienstleister") - das waren i18n-Strings in `src/i18n/account.js`
+   (`paymentSecureNotice`, `rechnungenIntro`, `rechnungenTrialNoPdf`,
+   `zahlungBody`, `zahlungCta`), die beim Umbau der Komponentenlogik
+   uebersehen wurden. In allen 5 Sprachen korrigiert.
+2. Der Erfolgs-Toast (`ProHeaderButton.jsx`) kam nach einem echten Testkauf
+   nicht: `CheckoutWizard.jsx` refresht den Account-Status nur einmal
+   verzoegert nach 1,5s, der Stripe-Webhook braucht beobachtet aber eher
+   2-3s, bis `customer.subscription.updated` verarbeitet ist. Ein zweiter,
+   spaeterer Nachzuegler-Refresh (4s) ergaenzt.
+
 ## 2026-08-27 (1.27.2)
 
 ### FIX: Nach echtem Stripe-Testkauf keine Willkommens-Mail, keine Rechnung sichtbar

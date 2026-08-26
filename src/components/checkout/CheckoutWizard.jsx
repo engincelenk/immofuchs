@@ -262,7 +262,17 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // WelcomeStep aber nicht.
   const handlePaymentCompleted = useCallback(async () => {
     await account.refresh();
+    // Zwei verzoegerte Nachzuegler statt einem (Live-Befund 2026-08-27,
+    // dev-Testkauf): der Stripe-Webhook braucht beobachtet ca. 2-3s ab
+    // Zahlungsbestaetigung, bis customer.subscription.updated bei uns
+    // ankommt und verarbeitet ist - ein einzelner Refresh nach 1,5s hat den
+    // Erfolgs-Toast (ProHeaderButton.jsx, purchaseSuccess) dadurch
+    // zuverlaessig verpasst, weil er noch vor dem Webhook lief. Mit zwei
+    // Versuchen (1,5s und 4s) reicht mindestens einer normalerweise aus,
+    // ohne bei einer schnellen Zustellung einen sichtbaren Unterschied zu
+    // machen.
     setTimeout(() => account.refresh(), 1500);
+    setTimeout(() => account.refresh(), 4000);
     goToStep("welcome");
   }, [account, goToStep]);
 
