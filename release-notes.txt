@@ -1,3 +1,16 @@
+## 2026-08-26 (1.22.4)
+
+### UX: Renditerechner - Ergebnis-Erklärtexte erst per Klick sichtbar
+
+In SectionExplain (src/components/ui/AccordionSection.jsx) wurden die
+Stichpunkt-Bullets bislang automatisch mit dem Öffnen einer
+Accordion-Section angezeigt, nur der ausführliche Erklärtext steckte
+hinter dem "Wie kommt das Ergebnis zustande?"-Toggle. Das erzeugte pro
+Section (v.a. bei "Lohnt sich das?" und "Zeitverlauf") viel Text auf
+einen Blick. Fix: Bullets und Erklärtext werden jetzt gemeinsam erst
+nach Klick auf den Toggle eingeblendet. Betrifft alle Rechner, die
+SectionExplain verwenden.
+
 ## 2026-08-26 (1.22.3)
 
 ### SECURITY: Login-CSRF-Schutz und Paddle-Webhook-Härtung (Security-Review)
