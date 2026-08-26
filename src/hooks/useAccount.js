@@ -69,6 +69,27 @@ export function useAccount() {
   const [accountDeleted, setAccountDeleted] = useState(false);
   const didHandleRedirectRef = useRef(false);
 
+  // Globale Kauf-Bestaetigung (Bugreport 26.08.: nach einem Kauf kam manchmal
+  // gar keine Meldung, weil Paddles checkout.completed-Event ausblieb und der
+  // Wizard dadurch nie zum WelcomeStep wechselte, sondern kommentarlos schloss
+  // - der Nutzer landete zurueck auf der Seite, auf der er vorher war). Dieser
+  // Toast haengt NICHT am Wizard-Event, sondern direkt am tatsaechlichen
+  // Pro-Status aus /me: sobald isPro bei einem Refresh von false auf true
+  // wechselt, wird er gezeigt - unabhaengig davon, ob/wie der Kauf-Dialog das
+  // mitbekommen hat. wasProRef startet bewusst erst nach dem ersten Refresh
+  // (initializedRef), damit ein Reload als bereits bestehender Pro-Nutzer
+  // nicht faelschlich den Toast ausloest.
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  const wasProRef = useRef(false);
+  const proInitializedRef = useRef(false);
+  const noteProStatus = useCallback((isPro) => {
+    if (proInitializedRef.current && !wasProRef.current && isPro) {
+      setPurchaseSuccess(true);
+    }
+    wasProRef.current = isPro;
+    proInitializedRef.current = true;
+  }, []);
+
   // Cross-cutting Pro-Signal fuer useSavedObjects (Merkliste.jsx): dieser Hook
   // wird von App() VOR AppProviders/AccountProvider aufgerufen (Ctx-Wert wird
   // dort synchron gebaut, bevor der Account-Context ueberhaupt existiert) -
@@ -93,21 +114,25 @@ export function useAccount() {
       if (res.status === 401) {
         setMe(null);
         broadcastIsPro(false);
+        noteProStatus(false);
         return;
       }
       if (!res.ok) throw new Error(`me_failed_${res.status}`);
       const json = await res.json();
       setMe(json);
-      broadcastIsPro(Boolean(json?.isPro));
+      const isPro = Boolean(json?.isPro);
+      broadcastIsPro(isPro);
+      noteProStatus(isPro);
     } catch (e) {
       console.error("[account] refresh fehlgeschlagen:", e);
       setError("refresh_failed");
       setMe(null);
       broadcastIsPro(false);
+      noteProStatus(false);
     } finally {
       setLoading(false);
     }
-  }, [broadcastIsPro]);
+  }, [broadcastIsPro, noteProStatus]);
 
   // Nach OAuth-/Magic-Link-Redirect landet der Nutzer mit
   // ?login_success=1|login_error=...|email_change_success=1|email_change_error=...
@@ -326,6 +351,7 @@ export function useAccount() {
   );
 
   const dismissLoginSuccess = useCallback(() => setLoginSuccess(false), []);
+  const dismissPurchaseSuccess = useCallback(() => setPurchaseSuccess(false), []);
   const dismissAccountDeleted = useCallback(() => setAccountDeleted(false), []);
   // Wird aufgerufen, sobald die wiederaufgenommene Kaufabsicht eingeloest
   // (Wizard geoeffnet) oder verworfen wurde (Wizard geschlossen).
@@ -634,8 +660,10 @@ export function useAccount() {
     oauthEmailTakenProviders,
     resetToken,
     loginSuccess,
+    purchaseSuccess,
     accountDeleted,
     dismissLoginSuccess,
+    dismissPurchaseSuccess,
     dismissAccountDeleted,
     pendingCheckout,
     clearPendingCheckout,

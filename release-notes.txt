@@ -1,3 +1,22 @@
+## 2026-08-26 (1.22.10)
+
+### FIX: Kein Bestaetigungs-Toast, wenn Paddles checkout.completed-Event ausblieb
+
+Admin-Testkauf: nach erfolgreichem Kauf kam keine Meldung, der Nutzer landete
+kommentarlos auf der Seite zurueck, auf der er vorher war (nicht immer
+"Abonnement"). Ursache: der Erfolgs-Screen (WelcomeStep.jsx) haengt in
+CheckoutWizard.jsx an Paddles checkout.completed-Event - blieb das aus
+(kommt in Sandbox/Testsessions gelegentlich vor), schloss der Wizard ohne
+jede Bestaetigung.
+
+Neu: globaler Erfolgs-Toast in ProHeaderButton.jsx (Vorbild
+LoginSuccessToast.jsx), der unabhaengig vom Wizard-Event direkt auf den
+tatsaechlichen Pro-Status aus /me reagiert. useAccount.js erkennt bei jedem
+Refresh den Wechsel von Free auf Pro (noteProStatus) und loest dann
+purchaseSuccess aus - der Toast erscheint dadurch auch dann, wenn der
+Checkout-Dialog vom Kaufabschluss nichts mitbekommen hat. Neuer i18n-Key
+purchaseSuccessToast in allen 5 Sprachen.
+
 ## 2026-08-26 (1.22.9)
 
 ### FIX: Irrefuehrender Trial-Text im Checkout + Paddle-Trial-Werbung entfernt

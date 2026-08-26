@@ -163,6 +163,19 @@ export function ProHeaderButton() {
           onDone={account.dismissAccountDeleted}
         />
       )}
+      {/* Sicherheitsnetz fuer den Kauf-Abschluss (Bugreport 26.08.): reagiert
+          auf den tatsaechlichen Pro-Status statt auf Paddles
+          checkout.completed-Event, das gelegentlich ausbleibt - siehe
+          useAccount.js, noteProStatus. Zeigt die Bestaetigung also auch dann,
+          wenn CheckoutWizard/WelcomeStep davon nichts mitbekommen haben und
+          der Nutzer kommentarlos auf seiner vorherigen Seite landet. */}
+      {account.purchaseSuccess && (
+        <LoginSuccessToast
+          t={t}
+          message={t.purchaseSuccessToast}
+          onDone={account.dismissPurchaseSuccess}
+        />
+      )}
       {(openMode === "account" || openMode === "login" || openMode === "checkout") && (
         <Suspense fallback={<LazyPanelFallback />}>
           {openMode === "account" && (
