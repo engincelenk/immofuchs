@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Sheet } from "../ui/Sheet.jsx";
+import { ThemeSwitchPills } from "../ui/ThemeSwitchPills.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
 import { IconClose } from "./accountIcons.jsx";
 
 // Seiten-Navigation der Landingpage als Schublade von links (Vorbild:
@@ -27,6 +29,8 @@ export function HeaderMenu({
   onLogin,
   onLogoClick, // Nutzer-Vorgabe 2026-08-18: Logo+Schriftzug fuehrt wie ueberall in der App zur Landingpage
 }) {
+  const { resolvedTheme } = useTheme();
+  const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-dark.png" : "/logo-wordmark.png";
   return (
     <Sheet open={open} onClose={onClose} variant="left" label={t.siteNavAria} size="min(320px, 86vw)">
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
@@ -77,7 +81,7 @@ export function HeaderMenu({
             {/* Schriftzug-Bild statt Icon + HTML-Text (2026-08-20, app-weit
                 ein Logo-File - siehe BrandIcon.jsx). */}
             <img
-              src="/logo-wordmark.png"
+              src={logoSrc}
               alt="immofuchs.info"
               className="hm-logo"
               style={{ objectFit: "contain", flexShrink: 0 }}
@@ -129,6 +133,26 @@ export function HeaderMenu({
               {langSelector}
             </div>
           )}
+
+          {/* Hell/Dunkel/System (Nutzer-Vorgabe 2026-08-26): zusaetzlich zu
+              "Mein Konto" -> "Einstellungen" auch hier direkt erreichbar -
+              anders als die Sprachwahl unabhaengig vom Login-Status sichtbar,
+              da die Darstellung eine Geraete-/Browser-Einstellung ist, keine
+              Kontoeinstellung. */}
+          <div
+            style={{
+              marginTop: langSelector ? 14 : 8,
+              paddingTop: langSelector ? 0 : 14,
+              borderTop: langSelector ? "none" : "1px solid var(--cb)",
+              paddingLeft: 16,
+              paddingRight: 16,
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ch)", marginBottom: 8 }}>
+              {t.profilThemeTitle}
+            </div>
+            <ThemeSwitchPills t={t} />
+          </div>
         </div>
       </div>
     </Sheet>

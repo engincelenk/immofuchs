@@ -7,6 +7,7 @@ import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
 import { LandingMascot } from "../components/assistant/LandingMascot.jsx";
 import { useAccountCtx } from "../context/AccountContext.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import { Ctx } from "../context/AppContext.jsx";
 import { ACCOUNT_T } from "../i18n/account.js";
 import { PricingSection } from "../components/checkout/PricingSection.jsx";
@@ -56,6 +57,8 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
   // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
   const account = useAccountCtx();
+  const { resolvedTheme } = useTheme();
+  const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-dark.png" : "/logo-wordmark.png";
   const [openMode, setOpenMode] = useState(null); // null | "checkout" | "login" | "account"
   // Laufzeit, die der Besucher in der Preis-Sektion gewaehlt hat
   // (Checkout-Neugestaltung 2026-08-17). Ohne diese Uebergabe muesste er die
@@ -209,7 +212,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 Seit 2026-08-20 ein Schriftzug-Bild statt Icon + HTML-Text
                 (app-weit ein Logo-File, siehe BrandIcon.jsx). */}
             <img
-              src="/logo-wordmark.png"
+              src={logoSrc}
               alt="immofuchs.info"
               className="lp-logo-icon"
               style={{
@@ -1672,7 +1675,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <img
-                src="/logo-wordmark.png"
+                src={logoSrc}
                 alt="immofuchs.info"
                 style={{ height: 40, width: "auto", objectFit: "contain" }}
               />

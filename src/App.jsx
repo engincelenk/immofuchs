@@ -19,6 +19,7 @@ import { ProHeaderButton } from "./components/account/ProHeaderButton.jsx";
 import { CalculatorTrialGate } from "./components/account/CalculatorTrialGate.jsx";
 import { tabZuRechner } from "./utils/assistantContext.js";
 import { useAccountCtx } from "./context/AccountContext.jsx";
+import { useTheme } from "./context/ThemeContext.jsx";
 import { hideSplashScreen, tabSwitchHaptic } from "./utils/nativeInit.js";
 
 const IC = {
@@ -349,6 +350,8 @@ export default function App() {
   // Nur fuer die Sichtbarkeit der Sprachwahl im Kopf - AccountProvider liegt
   // ueber App() (siehe main.jsx), der Login-Status ist hier also verfuegbar.
   const account = useAccountCtx();
+  const { resolvedTheme } = useTheme();
+  const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-dark.png" : "/logo-wordmark.png";
   const [zinsen, setZinsen] = useState(null); // holds the raw zinsen.json config (with live BBK)
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -699,7 +702,7 @@ export default function App() {
                   2026-08-20, app-weit nur ein Logo-File): der Schriftzug
                   steckt jetzt im Bild selbst, siehe BrandIcon.jsx. */}
               <img
-                src="/logo-wordmark.png"
+                src={logoSrc}
                 alt="immofuchs.info"
                 className="hdr-logo-img"
                 style={{ height: 56, width: "auto", objectFit: "contain", flexShrink: 0 }}

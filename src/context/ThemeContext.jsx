@@ -39,25 +39,41 @@ export function ThemeProvider({ children }) {
     }
   }, [theme]);
 
-  // Waehrend "System" aktiv ist, folgt die Statusleisten-Farbe (theme-color)
-  // live einem Wechsel des OS-Farbschemas - ohne Listener wuerde sie erst
-  // beim naechsten Reload nachziehen.
+  // resolvedTheme (2026-08-26, Logo-Umschaltung): "light"/"dark" - das
+  // tatsaechlich sichtbare Theme, mit aufgeloestem "System"-Wert. Consumer
+  // wie das Logo (siehe BrandIcon.jsx) brauchen genau das, nicht die rohe
+  // 3-Wert-Einstellung. Waehrend "System" aktiv ist, folgt sowohl das hier
+  // als auch die Statusleisten-Farbe (theme-color) live einem Wechsel des
+  // OS-Farbschemas - ohne Listener wuerden beide erst beim naechsten Reload
+  // nachziehen.
+  const [resolvedTheme, setResolvedTheme] = useState(() =>
+    theme === "dark" ||
+    (theme === "system" &&
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ? "dark"
+      : "light",
+  );
+
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const syncMetaThemeColor = () => {
+    const sync = () => {
       const effectiveDark = theme === "dark" || (theme === "system" && mq.matches);
+      setResolvedTheme(effectiveDark ? "dark" : "light");
       const meta = document.querySelector('meta[name="theme-color"]:not([media])');
       if (meta) meta.setAttribute("content", effectiveDark ? "#181818" : "#f5f5f0");
     };
-    syncMetaThemeColor();
+    sync();
     if (theme !== "system") return undefined;
-    mq.addEventListener("change", syncMetaThemeColor);
-    return () => mq.removeEventListener("change", syncMetaThemeColor);
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
   }, [theme]);
 
   const setTheme = (next) => setThemeState(next === "light" || next === "dark" ? next : "system");
 
-  return <ThemeCtx.Provider value={{ theme, setTheme }}>{children}</ThemeCtx.Provider>;
+  return (
+    <ThemeCtx.Provider value={{ theme, setTheme, resolvedTheme }}>{children}</ThemeCtx.Provider>
+  );
 }
 
 export function useTheme() {

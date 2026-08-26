@@ -1,3 +1,5 @@
+import { useTheme } from "../../context/ThemeContext.jsx";
+
 // Ersetzt das 🦊-Emoji als Platzhalter-Icon (Nutzer-Vorgabe 2026-08-11:
 // "wo es geht nicht mehr Icon Fuchs sondern Logo") durch das echte
 // Marken-Bild an Stellen, wo es allein als Marke steht - NICHT dort, wo
@@ -28,10 +30,17 @@
 // Nicht betroffen und bewusst weiterhin quadratisch: die PWA-Icons
 // (icon-192/512.png, manifest.json - Homescreen/Push), die Favicons und das
 // E-Mail-Logo. Das sind App-Symbole bzw. eigene Formate, keine UI-Marke.
+//
+// logo-wordmark-dark.png (2026-08-26): im Dark Mode war "immo" und ".info"
+// (Marineblau) auf dunklem Hintergrund praktisch unlesbar - dieselbe Grafik
+// mit den beiden Textteilen in Weiss statt Marineblau, sonst identisch
+// (Quelle docs/images/immofuchs-png-dark-mode.png, zugeschnitten/verkleinert
+// nach demselben Verfahren wie das helle Original, siehe Kommentar oben).
 export function BrandIcon({ size = 24, style }) {
+  const { resolvedTheme } = useTheme();
   return (
     <img
-      src="/logo-wordmark.png"
+      src={resolvedTheme === "dark" ? "/logo-wordmark-dark.png" : "/logo-wordmark.png"}
       alt="ImmoFuchs"
       style={{ height: size, width: "auto", objectFit: "contain", flexShrink: 0, ...style }}
     />

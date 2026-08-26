@@ -49,6 +49,26 @@ Noch offen:
   - PDF-Export (ExportPDF.jsx) bleibt bewusst außen vor - Dokumente zum
     Drucken/Teilen sollen unabhaengig vom App-Theme immer hell bleiben.
 
+### NEU: Logo im Dark Mode + Theme-Schalter im Seiten-Menue
+
+Das Logo (Schriftzug "immo" + ".info" in Marineblau) war im Dark Mode
+praktisch unlesbar - schwarzer/dunkelgrauer Text auf dunklem Hintergrund.
+Neue Datei public/logo-wordmark-dark.png (Quelle:
+docs/images/immofuchs-png-dark-mode.png, zugeschnitten/verkleinert nach
+demselben Verfahren wie das helle Original): identische Grafik, "immo" und
+".info" in Weiss statt Marineblau, "fuchs" bleibt Orange, Fuchs+Haus-Icon
+unveraendert. ThemeContext.jsx liefert jetzt zusaetzlich `resolvedTheme`
+("light"/"dark", loest "System" live auf) - darüber waehlen alle 6 Stellen,
+die das Logo zeigen (BrandIcon.jsx, App.jsx, Landing.jsx x2, HeaderMenu.jsx,
+MyAccount.jsx), automatisch die passende Datei.
+
+Zusaetzlich (Nutzer-Vorgabe): Hell/Dunkel/System jetzt auch direkt im
+mobilen Seiten-Menue der Landingpage erreichbar, nicht mehr nur unter "Mein
+Konto" -> "Einstellungen" - dort unabhaengig vom Login-Status sichtbar, da
+Darstellung eine Geraete-/Browser-Einstellung ist, keine Kontoeinstellung.
+Die Pillen-Reihe selbst steckt jetzt in einer gemeinsamen Komponente
+(ThemeSwitchPills.jsx), damit beide Stellen nicht auseinanderlaufen.
+
 ## 2026-08-25 (1.22.1)
 
 ### FIX: Neubau-AfA und KfW waren unsichtbar - i18n-Schluessel im falschen Objekt

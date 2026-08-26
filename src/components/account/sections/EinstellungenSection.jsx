@@ -1,17 +1,9 @@
 import { useState } from "react";
 import { LANGS } from "../../../i18n/translations.js";
-import { useTheme } from "../../../context/ThemeContext.jsx";
+import { ThemeSwitchPills } from "../../ui/ThemeSwitchPills.jsx";
 import { IconDownload } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
 import { actionBtnStyle, blockCardStyle, blockHintStyle, blockTitleStyle, sectionIntroStyle } from "../accountStyles.js";
-
-// Etappe 1 Light/Dark/System (2026-08-26): dieselben drei Werte wie
-// ThemeContext.setTheme akzeptiert, hier nur mit Beschriftung.
-const THEME_OPTIONS = [
-  { v: "light", labelKey: "profilThemeLight" },
-  { v: "dark", labelKey: "profilThemeDark" },
-  { v: "system", labelKey: "profilThemeSystem" },
-];
 
 // Spec-v3.0 Kap. 4.1/4.7: "Einstellungen" buendelt Sprache (vorher in
 // Profil), Benachrichtigungen und Datenschutz/Analyse - vorher hiess dieser
@@ -20,7 +12,6 @@ const THEME_OPTIONS = [
 // (Art. 20 DSGVO) bleibt hier, da inhaltlich am naechsten zu
 // "Datenschutz/Analyse erlauben".
 export function EinstellungenSection({ t, account, lang, setLang, onBack }) {
-  const { theme, setTheme } = useTheme();
   const [notifBusy, setNotifBusy] = useState(false);
   const marketingEmailsEnabled = Boolean(account.me.marketingEmailsEnabled);
 
@@ -68,29 +59,7 @@ export function EinstellungenSection({ t, account, lang, setLang, onBack }) {
       <div style={blockCardStyle}>
         <div style={blockTitleStyle}>{t.profilThemeTitle}</div>
         <p style={blockHintStyle}>{t.profilThemeHint}</p>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {THEME_OPTIONS.map((o) => (
-            <button
-              key={o.v}
-              onClick={() => setTheme(o.v)}
-              aria-current={o.v === theme ? "true" : undefined}
-              style={{
-                padding: "8px 12px",
-                borderRadius: 10,
-                border: `1px solid ${o.v === theme ? "var(--ca)" : "var(--cb)"}`,
-                background: o.v === theme ? "var(--ca-bg)" : "var(--ci)",
-                color: o.v === theme ? "var(--ca-dk)" : "var(--ct)",
-                fontSize: 13,
-                fontWeight: o.v === theme ? 700 : 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                minHeight: 40,
-              }}
-            >
-              {t[o.labelKey]}
-            </button>
-          ))}
-        </div>
+        <ThemeSwitchPills t={t} />
       </div>
 
       <div style={blockCardStyle}>
