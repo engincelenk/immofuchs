@@ -1,3 +1,31 @@
+## 2026-08-26 (1.22.9)
+
+### FIX: Irrefuehrender Trial-Text im Checkout + Paddle-Trial-Werbung entfernt
+
+Nutzer-Bugreport (Screenshot Paddle-Kaufformular): OrderSummary.jsx zeigte
+im Zahlungsschritt bei 0,00 EUR Tagesbetrag den Text "Heute {price} - die
+Testphase laeuft in der App und braucht keine Zahlungsdaten" - direkt unter
+dem Paddle-Kartenformular, das aktiv eine gueltige Kreditkarte verlangt.
+Zwei Fehler in einem Satz: (1) der eingesetzte Preis war der volle
+Monats-/Jahrespreis statt 0,00 EUR - "heute" stimmte nicht, (2) der Text
+beschrieb eigentlich die komplett getrennte kartenfreie 7-Tage-App-Testphase
+(app_trial_started_at, worker/src/db.ts), nicht den Paddle-Kauf, wo eine
+Karte Pflicht ist. summaryTrialNote in allen 5 Sprachen (src/i18n/account.js)
+auf "Heute 0,00 EUR - danach automatisch {price}. Jederzeit kuendbar."
+korrigiert, einheitlich fuer Monats- und Jahresplan.
+
+Zusaetzliche Nutzer-Entscheidung nach Rueckfrage: der separate
+Paddle-Trial (0 EUR am ersten Kauftag, gesteuert ueber den trial_period am
+Preis in Paddle selbst) wird abgeschafft - ein Kauf bedeutet ab sofort
+sofortige Abbuchung des echten Preises, die kostenlose Vorab-Nutzung laeuft
+ausschliesslich ueber die kartenfreie App-Testphase. Trial-Werbung im
+Checkout-Assistenten entfernt: "7 Tage kostenlos testen"-Pill und die
+hasUsedTrial-Verzweigung in PricingStep.jsx (src/components/checkout/) -
+zeigt jetzt immer den regulaeren Preis-Hinweis. WICHTIG: die eigentliche
+Paddle-Preiskonfiguration (trial_period entfernen) ist eine externe
+Aenderung im Paddle-Dashboard, die der Nutzer selbst vornehmen muss - ohne
+das zeigt Paddles eigene eingebettete Kaufbox weiterhin "0,00 EUR heute".
+
 ## 2026-08-26 (1.22.8)
 
 ### FEATURE: Admin-Button "Alle E-Mail-Vorlagen testen"

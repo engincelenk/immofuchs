@@ -29,16 +29,12 @@ export function PricingStep({
   setPlan,
   onContinue,
   onCancel,
-  account,
   discountCode,
   setDiscountCode,
   discountError,
 }) {
   const { lang } = useApp();
   const locale = LANG_LOCALE[lang] || "de-DE";
-  // T1 (Spec-v3.0 Kap. 3.0/3.1a): wer das Trial schon einmal hatte, sieht
-  // keinen Trial-Hinweis mehr, sondern direkt den regulaeren Preis.
-  const hasUsedTrial = Boolean(account?.me?.hasUsedTrial);
 
   return (
     <div>
@@ -46,29 +42,6 @@ export function PricingStep({
       <p style={{ fontSize: 13, color: "var(--ch)", margin: "0 0 14px", lineHeight: 1.5 }}>
         {t.termSub}
       </p>
-
-      {!hasUsedTrial && (
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            background: "#FCE9DC",
-            border: "1px solid var(--ca)",
-            color: "var(--ca-dk)",
-            borderRadius: 20,
-            padding: "4px 10px",
-            fontSize: 11,
-            fontWeight: 700,
-            marginBottom: 16,
-          }}
-        >
-          {/* Ohne Marken-Bild (2026-08-20): seit der Umstellung auf den
-              Schriftzug waere er hier 55x14px gross - unlesbar, und der
-              Badge-Text sagt ohnehin, worum es geht. */}
-          {t.pricingTrialBadge}
-        </div>
-      )}
 
       <div
         role="radiogroup"
@@ -104,15 +77,10 @@ export function PricingStep({
       />
 
       <div style={{ fontSize: 11.5, color: "var(--ch)", margin: "10px 2px 16px" }}>
-        {hasUsedTrial
-          ? t.summaryRenewalNote.replace(
-              "{price}",
-              plan === "yearly" ? t.planYearlyPrice : t.planMonthlyPrice,
-            )
-          : t.paymentTrialNotice.replace(
-              "{price}",
-              plan === "yearly" ? t.planYearlyPrice : t.planMonthlyPrice,
-            )}
+        {t.summaryRenewalNote.replace(
+          "{price}",
+          plan === "yearly" ? t.planYearlyPrice : t.planMonthlyPrice,
+        )}
       </div>
 
       {/* Abbrechen bewusst als Textbutton neben dem Primary (Vorbild): der
