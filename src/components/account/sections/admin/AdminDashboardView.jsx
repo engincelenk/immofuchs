@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
-import { fetchActivity, fetchDashboard } from "./adminApi.js";
-import { PLAN_LABELS, errorText, mutedTextStyle } from "./adminUiStyles.js";
+import { fetchActivity, fetchDashboard, triggerTestEmails } from "./adminApi.js";
+import { useAdminToast } from "./AdminToast.jsx";
+import {
+  PLAN_LABELS,
+  errorText,
+  mutedTextStyle,
+  secondaryBtnStyle,
+  dangerBtnStyle,
+} from "./adminUiStyles.js";
 
 const TILES = [
   { key: "totalUsers", label: "Nutzer gesamt", format: (v) => v.toLocaleString("de-DE") },
@@ -28,6 +35,9 @@ export function AdminDashboardView() {
   const [stats, setStats] = useState(null);
   const [activity, setActivity] = useState(null);
   const [error, setError] = useState(null);
+  const [testEmailsConfirm, setTestEmailsConfirm] = useState(false);
+  const [testEmailsBusy, setTestEmailsBusy] = useState(false);
+  const toast = useAdminToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +53,24 @@ export function AdminDashboardView() {
       cancelled = true;
     };
   }, []);
+
+  async function handleTestEmails() {
+    setTestEmailsBusy(true);
+    try {
+      const res = await triggerTestEmails();
+      const failed = res.results?.filter((r) => !r.ok) ?? [];
+      if (failed.length > 0) {
+        toast.error(`${res.results.length - failed.length}/${res.results.length} Mails an ${res.to} verschickt, ${failed.length} fehlgeschlagen.`);
+      } else {
+        toast.success(`Alle ${res.results.length} E-Mail-Vorlagen an ${res.to} verschickt.`);
+      }
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
+      setTestEmailsBusy(false);
+      setTestEmailsConfirm(false);
+    }
+  }
 
   return (
     <div>
@@ -67,6 +95,53 @@ export function AdminDashboardView() {
           ))}
         </div>
       )}
+
+      <section style={{ marginTop: 24 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 4px" }}>E-Mail-Vorlagen testen</h3>
+        <p style={{ ...mutedTextStyle, marginTop: 0, marginBottom: 12 }}>
+          Schickt alle 17 im System vorkommenden E-Mail-Vorlagen (Registrierung, Login, Passwort,
+          Abo-Ereignisse, Erinnerungen) einmal an deine eigene Login-Adresse, um Layout und Inhalt im
+          echten Postfach zu prüfen.
+        </p>
+        {!testEmailsConfirm ? (
+          <button type="button" style={secondaryBtnStyle} onClick={() => setTestEmailsConfirm(true)}>
+            📧 Alle E-Mail-Vorlagen testen
+          </button>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              background: "var(--cc)",
+              border: "1px solid var(--cb)",
+              borderRadius: 12,
+              padding: 14,
+            }}
+          >
+            <span style={{ fontSize: 13 }}>
+              17 E-Mails an deine eigene Adresse verschicken?
+            </span>
+            <button
+              type="button"
+              style={dangerBtnStyle}
+              disabled={testEmailsBusy}
+              onClick={handleTestEmails}
+            >
+              {testEmailsBusy ? "Sendet …" : "Ja, verschicken"}
+            </button>
+            <button
+              type="button"
+              style={secondaryBtnStyle}
+              disabled={testEmailsBusy}
+              onClick={() => setTestEmailsConfirm(false)}
+            >
+              Abbrechen
+            </button>
+          </div>
+        )}
+      </section>
 
       <section style={{ marginTop: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 4px" }}>Letzte Aktivitäten</h3>

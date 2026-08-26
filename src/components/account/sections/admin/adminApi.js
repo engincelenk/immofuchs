@@ -150,3 +150,10 @@ export function updateDiscount(id, patch) {
 export function createDiscountsBulk(input) {
   return post("/admin/discounts/bulk", input);
 }
+
+// Schickt alle E-Mail-Vorlagen einmal an den eingeloggten Admin selbst
+// (Nutzeranfrage 2026-08-26) - zum Pruefen von Layout/Inhalt im echten
+// Postfach, ohne jeden Ausloeser einzeln durchzuspielen.
+export function triggerTestEmails() {
+  return post("/admin/test-emails");
+}

@@ -1,3 +1,27 @@
+## 2026-08-26 (1.22.8)
+
+### FEATURE: Admin-Button "Alle E-Mail-Vorlagen testen"
+
+Nutzeranfrage: alle 17 im System vorkommenden E-Mail-Vorlagen einmal live
+im Postfach pruefen koennen, ohne jeden Ausloeser (Registrierung,
+Kuendigung, Zahlungsfehler, Erinnerungen, ...) einzeln durchzuspielen.
+
+Neue Route worker/src/routes/admin.ts POST /admin/test-emails
+(requireAuth + requireAdmin + requireCsrfOrigin, bewusst dauerhaft im Code -
+keine Wegwerf-Route): 9 Ereignisse laufen ueber dispatchNotification()
+(identischer Pfad wie live), die uebrigen 8 sind direkte sendEmail()-Aufrufe
+mit 1:1 aus den Original-Quellstellen uebernommenem Inhalt. payment_succeeded
+deckt zwei Tabellenzeilen ab (Kauf ohne Trial + Trial-Ende), macht 17 statt
+18 tatsaechliche Sende-Vorgaenge - beide Ausloeser nutzen exakt dieselbe
+Vorlage. Alle Mails gehen an die eigene Login-Adresse des ausloesenden
+Admins, Aufruf wird im Audit-Log protokolliert (test_emails.sent).
+
+Neuer Button "📧 Alle E-Mail-Vorlagen testen" im Admin-Dashboard
+(AdminDashboardView.jsx) mit Zwischenbestaetigung ("Ja, verschicken" /
+"Abbrechen") und Erfolg/Fehler-Toast pro Ergebnis.
+
+Worker-Tests weiterhin gruen (107/107).
+
 ## 2026-08-26 (1.22.7)
 
 ### FIX: Exposé-Import-Button, Dark-Mode-Textfarbe, fehlende Willkommens-Mail bei Trial

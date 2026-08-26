@@ -54,6 +54,8 @@ import {
   type DiscountPatch,
 } from "../paddle/discounts";
 import { getTransactionSummary, paddleDashboardSubscriptionUrl } from "../paddle/transactions";
+import { sendEmail } from "../email";
+import { dispatchNotification, type NotificationEvent } from "../notifications";
 
 const PAGE_SIZE = 20;
 
@@ -924,4 +926,129 @@ adminRoutes.get("/audit-log", requireAuth, requireAdminRead, async (c) => {
     // einen zweiten Endpunkt fuer eine sehr kurze Liste.
     admins,
   });
+});
+
+// Test-Versand aller E-Mail-Vorlagen (Nutzeranfrage 2026-08-26): schickt
+// jede im System vorkommende Mail-Vorlage einmal an den eingeloggten Admin
+// selbst, damit Layout/Inhalt im echten Postfach geprueft werden koennen,
+// ohne jeden Ausloeser (Registrierung, Kuendigung, Zahlungsfehler, ...)
+// einzeln durchspielen zu muessen. Auf dev landet dank
+// TEST_EMAIL_REDIRECT_TO ohnehin alles bei derselben Testadresse - die Route
+// bleibt trotzdem bewusst dauerhaft admin-geschuetzt (requireAdmin), damit
+// sie nicht zum offenen Mail-Spam-Endpunkt wird. 9 Ereignisse laufen ueber
+// dispatchNotification() (identischer Code-Pfad wie im echten Betrieb), die
+// uebrigen 8 sind direkte sendEmail()-Aufrufe (Registrierung, Login,
+// Passwort) - deren Inhalt ist hier 1:1 aus den jeweiligen Quellstellen
+// uebernommen, damit die Vorschau exakt der echten Mail entspricht statt nur
+// aehnlich zu sein. payment_succeeded deckt zwei Tabellenzeilen ab (Kauf
+// ohne Trial UND Trial-Ende) - beide verschicken exakt dieselbe Vorlage, ein
+// zweiter Versand waere reines Duplikat.
+adminRoutes.post("/test-emails", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const to = c.var.user.email;
+  const exampleLink = `${c.env.APP_BASE_URL || "https://immofuchs.info"}/?example=1`;
+  const results: { key: string; ok: boolean; error?: string }[] = [];
+
+  async function tryDirect(key: string, subject: string, html: string) {
+    try {
+      await sendEmail(c.env, to, subject, html);
+      results.push({ key, ok: true });
+    } catch (err) {
+      results.push({ key, ok: false, error: err instanceof Error ? err.message : "unknown" });
+    }
+  }
+
+  async function tryNotify(key: string, event: NotificationEvent, payload: Record<string, unknown>) {
+    try {
+      await dispatchNotification(c.env, { event, recipientEmail: to, payload });
+      results.push({ key, ok: true });
+    } catch (err) {
+      results.push({ key, ok: false, error: err instanceof Error ? err.message : "unknown" });
+    }
+  }
+
+  // ═══ 1-8: direkte sendEmail()-Aufrufe (Inhalt aus auth/passwordAuth.ts,
+  // auth/magicLink.ts, routes/account.ts uebernommen) ═══
+  await tryDirect(
+    "register_verify",
+    "Bestätige deine E-Mail-Adresse bei ImmoFuchs",
+    `<p>Willkommen bei ImmoFuchs! Bestätige deine E-Mail-Adresse mit einem Klick (24 Stunden gültig):</p>
+     <p><a href="${exampleLink}">${exampleLink}</a></p>
+     <p>Falls du dich nicht bei ImmoFuchs registriert hast, kannst du diese E-Mail ignorieren.</p>`,
+  );
+  await tryDirect(
+    "resend_verify",
+    "Dein neuer Bestätigungslink für ImmoFuchs",
+    `<p>Hier ist dein neuer Bestätigungslink (24 Stunden gültig):</p>
+     <p><a href="${exampleLink}">${exampleLink}</a></p>`,
+  );
+  await tryDirect(
+    "magic_link",
+    "Dein Login-Link fuer ImmoFuchs",
+    `<p>Klicke auf den folgenden Link, um dich bei ImmoFuchs anzumelden. Der Link ist 15 Minuten gueltig:</p>
+     <p><a href="${exampleLink}">${exampleLink}</a></p>
+     <p>Falls du diese Anmeldung nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>`,
+  );
+  await tryDirect(
+    "password_reset",
+    "Passwort zurücksetzen bei ImmoFuchs",
+    `<p>Setze dein Passwort mit einem Klick zurück (60 Minuten gültig):</p>
+     <p><a href="${exampleLink}">${exampleLink}</a></p>
+     <p>Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren - dein Passwort bleibt unverändert.</p>`,
+  );
+  await tryDirect(
+    "password_reset_oauth_only",
+    "Passwort zurücksetzen bei ImmoFuchs",
+    `<p>Für dein ImmoFuchs-Konto wurde ein Passwort-Reset angefragt. Dieses Konto wurde mit Google erstellt und hat kein Passwort.</p>
+     <p>Bitte melde dich über diese Anmeldemethode an.</p>
+     <p>Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>`,
+  );
+  await tryDirect(
+    "password_setup_invite",
+    "Dein ImmoFuchs-Konto wurde angelegt",
+    `<p>Für dich wurde ein ImmoFuchs-Konto angelegt. Setze mit einem Klick dein Passwort, um dich anzumelden (60 Minuten gültig):</p>
+     <p><a href="${exampleLink}">${exampleLink}</a></p>
+     <p>Falls du das nicht erwartet hast, kannst du diese E-Mail ignorieren.</p>`,
+  );
+  await tryDirect(
+    "password_changed_direct",
+    "Dein ImmoFuchs-Passwort wurde geändert",
+    `<p>Dein Passwort wurde soeben geändert. Alle anderen Geräte wurden zur Sicherheit abgemeldet.</p>
+     <p>Warst du das nicht? Bitte kontaktiere umgehend unseren Support.</p>`,
+  );
+  await tryDirect(
+    "email_change_confirm",
+    "Bestätige deine neue E-Mail-Adresse bei ImmoFuchs",
+    `<p>Bestätige den Wechsel zu dieser Adresse mit einem Klick (15 Minuten gültig):</p>
+     <p><a href="${exampleLink}">${exampleLink}</a></p>
+     <p>Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren - deine bisherige
+     Adresse bleibt unveraendert. <a href="${c.env.APP_BASE_URL || "https://immofuchs.info"}">Zurück zu ImmoFuchs</a></p>`,
+  );
+
+  // ═══ 9-17: ueber dispatchNotification() - identischer Pfad wie live ═══
+  const inOneWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("de-DE");
+  const inOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString("de-DE");
+  await tryNotify("renewal_reminder", "renewal_reminder", { periodEndDate: inOneWeek, amount: "59,99 €" });
+  await tryNotify("cancellation_confirmed", "cancellation_confirmed", { periodEndDate: inOneWeek });
+  await tryNotify("reactivation_confirmed", "reactivation_confirmed", {});
+  await tryNotify("account_deleted", "account_deleted", {});
+  await tryNotify("payment_failed", "payment_failed", { graceEndsDate: inOneWeek });
+  await tryNotify("payment_succeeded", "payment_succeeded", {
+    plan: "yearly",
+    amount: "59,99 €",
+    periodEndDate: inOneWeek,
+  });
+  await tryNotify("password_changed_notify", "password_changed", {});
+  await tryNotify("email_change_requested", "email_change_requested", { newEmail: "neue-adresse@beispiel.de" });
+  await tryNotify("trial_ending", "trial_ending", { periodEndDate: inOneDay, amount: "59,99 €" });
+
+  await logAdminAction(c.env.DB, {
+    adminUserId: c.var.userId,
+    adminEmail: c.var.user.email,
+    action: "test_emails.sent",
+    targetType: "system",
+    targetId: "test_emails",
+    details: { to, count: results.length },
+  });
+
+  return c.json({ ok: true, to, results });
 });
