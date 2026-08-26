@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LANGS } from "../../i18n/translations.js";
-import { IconChevronRight, IconLanguage, IconLogout } from "./accountIcons.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
+import { IconChevronRight, IconLanguage, IconLogout, IconTheme } from "./accountIcons.jsx";
 import { visibleSections } from "./accountSections.js";
 import { PlanChip } from "./PlanChip.jsx";
 
@@ -30,6 +31,10 @@ export function AccountMenuPanel({
 }) {
   const sections = showSections ? visibleSections(me?.role) : [];
   const currentLang = LANGS.find((l) => l.v === lang);
+  const { theme } = useTheme();
+  const themeLabel = { light: t.profilThemeLight, dark: t.profilThemeDark, system: t.profilThemeSystem }[
+    theme
+  ];
 
   return (
     <div>
@@ -105,6 +110,24 @@ export function AccountMenuPanel({
           />
         </div>
       )}
+
+      {/* Darstellung mit aktuellem Wert rechts (Nutzer-Vorgabe 2026-08-26,
+          gleiches Muster wie Sprache oben): Kurzweg nach "Einstellungen",
+          wo die Auswahl bereits liegt. Bewusst AUSSERHALB des
+          sections.length-Blocks, also auch in der kompakten Variante
+          sichtbar (innerhalb von "Mein Konto" selbst, wo sections leer ist,
+          weil die Bereiche schon in der Seitenleiste stehen) - Darstellung
+          ist eine Geraete-/Browser-Einstellung, keine Kontobereich-Kachel,
+          die dort schon dupliziert waere. */}
+      <div style={{ borderTop: "1px solid var(--cb)", padding: "4px 0" }}>
+        <MenuRow
+          compact={compactRows}
+          icon={<IconTheme size={20} />}
+          label={t.profilThemeTitle}
+          value={themeLabel}
+          onClick={() => onSelect("einstellungen")}
+        />
+      </div>
 
       <div style={{ borderTop: "1px solid var(--cb)", padding: "4px 0" }}>
         <MenuRow

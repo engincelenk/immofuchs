@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
@@ -59,6 +60,8 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
   const { lang, setLang } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
+  const { resolvedTheme } = useTheme();
+  const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-dark.png" : "/logo-wordmark.png";
   const isDesktop = useIsDesktop();
   const dialogRef = useRef(null);
   const [activeKey, setActiveKey] = useState(initialSection);
@@ -216,7 +219,7 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
               }}
             >
               <img
-                src="/logo-wordmark.png"
+                src={logoSrc}
                 alt="immofuchs.info"
                 className="ma-logo"
                 style={{ objectFit: "contain", flexShrink: 0 }}

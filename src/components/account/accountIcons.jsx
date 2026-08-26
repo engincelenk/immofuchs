@@ -236,6 +236,19 @@ export function IconLanguage({ size }) {
   );
 }
 
+// Halbmond - Darstellung (Hell/Dunkel/System), Etappe 1 Light/Dark/System
+// 2026-08-26, gleicher Platz wie IconLanguage im Kontomenue. Bewusst nur der
+// Mond (kein Sonne/Mond-Duo): das gaengige, eindeutige Symbol fuer
+// "Darstellung/Theme" in vergleichbaren Apps, unabhaengig davon, welcher der
+// drei Zustaende gerade aktiv ist.
+export function IconTheme({ size }) {
+  return (
+    <Svg size={size}>
+      <path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" />
+    </Svg>
+  );
+}
+
 // Rechnung/Beleg - ersetzt 🧾 in den Zahlungen.
 export function IconBeleg({ size }) {
   return (

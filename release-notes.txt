@@ -1,5 +1,42 @@
 ## 2026-08-26 (1.22.2)
 
+### FIX: Seite fror nach "Mein Konto" -> Startseite auf dem Handy ein
+
+Bugreport: Auf dem Handy vom Kontomenue direkt in einen Bereich (z.B.
+"Profil") gewechselt, dann per Brotkrumen-Haus zurueck zur Startseite - die
+Seite liess sich danach nicht mehr scrollen, kein Link reagierte mehr.
+
+Ursache: useScrollLock.js merkte sich beim Aktivieren nur den zu diesem
+Zeitpunkt gesetzten body-Style und stellte beim Deaktivieren exakt den
+wieder her - korrekt nur, wenn Sperren sauber LIFO oeffnen/schliessen. Beim
+Wechsel Kontomenue -> "Mein Konto" ueberlappen sich aber zwei Sperren: das
+Menue bleibt wegen seiner Ausstiegs-Animation (Sheet.jsx, ~260ms) noch
+gesperrt im Baum, waehrend "Mein Konto" bereits seine eigene Sperre
+aktiviert. "Mein Konto" merkte sich dadurch faelschlich position:fixed als
+Ausgangszustand und stellte beim eigenen Schliessen genau das wieder her,
+statt wirklich zu entsperren - die Seite blieb dauerhaft auf position:fixed
+mit veraltetem Scroll-Offset stehen.
+
+Behoben: useScrollLock.js auf einen Referenzzaehler umgestellt (gleiches
+Muster wie der bestehende trapStack in useFocusTrap.js fuer denselben Fall
+ueberlappender Overlays) - die Sperre bleibt aktiv, solange irgendeine
+Stelle sie braucht, und der echte Ausgangszustand wird erst wiederhergestellt,
+wenn wirklich die letzte aktive Sperre schliesst, unabhaengig von der
+Reihenfolge.
+
+### FIX + NEU: Logo in "Mein Konto" nachgezogen, Darstellung im Kontomenue
+
+Bugfix: MyAccount.jsx war bei der letzten Aenderung uebersehen worden - das
+Logo zeigte dort weiterhin die helle Variante mit unlesbarem Marineblau-Text
+auf dunklem Grund. Jetzt auf allen 6 Stellen konsistent.
+
+Neu: "Darstellung" (mit aktuellem Wert Hell/Dunkel/System) jetzt auch als
+Zeile im Kontomenue (AccountMenuPanel.jsx, gleiches Muster wie die
+bestehende Sprache-Zeile - Kurzweg nach "Einstellungen"). Bewusst auch in
+der kompakten Variante sichtbar (innerhalb von "Mein Konto" selbst), da
+Darstellung eine Geraete-/Browser-Einstellung ist, keine Kontobereich-Kachel.
+Neues Icon IconTheme (Halbmond) in accountIcons.jsx.
+
 ### NEU: Darstellung Hell/Dunkel/System (Etappe 1)
 
 Infrastruktur fuer app-weiten Theme-Switch. Umschalter unter "Mein Konto" ->
