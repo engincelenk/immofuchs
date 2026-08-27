@@ -6,6 +6,7 @@ import { ACCOUNT_T } from "../../i18n/account.js";
 import { LoginSuccessToast } from "./LoginSuccessToast.jsx";
 import { AccountAvatarButton, AccountMenu } from "./AccountMenu.jsx";
 import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
+import { useAnyWizardOpen } from "../checkout/wizardPresence.js";
 
 // Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
 // ProHeaderButton haengt fest in der Kopfzeile jeder Seite, CheckoutWizard/
@@ -17,6 +18,12 @@ const CheckoutWizard = lazyWithReload(
 const MyAccount = lazyWithReload(
   () => import("./MyAccount.jsx").then((m) => ({ default: m.MyAccount })),
   "MyAccount",
+);
+// Ebenfalls lazy: gebraucht wird die Bestaetigung genau einmal, direkt nach
+// einem Kauf - sie muss nicht in jedem Seitenaufruf mitgeladen werden.
+const PurchaseConfirmModal = lazyWithReload(
+  () => import("../checkout/PurchaseConfirmModal.jsx").then((m) => ({ default: m.PurchaseConfirmModal })),
+  "PurchaseConfirmModal",
 );
 
 // Einstiegspunkt in der Logo-Kopfzeile (Spec 4.3, korrigiert gegenueber v1:
@@ -49,6 +56,10 @@ export function ProHeaderButton() {
   // dem Kontomenue (Nutzer-Entwurf 2026-08-12).
   const [sectionKey, setSectionKey] = useState("profil");
   const avatarRef = useRef(null);
+  // Der Wizard kann auch ausserhalb dieser Komponente gemountet sein
+  // (MyAccount.jsx, Upgrade aus "Abonnement") - deshalb eine globale Abfrage
+  // statt eines Blicks auf openMode.
+  const anyWizardOpen = useAnyWizardOpen();
 
   // Passwort-Reset-Link (?reset_token=..., Ergaenzung 04.08.) muss die Maske
   // von selbst oeffnen - anders als bei OAuth gibt es hier keinen Weg, den
@@ -163,18 +174,21 @@ export function ProHeaderButton() {
           onDone={account.dismissAccountDeleted}
         />
       )}
-      {/* Sicherheitsnetz fuer den Kauf-Abschluss (Bugreport 26.08.): reagiert
+      {/* Kauf-Bestaetigung (Bugreport 26.08., erweitert 2026-08-27): reagiert
           auf den tatsaechlichen Pro-Status statt auf ein einzelnes
           Client-Event, das gelegentlich ausbleibt - siehe useAccount.js,
-          noteProStatus. Zeigt die Bestaetigung also auch dann, wenn
-          CheckoutWizard/WelcomeStep davon nichts mitbekommen haben und der
-          Nutzer kommentarlos auf seiner vorherigen Seite landet. */}
-      {account.purchaseSuccess && (
-        <LoginSuccessToast
-          t={t}
-          message={t.purchaseSuccessToast}
-          onDone={account.dismissPurchaseSuccess}
-        />
+          noteProStatus.
+          War bis 2026-08-27 nur eine kleine Einblendung oben rechts. Die war
+          nach einem Redirect-Bezahlweg (Google Pay, 3D Secure) die EINZIGE
+          Rueckmeldung, weil der Wizard-Zustand dabei verlorengeht - und wurde
+          prompt uebersehen ("keine abo bestaetigung gesehen"). Jetzt derselbe
+          Bildschirm wie im Wizard, nur als eigenes Fenster.
+          Nicht, solange irgendwo ein Wizard laeuft: der zeigt seinen eigenen
+          letzten Schritt (wizardPresence.js). */}
+      {account.purchaseSuccess && !anyWizardOpen && (
+        <Suspense fallback={null}>
+          <PurchaseConfirmModal onClose={account.dismissPurchaseSuccess} />
+        </Suspense>
       )}
       {(openMode === "account" || openMode === "login" || openMode === "checkout") && (
         <Suspense fallback={<LazyPanelFallback />}>

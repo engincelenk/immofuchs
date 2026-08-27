@@ -1,6 +1,13 @@
 import { cardStyle, primaryBtnStyle } from "./checkoutStyles.js";
 
-// Erfolgsscreen (Vorbild: Screenshot-Konfetti-Screen, Farbe --ca statt Navy).
+// Inhalt der Kauf-Bestaetigung (Vorbild: Screenshot-Konfetti-Screen, Farbe
+// --ca statt Navy). Bewusst OHNE eigenes Fenster-Drumherum, weil derselbe
+// Inhalt an zwei Stellen gebraucht wird:
+//   - als letzter Schritt im Checkout-Wizard (CheckoutWizard.jsx),
+//   - als eigenstaendiges Fenster (PurchaseConfirmModal.jsx), wenn der Wizard
+//     den Kaufabschluss nicht mehr erlebt hat - etwa nach einem echten
+//     Browser-Redirect von Google Pay oder 3D Secure, der den gesamten
+//     React-Zustand einreisst.
 //
 // Der Trial-Zweig haengt allein daran, ob Stripe eine Testphase auf dem Preis
 // hinterlegt hat - dann liefert der Webhook subscription.status "trialing".
@@ -9,7 +16,7 @@ import { cardStyle, primaryBtnStyle } from "./checkoutStyles.js";
 // Nicht zu verwechseln mit der App-Testphase (7 Tage, ohne Zahlungsdaten,
 // startAppTrialIfNew in worker/src/routes/account.ts): die laeuft VOR jedem
 // Kauf und hat mit diesem Bildschirm nichts zu tun.
-export function WelcomeStep({ t, account, onDone }) {
+export function PurchaseConfirmation({ t, account, onDone }) {
   const subscription = account?.me?.subscription;
   const isTrial = subscription?.status === "trialing";
 

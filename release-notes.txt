@@ -1,3 +1,35 @@
+## 2026-08-27 (1.28.2)
+
+### FIX: Nach dem Kauf fehlte die Abo-Bestaetigung
+
+Nutzer-Meldung nach einem Testkauf des Monatsabos: "keine abo bestaetigung
+gesehen, checkoutfenster geht zu und abo seite wird gezeigt".
+
+Ursache: Der Erfolgsbildschirm (frueher WelcomeStep.jsx) existierte nur als
+letzter SCHRITT im Checkout-Wizard. Zahlungsarten mit echtem Browser-Redirect
+- Google Pay, teils 3D Secure - reissen dessen React-Zustand komplett ein,
+bevor dieser Schritt erscheinen konnte. Uebrig blieb eine kleine Einblendung
+oben rechts, die im Vorbeigehen zu uebersehen ist.
+
+Der Bildschirm ist jetzt zweigeteilt: `PurchaseConfirmation.jsx` traegt den
+Inhalt, `PurchaseConfirmModal.jsx` zeigt ihn als eigenstaendiges Fenster.
+Dieses Fenster haengt an account.purchaseSuccess, also am tatsaechlichen
+Statuswechsel zu "pro" bzw. an der erkannten Stripe-Rueckkehr - es erscheint
+damit auf JEDEM Weg: inline bezahlt, ueber einen Redirect zurueckgekehrt oder
+aus "Mein Konto" heraus aufgewertet. Die frueher an dieser Stelle gezeigte
+Einblendung entfaellt (samt i18n-Schluessel purchaseSuccessToast).
+
+Doppelte Bestaetigungen verhindert `wizardPresence.js`: solange irgendwo ein
+Wizard laeuft, zeigt der seinen eigenen letzten Schritt und das Fenster bleibt
+zu. Bewusst ein Modul-Zaehler statt eines Contexts - der Wizard wird an zwei
+Stellen gemountet (ProHeaderButton.jsx und MyAccount.jsx), von denen keine ein
+Vorfahre der anderen ist.
+
+Betroffene Dateien: src/components/checkout/PurchaseConfirmation.jsx (neu),
+PurchaseConfirmModal.jsx (neu), wizardPresence.js (neu), WelcomeStep.jsx
+(entfaellt), CheckoutWizard.jsx, src/components/account/ProHeaderButton.jsx,
+src/i18n/account.js
+
 ## 2026-08-27 (1.28.1)
 
 ### AENDERUNG: "Zahlungen" ohne Erklaertexte, Bereichs-Pillen brechen um

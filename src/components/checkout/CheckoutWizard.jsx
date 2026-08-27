@@ -7,6 +7,7 @@ import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
 import { DEFAULT_COUNTRY } from "../../utils/countries.js";
 import { getWizardSteps, STEP_LABEL_KEYS } from "./wizardSteps.js";
+import { useRegisterWizardOpen } from "./wizardPresence.js";
 import { StepHeader } from "./StepHeader.jsx";
 import { OrderSummary } from "./OrderSummary.jsx";
 import { PricingStep } from "./PricingStep.jsx";
@@ -15,7 +16,7 @@ import { VerifyEmailStep } from "./VerifyEmailStep.jsx";
 import { PasswordResetFlow } from "./PasswordResetFlow.jsx";
 import { AddressStep } from "./AddressStep.jsx";
 import { PaymentStep } from "./PaymentStep.jsx";
-import { WelcomeStep } from "./WelcomeStep.jsx";
+import { PurchaseConfirmation } from "./PurchaseConfirmation.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
 
 // Dialogbreite je Schritt (Neugestaltung 2026-08-17). Der Zahlungsschritt
@@ -47,6 +48,10 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   const account = useAccountCtx();
   const isDesktop = useIsDesktop();
   const dialogRef = useRef(null);
+
+  // Solange dieser Wizard laeuft, unterdrueckt er die eigenstaendige
+  // Kauf-Bestaetigung (PurchaseConfirmModal.jsx) - er zeigt seine eigene.
+  useRegisterWizardOpen();
 
   // Anfangs-Variante beruecksichtigt bereits den aktuellen Login-Status
   // (Code-Review Task 9): sonst wuerde ein bereits eingeloggter Free-Nutzer
@@ -375,7 +380,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
       />
     );
   } else if (currentKey === "welcome") {
-    content = <WelcomeStep t={t} account={account} onDone={onClose} />;
+    content = <PurchaseConfirmation t={t} account={account} onDone={onClose} />;
   }
 
   return createPortal(
