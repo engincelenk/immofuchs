@@ -149,8 +149,18 @@ export function PaymentStep({
           return_url: window.location.href,
           payment_method_data: {
             billing_details: {
+              // Stripe verlangt bei fields.billingDetails.name:"never" ZWINGEND
+              // einen nicht-leeren Wert hier (IntegrationError sonst, Live-
+              // Befund 2026-08-27) - Firma ist in AddressStep.jsx bewusst
+              // optional, bei Privatkaeufern also meist leer. Kontoname ist
+              // bei der Registrierung Pflichtfeld, kann aber bei Google-/
+              // Apple-Konten fehlen, deshalb E-Mail als letzte Stufe.
               email: account?.me?.email || undefined,
-              name: billingAddress?.company?.trim() || undefined,
+              name:
+                billingAddress?.company?.trim() ||
+                account?.me?.name?.trim() ||
+                account?.me?.email ||
+                "Kunde",
               // Stripe verlangt bei fields.billingDetails.address:"never" im
               // Payment Element (siehe elements.create() oben) ALLE
               // Adress-Teilfelder hier, nicht nur die, die wir tatsaechlich

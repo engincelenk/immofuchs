@@ -1,3 +1,20 @@
+## 2026-08-27 (1.27.6)
+
+### FIX: Bezahlen-Button warf IntegrationError bei Privatkaeufern
+
+Live-Befund im Checkout, Schritt 5 (Zahlung): `stripe.confirmPayment()` brach
+mit "You specified 'never' for fields.billing_details.name ... but did not
+pass confirmParams.payment_method_data.billing_details.name" ab, sobald die
+Firma in `AddressStep.jsx` (bewusst optional, siehe Kommentar dort) leer
+blieb - also bei praktisch jedem Privatkaeufer. `PaymentStep.jsx` hatte das
+Payment Element mit `fields.billingDetails.name: "never"` erzeugt, aber beim
+Abschicken nur `billingAddress?.company?.trim() || undefined` als Name
+mitgegeben; Stripe verlangt bei "never" zwingend einen nicht-leeren Wert.
+
+Fix: dreistufige Kaskade statt des einzelnen Firmen-Felds - Firma (optional)
+-> Kontoname (Pflichtfeld bei der Registrierung, kann bei Google-/Apple-Login
+fehlen) -> E-Mail als letzter Fallback. `name` ist damit nie mehr leer.
+
 ## 2026-08-27 (1.27.5)
 
 ### FIX: 4x GET /api/v1/objects beim Landing-Load + CSP blockte GTM-Pixel
