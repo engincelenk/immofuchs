@@ -45,7 +45,11 @@ export function RedirectOverlay({ label }) {
         position: "absolute",
         inset: 0,
         zIndex: 5,
-        background: "rgba(255,255,255,.92)",
+        // Voll deckend statt 92 % Weiss (Nutzer-Meldung 2026-08-27: "wenn
+        // etwas geladen wird sieht man im hintergrund bereits die maske vom
+        // naechsten dialog"). Durchscheinende Formularfelder hinter einem
+        // Ladehinweis sehen nach halbfertig aus, nicht nach "einen Moment".
+        background: "var(--bg)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

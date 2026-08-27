@@ -41,7 +41,7 @@ const PurchaseConfirmModal = lazyWithReload(
 // ist damit unabhaengig davon montiert, von welchem Einstiegspunkt aus der
 // Nutzer den Wizard urspruenglich geoeffnet hatte.
 export function ProHeaderButton() {
-  const { lang } = useApp();
+  const { lang, goHome } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
   // Was geoeffnet ist, wird beim Oeffnen einmal festgelegt und NICHT bei jedem
@@ -75,7 +75,13 @@ export function ProHeaderButton() {
   // Zahlungsschritt weiter, dessen Kopf bereits "✓ Angemeldet als ..." zeigt.
   // Bewusst nur fuer Free-Nutzer: wer bereits Pro ist, hat nichts zu kaufen
   // und bekommt nur die Bestaetigungs-Einblendung.
-  const resumesCheckout = Boolean(account?.pendingCheckout) && account?.isLoggedIn && !account?.isPro;
+  // `zugang !== "pro"` statt `!isPro` (Bugreport 2026-08-27): isPro ist auch
+  // waehrend der kartenfreien Testphase true, die beim ersten /me automatisch
+  // startet. Wer den Kauf ueber Google/Apple begonnen hatte, kam sonst
+  // zurueck, war formal "Pro" - und der angefangene Kauf wurde nicht wieder
+  // aufgenommen. Nur wer wirklich BEZAHLT hat, hat nichts mehr zu kaufen.
+  const resumesCheckout =
+    Boolean(account?.pendingCheckout) && account?.isLoggedIn && account?.zugang !== "pro";
   const { dismissLoginSuccess } = account || {};
   useEffect(() => {
     if (!resumesCheckout) return;
@@ -90,7 +96,14 @@ export function ProHeaderButton() {
     account?.clearPendingCheckout?.();
   }, [account]);
 
-  if (!account || account.loading) return null;
+  // initialLoading statt loading (Bugreport 2026-08-27): `loading` wird bei
+  // JEDEM /me-Refresh wieder true. Mit der alten Pruefung verschwand hier bei
+  // jedem Refresh die gesamte Kontoflaeche - inklusive "Mein Konto" und dem
+  // darin gerenderten Checkout-Wizard, dessen Zustand damit weg war. Genau
+  // das passierte nach dem Bezahlen (drei Refreshes hintereinander) und liess
+  // den Nutzer statt auf der Kauf-Bestaetigung auf der Abo-Seite landen.
+  // Ausgeblendet wird jetzt nur noch, solange ueberhaupt nichts bekannt ist.
+  if (!account || account.initialLoading) return null;
 
   return (
     <>
@@ -157,6 +170,12 @@ export function ProHeaderButton() {
         onLogout={async () => {
           setMenuOpen(false);
           await account.logout();
+          // Zurueck auf die Startseite (Nutzer-Meldung 2026-08-27): wer sich
+          // abmeldet, blieb bisher genau dort stehen, wo er war - auf einer
+          // Flaeche, die ihm als Abgemeldetem gar nicht mehr zusteht, und ohne
+          // jede Rueckmeldung. Die Bestaetigung uebernimmt die Landingpage
+          // (logoutSuccess), die nach goHome() ohnehin die sichtbare Seite ist.
+          goHome?.();
         }}
       />
       {account.loginSuccess && (

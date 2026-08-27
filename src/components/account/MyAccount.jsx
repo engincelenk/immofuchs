@@ -65,7 +65,7 @@ const PILL_FADE_MASK =
 // Schliessen: dort steht die Bereichsliste ohnehin dauerhaft in der
 // Seitenleiste, eine "vorige Stufe" gibt es nicht.
 export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) {
-  const { lang, setLang } = useApp();
+  const { lang, setLang, goHome } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
   const { resolvedTheme } = useTheme();
@@ -104,6 +104,10 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
     setLogoutBusy(true);
     await account.logout();
     onClose();
+    // Siehe ProHeaderButton: abmelden fuehrt zurueck auf die Startseite,
+    // statt den Nutzer auf einer Flaeche stehen zu lassen, die ihm nicht mehr
+    // zusteht.
+    goHome?.();
   }
 
   // Bewusst OHNE deps: der Fokus-Trap ermittelt die fokussierbaren Elemente

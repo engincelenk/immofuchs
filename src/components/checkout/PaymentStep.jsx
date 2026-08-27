@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorBannerStyle, primaryBtnStyle } from "./checkoutStyles.js";
-import { LockGlyph, RedirectOverlay } from "./CheckoutShared.jsx";
+import { LockGlyph } from "./CheckoutShared.jsx";
 import { DEFAULT_COUNTRY } from "../../utils/countries.js";
 
 // Stripe verlangt bei fields.billingDetails.name:"never" ZWINGEND einen
@@ -40,6 +40,7 @@ export function PaymentStep({
   lang,
   billingAddress,
   onCompleted,
+  onBusyChange,
   discountCode,
   onDiscountError,
 }) {
@@ -152,6 +153,18 @@ export function PaymentStep({
       stripeRef.current = null;
     };
   }, []);
+
+  // Der Ladehinweis wird eine Ebene hoeher gerendert (CheckoutWizard.jsx), weil
+  // er sonst nur diese Formularspalte abdeckt und die Bestelluebersicht daneben
+  // offen liegen bleibt (Nutzer-Meldung 2026-08-27). Statt eines eigenen
+  // Overlays meldet dieser Schritt also nur noch, ob er beschaeftigt ist.
+  const onBusyChangeRef = useRef(onBusyChange);
+  onBusyChangeRef.current = onBusyChange;
+  useEffect(() => {
+    const busy = stage === "starting" || stage === "processing";
+    onBusyChangeRef.current?.(busy ? t.redirectingToCheckout : null);
+    return () => onBusyChangeRef.current?.(null);
+  }, [stage, t]);
 
   const handleSubmit = useCallback(
     async (e) => {
@@ -347,7 +360,6 @@ export function PaymentStep({
         )}
       </form>
 
-      {(stage === "starting" || stage === "processing") && <RedirectOverlay label={t.redirectingToCheckout} />}
     </div>
   );
 }

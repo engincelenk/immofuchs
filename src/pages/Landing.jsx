@@ -265,7 +265,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 hier bewusst weg (Nutzer-Wunsch: auf der Marketing-Seite
                 nicht noetig) - zusammen mit der langen Beschriftung war er
                 die Ursache des abgeschnittenen Menue-Knopfs. */}
-            {account && !account.loading && account.isLoggedIn && (
+            {account && !account.initialLoading && account.isLoggedIn && (
               <AccountAvatarButton
                 t={at}
                 me={account.me}
@@ -274,7 +274,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 innerRef={avatarRef}
               />
             )}
-            {account && !account.loading && !account.isLoggedIn && (
+            {account && !account.initialLoading && !account.isLoggedIn && (
               <button
                 onClick={() => setOpenMode("login")}
                 className="lp-account-btn"
@@ -478,6 +478,12 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           email={account.me?.email}
           onDone={account.dismissLoginSuccess}
         />
+      )}
+      {/* Abmelde-Bestaetigung: sichtbar wird sie immer HIER, weil jedes
+          Abmelden ueber goHome() auf dieser Seite endet (siehe
+          ProHeaderButton.jsx / MyAccount.jsx). */}
+      {account?.logoutSuccess && (
+        <LoginSuccessToast t={at} message={at.logoutToast} onDone={account.dismissLogoutSuccess} />
       )}
       {/* Nicht, solange der Wizard laeuft - der zeigt seine eigene
           Bestaetigung als letzten Schritt (wizardPresence.js). */}

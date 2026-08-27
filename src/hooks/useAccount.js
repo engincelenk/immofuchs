@@ -44,6 +44,18 @@ function takeCheckoutIntent() {
 // /api/v1/me-Aufruf ausloest.
 export function useAccount() {
   const [loading, setLoading] = useState(true);
+  // Getrennt von `loading`, weil beide etwas anderes beantworten: `loading`
+  // heisst "gerade laeuft eine /me-Anfrage" und wird bei JEDEM Refresh wieder
+  // true - `initialLoading` heisst "wir wissen noch gar nichts ueber diesen
+  // Nutzer" und kippt genau einmal.
+  //
+  // Anlass (Bugreport 2026-08-27): ProHeaderButton blendete die komplette
+  // Kontoflaeche bei `loading` aus. Nach dem Bezahlen laufen drei Refreshes
+  // (sofort, nach 1,5 s, nach 4 s, siehe CheckoutWizard/handlePaymentCompleted)
+  // - jeder davon riss "Mein Konto" samt dem darin gerenderten Checkout-Wizard
+  // ab, wodurch der Wizard-Zustand verloren ging und der Nutzer statt der
+  // Kauf-Bestaetigung wieder auf der Abo-Seite stand.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [me, setMe] = useState(null); // Rohantwort von /api/v1/me, oder null (nicht eingeloggt)
   const [error, setError] = useState(null);
   // E1 (Spec-v3.0 Kap. 2.2): OAuth-Callback lehnt bei bereits anders
@@ -67,6 +79,10 @@ export function useAccount() {
   // eigenen Redirect-Flag ab (kein login_success, da keine neue Session
   // entsteht) - siehe routes/auth.ts, /delete-reauth/{provider}/callback.
   const [accountDeleted, setAccountDeleted] = useState(false);
+  // Abmelden war bisher die einzige Kontoaktion ganz ohne Rueckmeldung
+  // (Nutzer-Meldung 2026-08-27): der Nutzer blieb stehen, wo er war, und nichts
+  // deutete darauf hin, dass er jetzt abgemeldet ist.
+  const [logoutSuccess, setLogoutSuccess] = useState(false);
   const didHandleRedirectRef = useRef(false);
 
   // Globale Kauf-Bestaetigung (Bugreport 26.08.: nach einem Kauf kam manchmal
@@ -155,6 +171,7 @@ export function useAccount() {
       noteProStatus(false, false);
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   }, [broadcastIsPro, noteProStatus]);
 
@@ -409,6 +426,11 @@ export function useAccount() {
   const dismissLoginSuccess = useCallback(() => setLoginSuccess(false), []);
   const dismissPurchaseSuccess = useCallback(() => setPurchaseSuccess(false), []);
   const dismissAccountDeleted = useCallback(() => setAccountDeleted(false), []);
+  // useCallback wie die drei darueber, nicht als Inline-Pfeil: LoginSuccessToast
+  // haelt onDone in den Effekt-Dependencies fuer seinen Auto-Schliessen-Timer -
+  // eine bei jedem Render neue Funktion wuerde den Timer endlos neu starten,
+  // die Einblendung ginge nie von selbst weg.
+  const dismissLogoutSuccess = useCallback(() => setLogoutSuccess(false), []);
   // Wird aufgerufen, sobald die wiederaufgenommene Kaufabsicht eingeloest
   // (Wizard geoeffnet) oder verworfen wurde (Wizard geschlossen).
   const clearPendingCheckout = useCallback(() => setPendingCheckout(null), []);
@@ -432,8 +454,12 @@ export function useAccount() {
     await clearNativeToken().catch(() => {});
     setMe(null);
     broadcastIsPro(false);
+    // Auch bei fehlgeschlagenem Server-Aufruf: lokal ist die Sitzung weg, der
+    // Nutzer IST hier abgemeldet - eine ausbleibende Meldung waere irrefuehrend.
+    setLogoutSuccess(true);
+    noteProStatus(false, false);
     return { ok };
-  }, [broadcastIsPro]);
+  }, [broadcastIsPro, noteProStatus]);
 
   const logoutAllDevices = useCallback(async () => {
     let ok = true;
@@ -672,6 +698,7 @@ export function useAccount() {
 
   return {
     loading,
+    initialLoading: loading && !hasLoadedOnce,
     me,
     isLoggedIn: Boolean(me),
     isPro: Boolean(me?.isPro),
@@ -687,6 +714,8 @@ export function useAccount() {
     loginSuccess,
     purchaseSuccess,
     accountDeleted,
+    logoutSuccess,
+    dismissLogoutSuccess,
     dismissLoginSuccess,
     dismissPurchaseSuccess,
     dismissAccountDeleted,

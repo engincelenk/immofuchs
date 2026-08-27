@@ -18,6 +18,7 @@ import { AddressStep } from "./AddressStep.jsx";
 import { PaymentStep } from "./PaymentStep.jsx";
 import { PurchaseConfirmation } from "./PurchaseConfirmation.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
+import { RedirectOverlay } from "./CheckoutShared.jsx";
 
 // Dialogbreite je Schritt (Neugestaltung 2026-08-17). Der Zahlungsschritt
 // bettet das Stripe Payment Element ein und braucht daneben noch Platz fuer
@@ -63,7 +64,11 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
       ? "upgrade"
       : entryPoint === "login"
         ? "login-only"
-        : account?.isLoggedIn && !account?.isPro
+        : // Gleiche Begruendung wie beim Schliessen-Zweig unten: `isPro` ist
+          // auch waehrend der Testphase true. Ein angemeldeter Testphasen-
+          // Nutzer hat seine E-Mail laengst bestaetigt und braucht den
+          // Verify-Schritt nicht.
+          account?.isLoggedIn && account?.zugang !== "pro"
           ? "new-customer-no-verify"
           : "new-customer";
   const [variant, setVariant] = useState(initialVariant);
@@ -76,9 +81,20 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // Einzige Ausnahme: entryPoint==="payment" (echtes Upgrade eines bereits
   // gewaehlten Plans, z.B. Wiederaufnahme nach OAuth-Redirect) startet
   // weiterhin direkt bei der Zahlung.
-  const [stepIndex, setStepIndex] = useState(() =>
-    initialVariant === "upgrade" ? getWizardSteps(initialVariant).indexOf("address") : 0,
-  );
+  //
+  // Ergaenzung 2026-08-27 (Nutzer-Meldung): kommt ein Plan von aussen mit -
+  // der Nutzer hat auf der Landingpage bereits "Plan waehlen" geklickt -, ist
+  // der Preise-Schritt eine Wiederholung derselben Frage. Der Wizard startet
+  // dann direkt beim naechsten offenen Punkt: "Konto" fuer Gaeste,
+  // "Rechnungsdaten" fuer Angemeldete. Aendern laesst sich der Plan weiterhin
+  // ueber "aendern" in der Bestelluebersicht, das zurueck auf "pricing" fuehrt.
+  const [stepIndex, setStepIndex] = useState(() => {
+    const steps = getWizardSteps(initialVariant);
+    if (initialVariant === "upgrade") return steps.indexOf("address");
+    if (initialVariant === "login-only" || !initialPlan) return 0;
+    const ziel = steps.indexOf(account?.isLoggedIn ? "address" : "account");
+    return ziel === -1 ? 0 : ziel;
+  });
   const [plan, setPlan] = useState(initialPlan || "yearly");
   // Rechnungsadresse (Bugreport 26.08.): nur im Wizard-State, keine
   // Persistierung in unserer DB - die Werte werden einmalig beim Erzeugen der
@@ -123,6 +139,11 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // dort erscheint, wo das Eingabefeld steht.
   const [discountCode, setDiscountCode] = useState("");
   const [discountError, setDiscountError] = useState(null);
+  // Ladehinweis des Zahlungsschritts (Nutzer-Meldung 2026-08-27): er liegt
+  // bewusst HIER statt in PaymentStep, damit er den gesamten Dialogkoerper
+  // abdeckt - inklusive Bestelluebersicht. In PaymentStep deckte er nur die
+  // Formularspalte ab, daneben blieb alles sichtbar.
+  const [paymentBusyLabel, setPaymentBusyLabel] = useState(null);
   const [verifyEmail, setVerifyEmail] = useState(null);
   const [passwordReset, setPasswordReset] = useState(
     account?.resetToken ? { initialStep: "reset" } : null,
@@ -198,13 +219,20 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     // dieser Effekt nur den Weg zur Zahlung kannte. Schliesst sich jetzt
     // stattdessen, wie der login-only-Zweig es fuer die reine Anmeldung
     // bereits tut.
-    if (account.isPro) {
+    // `zugang === "pro"` statt `isPro` (Bugreport 2026-08-27): isPro ist
+    // serverseitig `zugang !== "keiner"` und damit auch waehrend der
+    // kartenfreien 7-Tage-Testphase true - die beim ersten /me automatisch
+    // startet. Wer sich also mitten im Kauf-Flow anmeldete, war in derselben
+    // Sekunde "isPro" und bekam den Wizard kommentarlos zugeklappt, mit einer
+    // Testphase, die er nie wollte, statt der Zahlung, die er angefangen
+    // hatte. Zumachen ist nur richtig, wenn jemand bereits BEZAHLT hat.
+    if (account.zugang === "pro") {
       onCloseRef.current();
       return;
     }
     setVariant("new-customer-no-verify");
     setStepIndex(getWizardSteps("new-customer-no-verify").indexOf("address"));
-  }, [account?.isLoggedIn, account?.isPro, variant, currentKey]);
+  }, [account?.isLoggedIn, account?.zugang, variant, currentKey]);
 
   // login-only (Stufe Nutzer-Konzept 2026-08-11): Ziel ist ausschliesslich
   // die Anmeldung fuer den kostenlosen Ersttest, keine Kaufentscheidung -
@@ -216,6 +244,21 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     if (variant !== "login-only" || !account?.isLoggedIn) return;
     onCloseRef.current();
   }, [variant, account?.isLoggedIn]);
+
+  // Der Wizard zeigt die Kauf-Bestaetigung als eigenen letzten Schritt -
+  // damit ist das globale Signal verbraucht. Ohne dieses Abraeumen erschiene
+  // nach "Los geht's" dieselbe Bestaetigung ein zweites Mal als eigenes
+  // Fenster (ProHeaderButton.jsx/Landing.jsx), sobald der Wizard zu ist.
+  //
+  // Bewusst auch von purchaseSuccess abhaengig, nicht nur vom Schritt: das
+  // Signal kann erst durch einen der verzoegerten Refreshes gesetzt werden
+  // (der Stripe-Webhook braucht 2-4 s), also erst WAEHREND dieser Schritt
+  // schon sichtbar ist.
+  const dismissPurchaseSuccess = account?.dismissPurchaseSuccess;
+  const purchaseSuccess = account?.purchaseSuccess;
+  useEffect(() => {
+    if (currentKey === "welcome" && purchaseSuccess) dismissPurchaseSuccess?.();
+  }, [currentKey, purchaseSuccess, dismissPurchaseSuccess]);
 
   useFocusTrap(dialogRef, onClose, [stepIndex, passwordReset]);
 
@@ -369,6 +412,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         lang={lang}
         billingAddress={billingAddress}
         onCompleted={handlePaymentCompleted}
+        onBusyChange={setPaymentBusyLabel}
         discountCode={discountCode}
         // Ungueltiger Code: zurueck in den Laufzeit-Schritt, wo das
         // Eingabefeld steht - eine Fehlermeldung ohne zugehoeriges Feld waere
@@ -505,6 +549,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
             padding: "20px",
             paddingBottom: "calc(20px + env(safe-area-inset-bottom))",
             flex: 1,
+            position: "relative",
           }}
         >
           <div style={{ flex: summaryBeside ? "1 1 auto" : undefined, minWidth: 0 }}>{content}</div>
@@ -535,6 +580,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
               )}
             </div>
           )}
+          {paymentBusyLabel && <RedirectOverlay label={paymentBusyLabel} />}
         </div>
       </div>
     </div>,

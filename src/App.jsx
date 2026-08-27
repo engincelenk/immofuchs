@@ -562,6 +562,11 @@ export default function App() {
           setTab(id);
           setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
         },
+        // Nach dem Abmelden gebraucht (Nutzer-Meldung 2026-08-27: "wenn man
+        // sich ausloggt bleibt man an der stelle wo man auf der seite war").
+        // Die Funktion gab es hier schon fuer das Logo in der Kopfzeile, sie
+        // war nur nicht aus dem Kontobereich erreichbar.
+        goHome,
       }}
     >
       <style>

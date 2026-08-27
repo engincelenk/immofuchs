@@ -57,7 +57,13 @@ export function PurchaseConfirmModal({ onClose }) {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 1000,
+        // Ueber "Mein Konto" (MyAccount.jsx liegt auf 1000): wer gerade
+        // gekauft hat, soll die Bestaetigung sehen und nicht eine Flaeche,
+        // die zufaellig spaeter im DOM haengt. Bei gleichem z-index gewinnt
+        // der zuletzt eingehaengte Knoten - und das war je nach Reihenfolge
+        // mal die Bestaetigung, mal der Kontobereich (Bugreport 2026-08-27:
+        // "kein modal sondern die abo seite").
+        zIndex: 1100,
         overflowY: "auto",
         background: isDesktop ? "rgba(20,18,14,.45)" : "var(--bg)",
         ...(isDesktop

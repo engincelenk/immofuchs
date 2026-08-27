@@ -1,3 +1,103 @@
+## 2026-08-27 (1.29.0)
+
+### FIX: Kauf aus "Mein Konto" riss den Wizard ab - keine Bestaetigung, Abo-Seite stattdessen
+
+Testfall des Nutzers: als test.jaehrlich einloggen, Profil -> Abonnement ->
+kaufen, Rechnungsdaten ausfuellen, "Jetzt bezahlen" - danach stand er auf der
+Abo-Seite, ohne jede Bestaetigung.
+
+Zwei Fehler wirkten zusammen.
+
+**ProHeaderButton blendete bei JEDEM Refresh alles aus.** Die Pruefung lautete
+`if (!account || account.loading) return null` - und `account.loading` wird bei
+jeder /me-Anfrage wieder true. Nach dem Bezahlen laufen drei Refreshes (sofort,
+1,5 s, 4 s, siehe CheckoutWizard/handlePaymentCompleted). Jeder davon riss die
+gesamte Kontoflaeche ab, inklusive "Mein Konto" UND dem darin gerenderten
+Checkout-Wizard. Der Wizard-Zustand war damit weg; beim Wiederaufbau stand
+`showUpgrade` auf false - also Abo-Seite statt Willkommens-Schritt. Dasselbe
+erklaert die beiden Screenshots vom Ladehinweis, einmal mit gesetzten Haken und
+einmal ohne: das ist der Wizard, der zwischendurch neu montiert wurde.
+
+useAccount liefert dafuer jetzt `initialLoading` - true nur, solange ueberhaupt
+nichts ueber den Nutzer bekannt ist, und genau einmal kippend. `loading` bleibt
+unveraendert fuer alles, was wirklich "gerade laeuft eine Anfrage" meint. Die
+Landingpage-Kopfzeile nutzt es ebenfalls; dort flackerten Avatar und
+Anmelden-Knopf bei jedem Refresh weg.
+
+**Die Bestaetigung lag hinter "Mein Konto".** Beide Flaechen standen auf
+zIndex 1000, und bei gleichem z-index gewinnt der zuletzt eingehaengte Knoten.
+PurchaseConfirmModal liegt jetzt auf 1100.
+
+Dazu: der Wizard raeumt `purchaseSuccess` ab, sobald er seinen eigenen
+Willkommens-Schritt zeigt - sonst erschiene dieselbe Bestaetigung nach
+"Los geht's" ein zweites Mal als eigenes Fenster.
+
+### AENDERUNG: Ladehinweis deckt den ganzen Dialog ab
+
+"Wenn etwas geladen wird sieht man im hintergrund bereits die maske vom
+naechsten dialog": der Ladehinweis sass in PaymentStep und deckte damit nur die
+Formularspalte ab - die Bestelluebersicht daneben blieb offen - und war nur zu
+92 % deckend, das Formular schien durch. Er wird jetzt eine Ebene hoeher
+gerendert (CheckoutWizard) und deckt den gesamten Dialogkoerper voll ab.
+PaymentStep meldet dafuer nur noch, ob es beschaeftigt ist.
+
+### FIX: Anmelden mitten im Kauf beendete den Kauf - mit ungewollter Testphase
+
+"Ich klicke auf Plan waehlen, logge mich ein und sehe die Preise-Seite. Damit
+habe ich 7 Tage Testversion aktiviert. Aber was ist wenn ich gleich kaufen
+moechte?"
+
+Ursache: der Wizard schloss sich bei `account.isPro`. Serverseitig ist
+`isPro = zugang !== "keiner"` (routes/account.ts) - und die kartenfreie
+7-Tage-Testphase startet automatisch beim ersten /me. Wer sich also im
+Kauf-Flow anmeldete, war in derselben Sekunde "isPro" und bekam den Wizard
+kommentarlos zugeklappt, mit einer Testphase, die er nie wollte, statt der
+Zahlung, die er angefangen hatte.
+
+Geschlossen wird jetzt nur noch bei `zugang === "pro"`, also wenn jemand
+tatsaechlich schon bezahlt hat. Dieselbe Verwechslung steckte in der
+Variantenwahl des Wizards und in `resumesCheckout` (ProHeaderButton), das den
+nach einem Google-/Apple-Redirect angefangenen Kauf ebenfalls nicht mehr
+aufnahm, sobald eine Testphase lief - beide ziehen mit.
+
+Zweitens: wer auf der Landingpage bereits "Plan waehlen" geklickt hat, wurde im
+Wizard erneut nach dem Plan gefragt. Kommt ein Plan von aussen mit, startet der
+Wizard jetzt beim naechsten offenen Punkt - "Konto" fuer Gaeste,
+"Rechnungsdaten" fuer Angemeldete. Aendern geht weiter ueber "aendern" in der
+Bestelluebersicht bzw. "Zurueck". Der Weg ist damit: Plan waehlen -> anmelden ->
+Rechnungsdaten -> bezahlen, so wie es Stripe, Linear und Notion halten: die
+Kaufabsicht ueberlebt die Anmeldung, und niemand bekommt eine Testphase
+untergeschoben, der gerade kaufen wollte.
+
+### AENDERUNG: Abmelden fuehrt zurueck auf die Startseite
+
+"Wenn man sich ausloggt bleibt man an der stelle wo man auf der seite war."
+Stimmte - logout() leerte nur den Zustand, keiner der Aufrufer navigierte, und
+`if_landed` blieb gesetzt. Abmelden ruft jetzt `goHome()` (gab es in App.jsx
+laengst fuer das Logo, war nur nicht im Kontext verfuegbar) und zeigt auf der
+Startseite eine kurze Einblendung "Du bist abgemeldet." - in allen fuenf
+Sprachen, nach demselben Muster wie die Bestaetigung nach einer Kontoloeschung.
+Die Einblendung erscheint auch, wenn der Server-Aufruf fehlschlaegt: lokal ist
+die Sitzung dann trotzdem weg.
+
+### Anmerkung zum Willkommensfenster beim Admin-Login
+
+Das war der Fehler aus 1.28.5 (noteProStatus konnte "abgemeldet" nicht von
+"angemeldet, aber nicht Pro" unterscheiden). Admins trifft es zuverlaessig,
+weil `role === "admin"` serverseitig immer `zugang: "pro"` liefert
+(entitlement.ts). Der Fix ist seit 1.28.5 live; kein weiterer Code noetig.
+
+Abweichung vom Plan: angekuendigt waren drei Commits. CheckoutWizard.jsx,
+ProHeaderButton.jsx, useAccount.js und Landing.jsx sind aber an mehreren der
+Punkte beteiligt - eine Trennung haette Hunks innerhalb derselben Dateien
+auseinanderziehen muessen. Alles stammt aus demselben Testbericht und geht
+ohnehin zusammen live, deshalb ein Commit.
+
+Betroffene Dateien: src/hooks/useAccount.js, src/App.jsx, src/pages/Landing.jsx,
+src/components/account/ProHeaderButton.jsx, MyAccount.jsx,
+src/components/checkout/CheckoutWizard.jsx, PaymentStep.jsx,
+CheckoutShared.jsx, PurchaseConfirmModal.jsx, src/i18n/account.js
+
 ## 2026-08-27 (1.28.5)
 
 ### FIX: Abo-Bestaetigung erschien nach dem Kauf nicht, dafuer bei jeder Anmeldung
