@@ -1,3 +1,25 @@
+## 2026-08-27 (1.36.0)
+
+### FIX: Chart-Auswahl auf Touch-Geraeten sprang sofort zurueck, Tabellen-Header faelschlich farbig
+
+Nutzer-Meldung mit Screenshots (Mobilgeraet): Antippen eines Balkens im
+Zins/Tilgung-Chart zeigte den Wert nur kurz, danach sprang die Anzeige
+sofort wieder auf Jahr 10 zurueck. Ursache: die Auswahl hing an
+onMouseEnter/onMouseLeave - auf Touch-Geraeten feuert nach jedem Tap sofort
+ein synthetisches "mouseleave", die Auswahl fiel dadurch augenblicklich auf
+den Default zurueck. Umgestellt auf Klick/Tap-basierte, dauerhafte Auswahl
+(erneuter Klick auf denselben Balken hebt sie wieder auf) - dieselbe
+Umstellung auch im Donut (VermoegensQuelleChart.jsx), der bisher denselben
+Hover-Mechanismus nutzte und auf Touch-Geraeten ebenso fragil war. Nicht
+ausgewaehlte Balken/Segmente werden jetzt abgedunkelt, sobald etwas
+ausgewaehlt ist - vorher keine sichtbare Hervorhebung bei einer Auswahl.
+
+Ausserdem: die Tabellen-Spaltenkoepfe "CF ohne St." und "CF mit St." in der
+Jahrestabelle (YearTable.jsx) waren farbig (orange/gruen) statt grau wie
+alle anderen Spaltenkoepfe - sah nach einem fixen Status statt einer
+normalen Spalte aus. Jetzt einheitlich grau, die Ampelfarbe bleibt wie
+gehabt in den Datenzellen selbst (positiv/negativ je Zeile).
+
 ## 2026-08-27 (1.35.0)
 
 ### FIX: Layout auf Tablet-Hochformat (z.B. iPad) gequetscht statt lesbar

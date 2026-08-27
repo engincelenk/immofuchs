@@ -8,7 +8,14 @@ import { fmtE } from "../../utils/helpers.js";
 // Finanzmathematik, reine Darstellung.
 export function ZinsTilgungChart({ rows }) {
   const { t } = useApp();
-  const [hover, setHover] = useState(null);
+  // Klick statt Hover (Nutzer-Meldung 2026-08-27): auf Touch-Geraeten feuert
+  // nach jedem Tap sofort ein synthetisches "mouseleave", ein
+  // hover-basierter State fiel deshalb augenblicklich auf den Default
+  // zurueck ("kurz sieht man den Wert, dann wieder J10"). Ein Klick/Tap
+  // setzt die Auswahl jetzt dauerhaft, wie beim Donut in
+  // VermoegensQuelleChart.jsx - erneuter Klick auf denselben Balken hebt sie
+  // wieder auf.
+  const [sel, setSel] = useState(null);
   const n = rows.length;
   if (n < 2) return null;
 
@@ -32,9 +39,9 @@ export function ZinsTilgungChart({ rows }) {
   // fuer Primary/Accent stehen, statt eigener Chart-Farben.
   const colZins = "#1E3A5F";
   const colTilg = "#E8600A";
-  // Ohne Hover zeigt die Info-Zeile das letzte Jahr (naeher an "wo stehe ich
-  // am Ende" als ein beliebiges erstes Jahr).
-  const activeIdx = hover ?? n - 1;
+  // Ohne Auswahl zeigt die Info-Zeile das letzte Jahr (naeher an "wo stehe
+  // ich am Ende" als ein beliebiges erstes Jahr).
+  const activeIdx = sel ?? n - 1;
 
   return (
     <div
@@ -102,12 +109,14 @@ export function ZinsTilgungChart({ rows }) {
             const xx = pl + gap + i * (barW + gap);
             const zinsH = ph - (yv(r.zinsen || 0) - pt);
             const tilgH = ph - (yv((r.zinsen || 0) + (r.tilgB || 0)) - pt) - zinsH;
+            // Erst dimmen, wenn tatsaechlich etwas ausgewaehlt ist (wie im
+            // Donut) - ohne Auswahl stehen alle Balken gleich kraeftig da,
+            // nicht nur der zuletzt gezeigte.
+            const dimmed = sel !== null && sel !== i;
             return (
               <g
                 key={i}
-                onMouseEnter={() => setHover(i)}
-                onMouseLeave={() => setHover(null)}
-                onClick={() => setHover((h) => (h === i ? null : i))}
+                onClick={() => setSel((s) => (s === i ? null : i))}
                 style={{ cursor: "pointer" }}
               >
                 <rect
@@ -116,7 +125,8 @@ export function ZinsTilgungChart({ rows }) {
                   width={barW}
                   height={Math.max(zinsH, 0)}
                   fill={colZins}
-                  opacity={activeIdx === i ? 1 : 0.85}
+                  opacity={dimmed ? 0.35 : 1}
+                  style={{ transition: "opacity .15s" }}
                 />
                 <rect
                   x={xx}
@@ -124,7 +134,8 @@ export function ZinsTilgungChart({ rows }) {
                   width={barW}
                   height={Math.max(tilgH, 0)}
                   fill={colTilg}
-                  opacity={activeIdx === i ? 1 : 0.85}
+                  opacity={dimmed ? 0.35 : 1}
+                  style={{ transition: "opacity .15s" }}
                 />
                 <text x={xx + barW / 2} y={H - 8} textAnchor="middle" fill="var(--ch)" fontSize="9">
                   J{r.j}

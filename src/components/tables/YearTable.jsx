@@ -88,10 +88,14 @@ export function YearTable({ rows, zbJ }) {
               <th style={{ ...td, textAlign: "right", fontWeight: 500, color: "var(--ch)" }}>
                 {t.tblJahresmiete}
               </th>
-              <th style={{ ...td, textAlign: "right", fontWeight: 700, color: "var(--ca)" }}>
+              {/* Header-Spalten einheitlich grau statt farbig (Nutzer-Meldung
+                  2026-08-27): die faerbige Ampel gehoert in die Datenzellen
+                  (positiv/negativ je Zeile), nicht in die Spaltenueberschrift -
+                  sonst sieht es aus wie ein fixer Status statt einer Spalte. */}
+              <th style={{ ...td, textAlign: "right", fontWeight: 500, color: "var(--ch)" }}>
                 {t.tblCFOhne}
               </th>
-              <th style={{ ...td, textAlign: "right", fontWeight: 700, color: "#22c55e" }}>
+              <th style={{ ...td, textAlign: "right", fontWeight: 500, color: "var(--ch)" }}>
                 {t.tblCFMit}
               </th>
             </tr>
@@ -111,7 +115,9 @@ export function YearTable({ rows, zbJ }) {
                   <td style={{ ...stickyJ, background: isZB ? "var(--warn-bg)" : "var(--ci)" }}>
                     {r.j}
                     {isZB && (
-                      <span style={{ fontSize: 8, color: "var(--warn-tx)", marginLeft: 4 }}>◀ ZB</span>
+                      <span style={{ fontSize: 8, color: "var(--warn-tx)", marginLeft: 4 }}>
+                        ◀ ZB
+                      </span>
                     )}
                   </td>
                   <td style={{ ...td, color: "var(--ct)" }}>{fmtE(r.rest)}</td>

@@ -21,7 +21,12 @@ import { fmtE } from "../../utils/helpers.js";
 //    wird im Donut auf 0 gekappt statt eines negativen Segments).
 export function VermoegensQuelleChart({ R, d }) {
   const { t } = useApp();
-  const [hover, setHover] = useState(null);
+  // Klick statt Hover (Nutzer-Meldung 2026-08-27, gilt fuer alle Charts mit
+  // Hervorhebung): Touch-Geraete feuern nach dem Tap sofort ein
+  // synthetisches "mouseleave", eine reine Hover-Auswahl faellt dadurch
+  // augenblicklich wieder zurueck. Ein Klick/Tap setzt die Auswahl jetzt
+  // dauerhaft, erneuter Klick auf dasselbe Segment hebt sie wieder auf.
+  const [sel, setSel] = useState(null);
   const rows = R.yearRows || [];
   if (rows.length < 1) return null;
 
@@ -109,10 +114,9 @@ export function VermoegensQuelleChart({ R, d }) {
                 strokeWidth={sw}
                 strokeDasharray={a.dasharray}
                 strokeDashoffset={a.dashoffset}
-                opacity={hover === null || hover === a.key ? 1 : 0.35}
+                opacity={sel === null || sel === a.key ? 1 : 0.35}
                 style={{ cursor: "pointer", transition: "opacity .15s" }}
-                onMouseEnter={() => setHover(a.key)}
-                onMouseLeave={() => setHover(null)}
+                onClick={() => setSel((s) => (s === a.key ? null : a.key))}
               />
             ))}
           </g>
@@ -130,14 +134,13 @@ export function VermoegensQuelleChart({ R, d }) {
         {segments.map((s) => (
           <div
             key={s.key}
-            onMouseEnter={() => setHover(s.key)}
-            onMouseLeave={() => setHover(null)}
+            onClick={() => setSel((sv) => (sv === s.key ? null : s.key))}
             style={{
               display: "flex",
               alignItems: "center",
               gap: 6,
               cursor: "pointer",
-              opacity: hover === null || hover === s.key ? 1 : 0.5,
+              opacity: sel === null || sel === s.key ? 1 : 0.5,
             }}
           >
             <span
