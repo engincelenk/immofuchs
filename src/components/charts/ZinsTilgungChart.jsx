@@ -153,8 +153,12 @@ export function ZinsTilgungChart({ rows }) {
         <div
           style={{
             fontSize: 10.5,
-            color: "var(--ct)",
-            background: "#eef2f6",
+            // Theme-Token statt hartem "#eef2f6" (Nutzer-Meldung 2026-08-27:
+            // im Dunkelmodus war der Text unlesbar - heller Text auf hartem
+            // hellem Hintergrund). --info-bg/--info-tx sind das etablierte
+            // Token-Paar fuer genau solche Hinweiskarten, siehe atoms.jsx Ins().
+            color: "var(--info-tx)",
+            background: "var(--info-bg)",
             borderLeft: "3px solid var(--ca)",
             borderRadius: 6,
             padding: "7px 10px",

@@ -702,6 +702,24 @@ export default function App() {
         .mob-next-btn{display:block}
         .tbar-wrap{max-width:100%!important;border-radius:0!important;box-shadow:none!important}
       }
+      /* TABLET-HOCHFORMAT (Nutzer-Meldung 2026-08-27, iPad-Screenshot): das
+         Desktop-Split-Layout greift ab 700px Breite - ein iPad im
+         Hochformat ist aber 768-834px breit, viel zu schmal fuer zwei
+         Spalten (Formular + Finanz-Score-Kachel mit Gauge) nebeneinander.
+         Ergebnis war ein gequetschtes, kaum bedienbares Layout. Fix nach
+         demselben Muster wie oben (Landscape-Handy): in der Luecke zwischen
+         "zu schmal fuer zwei Spalten" (700px) und "echtes Tablet-Querformat/
+         Desktop" (1024px, iPad-Pro-Querformat-Breite) auf den bewaehrten
+         Umschalter zurueckfallen statt das Split-Layout zu erzwingen. */
+      @media(min-width:700px) and (max-width:1023px){
+        .mob-toggle{display:flex!important}
+        .split{display:block}
+        .inp-pane,.res-pane{display:none!important}
+        .inp-pane.act,.res-pane.act{display:block!important}
+        .res-pane{position:static}
+        .mob-next-btn{display:block}
+        .tbar-wrap{max-width:100%!important;border-radius:0!important;box-shadow:none!important}
+      }
       @media(max-width:699px){
         .inp-pane,.res-pane{display:none}
         .inp-pane.act,.res-pane.act{display:block}

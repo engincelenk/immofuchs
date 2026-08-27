@@ -1,3 +1,22 @@
+## 2026-08-27 (1.35.0)
+
+### FIX: Layout auf Tablet-Hochformat (z.B. iPad) gequetscht statt lesbar
+
+Nutzer-Meldung mit Screenshot: auf einem iPad im Hochformat (768-834px
+Breite) zeigte der Rechner Formular und Finanz-Score-Kachel nebeneinander
+gequetscht statt untereinander - kaum bedienbar.
+
+Ursache: das Desktop-Zweispalten-Layout (App.jsx, .split) greift bereits ab
+700px Breite. Ein iPad im Hochformat faellt in genau diese Breite, hat aber
+nicht genug Platz fuer zwei Spalten. Fix nach demselben Muster wie der
+bestehende Landscape-Handy-Fix (Breite >=700px, aber zu wenig Hoehe): im
+Bereich 700-1023px faellt das Layout jetzt ebenfalls auf den bewaehrten
+Umschalter (eine Spalte, Tab zwischen Eingabe/Ergebnis) zurueck statt das
+Split-Layout zu erzwingen. Ab 1024px (iPad-Querformat, Desktop) bleibt die
+Zweispalten-Ansicht wie bisher. Verifiziert bei 820px (Umschalter), 1023px
+(Umschalter) und 1024px (Grid) - keine Aenderung an reinem Mobile (<700px)
+oder Desktop (>=1024px).
+
 ## 2026-08-27 (1.34.0)
 
 ### FIX: Diagramm-Farben auf Markenschema umgestellt, Hover-Zeile blendete nervoes ein/aus
