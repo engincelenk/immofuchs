@@ -6,6 +6,7 @@ import { useTheme } from "../../context/ThemeContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
+import { useMediaQuery } from "../../hooks/useMediaQuery.js";
 import { useScrollLock } from "../../hooks/useScrollLock.js";
 import { goToLandingPage } from "../../utils/helpers.js";
 import { CheckoutWizard } from "../checkout/CheckoutWizard.jsx";
@@ -49,6 +50,13 @@ const SECTION_COMPONENTS = {
   admin: AdminSection,
 };
 
+// Weicher Auslauf am rechten Rand der scrollenden Pillen-Leiste. Die letzten
+// 28px werden ausgeblendet, wodurch eine angeschnittene Pille als "hier geht
+// es weiter" lesbar wird statt als abgeschnittenes Element. Die ersten 14px
+// bleiben voll deckend, damit die erste Pille buendig an der Kante steht.
+const PILL_FADE_MASK =
+  "linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%)";
+
 // onBackToMenu (optional, Nutzer-Korrektur 2026-08-13): auf dem Handy fuehrt
 // das ← zurueck ins Header-Menue statt den ganzen Kontobereich zu schliessen.
 // Vorher endete der Weg hier in einer Sackgasse - man kam ueber das Menue in
@@ -63,6 +71,9 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
   const { resolvedTheme } = useTheme();
   const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-dark.png" : "/logo-wordmark.png";
   const isDesktop = useIsDesktop();
+  // Ab dieser Breite passen die Bereichs-Pillen umgebrochen nebeneinander,
+  // darunter bleiben sie eine scrollende Leiste (siehe Kommentar am <nav>).
+  const pillsWrap = useMediaQuery("(min-width:640px)");
   const dialogRef = useRef(null);
   const [activeKey, setActiveKey] = useState(initialSection);
   // Upgrade-Einstieg fuer Free-Nutzer liegt bewusst hier und nicht im
@@ -384,27 +395,45 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
               ))}
             </nav>
           ) : (
-            /* Mobile Bereichswahl (Neugestaltung 2026-08-17). Vorher gab es
-               auf dem Handy GAR KEINE Navigation: wer einen Bereich offen
-               hatte, musste ueber das ← zurueck ins Menue und von dort neu
-               hinein, nur um von "Profil" nach "Zahlungen" zu wechseln. Die
-               waagerecht scrollende Pillen-Leiste ist dasselbe Muster, das
-               der Admin-Bereich bereits nutzt (AdminSection.jsx). */
+            /* Bereichswahl unterhalb der Desktop-Schwelle (Neugestaltung
+               2026-08-17). Vorher gab es auf dem Handy GAR KEINE Navigation:
+               wer einen Bereich offen hatte, musste ueber das ← zurueck ins
+               Menue und von dort neu hinein, nur um von "Profil" nach
+               "Zahlungen" zu wechseln. Die waagerecht scrollende Pillen-Leiste
+               ist dasselbe Muster, das der Admin-Bereich bereits nutzt
+               (AdminSection.jsx).
+
+               Korrektur 2026-08-27 (Nutzer-Meldung "im Browser werden die Tabs
+               abgeschnitten"): zwischen 640px und der Desktop-Schwelle greift
+               dieselbe scrollende Leiste, obwohl dort Platz fuer einen Umbruch
+               ist - am rechten Rand hing eine halb abgeschnittene Pille, was
+               im Browserfenster nach einem Fehler aussieht statt nach einer
+               Scroll-Andeutung. Ab 640px brechen die Pillen deshalb einfach um.
+               Auf dem Handy bleibt es beim Scroller: dort waeren drei Zeilen
+               Navigation ueber jedem Bereich zu viel. Die Verlaufs-Maske am
+               rechten Rand macht die Scrollbarkeit dort sichtbar, statt sie
+               nur zu vermuten. */
             <nav
               aria-label={t.accountNavAria}
               style={{
                 display: "flex",
                 gap: 8,
-                overflowX: "auto",
                 paddingBottom: 12,
                 marginBottom: 4,
-                // Zieht die Leiste bis an die Kanten des Inhaltsbereichs, damit
-                // beim Scrollen nichts abgeschnitten "klebt".
-                marginLeft: -14,
-                marginRight: -14,
-                paddingLeft: 14,
-                paddingRight: 14,
-                scrollbarWidth: "none",
+                ...(pillsWrap
+                  ? { flexWrap: "wrap" }
+                  : {
+                      overflowX: "auto",
+                      // Zieht die Leiste bis an die Kanten des Inhaltsbereichs,
+                      // damit beim Scrollen nichts abgeschnitten "klebt".
+                      marginLeft: -14,
+                      marginRight: -14,
+                      paddingLeft: 14,
+                      paddingRight: 14,
+                      scrollbarWidth: "none",
+                      maskImage: PILL_FADE_MASK,
+                      WebkitMaskImage: PILL_FADE_MASK,
+                    }),
               }}
             >
               {sections.map((s) => (

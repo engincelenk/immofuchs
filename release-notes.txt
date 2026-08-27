@@ -1,3 +1,33 @@
+## 2026-08-27 (1.28.1)
+
+### AENDERUNG: "Zahlungen" ohne Erklaertexte, Bereichs-Pillen brechen um
+
+Zwei Nutzer-Meldungen aus dem Kontobereich.
+
+"Zahlungen" zeigte oben zwei Erklaerabsaetze - wer die Karte verwaltet und
+dass Stripe die Rechnungen in unserem Auftrag ausstellt. Beides interessiert
+an dieser Stelle niemanden: der Kunde sucht hier seine Rechnung. Beide Texte
+sind ersatzlos entfallen (samt der i18n-Schluessel zahlungBody und
+rechnungenIntro in allen fuenf Sprachen), es bleibt die reine
+Rechnungsuebersicht. Die Angaben zum Zahlungsdienstleister stehen weiterhin
+in den AGB (Abschnitt 5) und der Datenschutzerklaerung.
+
+"Auf browser wenn man das fenster verkleinert werden die tabs abgeschnitten":
+unterhalb von 1024px greift die fuers Handy gebaute, waagerecht scrollende
+Pillen-Leiste - im verkleinerten Browserfenster hing dadurch eine halb
+abgeschnittene Pille am rechten Rand, was nach einem Fehler aussieht statt
+nach einer Scroll-Andeutung. Ab 640px brechen die Pillen jetzt um
+(flexWrap), darunter bleibt der Scroller, bekommt aber eine Verlaufs-Maske am
+rechten Rand, die die Scrollbarkeit sichtbar macht.
+
+Dafuer neu: `src/hooks/useMediaQuery.js` - die allgemeine Fassung dessen, was
+useIsDesktop bisher mit fest verdrahteter Abfrage enthielt. useIsDesktop nutzt
+sie jetzt selbst, seine Schnittstelle bleibt unveraendert.
+
+Betroffene Dateien: src/hooks/useMediaQuery.js (neu), src/hooks/useIsDesktop.js,
+src/components/account/MyAccount.jsx,
+src/components/account/sections/ZahlungenSection.jsx, src/i18n/account.js
+
 ## 2026-08-27 (1.28.0)
 
 ### NEU: Vollstaendige Rechnungsdaten + AGB-Zustimmung im Checkout

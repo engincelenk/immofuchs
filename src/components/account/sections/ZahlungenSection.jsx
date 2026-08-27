@@ -5,11 +5,9 @@ import { IconBeleg, IconExternal } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
 import {
   blockCardStyle,
-  blockHintStyle,
   blockTitleStyle,
   emptyStateStyle,
   inlineLinkBtnStyle,
-  sectionIntroStyle,
 } from "../accountStyles.js";
 
 // Spec-v3.0 Kap. 4.1/4.6: "Zahlungen" fasst Zahlungsmethode und Rechnungen in
@@ -17,6 +15,12 @@ import {
 // RechnungenSection, hier zusammengefuehrt). Beide Datenquellen bleiben
 // unveraendert bei Stripe - wir speichern selbst weder Kartendaten noch
 // Rechnungsadressen.
+//
+// Seit 2026-08-27 ohne jeden Erklaertext (Nutzer-Vorgabe): wer die Rechnung
+// ausstellt und wer die Zahlung technisch abwickelt, interessiert den Kunden
+// an dieser Stelle nicht - er sucht hier seine Rechnung, sonst nichts. Die
+// Angaben zum Zahlungsdienstleister stehen dort, wo sie hingehoeren: in den
+// AGB (Abschnitt 5) und der Datenschutzerklaerung.
 export function ZahlungenSection({ t, account, lang, onBack }) {
   const locale = LANG_LOCALE[lang] || "de-DE";
 
@@ -91,7 +95,6 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
   return (
     <div style={{ maxWidth: 560 }}>
       <SectionTitle title={t.navZahlung} onBack={onBack} backLabel={t.wizardBack} />
-      <p style={sectionIntroStyle}>{t.zahlungBody}</p>
 
       {/* Der Verweis ins Kundenportal ist hier bewusst entfernt
           (Nutzer-Entscheidung 2026-08-20): dort liessen sich neben der
@@ -107,8 +110,6 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
           <IconBeleg size={18} />
           {t.navRechnungen}
         </div>
-        <p style={blockHintStyle}>{t.rechnungenIntro}</p>
-
         {invoiceError === "list" && <div style={errorBannerStyle}>{t.rechnungenError}</div>}
         {invoiceError === "pdf" && <div style={errorBannerStyle}>{t.rechnungenPdfError}</div>}
 
