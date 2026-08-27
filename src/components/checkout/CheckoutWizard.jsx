@@ -380,7 +380,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
       />
     );
   } else if (currentKey === "welcome") {
-    content = <PurchaseConfirmation t={t} account={account} onDone={onClose} />;
+    content = <PurchaseConfirmation t={t} account={account} plan={plan} onDone={onClose} />;
   }
 
   return createPortal(

@@ -46,3 +46,20 @@ export function formatMoney(amount, locale) {
     currency: PLAN_CURRENCY,
   }).format(amount);
 }
+
+// Welche Laufzeit steht in der Kauf-Bestaetigung (PurchaseConfirmation.jsx)?
+// Zwei Quellen, weil beide luecken koennen: `subscription` kommt aus /me und
+// steht erst, wenn der Stripe-Webhook durch ist (beobachtet 2-4 s) - direkt
+// nach dem Bezahlen ist das Feld also oft noch leer. `gewaehlterPlan` ist die
+// Wahl aus dem Wizard, die es dafuer nur IM Wizard gibt, nicht nach einer
+// Rueckkehr aus einem Zahlungs-Redirect. Die Subscription hat Vorrang: sie ist
+// das, was tatsaechlich abgerechnet wird.
+//
+// Rueckgabe ist der i18n-Schluessel, nicht der fertige Text - diese Datei
+// kennt bewusst keine Sprachen (siehe Kommentar oben).
+export function purchasePlanLabelKey(subscription, gewaehlterPlan) {
+  const plan = subscription?.plan || gewaehlterPlan || null;
+  if (plan === "monthly") return "planMonthly";
+  if (plan === "yearly") return "planYearly";
+  return null;
+}

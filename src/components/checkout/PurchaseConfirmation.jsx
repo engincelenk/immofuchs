@@ -1,4 +1,5 @@
 import { cardStyle, primaryBtnStyle } from "./checkoutStyles.js";
+import { purchasePlanLabelKey } from "./planPricing.js";
 
 // Inhalt der Kauf-Bestaetigung (Vorbild: Screenshot-Konfetti-Screen, Farbe
 // --ca statt Navy). Bewusst OHNE eigenes Fenster-Drumherum, weil derselbe
@@ -16,9 +17,22 @@ import { cardStyle, primaryBtnStyle } from "./checkoutStyles.js";
 // Nicht zu verwechseln mit der App-Testphase (7 Tage, ohne Zahlungsdaten,
 // startAppTrialIfNew in worker/src/routes/account.ts): die laeuft VOR jedem
 // Kauf und hat mit diesem Bildschirm nichts zu tun.
-export function PurchaseConfirmation({ t, account, onDone }) {
+export function PurchaseConfirmation({ t, account, plan, onDone }) {
   const subscription = account?.me?.subscription;
   const isTrial = subscription?.status === "trialing";
+
+  // Die Zeile hiess bis 2026-08-27 nur "Plan: ImmoFuchs Pro" - eine Aussage,
+  // die auf dem Bildschirm "Willkommen bei ImmoFuchs Pro" nichts hinzufuegt
+  // (Nutzer-Meldung: "sollte das produkt das ich abonniert habe stehen").
+  // Jetzt steht die gebuchte Laufzeit dabei.
+  //
+  // Zwei Quellen, weil beide luecken koennen: `subscription.plan` kommt aus
+  // /me und steht erst, wenn der Stripe-Webhook durch ist (dauert beobachtet
+  // 2-4s) - direkt nach dem Bezahlen ist das Feld also oft noch leer. `plan`
+  // ist die im Wizard getroffene Wahl, die es dafuer nur im Wizard gibt, nicht
+  // nach einer Rueckkehr aus einem Redirect. Zusammen decken sie jeden Weg ab.
+  const planLabelKey = purchasePlanLabelKey(subscription, plan);
+  const planLabel = planLabelKey ? t[planLabelKey] : null;
 
   return (
     <div style={{ textAlign: "center", padding: "12px 0" }}>
@@ -46,9 +60,11 @@ export function PurchaseConfirmation({ t, account, onDone }) {
       </p>
 
       <div style={{ ...cardStyle, margin: "18px 0", textAlign: "left" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12, padding: "4px 0" }}>
           <span style={{ color: "var(--ch)" }}>{t.accountPlan}</span>
-          <span style={{ fontWeight: 700 }}>ImmoFuchs Pro</span>
+          <span style={{ fontWeight: 700, textAlign: "right" }}>
+            {planLabel ? `ImmoFuchs Pro – ${planLabel}` : "ImmoFuchs Pro"}
+          </span>
         </div>
         {subscription?.currentPeriodEnd && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0" }}>

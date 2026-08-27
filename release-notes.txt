@@ -1,3 +1,68 @@
+## 2026-08-27 (1.28.5)
+
+### FIX: Abo-Bestaetigung erschien nach dem Kauf nicht, dafuer bei jeder Anmeldung
+
+Zwei getrennte Fehler, beide reproduziert.
+
+**1. Nach dem Kauf kam nichts.** Die Bestaetigung wird ausschliesslich in
+ProHeaderButton.jsx gerendert - und der haengt im App-Shell, NICHT auf der
+Landingpage (steht so schon im Kommentar bei hasAuthRedirectParam in App.jsx,
+dort urspruenglich fuer LoginSuccessToast notiert). Wer den Kauf von der
+Landingpage aus startete und mit einer Zahlungsart bezahlte, die ueber einen
+echten Browser-Redirect abschliesst (PayPal, Google Pay, teils 3D Secure), kam
+auf ebendieser Landingpage zurueck: `purchaseSuccess` war gesetzt, es gab nur
+niemanden, der es anzeigt.
+
+Nachgewiesen ohne echten Kauf, indem die Rueckkehr-URL von Stripe nachgestellt
+wurde (`/?redirect_status=succeeded`): kein Dialog im DOM, und der
+PurchaseConfirmModal-Chunk wurde nie angefordert - React hatte also nie
+versucht, ihn zu rendern.
+
+Zwei Aenderungen dagegen:
+- `redirect_status` gehoert jetzt zu den Parametern, die hasAuthRedirectParam()
+  als "kommt aus einem Flow zurueck" wertet. Wer gerade bezahlt hat, ist Kunde
+  und landet im App-Shell statt auf der Werbeseite.
+- Die Landingpage rendert die Bestaetigung jetzt selbst - genau wie sie es seit
+  2026-08-11 schon fuer LoginSuccessToast tut. Das deckt den Weg ab, bei dem
+  gar kein Redirect stattfindet (Karte ohne 3D Secure) und der Nutzer die Seite
+  nie verlaesst.
+
+**2. Bei jeder Anmeldung erschien sie faelschlich.** noteProStatus() bekam den
+abgemeldeten Zustand und "angemeldet, aber nicht Pro" beide als `false`
+gemeldet. Beim Seitenaufbau laeuft ein Refresh gegen /me, der ohne Sitzung 401
+liefert - meldete sich danach ein bestehendes Pro-Konto an, sah das nach dem
+Uebergang "war nicht Pro -> ist Pro" aus, also nach einem frischen Kauf. Der
+Anmeldezustand wird jetzt getrennt mitgefuehrt: als Kauf zaehlt ein Wechsel
+nur, wenn der Nutzer schon vorher ANGEMELDET beobachtet wurde. Bis 2026-08-27
+fiel das kaum auf, weil es nur eine kleine Einblendung war - als Fenster ist es
+nicht zu uebersehen.
+
+### AENDERUNG: Bestaetigung nennt die gebuchte Laufzeit
+
+Die Zeile sagte "Plan: ImmoFuchs Pro" - auf einem Bildschirm mit der
+Ueberschrift "Willkommen bei ImmoFuchs Pro" eine Aussage ohne Inhalt
+(Nutzer-Meldung: "sollte das produkt das ich abonniert habe stehen"). Jetzt
+steht dort "ImmoFuchs Pro - Monatlich" bzw. "- Jaehrlich".
+
+Die Auswahl liegt als `purchasePlanLabelKey()` in planPricing.js, damit sie
+testbar ist: die Laufzeit kann aus zwei Quellen kommen, und beide koennen
+luecken. `subscription.plan` aus /me steht erst, wenn der Stripe-Webhook durch
+ist (beobachtet 2-4 s); die Wizard-Wahl gibt es nur im Wizard, nicht nach einer
+Rueckkehr aus einem Redirect. Die Subscription hat Vorrang - sie ist das, was
+tatsaechlich abgerechnet wird. Weiss keine Quelle etwas, steht wie bisher nur
+"ImmoFuchs Pro" da statt einer geratenen Laufzeit. Vier neue Tests decken genau
+diese Faelle ab.
+
+Zum "die Seite wird 2 mal geladen": ein Ladevorgang ist der Stripe-Redirect
+selbst (die Seite wird verlassen und kommt zurueck). Kommt ein zweiter dazu,
+ist das der Chunk-Reload-Schutz aus lazyRetry.js - er laedt die Seite einmal
+neu, wenn waehrend einer offenen Sitzung deployt wurde und ein gehashter Chunk
+nicht mehr existiert. Das erledigt sich mit dem naechsten Aufruf von selbst.
+
+Betroffene Dateien: src/hooks/useAccount.js, src/App.jsx, src/pages/Landing.jsx,
+src/components/checkout/PurchaseConfirmation.jsx, CheckoutWizard.jsx,
+planPricing.js, planPricing.test.js
+
 ## 2026-08-27 (1.28.4)
 
 ### AENDERUNG: Kappungsgrenzen-Liste liegt nicht mehr oeffentlich im Browser

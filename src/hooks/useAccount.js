@@ -88,13 +88,26 @@ export function useAccount() {
   // startet bewusst erst nach dem ersten Refresh (proInitializedRef), damit
   // ein Reload als bereits bestehender Pro-Nutzer nicht faelschlich den Toast
   // ausloest.
+  //
+  // Dritter Bugreport (2026-08-27): die Bestaetigung erschien bei JEDER
+  // Anmeldung eines bestehenden Pro-Kontos. Grund war, dass diese Funktion
+  // den abgemeldeten Zustand und "angemeldet, aber nicht Pro" beide als
+  // `false` gemeldet bekam. Beim Seitenaufbau laeuft ein Refresh gegen /me,
+  // der ohne Sitzung 401 liefert -> false; meldet sich derselbe Nutzer dann
+  // an und ist Pro, sah das nach dem Uebergang "war nicht Pro -> ist Pro"
+  // aus, also nach einem frischen Kauf. Deshalb wird der Anmeldezustand jetzt
+  // getrennt mitgefuehrt: als Kauf zaehlt ein Wechsel nur, wenn der Nutzer
+  // schon VORHER angemeldet beobachtet wurde.
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const wasProRef = useRef(false);
+  const wasLoggedInRef = useRef(false);
   const proInitializedRef = useRef(false);
-  const noteProStatus = useCallback((isPro) => {
-    if (proInitializedRef.current && !wasProRef.current && isPro) {
+  const noteProStatus = useCallback((loggedIn, isPro) => {
+    const beobachtetAngemeldet = proInitializedRef.current && wasLoggedInRef.current;
+    if (beobachtetAngemeldet && !wasProRef.current && isPro) {
       setPurchaseSuccess(true);
     }
+    wasLoggedInRef.current = loggedIn;
     wasProRef.current = isPro;
     proInitializedRef.current = true;
   }, []);
@@ -123,7 +136,7 @@ export function useAccount() {
       if (res.status === 401) {
         setMe(null);
         broadcastIsPro(false);
-        noteProStatus(false);
+        noteProStatus(false, false);
         return;
       }
       if (!res.ok) throw new Error(`me_failed_${res.status}`);
@@ -133,13 +146,13 @@ export function useAccount() {
       // Bewusst `zugang === "pro"` statt des `isPro`-Felds fuer die
       // Kauf-Erkennung (siehe Kommentar bei noteProStatus oben) - "isPro"
       // ist waehrend der kartenfreien Testphase bereits true.
-      noteProStatus(json?.zugang === "pro");
+      noteProStatus(true, json?.zugang === "pro");
     } catch (e) {
       console.error("[account] refresh fehlgeschlagen:", e);
       setError("refresh_failed");
       setMe(null);
       broadcastIsPro(false);
-      noteProStatus(false);
+      noteProStatus(false, false);
     } finally {
       setLoading(false);
     }

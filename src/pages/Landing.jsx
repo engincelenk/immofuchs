@@ -7,6 +7,7 @@ import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
 import { LandingMascot } from "../components/assistant/LandingMascot.jsx";
 import { useAccountCtx } from "../context/AccountContext.jsx";
+import { useAnyWizardOpen } from "../components/checkout/wizardPresence.js";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { Ctx } from "../context/AppContext.jsx";
 import { ACCOUNT_T } from "../i18n/account.js";
@@ -29,6 +30,19 @@ const CheckoutWizard = lazyWithReload(
 const MyAccount = lazyWithReload(
   () => import("../components/account/MyAccount.jsx").then((m) => ({ default: m.MyAccount })),
   "MyAccount",
+);
+// Die Kauf-Bestaetigung muss es auch hier geben (Bugreport 2026-08-27): wer
+// den Kauf von dieser Seite aus abschliesst, OHNE dass eine Zahlungsart die
+// Seite verlaesst (Karte ohne 3D Secure), bleibt genau hier - und der
+// ProHeaderButton, der die Bestaetigung sonst rendert, existiert nur im
+// App-Shell. Fuer den Redirect-Weg sorgt zusaetzlich hasAuthRedirectParam()
+// in App.jsx dafuer, dass die Rueckkehr direkt im App-Shell landet.
+const PurchaseConfirmModal = lazyWithReload(
+  () =>
+    import("../components/checkout/PurchaseConfirmModal.jsx").then((m) => ({
+      default: m.PurchaseConfirmModal,
+    })),
+  "PurchaseConfirmModal",
 );
 import { LoginSuccessToast } from "../components/account/LoginSuccessToast.jsx";
 import { AccountAvatarButton, AccountMenu } from "../components/account/AccountMenu.jsx";
@@ -57,6 +71,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
   // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
   const account = useAccountCtx();
+  // Der Wizard wird auch von dieser Seite aus gemountet - waehrend er laeuft,
+  // bleibt die eigenstaendige Kauf-Bestaetigung zu (er zeigt seine eigene).
+  const anyWizardOpen = useAnyWizardOpen();
   const { resolvedTheme } = useTheme();
   const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-dark.png" : "/logo-wordmark.png";
   const [openMode, setOpenMode] = useState(null); // null | "checkout" | "login" | "account"
@@ -461,6 +478,13 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           email={account.me?.email}
           onDone={account.dismissLoginSuccess}
         />
+      )}
+      {/* Nicht, solange der Wizard laeuft - der zeigt seine eigene
+          Bestaetigung als letzten Schritt (wizardPresence.js). */}
+      {account?.purchaseSuccess && !anyWizardOpen && (
+        <Suspense fallback={null}>
+          <PurchaseConfirmModal onClose={account.dismissPurchaseSuccess} />
+        </Suspense>
       )}
 
       {/* ═══════════ HERO ═══════════ */}

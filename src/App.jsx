@@ -305,6 +305,15 @@ const ROOT_TOKENS_CSS =
 // Redirect-Parameter bedeutet "der Nutzer kommt gerade aus einem
 // Auth-Flow zurueck" und soll deshalb direkt den App-Shell zeigen (Spec-v3.0
 // Kap. 2.6: Login landet immer auf dem Dashboard, nie zurueck auf S1).
+// Ergaenzt 2026-08-27 um "redirect_status" (Bugreport: nach dem Kauf erschien
+// keine Abo-Bestaetigung). Stripe haengt den Parameter an die return_url, wenn
+// eine Zahlungsart ueber einen echten Browser-Redirect abschliesst - PayPal,
+// Google Pay, teils 3D Secure. Wer den Kauf von der Landingpage aus gestartet
+// hat, kam dadurch auf ebendieser Landingpage zurueck. Dort gibt es aber
+// keinen ProHeaderButton (siehe Kommentar oben), und der ist der einzige Ort,
+// an dem die Bestaetigung gerendert wird: der Zustand war gesetzt, es gab nur
+// niemanden, der ihn anzeigt. Wer gerade bezahlt hat, ist ohnehin Kunde und
+// gehoert in den App-Shell, nicht auf die Werbeseite.
 function hasAuthRedirectParam() {
   const params = new URLSearchParams(window.location.search);
   return [
@@ -314,6 +323,7 @@ function hasAuthRedirectParam() {
     "email_change_success",
     "email_change_error",
     "reset_token",
+    "redirect_status",
   ].some((k) => params.has(k));
 }
 
