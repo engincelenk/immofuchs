@@ -163,15 +163,27 @@ export function computeRendite(d, t) {
   // Laufzeit. Ein gemeinsamer Tilgungssatz waere fachlich falsch.
   const annuitaetMon = (darlehenBank * (zinsProz + tilgungProz)) / 100 / 12;
 
-  // Tilgungsdauer bis Restschuld 0 (Annuitaetenformel; ohne Tilgung: nie → 0 bleibt)
+  // Tilgungsdauer bis Restschuld 0 (Annuitaetenformel).
+  // Korrektur 2026-08-27 (Kalibrierung Investment Score, Befund B6): ohne
+  // Bankdarlehen bleibt laufzeitJahre bei 0 (korrekt - nichts zu tilgen). Mit
+  // Bankdarlehen, das aber bei diesem Zins-/Tilgungssatz nie zurueckgefuehrt
+  // wird (z. B. Tilgungssatz 0, oder Annuitaet deckt nicht einmal die Zinsen),
+  // muss es Infinity werden statt 0 - sonst zeigt AMPEL.lz(0) faelschlich
+  // gruen fuer ein Darlehen, das ewig laeuft, und der Risikofaktor "lz=∞"
+  // weiter unten feuert nie (beides an echten Faellen nachgewiesen, siehe
+  // docs/technical_specs/kalibrierung-investment-score.md Abschnitt 2 B6).
   let laufzeitJahre = 0;
-  if (monatsZins > 0 && annuitaetMon > darlehenBank * monatsZins) {
-    laufzeitJahre =
-      Math.log(annuitaetMon / (annuitaetMon - darlehenBank * monatsZins)) /
-      Math.log(1 + monatsZins) /
-      12;
-  } else if (monatsZins === 0 && annuitaetMon > 0) {
-    laufzeitJahre = darlehenBank / annuitaetMon / 12;
+  if (darlehenBank > 0) {
+    if (monatsZins > 0 && annuitaetMon > darlehenBank * monatsZins) {
+      laufzeitJahre =
+        Math.log(annuitaetMon / (annuitaetMon - darlehenBank * monatsZins)) /
+        Math.log(1 + monatsZins) /
+        12;
+    } else if (monatsZins === 0 && annuitaetMon > 0) {
+      laufzeitJahre = darlehenBank / annuitaetMon / 12;
+    } else {
+      laufzeitJahre = Infinity;
+    }
   }
 
   const analyseMonate = jahre * 12;
