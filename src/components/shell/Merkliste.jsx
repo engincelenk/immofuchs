@@ -130,6 +130,28 @@ function fromServerObject(server, locale) {
   };
 }
 
+// useSavedObjects() laeuft bewusst in ZWEI Instanzen gleichzeitig (App.jsx
+// und Landing.jsx, siehe Kommentar dort). Ohne Dedupe feuert jede davon beim
+// Mount ihren eigenen GET /objects. Dieses geteilte In-Flight-Promise buendelt
+// zeitgleiche Leseanfragen zu einem einzigen Request; nach dem Settlen wird es
+// verworfen, ein spaeterer Refresh (z.B. nach Speichern/Loeschen) laedt also
+// wieder frisch. Rueckgabe null = Server antwortete nicht ok -> Aufrufer laesst
+// seinen Stand unveraendert (Verhalten wie vorher bei !res.ok).
+let objectsInFlight = null;
+function fetchObjectsOnce() {
+  if (!objectsInFlight) {
+    objectsInFlight = (async () => {
+      const res = await apiFetch("/objects");
+      if (!res.ok) return null;
+      const { objects } = await res.json();
+      return objects.map((o) => fromServerObject(o));
+    })().finally(() => {
+      objectsInFlight = null;
+    });
+  }
+  return objectsInFlight;
+}
+
 // Haelt Login-/Pro-Status, ruft /api/v1/me (Spec 5.3) - strukturell wie
 // useAssistant/useFinnBubble. Ein einziger Provider (AccountContext.jsx)
 // haelt genau eine Instanz, damit nicht jede Komponente ihren eigenen
@@ -158,10 +180,8 @@ export function useSavedObjects(setData) {
 
   const refreshFromServer = useCallback(async () => {
     try {
-      const res = await apiFetch("/objects");
-      if (!res.ok) return;
-      const { objects } = await res.json();
-      const mapped = objects.map((o) => fromServerObject(o));
+      const mapped = await fetchObjectsOnce();
+      if (!mapped) return;
       setSavedList(mapped);
       try {
         localStorage.setItem(PRO_MIRROR_KEY, JSON.stringify(mapped));
@@ -207,10 +227,6 @@ export function useSavedObjects(setData) {
       }
       await refreshFromServer();
     })();
-  }, [isPro, refreshFromServer]);
-
-  useEffect(() => {
-    if (isPro) refreshFromServer();
   }, [isPro, refreshFromServer]);
 
   const saveObj = useCallback(

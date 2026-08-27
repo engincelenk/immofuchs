@@ -1,3 +1,37 @@
+## 2026-08-27 (1.27.5)
+
+### FIX: 4x GET /api/v1/objects beim Landing-Load + CSP blockte GTM-Pixel
+
+Console-Befund auf dev.immofuchs.info. Drei Dinge steckten im Log, davon zwei
+echte Fehler:
+
+1. `/api/v1/objects` wurde bei jedem Landing-Load VIER MAL geholt. Ursache
+   waren zwei Multiplikatoren: `useSavedObjects()` laeuft bewusst in zwei
+   Instanzen gleichzeitig (App.jsx und Landing.jsx, siehe Kommentar in
+   Landing.jsx), und JEDE Instanz hatte zwei Mount-Effects, die beide
+   `refreshFromServer()` riefen - den Free->Pro-Migrations-Effect (der auch
+   ohne lokale Objekte immer mit `await refreshFromServer()` endet) und einen
+   zweiten Effect mit identischen Deps `[isPro, refreshFromServer]`, der damit
+   vollstaendig redundant war. 2 Instanzen x 2 Effects = 4 Requests.
+
+   Fix: der redundante zweite Effect ist entfernt (4 -> 2), und
+   `refreshFromServer()` laeuft jetzt ueber ein modul-globales
+   In-Flight-Promise (`fetchObjectsOnce()`), das zeitgleiche Leseanfragen
+   beider Instanzen zu einem einzigen Request buendelt (2 -> 1). Das Promise
+   wird nach dem Settlen verworfen, spaetere Refreshes (nach Speichern/
+   Loeschen) laden also weiterhin frisch. Verhalten bei `!res.ok` bleibt
+   unveraendert: der lokale Stand wird nicht angefasst.
+
+2. CSP blockte `https://www.googletagmanager.com/td?...`, den Tag-Diagnostics-
+   Pixel von GA4. In `index.html` stand googletagmanager.com zwar bei
+   `script-src`, fehlte aber bei `img-src`. Ergaenzt.
+
+Nicht geaendert (kein Bug): die vielen "Fetch finished loading"-Zeilen sind
+reines DevTools-Verbose-Logging ("Log XMLHttpRequests and fetch requests"),
+kein App-Output. Und der fehlgeschlagene POST auf region1.google-analytics.com
+ist NICHT unsere CSP - die Domain steht in `connect-src`, und Chrome hat dafuer
+auch keine Violation geloggt; das ist clientseitiges Tracking-Blocking.
+
 ## 2026-08-27 (1.27.4)
 
 ### FIX: Google-Pay-Zahlung zerstoerte den kompletten Checkout-Wizard-Zustand
