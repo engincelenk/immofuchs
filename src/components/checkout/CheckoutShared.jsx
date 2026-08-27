@@ -1,4 +1,9 @@
-import { errorBannerStyle, linkBtnStyle, textInputStyle } from "./checkoutStyles.js";
+import {
+  errorBannerStyle,
+  linkBtnStyle,
+  selectInputStyle,
+  textInputStyle,
+} from "./checkoutStyles.js";
 
 // Fehlertext-Mapping (Extrakt aus LoginModal.jsx) - eine Stelle fuer alle
 // Fehlercodes, die AccountStep/PasswordResetFlow zurueckbekommen koennen.
@@ -129,6 +134,26 @@ export function TextField({ id, label, hint, trailing, style, ...inputProps }) {
     <div>
       <FieldLabel htmlFor={id} label={label} trailing={trailing} />
       <input id={id} {...inputProps} style={{ ...textInputStyle, ...style }} />
+      {hint && <p style={{ fontSize: 11, color: "var(--ch)", margin: "5px 0 0" }}>{hint}</p>}
+    </div>
+  );
+}
+
+// Native <select> statt eines eigenen Listen-Aufklappers (Rechnungsdaten,
+// Land/Region). Auf dem Handy oeffnet das den systemeigenen Auswahl-Rad-Dialog,
+// den jeder kennt und der bei ~190 Eintraegen deutlich schneller zu bedienen
+// ist als eine selbstgebaute Liste im Modal.
+export function SelectField({ id, label, hint, options, style, ...selectProps }) {
+  return (
+    <div>
+      <FieldLabel htmlFor={id} label={label} />
+      <select id={id} {...selectProps} style={{ ...selectInputStyle, ...style }}>
+        {options.map((o) => (
+          <option key={o.code} value={o.code}>
+            {o.label}
+          </option>
+        ))}
+      </select>
       {hint && <p style={{ fontSize: 11, color: "var(--ch)", margin: "5px 0 0" }}>{hint}</p>}
     </div>
   );

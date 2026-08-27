@@ -15,10 +15,70 @@ function priceIdFor(env: Env, plan: Plan): string {
 }
 
 export interface BillingAddress {
+  firstName: string;
+  lastName: string;
   street: string;
+  houseNumber: string;
   zip: string;
   city: string;
+  /** ISO-3166-1 alpha-2, bereits in Grossbuchstaben (siehe routes/billing.ts). */
+  country: string;
   company?: string;
+  vatId?: string;
+}
+
+// Umsatzsteuer-Id: Stripe verlangt neben dem Wert einen TYP, der vom Land
+// abhaengt. Wir decken ab, was fuer diese Kundschaft realistisch ist - EU
+// (eu_vat), Schweiz und Grossbritannien. Fuer alles andere tragen wir lieber
+// gar keine Id ein als eine mit falschem Typ, den Stripe zurueckweist.
+const EU_VAT_COUNTRIES = new Set([
+  "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU", "IE",
+  "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK",
+]);
+
+function taxIdTypeFor(country: string): string | null {
+  if (EU_VAT_COUNTRIES.has(country)) return "eu_vat";
+  if (country === "CH") return "ch_vat";
+  if (country === "GB") return "gb_vat";
+  return null;
+}
+
+// Strasse und Hausnummer werden im Formular getrennt erfasst (AddressStep.jsx),
+// Stripe kennt nur `address.line1`. Dieselbe Zusammensetzung nutzt der Client
+// fuer die billing_details des Zahlungsmittels - beide muessen uebereinstimmen,
+// sonst weichen Rechnungsanschrift und Karten-Anschrift voneinander ab.
+function line1Of(address: BillingAddress): string {
+  return [address.street, address.houseNumber].map((v) => (v || "").trim()).filter(Boolean).join(" ");
+}
+
+// Rechnungsempfaenger: Firma hat Vorrang, sonst die Privatperson.
+function customerNameOf(address: BillingAddress): string | undefined {
+  const company = address.company?.trim();
+  if (company) return company;
+  const person = [address.firstName, address.lastName]
+    .map((v) => (v || "").trim())
+    .filter(Boolean)
+    .join(" ");
+  return person || undefined;
+}
+
+// USt-IdNr. als Tax-Id am Kunden hinterlegen, damit sie auf der Rechnung
+// erscheint. Bewusst "best effort": eine vom Nutzer falsch eingetippte Id darf
+// den Kauf NICHT abbrechen - Stripe validiert das Format und wirft sonst.
+// Bereits vorhandene, identische Ids werden nicht doppelt angelegt.
+async function syncTaxId(env: Env, customerId: string, address: BillingAddress): Promise<void> {
+  const value = address.vatId?.trim().toUpperCase();
+  if (!value) return;
+  const type = taxIdTypeFor(address.country);
+  if (!type) return;
+  const stripe = getStripeClient(env);
+  try {
+    const existing = await stripe.customers.listTaxIds(customerId, { limit: 20 });
+    if (existing.data.some((entry) => entry.value?.toUpperCase() === value)) return;
+    await stripe.customers.createTaxId(customerId, { type: type as never, value });
+  } catch (err) {
+    console.error("stripe_tax_id_failed", err instanceof Error ? err.message : "unknown");
+  }
 }
 
 // Erzeugt (bzw. findet) den Stripe-Kunden fuer diesen Nutzer. user_id landet
@@ -39,17 +99,29 @@ async function findOrCreateCustomer(
   const match = existing.data.find((c) => c.metadata?.user_id === userId);
   const addressFields = address
     ? {
-        name: address.company?.trim() || undefined,
+        name: customerNameOf(address),
         address: {
-          line1: address.street,
+          line1: line1Of(address),
           postal_code: address.zip,
           city: address.city,
-          country: "DE",
+          country: address.country,
+        },
+        // Vor- und Nachname zusaetzlich einzeln: `customer.name` traegt bei
+        // Firmenkunden den Firmennamen, die Ansprechperson waere sonst
+        // nirgends hinterlegt.
+        metadata: {
+          user_id: userId,
+          billing_first_name: address.firstName,
+          billing_last_name: address.lastName,
+          billing_company: address.company?.trim() || "",
         },
       }
     : {};
   if (match) {
-    if (address) await stripe.customers.update(match.id, addressFields);
+    if (address) {
+      await stripe.customers.update(match.id, addressFields);
+      await syncTaxId(env, match.id, address);
+    }
     return match.id;
   }
   const customer = await stripe.customers.create({
@@ -57,6 +129,7 @@ async function findOrCreateCustomer(
     metadata: { user_id: userId },
     ...addressFields,
   });
+  if (address) await syncTaxId(env, customer.id, address);
   return customer.id;
 }
 

@@ -52,6 +52,24 @@ export const textInputStyle = {
   fontFamily: "inherit",
 };
 
+// Native <select> in derselben Optik wie textInputStyle. appearance:none
+// entfernt den Betriebssystem-Pfeil, der eingebettete SVG-Pfeil (data-URI,
+// damit keine zusaetzliche Anfrage noetig ist) sitzt dafuer an fester Stelle -
+// sonst sieht das Feld auf jedem System anders aus als die Textfelder daneben.
+// paddingRight haelt den Platz fuer den Pfeil frei.
+export const selectInputStyle = {
+  ...textInputStyle,
+  padding: "0 34px 0 12px",
+  appearance: "none",
+  WebkitAppearance: "none",
+  MozAppearance: "none",
+  cursor: "pointer",
+  backgroundImage:
+    "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%238A8A80' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E\")",
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "right 12px center",
+};
+
 export const linkBtnStyle = {
   background: "none",
   border: "none",

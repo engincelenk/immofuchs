@@ -5,6 +5,7 @@ import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useIsDesktop } from "../../hooks/useIsDesktop.js";
+import { DEFAULT_COUNTRY } from "../../utils/countries.js";
 import { getWizardSteps, STEP_LABEL_KEYS } from "./wizardSteps.js";
 import { StepHeader } from "./StepHeader.jsx";
 import { OrderSummary } from "./OrderSummary.jsx";
@@ -79,11 +80,37 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   // Stripe-Subscription gebraucht (siehe useAccount.js/startCheckout) und
   // landen von dort direkt auf dem Stripe-Kundendatensatz.
   const [billingAddress, setBillingAddress] = useState({
+    firstName: "",
+    lastName: "",
     street: "",
+    houseNumber: "",
     zip: "",
     city: "",
+    country: DEFAULT_COUNTRY,
     company: "",
+    vatId: "",
   });
+  // Vor-/Nachname aus dem Kontonamen vorbelegen, sobald er bekannt ist. Nicht
+  // als useState-Initialwert: im Kauf-Flow eines NEUEN Kunden ist zum
+  // Montage-Zeitpunkt noch niemand angemeldet, der Name kommt erst mit dem
+  // Login zwei Schritte spaeter. Fuellt nur, solange beide Felder leer sind -
+  // eine bereits getippte Eingabe darf ein spaeterer /me-Refresh nicht
+  // ueberschreiben.
+  const accountName = account?.me?.name;
+  useEffect(() => {
+    const full = (accountName || "").trim();
+    if (!full) return;
+    setBillingAddress((prev) => {
+      if (prev.firstName || prev.lastName) return prev;
+      const parts = full.split(/\s+/);
+      return {
+        ...prev,
+        firstName: parts.length > 1 ? parts.slice(0, -1).join(" ") : parts[0],
+        lastName: parts.length > 1 ? parts[parts.length - 1] : "",
+      };
+    });
+  }, [accountName]);
+
   // Gutscheincode liegt seit der Neugestaltung 2026-08-17 im Wizard statt im
   // Zahlungsschritt: eingegeben wird er in der Kostenbox beim Waehlen der
   // Laufzeit, gebraucht wird er erst beim Erzeugen der Stripe-Subscription -
@@ -322,6 +349,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     content = (
       <AddressStep
         t={t}
+        account={account}
         value={billingAddress}
         onChange={setBillingAddress}
         onContinue={() => goToStep("payment")}

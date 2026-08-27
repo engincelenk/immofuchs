@@ -53,16 +53,32 @@ billingRoutes.post("/checkout", requireAuth, requireCsrfOrigin, async (c) => {
   // Rechnungsadresse (AddressStep.jsx, zwingend seit dem Wechsel weg von
   // Paddle als Merchant of Record) - landet auf dem Stripe-Customer-Datensatz,
   // siehe stripe/checkout.ts/findOrCreateCustomer.
+  // Feldumfang erweitert 2026-08-27 (Nutzer-Vorgabe): Vor-/Nachname, Strasse
+  // UND Hausnummer getrennt, Land aus voller Liste, optional Firma und
+  // USt-IdNr. Alle Pflichtfelder muessen nach dem Trimmen belegt sein - ein
+  // leerer String ist hier so unbrauchbar wie ein fehlendes Feld, weil er
+  // stillschweigend auf einer unvollstaendigen Rechnung landen wuerde.
   const rawAddress = body?.address;
-  const address =
-    rawAddress && typeof rawAddress.street === "string" && typeof rawAddress.zip === "string" && typeof rawAddress.city === "string"
-      ? {
-          street: rawAddress.street.trim(),
-          zip: rawAddress.zip.trim(),
-          city: rawAddress.city.trim(),
-          company: typeof rawAddress.company === "string" ? rawAddress.company.trim() : undefined,
-        }
-      : null;
+  const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
+  const country = str(rawAddress?.country).toUpperCase();
+  const candidate = {
+    firstName: str(rawAddress?.firstName),
+    lastName: str(rawAddress?.lastName),
+    street: str(rawAddress?.street),
+    houseNumber: str(rawAddress?.houseNumber),
+    zip: str(rawAddress?.zip),
+    city: str(rawAddress?.city),
+    country,
+    company: str(rawAddress?.company) || undefined,
+    vatId: str(rawAddress?.vatId) || undefined,
+  };
+  const addressComplete =
+    Boolean(rawAddress) &&
+    /^[A-Z]{2}$/.test(candidate.country) &&
+    (["firstName", "lastName", "street", "houseNumber", "zip", "city"] as const).every(
+      (key) => candidate[key].length > 0,
+    );
+  const address = addressComplete ? candidate : null;
 
   try {
     const { clientSecret } = await createSubscriptionCheckout(

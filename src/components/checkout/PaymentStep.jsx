@@ -1,6 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorBannerStyle, primaryBtnStyle } from "./checkoutStyles.js";
 import { LockGlyph, RedirectOverlay } from "./CheckoutShared.jsx";
+import { DEFAULT_COUNTRY } from "../../utils/countries.js";
+
+// Stripe verlangt bei fields.billingDetails.name:"never" ZWINGEND einen
+// nicht-leeren Wert (IntegrationError sonst, Live-Befund 2026-08-27). Firma
+// hat Vorrang, wenn sie gesetzt ist - dann soll die Rechnung an das
+// Unternehmen gehen, nicht an die Privatperson. Die Kette dahinter faengt
+// Altfaelle ab, in denen der Wizard-Zustand keinen Namen traegt.
+function billingName(address, account) {
+  const person = [address?.firstName, address?.lastName]
+    .map((v) => (v || "").trim())
+    .filter(Boolean)
+    .join(" ");
+  return (
+    address?.company?.trim() ||
+    person ||
+    account?.me?.name?.trim() ||
+    account?.me?.email ||
+    "Kunde"
+  );
+}
 
 // Schritt 3: Zahlung (Neugestaltung 2026-08-17, seit 2026-08-26 auf Stripe
 // Payment Element umgestellt statt Paddles eingebettetem iframe-Formular).
@@ -33,6 +53,13 @@ export function PaymentStep({
   const [resendBusy, setResendBusy] = useState(false);
   const [resendDone, setResendDone] = useState(false);
   const [withdrawalAccepted, setWithdrawalAccepted] = useState(false);
+  // Zweite Pflicht-Zustimmung (Nutzer-Vorgabe 2026-08-27): AGB, Datenschutz
+  // und Widerrufsbelehrung. Bewusst getrennt von der Widerrufs-Zustimmung
+  // darueber - die eine ist die Kenntnisnahme der Vertragsgrundlagen, die
+  // andere der ausdrueckliche Verzicht nach § 356 Abs. 5 BGB. In EINEN Haken
+  // gepackt waere der Verzicht in den AGB-Text versteckt und damit
+  // angreifbar.
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // onCompleted ueber eine Ref statt als Effect-Dependency (Bugreport 06.08.,
   // "Weiter zur Zahlung friert die App ein"): das account-Objekt aus
@@ -131,7 +158,7 @@ export function PaymentStep({
       e.preventDefault();
       const stripe = stripeRef.current;
       const elements = elementsRef.current;
-      if (!stripe || !elements || !withdrawalAccepted) return;
+      if (!stripe || !elements || !withdrawalAccepted || !termsAccepted) return;
       setStage("processing");
       setError(null);
       const { error: confirmError } = await stripe.confirmPayment({
@@ -156,11 +183,7 @@ export function PaymentStep({
               // bei der Registrierung Pflichtfeld, kann aber bei Google-/
               // Apple-Konten fehlen, deshalb E-Mail als letzte Stufe.
               email: account?.me?.email || undefined,
-              name:
-                billingAddress?.company?.trim() ||
-                account?.me?.name?.trim() ||
-                account?.me?.email ||
-                "Kunde",
+              name: billingName(billingAddress, account),
               // Stripe verlangt bei fields.billingDetails.address:"never" im
               // Payment Element (siehe elements.create() oben) ALLE
               // Adress-Teilfelder hier, nicht nur die, die wir tatsaechlich
@@ -169,12 +192,20 @@ export function PaymentStep({
               // kennt kein Bundesland-Pflichtfeld auf der Rechnung), deshalb
               // leer statt weggelassen.
               address: {
-                line1: billingAddress?.street || "",
+                // Strasse und Hausnummer werden im Formular getrennt erfasst
+                // (AddressStep.jsx), Stripe kennt nur line1 - hier wieder
+                // zusammengesetzt, in derselben Reihenfolge wie serverseitig
+                // (worker/src/stripe/checkout.ts), damit Rechnungsanschrift
+                // und Zahlungsmittel-Anschrift nicht auseinanderlaufen.
+                line1: [billingAddress?.street, billingAddress?.houseNumber]
+                  .map((v) => (v || "").trim())
+                  .filter(Boolean)
+                  .join(" "),
                 line2: "",
                 postal_code: billingAddress?.zip || "",
                 city: billingAddress?.city || "",
                 state: "",
-                country: "DE",
+                country: billingAddress?.country || DEFAULT_COUNTRY,
               },
             },
           },
@@ -187,7 +218,7 @@ export function PaymentStep({
       }
       onCompletedRef.current();
     },
-    [withdrawalAccepted, account, billingAddress, t],
+    [withdrawalAccepted, termsAccepted, account, billingAddress, t],
   );
 
   return (
@@ -222,34 +253,45 @@ export function PaymentStep({
       )}
 
       <form onSubmit={handleSubmit}>
-        {/* Die Zustimmung steht direkt ueber dem Formular (Nutzer-Meldung
-            2026-08-20). Sie bleibt jederzeit bedienbar: wer sie wieder
-            abwaehlt, sperrt den Submit-Button erneut. */}
-        <label
+        {/* Die Zustimmungen stehen direkt ueber dem Formular (Nutzer-Meldung
+            2026-08-20). Sie bleiben jederzeit bedienbar: wer einen Haken
+            wieder abwaehlt, sperrt den Submit-Button erneut. */}
+        <div
           style={{
-            display: "flex",
-            gap: 10,
-            alignItems: "flex-start",
-            fontSize: 12,
-            lineHeight: 1.5,
-            color: "var(--ct)",
             background: "var(--ci)",
             border: "1px solid var(--cb)",
             borderRadius: 10,
-            padding: "12px 14px",
             marginBottom: 14,
           }}
         >
-          <input
-            type="checkbox"
-            required
+          <ConsentRow
+            checked={termsAccepted}
+            disabled={error === "email_not_verified"}
+            onChange={setTermsAccepted}
+          >
+            {/* Satzbau bewusst aus Bausteinen statt einem Text mit
+                Platzhaltern: die drei Links muessen anklickbar bleiben, und
+                Trennzeichen (paymentTermsSep) sowie Satzende
+                (paymentTermsSuffix) unterscheiden sich je Sprache - im
+                Chinesischen etwa "、" statt ", ". Der Suffix bringt seinen
+                fuehrenden Abstand selbst mit, wo die Sprache einen braucht. */}
+            {t.paymentTermsPrefix}{" "}
+            <LegalLink href="/agb.html">{t.paymentTermsAgb}</LegalLink>
+            {t.paymentTermsSep}
+            <LegalLink href="/datenschutz.html">{t.paymentTermsPrivacy}</LegalLink>{" "}
+            {t.paymentTermsAnd}{" "}
+            <LegalLink href="/agb.html#widerruf">{t.paymentTermsWithdrawal}</LegalLink>
+            {t.paymentTermsSuffix}
+          </ConsentRow>
+          <ConsentRow
             checked={withdrawalAccepted}
             disabled={error === "email_not_verified"}
-            onChange={(e) => setWithdrawalAccepted(e.target.checked)}
-            style={{ marginTop: 2, flexShrink: 0 }}
-          />
-          <span>{t.paymentWithdrawalConsent}</span>
-        </label>
+            onChange={setWithdrawalAccepted}
+            divider
+          >
+            {t.paymentWithdrawalConsent}
+          </ConsentRow>
+        </div>
 
         {/* Erneut-Versuchen nur nach einem Fehlschlag beim Erzeugen der
             Kasse: fail() setzt stage zurueck auf "consent", das Formular ist
@@ -279,7 +321,11 @@ export function PaymentStep({
         )}
 
         {stage === "ready" && (
-          <button type="submit" disabled={!withdrawalAccepted} style={{ ...primaryBtnStyle, marginTop: 16, width: "100%" }}>
+          <button
+            type="submit"
+            disabled={!withdrawalAccepted || !termsAccepted}
+            style={{ ...primaryBtnStyle, marginTop: 16, width: "100%" }}
+          >
             {t.paymentPayCta}
           </button>
         )}
@@ -303,5 +349,54 @@ export function PaymentStep({
 
       {(stage === "starting" || stage === "processing") && <RedirectOverlay label={t.redirectingToCheckout} />}
     </div>
+  );
+}
+
+// Eine Zustimmungszeile. `divider` zieht die Trennlinie zur Zeile darueber -
+// beide Haken sitzen in EINER Box, damit sie als ein zusammengehoeriger
+// Block vor dem Bezahlen gelesen werden und nicht als zwei Hinweise, von
+// denen man einen ueberblaettert.
+function ConsentRow({ checked, disabled, onChange, divider, children }) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        gap: 10,
+        alignItems: "flex-start",
+        fontSize: 12,
+        lineHeight: 1.5,
+        color: "var(--ct)",
+        padding: "12px 14px",
+        borderTop: divider ? "1px solid var(--cb)" : "none",
+        cursor: disabled ? "default" : "pointer",
+      }}
+    >
+      <input
+        type="checkbox"
+        required
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ marginTop: 2, flexShrink: 0 }}
+      />
+      <span>{children}</span>
+    </label>
+  );
+}
+
+// stopPropagation, damit der Klick auf den Link nicht als Klick auf das
+// umschliessende <label> gilt - sonst wuerde jeder Blick in die AGB
+// gleichzeitig den Haken umschalten.
+function LegalLink({ href, children }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      style={{ color: "var(--ca-dk)" }}
+    >
+      {children}
+    </a>
   );
 }

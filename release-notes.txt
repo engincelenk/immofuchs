@@ -1,3 +1,43 @@
+## 2026-08-27 (1.28.0)
+
+### NEU: Vollstaendige Rechnungsdaten + AGB-Zustimmung im Checkout
+
+Nutzer-Vorgabe: Der Rechnungsschritt erhob bisher nur Strasse, PLZ, Ort und
+optional eine Firma - zu wenig fuer eine vollstaendige Rechnungsanschrift.
+
+Erhoben werden jetzt: Vorname, Nachname, Strasse, Hausnummer (getrennt vom
+Strassenfeld - im kombinierten Feld fehlte die Nummer regelmaessig), PLZ, Ort,
+Land aus der vollen Laenderliste sowie optional Firmenname und USt-IdNr.
+Die E-Mail steht nur zur Ansicht: sie ist der Schluessel, ueber den Stripe
+den Kunden findet - ein abweichender Wert wuerde einen zweiten Stripe-Kunden
+anlegen und das Abo vom Konto abkoppeln.
+
+Laenderliste (`src/utils/countries.js`): nur die ISO-Codes stehen im Code, die
+Anzeigenamen kommen zur Laufzeit aus `Intl.DisplayNames` in der aktiven
+Sprache - keine 190 Laendernamen mal fuenf Sprachen zu pflegen. DE/AT/CH
+stehen oben. Flaggen als Emoji; auf Windows gibt es dafuer keine Schrift,
+dort erscheinen die beiden Laenderbuchstaben (bekannt und akzeptiert, in
+einem nativen <select> ist kein Bild moeglich).
+
+USt-IdNr. wird als Stripe-Tax-Id am Kunden hinterlegt (eu_vat/ch_vat/gb_vat je
+nach Land) und erscheint damit auf der Rechnung. Bewusst "best effort": ein
+Tippfehler in der Id darf den Kauf nicht abbrechen.
+
+### NEU: Zustimmung zu AGB, Datenschutz und Widerrufsbelehrung
+
+Im Zahlungsschritt steht jetzt ein zweiter Pflicht-Haken mit Links auf
+/agb.html, /datenschutz.html und /agb.html#widerruf (neuer Anker). Bewusst
+getrennt vom bestehenden Widerrufs-Haken: der eine ist die Kenntnisnahme der
+Vertragsgrundlagen, der andere der ausdrueckliche Verzicht nach
+Paragraf 356 Abs. 5 BGB. In EINEN Haken gepackt waere der Verzicht im
+AGB-Text versteckt und damit angreifbar. Bezahlen ist erst moeglich, wenn
+beide gesetzt sind.
+
+Betroffene Dateien: src/utils/countries.js (neu), AddressStep.jsx,
+PaymentStep.jsx, CheckoutShared.jsx, checkoutStyles.js, CheckoutWizard.jsx,
+src/i18n/account.js, public/agb.html, worker/src/routes/billing.ts,
+worker/src/stripe/checkout.ts
+
 ## 2026-08-27 (1.27.7)
 
 ### FIX: Rechnungsuebersicht blieb nach dem allerersten Kauf dauerhaft leer
