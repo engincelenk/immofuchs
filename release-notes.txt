@@ -1,3 +1,51 @@
+## 2026-08-27 (1.28.4)
+
+### AENDERUNG: Kappungsgrenzen-Liste liegt nicht mehr oeffentlich im Browser
+
+Nutzer-Meldung: in der Konsole stand `GET /staedte-mit-kappungsgrenze.csv` -
+"damit kann man meine liste herunterladen". Stimmte: die gepflegte Liste lag
+als Datei unter einer ratbaren URL und liess sich als fertige CSV abgreifen.
+
+Sie liegt jetzt im Worker (`worker/src/data/kappungsgrenze.ts`, 500 Eintraege)
+und wird ueber `GET /api/v1/kappungsgrenze` als JSON ausgeliefert, einen Tag
+cachebar. `public/staedte-mit-kappungsgrenze.csv` ist geloescht.
+
+Ehrlich zur Reichweite: geheim ist die Liste damit nicht. Der Client braucht
+sie zum Rechnen und kann sie folglich immer abrufen - weg ist die bequeme
+Datei-URL, nicht die Abrufbarkeit. Die vollstaendig geschuetzte Variante
+(Endpunkt liefert nur true/false je Ort) scheitert daran, dass isK15() an drei
+Stellen MITTEN in den Berechnungen synchron aufgerufen wird
+(src/utils/rendite.js, Miete.jsx, Merkliste.jsx) und den Wert jedes Mal frisch
+aus d.ort ableitet, statt ihn im Rechner-Zustand mitzufuehren. Ein
+Einzelabfrage-Endpunkt ist zwangslaeufig asynchron und haette einen Eingriff in
+die Rechenkerne aller drei Rechner bedeutet - bewusst nicht gemacht
+(Nutzer-Entscheidung 2026-08-27).
+
+Das Ladeverhalten im Client bleibt unveraendert: einmal beim Import, bis dahin
+liefert isK15() false, also 20 % Kappungsgrenze als gesetzlichen Normalfall.
+Dieselbe Anlaufphase gab es mit der CSV auch. Das Zerlegen der CSV entfaellt -
+die Liste kommt bereits kleingeschrieben und entdoppelt an.
+
+Neuer Test (`kappungsgrenze.test.ts`) haelt genau das fest, woran eine
+Handpflege der Liste stillschweigend scheitern wuerde: ein Eintrag mit
+Grossbuchstaben oder Rand-Leerzeichen wuerde nie treffen, weil der Client
+gegen `ort.toLowerCase().trim()` vergleicht. Ebenfalls festgehalten: Hamburg
+fehlt ABSICHTLICH - es laeuft ueber die Bundesland-Pruefung der Aufrufer.
+
+Der Monats-Workflow ist nicht betroffen: scripts/monthly_update.py schreibt
+data.js, translations.js, zinsen.json und datenstatus.html - die
+Kappungsgrenzen-Liste war schon vorher Handpflege.
+
+Endpunkt lokal gegen `wrangler dev` geprueft: 200, 500 Eintraege,
+Cache-Control gesetzt, alte CSV-URL liefert 404.
+
+Betroffene Dateien: worker/src/data/kappungsgrenze.ts (neu),
+worker/src/data/kappungsgrenze.test.ts (neu),
+worker/src/routes/kappungsgrenze.ts (neu), worker/src/index.ts,
+src/data/plzData.js, public/staedte-mit-kappungsgrenze.csv (geloescht),
+docs/technical_specs/arc42-architektur-2026-07-30.md,
+docs/technical_specs/marktdaten-inventar.md
+
 ## 2026-08-27 (1.28.3)
 
 ### AENDERUNG: Support-FAQ auf den tatsaechlichen Stand gebracht, AGB korrigiert

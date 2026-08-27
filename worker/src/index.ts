@@ -15,6 +15,7 @@ import { billingRoutes } from "./routes/billing";
 import { accountRoutes } from "./routes/account";
 import { objectsRoutes } from "./routes/objects";
 import { consentRoutes } from "./routes/consent";
+import { kappungsgrenzeRoutes } from "./routes/kappungsgrenze";
 import { devicesRoutes } from "./routes/devices";
 import { exportRoutes } from "./routes/export";
 import { adminRoutes } from "./routes/admin";
@@ -56,6 +57,7 @@ app.route("/api/v1/billing", billingRoutes);
 app.route("/api/v1", accountRoutes); // exponiert /api/v1/me + /api/v1/account/*
 app.route("/api/v1/objects", objectsRoutes);
 app.route("/api/v1/consent", consentRoutes);
+app.route("/api/v1/kappungsgrenze", kappungsgrenzeRoutes);
 app.route("/api/v1/devices", devicesRoutes);
 app.route("/api/v1/export", exportRoutes);
 app.route("/api/v1/admin", adminRoutes);
