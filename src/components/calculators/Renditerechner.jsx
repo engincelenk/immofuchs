@@ -5,7 +5,6 @@ import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP, tpl } from "../../utils/helpers.js";
 import { rate, vrd } from "../../utils/bands.js";
 import { computeRendite } from "../../utils/rendite.js";
-import { berechneKennzahlen } from "../../utils/kennzahlen.js";
 import { F, Sel, Row, Sec, Ins, VT, AmpelKPI, NeutralKPI, Toggle } from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
 import { RBar } from "../charts/RBar.jsx";
@@ -60,10 +59,6 @@ export default function Haupt() {
     // steigt dann oben aus.
   }, [d.kaltmiete, d.flaeche]);
   const R = useMemo(() => computeRendite(d, t), [d, t]);
-  // Stufe 1 des Investment-Score-Umbaus (2026-08-27): zusaetzliche Kennzahlen
-  // (DSCR, Break-even-Miete/-Leerstand, ...) ohne Aggregation zu einem Score -
-  // siehe docs/technical_specs/investment-score.md.
-  const K = useMemo(() => berechneKennzahlen(d, R), [d, R]);
 
   // Der Neubau-Block gilt ab dem Baujahr, ab dem die 3-%-AfA greift
   // (§ 7 Abs. 4 Nr. 2a EStG) - dieselbe Grenze wie in afaFromBj.
@@ -858,18 +853,9 @@ export default function Haupt() {
               {(() => {
                 const cfOCol = rate("cfOhne", R.cf2OhneSt).color;
                 const cfMCol = rate("cfMit", R.cf2MitSt).color;
-                // Stufe 1 Investment-Score (2026-08-27): DSCR und
-                // Break-even-Leerstand koennen null sein (kein Kapitaldienst
-                // bzw. keine Kaltmiete) - dann neutral, nicht rot werten,
-                // wie beim isFinite-Guard fuer die Laufzeit in Sektion 3.
-                const dscrCol = K.dscrIst == null ? "yellow" : rate("dscrIst", K.dscrIst).color;
-                const beLeerCol =
-                  K.breakEvenLeerstand == null
-                    ? "yellow"
-                    : rate("breakEvenLeerstand", K.breakEvenLeerstand).color;
-                const worstCol = [cfOCol, cfMCol, dscrCol, beLeerCol].includes("red")
+                const worstCol = [cfOCol, cfMCol].includes("red")
                   ? "red"
-                  : [cfOCol, cfMCol, dscrCol, beLeerCol].includes("yellow")
+                  : [cfOCol, cfMCol].includes("yellow")
                     ? "yellow"
                     : "green";
                 const ampelHex =
@@ -945,64 +931,6 @@ export default function Haupt() {
                             : R.cf2MitSt >= -150
                               ? t.cfMYellowTip
                               : t.cfMRedTip
-                        }
-                      />
-                      <AmpelKPI
-                        label={t.dscr}
-                        value={K.dscrIst != null ? `${fmt(K.dscrIst, 2)}×` : "–"}
-                        color={dscrCol}
-                        statusLabel={
-                          dscrCol === "green"
-                            ? t.badgeGut
-                            : dscrCol === "yellow"
-                              ? t.badgeOkay
-                              : t.badgeKrit
-                        }
-                        status={
-                          K.dscrIst == null
-                            ? undefined
-                            : dscrCol === "green"
-                              ? "✓ " + t.dscrGreen
-                              : dscrCol === "yellow"
-                                ? "~ " + t.dscrYellow
-                                : "⚠ " + t.dscrRed
-                        }
-                        tip={
-                          K.dscrIst == null
-                            ? t.dscrKeinKapitaldienst
-                            : dscrCol === "green"
-                              ? t.dscrGreenTip
-                              : dscrCol === "yellow"
-                                ? t.dscrYellowTip
-                                : t.dscrRedTip
-                        }
-                      />
-                      <AmpelKPI
-                        label={t.beLeer}
-                        value={K.breakEvenLeerstand != null ? fmtP(K.breakEvenLeerstand, 0) : "–"}
-                        color={beLeerCol}
-                        statusLabel={
-                          beLeerCol === "green"
-                            ? t.badgeGut
-                            : beLeerCol === "yellow"
-                              ? t.badgeOkay
-                              : t.badgeKrit
-                        }
-                        status={
-                          K.breakEvenLeerstand == null
-                            ? undefined
-                            : beLeerCol === "green"
-                              ? "✓ " + t.beLeerGreen
-                              : beLeerCol === "yellow"
-                                ? "~ " + t.beLeerYellow
-                                : "⚠ " + t.beLeerRed
-                        }
-                        tip={
-                          beLeerCol === "green"
-                            ? t.beLeerGreenTip
-                            : beLeerCol === "yellow"
-                              ? t.beLeerYellowTip
-                              : t.beLeerRedTip
                         }
                       />
                     </div>
@@ -1159,11 +1087,6 @@ export default function Haupt() {
                         label={t.rate}
                         value={fmtE(R.ann)}
                         sub={`${t.zins} ${fmtE(R.z1)} + ${t.tilgK} ${fmtE(R.t1)}`}
-                      />
-                      <NeutralKPI
-                        label={t.beMiete}
-                        value={K.breakEvenMiete != null ? fmtE(K.breakEvenMiete) : "–"}
-                        sub={tpl(t.beMieteSub, { a: fmtE(+d.kaltmiete || 0) })}
                       />
                     </div>
                     {+d.grundAnteil > 40 && (

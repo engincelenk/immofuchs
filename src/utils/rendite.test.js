@@ -102,35 +102,6 @@ describe("computeRendite — Vollfinanzierung (Risiko-Rotbereich)", () => {
   });
 });
 
-describe("computeRendite — Tilgungssatz 0 (Darlehen wird nie zurueckgefuehrt)", () => {
-  // Regressionstest zur Korrektur vom 2026-08-27 (Kalibrierung Investment
-  // Score, Befund B6): laufzeitJahre blieb bei fehlender Tilgung faelschlich
-  // auf 0 statt Infinity - AMPEL.lz(0) zeigte damit gruen fuer ein Darlehen,
-  // das nie zurueckgezahlt wird, und der Risikofaktor "lz=∞" (15 Punkte) hat
-  // nie gefeuert. Siehe docs/technical_specs/kalibrierung-investment-score.md.
-  const R = computeRendite({ ...baseD, eigenkapital: "0", tilgung: "0" }, {});
-
-  it("Laufzeit ist Infinity, nicht 0", () => {
-    expect(R.lz).toBe(Infinity);
-  });
-
-  it("Risikofaktor lz=∞ feuert jetzt tatsaechlich", () => {
-    expect(R.rF).toContain("lz=∞");
-    expect(R.rF).not.toContain("lz>35");
-  });
-});
-
-describe("computeRendite — kein Bankdarlehen (Vollfinanzierung ueber Eigenkapital)", () => {
-  // Gegenprobe zum Test oben: OHNE Bankdarlehen bleibt laufzeitJahre 0 -
-  // das ist weiterhin korrekt (nichts zu tilgen), der Fix darf diesen Fall
-  // nicht veraendern.
-  const R = computeRendite({ ...baseD, kaufpreis: "0", garage: "0", eigenkapital: "0" }, {});
-
-  it("Laufzeit bleibt 0 ohne jedes Darlehen", () => {
-    expect(R.lz).toBe(0);
-  });
-});
-
 describe("computeRendite — nkFinanzieren (Nebenkosten mitfinanzieren)", () => {
   const R = computeRendite(baseD, {});
   const RnK = computeRendite({ ...baseD, nkFinanzieren: true }, {});

@@ -21,16 +21,6 @@ export const BANDS = {
   ekRendite: { dir: "up", green: 6, yellow: 3, unit: "%" },
   gesamtSaldo: { dir: "up", green: 0, yellow: null, unit: "eur" },
   wertAnnahme: { dir: "down", green: 2.5, yellow: 4.0, unit: "%" },
-  // ── Investment-Score Stufe 1 (2026-08-27) ──────────────────────────────
-  // Schwellen aus dem Kalibrierungslauf ueber 16 Referenzobjekte, siehe
-  // docs/technical_specs/kalibrierung-investment-score.md Abschnitt 5.
-  // dscrIst bewusst NICHT die Bankgrenze 1,3/1,2/1,0 aus dem Nutzer-Konzept:
-  // deutsche Bestandsobjekte liegen bei marktueblicher Finanzierung typisch
-  // zwischen 0,5 und 0,9 (Tilgung ist hier Vermoegensbildung, keine Kosten
-  // wie in der gewerblichen Finanzierung) - 1,3 waere fuer praktisch jedes
-  // Objekt rot und der Wert damit ohne Aussagekraft.
-  dscrIst: { dir: "up", green: 0.75, yellow: 0.58, unit: "x" },
-  breakEvenLeerstand: { dir: "up", green: -25, yellow: -55, unit: "%" },
 };
 export function rate(kpi, wert) {
   const b = BANDS[kpi];
