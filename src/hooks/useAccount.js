@@ -121,8 +121,6 @@ export function useAccount() {
     try {
       const res = await apiFetch("/me");
       if (res.status === 401) {
-        // TEMP-DIAGNOSE (2026-08-27, wird nach dem Befund wieder entfernt).
-        console.warn("[DIAG] refresh(): /me antwortete 401 -> setMe(null)");
         setMe(null);
         broadcastIsPro(false);
         noteProStatus(false);
@@ -196,7 +194,39 @@ export function useAccount() {
       window.history.replaceState({}, "", url.toString());
       setResetToken(tokenFromLink);
     }
-    refresh();
+
+    // Rueckkehr von einem Stripe-Redirect (Live-Befund 2026-08-27): Google
+    // Pay - und teils 3D Secure - schliessen den Zahlungsvorgang nicht
+    // inline ab, sondern ueber einen echten Browser-Redirect zurueck zur
+    // return_url (siehe PaymentStep.jsx). Das reisst den kompletten
+    // React-Zustand des Checkout-Wizards ein, BEVOR die Willkommens-Seite
+    // je erscheinen konnte - der Nutzer landete kommentarlos auf der
+    // Startseite, ohne jede Bestaetigung. Stripe haengt dafuer
+    // "payment_intent"/"payment_intent_client_secret"/"redirect_status" an
+    // die return_url an; wird das hier erkannt, gilt es wie eine
+    // abgeschlossene Kauf-Bestaetigung.
+    const redirectStatus = url.searchParams.get("redirect_status");
+    if (redirectStatus) {
+      for (const k of ["payment_intent", "payment_intent_client_secret", "redirect_status"]) {
+        url.searchParams.delete(k);
+      }
+      window.history.replaceState({}, "", url.toString());
+    }
+
+    refresh().then(() => {
+      if (redirectStatus === "succeeded") {
+        // Bewusst NICHT ueber noteProStatus/wasProRef: das ist der erste
+        // Refresh nach dem Reload, dessen Uebergangs-Guard (siehe
+        // Kommentar oben bei purchaseSuccess) einen frischen Kauf hier
+        // faelschlich unterdruecken wuerde.
+        setPurchaseSuccess(true);
+        // Ohne Wizard gibt es niemanden mehr, der auf den (teils erst nach
+        // 2-4s eintreffenden) Webhook wartet - deshalb hier dieselben zwei
+        // Nachzuegler-Refreshes wie in CheckoutWizard.jsx/handlePaymentCompleted.
+        setTimeout(() => refresh(), 1500);
+        setTimeout(() => refresh(), 4000);
+      }
+    });
   }, [refresh, broadcastIsPro]);
 
   // Google/Apple bleiben Browser-Redirect-Flows (10.0: "PWA-weites Rough

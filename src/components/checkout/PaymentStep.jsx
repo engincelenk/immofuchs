@@ -138,6 +138,15 @@ export function PaymentStep({
         elements,
         redirect: "if_required",
         confirmParams: {
+          // Fuer Zahlungsarten, die redirect:"if_required" NICHT inline
+          // abschliessen kann (Live-Befund 2026-08-27: Google Pay macht das
+          // im Testmodus konsequent, vermutlich betrifft es auch 3D Secure
+          // in bestimmten Faellen) - useAccount.js erkennt die Rueckkehr an
+          // "redirect_status" in der URL und behandelt sie wie eine
+          // abgeschlossene Kauf-Bestaetigung. Kein eigener Rueckkehr-Screen
+          // noetig: die Wizard-Route ist immer dieselbe Seiten-URL wie
+          // jetzt, kein separates return_url-Ziel.
+          return_url: window.location.href,
           payment_method_data: {
             billing_details: {
               email: account?.me?.email || undefined,

@@ -101,11 +101,7 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
   // auf den Schliessen-Knopf zurueckspringen.
   useFocusTrap(dialogRef, onClose);
 
-  // TEMP-DIAGNOSE (2026-08-27, wird nach dem Befund wieder entfernt).
-  if (!account?.me) {
-    console.warn("[DIAG] MyAccount: account.me ist falsy -> return null", { showUpgrade, account });
-    return null;
-  }
+  if (!account?.me) return null;
   // Zwei Fehler auf einmal behoben (UX-Audit 2026-08-12):
   //
   // 1. entryPoint="payment" sprang direkt in die Zahlung. Die Variante

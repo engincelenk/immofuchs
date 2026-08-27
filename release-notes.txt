@@ -1,3 +1,25 @@
+## 2026-08-27 (1.27.4)
+
+### FIX: Google-Pay-Zahlung zerstoerte den kompletten Checkout-Wizard-Zustand
+
+Live-Befund (mit temporaeren Diagnose-Logs eingegrenzt): Google Pay - anders
+als eine manuell eingegebene Testkarte - schliesst den Zahlungsvorgang bei
+Stripe nicht inline ab, sondern ueber einen echten Browser-Redirect zurueck
+zur `return_url`. Da `PaymentStep.jsx` bisher KEINE `return_url` an
+`stripe.confirmPayment()` uebergeben hat, sprang der Browser stattdessen auf
+die nackte Startseite - das riss den kompletten React-Zustand des
+Checkout-Wizards ein, BEVOR die "Willkommen bei ImmoFuchs Pro"-Seite je
+erscheinen konnte. Der Nutzer landete kommentarlos auf der Startseite, ohne
+jede sichtbare Bestaetigung (das beobachtete "Flimmern" zwischen dem alten
+Free-Zustand und der spaeter korrekt geladenen Kontoansicht).
+
+Fix: `return_url` gesetzt (aktuelle Seiten-URL, kein separates Rueckkehr-Ziel
+noetig) und in `useAccount.js` eine Behandlung ergaenzt, die Stripes
+Rueckkehr-Parameter (`redirect_status=succeeded` u.a.) erkennt, aus der URL
+entfernt und wie eine abgeschlossene Kauf-Bestaetigung behandelt (Erfolgs-
+Toast plus zwei Nachzuegler-Refreshes, da nach dem Reload kein Wizard mehr
+existiert, der auf den Webhook wartet).
+
 ## 2026-08-27 (1.27.3)
 
 ### FIX: Kontobereich zeigte noch Paddle-Texte, Erfolgs-Toast kam zu spaet
