@@ -43,6 +43,10 @@ export function VermoegensQuelleChart({ R, d }) {
   const eigenkapitalEinsatz =
     (+d.eigenkapital || 0) + nkCash + (+d.sonder || 0) + (+d.renovierung || 0);
 
+  // Markenfarben statt generischem Blau/Rot (Nutzer-Vorgabe 2026-08-27):
+  // zwei Marineblau-Toene (Primary-Familie, "Anteil des Investors") und zwei
+  // Fuchs-Orange-Toene (Accent-Familie, "kommt von aussen") - dieselbe
+  // Zweifarb-Logik wie ZinsTilgungChart.jsx, keine eigenen Chart-Farben.
   const segments = [
     {
       key: "eigenerAnteil",
@@ -50,9 +54,9 @@ export function VermoegensQuelleChart({ R, d }) {
       value: eigenkapitalEinsatz + eigenerAnteilTilgung,
       color: "#1E3A5F",
     },
-    { key: "mieterTilgung", label: t.vqMieterTilgung, value: mieterTilgKum, color: "#8fb4d9" },
+    { key: "mieterTilgung", label: t.vqMieterTilgung, value: mieterTilgKum, color: "#6E8CAE" },
     { key: "markt", label: t.vqMarkt, value: Math.max(0, R.w || 0), color: "#E8600A" },
-    { key: "finanzamt", label: t.vqFinanzamt, value: Math.max(0, R.sSt || 0), color: "#ef4444" },
+    { key: "finanzamt", label: t.vqFinanzamt, value: Math.max(0, R.sSt || 0), color: "#C44D00" },
   ];
   const total = segments.reduce((a, s) => a + s.value, 0);
   if (total <= 0) return null;

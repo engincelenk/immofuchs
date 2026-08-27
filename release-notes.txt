@@ -1,3 +1,19 @@
+## 2026-08-27 (1.34.0)
+
+### FIX: Diagramm-Farben auf Markenschema umgestellt, Hover-Zeile blendete nervoes ein/aus
+
+Nutzer-Meldung: die Info-Zeile unter dem Zins/Tilgung-Chart erschien und
+verschwand bei jedem Hover-Wechsel komplett - wirkte wie ein Sprung/
+Flackern. Die Zeile ist jetzt IMMER sichtbar (zeigt ohne Hover das letzte
+Jahr), nur ihr Inhalt wechselt beim Hover - kein Ein-/Ausblenden mehr.
+
+Beide neuen Charts (ZinsTilgungChart, VermoegensQuelleChart) nutzten bisher
+generische Chart-Farben (Gruen/Rot/helles Blau). Umgestellt auf die
+Marken-Zweifarblogik (Marineblau-Familie #1E3A5F/#6E8CAE fuer "Anteil des
+Investors", Fuchs-Orange-Familie #E8600A/#C44D00 fuer "kommt von aussen") -
+dieselben zwei Farben, die im ganzen Rechner fuer Primary/Accent stehen,
+statt eigener Chart-Paletten.
+
 ## 2026-08-27 (1.33.0)
 
 ### NEU: Zwei neue Diagramme im Renditerechner (Zins vs. Tilgung, Wer bezahlt das Vermögen?)

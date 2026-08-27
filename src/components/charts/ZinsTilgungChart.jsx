@@ -26,8 +26,15 @@ export function ZinsTilgungChart({ rows }) {
   const gap = (pw - n * barW) / (n + 1);
   const yv = (v) => pt + ph * (1 - v / maxTotal);
   const fK = (v) => Math.round(v / 1000) + "k";
-  const colZins = "#E8600A";
-  const colTilg = "#22c55e";
+  // Markenfarben statt generischem Rot/Gruen (Nutzer-Vorgabe 2026-08-27):
+  // Zinsen = Marineblau (Primary, "Kosten"), Tilgung = Fuchs-Orange (Accent,
+  // "baut Vermoegen auf") - dieselben zwei Farben, die im ganzen Rechner
+  // fuer Primary/Accent stehen, statt eigener Chart-Farben.
+  const colZins = "#1E3A5F";
+  const colTilg = "#E8600A";
+  // Ohne Hover zeigt die Info-Zeile das letzte Jahr (naeher an "wo stehe ich
+  // am Ende" als ein beliebiges erstes Jahr).
+  const activeIdx = hover ?? n - 1;
 
   return (
     <div
@@ -109,7 +116,7 @@ export function ZinsTilgungChart({ rows }) {
                   width={barW}
                   height={Math.max(zinsH, 0)}
                   fill={colZins}
-                  opacity={hover === i ? 1 : 0.85}
+                  opacity={activeIdx === i ? 1 : 0.85}
                 />
                 <rect
                   x={xx}
@@ -117,7 +124,7 @@ export function ZinsTilgungChart({ rows }) {
                   width={barW}
                   height={Math.max(tilgH, 0)}
                   fill={colTilg}
-                  opacity={hover === i ? 1 : 0.85}
+                  opacity={activeIdx === i ? 1 : 0.85}
                 />
                 <text x={xx + barW / 2} y={H - 8} textAnchor="middle" fill="var(--ch)" fontSize="9">
                   J{r.j}
@@ -139,23 +146,25 @@ export function ZinsTilgungChart({ rows }) {
             </text>
           ))}
         </svg>
-        {hover !== null && rows[hover] && (
-          <div
-            style={{
-              fontSize: 10.5,
-              color: "var(--ct)",
-              background: "#eef2f6",
-              borderLeft: "3px solid var(--ca)",
-              borderRadius: 6,
-              padding: "7px 10px",
-              marginTop: 4,
-              lineHeight: 1.5,
-            }}
-          >
-            J{rows[hover].j}: {t.chartZinsen || "Zinsen"} {fmtE(rows[hover].zinsen)} · {t.tilgung}{" "}
-            {fmtE(rows[hover].tilgB)}
-          </div>
-        )}
+        {/* Immer sichtbar statt bei jedem Mouse-Leave zu verschwinden (Nutzer-
+            Meldung 2026-08-27: das Ein-/Ausblenden bei jedem Hover-Wechsel
+            wirkte wie ein Sprung/Flackern). Zeigt ohne Hover das letzte Jahr,
+            der Hover ersetzt nur den Inhalt - die Zeile selbst bleibt stehen. */}
+        <div
+          style={{
+            fontSize: 10.5,
+            color: "var(--ct)",
+            background: "#eef2f6",
+            borderLeft: "3px solid var(--ca)",
+            borderRadius: 6,
+            padding: "7px 10px",
+            marginTop: 4,
+            lineHeight: 1.5,
+          }}
+        >
+          J{rows[activeIdx].j}: {t.chartZinsen || "Zinsen"} {fmtE(rows[activeIdx].zinsen)} ·{" "}
+          {t.tilgung} {fmtE(rows[activeIdx].tilgB)}
+        </div>
       </div>
     </div>
   );
