@@ -1,3 +1,4 @@
+import { useApp } from "../../context/AppContext.jsx";
 import { cardStyle, primaryBtnStyle } from "./checkoutStyles.js";
 import { purchasePlanLabelKey } from "./planPricing.js";
 
@@ -18,8 +19,19 @@ import { purchasePlanLabelKey } from "./planPricing.js";
 // startAppTrialIfNew in worker/src/routes/account.ts): die laeuft VOR jedem
 // Kauf und hat mit diesem Bildschirm nichts zu tun.
 export function PurchaseConfirmation({ t, account, plan, onDone }) {
+  const { goHome } = useApp();
   const subscription = account?.me?.subscription;
   const isTrial = subscription?.status === "trialing";
+
+  // "Los geht's" fuehrt zusaetzlich zur Landingpage (Nutzer-Vorgabe
+  // 2026-08-27): vorher schloss der Knopf nur das Fenster und liess den
+  // Nutzer dort stehen, wo der Kauf gestartet wurde (z.B. mitten im
+  // Renditerechner) - unabhaengig davon, ob dieser Bildschirm im Wizard oder
+  // als eigenstaendiges Fenster (PurchaseConfirmModal.jsx) auftaucht.
+  function handleDone() {
+    goHome();
+    onDone();
+  }
 
   // Die Zeile hiess bis 2026-08-27 nur "Plan: ImmoFuchs Pro" - eine Aussage,
   // die auf dem Bildschirm "Willkommen bei ImmoFuchs Pro" nichts hinzufuegt
@@ -81,7 +93,7 @@ export function PurchaseConfirmation({ t, account, plan, onDone }) {
         <TimelineItem icon="⏰" title={t.welcomeNextStep3} body={t.welcomeNextStep3Body} />
       </div>
 
-      <button onClick={onDone} style={primaryBtnStyle}>
+      <button onClick={handleDone} style={primaryBtnStyle}>
         {t.welcomeCtaDashboard}
       </button>
     </div>

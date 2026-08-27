@@ -1,3 +1,35 @@
+## 2026-08-27 (1.31.0)
+
+### FIX: Rechner hinter dem Kauf-Bestaetigungsfenster baute sich 3x neu auf
+
+useCalculatorTrial.js las bislang `account.loading` statt `account.initialLoading`
+(dieselbe Ursache, die am selben Tag schon fuer ProHeaderButton.jsx behoben
+wurde). `loading` wird bei JEDEM `account.refresh()` kurz `true` - nach einem
+Kauf laufen davon drei Stueck (sofort, nach 1,5s, nach 4s, siehe
+CheckoutWizard.jsx/handlePaymentCompleted, Webhook-Timing-Puffer). Jeder
+davon liess CalculatorTrialGate.jsx den kompletten Rechner hinter dem
+Bestaetigungsfenster kurz ausblenden und neu aufbauen. Jetzt haengt die
+Gate-Logik an `initialLoading` (kippt genau einmal, beim allerersten
+Laden), nicht mehr an jedem einzelnen Refresh.
+
+### NEU: "Los geht's" auf der Kauf-Bestaetigung fuehrt zur Startseite
+
+Der Knopf schloss bisher nur das Fenster und liess den Nutzer dort stehen,
+wo der Kauf begonnen hatte (z.B. mitten im Renditerechner). Ruft jetzt
+zusaetzlich den bestehenden `goHome`-Callback auf - gilt fuer beide Stellen,
+an denen der Bestaetigungsbildschirm auftaucht (Checkout-Wizard und das
+eigenstaendige Fenster nach einem Redirect-Bezahlweg).
+
+### FIX: Rechnungsdaten-Felder bekommen `name`-Attribute fuer Autofill
+
+Die Felder in AddressStep.jsx (Vorname, Nachname, Strasse, PLZ, Ort, Land,
+Firma) hatten bereits die passenden `autoComplete`-Tokens, aber kein
+`name`-Attribut. Mobile Autofill-Engines (iOS/Android) ziehen `name`
+zusaetzlich zu `autoComplete` als Signal heran. Ergaenzt jeweils den zum
+Token passenden Namen (z.B. `name="given-name"`); Hausnummer und USt-IdNr
+bleiben bewusst ohne, da fuer sie kein Autofill vorgesehen ist (siehe
+Kommentare im Code).
+
 ## 2026-08-27 (1.29.0)
 
 ### FIX: Kauf aus "Mein Konto" riss den Wizard ab - keine Bestaetigung, Abo-Seite stattdessen

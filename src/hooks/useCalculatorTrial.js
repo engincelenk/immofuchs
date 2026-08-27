@@ -13,7 +13,11 @@ import { useAccountCtx } from "../context/AccountContext.jsx";
 export function useCalculatorTrial() {
   const account = useAccountCtx();
 
-  const loading = account?.loading;
+  // initialLoading statt loading (wie ProHeaderButton.jsx, Bugreport
+  // 2026-08-27): `loading` wird bei JEDEM account.refresh() kurz true - nach
+  // einem Kauf laufen drei Refreshes (CheckoutWizard.jsx/handlePaymentCompleted),
+  // die den Rechner sonst dreimal ausblenden und neu aufbauen wuerden.
+  const loading = account?.initialLoading;
   const isLoggedIn = Boolean(account?.isLoggedIn);
   // Nur ein Abo rechnet dauerhaft. Die Testphase darf beim Rechnen ebenfalls
   // alles - nach ihrem Ende ist `zugang` "keiner" und die Wand greift.

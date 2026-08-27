@@ -53,6 +53,7 @@ export function AddressStep({ t, account, value, onChange, onContinue }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <TextField
               id={`${uid}-first`}
+              name="given-name"
               label={t.addressFirstNameLabel}
               type="text"
               required
@@ -65,6 +66,7 @@ export function AddressStep({ t, account, value, onChange, onContinue }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <TextField
               id={`${uid}-last`}
+              name="family-name"
               label={t.addressLastNameLabel}
               type="text"
               required
@@ -82,6 +84,7 @@ export function AddressStep({ t, account, value, onChange, onContinue }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <TextField
               id={`${uid}-street`}
+              name="address-line1"
               label={t.addressStreetLabel}
               type="text"
               required
@@ -114,6 +117,7 @@ export function AddressStep({ t, account, value, onChange, onContinue }) {
           <div style={{ flex: "0 0 120px" }}>
             <TextField
               id={`${uid}-zip`}
+              name="postal-code"
               label={t.addressZipLabel}
               type="text"
               required
@@ -126,6 +130,7 @@ export function AddressStep({ t, account, value, onChange, onContinue }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <TextField
               id={`${uid}-city`}
+              name="address-level2"
               label={t.addressCityLabel}
               type="text"
               required
@@ -139,6 +144,7 @@ export function AddressStep({ t, account, value, onChange, onContinue }) {
 
         <SelectField
           id={`${uid}-country`}
+          name="country"
           label={t.addressCountryLabel}
           required
           options={countries}
@@ -174,6 +180,7 @@ export function AddressStep({ t, account, value, onChange, onContinue }) {
 
         <TextField
           id={`${uid}-company`}
+          name="organization"
           label={t.addressCompanyLabel}
           hint={t.addressCompanyHint}
           type="text"
