@@ -11,6 +11,8 @@ import { F, Sel, Row, Sec, Ins, VT, AmpelKPI, NeutralKPI, Toggle } from "../ui/a
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
 import { ScoreBlock } from "../charts/ScoreBlock.jsx";
 import { InvestmentCheckRadar } from "../charts/InvestmentCheckRadar.jsx";
+import { ZinsTilgungChart } from "../charts/ZinsTilgungChart.jsx";
+import { VermoegensQuelleChart } from "../charts/VermoegensQuelleChart.jsx";
 import { StressTabelle } from "../tables/StressTabelle.jsx";
 import { YearTable } from "../tables/YearTable.jsx";
 import { Detail } from "../tables/Detail.jsx";
@@ -1438,6 +1440,8 @@ export default function Haupt() {
                 sync={{ key: secAllKey, open: secAllOpen }}
               >
                 <YearTable rows={R.yearRows} zbJ={+d.zinsbindung || 10} />
+                <ZinsTilgungChart rows={R.yearRows} />
+                <VermoegensQuelleChart R={R} d={d} />
                 {lang === "de" && (
                   <SectionExplain
                     intro={t.sec5Sub}

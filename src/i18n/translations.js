@@ -218,7 +218,8 @@ export const T = {
     beMieteSub: "aktuelle Kaltmiete: {a}",
     // ── Investment-Score Stufe 2 (2026-08-27) ──────────────────────────────
     financeScoreTitle: "ImmoFuchs Finanz-Score",
-    financeScoreSub: "Wirtschaftlichkeit, Cashflow und Finanzierung — Objekt-, Vermietungs- und Exit-Bewertung folgen später",
+    financeScoreSub:
+      "Wirtschaftlichkeit, Cashflow und Finanzierung — Objekt-, Vermietungs- und Exit-Bewertung folgen später",
     financeScoreZuWenig: "Zu wenige Angaben für eine Bewertung.",
     financeScoreLabelSolide: "Solide Kennzahlen",
     financeScoreLabelGemischt: "Gemischtes Bild",
@@ -238,23 +239,41 @@ export const T = {
     stressSaldo: "Gesamtsaldo n. {j} J.",
     stressAnschlussHint: "Bei einer Anschlussfinanzierung von {zins} % wird dein Cashflow negativ.",
     anschlussZinsLabel: "Anschlusszins (optional)",
-    anschlussZinsHint: "Nur falls du für die Zeit nach der Zinsbindung einen abweichenden Zins erwartest. Leer = heutiger Zinssatz bleibt bestehen.",
+    anschlussZinsHint:
+      "Nur falls du für die Zeit nach der Zinsbindung einen abweichenden Zins erwartest. Leer = heutiger Zinssatz bleibt bestehen.",
     scoreFindingsShow: "Was spricht dafür, was dagegen?",
     scoreFindingsHide: "Weniger anzeigen",
-    findKpFaktorDesc: "Kaufpreis im Verhältnis zur Jahreskaltmiete — ein sehr niedriger Faktor ist in Deutschland eher ein Standortsignal als ein Schnäppchen.",
+    findKpFaktorDesc:
+      "Kaufpreis im Verhältnis zur Jahreskaltmiete — ein sehr niedriger Faktor ist in Deutschland eher ein Standortsignal als ein Schnäppchen.",
     findAnfangsrenditeTitle: "Effektive Anfangsrendite",
-    findAnfangsrenditeDesc: "NOI im Verhältnis zur Gesamtinvestition inklusive Nebenkosten, Sonderumlage und Renovierung.",
+    findAnfangsrenditeDesc:
+      "NOI im Verhältnis zur Gesamtinvestition inklusive Nebenkosten, Sonderumlage und Renovierung.",
     findDscrObjektTitle: "DSCR (Objekt)",
-    findDscrObjektDesc: "Trägt sich die Immobilie bei einer marktüblichen Standardfinanzierung — unabhängig davon, wie du tatsächlich finanzierst.",
-    findDscrIstDesc: "Trägt sich deine tatsächliche Finanzierung. Immer zusammen mit der Zinsdeckung lesen, da ein niedriger Tilgungssatz diesen Wert künstlich verbessert.",
+    findDscrObjektDesc:
+      "Trägt sich die Immobilie bei einer marktüblichen Standardfinanzierung — unabhängig davon, wie du tatsächlich finanzierst.",
+    findDscrIstDesc:
+      "Trägt sich deine tatsächliche Finanzierung. Immer zusammen mit der Zinsdeckung lesen, da ein niedriger Tilgungssatz diesen Wert künstlich verbessert.",
     findIcrTitle: "Zinsdeckung (ICR)",
-    findIcrDesc: "NOI im Verhältnis zu den reinen Zinsen, ohne Tilgung — deckt eine durch niedrige Tilgung geschönte DSCR auf.",
+    findIcrDesc:
+      "NOI im Verhältnis zu den reinen Zinsen, ohne Tilgung — deckt eine durch niedrige Tilgung geschönte DSCR auf.",
     findBeLeerDesc: "Wie viel Leerstand die Immobilie verkraftet, bevor der Cashflow negativ wird.",
     findBelDesc: "Anteil des Kaufpreises, der fremdfinanziert ist.",
     findEkQuoteDesc: "Anteil des Kaufpreises, der aus Eigenkapital finanziert ist.",
     findRestschuldZBQuoteTitle: "Restschuld bei Zinsbindungsende",
-    findRestschuldZBQuoteDesc: "Wie viel vom Kaufpreis am Ende der Zinsbindung noch offen ist — bestimmt dein Zinsänderungsrisiko.",
-    hintScoreNiedrig: "Dein Finanz-Score liegt bei {wert}/100 — schau dir an, welche Kennzahlen ihn drücken.",
+    findRestschuldZBQuoteDesc:
+      "Wie viel vom Kaufpreis am Ende der Zinsbindung noch offen ist — bestimmt dein Zinsänderungsrisiko.",
+    hintScoreNiedrig:
+      "Dein Finanz-Score liegt bei {wert}/100 — schau dir an, welche Kennzahlen ihn drücken.",
+    // ── Zins/Tilgung- & Vermögensquellen-Charts (2026-08-27) ───────────────
+    chartZinsTilgungTitle: "Zins vs. Tilgung (jährlich)",
+    chartZinsen: "Zinsen",
+    chartVermoegenTitle: "Wer bezahlt das Vermögen?",
+    vqEigenerAnteil: "Eigener Anteil",
+    vqMieterTilgung: "Mieter (Tilgung)",
+    vqMarkt: "Markt (Wertzuwachs)",
+    vqFinanzamt: "Finanzamt (Steuer)",
+    vqSteuerlastHinweis:
+      "Steuerlast statt Ersparnis über den Zeitraum — nicht im Donut dargestellt (Segment wäre negativ).",
     vermietQ: "Nutzungsart",
     vermietJa: "Kapitalanlage (vermietet)",
     vermietNein: "Eigennutzung",
@@ -840,7 +859,8 @@ export const T = {
     dscrRed: "Does not cover debt service",
     dscrGreenTip: "Net operating income (NOI) covers interest and repayment with a buffer.",
     dscrYellowTip: "NOI covers the debt service only narrowly — little buffer for vacancy.",
-    dscrRedTip: "Net operating income is not enough to cover interest and repayment — the gap must come from other funds.",
+    dscrRedTip:
+      "Net operating income is not enough to cover interest and repayment — the gap must come from other funds.",
     dscrKeinKapitaldienst: "No loan in place — DSCR not applicable.",
     beLeer: "Vacancy buffer",
     beLeerGreen: "High buffer",
@@ -853,7 +873,8 @@ export const T = {
     beMieteSub: "current cold rent: {a}",
     // ── Investment score stage 2 (2026-08-27) ──────────────────────────────
     financeScoreTitle: "ImmoFuchs Finance Score",
-    financeScoreSub: "Economics, cash flow and financing — property, letting and exit scoring follow later",
+    financeScoreSub:
+      "Economics, cash flow and financing — property, letting and exit scoring follow later",
     financeScoreZuWenig: "Not enough data for an assessment.",
     financeScoreLabelSolide: "Solid metrics",
     financeScoreLabelGemischt: "Mixed picture",
@@ -873,23 +894,40 @@ export const T = {
     stressSaldo: "Total balance after {j} yrs.",
     stressAnschlussHint: "At a follow-up rate of {zins} % your cash flow turns negative.",
     anschlussZinsLabel: "Follow-up rate (optional)",
-    anschlussZinsHint: "Only if you expect a different rate after the fixed-rate period ends. Leave empty to keep today's rate unchanged.",
+    anschlussZinsHint:
+      "Only if you expect a different rate after the fixed-rate period ends. Leave empty to keep today's rate unchanged.",
     scoreFindingsShow: "What speaks for it, what against it?",
     scoreFindingsHide: "Show less",
-    findKpFaktorDesc: "Purchase price relative to annual cold rent — a very low factor is more often a location signal than a bargain in Germany.",
+    findKpFaktorDesc:
+      "Purchase price relative to annual cold rent — a very low factor is more often a location signal than a bargain in Germany.",
     findAnfangsrenditeTitle: "Effective initial yield",
-    findAnfangsrenditeDesc: "NOI relative to total investment including purchase costs, special levy and renovation.",
+    findAnfangsrenditeDesc:
+      "NOI relative to total investment including purchase costs, special levy and renovation.",
     findDscrObjektTitle: "DSCR (property)",
-    findDscrObjektDesc: "Does the property support itself under a standard market financing — regardless of how you actually finance it.",
-    findDscrIstDesc: "Does your actual financing support itself. Always read together with interest coverage, since a low repayment rate flatters this figure artificially.",
+    findDscrObjektDesc:
+      "Does the property support itself under a standard market financing — regardless of how you actually finance it.",
+    findDscrIstDesc:
+      "Does your actual financing support itself. Always read together with interest coverage, since a low repayment rate flatters this figure artificially.",
     findIcrTitle: "Interest coverage (ICR)",
-    findIcrDesc: "NOI relative to interest only, excluding repayment — exposes a DSCR flattered by a low repayment rate.",
+    findIcrDesc:
+      "NOI relative to interest only, excluding repayment — exposes a DSCR flattered by a low repayment rate.",
     findBeLeerDesc: "How much vacancy the property can absorb before cash flow turns negative.",
     findBelDesc: "Share of the purchase price financed by debt.",
     findEkQuoteDesc: "Share of the purchase price financed by equity.",
     findRestschuldZBQuoteTitle: "Remaining debt at end of fixed-rate period",
-    findRestschuldZBQuoteDesc: "How much of the purchase price is still outstanding at the end of the fixed-rate period — determines your interest-rate-change risk.",
+    findRestschuldZBQuoteDesc:
+      "How much of the purchase price is still outstanding at the end of the fixed-rate period — determines your interest-rate-change risk.",
     hintScoreNiedrig: "Your Finance Score is {wert}/100 — check which metrics are pulling it down.",
+    // ── Interest/repayment & wealth-source charts (2026-08-27) ─────────────
+    chartZinsTilgungTitle: "Interest vs. repayment (annual)",
+    chartZinsen: "Interest",
+    chartVermoegenTitle: "Who pays for the wealth?",
+    vqEigenerAnteil: "Your own share",
+    vqMieterTilgung: "Tenant (repayment)",
+    vqMarkt: "Market (appreciation)",
+    vqFinanzamt: "Tax office (tax)",
+    vqSteuerlastHinweis:
+      "Net tax cost instead of savings over the period — not shown in the donut (segment would be negative).",
     vermietQ: "Rent out property?",
     vermietJa: "Yes, rented out",
     vermietNein: "No / Owner-occupied",
@@ -1534,7 +1572,8 @@ export const T = {
     dscrRed: "Borç servisini karşılamıyor",
     dscrGreenTip: "Net işletme geliri (NOI) faiz ve anapara ödemesini yeterli tamponla karşılıyor.",
     dscrYellowTip: "NOI borç servisini ancak karşılıyor — boşluk durumunda az tampon var.",
-    dscrRedTip: "Net işletme geliri faiz ve anapara ödemesi için yeterli değil — fark başka kaynaklardan karşılanmalı.",
+    dscrRedTip:
+      "Net işletme geliri faiz ve anapara ödemesi için yeterli değil — fark başka kaynaklardan karşılanmalı.",
     dscrKeinKapitaldienst: "Kredi yok — DSCR uygulanamaz.",
     beLeer: "Boşluk tamponu",
     beLeerGreen: "Yüksek tampon",
@@ -1547,7 +1586,8 @@ export const T = {
     beMieteSub: "mevcut soğuk kira: {a}",
     // ── Yatırım Skoru 2. Aşama (2026-08-27) ────────────────────────────────
     financeScoreTitle: "ImmoFuchs Finans Skoru",
-    financeScoreSub: "Ekonomiklik, nakit akışı ve finansman — mülk, kiralama ve çıkış değerlendirmesi daha sonra eklenecek",
+    financeScoreSub:
+      "Ekonomiklik, nakit akışı ve finansman — mülk, kiralama ve çıkış değerlendirmesi daha sonra eklenecek",
     financeScoreZuWenig: "Değerlendirme için yeterli veri yok.",
     financeScoreLabelSolide: "Sağlam göstergeler",
     financeScoreLabelGemischt: "Karışık tablo",
@@ -1567,23 +1607,40 @@ export const T = {
     stressSaldo: "{j} yıl sonra toplam bakiye",
     stressAnschlussHint: "%{zins} bağlantı faiziyle nakit akışın negatife döner.",
     anschlussZinsLabel: "Bağlantı faizi (opsiyonel)",
-    anschlussZinsHint: "Sadece faiz sabitleme süresi bittikten sonra farklı bir faiz bekliyorsan. Boş bırakılırsa bugünkü faiz oranı değişmeden devam eder.",
+    anschlussZinsHint:
+      "Sadece faiz sabitleme süresi bittikten sonra farklı bir faiz bekliyorsan. Boş bırakılırsa bugünkü faiz oranı değişmeden devam eder.",
     scoreFindingsShow: "Neler lehte, neler aleyhte?",
     scoreFindingsHide: "Daha az göster",
-    findKpFaktorDesc: "Satış fiyatının yıllık soğuk kiraya oranı — çok düşük bir faktör Almanya'da genellikle fırsat değil, konum sinyalidir.",
+    findKpFaktorDesc:
+      "Satış fiyatının yıllık soğuk kiraya oranı — çok düşük bir faktör Almanya'da genellikle fırsat değil, konum sinyalidir.",
     findAnfangsrenditeTitle: "Efektif başlangıç getirisi",
-    findAnfangsrenditeDesc: "NOI'nin, yan giderler, özel katkı payı ve tadilat dahil toplam yatırıma oranı.",
+    findAnfangsrenditeDesc:
+      "NOI'nin, yan giderler, özel katkı payı ve tadilat dahil toplam yatırıma oranı.",
     findDscrObjektTitle: "DSCR (mülk)",
-    findDscrObjektDesc: "Mülk piyasa koşullarında standart bir finansmanla kendini finanse edebiliyor mu — sen nasıl finanse ettiğinden bağımsız olarak.",
-    findDscrIstDesc: "Senin gerçek finansmanın kendini finanse edebiliyor mu. Düşük bir geri ödeme oranı bu değeri yapay olarak iyileştirdiği için her zaman faiz karşılama oranıyla birlikte oku.",
+    findDscrObjektDesc:
+      "Mülk piyasa koşullarında standart bir finansmanla kendini finanse edebiliyor mu — sen nasıl finanse ettiğinden bağımsız olarak.",
+    findDscrIstDesc:
+      "Senin gerçek finansmanın kendini finanse edebiliyor mu. Düşük bir geri ödeme oranı bu değeri yapay olarak iyileştirdiği için her zaman faiz karşılama oranıyla birlikte oku.",
     findIcrTitle: "Faiz karşılama oranı (ICR)",
-    findIcrDesc: "NOI'nin, geri ödeme hariç sadece faize oranı — düşük geri ödeme oranıyla iyi gösterilmiş bir DSCR'yi ortaya çıkarır.",
+    findIcrDesc:
+      "NOI'nin, geri ödeme hariç sadece faize oranı — düşük geri ödeme oranıyla iyi gösterilmiş bir DSCR'yi ortaya çıkarır.",
     findBeLeerDesc: "Nakit akışı negatife dönmeden önce mülkün ne kadar boşluğu kaldırabileceği.",
     findBelDesc: "Satış fiyatının kredi ile finanse edilen kısmı.",
     findEkQuoteDesc: "Satış fiyatının öz sermaye ile finanse edilen kısmı.",
     findRestschuldZBQuoteTitle: "Faiz sabitleme süresi sonunda kalan borç",
-    findRestschuldZBQuoteDesc: "Faiz sabitleme süresi sonunda satış fiyatının ne kadarının hâlâ ödenmemiş olduğu — faiz değişim riskini belirler.",
+    findRestschuldZBQuoteDesc:
+      "Faiz sabitleme süresi sonunda satış fiyatının ne kadarının hâlâ ödenmemiş olduğu — faiz değişim riskini belirler.",
     hintScoreNiedrig: "Finans Skorun {wert}/100 — onu düşüren göstergelere bir bak.",
+    // ── Faiz/geri ödeme ve varlık kaynağı grafikleri (2026-08-27) ──────────
+    chartZinsTilgungTitle: "Faiz - Geri Ödeme (yıllık)",
+    chartZinsen: "Faiz",
+    chartVermoegenTitle: "Varlığı kim ödüyor?",
+    vqEigenerAnteil: "Öz payın",
+    vqMieterTilgung: "Kiracı (geri ödeme)",
+    vqMarkt: "Piyasa (değer artışı)",
+    vqFinanzamt: "Vergi dairesi (vergi)",
+    vqSteuerlastHinweis:
+      "Dönem boyunca tasarruf yerine net vergi yükü — donut'ta gösterilmiyor (segment negatif olurdu).",
     vermietQ: "Kiralık mı?",
     vermietJa: "Evet, kirada",
     vermietNein: "Hayır / Kendi kullanım",
@@ -2268,20 +2325,32 @@ export const T = {
     anschlussZinsHint: "仅当你预期固定利率期结束后利率会有所不同时填写。留空则续用当前利率。",
     scoreFindingsShow: "哪些是有利因素，哪些是不利因素？",
     scoreFindingsHide: "收起",
-    findKpFaktorDesc: "购买价格相对于年度冷租金的比例——在德国，过低的系数往往是地段信号，而非真正的划算。",
+    findKpFaktorDesc:
+      "购买价格相对于年度冷租金的比例——在德国，过低的系数往往是地段信号，而非真正的划算。",
     findAnfangsrenditeTitle: "有效初始收益率",
     findAnfangsrenditeDesc: "NOI相对于总投资（含购置成本、特别分摊和装修费用）的比例。",
     findDscrObjektTitle: "DSCR（房产）",
     findDscrObjektDesc: "在市场标准融资条件下，该房产能否自负盈亏——与你实际的融资方式无关。",
-    findDscrIstDesc: "你实际的融资安排能否自负盈亏。请始终与利息覆盖率一起看，因为过低的还款比例会人为美化这个数值。",
+    findDscrIstDesc:
+      "你实际的融资安排能否自负盈亏。请始终与利息覆盖率一起看，因为过低的还款比例会人为美化这个数值。",
     findIcrTitle: "利息覆盖率（ICR）",
     findIcrDesc: "NOI相对于纯利息（不含还款）的比例——可揭示被低还款比例美化的DSCR。",
     findBeLeerDesc: "在现金流转为负数之前，该房产能承受多少空置率。",
     findBelDesc: "购买价格中通过贷款融资的比例。",
     findEkQuoteDesc: "购买价格中通过自有资金融资的比例。",
     findRestschuldZBQuoteTitle: "固定利率期结束时的剩余债务",
-    findRestschuldZBQuoteDesc: "固定利率期结束时，购买价格中仍有多少尚未偿还——决定了你的利率变化风险。",
+    findRestschuldZBQuoteDesc:
+      "固定利率期结束时，购买价格中仍有多少尚未偿还——决定了你的利率变化风险。",
     hintScoreNiedrig: "你的财务评分为{wert}/100——看看是哪些指标在拉低它。",
+    // ── 利息/还款及财富来源图表（2026-08-27）───────────────────────────
+    chartZinsTilgungTitle: "利息与还款对比（每年）",
+    chartZinsen: "利息",
+    chartVermoegenTitle: "谁在支付这笔财富？",
+    vqEigenerAnteil: "自有部分",
+    vqMieterTilgung: "租客（还款部分）",
+    vqMarkt: "市场（增值）",
+    vqFinanzamt: "税务局（税收）",
+    vqSteuerlastHinweis: "该期间为净税负而非节税——未在环形图中显示（该部分数值为负）。",
     vermietQ: "出租房产？",
     vermietJa: "是，已出租",
     vermietNein: "否 / 自用",
@@ -2722,7 +2791,8 @@ export const T = {
     leerstand: "रिक्ति",
     eigenkapital: "स्वपूंजी",
     nkFinanzierenLabel: "अतिरिक्त लागत भी वित्तपोषित करें",
-    nkFinanzierenSub: "खरीद की अतिरिक्त लागत ऋण में जोड़ी जाती है (बैंक के वित्तपोषण प्रस्ताव जैसा)",
+    nkFinanzierenSub:
+      "खरीद की अतिरिक्त लागत ऋण में जोड़ी जाती है (बैंक के वित्तपोषण प्रस्ताव जैसा)",
     zinssatz: "ब्याज दर",
     tilgung: "चुकौती",
     zinsbindung: "निश्चित दर अवधि",
@@ -2898,9 +2968,11 @@ export const T = {
     dscrGreen: "ऋण सेवा को कवर करता है",
     dscrYellow: "मुश्किल से कवर करता है",
     dscrRed: "ऋण सेवा को कवर नहीं करता",
-    dscrGreenTip: "शुद्ध परिचालन आय (NOI) ब्याज और मूलधन भुगतान को पर्याप्त बफर के साथ कवर करती है।",
+    dscrGreenTip:
+      "शुद्ध परिचालन आय (NOI) ब्याज और मूलधन भुगतान को पर्याप्त बफर के साथ कवर करती है।",
     dscrYellowTip: "NOI ऋण सेवा को मुश्किल से कवर करती है — रिक्ति की स्थिति में कम बफर।",
-    dscrRedTip: "शुद्ध परिचालन आय ब्याज और मूलधन भुगतान के लिए पर्याप्त नहीं है — अंतर अन्य साधनों से पूरा करना होगा।",
+    dscrRedTip:
+      "शुद्ध परिचालन आय ब्याज और मूलधन भुगतान के लिए पर्याप्त नहीं है — अंतर अन्य साधनों से पूरा करना होगा।",
     dscrKeinKapitaldienst: "कोई ऋण नहीं है — DSCR लागू नहीं।",
     beLeer: "रिक्ति बफर",
     beLeerGreen: "उच्च बफर",
@@ -2913,7 +2985,8 @@ export const T = {
     beMieteSub: "वर्तमान कोल्ड रेंट: {a}",
     // ── निवेश स्कोर चरण 2 (2026-08-27) ──────────────────────────────────
     financeScoreTitle: "ImmoFuchs फाइनेंस स्कोर",
-    financeScoreSub: "आर्थिकता, कैश फ्लो और वित्तपोषण — संपत्ति, किराये और एग्ज़िट मूल्यांकन बाद में जोड़े जाएंगे",
+    financeScoreSub:
+      "आर्थिकता, कैश फ्लो और वित्तपोषण — संपत्ति, किराये और एग्ज़िट मूल्यांकन बाद में जोड़े जाएंगे",
     financeScoreZuWenig: "मूल्यांकन के लिए पर्याप्त डेटा नहीं है।",
     financeScoreLabelSolide: "मजबूत आंकड़े",
     financeScoreLabelGemischt: "मिला-जुला चित्र",
@@ -2933,23 +3006,40 @@ export const T = {
     stressSaldo: "{j} वर्ष बाद कुल शेष",
     stressAnschlussHint: "{zins}% की आगे की ब्याज दर पर आपका कैश फ्लो नकारात्मक हो जाएगा।",
     anschlussZinsLabel: "आगे की ब्याज दर (वैकल्पिक)",
-    anschlussZinsHint: "केवल तभी भरें जब आप फिक्स्ड-रेट अवधि समाप्त होने के बाद अलग ब्याज दर की उम्मीद करते हों। खाली छोड़ने पर आज की ब्याज दर अपरिवर्तित रहती है।",
+    anschlussZinsHint:
+      "केवल तभी भरें जब आप फिक्स्ड-रेट अवधि समाप्त होने के बाद अलग ब्याज दर की उम्मीद करते हों। खाली छोड़ने पर आज की ब्याज दर अपरिवर्तित रहती है।",
     scoreFindingsShow: "किस बात के पक्ष में है, किस बात के विरुद्ध?",
     scoreFindingsHide: "कम दिखाएं",
-    findKpFaktorDesc: "वार्षिक कोल्ड रेंट के सापेक्ष खरीद मूल्य — जर्मनी में बहुत कम फैक्टर अक्सर सौदा नहीं बल्कि लोकेशन का संकेत होता है।",
+    findKpFaktorDesc:
+      "वार्षिक कोल्ड रेंट के सापेक्ष खरीद मूल्य — जर्मनी में बहुत कम फैक्टर अक्सर सौदा नहीं बल्कि लोकेशन का संकेत होता है।",
     findAnfangsrenditeTitle: "प्रभावी प्रारंभिक प्रतिफल",
     findAnfangsrenditeDesc: "खरीद लागत, विशेष अंशदान और नवीनीकरण सहित कुल निवेश के सापेक्ष NOI।",
     findDscrObjektTitle: "DSCR (संपत्ति)",
-    findDscrObjektDesc: "क्या संपत्ति एक मानक बाजार वित्तपोषण के तहत खुद को वहन कर पाती है — आप वास्तव में कैसे वित्तपोषण करते हैं इससे स्वतंत्र।",
-    findDscrIstDesc: "क्या आपका वास्तविक वित्तपोषण खुद को वहन कर पाता है। हमेशा ब्याज कवरेज के साथ पढ़ें, क्योंकि कम चुकौती दर इस मूल्य को कृत्रिम रूप से बेहतर दिखाती है।",
+    findDscrObjektDesc:
+      "क्या संपत्ति एक मानक बाजार वित्तपोषण के तहत खुद को वहन कर पाती है — आप वास्तव में कैसे वित्तपोषण करते हैं इससे स्वतंत्र।",
+    findDscrIstDesc:
+      "क्या आपका वास्तविक वित्तपोषण खुद को वहन कर पाता है। हमेशा ब्याज कवरेज के साथ पढ़ें, क्योंकि कम चुकौती दर इस मूल्य को कृत्रिम रूप से बेहतर दिखाती है।",
     findIcrTitle: "ब्याज कवरेज (ICR)",
-    findIcrDesc: "केवल ब्याज (चुकौती को छोड़कर) के सापेक्ष NOI — कम चुकौती दर से बेहतर दिखाए गए DSCR को उजागर करता है।",
+    findIcrDesc:
+      "केवल ब्याज (चुकौती को छोड़कर) के सापेक्ष NOI — कम चुकौती दर से बेहतर दिखाए गए DSCR को उजागर करता है।",
     findBeLeerDesc: "कैश फ्लो नकारात्मक होने से पहले संपत्ति कितनी रिक्ति सहन कर सकती है।",
     findBelDesc: "खरीद मूल्य का वह हिस्सा जो ऋण से वित्तपोषित है।",
     findEkQuoteDesc: "खरीद मूल्य का वह हिस्सा जो स्वयं की पूंजी से वित्तपोषित है।",
     findRestschuldZBQuoteTitle: "ब्याज दर अवधि समाप्ति पर शेष ऋण",
-    findRestschuldZBQuoteDesc: "ब्याज दर अवधि के अंत में खरीद मूल्य का कितना हिस्सा अभी भी बकाया है — यह आपके ब्याज दर परिवर्तन जोखिम को निर्धारित करता है।",
-    hintScoreNiedrig: "आपका फाइनेंस स्कोर {wert}/100 है — देखें कि कौन से आंकड़े इसे नीचे खींच रहे हैं।",
+    findRestschuldZBQuoteDesc:
+      "ब्याज दर अवधि के अंत में खरीद मूल्य का कितना हिस्सा अभी भी बकाया है — यह आपके ब्याज दर परिवर्तन जोखिम को निर्धारित करता है।",
+    hintScoreNiedrig:
+      "आपका फाइनेंस स्कोर {wert}/100 है — देखें कि कौन से आंकड़े इसे नीचे खींच रहे हैं।",
+    // ── ब्याज/चुकौती और संपत्ति स्रोत चार्ट (2026-08-27) ─────────────────
+    chartZinsTilgungTitle: "ब्याज बनाम चुकौती (वार्षिक)",
+    chartZinsen: "ब्याज",
+    chartVermoegenTitle: "संपत्ति के लिए भुगतान कौन करता है?",
+    vqEigenerAnteil: "आपका अपना हिस्सा",
+    vqMieterTilgung: "किरायेदार (चुकौती)",
+    vqMarkt: "बाजार (मूल्य वृद्धि)",
+    vqFinanzamt: "कर कार्यालय (कर)",
+    vqSteuerlastHinweis:
+      "अवधि में बचत के बजाय शुद्ध कर भार — डोनट में नहीं दिखाया गया (यह हिस्सा नकारात्मक होता)।",
     vermietQ: "किराए पर दें?",
     vermietJa: "हां, किराए पर",
     vermietNein: "नहीं / स्वयं उपयोग",
@@ -3500,8 +3590,7 @@ export const TL = {
     imp: "Impressum",
     dse: "Datenschutz",
     ratesCompact: "Bauzinsen Ø",
-    ratesTip:
-      "Marktindikation für 10 Jahre Zinsbindung. Stand August 2026.",
+    ratesTip: "Marktindikation für 10 Jahre Zinsbindung. Stand August 2026.",
     ratesShort: "Topzins",
     ratesShort3: "BBank 10J",
     tagFull: "Kostenlos · Mit Konto · Aktuell",
@@ -3605,7 +3694,8 @@ export const TL = {
     step3H: "Instant results",
     step3P: "All results update in real time. No waiting, no cost.",
     step4H: "Sign up & choose a plan",
-    step4P: "Create a free account and pick the plan that fits — then every calculator is fully unlocked.",
+    step4P:
+      "Create a free account and pick the plan that fits — then every calculator is fully unlocked.",
     fullTitle: "Yield Calculator",
     fullBadge: "Yield",
     fullDesc:
@@ -3679,8 +3769,7 @@ export const TL = {
     imp: "Legal Notice",
     dse: "Privacy",
     ratesCompact: "Avg. mortgage rate",
-    ratesTip:
-      "Market indication for 10-year fixed periods. As of August 2026.",
+    ratesTip: "Market indication for 10-year fixed periods. As of August 2026.",
     ratesShort: "Top rate",
     ratesShort3: "BBank 10Y",
     tagFull: "Free · Free account · Live data",
@@ -3776,15 +3865,15 @@ export const TL = {
     uspSub: "Sadece bir hesaplayıcıdan fazlası",
     howTitle: "Nasıl çalışır",
     step1H: "Hesaplayıcı seçin veya ilanınızı yükleyin",
-    step1P:
-      "Uygun hesaplayıcıyı seçin — veya hemen ilanınızı yükleyin, Finn temel bilgileri alır.",
+    step1P: "Uygun hesaplayıcıyı seçin — veya hemen ilanınızı yükleyin, Finn temel bilgileri alır.",
     step2H: "Verileri kontrol edin",
     step2P:
       "Alım fiyatı, kira, faiz — ilanınızdan veya gerçekçi başlangıç değerleriyle önceden doldurulur, hepsi düzenlenebilir.",
     step3H: "Anında sonuçlar",
     step3P: "Tüm sonuçlar gerçek zamanlı güncellenir. Bekleme veya maliyet yoktur.",
     step4H: "Kaydolun ve plan seçin",
-    step4P: "Ücretsiz bir hesap oluşturun ve size uygun planı seçin — ardından tüm hesaplayıcılara sınırsız erişebilirsiniz.",
+    step4P:
+      "Ücretsiz bir hesap oluşturun ve size uygun planı seçin — ardından tüm hesaplayıcılara sınırsız erişebilirsiniz.",
     fullTitle: "Getiri Hesaplayıcı",
     fullBadge: "Getiri",
     fullDesc:
@@ -3856,8 +3945,7 @@ export const TL = {
     imp: "Künye",
     dse: "Gizlilik",
     ratesCompact: "Ort. ipotek faizi",
-    ratesTip:
-      "10 yıllık sabit faiz dönemi piyasa göstergesi. Ağustos 2026.",
+    ratesTip: "10 yıllık sabit faiz dönemi piyasa göstergesi. Ağustos 2026.",
     ratesShort: "En iyi",
     ratesShort3: "BBank 10Y",
     tagFull: "Ücretsiz · Ücretsiz hesap · Güncel",
@@ -4025,8 +4113,7 @@ export const TL = {
     imp: "法律声明",
     dse: "隐私",
     ratesCompact: "平均抵押利率",
-    ratesTip:
-      "10年固定利率期间市场指示。2026 年 8 月。",
+    ratesTip: "10年固定利率期间市场指示。2026 年 8 月。",
     ratesShort: "最优",
     ratesShort3: "联邦债券 10年",
     tagFull: "免费 · 免费账户 · 实时",
@@ -4050,7 +4137,8 @@ export const TL = {
     howShort: "4 步获得结果",
     navHow: "工作原理",
     navZinsen: "抵押利率",
-    subShort: "为德国投资者和房东提供免费计算器——回报、融资、租赁法、装修。注册免费账户即可立即开始。搭配 ImmoFuchs Pro 可无限使用。",
+    subShort:
+      "为德国投资者和房东提供免费计算器——回报、融资、租赁法、装修。注册免费账户即可立即开始。搭配 ImmoFuchs Pro 可无限使用。",
     heroCtaPrimary: "开始计算",
     heroCtaSecondary: "如何工作？",
     heroBadgeLive: "实时数据",
@@ -4128,7 +4216,8 @@ export const TL = {
     step3H: "तुरंत परिणाम",
     step3P: "सभी परिणाम रीयल-टाइम में अपडेट होते हैं। प्रतीक्षा या लागत नहीं।",
     step4H: "साइन अप करें और प्लान चुनें",
-    step4P: "एक मुफ़्त खाता बनाएं और उपयुक्त प्लान चुनें — इसके बाद सभी कैलकुलेटर पूरी तरह से उपलब्ध हो जाते हैं।",
+    step4P:
+      "एक मुफ़्त खाता बनाएं और उपयुक्त प्लान चुनें — इसके बाद सभी कैलकुलेटर पूरी तरह से उपलब्ध हो जाते हैं।",
     fullTitle: "रिटर्न कैलकुलेटर",
     fullBadge: "रिटर्न",
     fullDesc: "सबसे व्यापक कैलकुलेटर: रिटर्न, नकदी प्रवाह, कर लाभ, किराया कानून और जोखिम विश्लेषण।",
@@ -4196,8 +4285,7 @@ export const TL = {
     imp: "कानूनी सूचना",
     dse: "गोपनीयता",
     ratesCompact: "औसत होम लोन दर",
-    ratesTip:
-      "10 वर्ष निश्चित दर अवधि बाज़ार संकेत। अगस्त 2026।",
+    ratesTip: "10 वर्ष निश्चित दर अवधि बाज़ार संकेत। अगस्त 2026।",
     ratesShort: "सर्वोत्तम",
     ratesShort3: "BBank 10Y",
     tagFull: "मुफ्त · मुफ़्त खाता · वर्तमान",
@@ -4221,7 +4309,8 @@ export const TL = {
     howShort: "4 चरणों में परिणाम",
     navHow: "यह कैसे काम करता है",
     navZinsen: "बंधक दरें",
-    subShort: "जर्मनी में निवेशकों और मकान मालिकों के लिए मुफ्त कैलकुलेटर। मुफ़्त खाते के साथ तुरंत शुरू करें। ImmoFuchs Pro के साथ असीमित उपयोग।",
+    subShort:
+      "जर्मनी में निवेशकों और मकान मालिकों के लिए मुफ्त कैलकुलेटर। मुफ़्त खाते के साथ तुरंत शुरू करें। ImmoFuchs Pro के साथ असीमित उपयोग।",
     heroCtaPrimary: "गणना शुरू करें",
     heroCtaSecondary: "यह कैसे काम करता है?",
     heroBadgeLive: "लाइव डेटा",

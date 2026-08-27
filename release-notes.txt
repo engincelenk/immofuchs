@@ -1,3 +1,32 @@
+## 2026-08-27 (1.33.0)
+
+### NEU: Zwei neue Diagramme im Renditerechner (Zins vs. Tilgung, Wer bezahlt das Vermögen?)
+
+Nutzer-Vorbild: Screenshots eines externen Referenz-Rechners. Beide neu in
+Sektion 5 (Zeitverlauf), direkt unter der Jahrestabelle.
+
+- **Zins vs. Tilgung (jährlich)**: gestapelter Jahresbalken aus den bereits
+  vorhandenen Werten in R.yearRows (zinsen, tilgB) - reine Darstellung, keine
+  neue Finanzmathematik.
+- **Wer bezahlt das Vermögen?** (Donut): zerlegt das Nettovermögen bei
+  Verkauf in vier Quellen - Eigener Anteil, Mieter (Tilgung), Markt
+  (Wertzuwachs), Finanzamt (Steuer). Der "Mieter (Tilgung)"-Anteil ist
+  bewusst NICHT einfach die komplette kumulierte Tilgung (verbreitete, aber
+  irrefuehrende Vereinfachung in vielen Rendite-Rechnern), sondern nur der
+  Teil, den der Mietueberschuss (Miete − nicht umlagefaehige Kosten − Zinsen)
+  pro Jahr tatsaechlich gedeckt hat, gedeckelt auf die tatsaechliche Tilgung
+  dieses Jahres. Deckt die Miete nicht einmal die Zinsen, ist der Beitrag in
+  diesem Jahr 0 - der Rest der Tilgung zaehlt stattdessen zum "Eigenen
+  Anteil". Eine negative Steuerbilanz (Steuerlast statt -ersparnis) wird auf
+  0 gekappt und stattdessen als Hinweistext ausgewiesen, statt ein negatives
+  Donut-Segment zu zeigen.
+
+Beim Aufraeumen der Chart-Ordner aufgefallen, aber bewusst NICHT angefasst:
+drei unbenutzte Chart-Dateien aus einem frueheren Refactoring
+(CashflowDarlehenChart.jsx, RenditequellenChart.jsx, ExitSzenarioChart.jsx) -
+nirgends mehr importiert, koennten in einem separaten Aufraeum-Schritt
+entfernt oder reaktiviert werden.
+
 ## 2026-08-27 (1.32.0)
 
 ### NEU: ImmoFuchs Finanz-Score loest den alten Risiko-Score ab (Investment-Score-Umbau Stufe 2)
