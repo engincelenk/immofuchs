@@ -74,7 +74,7 @@ export function AccordionSection({ question, hint, color, children, defaultOpen 
         </div>
       </button>
       {open && (
-        <div style={{ padding: "0 12px 14px", borderTop: "1px solid var(--cb)" }}>{children}</div>
+        <div style={{ padding: "14px 12px", borderTop: "1px solid var(--cb)" }}>{children}</div>
       )}
     </div>
   );

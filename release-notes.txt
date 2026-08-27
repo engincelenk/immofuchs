@@ -1,3 +1,50 @@
+## 2026-08-27 (1.28.3)
+
+### AENDERUNG: Support-FAQ auf den tatsaechlichen Stand gebracht, AGB korrigiert
+
+Nutzer-Vorgabe: "aktualisiere profil -> support texte mit den aktuellen
+zustaenden". Beim Durchgehen kamen drei echte Falschaussagen zum Vorschein.
+
+1. FAQ 3 verwies auf einen Knopf fuer die freiwillige Geld-zurueck-Garantie
+   "unter Abonnement" - den gibt es dort nicht (und laut Nutzer-Entscheidung
+   2026-08-27 soll es gar keine Geld-zurueck-Garantie geben). Die Antwort
+   erklaert jetzt das gesetzliche Widerrufsrecht und wie es durch die
+   Zustimmung beim Bezahlen erlischt.
+2. FAQ 4 behauptete, ohne Pro seien "die drei zuletzt gespeicherten Objekte"
+   sichtbar. Tatsaechlich fuehrt der Client ohne Pro eine LOKALE Liste mit bis
+   zu FUENF Objekten (TRIAL_OBJECT_LIMIT_GESAMT in Merkliste.jsx), die
+   Pro-Objekte liegen davon unberuehrt auf dem Server.
+3. public/agb.html nannte 4,99 EUR/Monat und 49,99 EUR/Jahr - tatsaechlich sind
+   es 6,99 und 59,99 (planPricing.js). Ebenso stand dort noch die abgeloeste
+   Regel "jeder Rechner einmal pro Geraet" statt der 7-Tage-Testphase.
+
+Die FAQ umfasst jetzt acht statt fuenf Eintraege - neu sind: was die Testphase
+konkret enthaelt (mit den Tageskontingenten aus trialLimits.ts), wann
+abgebucht wird und womit man zahlen kann, und wo die Rechnung zu finden ist.
+Preise stehen in den Antworten als {monthly}/{yearly} und werden aus derselben
+Quelle gefuellt wie Preis-Sektion und Bestelluebersicht - sonst laufen sie bei
+der naechsten Preisaenderung in fuenf Sprachen auseinander.
+
+AGB weiter: Ziffer 8 (Freiwillige Geld-zurueck-Garantie) ist ersatzlos
+entfallen, die folgenden Ziffern sind auf 8-12 nachgerueckt, der Querverweis
+in der Haftung zieht mit, und das Wertersatz-Beispiel in der
+Widerrufsbelehrung rechnet mit den richtigen Preisen. Stand: 27. August 2026.
+
+Tote Reste entfernt: die nirgends eingebundenen i18n-Schluessel trustRefund
+("14 Tage Geld-zurueck") und accountRefund sowie refundSubscription() in
+useAccount.js. Die Worker-Route /billing/refund bleibt bestehen - sie ist von
+der e2e-Suite abgedeckt und erlaubt dem Betreiber weiterhin die Erstattung im
+Einzelfall.
+
+Mitgenommen: die kleine Polster-Korrektur an AccordionSection.jsx und
+SupportSection.jsx aus einer parallelen Sitzung. Die beiden Dateien gehoeren
+zusammen (das Polster wandert vom Kind in den Accordion-Rahmen) - einzeln
+committet waere die Darstellung kaputt.
+
+Betroffene Dateien: src/i18n/account.js,
+src/components/account/sections/SupportSection.jsx,
+src/components/ui/AccordionSection.jsx, src/hooks/useAccount.js, public/agb.html
+
 ## 2026-08-27 (1.28.2)
 
 ### FIX: Nach dem Kauf fehlte die Abo-Bestaetigung

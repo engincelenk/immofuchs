@@ -499,15 +499,6 @@ export function useAccount() {
     await refresh();
   }, [refresh]);
 
-  const refundSubscription = useCallback(async () => {
-    const res = await apiFetch("/billing/refund", { method: "POST" });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || "refund_failed");
-    }
-    await refresh();
-  }, [refresh]);
-
   // Tarifwechsel monatlich <-> jaehrlich (Phase 2). Der neue Plan landet
   // NICHT synchron in D1 - Stripe bestaetigt den Wechsel per
   // customer.subscription.updated-Webhook (siehe routes/billing.ts), der die
@@ -704,7 +695,6 @@ export function useAccount() {
     startCheckout,
     cancelSubscription,
     reactivateSubscription,
-    refundSubscription,
     changePlan,
     listInvoices,
     openInvoicePdf,
