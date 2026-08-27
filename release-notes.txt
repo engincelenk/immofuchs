@@ -1,3 +1,33 @@
+## 2026-08-27 (1.27.7)
+
+### FIX: Rechnungsuebersicht blieb nach dem allerersten Kauf dauerhaft leer
+
+Live-Befund im Kontobereich nach einem erfolgreichen Testkauf: "Zahlungen"
+zeigte dauerhaft "Noch keine Rechnungen vorhanden", obwohl die Zahlung
+durchgelaufen war. Ursache: Stripe garantiert die Zustellreihenfolge von
+Webhook-Events NICHT. `customer.subscription.created` mit Status "incomplete"
+wird bewusst ignoriert (kein DB-Eintrag, siehe Fix vom 27.08. zum
+faelschlich angelegten "canceled"-Status). Traf `invoice.payment_succeeded`
+VOR dem spaeteren `subscription.updated` (Status "active") ein, lief
+`storeLatestInvoiceId()` gegen ein UPDATE ohne passende Zeile - die entsteht
+ja erst beim spaeteren INSERT. Dieses INSERT setzte `latest_invoice_id` nie,
+und Stripes Idempotenz-Garantie ("at least once") stellt dasselbe Event nie
+wieder zu - die Rechnungs-ID des ersten Abrechnungszyklus war dauerhaft
+verloren.
+
+Fix (`worker/src/stripe/webhook.ts`): Stripes Subscription-Objekt traegt
+`latest_invoice` bereits an sich selbst (wie `customer`) - die ID wird jetzt
+direkt von dort beim Upsert uebernommen, sowohl beim INSERT (behebt den
+Erstkauf-Faell) als auch beim UPDATE (per COALESCE, self-healing bei jedem
+weiteren Event). Das macht das separate invoice.payment_succeeded-Event fuer
+die erste Rechnung ueberfluessig; es bleibt als zusaetzlicher
+Aktualisierungspfad fuer spaetere Verlaengerungen erhalten. Neuer
+Regressionstest in webhook.test.ts deckt genau dieses Race ab (latest_invoice
+kommt ausschliesslich vom Subscription-Objekt, kein separates Invoice-Event).
+
+Betrifft nur Kaeufe AB diesem Fix - der Testkauf von vorhin bleibt ohne
+latest_invoice_id in der DB und muesste manuell nachgetragen werden.
+
 ## 2026-08-27 (1.27.6)
 
 ### FIX: Bezahlen-Button warf IntegrationError bei Privatkaeufern

@@ -183,8 +183,17 @@ function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSub
                 return { meta: { changes: already ? 0 : 1 } };
               }
               if (sql.includes("UPDATE subscriptions SET status = ?, plan = ?")) {
-                const [status, plan, stripeCustomerId, periodEnd, cancelAtPeriodEnd, pastDueSince, updatedAt, id] =
-                  args;
+                const [
+                  status,
+                  plan,
+                  stripeCustomerId,
+                  periodEnd,
+                  cancelAtPeriodEnd,
+                  pastDueSince,
+                  latestInvoiceId,
+                  updatedAt,
+                  id,
+                ] = args;
                 const row = subscriptions.get(String(id));
                 if (row) {
                   row.status = String(status);
@@ -193,6 +202,8 @@ function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSub
                   row.current_period_end = Number(periodEnd);
                   row.cancel_at_period_end = Number(cancelAtPeriodEnd);
                   row.past_due_since = pastDueSince === null ? null : Number(pastDueSince);
+                  // Spiegelt COALESCE(?, latest_invoice_id) aus der echten Query.
+                  row.latest_invoice_id = latestInvoiceId === null ? row.latest_invoice_id : String(latestInvoiceId);
                   row.updated_at = Number(updatedAt);
                 }
                 return { meta: { changes: row ? 1 : 0 } };
@@ -209,6 +220,7 @@ function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSub
                   cancelAtPeriodEnd,
                   firstPurchaseAt,
                   pastDueSince,
+                  latestInvoiceId,
                   updatedAt,
                 ] = args;
                 subscriptions.set(String(id), {
@@ -222,7 +234,7 @@ function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSub
                   cancel_at_period_end: Number(cancelAtPeriodEnd),
                   first_purchase_at: Number(firstPurchaseAt),
                   past_due_since: pastDueSince === null ? null : Number(pastDueSince),
-                  latest_invoice_id: null,
+                  latest_invoice_id: latestInvoiceId === null ? null : String(latestInvoiceId),
                   updated_at: Number(updatedAt),
                 });
                 return { meta: { changes: 1 } };
@@ -309,6 +321,35 @@ describe("handleStripeWebhook — Status-/Plan-Mapping und Mail-Trigger", () => 
         payload: expect.objectContaining({ plan: "monthly", amount: preisText("monthly") }),
       }),
     );
+  });
+
+  // Regressionstest fuer den Live-Befund 2026-08-27 (Rechnungsuebersicht
+  // blieb nach dem allerersten Kauf dauerhaft leer): Stripe garantiert die
+  // Zustellreihenfolge von Webhook-Events NICHT - invoice.payment_succeeded
+  // trifft teils EHER ein als dieses subscription.created/updated. Dieses
+  // Event hier ist bewusst das EINZIGE im Test (kein vorheriges
+  // invoice.payment_succeeded), um genau den Fall abzudecken, in dem die
+  // Rechnungs-ID ausschliesslich ueber sub.latest_invoice am
+  // Subscription-Objekt selbst hereinkommt.
+  it("customer.subscription.created mit status=active uebernimmt latest_invoice direkt vom Subscription-Objekt, auch ohne separates invoice.payment_succeeded", async () => {
+    const { db, subscriptions } = createFakeBillingD1({
+      users: [{ id: "user_1", email: "kunde@example.com", trial_used_at: null }],
+    });
+    const event = subscriptionEvent("evt_1", "customer.subscription.created", {
+      id: "sub_1",
+      customer: "cus_1",
+      status: "active",
+      latest_invoice: "in_first_cycle",
+      items: { data: [{ price: { id: "price_monthly_1" } }] },
+      current_period_end: Math.floor(new Date("2026-09-18T00:00:00.000Z").getTime() / 1000),
+      cancel_at_period_end: false,
+      metadata: { user_id: "user_1" },
+    });
+
+    await handleStripeWebhook({ ...billingEnv, DB: db }, event);
+
+    const row = [...subscriptions.values()][0];
+    expect(row.latest_invoice_id).toBe("in_first_cycle");
   });
 
   // Regressionstest fuer den Live-Befund 2026-08-27 (siehe statusFromStripe-

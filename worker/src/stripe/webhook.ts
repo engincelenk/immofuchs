@@ -101,6 +101,21 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
   }
   const stripeSubscriptionId = sub.id;
   const stripeCustomerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+  // Stripe garantiert die Zustellreihenfolge von Webhook-Events NICHT (Live-
+  // Befund 2026-08-27: Rechnungsuebersicht blieb nach dem allerersten Kauf
+  // dauerhaft leer). invoice.payment_succeeded traf teils EHER ein als
+  // dieses subscription.updated/created - storeLatestInvoiceId() lief dann
+  // gegen ein UPDATE ohne passende Zeile (die entsteht ja erst hier unten
+  // per INSERT), und Stripes Idempotenz-Garantie ("at least once") stellt
+  // dasselbe Event nie wieder zu - die Rechnungs-ID war fuer den ersten
+  // Abrechnungszyklus fuer immer verloren. sub.latest_invoice traegt dieselbe
+  // ID bereits am Subscription-Objekt selbst (wie sub.customer oben), macht
+  // das Race also komplett ueberfluessig: die ID kommt direkt von hier statt
+  // vom separaten Event.
+  const latestInvoiceId =
+    typeof sub.latest_invoice === "string"
+      ? sub.latest_invoice
+      : (sub.latest_invoice?.id ?? null);
   const status = statusFromStripe(sub.status);
   const priceId = sub.items.data[0]?.price?.id;
   const plan = planFromPriceId(env, priceId);
@@ -138,7 +153,7 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
   if (existing) {
     await env.DB.prepare(
       `UPDATE subscriptions SET status = ?, plan = ?, stripe_customer_id = ?, current_period_end = ?,
-         cancel_at_period_end = ?, past_due_since = ?, updated_at = ? WHERE id = ?`,
+         cancel_at_period_end = ?, past_due_since = ?, latest_invoice_id = COALESCE(?, latest_invoice_id), updated_at = ? WHERE id = ?`,
     )
       .bind(
         cancelAtPeriodEnd ? "cancel_scheduled" : status,
@@ -147,6 +162,7 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
         periodEnd,
         cancelAtPeriodEnd,
         pastDueSince,
+        latestInvoiceId,
         now,
         existing.id,
       )
@@ -188,8 +204,8 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
     await env.DB.prepare(
       `INSERT INTO subscriptions
         (id, user_id, status, plan, stripe_customer_id, stripe_subscription_id, current_period_end,
-         cancel_at_period_end, first_purchase_at, past_due_since, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         cancel_at_period_end, first_purchase_at, past_due_since, latest_invoice_id, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         newId(),
@@ -202,6 +218,7 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
         cancelAtPeriodEnd,
         now,
         pastDueSince,
+        latestInvoiceId,
         now,
       )
       .run();
