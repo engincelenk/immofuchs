@@ -1,53 +1,74 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
+import { fmt, fmtP } from "../../utils/helpers.js";
 
-export function RBar({ score, factors }) {
+// Loest RBar.jsx ab (Investment-Score-Umbau Stufe 2, 2026-08-27) - siehe
+// docs/technical_specs/investment-score.md Abschnitt 10.2. Gleiche
+// Gauge-Geometrie wie RBar, aber gedrehte Farbrichtung (hoch = gut statt
+// hoch = schlecht) und "Dafuer/Dagegen"-Findings statt Risikofaktoren.
+//
+// `score` erwartet das Rueckgabeobjekt von investmentScore.js/berechneScore().
+// Ist `score.verfuegbar` false (Datengrundlage unter 60 % des Stufe-2-
+// Gewichts), zeigt die Komponente einen Platzhalter statt einer Zahl.
+export function ScoreBlock({ score }) {
   const { t } = useApp();
   const [ex, setEx] = useState(false);
   const [animated, setAnimated] = useState(false);
   useEffect(() => {
     const id = setTimeout(() => setAnimated(true), 80);
     return () => clearTimeout(id);
-  }, [score]);
+  }, [score?.score]);
 
-  // Color zones: 0-24 green, 25-49 yellow, 50-74 red, 75-100 dark red
-  const col = score < 25 ? "#22c55e" : score < 50 ? "#f59e0b" : score < 75 ? "#ef4444" : "#b91c1c";
-  const lbl = score < 25 ? t.niedrig : score < 50 ? t.mittel : t.hoch;
+  if (!score || !score.verfuegbar) {
+    return (
+      <div
+        style={{
+          background: "var(--cc)",
+          borderRadius: 16,
+          border: "1px solid var(--cb)",
+          padding: "24px 16px",
+          marginBottom: 16,
+          textAlign: "center",
+          color: "var(--ch)",
+          fontSize: 13,
+        }}
+      >
+        {t.financeScoreZuWenig || "Zu wenige Angaben für eine Bewertung."}
+      </div>
+    );
+  }
 
-  // Factor code → {icon, titleKey, descKey}
-  const FACTOR_MAP = {
-    "bel>95": { icon: "🏦", t: "rfBelT", d: "rfBelD" },
-    "bel>90": { icon: "🏦", t: "rfBelT", d: "rfBelD" },
-    "bel>80": { icon: "🏦", t: "rfBelT", d: "rfBelD" },
-    "nR<1": { icon: "📉", t: "rfNrT", d: "rfNrD" },
-    "nR<2": { icon: "📉", t: "rfNrT", d: "rfNrD" },
-    "nR<3": { icon: "📉", t: "rfNrT", d: "rfNrD" },
-    "cf<-500": { icon: "💸", t: "rfCfT", d: "rfCfD" },
-    "cf<0": { icon: "💸", t: "rfCfT", d: "rfCfD" },
-    "z≥5": { icon: "📊", t: "rfZT", d: "rfZD" },
-    "z≥4": { icon: "📊", t: "rfZT", d: "rfZD" },
-    "t<1": { icon: "⏳", t: "rfTT", d: "rfTD" },
-    "t<2": { icon: "⏳", t: "rfTT", d: "rfTD" },
-    "lz>35": { icon: "📅", t: "rfLzT", d: "rfLzD" },
-    "lz>30": { icon: "📅", t: "rfLzT", d: "rfLzD" },
-    "lz=∞": { icon: "∞", t: "rfLzT", d: "rfLzD" },
-    "p>6k": { icon: "🏷️", t: "rfPT", d: "rfPD" },
-    "p>5k": { icon: "🏷️", t: "rfPT", d: "rfPD" },
-    "ek<10": { icon: "💰", t: "rfEkT", d: "rfEkD" },
-    "ek<20": { icon: "💰", t: "rfEkT", d: "rfEkD" },
-    "ls>8": { icon: "🏠", t: "rfLsT", d: "rfLsD" },
-    "ls>5": { icon: "🏠", t: "rfLsT", d: "rfLsD" },
+  const COLORS = { green: "#22c55e", yellow: "#f59e0b", orange: "#f97316", red: "#ef4444" };
+  const col = COLORS[score.tier] || COLORS.red;
+  const lbl = t[score.labelKey] || score.labelKey;
+
+  // Findings-Karten: Titel/Text je Kennzahl, aus derselben Quelle wie die
+  // Ampel-Karten der Sektionen 2/3, damit ein Nutzer beide Darstellungen
+  // wiedererkennt.
+  const FINDING_MAP = {
+    kpFaktor: { title: t.kpFaktor, desc: t.findKpFaktorDesc, fmt: (v) => fmt(v, 1) + "×" },
+    anfangsrendite: {
+      title: t.findAnfangsrenditeTitle,
+      desc: t.findAnfangsrenditeDesc,
+      fmt: (v) => fmtP(v),
+    },
+    dscrObjekt: {
+      title: t.findDscrObjektTitle,
+      desc: t.findDscrObjektDesc,
+      fmt: (v) => fmt(v, 2) + "×",
+    },
+    dscrIst: { title: t.dscr, desc: t.findDscrIstDesc, fmt: (v) => fmt(v, 2) + "×" },
+    icr: { title: t.findIcrTitle, desc: t.findIcrDesc, fmt: (v) => fmt(v, 2) + "×" },
+    beLeer: { title: t.beLeer, desc: t.findBeLeerDesc, fmt: (v) => fmtP(v, 0) },
+    bel: { title: t.bel, desc: t.findBelDesc, fmt: (v) => fmtP(v) },
+    ekQuote: { title: t.ekQuote, desc: t.findEkQuoteDesc, fmt: (v) => fmtP(v) },
+    restschuldZBQuote: {
+      title: t.findRestschuldZBQuoteTitle,
+      desc: t.findRestschuldZBQuoteDesc,
+      fmt: (v) => fmtP(v),
+    },
   };
-
-  // Deduplicate factors by title key (e.g. bel>80 and bel>90 → one card)
-  const seen = new Set();
-  const dedupedFactors = (factors || []).filter((f) => {
-    const m = FACTOR_MAP[f];
-    if (!m) return true;
-    if (seen.has(m.t)) return false;
-    seen.add(m.t);
-    return true;
-  });
+  const findings = (score.findings || []).filter((f) => FINDING_MAP[f.code]);
 
   return (
     <div
@@ -61,7 +82,23 @@ export function RBar({ score, factors }) {
         boxSizing: "border-box",
       }}
     >
-      {/* Header strip */}
+      {score.hardStops.length > 0 && (
+        <div
+          style={{
+            background: "#ef4444",
+            padding: "10px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          {score.hardStops.map((hs) => (
+            <span key={hs.key} style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>
+              🔴 {t[hs.key] || hs.key}
+            </span>
+          ))}
+        </div>
+      )}
       <div
         style={{
           background: col,
@@ -80,20 +117,19 @@ export function RBar({ score, factors }) {
             textTransform: "uppercase",
           }}
         >
-          {t.risk}
+          {t.financeScoreTitle || "ImmoFuchs Finanz-Score"}
         </span>
         <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", opacity: 0.9 }}>{lbl}</span>
       </div>
 
-      {/* Gauge — zentriert, groß, farbige Zonen */}
       {(() => {
         const Rg = 108,
           cgx = 140,
           cgy = 132,
           sgw = 20;
-        const Cg = Math.PI * Rg; // ≈339.3
+        const Cg = Math.PI * Rg;
         const zLen = Cg / 3;
-        const gDash = animated ? Cg * (1 - Math.min(score, 100) / 100) : Cg;
+        const gDash = animated ? Cg * (1 - Math.min(score.score, 100) / 100) : Cg;
         return (
           <div style={{ padding: "20px 16px 8px" }}>
             <svg
@@ -101,11 +137,10 @@ export function RBar({ score, factors }) {
               viewBox="0 0 280 185"
               style={{ display: "block", maxWidth: 360, margin: "0 auto", overflow: "visible" }}
             >
-              {/* Zone arcs (background) — green / yellow / red */}
               <path
                 d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
                 fill="none"
-                stroke="#22c55e"
+                stroke="#ef4444"
                 strokeWidth={sgw}
                 strokeLinecap="butt"
                 opacity={0.22}
@@ -125,14 +160,13 @@ export function RBar({ score, factors }) {
               <path
                 d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
                 fill="none"
-                stroke="#ef4444"
+                stroke="#22c55e"
                 strokeWidth={sgw}
                 strokeLinecap="butt"
                 opacity={0.22}
                 strokeDasharray={`${zLen} ${Cg - zLen}`}
                 strokeDashoffset={-2 * zLen}
               />
-              {/* Score fill arc */}
               <path
                 d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
                 fill="none"
@@ -147,13 +181,12 @@ export function RBar({ score, factors }) {
                   transform: "scaleX(-1)",
                 }}
               />
-              {/* 0 and 100 endpoint labels */}
               <text
                 x={cgx - Rg - 2}
                 y={cgy + 20}
                 textAnchor="middle"
                 fontSize={11}
-                fill="#22c55e"
+                fill="#ef4444"
                 fontWeight={700}
               >
                 0
@@ -163,12 +196,11 @@ export function RBar({ score, factors }) {
                 y={cgy + 20}
                 textAnchor="middle"
                 fontSize={11}
-                fill="#b91c1c"
+                fill="#22c55e"
                 fontWeight={700}
               >
                 100
               </text>
-              {/* Score number — large center */}
               <text
                 x={cgx}
                 y={cgy - 14}
@@ -177,7 +209,7 @@ export function RBar({ score, factors }) {
                 fontWeight={900}
                 fill={col}
               >
-                {score}
+                {score.score}
               </text>
               <text
                 x={cgx}
@@ -189,7 +221,6 @@ export function RBar({ score, factors }) {
               >
                 /100
               </text>
-              {/* Risk label below arc */}
               <text
                 x={cgx}
                 y={cgy + 36}
@@ -201,11 +232,15 @@ export function RBar({ score, factors }) {
                 {lbl}
               </text>
             </svg>
+            <div style={{ textAlign: "center", fontSize: 10.5, color: "var(--ch)", marginTop: 4 }}>
+              {t.financeScoreSub ||
+                "Wirtschaftlichkeit, Cashflow und Finanzierung — Objekt-, Vermietungs- und Exit-Bewertung folgen später"}
+            </div>
           </div>
         );
       })()}
-      {/* Risikofaktoren — Expand button + Karten */}
-      {dedupedFactors.length > 0 && (
+
+      {findings.length > 0 && (
         <div style={{ padding: "0 12px 12px", marginTop: 4 }}>
           <button
             onClick={() => setEx(!ex)}
@@ -226,7 +261,12 @@ export function RBar({ score, factors }) {
               alignItems: "center",
             }}
           >
-            <span>▾ {ex ? t.riskHide : t.riskShow}</span>
+            <span>
+              ▾{" "}
+              {ex
+                ? t.scoreFindingsHide || "Weniger anzeigen"
+                : t.scoreFindingsShow || "Was spricht dafür, was dagegen?"}
+            </span>
             <span
               style={{
                 fontSize: 12,
@@ -237,28 +277,14 @@ export function RBar({ score, factors }) {
                 fontWeight: 700,
               }}
             >
-              {dedupedFactors.length}
+              {findings.length}
             </span>
           </button>
           {ex && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {dedupedFactors.map((f, i) => {
-                const m = FACTOR_MAP[f];
-                if (!m)
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        fontSize: 11,
-                        color: "var(--cl)",
-                        padding: "6px 10px",
-                        background: "var(--cb)",
-                        borderRadius: 8,
-                      }}
-                    >
-                      {f}
-                    </div>
-                  );
+              {findings.map((f, i) => {
+                const m = FINDING_MAP[f.code];
+                const good = f.tier === "green";
                 return (
                   <div
                     key={i}
@@ -266,16 +292,19 @@ export function RBar({ score, factors }) {
                   >
                     <div
                       style={{
-                        background: "rgba(232,101,10,.08)",
+                        background: good ? "rgba(34,197,94,.08)" : "rgba(239,68,68,.08)",
                         padding: "7px 12px",
                         display: "flex",
                         alignItems: "center",
                         gap: 8,
                       }}
                     >
-                      <span style={{ fontSize: 18 }}>{m.icon}</span>
+                      <span style={{ fontSize: 16 }}>{good ? "✓" : "⚠"}</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ct)" }}>
-                        {t[m.t] || m.t}
+                        {m.title}
+                      </span>
+                      <span style={{ fontSize: 11, color: "var(--ch)", marginLeft: "auto" }}>
+                        {m.fmt(f.wert)}
                       </span>
                     </div>
                     <div
@@ -286,7 +315,7 @@ export function RBar({ score, factors }) {
                         lineHeight: 1.6,
                       }}
                     >
-                      {t[m.d] || m.d}
+                      {m.desc}
                     </div>
                   </div>
                 );
@@ -298,5 +327,3 @@ export function RBar({ score, factors }) {
     </div>
   );
 }
-
-// ═══ ACCORDION SECTION ═══

@@ -22,8 +22,12 @@ function pickDringend(signale, t) {
   const s = signale || {};
   if (s.tier === "red") return t.hintTierRot;
   if (typeof s.cashflow === "number" && s.cashflow < 0) return t.hintCashflowNegativ;
-  if (typeof s.risiko === "number" && s.risiko > 60)
-    return tpl(t.hintRisikoHoch, { wert: Math.round(s.risiko) });
+  // Ersetzt den alten Risiko-Score (Richtung "hoch = schlecht") durch den
+  // Finanz-Score (Richtung "hoch = gut") aus investmentScore.js, Stufe 2 des
+  // Investment-Score-Umbaus (2026-08-27) - Schwelle 40 spiegelt die alte
+  // Risiko-Schwelle 60 (100 − 60 = 40).
+  if (typeof s.financeScore === "number" && s.financeScore < 40)
+    return tpl(t.hintScoreNiedrig, { wert: Math.round(s.financeScore) });
   return null;
 }
 

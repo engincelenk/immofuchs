@@ -1,3 +1,47 @@
+## 2026-08-27 (1.32.0)
+
+### NEU: ImmoFuchs Finanz-Score loest den alten Risiko-Score ab (Investment-Score-Umbau Stufe 2)
+
+Umsetzung von docs/technical_specs/investment-score.md, Stufe 2 (D1-D3 + D7,
+noch ohne Objekt-/Vermietungs-/Exit-Bewertung - dafuer heisst die Zahl bewusst
+"Finanz-Score", nicht "Investment Score", siehe Abschnitt 5.2 der Spec).
+
+Der bisherige additive Risiko-Score (R.rk/R.rF in rendite.js, Anzeige ueber
+RBar.jsx) hatte mehrere bekannte Fehler: Mehrfachbestrafung derselben Ursache
+(wenig Eigenkapital schlug in bis zu vier Gruppen gleichzeitig zu), absolute
+statt marktbezogene Zins-/Preisschwellen, und einen fachlich verkehrten
+k15-Bonus. Ersetzt durch eine neue Datei utils/investmentScore.js:
+
+- Vier Dimensionen (Wirtschaftlichkeit, Cashflow & Schuldentragfaehigkeit,
+  Finanzierung, Robustheit), gewichtet und auf 0-100 renormiert. Faellt die
+  verfuegbare Datengrundlage unter 60 % des Ausgangsgewichts, zeigt der
+  Rechner "Zu wenige Angaben fuer eine Bewertung" statt einer Zahl.
+- Hard Stops (Tilgungssatz 0, DSCR < 0,45, Beleihung > 100 %, Zuzahlung >
+  800 €/Mon.) kappen den Gesamtscore, statt ihn nur anteilig zu druecken -
+  eine gute Rendite darf eine kaputte Finanzierung nicht ueberkompensieren.
+- Neue Stress-Engine: drei vollstaendige Neuberechnungen (Basis/Negativ/
+  Stress) mit verschlechterter Miete, mehr Leerstand, hoeheren Kosten und
+  einem Zinsaufschlag ab Zinsbindungsende. Dafuer neu in rendite.js: das
+  optionale Feld "Anschlusszins" macht d.zinsbindung erstmals rechenwirksam
+  (vorher nur textlich erwaehnt) - leer gelassen rechnet alles unveraendert
+  wie bisher, bestehende gespeicherte Objekte sind nicht betroffen.
+- Neue Sektion 8 "Stresstest" im Renditerechner: Cashflow, DSCR und
+  Gesamtsaldo nebeneinander fuer alle drei Szenarien, plus ein Warnsatz, wenn
+  der Cashflow erst im Stress-Szenario ins Minus rutscht.
+- RBar.jsx (Gauge fuer den alten Risiko-Score) geloescht, ersetzt durch
+  ScoreBlock.jsx - gleiche Optik, gedrehte Farbrichtung (hoch = gut statt
+  hoch = schlecht) und eine "Was spricht dafuer, was dagegen?"-Liste statt
+  der bisherigen Risikofaktor-Karten.
+- Merkliste-Kartenvorschau und Finn-Sprechblasenhinweis zeigen jetzt den
+  Finanz-Score statt des Risikolevels (gleiche Kernaussage, gedrehte Skala).
+
+Bewusst NICHT Teil dieses Schritts (Stufe 3, spaeter): Objekt-/Sanierungs-,
+Vermietungs- und Exit-Bewertung, sowie eine Datenqualitaets-Anzeige. Die
+Kalibrierung der Bewertungsschwellen stammt aus 16 konstruierten Testfaellen
+(kalibrierung-investment-score.md) - eine Validierung an echten Exposés
+steht laut Spec noch aus und sollte vor einer breiten Nutzerkommunikation als
+"verlaesslicher Score" nachgeholt werden.
+
 ## 2026-08-27 (1.30.0)
 
 ### FIX: Laufzeit bei fehlender Tilgung stand faelschlich auf 0 statt Unendlich

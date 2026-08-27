@@ -76,47 +76,29 @@ describe("computeRendite — Kernkennzahlen (Standardfall)", () => {
     expect(R.kP).toBe(20);
   });
 
-  it("Risiko-Score und ausloesende Faktoren", () => {
-    expect(R.rk).toBe(19);
-    expect(R.rF).toEqual(["nR<3", "cf<0", "z≥4"]);
-  });
-
   it("Jahrestabelle hat eine Zeile pro Jahr", () => {
     expect(R.yearRows).toHaveLength(10);
     expect(R.yearRows[0].j).toBe(1);
   });
 });
 
-describe("computeRendite — Vollfinanzierung (Risiko-Rotbereich)", () => {
+describe("computeRendite — Vollfinanzierung", () => {
   const R = computeRendite({ ...baseD, kaufpreis: "500000", eigenkapital: "0", tilgung: "1" }, {});
 
   it("Beleihung 100% und EK-Quote 0", () => {
     expect(R.bel).toBe(100);
     expect(R.ekQ).toBe(0);
   });
-
-  it("Risiko-Score deckt viele Rotbereich-Faktoren ab", () => {
-    // Deckt bel>95, nR<2, cf<-500, z≥4, t<2, lz>35, p>6k, ek<10 in exakter Reihenfolge ab.
-    expect(R.rF).toEqual(["bel>95", "nR<2", "cf<-500", "z≥4", "t<2", "lz>35", "p>6k", "ek<10"]);
-    expect(R.rk).toBe(100);
-  });
 });
 
 describe("computeRendite — Tilgungssatz 0 (Darlehen wird nie zurueckgefuehrt)", () => {
   // Regressionstest zur Korrektur vom 2026-08-27 (Kalibrierung Investment
   // Score, Befund B6): laufzeitJahre blieb bei fehlender Tilgung faelschlich
-  // auf 0 statt Infinity - AMPEL.lz(0) zeigte damit gruen fuer ein Darlehen,
-  // das nie zurueckgezahlt wird, und der Risikofaktor "lz=∞" (15 Punkte) hat
-  // nie gefeuert. Siehe docs/technical_specs/kalibrierung-investment-score.md.
+  // auf 0 statt Infinity. Siehe docs/technical_specs/kalibrierung-investment-score.md.
   const R = computeRendite({ ...baseD, eigenkapital: "0", tilgung: "0" }, {});
 
   it("Laufzeit ist Infinity, nicht 0", () => {
     expect(R.lz).toBe(Infinity);
-  });
-
-  it("Risikofaktor lz=∞ feuert jetzt tatsaechlich", () => {
-    expect(R.rF).toContain("lz=∞");
-    expect(R.rF).not.toContain("lz>35");
   });
 });
 

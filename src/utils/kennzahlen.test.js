@@ -137,8 +137,7 @@ describe("berechneKennzahlen — Randfall Kaufpreis 0", () => {
 
 describe("berechneKennzahlen — Vollfinanzierung (Charakterisierung, deckt sich mit rendite.test.js)", () => {
   it("DSCR und Debt Yield fallen bei 100 % Beleihung deutlich", () => {
-    const { K, R } = kz({ kaufpreis: "500000", eigenkapital: "0", tilgung: "1" });
-    expect(R.rk).toBe(100); // unveraendert ggue. rendite.test.js
+    const { K } = kz({ kaufpreis: "500000", eigenkapital: "0", tilgung: "1" });
     expect(K.dscrIst).toBeCloseTo(0.384, 3);
     expect(K.dscrObjekt).toBeCloseTo(0.4, 3);
     expect(K.debtYield).toBeCloseTo(1.92, 2);

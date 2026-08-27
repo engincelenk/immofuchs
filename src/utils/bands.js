@@ -31,14 +31,39 @@ export const BANDS = {
   // Objekt rot und der Wert damit ohne Aussagekraft.
   dscrIst: { dir: "up", green: 0.75, yellow: 0.58, unit: "x" },
   breakEvenLeerstand: { dir: "up", green: -25, yellow: -55, unit: "%" },
+
+  // ── Investment-Score Stufe 2 (2026-08-27) ──────────────────────────────
+  // Werte aus demselben Kalibrierungslauf wie Stufe 1, siehe
+  // docs/technical_specs/investment-score.md Abschnitt 6.
+  // "kpFaktorScore" statt des bestehenden Schluessels "kpFaktor": der
+  // existiert schon als Ampelkarte in Sektion 2 mit einer anderen,
+  // monoton fallenden Bewertung (Kaufpreisfaktor moeglichst niedrig). Ein
+  // zweiter, plateau-foermiger Massstab fuer denselben Wert unter demselben
+  // Schluessel wuerde die bereits ausgelieferte Karte stillschweigend
+  // umfaerben - deshalb ein eigener Schluessel nur fuer den Score.
+  kpFaktorScore: { typ: "trapez", von: 18, bis: 25, null0: 11, null1: 39 },
+  anfangsrendite: { typ: "trapez", von: 3.0, bis: 4.5, null0: 1.7, null1: 7.0 },
+  dscrObjekt: { typ: "trapez", von: 0.75, bis: 1.15, null0: 0.42, null1: 1.8 },
+  icr: { dir: "up", green: 1.1, yellow: 0.9, unit: "x" },
+  debtYield: { dir: "up", green: 4.4, yellow: 3.67, unit: "%" },
+  restschuldZBQuote: { dir: "down", green: 50, yellow: 70, unit: "%" },
 };
 export function rate(kpi, wert) {
   const b = BANDS[kpi];
   if (!b) return { tier: "green", symbol: "✓", color: "green" };
   let tier;
-  if (b.dir === "up")
+  if (b.typ === "trapez") {
+    tier =
+      wert >= b.von && wert <= b.bis
+        ? "green"
+        : wert >= b.null0 && wert <= b.null1
+          ? "yellow"
+          : "red";
+  } else if (b.dir === "up") {
     tier = wert >= b.green ? "green" : b.yellow != null && wert >= b.yellow ? "yellow" : "red";
-  else tier = wert <= b.green ? "green" : b.yellow != null && wert <= b.yellow ? "yellow" : "red";
+  } else {
+    tier = wert <= b.green ? "green" : b.yellow != null && wert <= b.yellow ? "yellow" : "red";
+  }
   const symbol = tier === "green" ? "✓" : tier === "yellow" ? "~" : "⚠";
   const color = tier === "green" ? "green" : tier === "yellow" ? "yellow" : "red";
   return { tier, symbol, color };
@@ -51,6 +76,19 @@ export const vrd = (r) =>
 export function scoreKpi(kpi, value) {
   const b = BANDS[kpi];
   if (!b || value == null || !isFinite(value)) return 50;
+  // Trapez-Baender (Stufe 2 des Investment-Score-Umbaus, 2026-08-27): 100
+  // Punkte im Plateau [von, bis], linear fallend auf 0 an den Nullstellen
+  // [null0, null1] - fuer Kennzahlen, bei denen zu wenig UND zu viel
+  // schlecht sind (siehe investment-score.md Abschnitt 6, "trapez").
+  if (b.typ === "trapez") {
+    if (value >= b.von && value <= b.bis) return 100;
+    if (value < b.von) {
+      if (value <= b.null0) return 0;
+      return ((value - b.null0) / (b.von - b.null0)) * 100;
+    }
+    if (value >= b.null1) return 0;
+    return ((b.null1 - value) / (b.null1 - b.bis)) * 100;
+  }
   const { dir, green, yellow } = b;
   if (yellow == null) {
     const spread = Math.abs(green) || 1;

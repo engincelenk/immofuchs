@@ -6,10 +6,12 @@ import { fmt, fmtE, fmtP, tpl } from "../../utils/helpers.js";
 import { rate, vrd } from "../../utils/bands.js";
 import { computeRendite } from "../../utils/rendite.js";
 import { berechneKennzahlen } from "../../utils/kennzahlen.js";
+import { berechneScore } from "../../utils/investmentScore.js";
 import { F, Sel, Row, Sec, Ins, VT, AmpelKPI, NeutralKPI, Toggle } from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
-import { RBar } from "../charts/RBar.jsx";
+import { ScoreBlock } from "../charts/ScoreBlock.jsx";
 import { InvestmentCheckRadar } from "../charts/InvestmentCheckRadar.jsx";
+import { StressTabelle } from "../tables/StressTabelle.jsx";
 import { YearTable } from "../tables/YearTable.jsx";
 import { Detail } from "../tables/Detail.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -64,6 +66,12 @@ export default function Haupt() {
   // (DSCR, Break-even-Miete/-Leerstand, ...) ohne Aggregation zu einem Score -
   // siehe docs/technical_specs/investment-score.md.
   const K = useMemo(() => berechneKennzahlen(d, R), [d, R]);
+  // Stufe 2 (2026-08-27): loest den alten additiven Risiko-Score (vormals
+  // R.rk/R.rF) ab. Drei zusaetzliche computeRendite-Laeufe (Stress-Engine)
+  // stecken in berechneScore() selbst - Laufzeit im µs-Bereich, siehe
+  // Kommentar dort. Bleibt im selben useMemo wie R/K, kein zusaetzlicher
+  // Re-Render.
+  const score = useMemo(() => berechneScore(d, t), [d, t]);
 
   // Der Neubau-Block gilt ab dem Baujahr, ab dem die 3-%-AfA greift
   // (§ 7 Abs. 4 Nr. 2a EStG) - dieselbe Grenze wie in afaFromBj.
@@ -262,6 +270,20 @@ export default function Haupt() {
             onChange={(v) => set("zinsbindung", v)}
             options={[5, 10, 15, 20, 25, 30].map((y) => ({ v: y, l: `${y} J.` }))}
             tip={tip("zinsbindung")}
+          />
+          {/* Investment-Score Stufe 2 (2026-08-27): optionales Feld, macht
+              d.zinsbindung erstmals rechenwirksam (vorher nur textlich
+              erwaehnt). Leer = heutiger Zinssatz gilt unveraendert weiter -
+              bestehende Objekte und alle Nutzer, die das Feld nie anfassen,
+              rechnen exakt wie vorher. */}
+          <F
+            label={t.anschlussZinsLabel}
+            unit="% p.a."
+            value={d.anschlussZins}
+            onChange={(v) => set("anschlussZins", v)}
+            step="0.05"
+            hint={t.anschlussZinsHint}
+            tip={tip("anschlussZins")}
           />
           <Sec title={t.stNk} icon="📋" />
           <Row>
@@ -507,7 +529,11 @@ export default function Haupt() {
                   borderRadius: 10,
                   marginBottom: 10,
                   marginTop: -4,
-                  background: unterGrenze ? "var(--ok-bg)" : ueberGrenze ? "var(--warn-bg)" : "var(--ci)",
+                  background: unterGrenze
+                    ? "var(--ok-bg)"
+                    : ueberGrenze
+                      ? "var(--warn-bg)"
+                      : "var(--ci)",
                   border: `1px solid ${unterGrenze ? "var(--ok-bd)" : ueberGrenze ? "var(--warn-bd)" : "var(--cb)"}`,
                 }}
               >
@@ -515,7 +541,11 @@ export default function Haupt() {
                   style={{
                     fontSize: 10,
                     fontWeight: 700,
-                    color: unterGrenze ? "var(--ok-tx)" : ueberGrenze ? "var(--warn-tx)" : "var(--ct)",
+                    color: unterGrenze
+                      ? "var(--ok-tx)"
+                      : ueberGrenze
+                        ? "var(--warn-tx)"
+                        : "var(--ct)",
                     marginBottom: 3,
                   }}
                 >
@@ -671,8 +701,8 @@ export default function Haupt() {
                 </button>
               </div>
 
-              {/* RISIKOGAUGE — immer sichtbar */}
-              <RBar score={R.rk} factors={R.rF} />
+              {/* FINANZ-SCORE — immer sichtbar */}
+              <ScoreBlock score={score} />
 
               {/* ═══ SELBSTTRÄGER-CHECK ═══ */}
               {(() => {
@@ -1639,6 +1669,17 @@ export default function Haupt() {
                 );
               })()}
 
+              {/* ═══ SECTION 8: Stresstest (Investment-Score-Umbau Stufe 2, 2026-08-27) ═══ */}
+              {score.verfuegbar && (
+                <AccordionSection
+                  question={t.stressTitle || "Stresstest"}
+                  hint={t.stressSub}
+                  sync={{ key: secAllKey, open: secAllOpen }}
+                >
+                  <StressTabelle stress={score.stress} jahre={+d.jahre || 10} />
+                </AccordionSection>
+              )}
+
               <SaveBtn tab="haupt" />
               <ExportPDF title={t.hauptFull || t.haupt} rechner="renditerechner" />
               <Legal items={LEG.rendite} />
@@ -1691,7 +1732,13 @@ export default function Haupt() {
             contextLabel={at.contextRendite}
             suggested={suggested}
             lang={lang}
-            signale={R && { tier: nrTier, cashflow: R.cf2, risiko: R.rk }}
+            signale={
+              R && {
+                tier: nrTier,
+                cashflow: R.cf2,
+                financeScore: score?.verfuegbar ? score.score : null,
+              }
+            }
             autoOpenUpload={autoExpose}
             onAutoOpenUploadHandled={clearAutoExpose}
           />

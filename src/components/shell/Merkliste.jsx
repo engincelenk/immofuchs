@@ -16,6 +16,7 @@ import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
 import { ObjektDetail } from "../dashboard/ObjektDetail.jsx";
 import { scoreBadgeColor, scoreBadgeText } from "../dashboard/dashboardUtils.js";
 import { computeRendite } from "../../utils/rendite.js";
+import { berechneScore } from "../../utils/investmentScore.js";
 import { buildMP } from "../../utils/mietprognose.js";
 import { computeKreditVorschau } from "../../utils/kreditKennzahlen.js";
 import { isK15 } from "../../data/plzData.js";
@@ -54,7 +55,12 @@ const searchChipStyle = {
   fontFamily: "inherit",
   whiteSpace: "nowrap",
 };
-const searchChipActiveStyle = { ...searchChipStyle, background: "var(--ca)", color: "#fff", borderColor: "var(--ca)" };
+const searchChipActiveStyle = {
+  ...searchChipStyle,
+  background: "var(--ca)",
+  color: "#fff",
+  borderColor: "var(--ca)",
+};
 // Kontingent der Testphase (Nutzer-Vorgabe 2026-08-25): 5 Objekte INSGESAMT
 // fuer die ganze Phase. Pro speichert unbegrenzt.
 //
@@ -222,7 +228,10 @@ export function useSavedObjects(setData) {
           });
           if (res.ok) writeLocalList([]);
         } catch (e) {
-          console.error("[merkliste] Free->Pro-Import fehlgeschlagen, lokaler Stand bleibt erhalten:", e);
+          console.error(
+            "[merkliste] Free->Pro-Import fehlgeschlagen, lokaler Stand bleibt erhalten:",
+            e,
+          );
         }
       }
       await refreshFromServer();
@@ -316,7 +325,14 @@ export function SaveModal({ open, onClose, onSave, defaultName, lang }) {
     if (open) setName(defaultName || "");
   }, [open, defaultName]);
   return (
-    <Sheet open={open} onClose={onClose} variant="bottom" size={480} label={t.saveModalTitle || "Objekt speichern"} initialFocusRef={inp}>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      variant="bottom"
+      size={480}
+      label={t.saveModalTitle || "Objekt speichern"}
+      initialFocusRef={inp}
+    >
       <div style={{ padding: "0 20px 36px" }}>
         <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, color: "var(--ct)" }}>
           {t.saveModalTitle || "Objekt speichern"}
@@ -463,14 +479,19 @@ function rechnerKennzahlen(tab, inputData, t, locale) {
     const kp = +inputData.kaufpreis || 0;
     if (kp <= 0) return null;
     const R = computeRendite(inputData, t);
-    const rk = R.rk;
-    const rkColor = rk < 25 ? "#22c55e" : rk < 50 ? "#f59e0b" : rk < 75 ? "#ef4444" : "#b91c1c";
-    const rkLabel = rk < 25 ? t.niedrig : rk < 50 ? t.mittel : t.hoch;
+    // Loest die alte Risiko-Vorschau ab (Investment-Score-Umbau Stufe 2,
+    // 2026-08-27) - computeRendite() wird hier ohnehin live neu aufgerufen,
+    // der Eingriff bleibt auf diese vier Zeilen begrenzt (kein
+    // Persistenz-/Migrationsaufwand fuer bestehende gespeicherte Objekte).
+    const score = berechneScore(inputData, t);
+    const scoreColors = { green: "#22c55e", yellow: "#f59e0b", orange: "#f97316", red: "#ef4444" };
+    const scoreColor = score.verfuegbar ? scoreColors[score.tier] : "#8A8A80";
+    const scoreValue = score.verfuegbar ? `${score.score}/100` : "–";
     return [
       { label: t.kaufpreis || "Kaufpreis", value: `${fmtNum(kp)} €` },
       { label: "Nettorendite", value: fmtPct(R.nR) },
       { label: "Cashflow/Mon.", value: `${R.cf2 >= 0 ? "+" : ""}${fmtNum(R.cf2)} €` },
-      { label: "Risiko", value: rkLabel, color: rkColor },
+      { label: t.financeScoreTitle || "Finanz-Score", value: scoreValue, color: scoreColor },
     ];
   }
 
@@ -491,14 +512,28 @@ function rechnerKennzahlen(tab, inputData, t, locale) {
     const qm = +inputData.flaeche || 1,
       vQ = +inputData.vergleichsmiete || 0,
       jahre = +inputData.mietJahre || 10;
-    const k15 = isK15(inputData.ort) || inputData.bundesland === "BE" || inputData.bundesland === "HH";
+    const k15 =
+      isK15(inputData.ort) || inputData.bundesland === "BE" || inputData.bundesland === "HH";
     const kP = k15 ? 15 : 20;
-    const mt = buildMP(mi, qm, vQ, kP, inputData.letzteErhDatum, +inputData.letzteErhMiete || 0, jahre, k15, t);
+    const mt = buildMP(
+      mi,
+      qm,
+      vQ,
+      kP,
+      inputData.letzteErhDatum,
+      +inputData.letzteErhMiete || 0,
+      jahre,
+      k15,
+      t,
+    );
     const nx = mt.rows[0];
     const items = [{ label: t.kaltmiete || "Kaltmiete", value: `${fmtNum(mi)} €/Mon.` }];
     if (nx) {
       items.push(
-        { label: "Nächste Erhöhung", value: nx.datum instanceof Date ? nx.datum.toLocaleDateString(locale) : "—" },
+        {
+          label: "Nächste Erhöhung",
+          value: nx.datum instanceof Date ? nx.datum.toLocaleDateString(locale) : "—",
+        },
         { label: "Neue Miete", value: `${fmtNum(nx.neueMiete)} €/Mon.` },
         { label: "Erhöhung", value: nx.mE > 0 ? `+${fmtPct(nx.mP)}` : "—" },
       );
@@ -523,7 +558,8 @@ function rechnerKennzahlen(tab, inputData, t, locale) {
 }
 
 export function Merkliste() {
-  const { savedList, delObj, loadObj, setTabExt, lang, isProSavedObjects, savedObjectsFreeLimit } = useApp();
+  const { savedList, delObj, loadObj, setTabExt, lang, isProSavedObjects, savedObjectsFreeLimit } =
+    useApp();
   const t = T[lang] || T.de;
   const locale = LANG_LOCALE[lang] || "de-DE";
   const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
@@ -609,7 +645,9 @@ export function Merkliste() {
     let list = savedList;
     if (query.trim()) {
       const q = query.trim().toLowerCase();
-      list = list.filter((o) => o.name.toLowerCase().includes(q) || (o.ort || "").toLowerCase().includes(q));
+      list = list.filter(
+        (o) => o.name.toLowerCase().includes(q) || (o.ort || "").toLowerCase().includes(q),
+      );
     }
     if (rechnerFilter !== "alle") list = list.filter((o) => o.tab === rechnerFilter);
     if (onlyGut) list = list.filter((o) => o.scoreLabel === "gut");
@@ -691,7 +729,10 @@ export function Merkliste() {
         />
         {hasScores && (
           <>
-            <button onClick={() => setOnlyGut((v) => !v)} style={onlyGut ? searchChipActiveStyle : searchChipStyle}>
+            <button
+              onClick={() => setOnlyGut((v) => !v)}
+              style={onlyGut ? searchChipActiveStyle : searchChipStyle}
+            >
               Score „Gut"
             </button>
             <button onClick={() => setSortByScore((v) => !v)} style={searchChipStyle}>
@@ -748,7 +789,9 @@ export function Merkliste() {
         </Suspense>
       )}
       {filtered.length === 0 && (
-        <div style={{ textAlign: "center", padding: "32px 20px", color: "var(--ch)", fontSize: 13 }}>
+        <div
+          style={{ textAlign: "center", padding: "32px 20px", color: "var(--ch)", fontSize: 13 }}
+        >
           Keine Objekte gefunden.
         </div>
       )}
@@ -824,7 +867,15 @@ export function Merkliste() {
                   <div style={{ fontSize: 12, color: "var(--ch)", marginTop: 2 }}>{obj.date}</div>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 10, flexShrink: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginLeft: 10,
+                  flexShrink: 0,
+                }}
+              >
                 {obj.score != null && (
                   <span
                     style={{
@@ -868,7 +919,9 @@ export function Merkliste() {
                 {kennzahlen.map((k, ki) => (
                   <span key={ki}>
                     <span style={{ color: "var(--ch)" }}>{k.label} </span>
-                    <span style={{ fontWeight: 600, color: k.color || "var(--ct)" }}>{k.value}</span>
+                    <span style={{ fontWeight: 600, color: k.color || "var(--ct)" }}>
+                      {k.value}
+                    </span>
                   </span>
                 ))}
               </div>

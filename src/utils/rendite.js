@@ -24,31 +24,12 @@ export function berechneNichtUml(flaeche) {
 // `d` (+ Uebersetzungen `t`, nur fuer die intern genutzten Mietprognose-Status-
 // Labels) und liefert dasselbe Kennzahlen-Objekt wie zuvor (Schluesselnamen
 // bewusst unveraendert, damit die Komponente unangetastet bleibt).
-
-// Additives 0–100-Risikomodell: pro Gruppe feuert nur die erste zutreffende
-// Stufe (if/else-if). Die Schwellen sind hier benannt; die Punktgewichte stehen
-// bewusst inline neben ihrem Kurzlabel (rF), das dieselbe Bedeutung traegt.
-const RISIKO = {
-  belKritisch: 95,
-  belHoch: 90,
-  belErhoeht: 80,
-  nettoSehrNiedrig: 1,
-  nettoNiedrig: 2,
-  nettoGrenz: 3,
-  cfStarkNegativ: -500,
-  zinsHoch: 5,
-  zinsErhoeht: 4,
-  tilgungSehrNiedrig: 1,
-  tilgungNiedrig: 2,
-  laufzeitKritisch: 35,
-  laufzeitHoch: 30,
-  preisSehrHoch: 6000,
-  preisHoch: 5000,
-  ekNiedrig: 10,
-  ekGrenz: 20,
-  leerstandFaktorHoch: 0.08,
-  leerstandFaktorMittel: 0.05,
-};
+//
+// Das fruehere additive Risiko-Modell (rk/rF, RISIKO-Schwellen) ist mit dem
+// Investment-Score-Umbau Stufe 2 (2026-08-27) entfallen - siehe
+// docs/technical_specs/investment-score.md Abschnitt 2.2 fuer die Fehler, die
+// es hatte (Mehrfachbestrafung, ortsblinde/marktblinde Schwellen), und
+// utils/investmentScore.js fuer den Ersatz (Finanz-Score aus D1-D3+D7).
 
 export function computeRendite(d, t) {
   // ── Eingaben (Strings aus dem Formular → Zahlen) ──
@@ -72,6 +53,16 @@ export function computeRendite(d, t) {
   const wertsteigerungProz = +d.wertP || 0,
     jahre = +d.jahre || 10,
     sonderumlage = +d.sonder || 0;
+  // ── Anschlusszins (Investment-Score Stufe 2, 2026-08-27) ────────────────
+  // Optional. Ist er gesetzt, gilt er ab dem Jahr NACH Ende der Zinsbindung
+  // fuer das Bankdarlehen (nicht das KfW-Darlehen, dessen Zins ueber die
+  // gesamte Laufzeit gebunden ist). Die Annuitaet (unten, konstant) aendert
+  // sich dadurch nicht - nur die Zins-/Tilgungsaufteilung verschiebt sich,
+  // wie bei jeder realen Anschlussfinanzierung mit gleichbleibender Rate.
+  // Ist das Feld leer (Regelfall, alle Bestandsnutzer), verhaelt sich die
+  // Jahresschleife exakt wie vor dieser Erweiterung.
+  const zinsbindungJahre = Math.max(1, Math.round(+d.zinsbindung) || 10);
+  const anschlussZinsProz = +d.anschlussZins > 0 ? +d.anschlussZins : null;
   const renovierung = +d.renovierung || 0,
     vergleichsmiete = +d.vergleichsmiete || 0;
   // ── Neubau-Abschreibung (2026-08-25) ──
@@ -234,7 +225,9 @@ export function computeRendite(d, t) {
   for (let jahr = 1; jahr <= jahre; jahr++) {
     const restStart = restschuld;
     const jahresMieteJ = mieteImJahr(jahr) * leerstandsFaktor * 12;
-    const zinsJ = restschuld * (zinsProz / 100);
+    const zinsProzJahr =
+      anschlussZinsProz != null && jahr > zinsbindungJahre ? anschlussZinsProz : zinsProz;
+    const zinsJ = restschuld * (zinsProzJahr / 100);
     // Nie negativ: bei Tilgungssatz 0 oder einer Annuitaet unterhalb der
     // Jahreszinsen wuerde Math.min() sonst einen negativen Wert liefern und
     // die Restschuld unbemerkt steigen lassen.
@@ -254,8 +247,7 @@ export function computeRendite(d, t) {
     // Werbungskosten. Bei ueberschiessenden Mieten entsteht deshalb eine
     // Steuerlast (negatives steuerJ), keine Ersparnis.
     // Tilgung ist bewusst nicht enthalten: sie ist keine Werbungskosten.
-    const ergebnisJ =
-      jahresMieteJ - zinsJ - kfwZinsJ - nichtUmlagbarJahr - afaJ - sofortAufwandJ;
+    const ergebnisJ = jahresMieteJ - zinsJ - kfwZinsJ - nichtUmlagbarJahr - afaJ - sofortAufwandJ;
     const steuerJ = -ergebnisJ * (steuerProz / 100);
     const cfOhneStJ = jahresMieteJ - nichtUmlagbarJahr - zinsTilgungJ; // ohne Steuerwirkung
     const cfJ = cfOhneStJ + steuerJ; // mit Steuerwirkung
@@ -270,7 +262,7 @@ export function computeRendite(d, t) {
       rest: Math.max(0, restStart) + kfwZeile.restStart,
       restBank: Math.max(0, restStart),
       restKfw: kfwZeile.restStart,
-      zP: zinsProz,
+      zP: zinsProzJahr,
       zinsen: zinsJ + kfwZinsJ,
       zinsenBank: zinsJ,
       zinsenKfw: kfwZinsJ,
@@ -312,9 +304,7 @@ export function computeRendite(d, t) {
   const veraeusserungsgewinn = verkaufswert - buchwert;
   const spekulationsfrist = jahre <= 10;
   const steuer23 =
-    spekulationsfrist && veraeusserungsgewinn > 0
-      ? veraeusserungsgewinn * (steuerProz / 100)
-      : 0;
+    spekulationsfrist && veraeusserungsgewinn > 0 ? veraeusserungsgewinn * (steuerProz / 100) : 0;
   // nkFinanzieren AN: Nebenkosten stecken bereits im Darlehen (oben) und sind
   // damit keine zusaetzliche Barauslage mehr - sonst wuerden sie hier ein
   // zweites Mal vom Saldo abgezogen (einmal als hoehere Restschuld/Zins- und
@@ -353,94 +343,14 @@ export function computeRendite(d, t) {
   // Mischzins der Fremdfinanzierung im ersten Jahr.
   const mischzins =
     darlehen > 0
-      ? (darlehenBank * zinsProz + darlehenKfw * (+d.kfwZins > 0 ? +d.kfwZins : KFW_KREDIT.kfn.zins)) /
+      ? (darlehenBank * zinsProz +
+          darlehenKfw * (+d.kfwZins > 0 ? +d.kfwZins : KFW_KREDIT.kfn.zins)) /
         darlehen
       : 0;
   const cfMonOhneSt = effektivMieteMon - nichtUmlagbarMon - rateMonJ1;
   const cfMonMitSt = cfMonOhneSt + (yearRows[0]?.steuer || 0) / 12;
   const cfMon = cfMonOhneSt;
   const ekQuote = gesamtKaufpreis > 0 ? (eigenkapital / gesamtKaufpreis) * 100 : 0;
-
-  // ── Risiko-Score (additiv, 0–100; erste zutreffende Stufe je Gruppe) ──
-  let risikoScore = 0;
-  const risikoFaktoren = [];
-  if (beleihung > RISIKO.belKritisch) {
-    risikoScore += 30;
-    risikoFaktoren.push("bel>95");
-  } else if (beleihung > RISIKO.belHoch) {
-    risikoScore += 22;
-    risikoFaktoren.push("bel>90");
-  } else if (beleihung > RISIKO.belErhoeht) {
-    risikoScore += 12;
-    risikoFaktoren.push("bel>80");
-  }
-  if (nettoRendite < RISIKO.nettoSehrNiedrig) {
-    risikoScore += 20;
-    risikoFaktoren.push("nR<1");
-  } else if (nettoRendite < RISIKO.nettoNiedrig) {
-    risikoScore += 12;
-    risikoFaktoren.push("nR<2");
-  } else if (nettoRendite < RISIKO.nettoGrenz) {
-    risikoScore += 5;
-    risikoFaktoren.push("nR<3");
-  }
-  if (cfMon < RISIKO.cfStarkNegativ) {
-    risikoScore += 15;
-    risikoFaktoren.push("cf<-500");
-  } else if (cfMon < 0) {
-    risikoScore += 8;
-    risikoFaktoren.push("cf<0");
-  }
-  if (zinsProz >= RISIKO.zinsHoch) {
-    risikoScore += 12;
-    risikoFaktoren.push("z≥5");
-  } else if (zinsProz >= RISIKO.zinsErhoeht) {
-    risikoScore += 6;
-    risikoFaktoren.push("z≥4");
-  }
-  if (tilgungProz < RISIKO.tilgungSehrNiedrig) {
-    risikoScore += 18;
-    risikoFaktoren.push("t<1");
-  } else if (tilgungProz < RISIKO.tilgungNiedrig) {
-    risikoScore += 8;
-    risikoFaktoren.push("t<2");
-  }
-  if (isFinite(laufzeitJahre) && laufzeitJahre > RISIKO.laufzeitKritisch) {
-    risikoScore += 12;
-    risikoFaktoren.push("lz>35");
-  } else if (isFinite(laufzeitJahre) && laufzeitJahre > RISIKO.laufzeitHoch) {
-    risikoScore += 6;
-    risikoFaktoren.push("lz>30");
-  }
-  if (!isFinite(laufzeitJahre)) {
-    risikoScore += 15;
-    risikoFaktoren.push("lz=∞");
-  }
-  if (preisProQm > RISIKO.preisSehrHoch) {
-    risikoScore += 8;
-    risikoFaktoren.push("p>6k");
-  } else if (preisProQm > RISIKO.preisHoch) {
-    risikoScore += 4;
-    risikoFaktoren.push("p>5k");
-  }
-  if (ekQuote < RISIKO.ekNiedrig) {
-    risikoScore += 15;
-    risikoFaktoren.push("ek<10");
-  } else if (ekQuote < RISIKO.ekGrenz) {
-    risikoScore += 5;
-    risikoFaktoren.push("ek<20");
-  }
-  if (leerstandMon > analyseMonate * RISIKO.leerstandFaktorHoch) {
-    risikoScore += 8;
-    risikoFaktoren.push("ls>8");
-  } else if (leerstandMon > analyseMonate * RISIKO.leerstandFaktorMittel) {
-    risikoScore += 4;
-    risikoFaktoren.push("ls>5");
-  }
-  if (k15) risikoScore = Math.max(0, risikoScore - 5);
-  if (bruttoRendite >= 5) risikoScore = Math.max(0, risikoScore - 5);
-  if (cfMon > 0) risikoScore = Math.max(0, risikoScore - 3);
-  risikoScore = Math.min(100, Math.round(risikoScore));
 
   // Schluesselnamen bewusst unveraendert (Renditerechner.jsx liest R.pQm, R.bR, …)
   return {
@@ -480,8 +390,6 @@ export function computeRendite(d, t) {
     gOhne: gesamtSaldoOhneSt,
     vw: verkaufswert,
     w: wertzuwachs,
-    rk: risikoScore,
-    rF: risikoFaktoren,
     gP: grEstProz,
     j: jahre,
     sCF: summeCfMitSt,

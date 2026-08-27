@@ -174,6 +174,10 @@ function createDefaults() {
     zinssatz: String(MARKET_RATES.avg),
     tilgung: "1",
     zinsbindung: "10",
+    // Investment-Score Stufe 2 (2026-08-27): optional, leer = heutiger
+    // Zinssatz gilt nach Zinsbindungsende unveraendert weiter. Siehe
+    // rendite.js/computeRendite.
+    anschlussZins: "",
     notar: "2.0",
     makler: "3.57",
     steuersatz: "30",
@@ -289,9 +293,9 @@ const DARK_TOKENS =
   "--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--cro:#202020;--ca-bg:#3a2414;--ca-bd:#5a3a1e;--hdr-bg:rgba(24,24,24,.92);" +
   STATUS_TOKENS_DARK;
 const ROOT_TOKENS_CSS =
-  (":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f;--hdr-bg:rgba(245,245,240,.92);" +
-    STATUS_TOKENS_LIGHT +
-    "}") +
+  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f;--hdr-bg:rgba(245,245,240,.92);" +
+  STATUS_TOKENS_LIGHT +
+  "}" +
   `:root[data-theme="dark"]{${DARK_TOKENS}}` +
   `@media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]){${DARK_TOKENS}}}` +
   ":focus-visible{outline:2px solid var(--ca);outline-offset:2px;border-radius:6px}";
@@ -465,7 +469,8 @@ export default function App() {
     if (k === "zinssatz") zinssatzTouchedRef.current = true;
     // Nur ein vom automatisch gesetzten Richtwert abweichender Wert zaehlt als
     // echte Nutzereingabe - siehe Kommentar bei nichtUmlAutoRef.
-    if (k === "nichtUml" && String(v) !== nichtUmlAutoRef.current) nichtUmlTouchedRef.current = true;
+    if (k === "nichtUml" && String(v) !== nichtUmlAutoRef.current)
+      nichtUmlTouchedRef.current = true;
     setData((p) => ({ ...p, [k]: v }));
   }, []);
 
@@ -775,7 +780,10 @@ export default function App() {
             </CalculatorTrialGate>
           )}
           {tab === "steuer6" && (
-            <CalculatorTrialGate rechner={tabZuRechner("steuer6")} onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate
+              rechner={tabZuRechner("steuer6")}
+              onDismiss={() => setTab("saved")}
+            >
               <SteuerTrick />
             </CalculatorTrialGate>
           )}
@@ -897,7 +905,9 @@ export default function App() {
             aria-expanded={tabMenuOpen}
             aria-label={t.alleRechner}
           >
-            <span aria-hidden="true" style={{ fontSize: 17, lineHeight: 1 }}>☰</span>
+            <span aria-hidden="true" style={{ fontSize: 17, lineHeight: 1 }}>
+              ☰
+            </span>
             <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ch)" }}>{t.alle}</span>
           </button>
         </div>
@@ -913,7 +923,9 @@ export default function App() {
           label={t.alleRechner}
           size="min(640px, 100vw)"
         >
-          <div style={{ padding: "14px 18px 6px", fontSize: 13, fontWeight: 800, color: "var(--ct)" }}>
+          <div
+            style={{ padding: "14px 18px 6px", fontSize: 13, fontWeight: 800, color: "var(--ct)" }}
+          >
             {t.alleRechner}
           </div>
           {tabs.map((tb) => (
