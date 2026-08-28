@@ -1,3 +1,22 @@
+## 2026-08-28 (1.42.0)
+
+### AENDERUNG: Slider-Limits deutlich erhoeht, Mobile-Ergebnis-Regler in Renditerechner und Kreditrechner umgestellt
+
+Nutzer-Vorgabe: Kaufpreis und Eigenkapital (Renditerechner + Kreditrechner)
+jetzt 0-100.000.000 € statt 0-2.000.000 €/0-500.000 € (Schritt weiterhin
+1.000 €) - deckt auch sehr grosse Portfolio-/Gewerbeobjekte ab. Ebenso
+angehoben: Garage/Stellplatz (0-200.000 €), Sonderumlage (0-500.000 €),
+Renovierungskosten (0-5.000.000 €), KfW-Betrag im Kreditrechner (0-1.000.000
+€, jetzt fester Bereich statt dynamisch an den KfW-Deckel gekoppelt).
+
+Mobile-Ergebnis-Regler (Live-Slider-Panel) im Renditerechner umgestellt: statt
+Zinssatz+Tilgung jetzt Kaufpreis, Eigenkapital, Zinssatz (Tilgung entfernt) -
+das sind die Werte, an denen Nutzer auf Mobile am haeufigsten direkt im
+Ergebnis-Tab schrauben wollen. Im Kreditrechner gibt es jetzt ebenfalls ein
+Live-Slider-Panel (Kaufpreis, Eigenkapital, Zinssatz), platziert direkt unter
+der Raten-Kachel im Ergebnisbereich - vorher hatte dieser Rechner dort gar
+kein Panel.
+
 ## 2026-08-28 (1.41.0)
 
 ### NEU: Weitere Slider (Renditerechner, Kreditrechner, Mieterhoehungsrechner, Sanierungsrechner, 6%-Trick), KfW-Vorbelegung

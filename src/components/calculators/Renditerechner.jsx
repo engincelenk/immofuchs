@@ -146,7 +146,7 @@ export default function Haupt() {
             value={d.kaufpreis}
             onChange={(v) => set("kaufpreis", v)}
             tip={tip("kaufpreis")}
-            slider={{ min: 50000, max: 2000000, step: 1000 }}
+            slider={{ min: 0, max: 100000000, step: 1000 }}
           />
           <F
             label={t.garageKauf}
@@ -154,7 +154,7 @@ export default function Haupt() {
             value={d.garage}
             onChange={(v) => set("garage", v)}
             tip={tip("garage")}
-            slider={{ min: 0, max: 50000, step: 500 }}
+            slider={{ min: 0, max: 200000, step: 1000 }}
           />
           {(+d.garage || 0) > 0 && (
             <div
@@ -255,7 +255,7 @@ export default function Haupt() {
             value={d.eigenkapital}
             onChange={(v) => set("eigenkapital", v)}
             tip={tip("eigenkapital")}
-            slider={{ min: 0, max: 500000, step: 1000 }}
+            slider={{ min: 0, max: 100000000, step: 1000 }}
           />
           <Toggle
             checked={!!d.nkFinanzieren}
@@ -530,14 +530,14 @@ export default function Haupt() {
             value={d.sonder}
             onChange={(v) => set("sonder", v)}
             tip={tip("sonder")}
-            slider={{ min: 0, max: 50000, step: 500 }}
+            slider={{ min: 0, max: 500000, step: 1000 }}
           />
           <F
             label={t.renovierung}
             unit="€"
             value={d.renovierung}
             onChange={(v) => set("renovierung", v)}
-            slider={{ min: 0, max: 200000, step: 1000 }}
+            slider={{ min: 0, max: 5000000, step: 1000 }}
             tip={tip("renovierung")}
           />
           {(() => {
@@ -758,6 +758,26 @@ export default function Haupt() {
               <Ins emoji="ℹ️" text={t.exitHint} type="info" />
               <LiveSliderPanel title={t.liveRegler}>
                 <LiveSlider
+                  label={t.kaufpreis}
+                  unit="€"
+                  value={d.kaufpreis}
+                  onChange={(v) => set("kaufpreis", v)}
+                  min={0}
+                  max={100000000}
+                  step={1000}
+                  tip={tip("kaufpreis")}
+                />
+                <LiveSlider
+                  label={t.eigenkapital}
+                  unit="€"
+                  value={d.eigenkapital}
+                  onChange={(v) => set("eigenkapital", v)}
+                  min={0}
+                  max={100000000}
+                  step={1000}
+                  tip={tip("eigenkapital")}
+                />
+                <LiveSlider
                   label={t.zinssatz}
                   unit="% p.a."
                   value={d.zinssatz}
@@ -766,16 +786,6 @@ export default function Haupt() {
                   max={8}
                   step={0.05}
                   tip={tip("zinssatz")}
-                />
-                <LiveSlider
-                  label={t.tilgung}
-                  unit="% p.a."
-                  value={d.tilgung}
-                  onChange={(v) => set("tilgung", v)}
-                  min={0.5}
-                  max={8}
-                  step={0.05}
-                  tip={tip("tilgung")}
                 />
               </LiveSliderPanel>
 

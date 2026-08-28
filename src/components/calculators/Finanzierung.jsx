@@ -4,7 +4,7 @@ import { GREST, KFW_KREDIT } from "../../data.js";
 import { berechneKfwPlan, teileFinanzierung } from "../../utils/kfwDarlehen.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
-import { F, Sel, Row, Sec, KPI, Ins, VT, Toggle } from "../ui/atoms.jsx";
+import { F, Sel, Row, Sec, KPI, Ins, VT, Toggle, LiveSliderPanel, LiveSlider } from "../ui/atoms.jsx";
 import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -199,7 +199,7 @@ export default function Kredit() {
             value={d.kaufpreis}
             onChange={(v) => set("kaufpreis", v)}
             tip={tip("kaufpreis")}
-            slider={{ min: 50000, max: 2000000, step: 1000 }}
+            slider={{ min: 0, max: 100000000, step: 1000 }}
           />
           <Row>
             <F
@@ -208,7 +208,7 @@ export default function Kredit() {
               value={d.eigenkapital}
               onChange={(v) => set("eigenkapital", v)}
               tip={tip("eigenkapital")}
-              slider={{ min: 0, max: 500000, step: 1000 }}
+              slider={{ min: 0, max: 100000000, step: 1000 }}
             />
             <F
               label={t.darlehen}
@@ -365,7 +365,7 @@ export default function Kredit() {
                   onChange={(v) => set("kfwBetrag", v)}
                   hint={R ? `${t.kfwMax}: ${fmt(R.kfwDeckel)} €` : ""}
                   tip={tip("kfwBetrag")}
-                  slider={{ min: 0, max: Math.max(R?.kfwDeckel || 100000, 10000), step: 1000 }}
+                  slider={{ min: 0, max: 1000000, step: 1000 }}
                 />
               </Row>
               <Row>
@@ -446,6 +446,38 @@ export default function Kredit() {
                   </div>
                 </div>
               </div>
+              <LiveSliderPanel title={t.liveRegler}>
+                <LiveSlider
+                  label={t.kaufpreis}
+                  unit="€"
+                  value={d.kaufpreis}
+                  onChange={(v) => set("kaufpreis", v)}
+                  min={0}
+                  max={100000000}
+                  step={1000}
+                  tip={tip("kaufpreis")}
+                />
+                <LiveSlider
+                  label={t.eigenkapital}
+                  unit="€"
+                  value={d.eigenkapital}
+                  onChange={(v) => set("eigenkapital", v)}
+                  min={0}
+                  max={100000000}
+                  step={1000}
+                  tip={tip("eigenkapital")}
+                />
+                <LiveSlider
+                  label={t.zinssatz}
+                  unit="% p.a."
+                  value={d.zinssatz}
+                  onChange={(v) => set("zinssatz", v)}
+                  min={0.5}
+                  max={8}
+                  step={0.05}
+                  tip={tip("zinssatz")}
+                />
+              </LiveSliderPanel>
               <div className="if-row" style={{ marginBottom: 14 }}>
                 <KPI
                   label={t.darlehen}
