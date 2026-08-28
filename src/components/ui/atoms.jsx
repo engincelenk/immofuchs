@@ -30,6 +30,7 @@ export function F({
   hint,
   tip,
   placeholder,
+  slider,
   children,
 }) {
   const isNum = type === "number";
@@ -57,6 +58,21 @@ export function F({
     }
   };
   const dispVal = readOnly ? toDisp(value) : localVal;
+  // Dual-Input (Slider-Feature 2026-08-28): der Slider gehoert dorthin, wo
+  // der Wert lebt - direkt im Eingabefeld, statt in einem separaten Panel.
+  // Nur bei isNum sinnvoll (slider ist ein Range, keine Text-/Datumsfelder).
+  // Schreibt ueber denselben onChange-Pfad wie die Tastatureingabe, damit
+  // beide Wege exakt denselben Wert im Elternstate landen.
+  const hSlider = (e) => {
+    const v = e.target.value;
+    setLocalVal(v.replace(".", ","));
+    onChange?.(v);
+  };
+  // slider.fallback: fuer Felder, die leer bleiben duerfen und dann einen
+  // Platzhalter-Schaetzwert anzeigen (z.B. sanIstVerbrauch) - der Slider
+  // braucht trotzdem eine sinnvolle Thumb-Position statt 0.
+  const rawSliderSrc = value === "" || value == null ? slider?.fallback : value;
+  const sliderVal = rawSliderSrc == null || Number.isNaN(+rawSliderSrc) ? 0 : +rawSliderSrc;
   return (
     <div className="if-field" style={{ marginBottom: 14 }}>
       <div
@@ -84,52 +100,71 @@ export function F({
         {hint && <span style={{ fontSize: 12, color: "var(--ch)" }}>{hint}</span>}
       </div>
       {children || (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            background: readOnly ? "var(--cro)" : "var(--ci)",
-            border: "1px solid var(--cb)",
-            borderRadius: 10,
-            overflow: "hidden",
-            minHeight: 46,
-          }}
-        >
-          <input
-            type={isNum ? "text" : type}
-            inputMode={isNum ? "decimal" : undefined}
-            value={dispVal}
-            onChange={readOnly ? undefined : hChange}
-            onFocus={readOnly ? undefined : hFocus}
-            onBlur={readOnly ? undefined : hBlur}
-            readOnly={readOnly}
-            placeholder={placeholder || ""}
+        <>
+          <div
             style={{
-              flex: 1,
-              minWidth: 0,
-              border: "none",
-              outline: "none",
-              padding: "12px 14px",
-              fontSize: 18,
-              background: "transparent",
-              color: readOnly ? "var(--ch)" : "var(--ct)",
-              fontFamily: "inherit",
-              fontVariantNumeric: "tabular-nums",
+              display: "flex",
+              alignItems: "center",
+              background: readOnly ? "var(--cro)" : "var(--ci)",
+              border: "1px solid var(--cb)",
+              borderRadius: 10,
+              overflow: "hidden",
+              minHeight: 46,
             }}
-          />
-          {unit && (
-            <span
+          >
+            <input
+              type={isNum ? "text" : type}
+              inputMode={isNum ? "decimal" : undefined}
+              value={dispVal}
+              onChange={readOnly ? undefined : hChange}
+              onFocus={readOnly ? undefined : hFocus}
+              onBlur={readOnly ? undefined : hBlur}
+              readOnly={readOnly}
+              placeholder={placeholder || ""}
               style={{
-                padding: "0 12px 0 0",
-                fontSize: 14,
-                color: "var(--ch)",
-                whiteSpace: "nowrap",
+                flex: 1,
+                minWidth: 0,
+                border: "none",
+                outline: "none",
+                padding: "12px 14px",
+                fontSize: 18,
+                background: "transparent",
+                color: readOnly ? "var(--ch)" : "var(--ct)",
+                fontFamily: "inherit",
+                fontVariantNumeric: "tabular-nums",
               }}
-            >
-              {unit}
-            </span>
+            />
+            {unit && (
+              <span
+                style={{
+                  padding: "0 12px 0 0",
+                  fontSize: 14,
+                  color: "var(--ch)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {unit}
+              </span>
+            )}
+          </div>
+          {slider && isNum && !readOnly && (
+            <input
+              type="range"
+              min={slider.min}
+              max={slider.max}
+              step={slider.step}
+              value={sliderVal}
+              onChange={hSlider}
+              style={{
+                width: "100%",
+                height: 32,
+                marginTop: 8,
+                accentColor: "var(--ca)",
+                cursor: "pointer",
+              }}
+            />
           )}
-        </div>
+        </>
       )}
     </div>
   );

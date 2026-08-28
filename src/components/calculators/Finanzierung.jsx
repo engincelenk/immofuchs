@@ -4,7 +4,7 @@ import { GREST, KFW_KREDIT } from "../../data.js";
 import { berechneKfwPlan, teileFinanzierung } from "../../utils/kfwDarlehen.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
-import { F, Sel, Row, Sec, KPI, Ins, VT, Toggle, LiveSliderPanel, LiveSlider } from "../ui/atoms.jsx";
+import { F, Sel, Row, Sec, KPI, Ins, VT, Toggle } from "../ui/atoms.jsx";
 import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -199,6 +199,7 @@ export default function Kredit() {
             value={d.kaufpreis}
             onChange={(v) => set("kaufpreis", v)}
             tip={tip("kaufpreis")}
+            slider={{ min: 50000, max: 2000000, step: 1000 }}
           />
           <Row>
             <F
@@ -207,6 +208,7 @@ export default function Kredit() {
               value={d.eigenkapital}
               onChange={(v) => set("eigenkapital", v)}
               tip={tip("eigenkapital")}
+              slider={{ min: 0, max: 500000, step: 1000 }}
             />
             <F
               label={t.darlehen}
@@ -259,6 +261,7 @@ export default function Kredit() {
               onChange={(v) => set("zinssatz", v)}
               step="0.05"
               tip={tip("zinssatz")}
+              slider={{ min: 0.5, max: 8, step: 0.05 }}
             />
             <F
               label={t.tilgung}
@@ -267,6 +270,7 @@ export default function Kredit() {
               onChange={(v) => set("tilgung", v)}
               step="0.05"
               tip={tip("tilgung")}
+              slider={{ min: 0.5, max: 8, step: 0.05 }}
             />
           </Row>
           <Sel
@@ -369,6 +373,7 @@ export default function Kredit() {
                   onChange={(v) => set("kfwZins", v)}
                   step="0.05"
                   tip={tip("kfwZins")}
+                  slider={{ min: 0, max: 5, step: 0.05 }}
                 />
                 <Sel
                   label={t.kfwTfLabel}
@@ -402,28 +407,6 @@ export default function Kredit() {
             <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ch)" }}>🏦</div>
           ) : (
             <>
-              <LiveSliderPanel title={t.liveRegler}>
-                <LiveSlider
-                  label={t.zinssatz}
-                  unit="% p.a."
-                  value={d.zinssatz}
-                  onChange={(v) => set("zinssatz", v)}
-                  min={0.5}
-                  max={8}
-                  step={0.05}
-                  tip={tip("zinssatz")}
-                />
-                <LiveSlider
-                  label={t.tilgung}
-                  unit="% p.a."
-                  value={d.tilgung}
-                  onChange={(v) => set("tilgung", v)}
-                  min={0.5}
-                  max={8}
-                  step={0.05}
-                  tip={tip("tilgung")}
-                />
-              </LiveSliderPanel>
               <div
                 style={{
                   background: "linear-gradient(135deg,var(--ca),var(--ca-dk))",
@@ -540,7 +523,14 @@ export default function Kredit() {
                   {t.sondTilgSub}
                 </div>
                 <Row>
-                  <F label={t.vereinbSatz} unit="%" value={sondTP} onChange={setSondTP} step="1" />
+                  <F
+                    label={t.vereinbSatz}
+                    unit="%"
+                    value={sondTP}
+                    onChange={setSondTP}
+                    step="1"
+                    slider={{ min: 0, max: 20, step: 1 }}
+                  />
                   <F label={t.entspricht} unit="€/Jahr" value={fmt(R.sondE)} readOnly />
                 </Row>
                 <div style={{ fontSize: 11, color: "var(--ch)", marginTop: 2, marginBottom: 10 }}>

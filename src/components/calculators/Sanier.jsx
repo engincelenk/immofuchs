@@ -15,7 +15,7 @@ import {
 } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
-import { F, Sel, Row, Sec, KPI, Ins, VT, LiveSliderPanel, LiveSlider } from "../ui/atoms.jsx";
+import { F, Sel, Row, Sec, KPI, Ins, VT } from "../ui/atoms.jsx";
 import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -678,6 +678,12 @@ export default function Sanier() {
             placeholder={String(R.hkSchaetzung)}
             onChange={(v) => set("sanIstVerbrauch", v)}
             tip={tip("sanIstVerbrauch")}
+            slider={{
+              min: VERBRAUCH_GRENZEN.min,
+              max: VERBRAUCH_GRENZEN.max,
+              step: 5,
+              fallback: R.hkSchaetzung,
+            }}
           />
           {/* Herkunft des Kennwerts sichtbar machen: sonst aendert sich das
               Ergebnis nach einer Expose-Uebernahme ohne erkennbare Ursache. */}
@@ -857,6 +863,7 @@ export default function Sanier() {
                       onChange={(v) => sF("pvK", v)}
                       step="0.5"
                       tip={tip("pvLeistung")}
+                      slider={{ min: 3, max: 15, step: 0.5 }}
                     />
                   )}
                   {m.k === "keller" && (
@@ -884,6 +891,7 @@ export default function Sanier() {
                       value={s.batK}
                       onChange={(v) => sF("batK", v)}
                       tip={tip("batterie")}
+                      slider={{ min: 5, max: 20, step: 1 }}
                     />
                   )}
 
@@ -930,18 +938,6 @@ export default function Sanier() {
         </div>
 
         <div className={`res-pane ${view === "result" ? "act" : ""}`}>
-          <LiveSliderPanel title={t.liveRegler}>
-            <LiveSlider
-              label={t.sIstVerbrauch}
-              unit="kWh/m²a"
-              value={d.sanIstVerbrauch !== "" && d.sanIstVerbrauch != null ? d.sanIstVerbrauch : R.hkSchaetzung}
-              onChange={(v) => set("sanIstVerbrauch", v)}
-              min={VERBRAUCH_GRENZEN.min}
-              max={VERBRAUCH_GRENZEN.max}
-              step={5}
-              tip={tip("sanIstVerbrauch")}
-            />
-          </LiveSliderPanel>
           <div
             style={{
               background: "linear-gradient(135deg,var(--ca),var(--ca-dk))",

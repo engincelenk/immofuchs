@@ -1,3 +1,27 @@
+## 2026-08-28 (1.40.0)
+
+### AENDERUNG: Slider-Konzept ueberarbeitet - Dual-Input im Eingabefeld statt Ergebnis-Duplikate
+
+Nach nochmaliger UX-Analyse (ui-ux-designer-Subagent) galt fortan eine Regel
+statt zweier Sonderfaelle: der Slider gehoert dorthin, wo der Wert lebt. Ist
+er Teil der Eingabedaten, sitzt er direkt im Eingabefeld (Dual-Input: Slider
++ Zahlenfeld im selben Feld, neue optionale slider-Prop an der F-Komponente
+in atoms.jsx) - auf Mobile UND Desktop gleich. Ein Duplikat im separaten
+Ergebnis-Panel ist nur noch fuer die zwei Renditerechner-Felder gerecht-
+fertigt, die auf Mobile den "Was bleibt beim Verkauf?"-Exit-Saldo und den
+Finanz-Score direkt bewegen (Zinssatz, Tilgung) - dort trennt der VT-Um-
+schalter sonst Ursache und Wirkung auf zwei Tabs.
+
+Neu mit Dual-Input im Eingabefeld: Kaufpreis (50.000-2.000.000 €, Schritt
+1.000 €) und Eigenkapital (0-500.000 €, Schritt 1.000 €) in Renditerechner
+und Finanzierung; Zinssatz/Tilgung (Finanzierung), KfW-Zins, Ist-Verbrauch
+(Sanier, Bereich aus VERBRAUCH_GRENZEN), PV-Leistung, Batteriekapazitaet.
+Der Sondertilgungssatz (Finanzierung, reiner Ergebnis-Simulator ohne
+Eingabefeld-Pendant) bekam zusaetzlich einen Slider-Track statt nur Zahlen-
+feld. Die bisherigen Ergebnis-Duplikate in Finanzierung.jsx und Sanier.jsx
+sind entfernt (Score/Exit-Saldo existieren nur im Renditerechner, dort war
+die Duplizierung unnoetig) - reiner Platzgewinn auf Mobile.
+
 ## 2026-08-28 (1.39.0)
 
 ### AENDERUNG: Dunkler Modus ist jetzt Default statt System-Farbschema
