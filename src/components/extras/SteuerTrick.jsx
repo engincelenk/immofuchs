@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { STEUER_T } from "../../i18n/steuerTrick.js";
 import { T } from "../../i18n/translations.js";
@@ -7,6 +8,41 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { Tip } from "../ui/Tip.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
+
+// Euro-Eingabe mit Tausenderpunkten in der Anzeige (Nutzer-Vorgabe
+// 2026-08-28, "10000" -> "10.000") - dieser Rechner nutzt (anders als die
+// anderen 5) nicht die gemeinsame F-Komponente aus atoms.jsx, sondern eigene
+// Karten-Layouts mit absolut positioniertem Einheiten-Suffix. Gleiches
+// Fokus/Blur-Puffer-Prinzip wie F: waehrend der Eingabe roh, beim Verlassen
+// des Felds formatiert - sonst wuerden Tausenderpunkte beim Weitertippen als
+// Dezimalpunkte missverstanden.
+function CurrencyField({ value, onChange, style }) {
+  const toDisp = (v) => (v === "" || v == null || Number.isNaN(+v) ? "" : (+v).toLocaleString("de-DE"));
+  const [local, setLocal] = useState(() => toDisp(value));
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setLocal(toDisp(value));
+  }, [value]);
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={local}
+      onFocus={() => {
+        focused.current = true;
+        setLocal(value == null ? "" : String(value));
+      }}
+      onChange={(e) => {
+        setLocal(e.target.value);
+        onChange(e.target.value.replace(/\./g, "").replace(",", "."));
+      }}
+      onBlur={() => {
+        focused.current = false;
+      }}
+      style={style}
+    />
+  );
+}
 
 export function SteuerTrick() {
   // Vormals eigener lokaler useState (ls/gst/grd), nicht Teil von `d` -
@@ -96,12 +132,7 @@ export function SteuerTrick() {
                 <Tip text={st.lsTip} label={st.lsLabel} />
               </label>
               <div style={{ position: "relative" }}>
-                <input
-                  type="number"
-                  value={ls}
-                  onChange={(e) => set("steuer6Ls", e.target.value)}
-                  style={inp}
-                />
+                <CurrencyField value={ls} onChange={(v) => set("steuer6Ls", v)} style={inp} />
                 <span
                   style={{
                     position: "absolute",
@@ -153,12 +184,7 @@ export function SteuerTrick() {
                 <Tip text={st.grdTip} label={st.grdLabel} />
               </label>
               <div style={{ position: "relative" }}>
-                <input
-                  type="number"
-                  value={grd}
-                  onChange={(e) => set("steuer6Grd", e.target.value)}
-                  style={inp}
-                />
+                <CurrencyField value={grd} onChange={(v) => set("steuer6Grd", v)} style={inp} />
                 <span
                   style={{
                     position: "absolute",
@@ -176,7 +202,7 @@ export function SteuerTrick() {
                 type="range"
                 min={0}
                 max={1000000}
-                step={1000}
+                step={10000}
                 value={grundstueck}
                 onChange={(e) => set("steuer6Grd", e.target.value)}
                 style={{

@@ -1,3 +1,24 @@
+## 2026-08-28 (1.43.0)
+
+### AENDERUNG: Slider-Limits reduziert (realistischerer Bereich), Euro-Eingaben zeigen jetzt automatisch Tausenderpunkte
+
+Slider-Bereiche nach Nutzer-Feedback wieder verkleinert - 100 Mio. war zu
+grosszuegig: Kaufpreis/Eigenkapital jetzt 0-10.000.000 € (Schritt 10.000 €)
+in Renditerechner und Kreditrechner, Garage/Stellplatz 0-100.000 € (Schritt
+5.000 €), Sonderumlage 0-50.000 € (Schritt 1.000 €), Renovierungskosten
+0-1.000.000 € (Schritt 5.000 €), KfW-Betrag 0-1.000.000 € (Schritt
+10.000 €), Grundstueckswert im 6%-Trick weiterhin 0-1.000.000 € (Schritt
+jetzt 10.000 € statt 1.000 €).
+
+Ausserdem: alle editierbaren Euro-Betraege zeigen jetzt automatisch deutsche
+Tausenderpunkte an, sobald das Feld nicht mehr fokussiert ist ("10000" wird
+zu "10.000") - vorher nur bei den bereits berechneten/schreibgeschuetzten
+Kennzahlen der Fall. Betrifft die gemeinsame F-Komponente (atoms.jsx, erkannt
+an unit="€", €/m² o.ae. bleiben unveraendert) und damit alle Rechner, die sie
+nutzen. Der 6%-Trick-Rechner (SteuerTrick.jsx) nutzt als einziger nicht diese
+Komponente - dort wurde dieselbe Formatierung fuer Lohnsteuer und Grund-
+stueckswert separat nachgebaut (neue CurrencyField-Komponente).
+
 ## 2026-08-28 (1.42.0)
 
 ### AENDERUNG: Slider-Limits deutlich erhoeht, Mobile-Ergebnis-Regler in Renditerechner und Kreditrechner umgestellt

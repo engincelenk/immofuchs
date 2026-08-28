@@ -34,7 +34,21 @@ export function F({
   children,
 }) {
   const isNum = type === "number";
-  const toDisp = (v) => (isNum && !readOnly && v != null ? String(v).replace(".", ",") : (v ?? ""));
+  // Euro-Betraege bekommen automatisch Tausenderpunkte in der Anzeige
+  // (Nutzer-Vorgabe 2026-08-28: "10000" -> "10.000"), erkannt am unit="€" -
+  // €/m², €/kWh etc. bleiben unberuehrt, da dort Nachkommastellen zaehlen.
+  // Nur die Anzeige ist betroffen, der gespeicherte Wert bleibt ein reiner
+  // Zahlen-String ohne Trennzeichen.
+  const isCurrency = unit === "€";
+  const toDisp = (v) => {
+    if (!isNum || readOnly || v == null) return v ?? "";
+    if (v === "") return "";
+    if (isCurrency) {
+      const num = +v;
+      return Number.isNaN(num) ? String(v).replace(".", ",") : num.toLocaleString("de-DE");
+    }
+    return String(v).replace(".", ",");
+  };
   const [localVal, setLocalVal] = useState(() => toDisp(value));
   const focused = useRef(false);
   useEffect(() => {
@@ -42,11 +56,15 @@ export function F({
   }, [value]);
   const hFocus = () => {
     focused.current = true;
+    // Beim Fokussieren die Tausenderpunkte entfernen, sonst wuerden sie beim
+    // Weitertippen als Dezimalpunkte missverstanden (siehe hChange/hBlur).
+    if (isCurrency && value != null) setLocalVal(String(value));
   };
   const hChange = (e) => {
     const v = e.target.value;
     setLocalVal(v);
-    onChange?.(isNum && !readOnly ? v.replace(",", ".") : v);
+    const cleaned = isCurrency ? v.replace(/\./g, "").replace(",", ".") : v.replace(",", ".");
+    onChange?.(isNum && !readOnly ? cleaned : v);
   };
   const hBlur = () => {
     focused.current = false;
@@ -54,7 +72,10 @@ export function F({
       setLocalVal("0");
       onChange?.("0");
     } else {
-      onChange?.(isNum && !readOnly ? localVal.replace(",", ".") : localVal);
+      const cleaned = isCurrency
+        ? localVal.replace(/\./g, "").replace(",", ".")
+        : localVal.replace(",", ".");
+      onChange?.(isNum && !readOnly ? cleaned : localVal);
     }
   };
   const dispVal = readOnly ? toDisp(value) : localVal;
@@ -280,7 +301,7 @@ export function LiveSlider({ label, unit, value, onChange, min, max, step, tip }
             whiteSpace: "nowrap",
           }}
         >
-          {String(num).replace(".", ",")}
+          {unit === "€" ? num.toLocaleString("de-DE") : String(num).replace(".", ",")}
           {unit ? ` ${unit}` : ""}
         </span>
       </div>
