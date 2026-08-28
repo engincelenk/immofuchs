@@ -3589,7 +3589,7 @@ export const TL = {
     step2P:
       "Kaufpreis, Miete, Zinssatz — vorausgefüllt aus Ihrem Exposé oder mit realistischen Startwerten, alles editierbar.",
     step3H: "Sofort Ergebnisse",
-    step3P: "Alle Ergebnisse updaten in Echtzeit. Kein Warten, keine Kosten.",
+    step3P: "Alle Ergebnisse updaten in Echtzeit — sofort sichtbar, ohne Umwege.",
     step4H: "Anmelden & Abo wählen",
     step4P:
       "Kostenloses Konto erstellen und den passenden Tarif wählen — danach stehen dir alle Rechner uneingeschränkt zur Verfügung.",
@@ -3691,15 +3691,20 @@ export const TL = {
     uspScoreP:
       "Der ImmoFuchs Finanz-Score bewertet dein Objekt nicht nach Gefühl, sondern nach einem Scoring-Modell mit bis zu sieben Dimensionen: Wirtschaftlichkeit, Cashflow & Schuldentragfähigkeit, Finanzierung, Objekt & Sanierung, Vermietung, Exit und Robustheit.",
     usp4H: "Sofort startklar",
-    usp4P: "Direkt im Browser loslegen — kein Download, keine Zahlungsdaten nötig.",
+    usp4P:
+      "Direkt im Browser loslegen — kein Download, keine Installation und keine Zahlungsdaten nötig, um die Rechner zum ersten Mal auszuprobieren.",
     usp6H: "5 Sprachen",
-    usp6P: "Deutsch, Englisch, Türkisch, Chinesisch, Hindi — mit Fachbegriffen.",
+    usp6P:
+      "Deutsch, Englisch, Türkisch, Chinesisch und Hindi — inklusive der jeweiligen Fachbegriffe aus Steuer-, Miet- und Finanzierungsrecht, nicht nur wörtlich übersetzt.",
     uspAiH: "Persönlicher KI-Assistent",
-    uspAiP: "Finn antwortet zu Rendite, Finanzierung und Recht — direkt auf der Seite.",
+    uspAiP:
+      "Finn beantwortet deine Fragen zu Rendite, Finanzierung, Mietrecht und Steuern direkt auf der Seite — bezogen auf deine eingegebenen Zahlen, ohne die Seite zu verlassen.",
     uspScanH: "Exposé-Scan mit KI",
-    uspScanP: "Foto oder PDF hochladen — Finn füllt die Rechner. Kein Abtippen.",
+    uspScanP:
+      "Foto oder PDF hochladen — Finn liest Kaufpreis, Miete, Baujahr und Zustand automatisch aus und füllt die passenden Rechner. Kein manuelles Abtippen von Exposé-Daten mehr nötig.",
     uspHandoutH: "Besichtigungs-Handout",
-    uspHandoutP: "Finn macht aus dem Exposé die Fragen für den Termin. Zum Abhaken.",
+    uspHandoutP:
+      "Finn erstellt aus dem hochgeladenen Exposé automatisch eine Liste der wichtigsten Fragen für den Besichtigungstermin — zum Ausdrucken oder direkt am Handy zum Abhaken.",
     badgeNeu: "Neu",
     trustAi: "KI-Assistent inklusive",
     alarmTitle: "Zinsalarm",
@@ -3755,7 +3760,7 @@ export const TL = {
     step2P:
       "Purchase price, rent, interest rate — pre-filled from your listing or with realistic starting values, all editable.",
     step3H: "Instant results",
-    step3P: "All results update in real time. No waiting, no cost.",
+    step3P: "All results update in real time — visible instantly, no detours.",
     step4H: "Sign up & choose a plan",
     step4P:
       "Create a free account and pick the plan that fits — then every calculator is fully unlocked.",
@@ -3857,15 +3862,20 @@ export const TL = {
     uspScoreP:
       "The ImmoFuchs Finanz-Score doesn't rate your property on gut feeling — it uses a scoring model spanning up to seven dimensions: profitability, cashflow & debt service coverage, financing, property & renovation, letting, exit and robustness.",
     usp4H: "Ready to go instantly",
-    usp4P: "Get started right in your browser — no download, no payment details needed.",
+    usp4P:
+      "Get started right in your browser — no download, no installation and no payment details needed to try the calculators for the first time.",
     usp6H: "5 languages",
-    usp6P: "German, English, Turkish, Chinese, Hindi — technical terms included.",
+    usp6P:
+      "German, English, Turkish, Chinese and Hindi — including the technical terms from tax, tenancy and financing law, not just word-for-word translations.",
     uspAiH: "Personal AI assistant",
-    uspAiP: "Finn answers on yield, financing and law — right on the page.",
+    uspAiP:
+      "Finn answers your questions on yield, financing, tenancy law and taxes right on the page — based on the numbers you've entered, without leaving the page.",
     uspScanH: "AI listing scan",
-    uspScanP: "Upload a photo or PDF — Finn fills the calculators. No retyping.",
+    uspScanP:
+      "Upload a photo or PDF — Finn automatically reads out purchase price, rent, year built and condition, then fills the matching calculators. No more manually retyping listing data.",
     uspHandoutH: "Viewing handout",
-    uspHandoutP: "Finn turns the listing into your questions for the viewing. Ready to tick off.",
+    uspHandoutP:
+      "Finn automatically turns the uploaded listing into a list of the most important questions for your viewing appointment — print it out or tick it off right on your phone.",
     badgeNeu: "New",
     trustAi: "AI assistant included",
     alarmTitle: "Rate Alert",
@@ -3920,7 +3930,7 @@ export const TL = {
     step2P:
       "Alım fiyatı, kira, faiz — ilanınızdan veya gerçekçi başlangıç değerleriyle önceden doldurulur, hepsi düzenlenebilir.",
     step3H: "Anında sonuçlar",
-    step3P: "Tüm sonuçlar gerçek zamanlı güncellenir. Bekleme veya maliyet yoktur.",
+    step3P: "Tüm sonuçlar gerçek zamanlı güncellenir — anında görünür, dolambaçsız.",
     step4H: "Kaydolun ve plan seçin",
     step4P:
       "Ücretsiz bir hesap oluşturun ve size uygun planı seçin — ardından tüm hesaplayıcılara sınırsız erişebilirsiniz.",
@@ -4019,15 +4029,20 @@ export const TL = {
     uspScoreP:
       "ImmoFuchs Finans-Skoru mülkünü sezgiyle değil, yedi boyuta kadar uzanan bir puanlama modeliyle değerlendirir: karlılık, nakit akışı ve borç ödeme kapasitesi, finansman, mülk ve yenileme, kiralama, çıkış ve dayanıklılık.",
     usp4H: "Hemen başlayın",
-    usp4P: "Doğrudan tarayıcınızda başlayın — indirme veya ödeme bilgisi gerekmez.",
+    usp4P:
+      "Doğrudan tarayıcınızda başlayın — hesaplayıcıları ilk kez denemek için indirme, kurulum veya ödeme bilgisi gerekmez.",
     usp6H: "5 dil",
-    usp6P: "Almanca, İngilizce, Türkçe, Çince, Hintçe — teknik terimler dahil.",
+    usp6P:
+      "Almanca, İngilizce, Türkçe, Çince ve Hintçe — vergi, kira ve finansman hukukundan teknik terimler dahil, sadece kelime kelime çeviri değil.",
     uspAiH: "Kişisel yapay zeka asistanı",
-    uspAiP: "Finn getiri, finansman ve hukuk sorularını doğrudan sayfada yanıtlar.",
+    uspAiP:
+      "Finn getiri, finansman, kira hukuku ve vergi sorularını doğrudan sayfada, girdiğin rakamlara dayanarak yanıtlar — sayfadan ayrılman gerekmez.",
     uspScanH: "YZ ile ilan taraması",
-    uspScanP: "Fotoğraf veya PDF yükle — Finn hesaplayıcıları doldurur. Elle yazmak yok.",
+    uspScanP:
+      "Fotoğraf veya PDF yükle — Finn alım fiyatını, kirayı, yapım yılını ve durumu otomatik olarak okur ve ilgili hesaplayıcıları doldurur. İlan verilerini elle yazmaya gerek kalmaz.",
     uspHandoutH: "İnceleme föyü",
-    uspHandoutP: "Finn ilandan randevu için soruları çıkarır. İşaretlemeye hazır.",
+    uspHandoutP:
+      "Finn yüklenen ilandan otomatik olarak ziyaret randevusu için en önemli soruların listesini oluşturur — yazdırabilir veya doğrudan telefondan işaretleyebilirsin.",
     badgeNeu: "Yeni",
     trustAi: "Yapay zeka asistanı dahil",
     alarmTitle: "Faiz Alarmı",
@@ -4081,7 +4096,7 @@ export const TL = {
     step2H: "核对数据",
     step2P: "购买价格、租金、利率 — 从房源资料自动填入,或使用真实的初始值,均可编辑。",
     step3H: "即时结果",
-    step3P: "所有结果实时更新。无需等待或付费。",
+    step3P: "所有结果实时更新——即刻可见，无需绕道。",
     step4H: "注册并选择套餐",
     step4P: "创建免费账户并选择适合的套餐 — 之后即可无限制使用所有计算器。",
     fullTitle: "收益计算器",
@@ -4175,15 +4190,15 @@ export const TL = {
     uspScoreP:
       "ImmoFuchs 财务评分不凭直觉评估你的房产，而是采用最多七个维度的评分模型：经济性、现金流与偿债能力、融资、房产与装修、租赁、退出和稳健性。",
     usp4H: "立即开始",
-    usp4P: "直接在浏览器中开始——无需下载，无需支付信息。",
+    usp4P: "直接在浏览器中开始——首次试用计算器无需下载、无需安装、无需支付信息。",
     usp6H: "5 种语言",
-    usp6P: "德语、英语、土耳其语、中文、印地语 — 含专业术语。",
+    usp6P: "德语、英语、土耳其语、中文和印地语——包含税务、租赁和融资法律中的专业术语，而非逐字翻译。",
     uspAiH: "专属AI助手",
-    uspAiP: "Finn 在页面上解答收益、融资和法律问题。",
+    uspAiP: "Finn 直接在页面上解答收益、融资、租赁法和税务问题——基于你输入的数据，无需离开页面。",
     uspScanH: "AI 房源扫描",
-    uspScanP: "上传照片或 PDF — Finn 自动填入计算器，无需手动输入。",
+    uspScanP: "上传照片或 PDF——Finn 自动读取购买价格、租金、建成年份和状况，并填入相应的计算器。无需再手动录入房源数据。",
     uspHandoutH: "看房资料页",
-    uspHandoutP: "Finn 把房源信息变成看房要问的问题，可逐项勾选。",
+    uspHandoutP: "Finn 会根据上传的房源资料自动生成看房时最重要的问题清单——可打印，也可直接在手机上逐项勾选。",
     badgeNeu: "新",
     trustAi: "含AI助手",
     alarmTitle: "利率警报",
@@ -4238,7 +4253,7 @@ export const TL = {
     step2P:
       "खरीद मूल्य, किराया, ब्याज — आपके एक्सपोज़े से या यथार्थवादी शुरुआती मानों से पूर्व-भरे, सभी संपादन योग्य।",
     step3H: "तुरंत परिणाम",
-    step3P: "सभी परिणाम रीयल-टाइम में अपडेट होते हैं। प्रतीक्षा या लागत नहीं।",
+    step3P: "सभी परिणाम रीयल-टाइम में अपडेट होते हैं — तुरंत दिखते हैं, बिना किसी घुमाव के।",
     step4H: "साइन अप करें और प्लान चुनें",
     step4P:
       "एक मुफ़्त खाता बनाएं और उपयुक्त प्लान चुनें — इसके बाद सभी कैलकुलेटर पूरी तरह से उपलब्ध हो जाते हैं।",
@@ -4334,15 +4349,20 @@ export const TL = {
     uspScoreP:
       "ImmoFuchs फाइनेंस-स्कोर आपकी संपत्ति का आकलन अंदाज़े से नहीं, बल्कि सात आयामों तक फैले एक स्कोरिंग मॉडल से करता है: आर्थिकता, नकदी प्रवाह व ऋण-सेवा क्षमता, वित्तपोषण, संपत्ति व नवीनीकरण, किराएदारी, एग्ज़िट और मज़बूती।",
     usp4H: "तुरंत शुरू करें",
-    usp4P: "सीधे अपने ब्राउज़र में शुरू करें — कोई डाउनलोड नहीं, कोई भुगतान जानकारी नहीं चाहिए।",
+    usp4P:
+      "सीधे अपने ब्राउज़र में शुरू करें — कैलकुलेटर पहली बार आज़माने के लिए कोई डाउनलोड, इंस्टॉलेशन या भुगतान जानकारी नहीं चाहिए।",
     usp6H: "5 भाषाएं",
-    usp6P: "जर्मन, अंग्रेज़ी, तुर्की, चीनी, हिंदी — तकनीकी शब्दों सहित।",
+    usp6P:
+      "जर्मन, अंग्रेज़ी, तुर्की, चीनी और हिंदी — कर, किराया और वित्तपोषण कानून की तकनीकी शब्दावली सहित, केवल शब्द-दर-शब्द अनुवाद नहीं।",
     uspAiH: "व्यक्तिगत एआई सहायक",
-    uspAiP: "Finn रिटर्न, वित्तपोषण और कानून के सवालों का जवाब सीधे पेज पर देता है।",
+    uspAiP:
+      "Finn रिटर्न, वित्तपोषण, किराया कानून और करों से जुड़े सवालों का जवाब सीधे पेज पर देता है — आपके दर्ज किए गए आंकड़ों के आधार पर, पेज छोड़े बिना।",
     uspScanH: "AI एक्सपोज़े स्कैन",
-    uspScanP: "फ़ोटो या PDF अपलोड करें — Finn कैलकुलेटर भर देता है। टाइप करने की ज़रूरत नहीं।",
+    uspScanP:
+      "फ़ोटो या PDF अपलोड करें — Finn खरीद मूल्य, किराया, निर्माण वर्ष और स्थिति खुद पढ़ लेता है और संबंधित कैलकुलेटर भर देता है। एक्सपोज़े डेटा हाथ से टाइप करने की ज़रूरत नहीं।",
     uspHandoutH: "विज़िट हैंडआउट",
-    uspHandoutP: "Finn एक्सपोज़े से अपॉइंटमेंट के सवाल बना देता है। प्रिंट करें, टिक करें।",
+    uspHandoutP:
+      "Finn अपलोड किए गए एक्सपोज़े से विज़िट अपॉइंटमेंट के लिए सबसे ज़रूरी सवालों की सूची अपने आप बना देता है — प्रिंट करें या सीधे फ़ोन पर टिक करें।",
     badgeNeu: "नया",
     trustAi: "एआई सहायक शामिल",
     alarmTitle: "ब्याज अलार्म",

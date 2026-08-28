@@ -1,3 +1,19 @@
+## 2026-08-28 (1.45.0)
+
+### AENDERUNG: USP-Kachel-Texte auf der Landingpage angeglichen, letzter "keine Kosten"-Rest entfernt
+
+Die neue Finanz-Score-Kachel war deutlich laenger als die anderen fuenf
+Bausteine unter "Was macht Immofuchs besonders" - dadurch wirkte die Reihe
+optisch unausgewogen (Screenshot-Feedback). Finanz-Score-Text bleibt
+unveraendert, die anderen fuenf (Exposé-Scan, Besichtigungs-Handout,
+Persönlicher KI-Assistent, Sofort startklar, 5 Sprachen) wurden auf
+vergleichbare Zeilenzahl ausfuehrlicher formuliert, in allen 5 Sprachen.
+
+Zusaetzlich in Schritt 4 der "So funktioniert's"-Sektion (step3P) den
+letzten Rest vom "kostenlos"-Muster entfernt: "Kein Warten, keine Kosten"
+las sich wieder wie ein Gratis-Versprechen - jetzt "sofort sichtbar, ohne
+Umwege".
+
 ## 2026-08-28 (1.44.0)
 
 ### AENDERUNG: Landingpage-Texte bereinigt, Finanz-Score-Baustein ergaenzt, Stresstest-Kachel neu gestaltet
