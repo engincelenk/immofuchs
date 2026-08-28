@@ -13,7 +13,7 @@ describe("getWizardSteps", () => {
     ]);
   });
 
-  it("ueberspringt 'verify' bei OAuth/Passkey/Passwort-Login (kein separater Bestaetigungs-Schritt noetig)", () => {
+  it("ueberspringt 'verify' bei OAuth/Passwort-Login (kein separater Bestaetigungs-Schritt noetig)", () => {
     expect(getWizardSteps("new-customer-no-verify")).toEqual([
       "pricing",
       "account",

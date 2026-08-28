@@ -132,7 +132,7 @@ const ERROR_TEXTS = {
   cannot_suspend_self: "Du kannst dein eigenes Konto nicht sperren.",
   cannot_demote_self: "Du kannst dir nicht selbst die Admin-Rechte entziehen.",
   cannot_delete_self: "Du kannst dein eigenes Konto hier nicht löschen.",
-  no_password_account: "Dieses Konto hat kein Passwort (Google/Apple/Passkey) – ein Reset ist nicht möglich.",
+  no_password_account: "Dieses Konto hat kein Passwort (Google/Apple) – ein Reset ist nicht möglich.",
   delete_failed_try_again: "Löschen fehlgeschlagen. Die Stripe-Kündigung lief nicht durch – bitte erneut versuchen.",
   invalid_email: "Ungültige E-Mail-Adresse.",
   email_exists: "Ein Konto mit dieser E-Mail-Adresse existiert bereits.",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiBase, apiV1, apiFetch } from "../utils/apiBase.js";
-import { storeNativeToken, clearNativeToken } from "../utils/nativeAuth.js";
+import { clearNativeToken } from "../utils/nativeAuth.js";
 
 // Kaufabsicht ueber den OAuth-Redirect hinweg (Bugreport 06.08.): Google und
 // Apple verlassen die Seite komplett, wodurch der komplette Wizard-State
@@ -338,7 +338,7 @@ export function useAccount() {
       if (res.status === 423) return { ok: false, error: "locked", retryAfterSeconds: body.retryAfterSeconds };
       if (res.status === 403) return { ok: false, error: "email_not_verified" };
       // L3 (Spec-v3.0 Kap. 2.4): Konto existiert, wurde aber ueber Google/
-      // Apple/Passkey angelegt - kein "Passwort verknuepfen"-Angebot mehr
+      // Apple angelegt - kein "Passwort verknuepfen"-Angebot mehr
       // (Kap. 0.1), nur der Hinweis auf die richtige Methode.
       if (res.status === 401 && body.error === "oauth_only") {
         return { ok: false, error: "oauth_only", providers: body.providers || [] };
@@ -371,57 +371,6 @@ export function useAccount() {
     const body = await res.json().catch(() => ({}));
     return { ok: false, error: body.error || "invalid_or_expired" };
   }, []);
-
-  // Passkey ist aktuell der einzige Login-Weg ohne Browser-Redirect - der
-  // Worker gibt hier zusaetzlich zum Cookie ein `token` im Body zurueck, das
-  // nativ (Capacitor) in Secure Storage landet (10.0, S1-4/S6-2).
-  const passkeyLogin = useCallback(async () => {
-    const { startAuthentication } = await import("@simplewebauthn/browser");
-    const optionsRes = await apiFetch("/auth/passkey/login/options", { method: "POST" });
-    if (!optionsRes.ok) throw new Error("passkey_options_failed");
-    const { flowId, options } = await optionsRes.json();
-    const assertion = await startAuthentication({ optionsJSON: options });
-    const verifyRes = await apiFetch("/auth/passkey/login/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ flowId, response: assertion }),
-    });
-    if (!verifyRes.ok) throw new Error("passkey_login_failed");
-    const { token } = await verifyRes.json();
-    await storeNativeToken(token);
-    await refresh();
-    // Gleicher Bugfund wie bei loginWithPassword: kein Redirect, also ohne
-    // dies keine Willkommens-Rueckmeldung.
-    setLoginSuccess(true);
-  }, [refresh]);
-
-  const passkeyRegister = useCallback(
-    async (email) => {
-      const { startRegistration } = await import("@simplewebauthn/browser");
-      const optionsRes = await apiFetch("/auth/passkey/register/options", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (!optionsRes.ok) throw new Error("passkey_register_options_failed");
-      const { options } = await optionsRes.json();
-      const attestation = await startRegistration({ optionsJSON: options });
-      const verifyRes = await apiFetch("/auth/passkey/register/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          response: attestation,
-          deviceLabel: navigator.userAgentData?.platform || navigator.platform || null,
-        }),
-      });
-      if (!verifyRes.ok) throw new Error("passkey_register_failed");
-      const { token } = await verifyRes.json();
-      await storeNativeToken(token);
-      await refresh();
-    },
-    [refresh],
-  );
 
   const dismissLoginSuccess = useCallback(() => setLoginSuccess(false), []);
   const dismissPurchaseSuccess = useCallback(() => setPurchaseSuccess(false), []);
@@ -629,8 +578,8 @@ export function useAccount() {
   );
 
   // Passwort aendern bzw. erstmalig setzen (Phase 2, 4.13). currentPassword
-  // ist nur Pflicht, wenn das Konto bereits eines hat - reine OAuth-/Passkey-
-  // Konten setzen ihr erstes Passwort ohne. Welcher Fall vorliegt, verraet
+  // ist nur Pflicht, wenn das Konto bereits eines hat - reine OAuth-Konten
+  // setzen ihr erstes Passwort ohne. Welcher Fall vorliegt, verraet
   // /me nicht, deshalb entscheidet der Server: "current_password_required"
   // ist die Aufforderung an die Oberflaeche, das Feld nachzureichen.
   const changePassword = useCallback(async (newPassword, currentPassword) => {
@@ -730,8 +679,6 @@ export function useAccount() {
     loginWithPassword,
     requestPasswordReset,
     confirmPasswordReset,
-    passkeyLogin,
-    passkeyRegister,
     logout,
     logoutAllDevices,
     startCheckout,

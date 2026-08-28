@@ -40,9 +40,12 @@ export async function clearNativeToken() {
 // Baut die Auth-Header-Ergaenzung fuer fetch()-Aufrufe an den Worker. Web
 // bleibt beim Cookie (credentials:"include" reicht, dieses Modul liefert
 // dann ein leeres Objekt); nativ wird zusaetzlich der Bearer-Header gesetzt,
-// FALLS bereits ein Token gespeichert ist (z.B. nach Passkey-Login - aktuell
-// der einzige Login-Weg, der nativ ohne Browser-Redirect auskommt, siehe
-// routes/auth.ts-Kommentar).
+// FALLS bereits ein Token gespeichert ist. Passkey-Login (2026-08-28 entfernt)
+// war bisher der einzige Weg, der ueberhaupt ein Token in storeNativeToken()
+// ablegte - ohne redirect-freien Login-Weg bleibt dieses Token aktuell immer
+// leer. Fuer eine kuenftige native App (Phase D) braucht es hier einen neuen
+// token-liefernden Login-Weg, z.B. ueber ASWebAuthenticationSession o.ae.
+
 export async function nativeAuthHeaders() {
   if (!isNative()) return {};
   const token = await getNativeToken();

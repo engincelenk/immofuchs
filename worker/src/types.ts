@@ -212,9 +212,6 @@ export interface Env {
   APPLE_TEAM_ID?: string;
   APPLE_KEY_ID?: string;
   APPLE_PRIVATE_KEY?: string; // PKCS8, ES256 - fuer den JWT-Client-Secret-Flow (4.5)
-  WEBAUTHN_RP_ID: string;
-  WEBAUTHN_RP_NAME: string;
-  WEBAUTHN_ORIGIN: string;
   RESEND_API_KEY?: string;
   MAGIC_LINK_FROM_EMAIL?: string; // z.B. "ImmoFuchs <login@immofuchs.info>"
   // Cloudflare Email Sending (Ergaenzung 05.08.): Binding statt API-Key.

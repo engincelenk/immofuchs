@@ -1,17 +1,13 @@
 // Auth-Routen (Spec 4.4, 4.5): Google/Apple-OAuth, E-Mail-Magic-Link,
-// Passkey/WebAuthn, Session-Ende. Erst-Login = Registrierung (kein separater
-// Screen) - die db.find*-Helfer legen bei Bedarf einen neuen Nutzer an.
+// Session-Ende. Erst-Login = Registrierung (kein separater Screen) - die
+// db.find*-Helfer legen bei Bedarf einen neuen Nutzer an.
+// Passkey/WebAuthn wurde am 2026-08-28 komplett entfernt (Nutzer-Entscheidung) -
+// UI war schon seit 06.08. weg, dies war die letzte verbliebene Backend-Spur.
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { buildGoogleAuthUrl, exchangeGoogleCode } from "../auth/google";
 import { buildAppleAuthUrl, exchangeAppleCode } from "../auth/apple";
 import { requestMagicLink, verifyMagicLink } from "../auth/magicLink";
-import {
-  finishPasskeyLogin,
-  finishPasskeyRegistration,
-  startPasskeyLogin,
-  startPasskeyRegistration,
-} from "../auth/passkey";
 import {
   loginWithPassword,
   registerWithPassword,
@@ -328,56 +324,6 @@ authRoutes.post("/password-reset/confirm", requireCsrfOrigin, async (c) => {
   const result = await resetPassword(c.env, token, newPassword);
   if (!result.ok) return c.json({ error: result.error }, 400);
   return c.json({ ok: true });
-});
-
-// ═══ Passkey ═══
-
-authRoutes.post("/passkey/register/options", requireCsrfOrigin, async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const email = body && typeof body.email === "string" ? body.email : "";
-  if (!email) return c.json({ error: "invalid_email" }, 400);
-  const options = await startPasskeyRegistration(c.env, email);
-  return c.json({ options });
-});
-
-authRoutes.post("/passkey/register/verify", requireCsrfOrigin, async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!body || typeof body.email !== "string" || !body.response) {
-    return c.json({ error: "invalid_body" }, 400);
-  }
-  const result = await finishPasskeyRegistration(
-    c.env,
-    body.email,
-    body.response,
-    typeof body.deviceLabel === "string" ? body.deviceLabel : null,
-  );
-  if (!result.ok) return c.json({ error: result.error }, 400);
-  const { session, cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);
-  c.header("Set-Cookie", cookie, { append: true });
-  // Token zusaetzlich im Body (10.0, S1-4/S6-2): Passkey ist der einzige
-  // Login-Weg, der ohne Browser-Redirect auskommt - native Clients (Capacitor,
-  // Phase D) speichern ihn in Secure Storage statt eines Cookies, das auf der
-  // lokalen Capacitor-Origin nicht verlaesslich funktioniert. Web-Clients
-  // ignorieren dieses Feld einfach (Cookie reicht dort).
-  return c.json({ ok: true, token: session.id });
-});
-
-authRoutes.post("/passkey/login/options", requireCsrfOrigin, async (c) => {
-  const flowId = crypto.randomUUID();
-  const options = await startPasskeyLogin(c.env, flowId);
-  return c.json({ flowId, options });
-});
-
-authRoutes.post("/passkey/login/verify", requireCsrfOrigin, async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!body || typeof body.flowId !== "string" || !body.response) {
-    return c.json({ error: "invalid_body" }, 400);
-  }
-  const result = await finishPasskeyLogin(c.env, body.flowId, body.response);
-  if (!result.ok) return c.json({ error: result.error }, 400);
-  const { session, cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);
-  c.header("Set-Cookie", cookie, { append: true });
-  return c.json({ ok: true, token: session.id });
 });
 
 // ═══ Logout ═══

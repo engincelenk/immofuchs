@@ -434,7 +434,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               der gewaehlten Methode ab. Google/Apple verlassen die Seite und
               kommen mit ?login_success=1 zurueck, worauf App.jsx
               (hasAuthRedirectParam) direkt den App-Shell zeigt - der Nutzer
-              landet im Rechner. Passwort/Passkey laufen ohne Redirect, der
+              landet im Rechner. Passwort laeuft ohne Redirect, der
               Wizard schliesst sich nur selbst und der Nutzer stand wieder auf
               der Landingpage, wo er "Jetzt rechnen" erst suchen musste.
               Derselbe Vorsatz fuehrte also je nach Anmeldeweg woanders hin,
@@ -465,7 +465,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           </Ctx.Provider>
         </Suspense>
       )}
-      {/* Bugfund 2026-08-11: Passwort-/Passkey-Login ueber "Anmelden" auf
+      {/* Bugfund 2026-08-11: Passwort-Login ueber "Anmelden" auf
           dieser Seite schliesst den Wizard automatisch und kehrt hierher
           zurueck (kein Redirect wie bei Google/Apple) - ohne diesen Toast
           gab es dafuer bislang KEINE Bestaetigung, da LoginSuccessToast

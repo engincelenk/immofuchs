@@ -69,16 +69,6 @@ EXPOSE_GLOBAL_DAILY_LIMIT = "150"
 # EXPOSE_GEMINI_MODEL = "gemini-2.0-flash"
 
 # ═══ Kommerzialisierung (2026-08-03, Sprints 0-5b) ═══
-# WEBAUTHN_RP_ID/ORIGIN muessen zur tatsaechlich ausgeliefernden Domain passen,
-# sonst lehnt der Browser die Passkey-Ceremony ab. Anders als bei env.dev gibt
-# es hier keinen lokalen Nutzungsfall (Prod laeuft nie ueber `wrangler dev`),
-# deshalb reicht ein direkter Wert statt eines Secrets (Befund + Fix
-# 2026-08-04, war faelschlich auf "localhost" stehengeblieben - Passkey haette
-# sonst schon beim ersten Prod-Deploy des Kommerzialisierungs-Codes gegen die
-# echte Domain gebrochen).
-WEBAUTHN_RP_ID = "immofuchs.info"
-WEBAUTHN_RP_NAME = "ImmoFuchs"
-WEBAUTHN_ORIGIN = "https://immofuchs.info"
 # Kostenloser Exposé-Scan / Konto-Kauf: freiwillige 14-Tage-Geld-zurueck-Frist
 # und 3-Tage-Dunning-Kulanzfrist sind Code-Konstanten (siehe subscriptions.ts),
 # nicht hier - reine Geschaeftslogik, kein Infrastruktur-Flag.
@@ -181,18 +171,6 @@ MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
 # nicht existierende Postfaecher - siehe notifications.ts. Nur dev, kein Wert
 # in qa/prod (Top-Level-[vars]), damit sich dort nichts aendert.
 TEST_EMAIL_REDIRECT_TO = "useforai@web.de"
-# WEBAUTHN_RP_ID/ORIGIN bewusst NICHT hier als [vars] - anders als ALLOWED_ORIGIN
-# (das gegen eine Liste prueft) braucht WebAuthn genau EINEN Wert, der zur
-# tatsaechlich ausliefernden Origin passt. env.dev wird aber sowohl lokal
-# (localhost:5173, ueber .claude/launch.json) als auch remote deployt
-# (https://dev.immofuchs.info) genutzt - ein einzelner wrangler.toml-Wert
-# koennte immer nur fuer einen der beiden Faelle stimmen. Deshalb: lokal
-# kommt der Wert aus worker/.dev.vars (localhost), remote aus einem Secret
-# (`wrangler secret put WEBAUTHN_RP_ID/WEBAUTHN_ORIGIN --env dev`, Wert
-# "dev.immofuchs.info"/"https://dev.immofuchs.info") - .dev.vars gewinnt
-# lokal automatisch gegenueber [env.dev.vars], das Secret gewinnt remote,
-# weil hier gar kein Wert mehr definiert ist.
-WEBAUTHN_RP_NAME = "ImmoFuchs (Dev)"
 OBJECTS_SOFT_CAP = "500"
 FINN_PRO_DAILY_LIMIT = "50"
 FINN_FREE_MAX_TOKENS = "350"
@@ -253,9 +231,6 @@ name = "immofuchs-assistant-qa"
 [env.qa.vars]
 ASSISTANT_ENABLED = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://qa.immofuchs.info,https://admin-qa.immofuchs.info"
-WEBAUTHN_RP_ID = "qa.immofuchs.info"
-WEBAUTHN_RP_NAME = "ImmoFuchs (QA)"
-WEBAUTHN_ORIGIN = "https://qa.immofuchs.info"
 OBJECTS_SOFT_CAP = "500"
 FINN_PRO_DAILY_LIMIT = "50"
 FINN_FREE_MAX_TOKENS = "350"

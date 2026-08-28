@@ -25,8 +25,8 @@ export function ProfilSection({ t, account, onBack }) {
   const [newEmail, setNewEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  // Konzept-Dok 1.6/3.3/8.8: Name ist bei Google-/Apple-/Passkey-Konten
-  // anfangs leer (kein eigenes Registrierungsformular dort) - hier
+  // Konzept-Dok 1.6/3.3/8.8: Name ist bei Google-/Apple-Konten anfangs
+  // leer (kein eigenes Registrierungsformular dort) - hier
   // nachtraeglich ergaenz-/aenderbar, direkt ohne Double-Opt-In (anders als
   // E-Mail), da kein sicherheitskritisches Feld.
   const [changingName, setChangingName] = useState(false);
@@ -167,7 +167,7 @@ export function ProfilSection({ t, account, onBack }) {
         <PasswordBlock t={t} account={account} />
       ) : (
         // PR3 (Spec-v3.0 Kap. 4.3): kein Passwort-Formular fuer Konten, die
-        // nur ueber Google/Apple/Passkey angelegt wurden - Kap. 0.1 schliesst
+        // nur ueber Google/Apple angelegt wurden - Kap. 0.1 schliesst
         // ein nachtraegliches Verknuepfen aus.
         <div style={blockCardStyle}>
           <div style={blockTitleStyle}>{t.profilPasswordSocialOnlyTitle}</div>
@@ -186,8 +186,8 @@ export function ProfilSection({ t, account, onBack }) {
 // Passwort setzen/aendern. Ob das Konto ueberhaupt schon ein Passwort hat,
 // liefert /me nicht mit - deshalb startet das Formular ohne das Feld fuer das
 // aktuelle Passwort und blendet es erst ein, wenn der Server es einfordert
-// ("current_password_required"). Reine OAuth-/Passkey-Konten sehen es damit
-// nie, Passwort-Konten genau einmal.
+// ("current_password_required"). Reine OAuth-Konten sehen es damit nie,
+// Passwort-Konten genau einmal.
 function PasswordBlock({ t, account }) {
   const [showCurrent, setShowCurrent] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");

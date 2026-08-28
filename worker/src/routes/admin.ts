@@ -200,8 +200,8 @@ adminRoutes.get("/users/:id", requireAuth, requireAdminRead, async (c) => {
     emailVerified: Boolean(user.email_verified_at),
     isTestUser: Boolean(user.is_test_user),
     testEmailRedirectTo: user.test_email_redirect_to,
-    // Ohne password_hash gibt es keinen Reset-Weg (reines OAuth-/Passkey-
-    // Konto) - die UI soll den Knopf dann gar nicht erst anbieten, statt ihn
+    // Ohne password_hash gibt es keinen Reset-Weg (reines OAuth-Konto) - die
+    // UI soll den Knopf dann gar nicht erst anbieten, statt ihn
     // ins Leere laufen zu lassen. Der Hash selbst wird NIE ausgeliefert.
     hasPassword: Boolean(user.password_hash),
     subscription: sub

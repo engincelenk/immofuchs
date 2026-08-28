@@ -32,7 +32,7 @@ export const accountRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
 accountRoutes.get("/me", requireAuth, async (c) => {
   // Die Testphase startet beim ersten authentifizierten Zugriff, nicht schon
   // bei der Registrierung: so bekommt sie jeder Anmeldeweg (Passwort, Google,
-  // Apple, Passkey) an einer einzigen Stelle, und wer sein Konto nie benutzt,
+  // Apple) an einer einzigen Stelle, und wer sein Konto nie benutzt,
   // verbraucht sie nicht. Das UPDATE setzt nur, wenn noch nichts gesetzt ist.
   const frisch = await startAppTrialIfNew(c.env.DB, c.var.userId, TRIAL_DAUER_MS);
   const trialEndsAt = frisch ? frisch.endsAt : c.var.user.app_trial_ends_at;
@@ -193,7 +193,7 @@ accountRoutes.post("/account/name", requireAuth, requireCsrfOrigin, async (c) =>
 // Passwort aendern bzw. erstmalig setzen (Phase 2, 4.10/4.13). Zwei Faelle:
 //  - Konto MIT password_hash: currentPassword ist Pflicht und muss stimmen -
 //    sonst koennte ein fremdes, offen stehendes Geraet das Konto uebernehmen.
-//  - Konto OHNE password_hash (reines OAuth-/Passkey-/Magic-Link-Konto): kein
+//  - Konto OHNE password_hash (reines OAuth-/Magic-Link-Konto): kein
 //    currentPassword noetig, der Nutzer hat sich ueber eine gueltige Session
 //    bereits authentifiziert. Das ist NICHT dasselbe wie die unbeaufsichtigte
 //    "Stattdessen Passwort setzen"-Verknuepfung per E-Mail (passwordAuth.ts),
@@ -280,7 +280,7 @@ accountRoutes.get("/account/export", requireAuth, async (c) => {
 
 // D2 (Spec-v3.0 Kap. 4.5): Loeschung ist unwiderruflich, daher Sicherheits-
 // nachweis Pflicht. Passwort-Konten bestaetigen hier direkt mit currentPassword;
-// reine OAuth-/Passkey-Konten haben keins und muessen stattdessen ueber
+// reine OAuth-Konten haben keins und muessen stattdessen ueber
 // /auth/delete-reauth/{google,apple} eine frische Anmeldung durchlaufen (siehe
 // routes/auth.ts) - dieser Endpunkt liefert ihnen dafuer nur den 428-Hinweis.
 accountRoutes.post("/account/delete", requireAuth, requireCsrfOrigin, async (c) => {

@@ -8,7 +8,7 @@ export interface UserRow {
   id: string;
   email: string;
   // Migration 0015 (Konzept-Dok 1.6/3.3/8.8): nullable, da nur der Passwort-
-  // Registrierungs-Screen ein Namensfeld hat - OAuth/Passkey/Magic-Link legen
+  // Registrierungs-Screen ein Namensfeld hat - OAuth/Magic-Link legen
   // Konten ohne Name an, nachtraeglich im Profil ergaenzbar.
   name: string | null;
   role: string;
@@ -20,7 +20,7 @@ export interface UserRow {
   created_at: number;
   last_login_at: number | null;
   // Passwort-Weg (Ergaenzung 04.08., Migration 0011): NULL = Konto hat kein
-  // Passwort (reines OAuth/Passkey/Magic-Link-Konto).
+  // Passwort (reines OAuth/Magic-Link-Konto).
   password_hash: string | null;
   password_set_at: number | null;
   email_verified_at: number | null;
@@ -183,11 +183,6 @@ export async function listLinkedProviders(db: Env["DB"], userId: string): Promis
     .bind(userId)
     .all<{ provider: string }>();
   const providers = rows.results.map((r) => r.provider);
-  const hasPasskey = await db
-    .prepare("SELECT 1 FROM passkey_credentials WHERE user_id = ? LIMIT 1")
-    .bind(userId)
-    .first();
-  if (hasPasskey) providers.push("passkey");
   const hasPassword = await db
     .prepare("SELECT 1 FROM users WHERE id = ? AND password_hash IS NOT NULL")
     .bind(userId)
@@ -409,7 +404,7 @@ export async function setMarketingEmailsEnabled(db: Env["DB"], userId: string, e
 
 // Token wird nur gehasht abgelegt (4.5, 4.13, §13 Punkt 17) - Aufrufer
 // uebergibt bereits hashToken(rawToken). pendingPasswordHash ist gesetzt,
-// wenn dieser Token ein bestehendes OAuth-/Passkey-Konto mit einem Passwort
+// wenn dieser Token ein bestehendes OAuth-Konto mit einem Passwort
 // verknuepft (Wireframe-Karte 16 "Stattdessen Passwort setzen"), sonst NULL
 // (reine Registrierungs-Bestaetigung).
 export async function createEmailVerificationToken(
@@ -1499,7 +1494,6 @@ export async function deleteUserCompletely(db: Env["DB"], userId: string): Promi
   await db.batch([
     db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM oauth_identities WHERE user_id = ?").bind(userId),
-    db.prepare("DELETE FROM passkey_credentials WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM subscriptions WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM objects WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").bind(userId),

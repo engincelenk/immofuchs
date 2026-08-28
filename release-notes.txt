@@ -1,3 +1,41 @@
+## 2026-08-28 (1.48.0) [FRONTEND+WORKER+DB]
+
+### ENTFERNT: Passkey/WebAuthn-Login komplett entfernt
+
+Nutzer-Entscheidung: Passkey-Login wird nicht mehr gebraucht, App ist noch
+in der Testphase (keine Bestandspruefung auf Passkey-only-Konten noetig,
+Nutzer-Bestaetigung). Die UI war bereits seit 06.08. entfernt, das war der
+Rueckbau der verbliebenen Backend-Infrastruktur:
+
+- Frontend: toter Code in useAccount.js (passkeyLogin/passkeyRegister),
+  Passkey-Label in accountEntitlement.js entfernt, Kommentare in
+  AccountStep.jsx/ProfilSection.jsx/Landing.jsx/nativeAuth.js aktualisiert,
+  Admin-UI-Texte (AdminUserDrawer.jsx, adminUiStyles.js) nennen nur noch
+  Google/Apple als passwortlose Methoden. Dependency @simplewebauthn/browser
+  entfernt.
+- Backend: alle 4 Passkey-Routen (worker/src/routes/auth.ts) und das
+  komplette Modul worker/src/auth/passkey.ts entfernt. db.ts
+  (listLinkedProviders, deleteUserCompletely) und passwordAuth.ts
+  bereinigt. WEBAUTHN_RP_ID/RP_NAME/ORIGIN aus wrangler.toml (alle 3
+  Umgebungen) und types.ts entfernt, dev.vars.example bereinigt - behebt
+  nebenbei die Wrangler-Warnung ueber verwaiste Top-Level-Vars. Dependencies
+  @simplewebauthn/server + @simplewebauthn/types entfernt.
+- Datenbank: neue Migration 0029_drop_passkey.sql (DROP TABLE
+  passkey_credentials, passkey_challenges) - die urspruengliche Migration
+  0002 bleibt unveraendert stehen, da bereits produktiv angewendet.
+- Recht: AGB (public/agb.html) nennt Passkey nicht mehr als Anmeldeweg.
+
+Bekannter Nebeneffekt: der Bearer-Token-Pfad fuer eine kuenftige native App
+(Capacitor, Phase D) hing bisher ausschliesslich am Passkey-Login als
+einzigem redirect-freien Weg - ohne Passkey liefert aktuell kein Login-Weg
+mehr ein Token fuer nativeAuth.js/storeNativeToken(). Kein Problem heute
+(keine native App im Einsatz), aber relevant, sobald Phase D startet - dann
+braucht es einen neuen token-liefernden Login-Weg.
+
+Frontend: 430 Tests gruen, Build sauber. Worker: Typecheck sauber, 117
+Tests gruen (keine davon Passkey-spezifisch - Passkey war laut e2e-Doku nie
+automatisiert getestet).
+
 ## 2026-08-28 (1.47.0) [WORKER]
 
 ### FIX: "Mit Apple anmelden" schlug immer mit "Anmeldung nicht abgeschlossen" fehl

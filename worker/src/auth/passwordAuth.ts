@@ -158,7 +158,7 @@ export async function registerWithPassword(
 // ═══ E-Mail-Bestätigung (Double-Opt-In) ═══
 // Kein "Passwort nachtraeglich verknuepfen" mehr (Spec-v3.0 Kap. 0.1: Login-
 // Methoden sind strikt getrennt und nicht nachtraeglich verknuepfbar) - ein
-// Registrierungsversuch mit bereits ueber Google/Apple/Passkey belegter
+// Registrierungsversuch mit bereits ueber Google/Apple belegter
 // E-Mail ist ein reiner Fehlerfall (siehe registerWithPassword/E1/L3), kein
 // Angebot, das bestehende Konto per Passwort zu ergaenzen.
 
@@ -227,7 +227,7 @@ export async function loginWithPassword(env: Env, req: Request, emailRaw: string
   const user = await getUserByEmail(env.DB, email);
 
   if (user && !user.password_hash) {
-    // Konto existiert, wurde aber ueber Google/Apple/Passkey angelegt und hat
+    // Konto existiert, wurde aber ueber Google/Apple angelegt und hat
     // nie ein Passwort bekommen - eigenstaendiger Fehlerfall (L3, Kap. 0.1),
     // keine automatische Verknuepfung. Zaehlt bewusst nicht als Fehlversuch:
     // die eingegebenen Zugangsdaten sind nicht falsch, nur die falsche Methode.
@@ -266,7 +266,7 @@ export async function requestPasswordReset(env: Env, emailRaw: string): Promise<
 
   const user = await getUserByEmail(env.DB, email);
   // Nur Konten mit bestehendem Passwort bekommen einen Reset-Link - ein
-  // reines OAuth-/Passkey-Konto soll nicht ueber diesen Weg ein Passwort
+  // reines OAuth-Konto soll nicht ueber diesen Weg ein Passwort
   // bekommen (dafuer existiert die separate "Stattdessen Passwort
   // setzen"-Bestaetigung, s.o.), sonst waere das ein zweiter,
   // unbeaufsichtigter Weg, ein Passwort auf ein fremdes Konto zu legen.
@@ -285,7 +285,7 @@ export async function requestPasswordReset(env: Env, emailRaw: string): Promise<
     );
   } else if (user) {
     // P4 (Spec-v3.0 Kap. 2.5): Konto existiert, hat aber nie ein Passwort
-    // bekommen (Google/Apple/Passkey) - statt eines Reset-Links (den es dafuer
+    // bekommen (Google/Apple) - statt eines Reset-Links (den es dafuer
     // nicht geben kann, Kap. 0.1) bekommt der Nutzer den Hinweis auf seine
     // urspruengliche Anmeldemethode. Nach aussen bleibt die Antwort trotzdem
     // immer {ok:true} (keine Enumeration).
@@ -311,7 +311,7 @@ export async function requestPasswordReset(env: Env, emailRaw: string): Promise<
 // genau der erwuenschte Fall (frisches Konto, erstes Passwort). Deshalb kein
 // oeffentlicher Endpunkt, nur aus dem admin-gesicherten Erstellungs-Handler
 // aufrufbar - sonst waere es der in der Doku oben erwaehnte unbeaufsichtigte
-// Weg, einem fremden OAuth-/Passkey-Konto ein Passwort unterzuschieben.
+// Weg, einem fremden OAuth-Konto ein Passwort unterzuschieben.
 export async function sendPasswordSetupInvite(env: Env, user: Pick<UserRow, "id" | "email">): Promise<void> {
   const rawToken = crypto.randomUUID();
   await createPasswordResetToken(env.DB, user.id, await hashToken(rawToken));
@@ -330,7 +330,6 @@ export async function sendPasswordSetupInvite(env: Env, user: Pick<UserRow, "id"
 function providerDisplayName(provider: string): string {
   if (provider === "google") return "Google";
   if (provider === "apple") return "Apple";
-  if (provider === "passkey") return "Passkey";
   return provider;
 }
 

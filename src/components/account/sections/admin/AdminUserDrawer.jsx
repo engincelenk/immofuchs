@@ -451,8 +451,8 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                         { reloadList: false },
                       )
                     }
-                    // Ohne Passwort (reines Google-/Apple-/Passkey-Konto) gibt
-                    // es keinen Reset-Weg - der Knopf waere ein Blindgaenger.
+                    // Ohne Passwort (reines Google-/Apple-Konto) gibt es
+                    // keinen Reset-Weg - der Knopf waere ein Blindgaenger.
                     disabled={busy === "reset" || !detail.hasPassword}
                     style={secondaryBtnStyle}
                   >
@@ -460,7 +460,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                   </button>
                   {!detail.hasPassword && (
                     <p style={{ ...mutedTextStyle, margin: 0 }}>
-                      Konto ohne Passwort (Google/Apple/Passkey) – kein Reset möglich.
+                      Konto ohne Passwort (Google/Apple) – kein Reset möglich.
                     </p>
                   )}
                   <button

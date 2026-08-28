@@ -60,8 +60,6 @@ export function linkedProviderLabel(provider, t) {
       return "Google";
     case "apple":
       return "Apple";
-    case "passkey":
-      return "Passkey";
     case "password":
       return t?.providerPasswordLabel || provider;
     default:

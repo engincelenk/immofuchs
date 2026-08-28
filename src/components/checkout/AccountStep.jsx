@@ -25,8 +25,10 @@ import { linkBtnStyle, primaryBtnStyle, secondaryBtnStyle, appleBtnStyle, warnBa
 // anbieten; der separate Knopf verkaufte dieselbe Funktion ein zweites Mal.
 // Der Magic-Link war ein zweiter Mail-Kanal mit eigener Zustellbarkeits- und
 // Spam-Fehlerquelle, ohne eigenen Job neben "Passwort vergessen". Die
-// Worker-Routen (/auth/passkey/*, /auth/magic-link/*) bleiben bewusst
-// bestehen - ein reines UI-Aufraeumen, jederzeit reversibel.
+// Worker-Route /auth/magic-link/* bleibt bewusst bestehen - ein reines
+// UI-Aufraeumen, jederzeit reversibel. Passkey/WebAuthn ist dagegen seit
+// 2026-08-28 komplett entfernt (Backend, DB-Tabellen, Dependencies) - kein
+// Wieder-Einschalten ohne Neuaufbau moeglich.
 //
 // `plan` wird nur durchgereicht, um ihn vor dem OAuth-Redirect zu merken:
 // Google/Apple verlassen die Seite komplett, wodurch der Wizard-State
