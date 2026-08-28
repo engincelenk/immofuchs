@@ -273,12 +273,13 @@ export default function Kredit() {
               slider={{ min: 0.5, max: 8, step: 0.05 }}
             />
           </Row>
-          <Sel
+          <F
             label={t.zinsbindung}
+            unit="Jahre"
             value={d.zinsbindung}
-            onChange={(v) => set("zinsbindung", v)}
-            options={[5, 10, 15, 20, 25, 30].map((y) => ({ v: y, l: `${y} J.` }))}
+            onChange={(v) => set("zinsbindung", String(Math.round(+v / 5) * 5))}
             tip={tip("zinsbindung")}
+            slider={{ min: 5, max: 30, step: 5 }}
           />
 
           {/* ── KfW-Foerderdarlehen ──────────────────────────────────────
@@ -355,6 +356,7 @@ export default function Kredit() {
                   value={d.wohneinheiten || "1"}
                   onChange={(v) => set("wohneinheiten", v)}
                   tip={tip("wohneinheiten")}
+                  slider={{ min: 1, max: 20, step: 1 }}
                 />
                 <F
                   label={t.kfwBetrag}
@@ -363,6 +365,7 @@ export default function Kredit() {
                   onChange={(v) => set("kfwBetrag", v)}
                   hint={R ? `${t.kfwMax}: ${fmt(R.kfwDeckel)} €` : ""}
                   tip={tip("kfwBetrag")}
+                  slider={{ min: 0, max: Math.max(R?.kfwDeckel || 100000, 10000), step: 1000 }}
                 />
               </Row>
               <Row>
@@ -375,20 +378,22 @@ export default function Kredit() {
                   tip={tip("kfwZins")}
                   slider={{ min: 0, max: 5, step: 0.05 }}
                 />
-                <Sel
+                <F
                   label={t.kfwTfLabel}
+                  unit="Jahre"
                   value={d.kfwTilgungsfrei || "0"}
-                  onChange={(v) => set("kfwTilgungsfrei", v)}
-                  options={[0, 1, 2, 3, 4, 5].map((y) => ({ v: y, l: `${y} J.` }))}
+                  onChange={(v) => set("kfwTilgungsfrei", String(Math.round(+v)))}
                   tip={tip("kfwTilgungsfrei")}
+                  slider={{ min: 0, max: 5, step: 1 }}
                 />
               </Row>
-              <Sel
+              <F
                 label={t.kfwLaufzeitLabel}
+                unit="Jahre"
                 value={d.kfwLaufzeit || "30"}
-                onChange={(v) => set("kfwLaufzeit", v)}
-                options={[10, 15, 20, 25, 30, 35].map((y) => ({ v: y, l: `${y} J.` }))}
+                onChange={(v) => set("kfwLaufzeit", String(Math.round(+v / 5) * 5))}
                 tip={tip("kfwLaufzeit")}
+                slider={{ min: 10, max: 35, step: 5 }}
               />
             </>
           )}

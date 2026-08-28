@@ -670,6 +670,7 @@ export default function Sanier() {
             placeholder="3"
             onChange={(v) => set("sanPe", v)}
             tip={tip("pers")}
+            slider={{ min: 1, max: 8, step: 1, fallback: 3 }}
           />
           <F
             label={t.sIstVerbrauch}

@@ -172,6 +172,21 @@ export function SteuerTrick() {
                   €
                 </span>
               </div>
+              <input
+                type="range"
+                min={0}
+                max={1000000}
+                step={1000}
+                value={grundstueck}
+                onChange={(e) => set("steuer6Grd", e.target.value)}
+                style={{
+                  width: "100%",
+                  height: 32,
+                  marginTop: 8,
+                  accentColor: "var(--ca)",
+                  cursor: "pointer",
+                }}
+              />
               <div style={hint}>{st.grdHint}</div>
             </div>
           </div>

@@ -154,6 +154,7 @@ export default function Haupt() {
             value={d.garage}
             onChange={(v) => set("garage", v)}
             tip={tip("garage")}
+            slider={{ min: 0, max: 50000, step: 500 }}
           />
           {(+d.garage || 0) > 0 && (
             <div
@@ -243,6 +244,7 @@ export default function Haupt() {
               onChange={(v) => set("leerstand", v)}
               step="0.5"
               tip={tip("leerstand")}
+              slider={{ min: 0, max: 12, step: 0.5 }}
             />
           </Row>
           <Sec title={t.fin} icon="🏦" />
@@ -282,12 +284,13 @@ export default function Haupt() {
               slider={{ min: 0.5, max: 8, step: 0.05 }}
             />
           </Row>
-          <Sel
+          <F
             label={t.zinsbindung}
+            unit="Jahre"
             value={d.zinsbindung}
-            onChange={(v) => set("zinsbindung", v)}
-            options={[5, 10, 15, 20, 25, 30].map((y) => ({ v: y, l: `${y} J.` }))}
+            onChange={(v) => set("zinsbindung", String(Math.round(+v / 5) * 5))}
             tip={tip("zinsbindung")}
+            slider={{ min: 5, max: 30, step: 5 }}
           />
           {/* Investment-Score Stufe 2 (2026-08-27): optionales Feld, macht
               d.zinsbindung erstmals rechenwirksam (vorher nur textlich
@@ -513,11 +516,12 @@ export default function Haupt() {
               step="0.1"
               tip={tip("wertP")}
             />
-            <Sel
+            <F
               label={t.jahre}
+              unit="Jahre"
               value={d.jahre}
-              onChange={(v) => set("jahre", v)}
-              options={[5, 10, 15, 20, 25, 30].map((y) => ({ v: y, l: `${y} J.` }))}
+              onChange={(v) => set("jahre", String(Math.round(+v / 5) * 5))}
+              slider={{ min: 5, max: 30, step: 5 }}
             />
           </Row>
           <F
@@ -526,12 +530,14 @@ export default function Haupt() {
             value={d.sonder}
             onChange={(v) => set("sonder", v)}
             tip={tip("sonder")}
+            slider={{ min: 0, max: 50000, step: 500 }}
           />
           <F
             label={t.renovierung}
             unit="€"
             value={d.renovierung}
             onChange={(v) => set("renovierung", v)}
+            slider={{ min: 0, max: 200000, step: 1000 }}
             tip={tip("renovierung")}
           />
           {(() => {

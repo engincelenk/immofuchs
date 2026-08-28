@@ -4,7 +4,7 @@ import { isK15 } from "../../data/plzData.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtDat } from "../../utils/helpers.js";
 import { buildMP } from "../../utils/mietprognose.js";
-import { F, Sel, Row, Sec, Ins, VT } from "../ui/atoms.jsx";
+import { F, Row, Sec, Ins, VT } from "../ui/atoms.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -131,11 +131,12 @@ export default function Miete() {
               />
             </Row>
           )}
-          <Sel
+          <F
             label={t.jahre}
+            unit="Jahre"
             value={d.mietJahre || "10"}
-            onChange={(v) => set("mietJahre", v)}
-            options={[5, 10, 15, 20].map((y) => ({ v: y, l: `${y} J.` }))}
+            onChange={(v) => set("mietJahre", String(Math.round(+v / 5) * 5))}
+            slider={{ min: 5, max: 20, step: 5 }}
           />
           <button
             className="mob-next-btn"

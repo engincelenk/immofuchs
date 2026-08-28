@@ -1,3 +1,23 @@
+## 2026-08-28 (1.41.0)
+
+### NEU: Weitere Slider (Renditerechner, Kreditrechner, Mieterhoehungsrechner, Sanierungsrechner, 6%-Trick), KfW-Vorbelegung
+
+Dual-Input (Slider + Zahlenfeld) ergaenzt fuer: Garage/Stellplatz, Sonder-
+umlage, Renovierungskosten, Leerstand (Renditerechner); Wohneinheiten,
+KfW-Betrag (Slider-Obergrenze folgt dynamisch dem KfW-Deckel), Zinssatz KfW
+(Renditerechner + Kreditrechner). Ausserdem vier bisherige Jahres-Dropdowns
+auf Slider mit 5-Jahres-Schritten umgestellt (Auswahl bleibt exakt auf den
+gueltigen Werten, da onChange auf das naechste Vielfache von 5 rundet):
+Zinsbindung und Analysezeitraum im Renditerechner, Zinsbindung/Tilgungsfrei/
+Laufzeit im Kreditrechner, Analysezeitraum im Mieterhoehungsrechner.
+Sanierungsrechner: Personen-Feld jetzt mit 1er-Schritt-Slider. 6%-Trick
+(SteuerTrick.jsx, einziger Rechner ohne die gemeinsame F-Komponente): dem
+Grundstückswert-Feld manuell ein Slider-Track im selben Look hinzugefuegt.
+
+Ausserdem: KfW-Felder sind jetzt vorbelegt (Zinssatz 2,8 %, Betrag
+100.000 €, tilgungsfrei 5 Jahre) statt leer/programmabhaengig geschaetzt -
+wer den KfW-Schalter aktiviert, sieht sofort plausible Werte statt Nullen.
+
 ## 2026-08-28 (1.40.0)
 
 ### AENDERUNG: Slider-Konzept ueberarbeitet - Dual-Input im Eingabefeld statt Ergebnis-Duplikate
