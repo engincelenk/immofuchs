@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-// Light/Dark/System (Etappe 1, 2026-08-26). "system" ist der Default und
-// wird NICHT in localStorage geschrieben - erst eine explizite Wahl des
-// Nutzers wird persistiert (sonst liesse sich "System" nach einer expliziten
-// Wahl nie wieder erreichen, ausser durch Loeschen der Browserdaten).
+// Light/Dark/System (Etappe 1, 2026-08-26). "dark" ist der Default (Nutzer-
+// Vorgabe 2026-08-28, vorher "system") und wird NICHT in localStorage
+// geschrieben - erst eine explizite Wahl von "Hell" oder "System" wird
+// persistiert (sonst liesse sich der Default nach einer expliziten Wahl nie
+// wieder erreichen, ausser durch Loeschen der Browserdaten).
 // Das Blocking-Script in index.html setzt data-theme bereits vor dem ersten
 // Paint synchron aus demselben localStorage-Key - dieser Context uebernimmt
 // danach nur noch die Reaktivitaet (Umschalten zur Laufzeit, Live-Update bei
@@ -14,9 +15,9 @@ const ThemeCtx = createContext(null);
 function readStored() {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    return v === "light" || v === "dark" ? v : "system";
+    return v === "light" || v === "system" ? v : "dark";
   } catch {
-    return "system";
+    return "dark";
   }
 }
 
@@ -31,7 +32,7 @@ export function ThemeProvider({ children }) {
       root.setAttribute("data-theme", theme);
     }
     try {
-      if (theme === "system") localStorage.removeItem(STORAGE_KEY);
+      if (theme === "dark") localStorage.removeItem(STORAGE_KEY);
       else localStorage.setItem(STORAGE_KEY, theme);
     } catch {
       // localStorage kann in Private-Mode/blockiertem Storage fehlschlagen -

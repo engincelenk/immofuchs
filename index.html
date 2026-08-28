@@ -3,18 +3,25 @@
   <head>
     <meta charset="UTF-8" />
 
-    <!-- ═══ Theme (Light/Dark/System, Etappe 1, 2026-08-26) ═══
+    <!-- ═══ Theme (Light/Dark/System, Etappe 1, 2026-08-26; Dark-Default
+         2026-08-28) ═══
          Muss VOR jedem Paint laufen (blockierendes <script>, ganz oben im
          <head>), sonst blitzt bei "dark" bzw. dunklem System-Farbschema kurz
          das helle Layout auf, bevor React mountet und ThemeContext.jsx
          reagiert. Derselbe localStorage-Key ("if_theme") wie dort - siehe
-         Kommentar in ThemeContext.jsx fuer die Bedeutung von "system". -->
+         Kommentar in ThemeContext.jsx fuer die Bedeutung von "system".
+         Ohne gespeicherte Wahl (oder bei Storage-Fehler) ist "dark" der
+         Default, unabhaengig vom OS-Farbschema - nur "light" und "system"
+         sind explizite, gespeicherte Wahlen. -->
     <script>
       (function () {
         try {
           var v = localStorage.getItem("if_theme");
-          if (v === "light" || v === "dark") document.documentElement.setAttribute("data-theme", v);
-        } catch (e) {}
+          if (v === "light") document.documentElement.setAttribute("data-theme", "light");
+          else if (v !== "system") document.documentElement.setAttribute("data-theme", "dark");
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
       })();
     </script>
     <meta
@@ -122,7 +129,7 @@
     </script>
 
     <!-- ═══ PWA ═══ -->
-    <meta name="theme-color" content="#f5f5f0" />
+    <meta name="theme-color" content="#181818" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

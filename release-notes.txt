@@ -1,3 +1,16 @@
+## 2026-08-28 (1.39.0)
+
+### AENDERUNG: Dunkler Modus ist jetzt Default statt System-Farbschema
+
+Nutzer-Vorgabe: neue Besucher sollen ImmoFuchs unabhaengig vom OS-Farb-
+schema zuerst im Dark Mode sehen. Vorher galt ohne gespeicherte Wahl
+"System" (folgt dem OS), jetzt gilt ohne gespeicherte Wahl "Dunkel" -
+"Hell" und "System" bleiben ueber die Profil-Umschalter weiterhin waehlbar
+und werden wie bisher gespeichert. Blocking-Script in index.html (verhindert
+Hell-Aufblitzen vor dem ersten Render) und ThemeContext.jsx entsprechend
+umgestellt, ebenso der statische theme-color-Meta-Tag fuer die Browser-
+Statusleiste (#181818 statt #f5f5f0).
+
 ## 2026-08-28 (1.38.0)
 
 ### NEU: Exit-Saldo-Kachel im Renditerechner, Live-Regler jetzt zwischen Finanz-Score und Selbsttraeger-Check
