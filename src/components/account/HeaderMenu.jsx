@@ -24,7 +24,7 @@ export function HeaderMenu({
   onClose,
   t,
   navItems, // [{key, label, onSelect}] - Landings Scroll-Anker
-  langSelector, // Sprachwahl - nur fuer nicht angemeldete Besucher (sonst in "Einstellungen")
+  langSelector, // Sprachwahl mit Flaggen (LangSel) - seit 2026-08-28 unabhaengig vom Login-Status sichtbar, zusaetzlich zu "Einstellungen"
   isLoggedIn,
   onLogin,
   onLogoClick, // Nutzer-Vorgabe 2026-08-18: Logo+Schriftzug fuehrt wie ueberall in der App zur Landingpage
@@ -90,6 +90,13 @@ export function HeaderMenu({
           <button
             onClick={onClose}
             aria-label={t.close}
+            // data-focus-skip (Bugreport 2026-08-28): der Fokus-Trap
+            // fokussiert sonst automatisch diesen X-Button beim Oeffnen (er
+            // ist wegen tabIndex={-1} am Logo daneben das erste fokussierbare
+            // Element) - dadurch zeigte er browserabhaengig manchmal einen
+            // sichtbaren Fokusring. Bleibt trotzdem ganz normal per Tab
+            // erreichbar, siehe useFocusTrap.js.
+            data-focus-skip="true"
             style={{
               display: "flex",
               alignItems: "center",

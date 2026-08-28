@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { MARKET_RATES, WERTSTEIGERUNG, AFA } from "./data.js";
 import { berechneNichtUml } from "./utils/rendite.js";
 import { AppProviders } from "./context/AppProviders.jsx";
-import { T } from "./i18n/translations.js";
+import { T, LANGS } from "./i18n/translations.js";
 import { TIPS } from "./i18n/tips.js";
 import { LangSel } from "./components/ui/LangSel.jsx";
 import { Sheet } from "./components/ui/Sheet.jsx";
@@ -341,7 +341,26 @@ export default function App() {
     const btn = tbarRef.current?.querySelector(`[data-tab-id="${tab}"]`);
     btn?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [tab]);
-  const [lang, setLang] = useState("de");
+  // Sprache wird wie "theme" (ThemeContext.jsx) in localStorage gespiegelt
+  // (Bugreport 2026-08-28): vorher reiner React-State ohne Persistierung -
+  // jeder echte Reload (z.B. nach einem OAuth-Redirect) fiel zwangsläufig
+  // auf "de" zurück, unabhaengig von der zuvor gewaehlten Sprache.
+  const [lang, setLang] = useState(() => {
+    try {
+      const stored = localStorage.getItem("if_lang");
+      return LANGS.some((l) => l.v === stored) ? stored : "de";
+    } catch {
+      return "de";
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("if_lang", lang);
+    } catch {
+      // localStorage kann in Private-Mode/blockiertem Storage fehlschlagen -
+      // die Wahl gilt dann nur fuer die laufende Sitzung, kein Absturz noetig.
+    }
+  }, [lang]);
   const [landed, setLanded] = useState(() => {
     if (sessionStorage.getItem("if_landed") === "1") return true;
     if (!hasAuthRedirectParam()) return false;

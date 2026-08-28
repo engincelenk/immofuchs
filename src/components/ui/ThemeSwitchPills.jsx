@@ -1,4 +1,5 @@
 import { useTheme } from "../../context/ThemeContext.jsx";
+import { IconThemeLight, IconTheme, IconThemeSystem } from "../account/accountIcons.jsx";
 
 // Geteilte Pillen-Reihe fuer die Hell/Dunkel/System-Wahl (Etappe 1,
 // 2026-08-26) - urspruenglich nur in EinstellungenSection.jsx, jetzt auch im
@@ -6,11 +7,12 @@ import { useTheme } from "../../context/ThemeContext.jsx";
 // 2026-08-26). Eine Stelle statt zweier Kopien, damit Optionsliste und Optik
 // nicht auseinanderlaufen. `t` erwartet dieselben profilTheme*-Schluessel
 // wie ACCOUNT_T (i18n/account.js) - beide Aufrufer reichen dort ihr `t`
-// durch.
+// durch. Icons ergaenzt (Nutzer-Vorgabe 2026-08-28): reiner Text war zu
+// unauffaellig, Sonne/Mond/Monitor sind sofort erkennbar.
 const THEME_OPTIONS = [
-  { v: "light", labelKey: "profilThemeLight" },
-  { v: "dark", labelKey: "profilThemeDark" },
-  { v: "system", labelKey: "profilThemeSystem" },
+  { v: "light", labelKey: "profilThemeLight", Icon: IconThemeLight },
+  { v: "dark", labelKey: "profilThemeDark", Icon: IconTheme },
+  { v: "system", labelKey: "profilThemeSystem", Icon: IconThemeSystem },
 ];
 
 export function ThemeSwitchPills({ t }) {
@@ -23,6 +25,9 @@ export function ThemeSwitchPills({ t }) {
           onClick={() => setTheme(o.v)}
           aria-current={o.v === theme ? "true" : undefined}
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
             padding: "8px 12px",
             borderRadius: 10,
             border: `1px solid ${o.v === theme ? "var(--ca)" : "var(--cb)"}`,
@@ -35,6 +40,7 @@ export function ThemeSwitchPills({ t }) {
             minHeight: 40,
           }}
         >
+          <o.Icon size={16} />
           {t[o.labelKey]}
         </button>
       ))}

@@ -75,7 +75,17 @@ export function useFocusTrap(containerRef, onClose, deps = [], active = true) {
     // ansonsten liest ein Screenreader erst den ganzen Dialog-Rahmen vor.
     // Nur wenn dieser Trap wirklich der oberste ist, sonst raeubt ein
     // verschachteltes Overlay dem bereits offenen darunter den Fokus.
-    if (isTop()) focusableElements()[0]?.focus();
+    // data-focus-skip (Bugreport 2026-08-28): einzelne Elemente (z.B. ein
+    // Schliessen-Button direkt am Dialog-Anfang) sollen NICHT das
+    // automatische Erstfokus-Ziel sein, aber weiterhin ganz normal per Tab
+    // erreichbar bleiben - anders als tabIndex={-1} (das entfernt komplett
+    // aus dem Tab-Zyklus, siehe Logo-Button in HeaderMenu.jsx). Ohne dieses
+    // Attribut faellt der Auto-Fokus wie bisher auf das allererste Element.
+    if (isTop()) {
+      const focusable = focusableElements();
+      const initial = focusable.find((el) => !el.hasAttribute("data-focus-skip")) || focusable[0];
+      initial?.focus();
+    }
     return () => document.removeEventListener("keydown", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onClose, active, ...deps]);

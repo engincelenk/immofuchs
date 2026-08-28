@@ -1,12 +1,3 @@
-export const AMPEL = {
-  bruttoR: (v) => (v >= 5 ? "#22c55e" : v >= 4 ? "#f59e0b" : "#ef4444"),
-  nettoR: (v) => (v >= 3.5 ? "#22c55e" : v >= 2.5 ? "#f59e0b" : "#ef4444"),
-  cfOhne: (v) => (v > 0 ? "#22c55e" : v >= -100 ? "#f59e0b" : "#ef4444"),
-  cfMit: (v) => (v > 0 ? "#22c55e" : v >= -100 ? "#f59e0b" : "#ef4444"),
-  bel: (v) => (v < 70 ? "#22c55e" : v < 85 ? "#f59e0b" : "#ef4444"),
-  lz: (v) => (!isFinite(v) || v > 35 ? "#ef4444" : v > 25 ? "#f59e0b" : "#22c55e"),
-};
-
 export const BANDS = {
   bruttoR: { dir: "up", green: 5.0, yellow: 4.0, unit: "%" },
   nettoR: { dir: "up", green: 3.5, yellow: 2.5, unit: "%" },

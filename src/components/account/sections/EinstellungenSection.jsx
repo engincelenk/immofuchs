@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { LANGS } from "../../../i18n/translations.js";
+import { FLAGS } from "../../ui/LangSel.jsx";
 import { ThemeSwitchPills } from "../../ui/ThemeSwitchPills.jsx";
 import { IconDownload } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
@@ -38,6 +39,9 @@ export function EinstellungenSection({ t, account, lang, setLang, onBack }) {
               onClick={() => setLang(l.v)}
               aria-current={l.v === lang ? "true" : undefined}
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
                 padding: "8px 12px",
                 borderRadius: 10,
                 border: `1px solid ${l.v === lang ? "var(--ca)" : "var(--cb)"}`,
@@ -50,6 +54,7 @@ export function EinstellungenSection({ t, account, lang, setLang, onBack }) {
                 minHeight: 40,
               }}
             >
+              <span aria-hidden="true">{FLAGS[l.v] || "🌐"}</span>
               {l.full}
             </button>
           ))}

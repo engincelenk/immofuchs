@@ -337,7 +337,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 { key: "funktioniert", label: l.navHow, onSelect: () => scrollTo("funktioniert") },
                 { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
               ]}
-              langSelector={account?.isLoggedIn ? null : <LangSel lang={lang} setLang={setLang} />}
+              langSelector={<LangSel lang={lang} setLang={setLang} />}
               onLogin={() => {
                 setNavOpen(false);
                 setOpenMode("login");

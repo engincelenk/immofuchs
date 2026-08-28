@@ -249,6 +249,27 @@ export function IconTheme({ size }) {
   );
 }
 
+// Sonne/Monitor ergaenzen IconTheme (bereits ein Mond) zu einem vollstaendigen
+// Hell/Dunkel/System-Set fuer ThemeSwitchPills.jsx (Nutzer-Vorgabe 2026-08-28:
+// Icons statt reinem Text bei der Darstellungs-Wahl).
+export function IconThemeLight({ size }) {
+  return (
+    <Svg size={size}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+    </Svg>
+  );
+}
+
+export function IconThemeSystem({ size }) {
+  return (
+    <Svg size={size}>
+      <rect x="3" y="4" width="18" height="13" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+    </Svg>
+  );
+}
+
 // Rechnung/Beleg - ersetzt 🧾 in den Zahlungen.
 export function IconBeleg({ size }) {
   return (

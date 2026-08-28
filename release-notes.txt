@@ -1,3 +1,39 @@
+## 2026-08-28 (1.46.0)
+
+### FIX: Sprachwahl ging nach Reload verloren, Fokusring-Rahmen im Burger-Menue-X
+
+Zwei Bugreports mit Screenshots behoben:
+
+1. Sprache sprang nach einem echten Reload (z.B. nach OAuth-Redirect) immer
+   auf Deutsch zurueck: `lang` in App.jsx war reiner React-State ohne
+   Persistierung, anders als `theme` (localStorage `if_theme`). Jetzt
+   analog in `localStorage` (`if_lang`) gespiegelt und beim Start daraus
+   geladen (nur gueltige LANGS-Werte akzeptiert, sonst Fallback "de"). Per
+   Reload nachgestellt und bestaetigt: Hindi bleibt jetzt erhalten.
+
+2. Der Schliessen-Button (X) im Burger-Menue zeigte manchmal einen
+   sichtbaren Fokus-Rahmen. Ursache: useFocusTrap.js fokussiert beim
+   Oeffnen automatisch das erste fokussierbare Element - seit einem
+   frueheren Fix (Logo-Button tabIndex={-1}) ist das jetzt der X-Button.
+   Neues, wiederverwendbares Attribut `data-focus-skip` nimmt ein Element
+   nur vom automatischen Erstfokus aus (bleibt per Tab normal erreichbar),
+   auf den X-Button angewendet - der Fokus landet jetzt korrekt auf dem
+   ersten echten Menuepunkt (per Browser-Check bestaetigt: activeElement
+   ist "Rechner", nicht mehr der X-Button).
+
+### NEU: Sprachauswahl mit Flaggen an zwei Stellen, Hell/Dunkel/System mit Icons
+
+Sprachauswahl (mit Flaggen) jetzt sowohl unter "Einstellungen" als auch im
+Burger-Menue - vorher zeigte "Einstellungen" nur Text ohne Flaggen, und das
+Burger-Menue liess die Sprachwahl (LangSel, hatte bereits Flaggen) nur fuer
+nicht angemeldete Besucher sehen. Beide Stellen nutzen jetzt dasselbe
+FLAGS-Mapping aus LangSel.jsx.
+
+Hell/Dunkel/System-Auswahl (ThemeSwitchPills.jsx, wirkt an beiden
+Einbindungsstellen) zeigt jetzt Sonne/Mond/Monitor-Icons vor dem Text statt
+nur Text - neue Icons IconThemeLight/IconThemeSystem in accountIcons.jsx
+ergaenzt (IconTheme, bereits ein Mond, fuer "Dunkel" wiederverwendet).
+
 ## 2026-08-28 (1.45.0)
 
 ### AENDERUNG: USP-Kachel-Texte auf der Landingpage angeglichen, letzter "keine Kosten"-Rest entfernt

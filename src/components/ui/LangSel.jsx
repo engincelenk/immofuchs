@@ -8,7 +8,7 @@ import { LANGS } from "../../i18n/translations.js";
 // zurueck statt Globus-Icon, da in Sprachwaehlern (Duolingo, Google
 // Translate etc.) trotz derselben Unschaerfe verbreitete, sofort erkennbare
 // Praxis - rein visuelle Abkuerzung, kein Anspruch auf Praezision.
-const FLAGS = { de: "🇩🇪", en: "🇬🇧", tr: "🇹🇷", zh: "🇨🇳", hi: "🇮🇳" };
+export const FLAGS = { de: "🇩🇪", en: "🇬🇧", tr: "🇹🇷", zh: "🇨🇳", hi: "🇮🇳" };
 
 export function LangSel({ lang, setLang }) {
   const [open, setOpen] = useState(false);
