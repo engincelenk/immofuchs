@@ -481,6 +481,8 @@ export const T = {
     stVerhandlZiel: "Verhandlungsziel",
     stIstKPPuffer: "unter Ist-KP\u00a0—\u00a0Puffer",
     stMitStVor: "Mit Steuervorteil",
+    ohneStVor: "Ohne Steuervorteil",
+    exitHint: "Detailrechnung siehe Abschnitt „Trägt sich die Immobilie von selbst?“ weiter unten.",
     stUnterZiel: "unter Ziel",
     stHero1:
       "Das Objekt trägt sich selbst\u00a0— Cashflow ist positiv, ohne jeden Steuervorteil. Perfekter Ausgangspunkt.",
@@ -1214,6 +1216,8 @@ export const T = {
     stVerhandlZiel: "Negotiation target",
     stIstKPPuffer: "below actual price\u00a0—\u00a0buffer",
     stMitStVor: "With tax benefit",
+    ohneStVor: "Without tax benefit",
+    exitHint: "See the “Does the property pay for itself?” section below for the full breakdown.",
     stUnterZiel: "below target",
     stHero1:
       "The property sustains itself\u00a0— cashflow is positive without any tax benefit. Perfect starting point.",
@@ -1841,6 +1845,8 @@ export const T = {
     stVerhandlZiel: "Pazarlık hedefi",
     stIstKPPuffer: "mevcut fiyatın altında\u00a0—\u00a0tampon",
     stMitStVor: "Vergi avantajıyla",
+    ohneStVor: "Vergi avantajı olmadan",
+    exitHint: "Detaylı hesaplama için aşağıdaki „Mülk kendi kendini finanse ediyor mu?“ bölümüne bakın.",
     stUnterZiel: "hedefin altında",
     stHero1:
       "Mülk kendi kendini finanse ediyor\u00a0— herhangi bir vergi avantajı olmadan nakit akışı pozitif. Mükemmel başlangıç.",
@@ -2542,6 +2548,8 @@ export const T = {
     stVerhandlZiel: "谈判目标",
     stIstKPPuffer: "低于当前价格\u00a0—\u00a0缓冲",
     stMitStVor: "含税收优惠",
+    ohneStVor: "不含税收优惠",
+    exitHint: "详细计算见下方「房产能否自持？」部分。",
     stUnterZiel: "低于目标",
     stHero1: "该房产可自持\u00a0— 无需任何税收优惠即现金流为正。完美起点。",
     stHero2: "含税收优惠已可自持（{cf}/月）。不含税还差{diff}/月\u00a0— 小缓冲风险。",
@@ -3235,6 +3243,8 @@ export const T = {
     stVerhandlZiel: "बातचीत का लक्ष्य",
     stIstKPPuffer: "वास्तविक मूल्य से कम\u00a0—\u00a0बफर",
     stMitStVor: "कर लाभ के साथ",
+    ohneStVor: "कर लाभ के बिना",
+    exitHint: "विस्तृत गणना नीचे „क्या संपत्ति खुद को वित्तपोषित करती है?“ अनुभाग में देखें।",
     stUnterZiel: "लक्ष्य से कम",
     stHero1:
       "यह संपत्ति स्व-वित्तपोषित है\u00a0— बिना किसी कर लाभ के नकदी प्रवाह सकारात्मक। सही शुरुआत।",

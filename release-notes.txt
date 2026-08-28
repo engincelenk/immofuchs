@@ -1,3 +1,20 @@
+## 2026-08-28 (1.38.0)
+
+### NEU: Exit-Saldo-Kachel im Renditerechner, Live-Regler jetzt zwischen Finanz-Score und Selbsttraeger-Check
+
+Direkt unter dem ImmoFuchs Finanz-Score zeigt eine neue Kachel "Was bleibt
+beim Verkauf nach {j} Jahren?" mit den zwei wichtigsten Zahlen - Saldo mit
+und ohne Steuervorteil (R.g / R.gOhne, grün/rot eingefaerbt) - plus einem
+kurzen Hinweis, dass die Detailrechnung im Abschnitt "Traegt sich die
+Immobilie von selbst?" weiter unten folgt.
+
+Die Live-Regler (Zinssatz/Tilgung) sind von ganz oben im Ergebnis-Bereich
+direkt unter diese neue Kachel gewandert: auf Mobile/Tablet-Hochformat kann
+der Nutzer jetzt direkt neben dem Saldo schieben, ohne zurueck zur Eingabe
+wechseln zu muessen. Zum Testen sind die Regler jetzt auch auf dem
+Desktop-Split-Layout sichtbar (vorher dort ausgeblendet, weil das
+Eingabefeld direkt daneben stand).
+
 ## 2026-08-28 (1.37.0)
 
 ### NEU: Live-Regler-Slider fuer Zins/Tilgung (Renditerechner, Finanzierung) und Ist-Verbrauch (Sanierungsrechner)

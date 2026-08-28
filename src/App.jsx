@@ -681,7 +681,10 @@ export default function App() {
         .split{display:grid;grid-template-columns:1fr 1.15fr;gap:24px;align-items:start}
         .inp-pane,.res-pane{display:block!important}
         .res-pane{position:sticky;top:94px;max-width:100%;overflow-x:hidden}
-        .res-live-sliders{display:none}
+        /* .res-live-sliders bleibt hier zum Testen (2026-08-28) auch auf dem
+           echten Desktop-Split sichtbar, obwohl das Eingabefeld daneben
+           bereits denselben Wert bearbeitbar macht - siehe Kommentar bei der
+           Basis-Regel oben. */
         .content{padding:24px 28px}
         .hdr-inner{padding-left:28px;padding-right:28px}
         /* Verschoben von .tbar auf .tbar-wrap (2026-08-12): die feste

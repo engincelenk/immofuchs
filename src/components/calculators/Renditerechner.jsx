@@ -667,28 +667,6 @@ export default function Haupt() {
             </div>
           ) : (
             <>
-              <LiveSliderPanel title={t.liveRegler}>
-                <LiveSlider
-                  label={t.zinssatz}
-                  unit="% p.a."
-                  value={d.zinssatz}
-                  onChange={(v) => set("zinssatz", v)}
-                  min={0.5}
-                  max={8}
-                  step={0.05}
-                  tip={tip("zinssatz")}
-                />
-                <LiveSlider
-                  label={t.tilgung}
-                  unit="% p.a."
-                  value={d.tilgung}
-                  onChange={(v) => set("tilgung", v)}
-                  min={0.5}
-                  max={8}
-                  step={0.05}
-                  tip={tip("tilgung")}
-                />
-              </LiveSliderPanel>
               <div
                 style={{
                   display: "flex",
@@ -739,6 +717,57 @@ export default function Haupt() {
 
               {/* FINANZ-SCORE — immer sichtbar */}
               <ScoreBlock score={score} />
+
+              {/* ═══ EXIT-SALDO — Kurzfassung, Detailrechnung folgt in Section 7
+                  weiter unten. Direkt darunter die Live-Regler: hier kann der
+                  Nutzer Zins/Tilgung anpassen und sieht die Wirkung sofort an
+                  dieser Kachel, ohne im Mobile-Umschalter zurueck zur Eingabe
+                  zu muessen. ═══ */}
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--ct)",
+                  margin: "16px 0 8px",
+                }}
+              >
+                {t.sec7Q.replace("{j}", String(R.j))}
+              </div>
+              <Row>
+                <AmpelKPI
+                  label={t.stMitStVor}
+                  value={fmtE(R.g)}
+                  color={rate("gesamtSaldo", R.g).color}
+                />
+                <AmpelKPI
+                  label={t.ohneStVor}
+                  value={fmtE(R.gOhne || 0)}
+                  color={rate("gesamtSaldo", R.gOhne || 0).color}
+                />
+              </Row>
+              <Ins emoji="ℹ️" text={t.exitHint} type="info" />
+              <LiveSliderPanel title={t.liveRegler}>
+                <LiveSlider
+                  label={t.zinssatz}
+                  unit="% p.a."
+                  value={d.zinssatz}
+                  onChange={(v) => set("zinssatz", v)}
+                  min={0.5}
+                  max={8}
+                  step={0.05}
+                  tip={tip("zinssatz")}
+                />
+                <LiveSlider
+                  label={t.tilgung}
+                  unit="% p.a."
+                  value={d.tilgung}
+                  onChange={(v) => set("tilgung", v)}
+                  min={0.5}
+                  max={8}
+                  step={0.05}
+                  tip={tip("tilgung")}
+                />
+              </LiveSliderPanel>
 
               {/* ═══ SELBSTTRÄGER-CHECK ═══ */}
               {(() => {
