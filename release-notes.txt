@@ -1,3 +1,49 @@
+## 2026-08-28 (1.44.0)
+
+### AENDERUNG: Landingpage-Texte bereinigt, Finanz-Score-Baustein ergaenzt, Stresstest-Kachel neu gestaltet
+
+Vollstaendige Durchsicht aller Landingpage-Texte (index.html SEO-Meta,
+Landing.jsx, translations.js) nach mehreren Nutzer-Feedback-Runden:
+
+- index.html: Title, Description, Open-Graph-, Twitter- und JSON-LD-Tags
+  behaupteten "ohne Anmeldung" (seit Spec v3.0 falsch, Konto ist Pflicht)
+  und "kostenlos"/isAccessibleForFree/offers.price=0 (falsch seit dem
+  7-Tage-Test-Modell). Alle Stellen umformuliert, Steuer/§6-Trick und
+  Vorfaelligkeitsrechner in featureList ergaenzt (fehlten bisher).
+- translations.js: neun tote Uebersetzungs-Keys entfernt (trust1-3,
+  heroEyebrow, tagFull, heroSubShort, sub, die komplette nie gerenderte
+  "Warum Immofuchs?"-Sektion trustHead/trust1H-trust4P) - in allen 5
+  Sprachen.
+- "7 Tage kostenlos"/"Testphase" aus den reinen Marketingtexten entfernt
+  (footerNote, usp4H/P) - im eingeloggten Bereich (Checkout, Konto-Status,
+  FAQ, PlanChip) bleibt es unangetastet, dort ist es echter Nutzerstatus,
+  keine Werbeaussage.
+- uspLead korrigiert: nannte "Marktdaten", obwohl es laut
+  investment-score.md bewusst keine PLZ-Preis-/Mietdatenbank gibt - jetzt
+  nur noch Zins-, Foerder- und Rechtsdaten (die tatsaechlich automatisch
+  einfliessen).
+- fullF5 und fullDesc (Renditerechner-Kachel) nannten noch "Risikoanalyse
+  & Schnellcheck" - veraltete Bezeichnung von vor dem Score-Umbau, jetzt
+  "ImmoFuchs Finanz-Score & Stresstest" bzw. "...Finanz-Score in einem".
+- finF6 (Kreditrechner-Kachel) ergaenzt um KfW-Foerderung, fehlte trotz
+  prominenter KfW-Sektion im Rechner.
+- Neuer Baustein "ImmoFuchs Finanz-Score — Methodik statt Bauchgefühl"
+  unter "Was macht Immofuchs besonders", nennt die sieben Scoring-
+  Dimensionen (Wirtschaftlichkeit, Cashflow & Schuldentragfähigkeit,
+  Finanzierung, Objekt & Sanierung, Vermietung, Exit, Robustheit).
+
+### NEU: Stresstest-Kachel im Renditerechner komplett neu gestaltet
+
+Statt einer 3-Spalten-Tabelle (Basis/Negativ/Stress nebeneinander) zeigt
+die Kachel jetzt immer nur ein Szenario gross an, umgeschaltet per Slider
+mit drei Rasten (Normal/Vorsichtig/Krisenfest) - dazu ein Satz, der genau
+erklaert, was gerade simuliert wird, und ein ⓘ-Tooltip, der "Stresstest"
+in zwei Saetzen erklaert. DSCR ersetzt durch "Mietdeckung" in % + Status-
+wort ("132 % — Rate sicher gedeckt") statt Bank-Jargon ("1,32×"). Neue
+Datei-Struktur in StressTabelle.jsx, alle Uebersetzungs-Keys in 5 Sprachen
+ergaenzt, Vollstaendigkeits-Test (vollstaendigkeit.test.js) bestaetigt
+konsistente Schluessel ueber alle Sprachen.
+
 ## 2026-08-28 (1.43.0)
 
 ### AENDERUNG: Slider-Limits reduziert (realistischerer Bereich), Euro-Eingaben zeigen jetzt automatisch Tausenderpunkte

@@ -1599,6 +1599,17 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               {
                 svg: (
                   <>
+                    <path d="M4 18a8 8 0 1 1 16 0" />
+                    <path d="M12 18l4-6" />
+                    <path d="M12 18h.01" />
+                  </>
+                ),
+                h: l.uspScoreH,
+                p: l.uspScoreP,
+              },
+              {
+                svg: (
+                  <>
                     <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />
                   </>
                 ),
