@@ -15,7 +15,7 @@ import {
 } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
-import { F, Sel, Row, Sec, KPI, Ins, VT } from "../ui/atoms.jsx";
+import { F, Sel, Row, Sec, KPI, Ins, VT, LiveSliderPanel, LiveSlider } from "../ui/atoms.jsx";
 import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -930,6 +930,18 @@ export default function Sanier() {
         </div>
 
         <div className={`res-pane ${view === "result" ? "act" : ""}`}>
+          <LiveSliderPanel title={t.liveRegler}>
+            <LiveSlider
+              label={t.sIstVerbrauch}
+              unit="kWh/m²a"
+              value={d.sanIstVerbrauch !== "" && d.sanIstVerbrauch != null ? d.sanIstVerbrauch : R.hkSchaetzung}
+              onChange={(v) => set("sanIstVerbrauch", v)}
+              min={VERBRAUCH_GRENZEN.min}
+              max={VERBRAUCH_GRENZEN.max}
+              step={5}
+              tip={tip("sanIstVerbrauch")}
+            />
+          </LiveSliderPanel>
           <div
             style={{
               background: "linear-gradient(135deg,var(--ca),var(--ca-dk))",

@@ -4,7 +4,7 @@ import { GREST, KFW_KREDIT } from "../../data.js";
 import { berechneKfwPlan, teileFinanzierung } from "../../utils/kfwDarlehen.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
-import { F, Sel, Row, Sec, KPI, Ins, VT, Toggle } from "../ui/atoms.jsx";
+import { F, Sel, Row, Sec, KPI, Ins, VT, Toggle, LiveSliderPanel, LiveSlider } from "../ui/atoms.jsx";
 import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -402,6 +402,28 @@ export default function Kredit() {
             <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ch)" }}>🏦</div>
           ) : (
             <>
+              <LiveSliderPanel title={t.liveRegler}>
+                <LiveSlider
+                  label={t.zinssatz}
+                  unit="% p.a."
+                  value={d.zinssatz}
+                  onChange={(v) => set("zinssatz", v)}
+                  min={0.5}
+                  max={8}
+                  step={0.05}
+                  tip={tip("zinssatz")}
+                />
+                <LiveSlider
+                  label={t.tilgung}
+                  unit="% p.a."
+                  value={d.tilgung}
+                  onChange={(v) => set("tilgung", v)}
+                  min={0.5}
+                  max={8}
+                  step={0.05}
+                  tip={tip("tilgung")}
+                />
+              </LiveSliderPanel>
               <div
                 style={{
                   background: "linear-gradient(135deg,var(--ca),var(--ca-dk))",

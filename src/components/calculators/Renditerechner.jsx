@@ -7,7 +7,19 @@ import { rate, vrd } from "../../utils/bands.js";
 import { computeRendite } from "../../utils/rendite.js";
 import { berechneKennzahlen } from "../../utils/kennzahlen.js";
 import { berechneScore } from "../../utils/investmentScore.js";
-import { F, Sel, Row, Sec, Ins, VT, AmpelKPI, NeutralKPI, Toggle } from "../ui/atoms.jsx";
+import {
+  F,
+  Sel,
+  Row,
+  Sec,
+  Ins,
+  VT,
+  AmpelKPI,
+  NeutralKPI,
+  Toggle,
+  LiveSliderPanel,
+  LiveSlider,
+} from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
 import { ScoreBlock } from "../charts/ScoreBlock.jsx";
 import { InvestmentCheckRadar } from "../charts/InvestmentCheckRadar.jsx";
@@ -655,6 +667,28 @@ export default function Haupt() {
             </div>
           ) : (
             <>
+              <LiveSliderPanel title={t.liveRegler}>
+                <LiveSlider
+                  label={t.zinssatz}
+                  unit="% p.a."
+                  value={d.zinssatz}
+                  onChange={(v) => set("zinssatz", v)}
+                  min={0.5}
+                  max={8}
+                  step={0.05}
+                  tip={tip("zinssatz")}
+                />
+                <LiveSlider
+                  label={t.tilgung}
+                  unit="% p.a."
+                  value={d.tilgung}
+                  onChange={(v) => set("tilgung", v)}
+                  min={0.5}
+                  max={8}
+                  step={0.05}
+                  tip={tip("tilgung")}
+                />
+              </LiveSliderPanel>
               <div
                 style={{
                   display: "flex",

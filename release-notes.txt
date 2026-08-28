@@ -1,3 +1,30 @@
+## 2026-08-28 (1.37.0)
+
+### NEU: Live-Regler-Slider fuer Zins/Tilgung (Renditerechner, Finanzierung) und Ist-Verbrauch (Sanierungsrechner)
+
+Ausgangspunkt war die Frage, wo im Slider-Einsatz sinnvoll ist - Analyse per
+ui-ux-designer-Subagent ueber alle 6 Rechner ergab: nur Felder mit hartem,
+bekanntem Wertebereich und explorativem "was-waere-wenn"-Charakter eignen
+sich (Zinssatz, Tilgung, Wertsteigerung, Ist-Verbrauch), Euro-Betraege ohne
+Obergrenze (Kaufpreis, Eigenkapital) und feingranulare Felder (Makler-
+provision 0,01%) nicht.
+
+Neue Dual-Komponente LiveSlider/LiveSliderPanel (atoms.jsx) kombiniert
+Range-Slider mit dem bestehenden Zahlenfeld - nie Slider allein, damit
+Praezisions-Eingabe per Tastatur weiterhin moeglich bleibt. Eingesetzt
+(Startset) fuer Zinssatz/Tilgung in Renditerechner.jsx und Finanzierung.jsx
+(0,5-8%, Schritt 0,05) sowie Ist-Verbrauch in Sanier.jsx (20-400 kWh/m²a,
+Schritt 5, Bereich bereits als VERBRAUCH_GRENZEN im Code fixiert).
+
+Zusaetzlich: auf Mobile/Tablet-Hochformat blendet der VT-Umschalter Eingabe
+und Ergebnis nacheinander ein - ein Slider nur im Eingabebereich haette
+dort staendiges Zurueckwechseln erzwungen, um die Auswirkung im Ergebnis zu
+sehen. Die Live-Regler erscheinen deshalb zusaetzlich oben im Ergebnis-Tab
+(neue .res-live-sliders-Regel in App.jsx), synchron zum Eingabefeld ueber
+denselben set()-Handler. Auf dem echten Desktop-Split-Layout (beide Spalten
+permanent sichtbar, ab 1024px) bleibt das Ergebnis-Panel ausgeblendet, da
+dort das Eingabefeld ohnehin daneben steht.
+
 ## 2026-08-27 (1.36.0)
 
 ### FIX: Chart-Auswahl auf Touch-Geraeten sprang sofort zurueck, Tabellen-Header faelschlich farbig

@@ -171,6 +171,101 @@ export function Sel({ label, value, onChange, options, tip }) {
 export function Row({ children }) {
   return <div className="if-row">{children}</div>;
 }
+
+// Live-Regler fuer den Ergebnis-Bereich: auf Mobile/Tablet-Hochformat blendet
+// der VT-Umschalter Eingabe und Ergebnis nacheinander ein, dort muesste man
+// sonst fuer jede Zins-/Tilgungsaenderung zurueck zur Eingabe wechseln. Das
+// LiveSliderPanel duppliziert nur die ausgewaehlten Szenario-Felder als
+// Slider direkt im Ergebnis - dieselben set()-Handler wie im Eingabefeld,
+// also synchron. Auf echtem Desktop-Split (beide Spalten permanent
+// sichtbar) blendet die .res-live-sliders-Regel in App.jsx das Panel aus,
+// da es dort redundant waere.
+export function LiveSliderPanel({ title, children }) {
+  return (
+    <div
+      className="res-live-sliders"
+      style={{
+        background: "var(--cc)",
+        border: "1px solid var(--cb)",
+        borderRadius: 12,
+        padding: "12px 14px",
+        marginBottom: 14,
+      }}
+    >
+      {title && (
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: "var(--ch)",
+            textTransform: "uppercase",
+            letterSpacing: 0.6,
+            marginBottom: 10,
+          }}
+        >
+          {title}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+export function LiveSlider({ label, unit, value, onChange, min, max, step, tip }) {
+  const num = value === "" || value == null || Number.isNaN(+value) ? 0 : +value;
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          marginBottom: 4,
+          gap: 8,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 13,
+            color: "var(--cl)",
+            fontWeight: 500,
+            display: "inline-flex",
+            alignItems: "center",
+          }}
+        >
+          {label}
+          {tip && <Tip text={tip} label={label} />}
+        </span>
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: "var(--ca)",
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {String(num).replace(".", ",")}
+          {unit ? ` ${unit}` : ""}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={num}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: "100%",
+          height: 32,
+          accentColor: "var(--ca)",
+          cursor: "pointer",
+        }}
+      />
+    </div>
+  );
+}
 // An/Aus-Schalter fuer Formular-Optionen ausserhalb einfacher Zahlenfelder
 // (z.B. "Nebenkosten mitfinanzieren"). Kompakte Variante des Toggle-Musters
 // aus Sanier.jsx (dort inline, hier wiederverwendbar fuer Renditerechner UND

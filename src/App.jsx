@@ -659,6 +659,16 @@ export default function App() {
       .mob-toggle button.act{background:var(--ca);color:#fff}
       .mob-next-btn{display:none;width:100%;padding:14px;font-size:16px;font-weight:700;background:var(--ca);color:#fff;border:none;border-radius:12px;cursor:pointer;font-family:inherit;margin-top:16px;letter-spacing:.3px}
       .hdr-tag{display:none}
+      /* .res-live-sliders (Slider-Feature 2026-08-28): auf Mobile/Tablet-
+         Hochformat toggelt VT zwischen Eingabe und Ergebnis, dort duplizieren
+         die Live-Regler ausgewaehlte Szenario-Felder direkt im Ergebnis-Tab.
+         Auf dem echten Desktop-Split (beide Spalten permanent sichtbar,
+         siehe .split-Regel unten) waeren sie redundant zum Eingabefeld -
+         dort per Default sichtbar, im echten Split-Layout ausgeblendet.
+         Faellt das Split-Layout wieder auf den Umschalter zurueck (Landscape-
+         Handy/Tablet-Hochformat-Ausnahmen unten), muessen sie dort wieder an -
+         dasselbe Redeklarations-Muster wie .mob-next-btn/.mob-toggle. */
+      .res-live-sliders{display:block}
       /* TABLET / DESKTOP — overrides */
       @media(min-width:760px){
         .hdr-tag{display:block!important}
@@ -671,6 +681,7 @@ export default function App() {
         .split{display:grid;grid-template-columns:1fr 1.15fr;gap:24px;align-items:start}
         .inp-pane,.res-pane{display:block!important}
         .res-pane{position:sticky;top:94px;max-width:100%;overflow-x:hidden}
+        .res-live-sliders{display:none}
         .content{padding:24px 28px}
         .hdr-inner{padding-left:28px;padding-right:28px}
         /* Verschoben von .tbar auf .tbar-wrap (2026-08-12): die feste
@@ -699,6 +710,7 @@ export default function App() {
         .inp-pane,.res-pane{display:none!important}
         .inp-pane.act,.res-pane.act{display:block!important}
         .res-pane{position:static}
+        .res-live-sliders{display:block}
         .mob-next-btn{display:block}
         .tbar-wrap{max-width:100%!important;border-radius:0!important;box-shadow:none!important}
       }
@@ -717,6 +729,7 @@ export default function App() {
         .inp-pane,.res-pane{display:none!important}
         .inp-pane.act,.res-pane.act{display:block!important}
         .res-pane{position:static}
+        .res-live-sliders{display:block}
         .mob-next-btn{display:block}
         .tbar-wrap{max-width:100%!important;border-radius:0!important;box-shadow:none!important}
       }
