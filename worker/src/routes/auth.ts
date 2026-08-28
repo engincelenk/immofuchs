@@ -142,6 +142,14 @@ authRoutes.get("/google/callback", async (c) => {
 
 // ═══ Apple ═══
 // response_mode=form_post - Apple postet an den Callback, kein GET-Query.
+// Bugfix 2026-08-28: der Callback ist damit eine Cross-Site-POST-Anfrage von
+// appleid.apple.com - SameSite=Lax-Cookies werden dabei vom Browser NICHT
+// mitgeschickt (nur bei GET-Top-Level-Navigationen wie beim Google-Callback).
+// Ohne SameSite=None kam das State-Cookie beim Callback nie an, jede
+// Apple-Anmeldung endete an der state!==cookieState-Pruefung unten mit
+// "oauth_state_mismatch" - reproduziert und verifiziert. Secure war schon
+// gesetzt (fuer None ohnehin Pflicht). Google bleibt bewusst bei Lax, das
+// ist dort der sicherere korrekte Wert (GET-Callback, keine Cross-Site-POST).
 
 authRoutes.get("/apple/start", (c) => {
   const state = randomState();
@@ -149,7 +157,7 @@ authRoutes.get("/apple/start", (c) => {
   const url = buildAppleAuthUrl(c.env, redirectUri, state);
   c.header(
     "Set-Cookie",
-    `${OAUTH_STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+    `${OAUTH_STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=600`,
   );
   return c.redirect(url, 302);
 });
@@ -159,12 +167,12 @@ authRoutes.get("/delete-reauth/apple", requireAuth, (c) => {
   const state = randomState();
   const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/apple/callback");
   const url = buildAppleAuthUrl(c.env, redirectUri, state);
-  c.header("Set-Cookie", `${OAUTH_STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`, {
+  c.header("Set-Cookie", `${OAUTH_STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=600`, {
     append: true,
   });
   c.header(
     "Set-Cookie",
-    `${DELETE_REAUTH_COOKIE}=${c.var.userId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+    `${DELETE_REAUTH_COOKIE}=${c.var.userId}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=600`,
     { append: true },
   );
   return c.redirect(url, 302);
@@ -178,7 +186,7 @@ authRoutes.post("/apple/callback", async (c) => {
   const base = frontendBase(c.env, c.req.raw);
   const deleteReauthUserId = readCookie(c.req.raw, DELETE_REAUTH_COOKIE);
   if (deleteReauthUserId) {
-    c.header("Set-Cookie", `${DELETE_REAUTH_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`, {
+    c.header("Set-Cookie", `${DELETE_REAUTH_COOKIE}=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0`, {
       append: true,
     });
   }

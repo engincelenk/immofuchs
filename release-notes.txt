@@ -1,3 +1,30 @@
+## 2026-08-28 (1.47.0) [WORKER]
+
+### FIX: "Mit Apple anmelden" schlug immer mit "Anmeldung nicht abgeschlossen" fehl
+
+Nutzer-Meldung: Apple-Login endete zuverlaessig mit einer Fehlermeldung und
+Ruecksprung zur Landingpage - Google-Login war davon nicht betroffen.
+
+Ursache gefunden und verifiziert (worker/src/auth/apple.ts, worker/src/
+routes/auth.ts): Apple verlangt response_mode=form_post - appleid.apple.com
+schickt nach der Anmeldung ein automatisches POST-Formular an den Callback,
+keine normale GET-Weiterleitung wie bei Google. Das vorher gesetzte
+State-Cookie (SameSite=Lax) wird vom Browser bei einer Cross-Site-POST-
+Anfrage aber grundsaetzlich NICHT mitgeschickt - nur bei GET-Top-Level-
+Navigationen. Das Cookie kam beim Callback nie an, die state!==cookieState-
+Pruefung schlug deshalb IMMER fehl, unabhaengig vom eigentlichen
+Apple-Login-Ergebnis.
+
+Fix: State- und Delete-Reauth-Cookie fuer den Apple-Flow (/apple/start,
+/delete-reauth/apple, /apple/callback) auf SameSite=None umgestellt (Secure
+war schon gesetzt, fuer None ohnehin Pflicht). Google bleibt bewusst bei
+SameSite=Lax - dort ist das der sicherere korrekte Wert (GET-Callback, keine
+Cross-Site-POST). Worker-Typecheck und alle 117 Worker-Tests grün.
+
+ACHTUNG: Diese Aenderung liegt unter worker/ - braucht zusaetzlich zum
+normalen Frontend-Push einen eigenen `npx wrangler deploy`, sonst wirkt der
+Fix nicht.
+
 ## 2026-08-28 (1.46.0)
 
 ### FIX: Sprachwahl ging nach Reload verloren, Fokusring-Rahmen im Burger-Menue-X
