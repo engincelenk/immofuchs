@@ -1,3 +1,11 @@
+## 2026-08-29 (1.49.1) [FRONTEND]
+
+### Slider fuer Nicht umlagefaehige Kosten und Wertsteigerung ergaenzt
+
+Renditerechner.jsx: "Nicht umlagefaehige Kosten" hat jetzt einen Slider
+(0-500 €, Schritt 25), "Wertsteigerung" ebenfalls (0-6 %, Schritt 0,1).
+Beide Felder blieben bisher reine Zahlenfelder ohne Slider.
+
 ## 2026-08-29 (1.49.0) [FRONTEND]
 
 ### NEU: Bewegliche Wirtschaftsgüter im Renditerechner separat abschreibbar

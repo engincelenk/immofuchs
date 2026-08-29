@@ -236,6 +236,7 @@ export default function Haupt() {
               value={d.nichtUml}
               onChange={(v) => set("nichtUml", v)}
               tip={tip("nichtUml")}
+              slider={{ min: 0, max: 500, step: 25 }}
             />
             <F
               label={t.leerstand}
@@ -532,6 +533,7 @@ export default function Haupt() {
               onChange={(v) => set("wertP", v)}
               step="0.1"
               tip={tip("wertP")}
+              slider={{ min: 0, max: 6, step: 0.1 }}
             />
             <F
               label={t.jahre}
