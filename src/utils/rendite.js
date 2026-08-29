@@ -65,6 +65,16 @@ export function computeRendite(d, t) {
   const anschlussZinsProz = +d.anschlussZins > 0 ? +d.anschlussZins : null;
   const renovierung = +d.renovierung || 0,
     vergleichsmiete = +d.vergleichsmiete || 0;
+  // ── Bewegliche Wirtschaftsgueter (Kueche, Einbaumoebel etc., 2026-08-29) ─
+  // Optional, per Toggle aktiviert. Im Kaufvertrag separat ausgewiesene
+  // bewegliche Wirtschaftsgueter gehoeren nicht zur Gebaeude-AfA-Basis,
+  // sondern werden ueber ihre eigene (hier typisiert: 10 Jahre) betriebs-
+  // gewoehnliche Nutzungsdauer linear abgeschrieben - unabhaengig von
+  // degressiver AfA/Sonder-AfA/§7b, die nur fuer das Gebaeude gelten.
+  const beweglAktiv = !!d.beweglAktiv;
+  const bewegliche = beweglAktiv ? +d.bewegl || 0 : 0;
+  const BEWEGL_NUTZUNGSDAUER = 10;
+  const beweglAfaJahr = bewegliche > 0 ? bewegliche / BEWEGL_NUTZUNGSDAUER : 0;
   // ── Neubau-Abschreibung (2026-08-25) ──
   // Alle Felder sind optional; fehlen sie, verhaelt sich die Rechnung wie
   // vor der Erweiterung: lineare AfA mit dem Satz aus dem Formular.
@@ -94,7 +104,13 @@ export function computeRendite(d, t) {
   // kosten und gehoeren anteilig zur Gebaeude-Bemessungsgrundlage - bei
   // 10-12 % Nebenkosten fehlten dauerhaft 10-12 % der Abschreibung.
   const anschaffungskosten = gesamtKaufpreis + nebenkosten;
-  const afaBemessung = anschaffungskosten * (gebaeudeAnteilProz / 100);
+  // Bewegliche Wirtschaftsgueter mindern die Gebaeude-AfA-Basis, sonst
+  // wuerden sie doppelt (einmal ueber die Gebaeude-AfA, einmal ueber ihre
+  // eigene AfA unten) abgeschrieben.
+  const afaBemessung = Math.max(
+    0,
+    anschaffungskosten * (gebaeudeAnteilProz / 100) - bewegliche,
+  );
 
   // ── Renovierung: 15%-Grenze entscheidet Sofortabzug vs. Aktivierung ────
   // Die Grenze bemisst sich nach den Gebaeude-Anschaffungskosten inkl.
@@ -236,7 +252,8 @@ export function computeRendite(d, t) {
     const kfwZinsJ = kfwZeile.zins;
     const kfwTilgJ = kfwZeile.tilgung;
     const zinsTilgungJ = zinsJ + tilgungJ + kfwZinsJ + kfwTilgJ;
-    const afaJ = afaPlan.afa[jahr - 1] || 0;
+    const beweglAfaJ = jahr <= BEWEGL_NUTZUNGSDAUER ? beweglAfaJahr : 0;
+    const afaJ = (afaPlan.afa[jahr - 1] || 0) + beweglAfaJ;
     const sofortAufwandJ = jahr === 1 && renUnterGrenze ? renovierung : 0;
 
     // ── Steuerliches Ergebnis nach § 21 EStG ──────────────────────────────
@@ -408,5 +425,8 @@ export function computeRendite(d, t) {
     ren15Grenze,
     renUnterGrenze,
     renUeberGrenze,
+    bewegl: bewegliche,
+    beweglAfaJ: beweglAfaJahr,
+    beweglNutzungsdauer: BEWEGL_NUTZUNGSDAUER,
   };
 }

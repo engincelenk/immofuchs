@@ -1,3 +1,23 @@
+## 2026-08-29 (1.49.0) [FRONTEND]
+
+### NEU: Bewegliche Wirtschaftsgüter im Renditerechner separat abschreibbar
+
+Im Kaufvertrag separat ausgewiesene bewegliche Wirtschaftsgüter (z. B.
+Einbauküche, Einbaumöbel) zählen steuerlich nicht zum Gebäude und lassen
+sich schneller abschreiben als die Gebäude-AfA (33-50 Jahre). Bisher gab
+es dafür kein Eingabefeld - der Betrag floss ungewollt in den regulären
+Gebäude-Kaufpreis und wurde entsprechend langsam abgeschrieben.
+
+- Neuer Toggle "Bewegliche Wirtschaftsgüter separat abschreiben" direkt
+  bei Grundstücks-/Gebäudeanteil (Renditerechner.jsx). Default AUS -
+  Status quo fuer Bestandsnutzer bleibt unveraendert.
+- AN: Eingabefeld "Kaufpreisanteil bewegliche Wirtschaftsgüter" (€). Der
+  Betrag wird aus der Gebäude-AfA-Bemessungsgrundlage herausgerechnet und
+  separat linear über 10 Jahre abgeschrieben (rendite.js), parallel zur
+  bestehenden Gebäude-AfA (linear/degressiv/Sonder-AfA § 7b unveraendert).
+- Tooltip erklaert Zweck und Abschreibungsdauer. Uebersetzt in alle 5
+  Sprachen (DE/EN/TR/ZH/HI).
+
 ## 2026-08-28 (1.48.0) [FRONTEND+WORKER+DB]
 
 ### ENTFERNT: Passkey/WebAuthn-Login komplett entfernt

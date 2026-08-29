@@ -356,6 +356,23 @@ export default function Haupt() {
               tip={tip("gebAnteil")}
             />
           </Row>
+          <Toggle
+            checked={!!d.beweglAktiv}
+            onChange={(v) => set("beweglAktiv", v)}
+            label={t.beweglLabel}
+            sub={t.beweglSub}
+            tip={tip("bewegl")}
+          />
+          {d.beweglAktiv && (
+            <F
+              label={t.bewegl}
+              unit="€"
+              value={d.bewegl}
+              onChange={(v) => set("bewegl", v)}
+              slider={{ min: 0, max: 100000, step: 1000 }}
+              tip={tip("bewegl")}
+            />
+          )}
           {/* ── Neubau-Abschreibung (2026-08-25) ────────────────────────
               Sichtbar nur ab Baujahr 2023 - darunter existiert der Block
               nicht und die Steuer-Sektion verhaelt sich exakt wie bisher.

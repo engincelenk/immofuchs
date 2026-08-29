@@ -187,6 +187,11 @@ function createDefaults() {
     afaSatz: String(AFA.standard),
     grundAnteil: "20",
     gebAnteil: "80",
+    // Bewegliche Wirtschaftsgueter (Kueche, Einbaumoebel, 2026-08-29):
+    // Default AUS = Status quo, Kaufpreis wird komplett wie bisher ueber
+    // die Gebaeude-AfA abgeschrieben. Siehe rendite.js computeRendite.
+    beweglAktiv: false,
+    bewegl: "",
     wertP: String(WERTSTEIGERUNG.pA),
     // ── Neubau-Abschreibung (2026-08-25) ──
     // Alle Vorbelegungen bilden bewusst den Status quo ab: lineare AfA,

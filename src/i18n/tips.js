@@ -53,6 +53,8 @@ export const TIPS = {
     afa: "Absetzung für Abnutzung (§ 7 EStG). 2% linear für Baujahr ab 1925, 3% für Neubau ab 2023.",
     grundAnteil: "Nicht abschreibbar. Typisch 20% in Städten, 10-15% auf dem Land.",
     gebAnteil: "Gebäudewert - abschreibbar gemäß AfA-Satz.",
+    bewegl:
+      "Kaufpreisanteil für bewegliche Wirtschaftsgüter (z. B. Einbauküche, Möbel), sofern im Kaufvertrag separat ausgewiesen. Wird getrennt vom Gebäude über 10 Jahre linear abgeschrieben.",
     wertP: "Historische Wertsteigerung 2-3% p.a. (langfristig). Regional stark variabel.",
     altAnlage:
       "Angenommene jährliche Rendite einer Alternativanlage (z.B. ETF/Aktienmarkt) zum Vergleich mit der Immobilie. Historischer Richtwert: 6-7% p.a.",
@@ -132,6 +134,8 @@ export const TIPS = {
     afa: "Depreciation per § 7 German Income Tax Act. 2% linear from 1925, 3% for new builds from 2023.",
     grundAnteil: "Not depreciable. Typically 20% in cities, 10-15% rural.",
     gebAnteil: "Building value — depreciable per AfA rate.",
+    bewegl:
+      "Purchase price share for movable assets (e.g. built-in kitchen, furniture), if listed separately in the purchase contract. Depreciated separately from the building over 10 years, straight-line.",
     wertP: "Historical appreciation 2-3% p.a. long-term. Strong regional variation.",
     altAnlage:
       "Assumed annual return of an alternative investment (e.g. ETF/stock market) to compare against the property. Historical benchmark: 6-7% p.a.",
@@ -207,6 +211,8 @@ export const TIPS = {
     afa: "Almanya Gelir Vergisi Kanunu § 7'ye göre amortisman. 1925'ten itibaren doğrusal %2, 2023'ten itibaren yeni yapılarda %3.",
     grundAnteil: "Amortisman yok. Şehirlerde tipik %20, kırsalda %10-15.",
     gebAnteil: "Bina değeri - AfA oranına göre amortismana tabi.",
+    bewegl:
+      "Alım sözleşmesinde ayrı gösterilmişse, taşınır mallar (ör. gömme mutfak, mobilya) için alım fiyatı payı. Binadan ayrı olarak 10 yılda doğrusal amortismana tabi tutulur.",
     wertP: "Tarihsel değer artışı uzun vadede yıllık %2-3. Bölgesel olarak çok değişken.",
     altAnlage:
       "Mülkle karşılaştırmak için varsayılan alternatif yatırım (örn. ETF/borsa) yıllık getirisi. Tarihsel referans: yıllık %6-7.",
@@ -279,6 +285,7 @@ export const TIPS = {
     afa: "按德国所得税法第 7 条折旧。1925 年起线性 2%，2023 年起新建筑 3%。",
     grundAnteil: "不可折旧。城市通常20%，农村10-15%。",
     gebAnteil: "建筑价值 - 按 AfA 率折旧。",
+    bewegl: "动产（如嵌入式厨房、家具）的购房价份额，前提是购房合同中单独列明。与建筑物分开，按10年直线折旧。",
     wertP: "长期历史增值年度 2-3%。地区差异很大。",
     altAnlage: "假设的替代投资（如ETF/股市）年化收益率，用于与房产比较。历史参考值：年化6-7%。",
     sonder: "一次性物业特别征收，例如新供暖、屋顶、外墙翻新、电梯。购买前查阅业主大会会议记录。",
@@ -345,6 +352,8 @@ export const TIPS = {
     afa: "जर्मन आयकर अधिनियम § 7 के अनुसार मूल्यह्रास। 1925 से रैखिक 2%, 2023 से नई इमारतों के लिए 3%।",
     grundAnteil: "मूल्यह्रास नहीं। शहरों में आमतौर पर 20%, ग्रामीण 10-15%।",
     gebAnteil: "भवन मूल्य - AfA दर के अनुसार मूल्यह्रास।",
+    bewegl:
+      "चल संपत्तियों (जैसे बिल्ट-इन रसोई, फर्नीचर) के लिए खरीद मूल्य हिस्सा, यदि खरीद अनुबंध में अलग से दर्शाया गया हो। भवन से अलग, 10 वर्षों में सीधी-रेखा मूल्यह्रास।",
     wertP: "दीर्घकालिक ऐतिहासिक मूल्य वृद्धि प्रति वर्ष 2-3%। मजबूत क्षेत्रीय भिन्नता।",
     altAnlage:
       "संपत्ति से तुलना हेतु मान लिया गया वैकल्पिक निवेश (जैसे ETF/शेयर बाज़ार) का वार्षिक प्रतिफल। ऐतिहासिक संदर्भ: वार्षिक 6-7%।",
