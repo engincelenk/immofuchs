@@ -22,7 +22,6 @@ import {
 } from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
 import { ScoreBlock } from "../charts/ScoreBlock.jsx";
-import { AiAnalyseCard } from "./AiAnalyseCard.jsx";
 import { InvestmentCheckRadar } from "../charts/InvestmentCheckRadar.jsx";
 import { ZinsTilgungChart } from "../charts/ZinsTilgungChart.jsx";
 import { VermoegensQuelleChart } from "../charts/VermoegensQuelleChart.jsx";
@@ -744,11 +743,6 @@ export default function Haupt() {
                   </span>
                 </button>
               </div>
-
-              {/* KI-TOOLS Phase 1 (Spec neue-phase2, Abschnitt 1.2/1.3): "Immobilie
-                  analysieren" als Einstiegspunkt, direkt vor dem Finanz-Score -
-                  reine Aggregation/Mathematik auf R/K/score, kein LLM. */}
-              <AiAnalyseCard t={t} d={d} R={R} score={score} />
 
               {/* FINANZ-SCORE — immer sichtbar */}
               <ScoreBlock score={score} />
@@ -1810,10 +1804,6 @@ export default function Haupt() {
         // Fragenkatalog (Nutzerwunsch 2026-07-24): voller kuratierter Pool
         // statt nur 3 Fragen - Blaettern uebernimmt AssistantSheet.jsx.
         const suggested = R && [
-          // Makler-Fragen generieren (Spec neue-phase2, KI-Tool #5, Phase 1):
-          // bewusst als erster Chip, kein eigener Endpunkt/Kontingent - laeuft
-          // ueber genau dieselbe Finn-Pipeline wie jede andere Frage hier.
-          at.suggestedMaklerFragen,
           tpl(at.suggested1, { ampel: at["tier_" + nrTier] || nrTier }),
           at.suggested2,
           at.suggested4,

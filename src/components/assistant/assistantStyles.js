@@ -117,17 +117,6 @@ export const ASSISTANT_SHEET_CSS = `
   .if-exp-toggle{flex:none;align-self:center;display:flex;align-items:center;min-width:24px;min-height:24px;justify-content:center}
   .if-exp-toggle input{width:18px;height:18px;accent-color:var(--ca)}
   .if-exp-apply{width:100%;margin-top:10px;background:var(--ca);color:#fff;border:none;border-radius:12px;padding:11px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;min-height:44px}
-
-  /* Expose-Roentgen (Spec neue-phase2, KI-Tool #4) - eigener Block ueber den
-     Feldgruppen, gleiche Kartenoptik wie if-exp-warnung, nur nach Schwere
-     eingefaerbt statt einheitlich gelb. */
-  .if-exp-roentgen{margin:2px 0 12px;padding-top:8px;border-top:1px solid var(--cb)}
-  .if-exp-roentgen-titel{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--ch);margin-bottom:6px}
-  .if-exp-risiko{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:8px;margin-bottom:6px;font-size:12px;line-height:1.5}
-  .if-exp-risiko.hoch{background:var(--bad-bg);color:var(--bad-tx)}
-  .if-exp-risiko.mittel{background:var(--warn-bg);color:var(--warn-tx)}
-  .if-exp-risiko.niedrig{background:var(--info-bg);color:var(--info-tx)}
-  .if-exp-risiko-label{font-weight:700;flex-shrink:0}
   .if-exp-apply:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
   .if-exp-chip{align-self:center;background:var(--ci);border:1px solid var(--cb);border-radius:14px;padding:6px 12px;font-size:12px;color:var(--ch)}
 

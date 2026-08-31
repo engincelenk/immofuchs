@@ -81,20 +81,6 @@ export interface ExposeAbweichung {
   hinweis: string;
 }
 
-// Expose-Roentgen (Spec neue-phase2, KI-Tool #4): inhaltliche Risikobewertung
-// des Exposetexts - anders als `warnungen` (fehlende/unsichere FELDER) und
-// `abweichungen` (WIDERSPRUeCHE zwischen Quellen) geht es hier um Signalwoerter
-// und Auffaelligkeiten im Fliesstext selbst (Sanierungsstau, schlechte
-// Energieklasse, Erbpacht, Denkmalschutz, lange Standzeit etc.), die der
-// Nutzer sonst leicht ueberliest.
-export type ExposeRisikoSchwere = "hoch" | "mittel" | "niedrig";
-
-export interface ExposeRisiko {
-  code: string;
-  schwere: ExposeRisikoSchwere;
-  hinweis: string;
-}
-
 export interface ExposeObjekt {
   titel: string | null;
   objektart: string | null;
@@ -184,7 +170,6 @@ export interface ExposeExtractResponse {
   confidence: Record<string, ConfidenceWert>;
   warnungen: ExposeWarnung[];
   abweichungen: ExposeAbweichung[];
-  risiken: ExposeRisiko[];
 }
 
 export interface Env {

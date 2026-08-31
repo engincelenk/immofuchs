@@ -2,8 +2,6 @@ import type {
   ConfidenceWert,
   ExposeAbweichung,
   ExposeExtractResponse,
-  ExposeRisiko,
-  ExposeRisikoSchwere,
   ExposeWarnung,
 } from "./types";
 
@@ -19,8 +17,6 @@ const MAX_BESCHREIBUNG_LEN = 1500;
 const MAX_WARNUNGEN = 20;
 const MAX_ABWEICHUNGEN = 10;
 const MAX_QUELLE_LEN = 60;
-const MAX_RISIKEN = 15;
-const MAX_CODE_LEN = 40;
 
 export function parseExposeOutput(raw: string): ExposeExtractResponse {
   const data = parseJson(raw);
@@ -93,7 +89,6 @@ export function parseExposeOutput(raw: string): ExposeExtractResponse {
     confidence: confidence(data.confidence),
     warnungen: warnungen(data.warnungen),
     abweichungen: abweichungen(data.abweichungen),
-    risiken: risiken(data.risiken),
   };
 }
 
@@ -246,26 +241,6 @@ function abweichungen(value: unknown): ExposeAbweichung[] {
     // Finding ohne Inhalt.
     if (wert_a === wert_b) continue;
     out.push({ feld, wert_a, quelle_a, wert_b, quelle_b, hinweis });
-  }
-  return out;
-}
-
-const RISIKO_SCHWEREN: ReadonlySet<string> = new Set(["hoch", "mittel", "niedrig"]);
-
-// Expose-Roentgen (Spec neue-phase2, KI-Tool #4) - gleiche Haertung wie
-// warnungen()/abweichungen(): ein Eintrag ohne gueltige Schwere oder ohne
-// Hinweistext ist fuer den Nutzer wertlos und wird verworfen statt mit einem
-// Platzhalter angezeigt zu werden.
-function risiken(value: unknown): ExposeRisiko[] {
-  if (!Array.isArray(value)) return [];
-  const out: ExposeRisiko[] = [];
-  for (const entry of value.slice(0, MAX_RISIKEN)) {
-    const e = obj(entry);
-    const code = text(e.code, MAX_CODE_LEN);
-    const hinweis = text(e.hinweis);
-    const schwereRoh = typeof e.schwere === "string" ? e.schwere.trim().toLowerCase() : "";
-    if (!code || !hinweis || !RISIKO_SCHWEREN.has(schwereRoh)) continue;
-    out.push({ code, schwere: schwereRoh as ExposeRisikoSchwere, hinweis });
   }
   return out;
 }
