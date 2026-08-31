@@ -1,0 +1,10 @@
+{
+  "appId": "info.immofuchs.app",
+  "appName": "ImmoFuchs",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}

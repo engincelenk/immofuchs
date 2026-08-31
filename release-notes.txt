@@ -1,3 +1,64 @@
+## 2026-08-31 (1.51.0) [FRONTEND+BACKEND]
+
+### Feature: Capacitor-Scaffold neu aufgesetzt + native In-App-Kaeufe (RevenueCat, Phase 1)
+
+**Kontext**
+- App-Store/Google-Play-Rollout wird vorbereitet. Das fruehere Capacitor-
+  Scaffold (mobile/, siehe 1.55.98) war am 2026-08-04 (1.6.1) bewusst
+  zurueckgebaut worden, weil zu diesem Zeitpunkt erst die Kommerzialisierung
+  fertiggestellt werden sollte. Diese ist inzwischen live (Stripe statt
+  Paddle). Nutzer-Entscheidung dieser Runde: native In-App-Kaeufe zusaetzlich
+  zu Stripe (nicht "kein Kauf in der App") - Grund: Apple Guideline 3.1.1 und
+  Google Plays Billing-Richtlinie verlangen fuer In-App-Abos die jeweils
+  eigene Kauf-API. Vollstaendige Anleitung inkl. App-Store-Connect-/Play-
+  Console-Schritten: docs/app-store-google-play-setup.md.
+
+**Capacitor**
+- `@capacitor/core/haptics/preferences/push-notifications/splash-screen` von
+  7.x auf 8.x angehoben (Konflikt mit dem neu installierten
+  `@capacitor/cli@8`/`@capacitor/ios@8`/`@capacitor/android@8`).
+- `capacitor.config.json` (bewusst JSON statt TS - kein TypeScript im
+  Projekt, keine neue Abhaengigkeit dafuer einfuehren).
+- `ios/`, `android/` per echtem `npx cap add ios|android` generiert (nicht
+  von Hand geschrieben), `.gitignore`-Eintraege von den alten `mobile/`-Pfaden
+  auf die tatsaechliche Root-Struktur umgestellt.
+
+**Native In-App-Kauf (RevenueCat)**
+- `@revenuecat/purchases-capacitor` installiert.
+- Neu: `src/utils/nativePurchases.js` (RevenueCat-Konfiguration mit der
+  eigenen internen User-ID als appUserID, Kauf/Restore, Entitlement-Check).
+- Neu: `src/components/checkout/NativePurchaseStep.jsx` - ersetzt PaymentStep
+  innerhalb der App (CheckoutWizard.jsx: `Capacitor.isNativePlatform()`
+  ueberspringt zusaetzlich den Adress-Schritt, den native Kaeufe nicht
+  brauchen). Neue i18n-Keys `nativePurchase*` in allen 5 Sprachen.
+- Worker: neue Route `POST /api/v1/billing/webhook/revenuecat`
+  (`worker/src/revenuecat/webhook.ts`) - eigenes Auth-Schema (statisches
+  Secret statt HMAC-Signatur wie bei Stripe), bildet RevenueCat-Event-Typen
+  auf dieselben Status-Werte wie der Stripe-Webhook ab. Migration 0031
+  (`subscriptions.source/revenuecat_app_user_id/revenuecat_original_transaction_id`) -
+  `entitlement.ts` bleibt unveraendert, kennt weiterhin nur Status/Periodenende.
+
+**Ausdruecklich UNGETESTET, kann hier nicht verifiziert werden:**
+- Jeglicher echte Kauf/Webhook-Event (kein RevenueCat-Projekt, keine echten
+  App-Store-Connect-/Play-Console-Produkte angelegt).
+- iOS-Build (kein Xcode/macOS in dieser Umgebung), Android-Build (kein
+  Android SDK/Gradle hier).
+- Bekannter offener Randfall: `idx_subscriptions_active_user` (UNIQUE) kann
+  bei einem Nutzer mit gleichzeitig aktivem Stripe- UND nativem Abo
+  fehlschlagen - siehe Kommentar in revenuecat/webhook.ts.
+
+**Verifiziert:** `npm run build` (Frontend), `npx tsc --noEmit` (Worker),
+Frontend-Vitest (430/430), Worker-Vitest (117/117), Migration 0031 lokal
+gegen D1 angewendet.
+
+**Betroffene Dateien:** `package.json`, `capacitor.config.json`, `ios/`,
+`android/`, `.gitignore`, `src/utils/nativePurchases.js`,
+`src/components/checkout/{CheckoutWizard,NativePurchaseStep}.jsx`,
+`src/i18n/account.js`, `.env.example`, `worker/.dev.vars.example`,
+`worker/src/types.ts`, `worker/src/routes/billing.ts`,
+`worker/src/revenuecat/webhook.ts`, `worker/migrations/0031_revenuecat_billing.sql`,
+`docs/app-store-google-play-setup.md`.
+
 ## 2026-08-31 (1.50.1) [FRONTEND+BACKEND]
 
 ### KI-Tools Phase 1 + Exposé-Röntgen zurückgebaut

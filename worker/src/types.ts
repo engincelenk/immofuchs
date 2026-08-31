@@ -238,6 +238,12 @@ export interface Env {
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_PRICE_ID_MONTHLY?: string;
   STRIPE_PRICE_ID_YEARLY?: string;
+
+  // RevenueCat (native In-App-Kaeufe iOS/Android zusaetzlich zu Stripe, siehe
+  // docs/app-store-google-play-setup.md Teil C). Der Webhook authentifiziert
+  // sich ueber ein statisches Authorization-Bearer-Secret (im RevenueCat-
+  // Dashboard konfiguriert), keine HMAC-Signatur wie bei Stripe.
+  REVENUECAT_WEBHOOK_AUTH?: string;
   // QA-Hilfsmittel (2026-08-18): Mails an is_test_user-Konten (siehe
   // db.ts, setUserFlags) landen bei gesetztem Wert hier statt an die
   // Test-Adresse - so lassen sich echte Test-E-Mail-Adressen (test.free@...)

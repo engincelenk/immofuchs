@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Capacitor } from "@capacitor/core";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ACCOUNT_T } from "../../i18n/account.js";
@@ -16,6 +17,7 @@ import { VerifyEmailStep } from "./VerifyEmailStep.jsx";
 import { PasswordResetFlow } from "./PasswordResetFlow.jsx";
 import { AddressStep } from "./AddressStep.jsx";
 import { PaymentStep } from "./PaymentStep.jsx";
+import { NativePurchaseStep } from "./NativePurchaseStep.jsx";
 import { PurchaseConfirmation } from "./PurchaseConfirmation.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
 import { RedirectOverlay } from "./CheckoutShared.jsx";
@@ -49,6 +51,10 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   const account = useAccountCtx();
   const isDesktop = useIsDesktop();
   const dialogRef = useRef(null);
+  // Native In-App-Kauf (RevenueCat) statt Stripe-Checkout, siehe
+  // docs/app-store-google-play-setup.md. isNativePlatform() aendert sich zur
+  // Laufzeit nie, useMemo mit leerer Dependency-Liste reicht.
+  const isNative = useMemo(() => Capacitor.isNativePlatform(), []);
 
   // Solange dieser Wizard laeuft, unterdrueckt er die eigenstaendige
   // Kauf-Bestaetigung (PurchaseConfirmModal.jsx) - er zeigt seine eigene.
@@ -260,6 +266,15 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     if (currentKey === "welcome" && purchaseSuccess) dismissPurchaseSuccess?.();
   }, [currentKey, purchaseSuccess, dismissPurchaseSuccess]);
 
+  // Native Kaeufe brauchen keine Rechnungsadresse - Apple/Google verwalten
+  // Zahlungsmittel und Rechnung selbst. "address" bleibt in wizardSteps.js
+  // fuer den Web-Flow unveraendert bestehen, wird hier nur uebersprungen
+  // (gleiches Auto-Advance-Muster wie der Effekt oben fuer "account"/"verify").
+  useEffect(() => {
+    if (!isNative || currentKey !== "address") return;
+    goToStep("payment");
+  }, [isNative, currentKey, goToStep]);
+
   useFocusTrap(dialogRef, onClose, [stepIndex, passwordReset]);
 
   // Seiten-Scroll sperren, solange der Wizard offen ist. html UND body, nicht
@@ -402,6 +417,10 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
         onChange={setBillingAddress}
         onContinue={() => goToStep("payment")}
       />
+    );
+  } else if (currentKey === "payment" && isNative) {
+    content = (
+      <NativePurchaseStep t={t} account={account} plan={plan} onCompleted={handlePaymentCompleted} />
     );
   } else if (currentKey === "payment") {
     content = (

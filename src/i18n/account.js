@@ -154,6 +154,14 @@ export const ACCOUNT_T = {
     paymentInlineFallback:
       "Das eingebettete Zahlungsfenster ließ sich nicht laden. Die sichere Zahlung öffnet sich stattdessen in einem eigenen Fenster.",
     paymentEncrypted: "Verschlüsselte und sichere Zahlung",
+    nativePurchaseTitle: "Pro freischalten",
+    nativePurchaseSub:
+      "Der Kauf läuft über dein App Store- bzw. Google Play-Konto und wird dort abgerechnet.",
+    nativePurchaseCta: "Jetzt kaufen",
+    nativePurchaseBusy: "Kauf wird verarbeitet…",
+    nativePurchaseRestore: "Käufe wiederherstellen",
+    nativePurchaseErrorGeneric: "Der Kauf konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
+    nativePurchaseErrorNoActiveSubscription: "Es wurde kein aktives Abo gefunden.",
 
     welcomeTitle: "Willkommen bei ImmoFuchs Pro",
     welcomeSubtitle: "Dein Abo ist aktiv — alle Funktionen sind sofort freigeschaltet.",
@@ -550,6 +558,14 @@ export const ACCOUNT_T = {
     paymentInlineFallback:
       "The embedded payment window could not be loaded. Secure payment will open in a separate window instead.",
     paymentEncrypted: "Encrypted and secure payment",
+    nativePurchaseTitle: "Unlock Pro",
+    nativePurchaseSub:
+      "The purchase is processed through your App Store or Google Play account and billed there.",
+    nativePurchaseCta: "Buy now",
+    nativePurchaseBusy: "Processing purchase…",
+    nativePurchaseRestore: "Restore purchases",
+    nativePurchaseErrorGeneric: "The purchase could not be completed. Please try again.",
+    nativePurchaseErrorNoActiveSubscription: "No active subscription was found.",
 
     welcomeTitle: "Welcome to ImmoFuchs Pro",
     welcomeSubtitle: "Your subscription is active — every feature is unlocked right away.",
@@ -937,6 +953,14 @@ export const ACCOUNT_T = {
     paymentInlineFallback:
       "Gömülü ödeme penceresi yüklenemedi. Güvenli ödeme bunun yerine ayrı bir pencerede açılacak.",
     paymentEncrypted: "Şifreli ve güvenli ödeme",
+    nativePurchaseTitle: "Pro'yu etkinleştir",
+    nativePurchaseSub:
+      "Satın alma işlemi App Store veya Google Play hesabın üzerinden yapılır ve oradan faturalandırılır.",
+    nativePurchaseCta: "Şimdi satın al",
+    nativePurchaseBusy: "Satın alma işleniyor…",
+    nativePurchaseRestore: "Satın alımları geri yükle",
+    nativePurchaseErrorGeneric: "Satın alma tamamlanamadı. Lütfen tekrar deneyin.",
+    nativePurchaseErrorNoActiveSubscription: "Aktif bir abonelik bulunamadı.",
 
     welcomeTitle: "ImmoFuchs Pro'ya hoş geldin",
     welcomeSubtitle: "Aboneliğin aktif — tüm özellikler hemen kullanılabilir.",
@@ -1321,6 +1345,13 @@ export const ACCOUNT_T = {
     paymentRetryCta: "重试",
     paymentInlineFallback: "嵌入式支付窗口无法加载。安全支付将改为在单独的窗口中打开。",
     paymentEncrypted: "加密且安全的支付",
+    nativePurchaseTitle: "解锁 Pro",
+    nativePurchaseSub: "购买将通过您的 App Store 或 Google Play 账户处理并扣费。",
+    nativePurchaseCta: "立即购买",
+    nativePurchaseBusy: "正在处理购买…",
+    nativePurchaseRestore: "恢复购买",
+    nativePurchaseErrorGeneric: "购买未能完成，请重试。",
+    nativePurchaseErrorNoActiveSubscription: "未找到有效订阅。",
 
     welcomeTitle: "欢迎使用 ImmoFuchs Pro",
     welcomeSubtitle: "您的订阅已激活——所有功能立即解锁。",
@@ -1708,6 +1739,14 @@ export const ACCOUNT_T = {
     paymentInlineFallback:
       "एम्बेडेड भुगतान विंडो लोड नहीं हो सकी। सुरक्षित भुगतान इसके बजाय एक अलग विंडो में खुलेगा।",
     paymentEncrypted: "एन्क्रिप्टेड और सुरक्षित भुगतान",
+    nativePurchaseTitle: "प्रो अनलॉक करें",
+    nativePurchaseSub:
+      "खरीदारी आपके App Store या Google Play खाते के माध्यम से होगी और वहीं बिल की जाएगी।",
+    nativePurchaseCta: "अभी खरीदें",
+    nativePurchaseBusy: "खरीदारी प्रोसेस हो रही है…",
+    nativePurchaseRestore: "खरीदारी पुनर्स्थापित करें",
+    nativePurchaseErrorGeneric: "खरीदारी पूरी नहीं हो सकी। कृपया पुनः प्रयास करें।",
+    nativePurchaseErrorNoActiveSubscription: "कोई सक्रिय सदस्यता नहीं मिली।",
 
     welcomeTitle: "ImmoFuchs Pro में आपका स्वागत है",
     welcomeSubtitle: "आपकी सदस्यता सक्रिय है — सभी सुविधाएं तुरंत अनलॉक हैं।",

@@ -8,14 +8,17 @@ CLAUDE.md
 .env
 docs/
 
-# Capacitor native projects (mobile/, Spec Abschnitt 7/8) - maschinenspezifische
+# Capacitor native projects (ios/, android/) - maschinenspezifische
 # SDK-Pfade und Build-Artefakte, nie einchecken.
-mobile/android/local.properties
-mobile/android/.gradle/
-mobile/android/app/build/
-mobile/ios/App/Pods/
-mobile/ios/App/build/
-mobile/ios/DerivedData/
+android/local.properties
+android/.gradle/
+android/app/build/
+android/app/release/
+ios/App/Pods/
+ios/App/build/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/DerivedData/
 
 # Playwright (S6-5/S8-5)
 /playwright-report/
@@ -52,3 +55,4 @@ e2e/test-results/
 # Pruefen echte Test-Passwoerter + den Stripe-Webhook-Secret und war NICHT
 # von der bisherigen Regel erfasst.
 e2e/.env.local*
+.tmp_screenshots/
