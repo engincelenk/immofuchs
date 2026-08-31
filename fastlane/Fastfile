@@ -1,0 +1,63 @@
+# iOS-Build + TestFlight-Upload, laeuft ausschliesslich auf dem GitHub-Actions
+# macOS-Runner (.github/workflows/mobile-ios.yml) - kein lokaler Mac noetig.
+# Siehe docs/app-store-google-play-setup.md fuer die einmalige Einrichtung
+# (App Store Connect API Key, Fastlane match Zertifikats-Repo).
+#
+# App Store Connect API Key statt Apple-ID/Passwort (Empfehlung): keine
+# 2FA-Unterbrechung in einer nicht-interaktiven CI-Umgebung moeglich.
+default_platform(:ios)
+
+platform :ios do
+  desc "Baut die App und laedt sie zu TestFlight hoch"
+  lane :beta do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_CONTENT"],
+      is_key_content_base64: true,
+    )
+
+    # match liest/schreibt Zertifikate+Profile aus einem separaten privaten
+    # Git-Repo (siehe docs/app-store-google-play-setup.md A10.5) - readonly
+    # in CI, damit ein versehentlicher Lauf nie neue Zertifikate erzeugt.
+    match(
+      type: "appstore",
+      readonly: true,
+      api_key: api_key,
+    )
+
+    # Ohne diesen Schritt bleibt das Xcode-Projekt auf "Automatic Signing"
+    # stehen und ignoriert die von match geladenen Profile - der Build
+    # scheitert dann mit einem Signing-Fehler, obwohl match selbst
+    # erfolgreich war. code_sign_identity/profile_name kommen aus den
+    # ENV-Variablen, die match beim Lauf oben automatisch gesetzt hat
+    # (sigh_<bundle-id>_appstore_*).
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "ios/App/App.xcodeproj",
+      team_id: ENV["APPLE_TEAM_ID"],
+      code_sign_identity: "Apple Distribution",
+      profile_name: ENV["sigh_info.immofuchs.app_appstore_profile-name"],
+    )
+
+    increment_build_number(
+      xcodeproj: "ios/App/App.xcodeproj",
+      # Build-Nummer = GitHub-Actions-Laufnummer statt einer lokal
+      # hochgezaehlten Zahl - eindeutig ueber beliebig viele CI-Laeufe hinweg,
+      # ohne dass ein Commit die Zahl selbst pflegen muesste.
+      build_number: ENV["GITHUB_RUN_NUMBER"] || Time.now.to_i.to_s,
+    )
+
+    build_app(
+      project: "ios/App/App.xcodeproj",
+      scheme: "App",
+      export_method: "app-store",
+      export_options: { signingStyle: "manual" },
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end

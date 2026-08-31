@@ -1,3 +1,35 @@
+## 2026-08-31 (1.51.1) [CI]
+
+### Feature: GitHub-Actions-Workflow fuer iOS-Build/TestFlight-Upload (kein eigener Mac noetig)
+
+**Kontext**
+- Nutzerfrage: braucht es zwingend einen Mac/Xcode, um ImmoFuchs in den App
+  Store zu bringen? Antwort: ja fuer den Build/Signing-Schritt selbst (Apple-
+  Plattformregel), aber nicht zwingend einen EIGENEN Mac - ein gehosteter
+  macOS-CI-Runner reicht. Dieser Commit richtet genau das ein.
+
+**Neu**
+- `.github/workflows/mobile-ios.yml`: manuell ausgeloester Workflow
+  (`workflow_dispatch`, Wahl zwischen dev/qa/prod als Backend-Ziel), laeuft
+  auf `macos-14`. Baut die Web-Assets, `npx cap sync ios`, dann Fastlane.
+- `Gemfile` (nur `fastlane`-Gem), `fastlane/Appfile`, `fastlane/Matchfile`,
+  `fastlane/Fastfile` (Lane `beta`: App Store Connect API Key statt Apple-ID/
+  Passwort - keine 2FA-Unterbrechung in CI moeglich -, `match` readonly,
+  `update_code_signing_settings`, `build_app`, `upload_to_testflight`).
+- `docs/app-store-google-play-setup.md` Abschnitt A5/A9 aktualisiert: iOS-
+  Scaffold ist erledigt, TestFlight-Upload läuft über CI, Tabelle der
+  benötigten sechs GitHub Secrets (ASC_KEY_ID/ISSUER_ID/KEY_CONTENT,
+  APPLE_TEAM_ID, MATCH_GIT_URL/PASSWORD).
+
+**Ausdruecklich UNGETESTET, kann hier nicht verifiziert werden:** der
+komplette Workflow - kein Apple Developer Account/Match-Repo/ASC-Key in
+dieser Umgebung, kein Ruby/Xcode zum lokalen Syntax-Check. Erster echter
+Lauf zeigt, ob z.B. Xcode-Scheme-Name "App" oder Signing-Details angepasst
+werden muessen (siehe Kommentare in fastlane/Fastfile).
+
+**Betroffene Dateien:** `.github/workflows/mobile-ios.yml`, `Gemfile`,
+`fastlane/{Appfile,Matchfile,Fastfile}`, `docs/app-store-google-play-setup.md`.
+
 ## 2026-08-31 (1.51.0) [FRONTEND+BACKEND]
 
 ### Feature: Capacitor-Scaffold neu aufgesetzt + native In-App-Kaeufe (RevenueCat, Phase 1)

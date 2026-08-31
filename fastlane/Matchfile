@@ -1,0 +1,7 @@
+# Fastlane match - verschluesselte Zertifikate/Profile in einem separaten
+# privaten Git-Repo (siehe docs/app-store-google-play-setup.md A10.5). Repo-
+# URL und Passphrase kommen ausschliesslich als GitHub Secrets, nie im Code.
+git_url(ENV["MATCH_GIT_URL"])
+storage_mode("git")
+type("appstore")
+app_identifier(["info.immofuchs.app"])
