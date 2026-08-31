@@ -1196,6 +1196,86 @@ export async function listSupportNotes(db: Env["DB"], userId: string): Promise<S
   return rows.results;
 }
 
+// ═══ Feedback-Modal (Spec neue-phase2, Abschnitt 2) ═══
+
+export interface FeedbackRow {
+  id: string;
+  user_id: string;
+  text: string;
+  category: string | null;
+  kontext_json: string | null;
+  plattform: string | null;
+  app_version: string | null;
+  erstellt_am: number;
+}
+
+export async function insertFeedback(
+  db: Env["DB"],
+  entry: {
+    userId: string;
+    text: string;
+    category?: string | null;
+    kontext?: unknown;
+    plattform?: string | null;
+    appVersion?: string | null;
+  },
+): Promise<FeedbackRow> {
+  const row: FeedbackRow = {
+    id: newId(),
+    user_id: entry.userId,
+    text: entry.text,
+    category: entry.category ?? null,
+    kontext_json: entry.kontext ? JSON.stringify(entry.kontext) : null,
+    plattform: entry.plattform ?? null,
+    app_version: entry.appVersion ?? null,
+    erstellt_am: Date.now(),
+  };
+  await db
+    .prepare(
+      `INSERT INTO feedback (id, user_id, text, category, kontext_json, plattform, app_version, erstellt_am)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      row.id,
+      row.user_id,
+      row.text,
+      row.category,
+      row.kontext_json,
+      row.plattform,
+      row.app_version,
+      row.erstellt_am,
+    )
+    .run();
+  return row;
+}
+
+export interface FeedbackAdminRow extends FeedbackRow {
+  email: string;
+}
+
+// Admin-Ansicht (2.4: "sonst verschwindet das Feedback ungelesen in der
+// DB") - analog zu listAdminAuditLog: einfache Seitenzaehlung, kein Filter
+// in Version 1, da noch keine nennenswerte Datenmenge zu erwarten ist.
+export async function listFeedbackForAdmin(
+  db: Env["DB"],
+  page: number,
+  pageSize: number,
+): Promise<{ entries: FeedbackAdminRow[]; total: number }> {
+  const offset = (page - 1) * pageSize;
+  const [rows, countRow] = await Promise.all([
+    db
+      .prepare(
+        `SELECT f.*, u.email as email FROM feedback f
+         JOIN users u ON u.id = f.user_id
+         ORDER BY f.erstellt_am DESC LIMIT ? OFFSET ?`,
+      )
+      .bind(pageSize, offset)
+      .all<FeedbackAdminRow>(),
+    db.prepare("SELECT COUNT(*) as n FROM feedback").first<{ n: number }>(),
+  ]);
+  return { entries: rows.results, total: countRow?.n ?? 0 };
+}
+
 // ═══ Admin Panel — Dashboard (Paket 6, MVP-Pflicht #1) ═══
 // Deckt exakt das "Beispiel" aus dem Konzept-Dok Abschnitt 3 ab (Nutzer
 // gesamt, Aktive Abos, Trial Nutzer, MRR, Kuendigungen Monat) - nicht die

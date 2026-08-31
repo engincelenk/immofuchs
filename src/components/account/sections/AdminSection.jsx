@@ -7,6 +7,7 @@ import { AdminUsersView } from "./admin/AdminUsersView.jsx";
 import { AdminSubscriptionsView } from "./admin/AdminSubscriptionsView.jsx";
 import { AdminAuditLogView } from "./admin/AdminAuditLogView.jsx";
 import { AdminDiscountsView } from "./admin/AdminDiscountsView.jsx";
+import { AdminFeedbackView } from "./admin/AdminFeedbackView.jsx";
 
 // Bereich nur fuer role==='admin' (siehe MyAccount.jsx SECTIONS-Filter).
 // Ersetzt die vormals eigenstaendige admin/-App (eigener Login-Screen,
@@ -20,6 +21,7 @@ const TABS = [
   { key: "users", label: "Nutzer", Component: AdminUsersView },
   { key: "subscriptions", label: "Abos & Zahlungen", Component: AdminSubscriptionsView },
   { key: "discounts", label: "Gutscheine", Component: AdminDiscountsView },
+  { key: "feedback", label: "Feedback", Component: AdminFeedbackView },
   { key: "audit", label: "Sicherheit & Audit-Log", Component: AdminAuditLogView },
 ];
 

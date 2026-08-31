@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { AccordionSection } from "../../ui/AccordionSection.jsx";
 import { IconIdee, IconMail } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
+import { FeedbackModal } from "./FeedbackModal.jsx";
 import {
   actionBtnStyle,
   blockCardStyle,
@@ -16,6 +18,7 @@ const SUPPORT_MAIL = "info@immofuchs.info";
 const FAQ_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8"];
 
 export function SupportSection({ t, onBack }) {
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const mailto = (subject) => `mailto:${SUPPORT_MAIL}?subject=${encodeURIComponent(subject)}`;
 
   // Preise stehen NICHT im Antworttext, sondern als {monthly}/{yearly} - sonst
@@ -55,15 +58,18 @@ export function SupportSection({ t, onBack }) {
             <IconMail size={18} />
             {t.supportContactCta}
           </a>
-          <a
-            href={mailto(t.supportFeedbackSubject)}
-            style={{ ...actionBtnStyle, display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
+          <button
+            type="button"
+            onClick={() => setFeedbackOpen(true)}
+            style={{ ...actionBtnStyle, display: "flex", alignItems: "center", gap: 10 }}
           >
             <IconIdee size={18} />
             {t.supportFeedbackCta}
-          </a>
+          </button>
         </div>
       </div>
+
+      {feedbackOpen && <FeedbackModal t={t} onClose={() => setFeedbackOpen(false)} />}
     </div>
   );
 }

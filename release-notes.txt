@@ -1,3 +1,61 @@
+## 2026-08-31 (1.52.0) [FRONTEND+BACKEND]
+
+### NEU: Exposé-Röntgen (Immofuchs AI-Engine, KI-Tool #4)
+
+Der bestehende Exposé-Scan bewertet den Text jetzt zusätzlich inhaltlich,
+nicht nur feldweise: Sanierungsstau, schlechte Energieklasse, angekündigte
+Modernisierung, Erbpacht, Denkmalschutz, Rechtsstreit, Miete unter
+Marktniveau, lange Inseratsdauer, langer Leerstand. Läuft im selben
+Modell-Call wie die bestehende Feld-Extraktion (kein zweiter Call, kein
+zusätzliches Kontingent) - neuer "risiken"-Zweig im Extraktions-Schema, nach
+Schwere (hoch/mittel/niedrig) eingefärbt direkt über der Ergebnis-Checkliste
+im Finn-Chat.
+
+- worker/src/exposePrompt.ts: neues Schema-Feld + Erkennungsregeln je Risiko-Code
+- worker/src/exposeOutput.ts: risiken()-Parser + 3 neue Tests
+- worker/src/types.ts: ExposeRisiko/ExposeRisikoSchwere
+- src/components/assistant/ExposeResultCard.jsx, assistantStyles.js, i18n/expose.js
+
+## 2026-08-31 (1.51.0) [FRONTEND]
+
+### NEU: KI-Tools Phase 1 im Renditerechner (Immofuchs AI-Engine)
+
+Vier Tools aus der überarbeiteten Spec (docs/plans/neue-phase2/spec-ki-feedback-stripe.md,
+Abschnitt 1.2/1.3) - alle ohne Marktdaten-Abhängigkeit, drei davon reine
+Mathematik ohne Modell-Call:
+
+- "Immobilie analysieren": neue Zusammenfassungskarte direkt vor dem
+  Finanz-Score - monatliche Rate, Cashflow-Über-/Unterdeckung, Nettorendite,
+  Score auf einen Blick.
+- "Maximaler Kaufpreis": Zielrendite eingeben, Kaufpreis wird per Bisektion
+  auf der bestehenden rendite.js-Formel rückgerechnet.
+- "Was müsste sich ändern?": rechnet Kaufpreis/Miete/Sanierungskosten in
+  festen Varianten durch und zeigt den größten Hebel auf den Finanz-Score.
+- "Makler-Fragen generieren": neuer, vorangestellter Frage-Chip im
+  Finn-Assistenten - läuft über die bestehende Finn-Pipeline, kein neuer
+  Endpunkt, kein neues Kontingent.
+
+Neu: src/utils/aiTools.js, src/components/calculators/AiAnalyseCard.jsx.
+Preis neu schätzen (Marktdaten offen) und Verhandlungsassistent (baut auf
+Preis neu schätzen + Exposé-Röntgen auf) bleiben zurückgestellt.
+
+## 2026-08-31 (1.50.0) [FRONTEND+BACKEND]
+
+### NEU: Feedback-Modal in Mein Konto -> Hilfe
+
+Ersetzt den bisherigen mailto:-Link "Feedback oder Wunsch senden" durch ein
+Modal im App-Design: Freitext mit Mindestlaenge 100 Zeichen, optionale
+Kategorie (Fehler/Idee/Sonstiges), Bestaetigung inline. Kein Reward-System
+(bewusst nicht Teil dieser Version). Feedback landet in der neuen D1-Tabelle
+`feedback` und ist im Admin-Bereich unter dem neuen Tab "Feedback" einsehbar.
+
+- Neu: src/components/account/sections/FeedbackModal.jsx, src/utils/feedbackApi.js
+- Neu: worker/src/routes/account.ts POST /feedback (authentifiziert,
+  Mindestlaenge serverseitig erzwungen)
+- Neu: worker/src/routes/admin.ts GET /feedback,
+  src/components/account/sections/admin/AdminFeedbackView.jsx
+- Migration: worker/migrations/0030_feedback.sql
+
 ## 2026-08-29 (1.49.1) [FRONTEND]
 
 ### Slider fuer Nicht umlagefaehige Kosten und Wertsteigerung ergaenzt

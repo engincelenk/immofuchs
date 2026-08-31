@@ -40,6 +40,7 @@ import {
   logAdminAction,
   listAdminAuditLog,
   listAuditLogAdmins,
+  listFeedbackForAdmin,
 } from "../db";
 import { deleteAccountCompletely } from "../accountDeletion";
 import { cancelImmediately } from "../stripe/checkout";
@@ -919,6 +920,27 @@ adminRoutes.get("/audit-log", requireAuth, requireAdminRead, async (c) => {
     // Auswahlwerte fuer den Admin-Filter gleich mitliefern - spart der UI
     // einen zweiten Endpunkt fuer eine sehr kurze Liste.
     admins,
+  });
+});
+
+// Feedback-Modal (Spec neue-phase2, Abschnitt 2.4): Read-Only-Liste, damit
+// eingereichtes Feedback nicht ungelesen in der DB liegen bleibt. Keine
+// eigene Permission - dieselbe Leseberechtigung wie Audit-Log/Nutzerliste.
+adminRoutes.get("/feedback", requireAuth, requireAdminRead, async (c) => {
+  const page = Math.max(1, Number(new URL(c.req.url).searchParams.get("page")) || 1);
+  const { entries, total } = await listFeedbackForAdmin(c.env.DB, page, PAGE_SIZE);
+  return c.json({
+    entries: entries.map((f) => ({
+      id: f.id,
+      email: f.email,
+      text: f.text,
+      category: f.category,
+      plattform: f.plattform,
+      erstelltAm: f.erstellt_am,
+    })),
+    total,
+    page,
+    pageSize: PAGE_SIZE,
   });
 });
 

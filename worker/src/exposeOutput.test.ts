@@ -188,6 +188,41 @@ describe("parseExposeOutput", () => {
   });
 });
 
+// ── Expose-Roentgen (Spec neue-phase2, KI-Tool #4) ──────────────────────────
+describe("parseExposeOutput - risiken", () => {
+  it("liest gueltige Risiko-Eintraege", () => {
+    const r = parseExposeOutput(
+      JSON.stringify({
+        risiken: [
+          { code: "sanierungsstau", schwere: "hoch", hinweis: "Sanierungsstau im Text erwaehnt" },
+          { code: "erbpacht", schwere: "mittel", hinweis: "Erbbaurecht statt Volleigentum" },
+        ],
+      }),
+    );
+    expect(r.risiken).toEqual([
+      { code: "sanierungsstau", schwere: "hoch", hinweis: "Sanierungsstau im Text erwaehnt" },
+      { code: "erbpacht", schwere: "mittel", hinweis: "Erbbaurecht statt Volleigentum" },
+    ]);
+  });
+
+  it("verwirft Eintraege ohne gueltige Schwere oder ohne Hinweis", () => {
+    const r = parseExposeOutput(
+      JSON.stringify({
+        risiken: [
+          { code: "sanierungsstau", schwere: "kritisch", hinweis: "ungueltige Schwere" },
+          { code: "erbpacht", schwere: "hoch" },
+          "kaputt",
+        ],
+      }),
+    );
+    expect(r.risiken).toEqual([]);
+  });
+
+  it("liefert ein leeres Risiken-Array, wenn das Modell keins schickt", () => {
+    expect(parseExposeOutput("{}").risiken).toEqual([]);
+  });
+});
+
 // ── Felder aus dem Abgleich der Referenzexposes (Ingersheim, Murr) ─────────
 describe("parseExposeOutput - neue Felder", () => {
   it("reicht die Felder des Expose Murr durch", () => {

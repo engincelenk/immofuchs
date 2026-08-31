@@ -19,6 +19,7 @@ import {
   setMarketingEmailsEnabled,
   getTrialUsage,
   startAppTrialIfNew,
+  insertFeedback,
 } from "../db";
 import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/password";
 import { sendEmail } from "../email";
@@ -112,6 +113,24 @@ accountRoutes.post("/calculator-trial/consume", requireAuth, requireCsrfOrigin, 
   // und ein 404 dort als Fehler auffiele; sie quittiert jetzt nur noch.
   // Vorher gab sie bei erschoepftem Kontingent 402 "trial_limit_reached"
   // zurueck - genau der Fehler, der beim Rechnen auftauchte.
+  return c.json({ ok: true });
+});
+
+// Feedback-Modal (Spec neue-phase2, Abschnitt 2.4): Mindestlaenge serverseitig
+// erzwungen, nicht nur im Frontend-Textarea - sonst liesse sich die Regel per
+// direktem API-Call umgehen. Kategorie ist eine feste, kleine Auswahl (Chips
+// im Modal); ein unbekannter Wert wird verworfen statt die Anfrage abzulehnen,
+// da die Kategorie rein informativ fuer die spaetere Auswertung ist.
+const FEEDBACK_MIN_LENGTH = 100;
+const FEEDBACK_CATEGORIES = new Set(["bug", "idee", "sonstiges"]);
+
+accountRoutes.post("/feedback", requireAuth, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const text = typeof body?.text === "string" ? body.text.trim() : "";
+  if (text.length < FEEDBACK_MIN_LENGTH) return c.json({ error: "text_too_short" }, 400);
+  const category = typeof body?.category === "string" && FEEDBACK_CATEGORIES.has(body.category) ? body.category : null;
+  const plattform = typeof body?.plattform === "string" ? body.plattform.slice(0, 40) : null;
+  await insertFeedback(c.env.DB, { userId: c.var.userId, text, category, plattform });
   return c.json({ ok: true });
 });
 

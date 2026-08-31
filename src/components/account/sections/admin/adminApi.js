@@ -158,3 +158,10 @@ export function createDiscountsBulk(input) {
 export function triggerTestEmails() {
   return post("/admin/test-emails");
 }
+
+export function fetchFeedback(page) {
+  const params = new URLSearchParams();
+  if (page) params.set("page", String(page));
+  const qs = params.toString();
+  return request(`/admin/feedback${qs ? `?${qs}` : ""}`);
+}

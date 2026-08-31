@@ -91,6 +91,17 @@ export const EXPOSE_JSON_SCHEMA = {
         },
       },
     },
+    risiken: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          code: { type: "string" },
+          schwere: { type: "string", enum: ["hoch", "mittel", "niedrig"] },
+          hinweis: { type: "string" },
+        },
+      },
+    },
   },
 };
 
@@ -127,7 +138,8 @@ const SCHEMA = `{
   "abweichungen": [ {
     "feld": string, "wert_a": number|string, "quelle_a": string,
     "wert_b": number|string, "quelle_b": string, "hinweis": string
-  } ]
+  } ],
+  "risiken": [ { "code": string, "schwere": "hoch"|"mittel"|"niedrig", "hinweis": string } ]
 }`;
 
 export const EXPOSE_SYSTEM_PROMPT = `Du bist ein Extraktions-Assistent fuer Immobilien-Exposes.
@@ -219,4 +231,37 @@ Regeln:
 - "hinweis" in "warnungen" und "abweichungen" ist neutral und sachlich zu
   formulieren ("im Expose unterschiedlich angegeben", "noch zu klaeren") -
   niemals wertend oder anklagend gegenueber dem Anbieter.
+- "risiken" ("Expose-Roentgen"): durchsuche objektbeschreibung, lagebeschreibung,
+  zustand UND alle sonstigen Felder auf inhaltliche Risikosignale - anders als
+  "warnungen" (fehlende/unsichere Felder) und "abweichungen" (Widersprueche
+  zwischen Quellen) geht es hier um tatsaechliche Auffaelligkeiten im Objekt
+  selbst. Nur melden, was im Expose-Text konkret belegt ist - niemals
+  spekulieren oder aus Abwesenheit einer Angabe ein Risiko ableiten (fehlende
+  Angaben gehoeren in "warnungen", nicht in "risiken"). Pruefe insbesondere:
+  * "sanierungsstau" - Sanierungsstau, Instandhaltungsrueckstand, aufgeschobene
+    Reparaturen ausdruecklich erwaehnt
+  * "energieklasse_schlecht" - energieeffizienzklasse F, G oder H, oder
+    energieausweis nennt "unsaniert"/hohen Energiebedarf
+  * "modernisierung_angekuendigt" - bevorstehende oder laufende
+    Modernisierungsmassnahme/Sonderumlage explizit genannt
+  * "erbpacht" - Erbbaurecht/Erbpacht statt Volleigentum
+  * "denkmalschutz" - Denkmalschutz/Ensembleschutz genannt (kann AfA-Vorteile
+    UND Sanierungsauflagen bedeuten - neutral als Risiko melden, nicht als
+    reiner Vorteil)
+  * "rechtsstreit" - laufender Rechtsstreit, Eigentuemerstreit oder
+    Zwangsversteigerung erwaehnt
+  * "miete_unter_markt" - Expose weist selbst auf eine Miete "deutlich unter
+    Marktniveau" oder vergleichbare Formulierung hin
+  * "lange_standzeit" - Expose oder Kontext nennt ausdruecklich eine lange
+    Inseratsdauer/mehrfache Preissenkung
+  * "leerstand_lang" - laengerer Leerstand vor Verkauf ausdruecklich erwaehnt
+  * "sonstiges" - fuer klar belegte Risiken ausserhalb dieser Liste, kurz im
+    Hinweistext benennen
+  "schwere" grob einordnen: "hoch" fuer direkt kostenwirksame/rechtliche
+  Risiken (Sanierungsstau, Rechtsstreit, sehr schlechte Energieklasse),
+  "mittel" fuer geschaeftsrelevante, aber nicht sofort teure Punkte (Erbpacht,
+  Denkmalschutz, Modernisierung angekuendigt), "niedrig" fuer Hinweise mit
+  begrenzter finanzieller Wirkung (miete_unter_markt, lange_standzeit). Kein
+  Eintrag noetig, wenn nichts davon zutrifft - "risiken" darf ein leeres Array
+  sein.
 - Erfinde nichts. Lieber null als geraten.`;

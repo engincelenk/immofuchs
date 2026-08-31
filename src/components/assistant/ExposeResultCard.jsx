@@ -89,6 +89,27 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
         })}
       </div>
 
+      {/* Expose-Roentgen (Spec neue-phase2, KI-Tool #4): inhaltliche
+          Risikobewertung, unabhaengig von den Feldgruppen darunter - deshalb
+          ganz oben, direkt nach dem Fund-Zaehler, statt in eine Gruppe
+          eingehaengt zu sein. Leeres Array (kein Befund) zeigt bewusst gar
+          nichts, statt eine leere Karte "keine Risiken" einzublenden. */}
+      {ergebnis.risiken?.length > 0 && (
+        <div className="if-exp-roentgen">
+          <div className="if-exp-roentgen-titel">{t.roentgenTitel}</div>
+          {ergebnis.risiken.map((r, i) => (
+            <div key={i} className={`if-exp-risiko ${r.schwere}`}>
+              <span>{r.schwere === "hoch" ? "🔴" : r.schwere === "mittel" ? "🟠" : "🟡"}</span>
+              <span>
+                <span className="if-exp-risiko-label">{t[`risikoCode_${r.code}`] || r.code}</span>
+                {" — "}
+                {r.hinweis}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {uebernehmbareKeys.length > 0 && (
         <button
           type="button"
