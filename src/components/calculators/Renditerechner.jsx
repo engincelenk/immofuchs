@@ -22,6 +22,7 @@ import {
 } from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
 import { ScoreBlock } from "../charts/ScoreBlock.jsx";
+import { KiToolsSection } from "./KiToolsSection.jsx";
 import { InvestmentCheckRadar } from "../charts/InvestmentCheckRadar.jsx";
 import { ZinsTilgungChart } from "../charts/ZinsTilgungChart.jsx";
 import { VermoegensQuelleChart } from "../charts/VermoegensQuelleChart.jsx";
@@ -746,6 +747,20 @@ export default function Haupt() {
 
               {/* FINANZ-SCORE — immer sichtbar */}
               <ScoreBlock score={score} />
+
+              {/* ✨ KI-Tools (Runde 1) — eigene Section direkt nach dem
+                  Finanz-Score, siehe docs/plans/neue-phase2/
+                  analyse-ki-tools-und-ux.md Abschnitt 2. Bewusst kein neues
+                  UI-Muster: bestehende AccordionSection, defaultOpen=true
+                  fuer Erstbesuch-Sichtbarkeit. */}
+              <AccordionSection
+                question={t.kiToolsFrage}
+                hint={t.kiToolsHint}
+                color="var(--ca)"
+                defaultOpen={true}
+              >
+                <KiToolsSection t={t} d={d} R={R} score={score} />
+              </AccordionSection>
 
               {/* ═══ EXIT-SALDO — Kurzfassung, Detailrechnung folgt in Section 7
                   weiter unten. Direkt darunter die Live-Regler: hier kann der

@@ -1,3 +1,66 @@
+## 2026-08-31 (1.52.0)
+
+### Feature: KI-Tools Runde 1 im Renditerechner ("Immobilie analysieren" + "Was müsste sich ändern?")
+
+**Kontext**
+- Nutzerwunsch: KI-Funktionen sollen dort, wo sie gebraucht werden, per
+  Knopfdruck verfügbar sein, ohne den Renditerechner dichter zu machen
+  ("weniger ist mehr"). Ein erster Versuch dazu (`d3acfa8`) wurde am selben
+  Tag wieder zurückgebaut (`2ca4dce`), weil er als zusätzliche, immer
+  sichtbare Karte direkt vor den Finanz-Score eingefügt wurde — additiv statt
+  verdichtend.
+- Neuer Anlauf nach Brainstorm + `/ux-designer`-Platzierungsklärung, dokumentiert
+  in `docs/plans/neue-phase2/analyse-ki-tools-und-ux.md`. Tool-Zuschnitt
+  deutlich kleiner als der ursprüngliche 7er-Katalog aus
+  `spec-ki-feedback-stripe.md`: nur die beiden Tools, die ohne LLM und ohne
+  externen Marktdaten-Anbieter auskommen (reine Mathematik auf der
+  bestehenden Rendite-/Score-Engine). "Preis neu schätzen" und der
+  "Verhandlungsassistent" bleiben zurückgestellt (Marktdaten-Anbieter-
+  Entscheidung offen), "Makler-Fragen generieren" und "Exposé-Röntgen"
+  wurden vom Nutzer verworfen.
+
+**Neu**
+- `src/utils/aiTools.js`: `loeseMaximalenKaufpreis()` (Bisektion auf
+  `computeRendite()`) und `berechneHebelAnalyse()` (Score-Varianten bei
+  verschobenem Kaufpreis/Miete/Sanierung) — reine Mathematik, kein
+  Modell-Call, kein Tageskontingent.
+- `src/components/calculators/KiToolsSection.jsx` (neu, ersetzt die
+  zurückgebaute `AiAnalyseCard.jsx`): zwei Knöpfe ("Immobilie analysieren",
+  "Was müsste sich ändern?"), Inhalt erscheint erst nach Tap statt immer
+  sichtbar zu sein. "Maximaler Kaufpreis" ist als interaktives
+  Mini-Formular (Ziel-Nettorendite-Eingabe) Teil von "Was müsste sich
+  ändern?" statt eines dritten, redundanten Buttons.
+- `Renditerechner.jsx`: neue, wiederverwendete `AccordionSection`
+  ("✨ Was sagt die KI dazu?", `defaultOpen={true}`) direkt nach
+  `<ScoreBlock />` und vor dem Exit-Saldo-Block — kein neues UI-Muster,
+  keine neue Bibliothek, keine Änderung an bestehenden Kennzahlen/Feldern.
+- `src/i18n/translations.js`: i18n-Keys für beide Tools plus Section-Frage/
+  Hint/Disclaimer/Fallback-Text in allen 5 Sprachen (de/en/tr/zh/hi)
+  ergänzt.
+
+**Bewusst nicht übernommen aus der Referenz-App (ImmoRechner)**
+- Kein KI-Coins-/Mikrotransaktionssystem — Tageskontingente bleiben wie in
+  `spec-ki-feedback-stripe.md` 1.4 entschieden.
+- Keine Tab-basierte Objektseite, kein Umbau der Seitenarchitektur.
+- Keine Card-Platzierung ohne Einklappbarkeit (genau das Problem, das heute
+  früher zum Rückbau geführt hat).
+
+**Warum**
+- Löst die eigentliche Nutzerspannung ("bester KI-Output" vs. "nichts durch
+  Entschlanken verlieren") über progressive disclosure statt über Streichen:
+  alle bestehenden Renditerechner-Felder bleiben unangetastet, die neuen
+  Tools sind additiv, aber standardmäßig zusammengefasst hinter zwei
+  Buttons statt als Dauerblock.
+
+**Betroffene Dateien**
+- `src/utils/aiTools.js` (neu)
+- `src/components/calculators/KiToolsSection.jsx` (neu)
+- `src/components/calculators/Renditerechner.jsx` (Import + eine neue
+  AccordionSection eingefügt)
+- `src/i18n/translations.js` (neue Keys in 5 Sprachblöcken)
+
+**Breaking Changes:** keine.
+
 ## 2026-08-31 (1.51.1) [CI]
 
 ### Feature: GitHub-Actions-Workflow fuer iOS-Build/TestFlight-Upload (kein eigener Mac noetig)
