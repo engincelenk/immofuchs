@@ -4,8 +4,8 @@ import { useIsDesktop } from "../../../hooks/useIsDesktop.js";
 import { useFocusTrap } from "../../../hooks/useFocusTrap.js";
 import { IconClose } from "../accountIcons.jsx";
 import { sendFeedback } from "../../../utils/feedbackApi.js";
-import { primaryBtnStyle, textInputStyle } from "../../checkout/checkoutStyles.js";
-import { errorBannerStyle, successBannerStyle } from "../accountStyles.js";
+import { errorBannerStyle, primaryBtnStyle, textInputStyle } from "../../checkout/checkoutStyles.js";
+import { successBannerStyle } from "../accountStyles.js";
 
 const MIN_LENGTH = 100;
 const CATEGORIES = ["bug", "idee", "sonstiges"];
