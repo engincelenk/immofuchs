@@ -68,9 +68,27 @@ jobs:
           python-version: "3.11"
 
       - name: 📦 Python-Abhängigkeiten installieren
+        # Die Paketliste steht in scripts/requirements.txt und NICHT hier: bei
+        # schedule-Laeufen nimmt GitHub diese YAML immer vom Default-Branch
+        # (main), das Skript aber vom jeweiligen Matrix-Branch. Eine hier fest
+        # verdrahtete Liste laeuft dadurch zwangslaeufig auseinander, sobald
+        # das Skript auf einem Branch eine neue Bibliothek importiert - genau
+        # das war die Ursache des monatelangen "ModuleNotFoundError:
+        # pdfplumber": main hatte noch "pip install anthropic requests",
+        # waehrend das Skript laengst pdfplumber importierte. Neue
+        # Abhaengigkeit daher in scripts/requirements.txt eintragen, im selben
+        # Branch wie die Skript-Aenderung.
         run: |
-          pip install requests pdfplumber playwright
-          playwright install --with-deps chromium
+          if [ -f scripts/requirements.txt ]; then
+            pip install -r scripts/requirements.txt
+          else
+            echo "::warning::scripts/requirements.txt fehlt auf ${{ matrix.env.branch }} - Fallback-Liste wird installiert"
+            pip install requests pdfplumber playwright
+          fi
+          # Browser-Download nur, wenn das Skript Playwright ueberhaupt nutzt.
+          if python -c "import playwright" 2>/dev/null; then
+            python -m playwright install --with-deps chromium
+          fi
 
       # ── 3. Marktdaten aktualisieren ──────────────────────────────────────
       # Seit 2026-08-24 ohne LLM: Bundesbank-PDF (pdfplumber) + Interhyp-

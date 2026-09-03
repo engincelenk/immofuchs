@@ -1,3 +1,46 @@
+## 2026-09-03 (1.52.1)
+
+### Fix (CI): Monthly Data Update lief jeden Monat auf `ModuleNotFoundError: pdfplumber`
+
+**Problem**
+- Der geplante Monatsjob (`.github/workflows/monthly-update.yml`, cron am 1.)
+  brach in allen drei Matrix-Jobs (PROD/DEV/QA) sofort ab:
+  `File "scripts/monthly_update.py", line 28, in <module> import pdfplumber
+  ModuleNotFoundError: No module named 'pdfplumber'`.
+- Ursache: Bei `schedule:`-Läufen nimmt GitHub Actions die Workflow-Datei
+  **immer vom Default-Branch (`main`)** — unabhängig davon, welchen Branch die
+  einzelnen Matrix-Jobs danach auschecken. Auf `main` stand im Install-Schritt
+  aber noch der alte LLM-Stand `pip install anthropic requests`
+  (letzter Workflow-Commit dort: `ab18384`), während das Skript auf `main`
+  längst die LLM-freie Version mit `pdfplumber` + `playwright` war
+  (`1ed5a55`). Die Paketliste und das Skript waren also auf demselben Branch
+  auseinandergelaufen.
+- Warum der frühere Fix nicht griff: Er wurde nur auf `Immofuchs-dev`
+  gemacht (`a9258a8`). Für den Scheduler ist der dev-Stand der YAML
+  wirkungslos — er liest ausschließlich `main`.
+
+**Fix (strukturell, nicht nur die eine pip-Zeile)**
+- Neu: `scripts/requirements.txt` (`requests`, `pdfplumber`, `playwright`).
+  Die Abhängigkeiten reisen damit **zusammen mit dem Skript** im jeweiligen
+  Branch-Checkout, statt in der YAML auf `main` festzukleben.
+- Install-Schritt nutzt jetzt `pip install -r scripts/requirements.txt`, mit
+  Fallback auf die feste Liste (+ `::warning::`), falls ein älterer Branch die
+  Datei noch nicht hat. Der Chromium-Download läuft nur noch, wenn Playwright
+  tatsächlich installiert ist.
+- Folge: Eine neue Python-Abhängigkeit wird künftig in `requirements.txt` im
+  selben Branch wie die Skript-Änderung ergänzt — die Workflow-YAML auf `main`
+  muss dafür nie wieder angefasst werden.
+
+**Deployment**
+- Zusätzlich als eigener, minimaler Commit direkt auf `main` (nur diese beiden
+  CI-Dateien) — sonst hätte der Fix für den Scheduler erneut keine Wirkung.
+  Bewusst nicht über `push.ps1 prod`, das hätte den kompletten dev-Stand
+  (KI-Tools, Capacitor …) nach PROD gezogen.
+- `Immofuchs-qa` erhält die Änderung beim nächsten regulären Merge; bis dahin
+  greift der Fallback im Install-Schritt.
+
+**Betroffene Dateien:** .github/workflows/monthly-update.yml, scripts/requirements.txt
+
 ## 2026-08-31 (1.52.0)
 
 ### Feature: KI-Tools Runde 1 im Renditerechner ("Immobilie analysieren" + "Was müsste sich ändern?")

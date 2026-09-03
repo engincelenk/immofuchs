@@ -1,0 +1,16 @@
+# Python-Abhaengigkeiten fuer scripts/monthly_update.py
+#
+# Diese Datei liegt bewusst NEBEN dem Skript und nicht in der Workflow-YAML:
+# Bei schedule-Laeufen nimmt GitHub Actions monthly-update.yml immer vom
+# Default-Branch (main), das Skript aber vom jeweiligen Matrix-Branch. Standen
+# die Abhaengigkeiten in der YAML, lief die Liste auf main zwangslaeufig aus
+# dem Ruder, sobald das Skript auf einem Branch eine neue Bibliothek
+# importierte (Vorfall: ModuleNotFoundError "pdfplumber" ueber Monate, weil
+# main noch "pip install anthropic requests" hatte).
+#
+# Neue Abhaengigkeit? Hier eintragen - im selben Branch wie die Skript-
+# Aenderung. Die Workflow-Datei muss dafuer nicht mehr angefasst werden.
+
+requests
+pdfplumber
+playwright
