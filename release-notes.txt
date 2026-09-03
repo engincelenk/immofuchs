@@ -1,3 +1,36 @@
+## 2026-09-03 (1.52.3)
+
+### Korrektur zu 1.52.2: Der API-Ausfall betraf nur DEV, nicht PROD/QA
+
+**Richtigstellung**
+- In 1.52.2 stand, der env-lose Build des Monatsjobs habe immofuchs.info,
+  qa.immofuchs.info und dev.immofuchs.info gleichzeitig lahmgelegt. Das war
+  ein Fehlschluss: Belegt war nur, dass die Worker-URL in keinem der drei
+  ausgelieferten Bundles vorkommt.
+- Tatsächlich führen `main` und `Immofuchs-qa` den Konto-/API-Teil noch gar
+  nicht — dort existieren weder `src/utils/apiBase.js` noch `checkout/`,
+  `account/` oder eine einzige `VITE_ASSISTANT_URL`-Verwendung. Ihre Bundles
+  enthalten deshalb auch kein `/api/v1` und können am fehlenden Env-Wert
+  nicht scheitern.
+- **Betroffen war ausschließlich dev.immofuchs.info** — genau dort, wo die
+  404 gemeldet wurden. PROD und QA liefen durchgehend normal.
+
+**Unverändert richtig bleibt**
+- Der Befund selbst: Der Monatsjob baute ohne `VITE_*` und spiegelte dieses
+  Ergebnis über alle drei Zielordner. Auf `main`/`Immofuchs-qa` fiel das nur
+  deshalb nicht auf, weil deren Code den Wert (noch) nicht braucht.
+- Damit ist der Fix aus 1.52.2 keine Kosmetik, sondern verhindert genau den
+  Ausfall, den PROD beim nächsten `push.ps1 prod` bekommen hätte, sobald der
+  dev-Stand mit Konten und Zahlung nach `main` wandert.
+
+**Verifiziert nach dem Redeploy**
+- dev.immofuchs.info: neues Bundle, Worker-URL wieder enthalten, `/api/v1/me`
+  antwortet mit 401 statt 404.
+- immofuchs.info / qa.immofuchs.info: Build unverändert (identischer
+  Asset-Hash wie vorher) — dort gab es nichts zu reparieren.
+
+**Betroffene Dateien:** .github/workflows/monthly-update.yml (nur Kommentar)
+
 ## 2026-09-03 (1.52.2)
 
 ### Fix: Monatsjob hat PROD, QA und DEV ohne API deployt + Checkout-Dialog stürzte ab
