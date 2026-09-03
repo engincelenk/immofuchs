@@ -11,8 +11,8 @@
 //       und Interhyp-Zinstabelle (10J, Eigen-Ø der drei Beleihungsauslauf-
 //       Klassen) - einzige Zinsangabe, kein separater Topzins.
 export const MARKET_RATES = {
-  stand: "August 2026",
-  avg: 3.99,
+  stand: "September 2026",
+  avg: 4.07,
 };
 
 // ── GRUNDERWERBSTEUER je Bundesland ─────────────────────────────────────
