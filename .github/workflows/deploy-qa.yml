@@ -5,8 +5,16 @@ on:
     branches:
       - Immofuchs-qa
 
-# Verhindert Wettrennen mit einem gleichzeitig laufenden monthly-update.yml
-# fuer QA - beide spiegeln mit --delete auf dasselbe Zielverzeichnis.
+# Verhindert, dass zwei Deploys fuer QA gleichzeitig mit --delete auf
+# qa.immofuchs.info spiegeln - der zuletzt fertige gewinnt sonst
+# unkontrolliert, ein neuer Lauf bricht den aelteren stattdessen ab.
+#
+# Stand 2026-09-03 ist monthly-update.yml NICHT mehr der zweite Spiegler:
+# der Monatsjob baut und deployt nicht mehr selbst, sondern stoesst genau
+# diesen Workflow hier per workflow_dispatch an (er hatte einen eigenen
+# Build ohne die VITE_*-Variablen von unten, siehe dortigen Kommentar).
+# Die Gruppe schuetzt jetzt den Fall, dass dieser Dispatch und ein
+# regulaerer Push kurz hintereinander eintreffen.
 concurrency:
   group: deploy-qa
   cancel-in-progress: true
