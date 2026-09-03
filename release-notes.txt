@@ -1,3 +1,20 @@
+## 2026-09-03 (1.52.4)
+
+### Doku: concurrency-Kommentare in den Deploy-Workflows nachgezogen
+
+- `deploy-dev.yml`, `deploy-qa.yml` und `deploy-prod.yml` begründeten ihre
+  `concurrency`-Gruppe noch mit dem „Wettrennen mit monthly-update.yml".
+  Das gibt es seit 1.52.2 nicht mehr — der Monatsjob spiegelt nicht mehr
+  selbst, sondern stößt genau diese Workflows per `workflow_dispatch` an.
+- Die `concurrency` selbst bleibt unverändert und weiterhin sinnvoll: sie
+  schützt jetzt den Fall, dass dieser Dispatch und ein regulärer Push kurz
+  hintereinander eintreffen und beide mit `--delete` auf dasselbe
+  Zielverzeichnis spiegeln würden.
+- Reine Kommentaränderung, kein Verhaltenswechsel (`group` und
+  `cancel-in-progress` je Workflow unangetastet).
+
+**Betroffene Dateien:** .github/workflows/deploy-dev.yml, .github/workflows/deploy-qa.yml, .github/workflows/deploy-prod.yml
+
 ## 2026-09-03 (1.52.3)
 
 ### Korrektur zu 1.52.2: Der API-Ausfall betraf nur DEV, nicht PROD/QA
