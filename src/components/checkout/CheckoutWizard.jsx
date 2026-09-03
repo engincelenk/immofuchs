@@ -165,6 +165,19 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     [variant, t],
   );
   const currentKey = steps[stepIndex]?.key;
+  // Bewusst hier oben, direkt hinter steps/currentKey, und nicht weiter
+  // unten bei den uebrigen Handlern: mehrere useEffect-Bloecke darunter
+  // fuehren goToStep in ihrer Dependency-Liste. Die wird bei JEDEM Render
+  // ausgewertet - stuende die Deklaration danach, waere goToStep zu diesem
+  // Zeitpunkt noch in der temporalen Todeszone und der Wizard stuerbe beim
+  // Oeffnen mit "Cannot access before initialization" ab (Bugreport
+  // 2026-09-03, eingeschleppt mit dem native-Kauf-Effekt aus 673f400).
+  const goToStep = useCallback(
+    (key) => {
+      setStepIndex(steps.findIndex((s) => s.key === key));
+    },
+    [steps],
+  );
   // Wo eine Bestelluebersicht sinnvollen Zusatzkontext liefert.
   // "verify"/"welcome"/Passwort-Reset bleiben bewusst ohne - dort gibt es
   // nichts zu bestaetigen. Der Laufzeit-Schritt ebenfalls nicht: dort steht die
@@ -294,12 +307,6 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
     };
   }, []);
 
-  const goToStep = useCallback(
-    (key) => {
-      setStepIndex(steps.findIndex((s) => s.key === key));
-    },
-    [steps],
-  );
   // Login-Status pruefen statt hart auf "account" zu springen (Bugreport
   // 06.08.): wer ueber "ändern" aus der Zahlung zurueck in die Planauswahl
   // geht, ist bereits angemeldet - der Auto-Advance-Effekt oben greift dann

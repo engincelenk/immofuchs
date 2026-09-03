@@ -1,3 +1,71 @@
+## 2026-09-03 (1.52.2)
+
+### Fix: Monatsjob hat PROD, QA und DEV ohne API deployt + Checkout-Dialog stürzte ab
+
+**Problem 1 — alle drei Umgebungen ohne Backend-Anbindung (Live-Ausfall)**
+- Nach dem ersten erfolgreichen Lauf des reparierten Monatsjobs (19:20–19:21 Uhr)
+  meldete die Konsole auf dev.immofuchs.info `404` für `/api/v1/me` und
+  `[kapp15] Liste nicht geladen`. Betroffen waren immofuchs.info (19:20:50),
+  qa.immofuchs.info (19:20:58) und dev.immofuchs.info (19:21:03) —
+  Login, Konto und Zahlung waren auf allen drei Seiten tot.
+- Ursache: Der Build-Schritt in `monthly-update.yml` war ein blankes
+  `npm ci && npm run build` **ohne** die `VITE_*`-Variablen, die
+  `deploy-dev/qa/prod.yml` setzen. Ohne `VITE_ASSISTANT_URL` liefert
+  `apiBase()` (`src/utils/apiBase.js`) einen Leerstring, alle
+  `/api/v1/*`-Aufrufe gehen dadurch relativ an den IONOS-Webspace statt an
+  den Worker → Apache-404. `VITE_STRIPE_PUBLISHABLE_KEY` und
+  `VITE_TURNSTILE_SITE_KEY` fehlten ebenso. Dieser Build wurde per
+  `mirror --delete` über alle drei Zielordner gespiegelt.
+- Nachweis: `grep` nach der Worker-URL im ausgelieferten `index-*.js` ergab
+  auf allen drei Domains 0 Treffer.
+
+**Fix 1 (strukturell): Der Monatsjob baut und deployt nicht mehr selbst**
+- Build-, lftp- und Deploy-Schritt entfernt. Stattdessen stößt der Job nach
+  dem Daten-Push das reguläre `deploy-<env>.yml` per
+  `gh workflow run --ref <branch>` an (alle drei haben `workflow_dispatch`).
+  Nötig, weil ein Push mit `GITHUB_TOKEN` bewusst keine weiteren Workflows
+  auslöst (Endlosschleifen-Schutz) — genau deshalb hatte der Job überhaupt
+  einen eigenen Deploy-Pfad.
+- Die Build-Umgebung existiert damit nur noch an **einer** Stelle je
+  Umgebung und kann nicht mehr veralten — dieselbe Drift-Klasse wie beim
+  `pdfplumber`-Fehler eine Version zuvor.
+- `permissions: actions: write` ergänzt, `target`-Feld aus der Matrix
+  entfernt (nur vom lftp-Schritt gebraucht), Commit-Schritt liefert
+  `changed` als Output — ohne Datenänderung wird gar nicht deployt.
+- Job-`concurrency` entfernt: In der Gruppe `deploy-<slug>` hätte der
+  angestoßene Deploy-Lauf den Monatsjob per `cancel-in-progress` mitten im
+  Lauf abgebrochen.
+
+**Problem 2 — Checkout-/Login-Dialog stürzte beim Öffnen ab (nur dev)**
+- `Uncaught ReferenceError: Cannot access 'C' before initialization` im
+  Chunk `CheckoutWizard-*.js`.
+- Ursache: Der Effekt für native Käufe (`673f400`) führt `goToStep` in seiner
+  Dependency-Liste, `const goToStep = useCallback(…)` stand aber ~25 Zeilen
+  **darunter**. Dependency-Arrays werden bei jedem Render ausgewertet — also
+  temporale Todeszone bei jedem einzelnen Render des Wizards.
+- Fix: `goToStep` steht jetzt direkt hinter `steps`/`currentKey`, vor allen
+  Effekten, die es benutzen. Reihenfolge der Effekte unverändert.
+- `main` ist nicht betroffen (der native-Kauf-Effekt existiert dort nicht).
+- Gegenprobe über die ganze Codebasis mit
+  `eslint --rule no-use-before-define`: die übrigen 24 Fundstellen liegen
+  alle in JSX-Attributen oder in Effekt-*Rümpfen*, die erst nach dem
+  Durchlauf des Komponentenkörpers ausgewertet werden — kein weiterer
+  TDZ-Fall.
+
+**Kein Fehler: Zinssatz September**
+- 4.07 % war die ganze Zeit ausgeliefert (Hero-Mockup, Kopfzeile
+  „Stand: September 2026", Bauzinsen-Sektion, `zinsen.json` auf dev **und**
+  prod). Die Aufschlüsselung (Bundesbank 4.11 / Interhyp 4.03) steht seit
+  `aa2cfc2` bewusst nur im Workflow-Log, nicht mehr im Ticker.
+
+**Verifiziert**
+- Lokaler Production-Build + Preview: Login-Dialog öffnet sauber, kein
+  ReferenceError mehr in der Konsole.
+- Mit gesetztem `VITE_ASSISTANT_URL` antwortet `/api/v1/me` mit **401**
+  (Worker erreicht, nicht angemeldet) statt **404** (Aufruf lief ins Leere).
+
+**Betroffene Dateien:** .github/workflows/monthly-update.yml, src/components/checkout/CheckoutWizard.jsx
+
 ## 2026-09-03 (1.52.1)
 
 ### Fix (CI): Monthly Data Update lief jeden Monat auf `ModuleNotFoundError: pdfplumber`
