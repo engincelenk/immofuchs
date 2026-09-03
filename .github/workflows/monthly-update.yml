@@ -125,8 +125,12 @@ jobs:
       #      apiBase() (src/utils/apiBase.js) einen Leerstring, alle
       #      /api/v1/*-Aufrufe gingen dadurch relativ an den IONOS-Webspace
       #      statt an den Worker (404 bei /me und der kapp15-Liste); Stripe-
-      #      und Turnstile-Key fehlten ebenso. Dieser kaputte Build wurde per
-      #      "mirror --delete" ueber PROD, QA UND DEV gespiegelt. Die
+      #      und Turnstile-Key fehlten ebenso. Dieser Build wurde per
+      #      "mirror --delete" ueber PROD, QA und DEV gespiegelt - kaputt ging
+      #      dabei aber nur DEV: main und Immofuchs-qa fuehren den Konto-/
+      #      API-Teil (src/utils/apiBase.js, VITE_ASSISTANT_URL) noch gar
+      #      nicht, dort fehlte also nichts. Sobald dieser Stand nach qa/main
+      #      wandert, traefe es die beiden genauso. Die
       #      Build-Umgebung steht jetzt nur noch an EINER Stelle je Umgebung -
       #      im jeweiligen deploy-*.yml - und kann hier nicht mehr veralten.
       #
