@@ -11,6 +11,9 @@ on:
 # nutzen darf (Default-Token ist sonst read-only fuer contents).
 permissions:
   contents: write
+  # actions: write - dieser Job stoesst die regulaeren deploy-*.yml per
+  # workflow_dispatch an, statt selbst zu bauen und zu spiegeln (siehe unten).
+  actions: write
 
 jobs:
   update-and-deploy:
@@ -24,25 +27,19 @@ jobs:
         env:
           - name: PROD
             branch: main
-            target: /immofuchs
             slug: prod
           - name: DEV
             branch: Immofuchs-dev
-            target: /dev.immofuchs.info
             slug: dev
           - name: QA
             branch: Immofuchs-qa
-            target: /qa.immofuchs.info
             slug: qa
 
-    # Gleiche Gruppe wie im jeweiligen deploy-*.yml fuer dieselbe Umgebung -
-    # verhindert, dass dieser Job und ein Push-Deploy gleichzeitig auf
-    # denselben Zielordner mirror --delete fahren und sich gegenseitig
-    # ueberschreiben (Ursache des Vorfalls vom 24.08.2026: ein veralteter
-    # main-Lauf hat DEV/QA nach einem frischen Push wieder zurueckgesetzt).
-    concurrency:
-      group: deploy-${{ matrix.env.slug }}
-      cancel-in-progress: true
+    # Bewusst KEINE concurrency-Gruppe mehr: dieser Job spiegelt seit
+    # 2026-09-03 nicht mehr selbst auf den Zielordner, sondern stoesst das
+    # deploy-*.yml der Umgebung an. Stuende er weiter in der Gruppe
+    # "deploy-<slug>", wuerde ihn genau der Deploy-Lauf, den er gerade
+    # ausgeloest hat, per cancel-in-progress mitten im Job abbrechen.
 
     steps:
       # ── 1. Checkout - JEDE Umgebung von ihrem EIGENEN Branch ──────────────
@@ -67,7 +64,27 @@ jobs:
           python-version: "3.11"
 
       - name: 📦 Python-Abhängigkeiten installieren
-        run: pip install anthropic requests
+        # Die Paketliste steht in scripts/requirements.txt und NICHT hier: bei
+        # schedule-Laeufen nimmt GitHub diese YAML immer vom Default-Branch
+        # (main), das Skript aber vom jeweiligen Matrix-Branch. Eine hier fest
+        # verdrahtete Liste laeuft dadurch zwangslaeufig auseinander, sobald
+        # das Skript auf einem Branch eine neue Bibliothek importiert - genau
+        # das war die Ursache des monatelangen "ModuleNotFoundError:
+        # pdfplumber": hier stand noch "pip install anthropic requests",
+        # waehrend das Skript laengst pdfplumber importierte. Neue
+        # Abhaengigkeit daher in scripts/requirements.txt eintragen, im selben
+        # Branch wie die Skript-Aenderung.
+        run: |
+          if [ -f scripts/requirements.txt ]; then
+            pip install -r scripts/requirements.txt
+          else
+            echo "::warning::scripts/requirements.txt fehlt auf ${{ matrix.env.branch }} - Fallback-Liste wird installiert"
+            pip install requests pdfplumber playwright
+          fi
+          # Browser-Download nur, wenn das Skript Playwright ueberhaupt nutzt.
+          if python -c "import playwright" 2>/dev/null; then
+            python -m playwright install --with-deps chromium
+          fi
 
       # ── 3. Marktdaten aktualisieren ──────────────────────────────────────
       - name: 🔄 Marktdaten aktualisieren
@@ -83,44 +100,50 @@ jobs:
       #      24.08.2026: main/QA zeigten Monate spaeter noch den Mai-Stand,
       #      weil hier nie gepusht wurde). ───────────────────────────────────
       - name: 📝 Änderungen committen & pushen
+        id: commit
         run: |
           git config --global user.name "ImmoFuchs Bot"
           git config --global user.email "bot@immofuchs.info"
           git add src/data.js src/i18n/translations.js public/zinsen.json
           if git diff --staged --quiet; then
             echo "Keine Änderungen — kein Commit nötig"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             MONTH=$(date +'%B %Y')
             git commit -m "data: Monatliches Update $MONTH (${{ matrix.env.name }})"
             git push origin HEAD:${{ matrix.env.branch }}
             echo "✓ Commit erstellt und gepusht"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── 5. Build ─────────────────────────────────────────────────────────
-      - name: 🛠️ Node.js einrichten
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
-
-      - name: 📦 Build
-        run: |
-          npm ci
-          npm run build
-
-      # ── 6. Deploy - NUR die eigene Umgebung, nicht mehr alle drei ─────────
-      - name: 📦 lftp installieren
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
-
-      - name: 🚀 Deploy → ${{ matrix.env.name }}
+      # ── 5. Deploy - NICHT mehr selbst bauen und spiegeln, sondern den
+      #      regulaeren Deploy-Workflow der Umgebung anstossen.
+      #
+      #      Grund (Vorfall 2026-09-03): hier stand ein eigenes
+      #      "npm ci && npm run build" OHNE die VITE_*-Variablen, die
+      #      deploy-dev/qa/prod.yml setzen. Ohne VITE_ASSISTANT_URL liefert
+      #      apiBase() (src/utils/apiBase.js) einen Leerstring, alle
+      #      /api/v1/*-Aufrufe gingen dadurch relativ an den IONOS-Webspace
+      #      statt an den Worker (404 bei /me und der kapp15-Liste); Stripe-
+      #      und Turnstile-Key fehlten ebenso. Dieser kaputte Build wurde per
+      #      "mirror --delete" ueber PROD, QA UND DEV gespiegelt. Die
+      #      Build-Umgebung steht jetzt nur noch an EINER Stelle je Umgebung -
+      #      im jeweiligen deploy-*.yml - und kann hier nicht mehr veralten.
+      #
+      #      Der Push oben startet die Deploy-Workflows nicht von selbst:
+      #      GitHub loest aus einem Push mit GITHUB_TOKEN bewusst keine
+      #      weiteren Workflows aus (Endlosschleifen-Schutz). Daher der
+      #      explizite workflow_dispatch - er braucht "actions: write" oben.
+      - name: 🚀 Deploy anstoßen (${{ matrix.env.name }})
+        if: steps.commit.outputs.changed == 'true'
         env:
-          SSH_HOST: ${{ secrets.IONOS_FTP_SERVER }}
-          SSH_USER: ${{ secrets.IONOS_FTP_USERNAME }}
-          SSH_PASS: ${{ secrets.IONOS_FTP_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          lftp -c "
-          set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
-          open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
-          mirror -R ./dist ${{ matrix.env.target }} --reverse --verbose --continue --delete;
-          quit;
-          "
+          gh workflow run "deploy-${{ matrix.env.slug }}.yml" \
+            --repo "${{ github.repository }}" \
+            --ref "${{ matrix.env.branch }}"
+          echo "✓ deploy-${{ matrix.env.slug }}.yml auf ${{ matrix.env.branch }} angestossen"
+
+      - name: ⏭️ Kein Deploy nötig
+        if: steps.commit.outputs.changed != 'true'
+        run: echo "Keine Datenänderung — ${{ matrix.env.name }} bleibt auf seinem aktuellen Stand."
