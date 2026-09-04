@@ -1,3 +1,41 @@
+## 2026-09-04 (1.55.0)
+
+### Karte am Objekt statt Deutschlandkarte, PLZ-Vervollstaendigung, keine Beispielwerte
+
+Korrektur zu 1.54.0 nach Nutzer-Rueckmeldung: Die Deutschlandkarte mit
+Punkten beantwortete keine Frage, die beim Arbeiten mit einem Objekt
+aufkommt. Gewuenscht war das Gegenteil - eine kleine Karte AM Objekt und
+Vervollstaendigung bei der Adresseingabe.
+
+**Entfernt**
+- `ObjektKarte.jsx` und die Ansicht "Karte" in der Objektliste. Die
+  Ortsansicht bleibt.
+
+**Lage am Objekt**
+- Kleiner Kartenausschnitt mit Pin, eingebettet ueber die offizielle
+  OpenStreetMap-Einbettung. Die Koordinaten liefert der lokale
+  GeoNames-Datensatz anhand der PLZ - keine Geocoding-Abfrage.
+- Darunter "In Google Maps öffnen" und "OpenStreetMap".
+- Ehrlicher Hinweis: der Pin zeigt die Mitte der Postleitzahl, nicht die
+  Hausnummer.
+- `index.html`: CSP um `frame-src https://www.openstreetmap.org` erweitert.
+  Ohne den Eintrag blockiert der Browser den Kartenausschnitt still, die
+  Karte bliebe ein leerer Rahmen.
+
+**PLZ und Ort mit Vervollstaendigung**
+- Beim Anlegen und Bearbeiten fuellt eine vollstaendig eingetippte PLZ Ort und
+  Bundesland automatisch; beim Ort erscheint ein Vorschlagsmenue mit PLZ und
+  Bundesland. Grundlage ist die bereits vorhandene PLZ_DB - dieselbe Mechanik
+  wie in `ui/PLZSearch.jsx`, hier auf lokalem Formular-State.
+- Die Felder stehen jetzt direkt hinter dem Namen statt hinter den
+  Geldbetraegen - erst wo, dann was es kostet.
+
+**Keine Beispielwerte mehr**
+- Saemtliche `placeholder` im Anlegen-Formular entfernt. Vorausgefuellte
+  Beispiele lasen sich wie echte Werte.
+
+**Betroffene Dateien:** index.html, src/components/dashboard/ObjektAnlegen.jsx, src/components/dashboard/ObjektUnterlagen.jsx, src/components/shell/Merkliste.jsx, geloescht: src/components/dashboard/ObjektKarte.jsx
+
 ## 2026-09-04 (1.54.0)
 
 ### Objektkarte mit echten Koordinaten - ohne Kartendienst

@@ -14,6 +14,7 @@ import {
   unterlageSpeichern,
   unterlagenLaden,
 } from "../../utils/objektUnterlagen.js";
+import { koordinateFuer, ladePlzGeo } from "../../utils/plzGeo.js";
 
 const FEHLER_TEXT = {
   zu_gross: `Die Datei ist größer als ${Math.round(MAX_DATEI_BYTES / 1024 / 1024)} MB.`,
@@ -208,19 +209,41 @@ export function ObjektUnterlagen({ objektId }) {
   );
 }
 
-// Lage - das Muster aus der Analyse-Vorlage: Adresse plus ein Sprung in die
-// Kartenanwendung des Geraets. Eine eingebettete Karte mit Pin braucht
-// Koordinaten; die PLZ-Datenbank des Projekts fuehrt nur PLZ, Ort und
-// Bundesland, deshalb hier bewusst der Link statt einer ungenauen Karte.
+// Lage am Objekt: kleiner Kartenausschnitt mit Pin plus Sprung in die
+// Kartenanwendung - das Muster aus der Analyse-Vorlage.
+//
+// Der Ausschnitt kommt als OpenStreetMap-Einbettung. Die Koordinaten dafuer
+// liefert der lokale GeoNames-Datensatz (utils/plzGeo.js) anhand der PLZ; die
+// Karte selbst laedt OSM erst, wenn dieser Bereich sichtbar ist. Ohne
+// Koordinaten bleibt der Adressblock samt Link stehen, die Karte entfaellt
+// still - besser als ein leerer Rahmen.
 export function ObjektLage({ data, titel }) {
-  const teile = [
-    [data?.strasse, data?.hausnummer].filter(Boolean).join(" "),
-    [data?.plz, data?.ort].filter(Boolean).join(" "),
-  ].filter(Boolean);
-  const adresse = teile.join(", ");
+  const [koord, setKoord] = useState(null);
+  const strasse = [data?.strasse, data?.hausnummer].filter(Boolean).join(" ");
+  const ortsteil = [data?.plz, data?.ort].filter(Boolean).join(" ");
+  const adresse = [strasse || titel, ortsteil].filter(Boolean).join(", ");
+
+  useEffect(() => {
+    let lebt = true;
+    if (!data?.plz) return undefined;
+    ladePlzGeo().then((map) => {
+      if (lebt) setKoord(koordinateFuer(data.plz, map));
+    });
+    return () => {
+      lebt = false;
+    };
+  }, [data?.plz]);
+
   if (!adresse) return null;
 
   const suche = encodeURIComponent(adresse);
+  // Rund 1,5 km Kantenlaenge - nah genug, um die Strassen zu erkennen, weit
+  // genug, dass die PLZ-Ungenauigkeit (etwa 110 m) nicht stoert.
+  const d = 0.008;
+  const bbox = koord
+    ? `${(koord.lon - d).toFixed(4)},${(koord.lat - d / 1.6).toFixed(4)},${(koord.lon + d).toFixed(4)},${(koord.lat + d / 1.6).toFixed(4)}`
+    : null;
+
   return (
     <div
       style={{
@@ -237,38 +260,71 @@ export function ObjektLage({ data, titel }) {
           textTransform: "uppercase",
           letterSpacing: 0.6,
           fontWeight: 600,
-          marginBottom: 8,
+          marginBottom: 10,
         }}
       >
         Lage
       </div>
-      <div style={{ fontSize: 14, color: "var(--ct)", marginBottom: 12 }}>
-        {titel ? `${titel} · ` : ""}
-        {adresse}
+
+      {bbox && (
+        <iframe
+          title={`Karte ${adresse}`}
+          loading="lazy"
+          src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${koord.lat},${koord.lon}`}
+          style={{
+            width: "100%",
+            height: 190,
+            border: "1px solid var(--cb)",
+            borderRadius: 10,
+            display: "block",
+            marginBottom: 10,
+          }}
+        />
+      )}
+
+      <div style={{ fontSize: 14, color: "var(--ct)", marginBottom: 12 }}>{adresse}</div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${suche}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={kartenLinkStil}
+        >
+          <span aria-hidden="true">📍</span> In Google Maps öffnen
+        </a>
+        <a
+          href={`https://www.openstreetmap.org/search?query=${suche}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={kartenLinkStil}
+        >
+          OpenStreetMap
+        </a>
       </div>
-      <a
-        href={`https://www.openstreetmap.org/search?query=${suche}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          height: 40,
-          padding: "0 16px",
-          borderRadius: 10,
-          border: "1.5px solid var(--cb)",
-          color: "var(--ct)",
-          fontSize: 14,
-          fontWeight: 600,
-          textDecoration: "none",
-        }}
-      >
-        <span aria-hidden="true">📍</span> Auf der Karte öffnen
-      </a>
+
+      {koord && (
+        <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 10, lineHeight: 1.5 }}>
+          Der Pin zeigt die Mitte der Postleitzahl, nicht die genaue Hausnummer.
+        </div>
+      )}
     </div>
   );
 }
+
+const kartenLinkStil = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  height: 40,
+  padding: "0 16px",
+  borderRadius: 10,
+  border: "1.5px solid var(--cb)",
+  color: "var(--ct)",
+  fontSize: 14,
+  fontWeight: 600,
+  textDecoration: "none",
+};
 
 // Kartenansicht der Objektliste (Phase E, Toggle "Liste | Karte").
 //

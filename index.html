@@ -42,10 +42,17 @@
          Eintraege blockiert der Browser die Skripte VOR jedem Netzwerkfehler,
          Login/Checkout scheitert dann still. api.immofuchs.info ist als
          Platzhalter fuer den spaeteren Worker-Domain-Umzug (5.1) bereits mit
-         aufgenommen, auch wenn er noch nicht live geschaltet ist. -->
+         aufgenommen, auch wenn er noch nicht live geschaltet ist.
+
+         2026-09-04: frame-src zusaetzlich um www.openstreetmap.org - die
+         Lage-Karte am Objekt bindet den offiziellen OSM-Kartenausschnitt als
+         iframe ein. Ohne den Eintrag blockiert der Browser ihn still, die
+         Karte bliebe ein leerer Rahmen. Es wird nur der Kartenausschnitt
+         geladen; die Koordinaten dafuer kommen aus dem lokalen
+         PLZ-Datensatz, nicht aus einer Abfrage. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://accounts.google.com/gsi/client https://appleid.cdn-apple.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://api.bundesbank.de https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://stats.g.doubleclick.net https://immofuchs-assistant.engincelenk.workers.dev https://immofuchs-assistant-dev.engincelenk.workers.dev https://immofuchs-assistant-qa.engincelenk.workers.dev https://api.immofuchs.info https://api-dev.immofuchs.info https://accounts.google.com https://appleid.apple.com https://api.stripe.com https://m.stripe.com https://m.stripe.network; frame-src https://js.stripe.com https://hooks.stripe.com; base-uri 'self'; form-action 'self' https://accounts.google.com https://appleid.apple.com;"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://accounts.google.com/gsi/client https://appleid.cdn-apple.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://api.bundesbank.de https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://stats.g.doubleclick.net https://immofuchs-assistant.engincelenk.workers.dev https://immofuchs-assistant-dev.engincelenk.workers.dev https://immofuchs-assistant-qa.engincelenk.workers.dev https://api.immofuchs.info https://api-dev.immofuchs.info https://accounts.google.com https://appleid.apple.com https://api.stripe.com https://m.stripe.com https://m.stripe.network; frame-src https://js.stripe.com https://hooks.stripe.com https://www.openstreetmap.org; base-uri 'self'; form-action 'self' https://accounts.google.com https://appleid.apple.com;"
     />
 
     <!-- ═══ SEO — Grundlagen ═══ -->

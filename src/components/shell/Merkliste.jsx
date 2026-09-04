@@ -19,7 +19,6 @@ import { ObjektKPIs, VollstaendigkeitsRing } from "../dashboard/ObjektKPIs.jsx";
 import { ObjektAnlegen } from "../dashboard/ObjektAnlegen.jsx";
 import { ObjektVergleich } from "../dashboard/ObjektVergleich.jsx";
 import { ObjektOrte } from "../dashboard/ObjektUnterlagen.jsx";
-import { ObjektKarte } from "../dashboard/ObjektKarte.jsx";
 import {
   berechneObjektKennzahlen,
   toResultData,
@@ -827,7 +826,6 @@ export function Merkliste() {
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
         {[
           ["liste", "Liste"],
-          ["karte", "Karte"],
           ["orte", "Orte"],
         ].map(([id, label]) => (
           <button
@@ -933,7 +931,6 @@ export function Merkliste() {
           Keine Objekte gefunden.
         </div>
       )}
-      {ansicht === "karte" && <ObjektKarte objekte={filtered} onOeffnen={openDetail} />}
       {ansicht === "orte" && (
         <ObjektOrte objekte={filtered} onOeffnen={openDetail} />
       )}
