@@ -30,12 +30,23 @@ const TIER_FARBE = {
   red: "#B3402A",
 };
 
+// Wortwahl bewusst wie in investmentScore.js/staffel(): der Score bewertet
+// die Gesamtqualitaet ueber mehrere Dimensionen (Rendite, Kapitaldienst,
+// Robustheit), NICHT ob die Miete die Rate deckt. Ein frueherer Entwurf nannte
+// green "Traegt sich" - dann stand ueber einem negativen Cashflow das Wort
+// "Traegt sich" und darunter der Satz, dass zugezahlt werden muss. Genau der
+// Selbstwiderspruch, den die Analyse-Vorlage vormacht (Befund 1.10).
 const TIER_WORT = {
-  green: "Trägt sich",
-  yellow: "Knapp",
+  green: "Solide",
+  yellow: "Gemischt",
   orange: "Schwach",
   red: "Kritisch",
 };
+
+// Die Cashflow-Aussage ist eine eigene, kleinere Zeile neben dem Score - sie
+// beantwortet die andere Frage: traegt sich das Objekt aus der Miete?
+const CF_WORT = (cf) =>
+  cf >= 150 ? "trägt sich" : cf >= 0 ? "trägt sich knapp" : "Zuzahlung nötig";
 
 const FELD_NAME = {
   kaufpreis: "Kaufpreis",
@@ -161,6 +172,20 @@ export function Ueberblick({ kennzahlen, data, onFinnFrage, onStellschrauben, lo
               {kennzahlen.score}/100
             </span>
           )}
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: 12,
+              fontWeight: 700,
+              padding: "3px 9px",
+              borderRadius: 999,
+              whiteSpace: "nowrap",
+              color: cf >= 0 ? "#2F6B4F" : "#B3402A",
+              background: cf >= 0 ? "#2F6B4F1a" : "#B3402A1a",
+            }}
+          >
+            {CF_WORT(cf)}
+          </span>
         </div>
         <div style={{ fontSize: 15, lineHeight: 1.5, color: "var(--ct)" }}>
           {urteilSatz(kennzahlen)}
