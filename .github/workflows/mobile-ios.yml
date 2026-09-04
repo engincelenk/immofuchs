@@ -54,6 +54,20 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
+      - name: 🔍 Debug - MATCH_GIT_URL Laenge/Hash pruefen (kein Secret-Leak)
+        # Temporaerer Diagnose-Schritt (Live-Befund 2026-09-04): lokaler
+        # `git clone` mit derselben URL funktioniert, CI schlaegt mit
+        # identischem "invalid credentials" fehl - Verdacht auf einen beim
+        # Kopieren ins GitHub-Secret-Feld verstuemmelten Wert (z.B.
+        # angehaengter Zeilenumbruch). Nur Laenge/Hash werden ausgegeben,
+        # der eigentliche Wert bleibt geheim. Nach erfolgreichem Fund wieder
+        # entfernen.
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+        run: |
+          echo "Laenge: ${#MATCH_GIT_URL}"
+          echo -n "$MATCH_GIT_URL" | shasum -a 256
+
       - name: 🔐 Fastlane match + Build + TestFlight-Upload
         env:
           # App Store Connect API Key (Empfehlung statt Apple-ID/Passwort -
