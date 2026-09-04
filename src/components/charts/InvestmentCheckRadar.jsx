@@ -6,12 +6,14 @@ import { rate, scoreKpi, BANDS } from "../../utils/bands.js";
 // Fasst die sechs wichtigsten Immobilien-Investment-KPIs auf einer normierten Skala
 // zusammen (0–100, hergeleitet aus denselben BANDS-Schwellen wie die Ampel-Karten in
 // Section 1–4). Ersetzt keine bestehende Ampel-Karte, sondern ergänzt den Gesamtüberblick.
-export function InvestmentCheckRadar({ R, d }) {
+// d wird seit der Zentralisierung der Monat/Jahr-Umrechnung (B4, 2026-09)
+// nicht mehr gebraucht - der Kaufpreisfaktor kommt als R.kpF aus rendite.js.
+export function InvestmentCheckRadar({ R }) {
   const { t, lang } = useApp();
   const [sel, setSel] = useState(null);
   const [scalesOpen, setScalesOpen] = useState(false);
 
-  const kpFaktor = R.gKP / Math.max((+d.kaltmiete || 1) * 12, 1);
+  const kpFaktor = R.kpF;
   const cfMonatlichMit = R.yearRows || [];
   const beIdx = cfMonatlichMit.findIndex((r) => (r.cf || 0) / 12 >= 0);
   const beJahr = beIdx >= 0 ? cfMonatlichMit[beIdx].j : R.j + 5;

@@ -30,7 +30,7 @@ export function VermoegensQuelleChart({ R, d }) {
   const rows = R.yearRows || [];
   if (rows.length < 1) return null;
 
-  const nichtUmlagbarJahr = (+d.nichtUml || 0) * 12;
+  const nichtUmlagbarJahr = R.nuJ;
   let tilgKum = 0,
     mieterTilgKum = 0;
   rows.forEach((r) => {

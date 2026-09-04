@@ -337,7 +337,12 @@ function hasAuthRedirectParam() {
 }
 
 export default function App() {
-  const [tab, setTab] = useState("haupt");
+  // A5 des Umbauplans (docs/plans/neue-phase2/01-umbauplan-phase-a-b.md):
+  // Die Objektansicht ist der Standardeinstieg (Entscheidung 1 vom 2026-09-04),
+  // Schnellrechnen bleibt gleichberechtigt daneben - der Landing-Traffic sucht
+  // oft nur eine schnelle Zahl und kommt weiter direkt in einem Rechner an,
+  // weil startApp() den gewuenschten Tab uebergibt.
+  const [tab, setTab] = useState("saved");
   // Aktiven Tab in der scrollbaren .tbar sichtbar halten (Konzept 8.5b) -
   // sonst verschwindet er bei vielen Tabs auf schmalen Screens seitlich aus
   // dem sichtbaren Bereich, sobald der Nutzer selbst gescrollt hat.
@@ -529,13 +534,15 @@ export default function App() {
   );
   const t = T[lang];
   const tabs = [
+    // A5: "Meine Objekte" steht vorn - das Objekt ist das Zuhause der App,
+    // die sechs Rechner sind Schnellrechnen daneben.
+    { id: "saved", l: t.meineObjekte || t.merkliste, ic: IC.saved },
     { id: "haupt", l: t.haupt, ic: IC.haupt },
     { id: "kredit", l: t.kredit, ic: IC.kredit },
     { id: "miete", l: t.miete, ic: IC.miete },
     { id: "sanier", l: t.sanier, ic: IC.sanier },
     { id: "steuer6", l: t.steuer6, ic: IC.steuer6 },
     { id: "vfe", l: t.vfe, ic: IC.vfe },
-    { id: "saved", l: t.merkliste, ic: IC.saved },
     // Navigations-Zusammenfuehrung (Konzept-Dok 8.5a, 2026-08): die vormals
     // zusaetzlichen Pro-Tabs "Start"/"Objekte" sind in der obigen
     // "saved"-Ansicht aufgegangen (Merkliste.jsx) - Free und Pro sehen jetzt
@@ -543,7 +550,9 @@ export default function App() {
   ];
 
   const startApp = (startTab, opts) => {
+    // Ohne expliziten Rechner landet der Nutzer bei seinen Objekten (A5).
     if (startTab && tabs.find((x) => x.id === startTab)) setTab(startTab);
+    else setTab("saved");
     setAutoExpose(Boolean(opts?.openUpload));
     sessionStorage.setItem("if_landed", "1");
     setLanded(true);

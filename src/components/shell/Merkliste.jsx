@@ -15,11 +15,14 @@ import { Sheet } from "../ui/Sheet.jsx";
 import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
 import { ObjektDetail } from "../dashboard/ObjektDetail.jsx";
 import { scoreBadgeColor, scoreBadgeText } from "../dashboard/dashboardUtils.js";
-import { computeRendite } from "../../utils/rendite.js";
-import { berechneScore } from "../../utils/investmentScore.js";
-import { buildMP } from "../../utils/mietprognose.js";
-import { computeKreditVorschau } from "../../utils/kreditKennzahlen.js";
-import { isK15 } from "../../data/plzData.js";
+import { ObjektKPIs, VollstaendigkeitsRing } from "../dashboard/ObjektKPIs.jsx";
+import { ObjektAnlegen } from "../dashboard/ObjektAnlegen.jsx";
+import { ObjektVergleich } from "../dashboard/ObjektVergleich.jsx";
+import {
+  berechneObjektKennzahlen,
+  toResultData,
+  berechneVollstaendigkeit,
+} from "../../utils/objektKennzahlen.js";
 
 // Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
 // Merkliste haengt auf jeder Rechner-Seite, CheckoutWizard aber nur bei
@@ -35,13 +38,6 @@ const MAX_COMPARE = 5;
 // useMemo-Deps sauber bleiben (tabLabel haette bei jedem Render eine neue
 // Objektidentitaet).
 const RECHNER_TABS = ["haupt", "kredit", "miete", "sanier"];
-// Vereinfachte Bild-Logik (Konzept-Dok 8.3g, Nutzerentscheidung 2026-08-10):
-// der Exposé-Scan extrahiert aktuell kein Bild (siehe autoSaveExposeObject.js),
-// echte Fotos koennen also weder fuer Exposé- noch fuer manuell angelegte
-// Objekte gezeigt werden. Stattdessen ein rechnerspezifisches Icon als
-// Platzhalter statt eines beliebigen Standardbilds fuer alle - macht die
-// Kartenvorschau trotzdem auf den ersten Blick unterscheidbar.
-const RECHNER_ICON = { haupt: "📈", kredit: "🏦", miete: "🏘️", sanier: "🔨" };
 const searchChipStyle = {
   height: 38,
   padding: "0 12px",
@@ -88,13 +84,27 @@ function writeLocalList(list) {
   }
 }
 
-// Server-Objekt (D1-Schema, 4.2/4.17) <-> lokale Merkliste-Form
-// {id,name,date,tab,data}. Das D1-Schema hat bewusst kein eigenes "tab"-Feld
-// (1:1 aus der Spec uebernommen) - wird deshalb als Teil von input_data
-// mitgefuehrt statt das Schema eigenmaechtig zu erweitern.
-function toServerPayload(local) {
+// Server-Objekt (D1-Schema, 4.2/4.17) <-> lokale Objektform
+// {id,name,date,letzteAnsicht,data}. Das D1-Schema hat bewusst kein eigenes
+// Feld fuer die Ansicht (1:1 aus der Spec uebernommen) - sie wird deshalb in
+// result_data mitgefuehrt statt das Schema eigenmaechtig zu erweitern.
+// result_data war bis dahin ungenutzt ({}), input_data bleibt so der reine
+// Formular-State.
+// Schritt A1 des Umbauplans (docs/plans/neue-phase2/01-umbauplan-phase-a-b.md):
+// Bis 2026-09 trug inputData ein Feld "tab" und band das Objekt damit an genau
+// einen Rechner - derselbe Kauf, einmal im Rendite- und einmal im
+// Kreditrechner gespeichert, ergab zwei getrennte Objekte. Da alle sechs
+// Rechner ohnehin denselben d-State aus dem AppContext lesen, existiert
+// "ein Objekt, mehrere Blickwinkel" zur Laufzeit laengst; nur die Persistenz
+// hat es zerlegt. inputData ist deshalb jetzt der vollstaendige State, und
+// die Ansicht wandert als "letzteAnsicht" daneben - eine reine
+// UI-Erinnerung, keine Identitaet mehr.
+export function toServerPayload(local) {
   const kaufpreis = Number(local.data?.kaufpreis);
   const wohnflaeche = Number(local.data?.wohnflaeche ?? local.data?.flaeche);
+  // A2: score/scoreLabel standen hier bis 2026-09 hart auf null - nur der
+  // Exposé-Scan befuellte sie. Jetzt bekommt jedes Objekt seine Ampel.
+  const kz = berechneObjektKennzahlen(local.data);
   return {
     id: local.id,
     title: local.name,
@@ -102,10 +112,10 @@ function toServerPayload(local) {
     ort: local.data?.ort || null,
     kaufpreis: Number.isFinite(kaufpreis) ? kaufpreis : null,
     wohnflaeche: Number.isFinite(wohnflaeche) ? wohnflaeche : null,
-    score: null,
-    scoreLabel: null,
-    inputData: { tab: local.tab, ...local.data },
-    resultData: {},
+    score: kz.score,
+    scoreLabel: kz.scoreLabel,
+    inputData: { ...local.data },
+    resultData: { ...toResultData(kz), letzteAnsicht: local.letzteAnsicht || "haupt" },
     source: "manuell",
   };
 }
@@ -116,13 +126,16 @@ function toServerPayload(local) {
 // (Konzept-Dok 8.5a) ist dies die einzige Objektquelle fuer Free+Pro, daher
 // muessen diese Felder erhalten bleiben (u. a. fuer Score-Badge und
 // ObjektDetail nach Exposé-Scan-Auto-Save, siehe autoSaveExposeObject.js).
-function fromServerObject(server, locale) {
-  const { tab, ...data } = server.inputData || {};
+export function fromServerObject(server, locale) {
+  // A1: "tab" aus inputData herausziehen falls vorhanden - es ist seit dem
+  // Schnitt kein Bestandteil des States mehr, koennte aber in aelteren
+  // Testdatensaetzen noch stecken und wuerde sonst als Formularfeld landen.
+  const { tab: legacyTab, ...data } = server.inputData || {};
   return {
     id: server.id,
     name: server.title || "Objekt",
     date: new Date(server.updatedAt).toLocaleDateString(locale),
-    tab: tab || "haupt",
+    letzteAnsicht: server.resultData?.letzteAnsicht || legacyTab || "haupt",
     data,
     plz: server.plz ?? null,
     ort: server.ort ?? null,
@@ -133,6 +146,9 @@ function fromServerObject(server, locale) {
     source: server.source ?? null,
     updatedAt: server.updatedAt ?? null,
     inputData: server.inputData || null,
+    // A2: die beim Speichern abgelegten Kennzahlen, damit die Liste rendern
+    // kann, ohne jedes Objekt neu durchzurechnen.
+    kennzahlen: server.resultData || null,
   };
 }
 
@@ -244,8 +260,16 @@ export function useSavedObjects(setData) {
         id: crypto.randomUUID(),
         name: name.trim() || "Objekt",
         date: new Date().toLocaleDateString("de-DE"),
-        tab,
+        // A1: der Aufrufer uebergibt weiterhin den aktuellen Rechner-Tab, er
+        // beschreibt jetzt aber nur noch, wo der Nutzer zuletzt war.
+        letzteAnsicht: tab,
         data: { ...data },
+        // A2: auch der Free-Pfad (localStorage) fuehrt Score und Kennzahlen
+        // mit - sonst haette nur die Pro-Liste eine Ampel.
+        ...(() => {
+          const kz = berechneObjektKennzahlen(data);
+          return { score: kz.score, scoreLabel: kz.scoreLabel, kennzahlen: kz };
+        })(),
       };
       if (isPro) {
         try {
@@ -298,7 +322,7 @@ export function useSavedObjects(setData) {
   const loadObj = useCallback(
     (obj, setTab) => {
       setData(obj.data);
-      setTab(obj.tab);
+      setTab(obj.letzteAnsicht || "haupt");
     },
     [setData],
   );
@@ -461,104 +485,17 @@ export function SaveBtn({ tab }) {
     </>
   );
 }
-
-// Rechnerspezifische Kennzahlen fuer die Kartenvorschau (Konzept-Dok 8.3).
-// Variante (b): die Kennzahlen werden aus den gespeicherten Rohdaten
-// (inputData) mit denselben Rechenkernen wie in den Rechnern selbst neu
-// berechnet, statt sie zusaetzlich zu persistieren (resultData bleibt leer,
-// wie im Bestand) - bleibt so automatisch konsistent mit der aktuellen
-// Berechnungslogik, ohne Datenmigration bestehender Objekte.
-// Rueckgabe: Array von {label, value[, color]} oder null, wenn fuer diesen
-// Rechner-Typ/diese Daten nichts Sinnvolles berechenbar ist (Aufrufer faellt
-// dann auf die generische Kaufpreis/Miete/EK-Vorschau zurueck).
-function rechnerKennzahlen(tab, inputData, t, locale) {
-  const fmtNum = (v) => (Number.isFinite(v) ? Math.round(v).toLocaleString(locale) : null);
-  const fmtPct = (v) => `${(+v).toFixed(1).replace(".", ",")} %`;
-
-  if (tab === "haupt") {
-    const kp = +inputData.kaufpreis || 0;
-    if (kp <= 0) return null;
-    const R = computeRendite(inputData, t);
-    // Loest die alte Risiko-Vorschau ab (Investment-Score-Umbau Stufe 2,
-    // 2026-08-27) - computeRendite() wird hier ohnehin live neu aufgerufen,
-    // der Eingriff bleibt auf diese vier Zeilen begrenzt (kein
-    // Persistenz-/Migrationsaufwand fuer bestehende gespeicherte Objekte).
-    const score = berechneScore(inputData, t);
-    const scoreColors = { green: "#22c55e", yellow: "#f59e0b", orange: "#f97316", red: "#ef4444" };
-    const scoreColor = score.verfuegbar ? scoreColors[score.tier] : "#8A8A80";
-    const scoreValue = score.verfuegbar ? `${score.score}/100` : "–";
-    return [
-      { label: t.kaufpreis || "Kaufpreis", value: `${fmtNum(kp)} €` },
-      { label: "Nettorendite", value: fmtPct(R.nR) },
-      { label: "Cashflow/Mon.", value: `${R.cf2 >= 0 ? "+" : ""}${fmtNum(R.cf2)} €` },
-      { label: t.financeScoreTitle || "Finanz-Score", value: scoreValue, color: scoreColor },
-    ];
-  }
-
-  if (tab === "kredit") {
-    const R = computeKreditVorschau(inputData);
-    if (!R) return null;
-    return [
-      { label: "Darlehen", value: `${fmtNum(R.da)} €` },
-      { label: "Monatl. Rate", value: `${fmtNum(R.ann)} €` },
-      { label: "Beleihung", value: fmtPct(R.bel) },
-      { label: "Restschuld n. ZB", value: `${fmtNum(R.rZB)} €` },
-    ];
-  }
-
-  if (tab === "miete") {
-    const mi = +inputData.kaltmiete || 0;
-    if (mi <= 0) return null;
-    const qm = +inputData.flaeche || 1,
-      vQ = +inputData.vergleichsmiete || 0,
-      jahre = +inputData.mietJahre || 10;
-    const k15 =
-      isK15(inputData.ort) || inputData.bundesland === "BE" || inputData.bundesland === "HH";
-    const kP = k15 ? 15 : 20;
-    const mt = buildMP(
-      mi,
-      qm,
-      vQ,
-      kP,
-      inputData.letzteErhDatum,
-      +inputData.letzteErhMiete || 0,
-      jahre,
-      k15,
-      t,
-    );
-    const nx = mt.rows[0];
-    const items = [{ label: t.kaltmiete || "Kaltmiete", value: `${fmtNum(mi)} €/Mon.` }];
-    if (nx) {
-      items.push(
-        {
-          label: "Nächste Erhöhung",
-          value: nx.datum instanceof Date ? nx.datum.toLocaleDateString(locale) : "—",
-        },
-        { label: "Neue Miete", value: `${fmtNum(nx.neueMiete)} €/Mon.` },
-        { label: "Erhöhung", value: nx.mE > 0 ? `+${fmtPct(nx.mP)}` : "—" },
-      );
-    }
-    return items;
-  }
-
-  if (tab === "sanier") {
-    // Foerderung/Amortisation brauchen den lokalen `s`-State aus Sanier.jsx
-    // (Heizkosten/Strompreis/Anbau-Typ/iSFP/PV-kWp), der beim Speichern NICHT
-    // mitpersistiert wird - laesst sich beim Laden also nicht rekonstruieren.
-    // Bewusst nur die tatsaechlich gespeicherten Rohwerte zeigen statt
-    // Kennzahlen vorzutaeuschen (Nutzerentscheidung 2026-08-10).
-    const items = [];
-    const fl = +inputData.sanFl || +inputData.flaeche || 0;
-    if (fl > 0) items.push({ label: "Wohnfläche", value: `${fmtNum(fl)} m²` });
-    if (inputData.baujahr) items.push({ label: "Baujahr", value: String(inputData.baujahr) });
-    return items.length ? items : null;
-  }
-
-  return null;
-}
-
 export function Merkliste() {
-  const { savedList, delObj, loadObj, setTabExt, lang, isProSavedObjects, savedObjectsFreeLimit } =
+  const {
+    savedList,
+    saveObj,
+    delObj,
+    loadObj,
+    setTabExt,
+    lang,
+    isProSavedObjects,
+    savedObjectsFreeLimit,
+  } =
     useApp();
   const t = T[lang] || T.de;
   const locale = LANG_LOCALE[lang] || "de-DE";
@@ -572,6 +509,29 @@ export function Merkliste() {
   // Objekte mit Score, siehe autoSaveExposeObject.js). detailObj oeffnet die
   // bisherige ObjektDetail-Ansicht statt eines eigenen Tabs.
   const [detailObj, setDetailObj] = useState(null);
+  // B3: Objekt anlegen mit fuenf Feldern statt vierzig.
+  const [anlegenOffen, setAnlegenOffen] = useState(false);
+  // Phase E: Zeilen-Diff vor dem Finn-Chat - die Zahlen zuerst, die
+  // Einordnung auf Wunsch.
+  const [vergleichOffen, setVergleichOffen] = useState(false);
+  // Phase D: einmaliger Willkommenshinweis. Die Analyse-Vorlage macht das als
+  // persoenlichen Brief - das schafft Vertrauen bei einer App, in die man
+  // Geldzahlen eintippt. Bewusst schliessbar und nur einmal.
+  const [willkommenWeg, setWillkommenWeg] = useState(() => {
+    try {
+      return localStorage.getItem("if_willkommen_v1") === "1";
+    } catch {
+      return true;
+    }
+  });
+  const willkommenSchliessen = () => {
+    setWillkommenWeg(true);
+    try {
+      localStorage.setItem("if_willkommen_v1", "1");
+    } catch {
+      /* Storage blockiert - Hinweis erscheint dann erneut, kein Blocker */
+    }
+  };
   const [query, setQuery] = useState("");
   const [onlyGut, setOnlyGut] = useState(false);
   const [sortByScore, setSortByScore] = useState(false);
@@ -601,8 +561,6 @@ export function Merkliste() {
     miete: t.miete || "Miete",
     sanier: t.sanier || "Sanierung",
   };
-  const tabColor = { haupt: "#1E3A5F", kredit: "#0a7ea4", miete: "#2d8a4e", sanier: "#8a5a0a" };
-  const fmt = (v) => (v ? Number(v).toLocaleString(locale) : null);
 
   const toggleCompare = (id) => {
     setCompareIds((prev) => {
@@ -618,27 +576,29 @@ export function Merkliste() {
     setCompareSheetOpen(true);
   };
   const compareObjs = savedList.filter((o) => compareIds.includes(o.id));
-  // o.tab ist die UI-Tab-Id (haupt/kredit/...), der Worker will seinen eigenen
+  // o.letzteAnsicht ist die UI-Tab-Id (haupt/kredit/...), der Worker will seinen eigenen
   // rechner-Wert - siehe tabZuRechner(). Die Uebersetzung muss auch den
   // ASSISTANT_FIELDS-Zugriff speisen, sonst bleiben die felder leer.
   const vergleichsObjekte = compareObjs.map((o) => {
-    const rechner = tabZuRechner(o.tab);
+    const rechner = tabZuRechner(o.letzteAnsicht);
     const fields = ASSISTANT_FIELDS[rechner] ?? [];
     const felder = Object.fromEntries(fields.map((f) => [f, o.data[f]]));
     return { name: o.name, tab: rechner, felder };
   });
-  const compareRechner = tabZuRechner(compareObjs[0]?.tab);
+  const compareRechner = tabZuRechner(compareObjs[0]?.letzteAnsicht);
 
   // Score existiert nur fuer Objekte aus dem Exposé-Scan-Auto-Save (Pro) -
   // Suchleiste bleibt immer sichtbar, Score-Filter/-Sortierung nur wenn es
   // ueberhaupt Objekte mit Score gibt (sonst ein Filter, der nie etwas
   // findet - vgl. Projektregel "keine halbfertigen Zustaende").
+  // A2: frueher hatten nur Exposé-Objekte einen Score, deshalb war der
+  // Filter bedingt. Jetzt bekommt jedes Objekt mit Kaufpreis eine Ampel.
   const hasScores = savedList.some((o) => o.score != null);
   // Filterleiste nach Rechnertyp nur zeigen, wenn ueberhaupt mehr als eine
   // Rechnerart gespeichert ist - sonst ein Filter ohne Wirkung (gleiche
   // Projektregel wie bei hasScores oben).
   const rechnerTypesPresent = useMemo(
-    () => [...new Set(savedList.map((o) => o.tab))].filter((tab) => RECHNER_TABS.includes(tab)),
+    () => [...new Set(savedList.map((o) => o.letzteAnsicht))].filter((tab) => RECHNER_TABS.includes(tab)),
     [savedList],
   );
   const filtered = useMemo(() => {
@@ -649,7 +609,7 @@ export function Merkliste() {
         (o) => o.name.toLowerCase().includes(q) || (o.ort || "").toLowerCase().includes(q),
       );
     }
-    if (rechnerFilter !== "alle") list = list.filter((o) => o.tab === rechnerFilter);
+    if (rechnerFilter !== "alle") list = list.filter((o) => o.letzteAnsicht === rechnerFilter);
     if (onlyGut) list = list.filter((o) => o.scoreLabel === "gut");
     if (sortByScore) list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
     return list;
@@ -671,10 +631,29 @@ export function Merkliste() {
       wohnflaeche: obj.wohnflaeche ?? obj.data?.wohnflaeche ?? obj.data?.flaeche ?? null,
       source: obj.source || "manuell",
       updatedAt: obj.updatedAt || null,
-      inputData: obj.inputData || { tab: obj.tab, ...obj.data },
+      inputData: obj.inputData || { ...obj.data },
+      letzteAnsicht: obj.letzteAnsicht || "haupt",
     });
   }
   if (detailObj) return <ObjektDetail objekt={detailObj} onBack={() => setDetailObj(null)} />;
+
+  // B3: legt das Objekt aus den fuenf Feldern an und oeffnet es direkt -
+  // "Objekt anlegen -> Urteil sehen" ohne Zwischenschritt.
+  const objektAnlegen = async (name, daten) => {
+    await saveObj(name, daten, "haupt");
+    setAnlegenOffen(false);
+  };
+
+  const anlegenSheet = (
+    <Sheet open={anlegenOffen} onClose={() => setAnlegenOffen(false)} label="Objekt anlegen">
+      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Objekt anlegen</div>
+      <ObjektAnlegen
+        t={t}
+        onAnlegen={objektAnlegen}
+        onAbbrechen={() => setAnlegenOffen(false)}
+      />
+    </Sheet>
+  );
 
   if (!savedList.length)
     return (
@@ -695,13 +674,95 @@ export function Merkliste() {
         <div style={{ fontSize: 16, fontWeight: 700, color: "var(--ct)", marginBottom: 8 }}>
           {t.emptyTitle || "Noch keine Objekte gespeichert"}
         </div>
-        <div style={{ fontSize: 14, color: "var(--ch)", lineHeight: 1.5 }}>
-          {t.emptyHint || 'Berechne ein Objekt und tippe auf „Speichern", um es hier zu sichern.'}
+        <div style={{ fontSize: 14, color: "var(--ch)", lineHeight: 1.5, maxWidth: 340, margin: "0 auto" }}>
+          Lege dein erstes Objekt mit fünf Angaben an — Kaufpreis, Wohnfläche,
+          Kaltmiete, Eigenkapital und einem Namen. Rendite und Cashflow siehst du
+          sofort danach.
         </div>
+        <button
+          type="button"
+          onClick={() => setAnlegenOffen(true)}
+          style={{
+            marginTop: 20,
+            height: 46,
+            padding: "0 22px",
+            borderRadius: 10,
+            border: "none",
+            background: "var(--ca)",
+            color: "#fff",
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          + Objekt anlegen
+        </button>
+        {anlegenSheet}
       </div>
     );
   return (
     <div style={{ padding: "16px 16px 100px" }}>
+      {!willkommenWeg && (
+        <div
+          style={{
+            background: "var(--ci)",
+            border: "1px solid var(--cb)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            marginBottom: 14,
+            position: "relative",
+          }}
+        >
+          <button
+            type="button"
+            onClick={willkommenSchliessen}
+            aria-label="Hinweis schließen"
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 30,
+              height: 30,
+              border: "none",
+              background: "none",
+              color: "var(--ch)",
+              fontSize: 17,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            ✕
+          </button>
+          <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 6, paddingRight: 28 }}>
+            Deine Objekte an einem Ort
+          </div>
+          <div style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.55 }}>
+            Jedes Objekt zeigt dir zuerst eine Einschätzung, dann die Regler zum
+            Durchspielen — und darunter alle Zahlen im Detail. Die Rechner bleiben
+            als Schnellrechnen daneben erhalten.
+          </div>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => setAnlegenOffen(true)}
+        style={{
+          width: "100%",
+          height: 46,
+          marginBottom: 14,
+          borderRadius: 10,
+          border: "1.5px dashed var(--ca)",
+          background: "transparent",
+          color: "var(--ca)",
+          fontSize: 15,
+          fontWeight: 700,
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
+      >
+        + Objekt anlegen
+      </button>
       <div style={{ fontSize: 13, color: "var(--ch)", marginBottom: 12, fontWeight: 500 }}>
         {savedList.length}
         {!isProSavedObjects ? `/${savedObjectsFreeLimit}` : ""}{" "}
@@ -796,15 +857,15 @@ export function Merkliste() {
         </div>
       )}
       {filtered.map((obj) => {
-        const kp = fmt(obj.kaufpreis ?? obj.data.kaufpreis);
-        const miete = fmt(obj.data.kaltmiete);
-        const ek = fmt(obj.data.eigenkapital);
-        const inputData = obj.inputData || { tab: obj.tab, ...obj.data };
-        // Rechnerspezifische Kennzahlen (Konzept-Dok 8.3) statt der
-        // generischen Kaufpreis/Miete/EK-Vorschau, wo berechenbar - Fallback
-        // auf die generische Vorschau darunter, wenn null (z. B. Sanierung
-        // ohne gespeicherte Wohnflaeche/Baujahr, oder unbekannter Tab).
-        const kennzahlen = rechnerKennzahlen(obj.tab, inputData, t, locale);
+        const inputData = obj.inputData || { ...obj.data };
+        // A3: sechs Objekt-Kennzahlen statt der frueheren rechnerspezifischen
+        // Vorschau - seit A1 ist ein Objekt nicht mehr an einen Rechner
+        // gebunden. Bevorzugt der beim Speichern abgelegte Stand (resultData),
+        // sonst frisch gerechnet (Free-Pfad/localStorage, Altbestand).
+        const kennzahlen = obj.kennzahlen?.score != null
+          ? { verfuegbar: true, kaufpreis: obj.kaufpreis ?? +inputData.kaufpreis, ...obj.kennzahlen }
+          : berechneObjektKennzahlen(inputData, t);
+        const vollstaendigkeit = berechneVollstaendigkeit(inputData);
         // Exposé-Scan-Auto-Save legt Objekte nur mit {tab,quelle} an (siehe
         // autoSaveExposeObject.js) - fuer diese gibt es nichts Sinnvolles zum
         // "Laden" in den Rechner, nur die Detailansicht (Tap auf die Karte).
@@ -836,21 +897,6 @@ export function Merkliste() {
               }}
             >
               <div style={{ display: "flex", gap: 10, flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: `${tabColor[obj.tab] || "#888"}1a`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 19,
-                    flexShrink: 0,
-                  }}
-                >
-                  {RECHNER_ICON[obj.tab] || "🏠"}
-                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
@@ -891,72 +937,21 @@ export function Merkliste() {
                     {scoreBadgeText(obj.scoreLabel)}
                   </span>
                 )}
-                <span
-                  style={{
-                    background: tabColor[obj.tab] || "#888",
-                    color: "#fff",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: "3px 9px",
-                    borderRadius: 20,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {tabLabel[obj.tab] || obj.tab}
-                </span>
+                <VollstaendigkeitsRing prozent={vollstaendigkeit} />
               </div>
             </div>
-            {kennzahlen ? (
-              <div
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  marginBottom: 12,
-                  fontSize: 13,
-                }}
-              >
-                {kennzahlen.map((k, ki) => (
-                  <span key={ki}>
-                    <span style={{ color: "var(--ch)" }}>{k.label} </span>
-                    <span style={{ fontWeight: 600, color: k.color || "var(--ct)" }}>
-                      {k.value}
-                    </span>
-                  </span>
-                ))}
-              </div>
-            ) : (
-              (kp || miete || ek) && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    flexWrap: "wrap",
-                    marginBottom: 12,
-                    fontSize: 13,
-                  }}
-                >
-                  {kp && (
-                    <span>
-                      <span style={{ color: "var(--ch)" }}>{t.kaufpreis || "Kaufpreis"} </span>
-                      <span style={{ fontWeight: 600, color: "var(--ct)" }}>{kp} €</span>
-                    </span>
-                  )}
-                  {miete && (
-                    <span>
-                      <span style={{ color: "var(--ch)" }}>{t.kaltmiete || "Miete"} </span>
-                      <span style={{ fontWeight: 600, color: "var(--ct)" }}>{miete} €/Mo.</span>
-                    </span>
-                  )}
-                  {ek && (
-                    <span>
-                      <span style={{ color: "var(--ch)" }}>{t.eigenkapital || "EK"} </span>
-                      <span style={{ fontWeight: 600, color: "var(--ct)" }}>{ek} €</span>
-                    </span>
-                  )}
+            <div style={{ marginBottom: 12 }}>
+              {kennzahlen?.verfuegbar ? (
+                <ObjektKPIs kennzahlen={kennzahlen} t={t} locale={locale} />
+              ) : (
+                // Lehrender Empty-State statt leerer Flaeche (Konzept 3.6):
+                // sagen, was fehlt, statt nur zu melden dass nichts da ist.
+                <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5 }}>
+                  {t.objektOhneKennzahlen ||
+                    "Trage einen Kaufpreis ein, damit Rendite und Cashflow berechnet werden können."}
                 </div>
-              )
-            )}
+              )}
+            </div>
             <div style={{ display: "flex", gap: 8 }}>
               {loadable && (
                 <button
@@ -1123,8 +1118,10 @@ export function Merkliste() {
           <button
             className="no-print"
             onClick={() => {
+              // Phase E: erst der Zeilen-Diff mit den Zahlen, die Einordnung
+              // durch Finn auf Wunsch aus dem Vergleich heraus.
               dismissCompareBubble();
-              openCompare();
+              setVergleichOffen(true);
             }}
             style={{
               height: 38,
@@ -1143,10 +1140,29 @@ export function Merkliste() {
               gap: 8,
             }}
           >
-            {at.compareButton} ({compareIds.length})
+            Vergleichen ({compareIds.length})
           </button>
         </div>
       )}
+      {anlegenSheet}
+      <Sheet
+        open={vergleichOffen}
+        onClose={() => setVergleichOffen(false)}
+        label="Objekte vergleichen"
+      >
+        <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 14 }}>
+          Objekte vergleichen
+        </div>
+        <ObjektVergleich
+          objekte={compareObjs}
+          t={t}
+          locale={locale}
+          onFinnFrage={() => {
+            setVergleichOffen(false);
+            openCompare();
+          }}
+        />
+      </Sheet>
       <AssistantSheet
         open={compareSheetOpen}
         onClose={() => setCompareSheetOpen(false)}

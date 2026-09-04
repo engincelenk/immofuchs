@@ -90,6 +90,12 @@ export function computeRendite(d, t) {
   //    Ergebnis-Pane sichtbar bleibt) ──
   const preisProQm = flaeche > 0 ? kaufpreis / flaeche : 0;
   const jahresMiete = kaltmiete * 12;
+  // Kaufpreisfaktor (Gesamtkaufpreis ÷ Jahresmiete). Lag bis 2026-09 an vier
+  // Stellen dupliziert in den Komponenten (Renditerechner 2x, Ergebnistext 1x,
+  // InvestmentCheckRadar 1x). Der Nenner-Schutz repliziert die dortige Formel
+  // exakt - kaltmiete 0 wird zu 1 EUR/Monat, damit der Faktor endlich bleibt
+  // und die Bewertung ueber rate("kpFaktor", ...) unveraendert ausfaellt.
+  const kaufpreisFaktor = gesamtKaufpreis / Math.max((kaltmiete || 1) * 12, 1);
   const nebenkosten = (gesamtKaufpreis * (grEstProz + notarProz + maklerProz)) / 100;
   // nkFinanzieren AN: Nebenkosten fliessen mit ins Darlehen (Bank-Modell, z.B.
   // "Finanzierungsbedarf = Kaufpreis + Nebenkosten - Eigenkapital" in einem
@@ -372,6 +378,11 @@ export function computeRendite(d, t) {
   // Schluesselnamen bewusst unveraendert (Renditerechner.jsx liest R.pQm, R.bR, …)
   return {
     pQm: preisProQm,
+    // Monat-zu-Jahr-Umrechnung gehoert ausschliesslich hierher: jMiete und kpF
+    // ersetzen die frueher in den Komponenten verstreuten "kaltmiete * 12".
+    jMiete: jahresMiete,
+    kpF: kaufpreisFaktor,
+    nuJ: nichtUmlagbarJahr,
     bR: bruttoRendite,
     nR: nettoRendite,
     ann: annuitaetMon,

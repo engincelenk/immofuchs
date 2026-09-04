@@ -52,8 +52,11 @@ export async function autoSaveExposeObject(ergebnis) {
         wohnflaeche: Number.isFinite(wohnflaeche) ? wohnflaeche : null,
         score,
         scoreLabel,
-        inputData: { tab: "haupt", quelle: "expose-scan" },
-        resultData: ergebnis,
+        // A1: inputData ist reiner Formular-State - der Exposé-Scan liefert
+        // (noch) keinen, deshalb nur die Herkunft. Die Ansicht wandert wie bei
+        // manuell gespeicherten Objekten nach resultData.
+        inputData: { quelle: "expose-scan" },
+        resultData: { ...ergebnis, letzteAnsicht: "haupt" },
         source: "expose-scan",
       }),
     });

@@ -927,7 +927,7 @@ export default function Haupt() {
                         <Ins emoji="📊" text={t.adv1} type="warn" />
                       </div>
                     )}
-                    {R.bR > 0 && +d.kaltmiete > 0 && R.gKP / (+d.kaltmiete * 12) > 30 && (
+                    {R.bR > 0 && +d.kaltmiete > 0 && R.kpF > 30 && (
                       <div style={{ marginTop: 4 }}>
                         <Ins emoji="🏷️" text={t.adv2} type="warn" />
                       </div>
@@ -943,10 +943,10 @@ export default function Haupt() {
                         bullets={(() => {
                           const brRat = rate("bruttoR", R.bR);
                           const nrRat = rate("nettoR", R.nR);
-                          const kpF = R.gKP / Math.max((+d.kaltmiete || 1) * 12, 1);
+                          const kpF = R.kpF;
                           const kpRat = rate("kpFaktor", kpF);
                           return [
-                            `${brRat.symbol} Bruttorendite ${fmtP(R.bR)} — ${R.bR >= 5 ? "solide ab 5 %" : R.bR >= 4 ? "4–5 % akzeptabel" : "unter 4 %"} → ${vrd(brRat)} (Jahresmiete ${fmtE((+d.kaltmiete || 0) * 12)} ÷ ${fmtE(R.gKP)})`,
+                            `${brRat.symbol} Bruttorendite ${fmtP(R.bR)} — ${R.bR >= 5 ? "solide ab 5 %" : R.bR >= 4 ? "4–5 % akzeptabel" : "unter 4 %"} → ${vrd(brRat)} (Jahresmiete ${fmtE(R.jMiete)} ÷ ${fmtE(R.gKP)})`,
                             `${nrRat.symbol} Nettorendite ${fmtP(R.nR)} — ${R.nR >= 3.5 ? "solide ab 3,5 %" : R.nR >= 2.5 ? "2,5–3,5 % akzeptabel" : "unter 2,5 %"} → ${vrd(nrRat)}${+d.leerstand > 0 ? " (inkl. Leerstandsverluste)" : ""}`,
                             `${kpRat.symbol} Kaufpreisfaktor ${fmt(kpF, 1)}x — ${kpF <= 25 ? "≤ 25x solide" : kpF <= 30 ? "25–30x teuer" : ">30x sehr teuer"} → ${vrd(kpRat)}`,
                             `Benchmark-Vergleich: Tagesgeld 3 % ${R.nR >= 3 ? "✓" : "⚠"} · Staatsanleihe 3,5 % ${R.nR >= 3.5 ? "✓" : "⚠"} · ETF ~7 % ${R.nR >= 7 ? "✓" : "⚠"} — Nettorendite ${fmtP(R.nR)}`,
@@ -962,7 +962,7 @@ export default function Haupt() {
                               : []),
                           ];
                         })()}
-                        text={`Die Bruttorendite ist der erste Schnell-Check für jedes Immobilien-Investment: du nimmst die Jahresmiete und teilst sie durch den Gesamtkaufpreis. Bei dir sind das ${fmtE((+d.kaltmiete || 0) * 12)} Jahresmiete auf ${fmtE(R.gKP)} Kaufpreis — macht ${fmtP(R.bR)} brutto. Diese Zahl klingt erstmal klar, ist aber noch geschönt: Sie ignoriert die Kosten, die du nicht auf den Mieter weitergeben kannst.\n\nDie Nettorendite ist die ehrlichere Zahl. Sie zieht alle nicht-umlegbaren Kosten ab — also Hausverwaltung, Instandhaltungsrücklage, Leerstand, eigene Reparaturkosten — und zeigt dir, was wirklich bei dir ankommt. ${R.nR >= 3.5 ? "Bei " + fmtP(R.nR) + " liegst du solide über dem, was ein Tagesgeldkonto oder eine sichere Staatsanleihe bringt." : R.nR >= 2.5 ? "Bei " + fmtP(R.nR) + " ist die Rendite noch akzeptabel — schau aber, ob die laufenden Kosten noch steigen können (Stichwort: Instandhaltung und Rücklagen)." : "Bei " + fmtP(R.nR) + " ist die Rendite schwach — das schlägt kaum mehr als ein gutes Tagesgeldkonto, und das ohne das Risiko und die Arbeit einer Immobilie."}\n\nStellschrauben — was kannst du drehen? Erstens der Kaufpreis: 10.000 € weniger bedeuten direkt eine höhere Rendite, ohne dass sich sonst etwas ändern muss. Zweitens die Kaltmiete: Ist sie marktgerecht oder liegt sie noch unter dem Ortsüblichen? Drittens die nicht-umlegbaren Kosten: Weniger Leerstand, günstigerer Verwalter, günstigeres Hausgeld verbessern die Nettorendite direkt. Und wer einen Stellplatz oder eine Garage separat vermietet, verbessert die Einnahmen ohne großen Mehraufwand.`}
+                        text={`Die Bruttorendite ist der erste Schnell-Check für jedes Immobilien-Investment: du nimmst die Jahresmiete und teilst sie durch den Gesamtkaufpreis. Bei dir sind das ${fmtE(R.jMiete)} Jahresmiete auf ${fmtE(R.gKP)} Kaufpreis — macht ${fmtP(R.bR)} brutto. Diese Zahl klingt erstmal klar, ist aber noch geschönt: Sie ignoriert die Kosten, die du nicht auf den Mieter weitergeben kannst.\n\nDie Nettorendite ist die ehrlichere Zahl. Sie zieht alle nicht-umlegbaren Kosten ab — also Hausverwaltung, Instandhaltungsrücklage, Leerstand, eigene Reparaturkosten — und zeigt dir, was wirklich bei dir ankommt. ${R.nR >= 3.5 ? "Bei " + fmtP(R.nR) + " liegst du solide über dem, was ein Tagesgeldkonto oder eine sichere Staatsanleihe bringt." : R.nR >= 2.5 ? "Bei " + fmtP(R.nR) + " ist die Rendite noch akzeptabel — schau aber, ob die laufenden Kosten noch steigen können (Stichwort: Instandhaltung und Rücklagen)." : "Bei " + fmtP(R.nR) + " ist die Rendite schwach — das schlägt kaum mehr als ein gutes Tagesgeldkonto, und das ohne das Risiko und die Arbeit einer Immobilie."}\n\nStellschrauben — was kannst du drehen? Erstens der Kaufpreis: 10.000 € weniger bedeuten direkt eine höhere Rendite, ohne dass sich sonst etwas ändern muss. Zweitens die Kaltmiete: Ist sie marktgerecht oder liegt sie noch unter dem Ortsüblichen? Drittens die nicht-umlegbaren Kosten: Weniger Leerstand, günstigerer Verwalter, günstigeres Hausgeld verbessern die Nettorendite direkt. Und wer einen Stellplatz oder eine Garage separat vermietet, verbessert die Einnahmen ohne großen Mehraufwand.`}
                       />
                     )}
                     {lang !== "de" && t.s1b1 && (
@@ -970,13 +970,13 @@ export default function Haupt() {
                         intro={intro}
                         bullets={[
                           tpl(t.s1b1, {
-                            a: fmtE((+d.kaltmiete || 0) * 12),
+                            a: fmtE(R.jMiete),
                             b: fmtE(R.gKP),
                             c: fmtP(R.bR),
                           }),
                           t.s1b2 + (+d.leerstand > 0 ? t.s1b2v || "" : ""),
                           t.s1b3,
-                          tpl(t.s1b4, { x: fmt(R.gKP / Math.max((+d.kaltmiete || 1) * 12, 1), 1) }),
+                          tpl(t.s1b4, { x: fmt(R.kpF, 1) }),
                           ...(R.bR > 0 && R.nR > 0 && R.bR - R.nR > 2
                             ? [tpl(t.s1b5, { x: fmtP(R.bR - R.nR) })]
                             : []),
@@ -990,7 +990,7 @@ export default function Haupt() {
                           }) +
                           "\n\n" +
                           tpl(t.s1t1, {
-                            rent: fmtE((+d.kaltmiete || 0) * 12),
+                            rent: fmtE(R.jMiete),
                             price: fmtE(R.gKP),
                             bR: fmtP(R.bR),
                           }) +
@@ -1639,7 +1639,7 @@ export default function Haupt() {
                 hint={t.radarSub}
                 sync={{ key: secAllKey, open: secAllOpen }}
               >
-                <InvestmentCheckRadar R={R} d={d} />
+                <InvestmentCheckRadar R={R} />
               </AccordionSection>
 
               {/* ═══ SECTION 7: Verkaufsszenario & Ergebnis ═══ */}
@@ -1842,7 +1842,7 @@ export default function Haupt() {
             active={!!R}
             rechner="renditerechner"
             buildKontext={() => {
-              const kpF = R.gKP / Math.max((+d.kaltmiete || 1) * 12, 1);
+              const kpF = R.kpF;
               return buildAssistantContext("renditerechner", d, {
                 nettoRendite: R.nR,
                 bruttoRendite: R.bR,

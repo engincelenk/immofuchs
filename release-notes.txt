@@ -1,3 +1,150 @@
+## 2026-09-04 (1.53.0)
+
+### Objekt statt Rechner: Ueberblick, Stellschrauben und Chip-Navigation
+
+Setzt die Phasen A bis E des Konzepts um (docs/plans/neue-phase2/).
+Die App hat jetzt ein Zuhause: das Objekt. Die sechs Rechner bleiben
+vollstaendig erhalten und sind als Schnellrechnen weiter direkt erreichbar.
+
+**A2 - Jedes Objekt bekommt eine Ampel**
+- Neu `src/utils/objektKennzahlen.js`: leitet Score, Cashflow, Faktor,
+  Rate und Kosten aus dem Formular-State ab - eine Stelle fuer Objektkarte,
+  Ueberblick und das gespeicherte `resultData`.
+- `toServerPayload` setzt score/scoreLabel nicht mehr hart auf null; auch der
+  Free-Pfad (localStorage) fuehrt die Kennzahlen mit.
+- Ebenfalls dort: Vollstaendigkeit (gewichtet nach Ergebnisrelevanz, nicht
+  nach Feldanzahl) und `fehlendeFelder()` fuer die lehrenden Empty-States.
+
+**A3 - Objektkarte mit sechs Kennzahlen**
+- Neu `ObjektKPIs.jsx` mit Kennzahlen-Raster und Vollstaendigkeitsring.
+- Das Raster nutzt `auto-fit`, faellt also unter rund 360 px selbst auf zwei
+  Spalten - bei siebenstelligen Betraegen bricht sonst die Zeile.
+- Die rechnerspezifische Kartenvorschau entfaellt: seit A1 ist ein Objekt
+  nicht mehr an einen Rechner gebunden. `rechnerKennzahlen()` samt
+  Rechner-Icons und -Farben ist damit entfallen.
+
+**A4 + C - Objektdetail mit Chip-Navigation**
+- `ObjektDetail.jsx` ist vom Kartenfragment zum Objekt-Container geworden:
+  Ueberblick, Stellschrauben, Finanzierung, Miete & Recht, Sanierung, Steuer,
+  Alle Daten. Das Scrollverhalten uebernimmt die bestehende `.tbar`-Logik.
+- Reiter erscheinen kontextabhaengig - Sanierung nur mit Baujahr,
+  Finanzierung nur bei vorhandenem Kredit.
+- Die Rechner-Reiter fuehren in den jeweiligen Rechner und nehmen die
+  Objektdaten mit, statt Rechnerlogik zu duplizieren.
+
+**A5 - Meine Objekte ist der Einstieg**
+- Der Tab steht vorn und ist der Standard nach der Landing; `startApp()` ohne
+  Rechner landet dort. Die Rechner-Kacheln der Landing fuehren unveraendert
+  direkt in den jeweiligen Rechner.
+- Neues Label `meineObjekte` in allen fuenf Sprachen.
+
+**B1 - Ueberblick (Tiefenstufe 1)**
+- Neu `Ueberblick.jsx`: Ampel mit Klartext-Urteil, drei Kennzahlen mit
+  Ein-Satz-Erklaerung hinter einem Fragezeichen, Einnahmen/Ausgaben als
+  proportionale Balken, offengelegte Annahmen.
+- Das Urteil kommt aus dem Regelwerk, nicht aus der KI - kostenlos, sofort,
+  deterministisch. Nur der Finn-Einstieg darunter ist KI und traegt
+  entsprechend Marineblau.
+
+**B2 - Stellschrauben (Tiefenstufe 2)**
+- Neu `Stellschrauben.jsx`: vier Reglerkarten mit Schrittknoepfen fuer Touch,
+  Presets fuer den Beleihungsauslauf und mitlaufendem Ergebnis.
+- Die Regler arbeiten auf einer lokalen Kopie der Objektdaten. Uebernommen
+  wird erst auf Knopfdruck - so zeigt ein Objekt nie die Zahlen eines fremden
+  Rechnerstands, und ein Reiterwechsel ueberschreibt keine Rechnereingaben.
+- Die Rueckwaertsrechnung ("Welcher Kaufpreis bringt mir X %?") sitzt jetzt
+  neben dem Kaufpreis-Regler statt in einer KI-Sektion. Sie ist reine
+  Mathematik und heisst nicht mehr KI.
+
+**B3 - Objekt anlegen mit fuenf Feldern**
+- Neu `ObjektAnlegen.jsx` mit Live-Vorschau des Cashflows und genannten
+  Annahmen, plus Exposé-Weg an Position 1.
+- Neu `src/utils/annahmen.js`: Defaults an einer Stelle, damit Vorbelegung
+  und Annahmen-Zeile nie auseinanderlaufen. Leitet auch die nicht
+  umlagefaehigen Kosten aus der Wohnflaeche ab.
+
+**D - Die App erklaert sich selbst**
+- Lehrende Empty-States: nennen die fehlenden Felder, statt nur zu melden,
+  dass nichts da ist.
+- Erklaerungen an Cashflow, Nettorendite und Faktor ueber das vorhandene
+  `Tip.jsx`.
+- Einmaliger, schliessbarer Willkommenshinweis ueber der Objektliste.
+
+**E - Objektvergleich als Zeilen-Diff**
+- Neu `ObjektVergleich.jsx`: pro Kennzahl eine Zeile mit allen Werten und
+  hervorgehobenem besseren. Zwei Spalten nebeneinander sind auf 375 px
+  unlesbar, deshalb bewusst kein Spaltenlayout.
+- Der Vergleichs-Knopf zeigt jetzt zuerst die Zahlen; die Einordnung durch
+  Finn ist von dort aus einen Klick entfernt.
+
+**Tests:** neu `objektKennzahlen.test.js` (13 Faelle). Gesamt 437 gruen.
+
+**Betroffene Dateien:** src/App.jsx, src/i18n/translations.js, src/components/shell/Merkliste.jsx, src/components/dashboard/ObjektDetail.jsx, src/components/dashboard/ObjektKPIs.jsx, src/components/dashboard/Ueberblick.jsx, src/components/dashboard/Stellschrauben.jsx, src/components/dashboard/ObjektAnlegen.jsx, src/components/dashboard/ObjektVergleich.jsx, src/utils/objektKennzahlen.js, src/utils/objektKennzahlen.test.js, src/utils/annahmen.js
+
+## 2026-09-04 (1.52.6)
+
+### Ein Objekt ist nicht mehr an genau einen Rechner gebunden
+
+Schritt A1 des Umbauplans (docs/plans/neue-phase2/01-umbauplan-phase-a-b.md).
+Bisher trug `inputData` ein Feld `tab` und band ein gespeichertes Objekt damit
+an genau einen Rechner: derselbe Kauf, einmal im Rendite- und einmal im
+Kreditrechner gespeichert, ergab zwei getrennte Objekte.
+
+- Da alle sechs Rechner ohnehin denselben `d`-State aus dem AppContext lesen,
+  existiert "ein Objekt, mehrere Blickwinkel" zur Laufzeit laengst - nur die
+  Persistenz hat es zerlegt. Die urspruenglich geplante Aufteilung in
+  Stamm- und Facettendaten war deshalb nicht noetig.
+- `inputData` ist jetzt der reine Formular-State ohne `tab`. Die Ansicht
+  wandert als `letzteAnsicht` nach `resultData` (dort war bislang `{}`), das
+  D1-Schema bleibt unveraendert - der Worker nimmt beide Felder ohne
+  Schema-Validierung entgegen (`objects.ts`: `inputData: b.inputData ?? {}`).
+- Intern heisst das Feld nicht mehr `tab`, sondern `letzteAnsicht` - der
+  Bedeutungswechsel von "was ist dieses Objekt" zu "wo war der Nutzer zuletzt"
+  ist damit im Code sichtbar. Betroffen sind Filter, Vergleich, Kartenanzeige
+  und die Detailansicht.
+- `fromServerObject()` zieht ein eventuell vorhandenes altes `tab` aus
+  `inputData` heraus, damit es nicht als Formularfeld landet, und nutzt es als
+  Rueckfallwert fuer die Ansicht.
+- Sichtbare Folge: Ein Objekt hat jetzt EINEN Satz Annahmen ueber alle Rechner.
+  Wer den Zinssatz im Kreditrechner aendert, aendert damit auch die Rendite im
+  Renditerechner - genau der Sinn von "ein Objekt".
+- Neu: `src/components/shell/objektMapping.test.js` deckt den Round-Trip ab,
+  inklusive Altdatensatz mit `tab` und Exposé-Objekt mit belegtem `resultData`.
+  `toServerPayload`/`fromServerObject` sind dafuer exportiert.
+
+**Betroffene Dateien:** src/components/shell/Merkliste.jsx, src/components/shell/objektMapping.test.js, src/components/dashboard/ObjektDetail.jsx, src/utils/autoSaveExposeObject.js
+
+## 2026-09-04 (1.52.5)
+
+### Monat-zu-Jahr-Umrechnung liegt jetzt an genau einer Stelle
+
+Schritt B4 des Umbauplans (docs/plans/neue-phase2/01-umbauplan-phase-a-b.md).
+Anlass ist der Einheiten-Befund aus der ImmoRechner-Analyse: dort steht der
+Jahreswert unter der Ueberschrift "Monatliche Kaltmiete", wodurch der
+ausgewiesene Cashflow um den Faktor zwoelf danebenliegt.
+
+- `computeRendite()` gibt drei bereits intern berechnete Groessen jetzt auch
+  zurueck: `jMiete` (Jahresmiete), `kpF` (Kaufpreisfaktor) und `nuJ` (nicht
+  umlagefaehige Kosten pro Jahr).
+- Damit entfallen neun in Komponenten verstreute Umrechnungen
+  (`kaltmiete * 12`, `nichtUml * 12`) in `Renditerechner.jsx`,
+  `InvestmentCheckRadar.jsx` und `VermoegensQuelleChart.jsx`.
+- Der Kaufpreisfaktor war zuvor an vier Stellen einzeln berechnet - inklusive
+  des Nenner-Schutzes `Math.max((kaltmiete || 1) * 12, 1)`, der in `rendite.js`
+  bewusst identisch uebernommen wurde. Reines Refactoring, keine geaenderten
+  Zahlen.
+- `InvestmentCheckRadar` braucht die Prop `d` nicht mehr und bekommt sie nicht
+  mehr uebergeben.
+- Neu: `src/utils/rendite.test.js` haelt die Invariante fest, damit die
+  Duplikate nicht zurueckkehren.
+
+Der Label-Teil von B4 entfaellt: Der Audit hat gezeigt, dass die Geldfelder
+ihre Einheit bereits ueber die `unit`-Prop tragen (`nichtUml` als "EUR/Mon.",
+`leerstand` als "Mon.", `kaltmiete` als "Kaltmiete (mtl.)"). Dort war nichts zu
+korrigieren.
+
+**Betroffene Dateien:** src/utils/rendite.js, src/utils/rendite.test.js, src/components/calculators/Renditerechner.jsx, src/components/charts/InvestmentCheckRadar.jsx, src/components/charts/VermoegensQuelleChart.jsx
+
 ## 2026-09-04 (1.52.7) [FRONTEND+BACKEND]
 
 ### Rückbau: RevenueCat/native In-App-Käufe wieder entfernt - kein Kauf in der App
