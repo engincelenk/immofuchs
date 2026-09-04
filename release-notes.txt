@@ -1,3 +1,43 @@
+## 2026-09-04 (1.54.0)
+
+### Objektkarte mit echten Koordinaten - ohne Kartendienst
+
+Letzter offener Punkt aus Phase E des Konzepts.
+
+**Koordinaten**
+- Neu `public/plz-geo.txt`: Koordinaten zu 10.813 Postleitzahlen aus dem
+  GeoNames-Datensatz (CC BY 3.0, Namensnennung samt Link steht unter der
+  Karte).
+- Bewusst statische Datei statt Geocoding-Dienst: kein Laufzeit-Request je
+  Objekt, kein API-Schluessel, keine Rate-Limits - und offline nutzbar, was
+  fuer eine PWA zaehlt.
+- Kodierung als Base36-Differenzen zum Vorgaenger (die Liste ist nach PLZ
+  sortiert, benachbarte PLZ liegen geografisch nah beieinander): 85 KB statt
+  184 KB roh. Lat/Lon in Tausendstel Grad, rund 110 m genau - fuer Punkte auf
+  einer Deutschlandkarte reichlich.
+- Neu `src/utils/plzGeo.js` mit Lazy-Load (die Datei belastet das Haupt-Bundle
+  nicht, sie wird erst beim ersten Oeffnen der Karte geholt), Dekoder,
+  Lookup und Projektion.
+
+**Karte**
+- Neu `ObjektKarte.jsx`, dritte Ansicht neben Liste und Orten.
+- Der Umriss kommt ohne Kartenkacheln aus: die 10.813 PLZ-Punkte decken
+  Deutschland flaechendeckend ab und ergeben als schwache Punkte eine
+  erkennbare Silhouette, in der die Ballungsraeume sichtbar dichter sind.
+  Damit entfaellt der Tile-Server samt Requests und Nutzungsbedingungen.
+- Gezeichnet auf Canvas statt SVG - 10.800 DOM-Knoten waeren spuerbar langsam.
+- Objekte als Punkte in der Ampelfarbe ihres Scores, Tippen waehlt das
+  naechstliegende (Trefferradius 18 px, fuer Fingerkuppen), ein Klick auf die
+  Karte darunter oeffnet es.
+- Objekte ohne bekannte Postleitzahl werden unter der Karte gezaehlt statt
+  still verschwiegen.
+
+**Tests:** neu `plzGeo.test.js` (9 Faelle) - prueft den Dekoder gegen den
+echten Datensatz, inklusive Stichproben gegen Berlin, Muenchen, Hamburg und
+Ingersheim sowie die Projektionsrichtungen. Gesamt 455 gruen.
+
+**Betroffene Dateien:** public/plz-geo.txt, src/utils/plzGeo.js, src/utils/plzGeo.test.js, src/components/dashboard/ObjektKarte.jsx, src/components/shell/Merkliste.jsx
+
 ## 2026-09-04 (1.53.2)
 
 ### Objekte bearbeiten, PLZ und Ort als Pflichtfeld
