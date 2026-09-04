@@ -20,9 +20,16 @@ platform :ios do
     # match liest/schreibt Zertifikate+Profile aus einem separaten privaten
     # Git-Repo (siehe docs/app-store-google-play-setup.md A10.5) - readonly
     # in CI, damit ein versehentlicher Lauf nie neue Zertifikate erzeugt.
+    #
+    # TEMPORAER readonly:false (2026-09-04): das Zertifikats-Repo ist neu und
+    # leer, kein Mac vorhanden fuer den sonst ueblichen einmaligen lokalen
+    # `fastlane match appstore`-Lauf - der CI-Runner erzeugt die Zertifikate
+    # stattdessen genau einmal selbst. NACH dem ersten erfolgreichen Lauf
+    # zwingend wieder auf `readonly: true` zurückstellen (siehe
+    # docs/app-store-google-play-setup.md A9).
     match(
       type: "appstore",
-      readonly: true,
+      readonly: false,
       api_key: api_key,
     )
 
