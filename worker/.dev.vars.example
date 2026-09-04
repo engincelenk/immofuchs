@@ -35,12 +35,6 @@ STRIPE_WEBHOOK_SECRET=
 STRIPE_PRICE_ID_MONTHLY=
 STRIPE_PRICE_ID_YEARLY=
 
-# ═══ RevenueCat (native In-App-Kaeufe, siehe docs/app-store-google-play-setup.md
-# Teil C) ═══ Statisches Authorization-Secret, im RevenueCat-Dashboard unter
-# Project Settings > Webhooks als "Authorization header value" eintragen -
-# muss exakt hier uebereinstimmen, sonst 401.
-REVENUECAT_WEBHOOK_AUTH=
-
 # ═══ Nativer Push (Phase D, S7-1) ═══
 # Ohne diese Werte bleibt Push ein stilles No-Op (worker/src/push.ts) - siehe
 # docs/kommerzialisierung-setup.md fuer die Einrichtung (Firebase-Projekt,

@@ -17,7 +17,7 @@ import { VerifyEmailStep } from "./VerifyEmailStep.jsx";
 import { PasswordResetFlow } from "./PasswordResetFlow.jsx";
 import { AddressStep } from "./AddressStep.jsx";
 import { PaymentStep } from "./PaymentStep.jsx";
-import { NativePurchaseStep } from "./NativePurchaseStep.jsx";
+import { NativeWebRedirectStep } from "./NativeWebRedirectStep.jsx";
 import { PurchaseConfirmation } from "./PurchaseConfirmation.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
 import { RedirectOverlay } from "./CheckoutShared.jsx";
@@ -426,9 +426,7 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
       />
     );
   } else if (currentKey === "payment" && isNative) {
-    content = (
-      <NativePurchaseStep t={t} account={account} plan={plan} onCompleted={handlePaymentCompleted} />
-    );
+    content = <NativeWebRedirectStep t={t} />;
   } else if (currentKey === "payment") {
     content = (
       <PaymentStep

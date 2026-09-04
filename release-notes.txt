@@ -1,3 +1,64 @@
+## 2026-09-04 (1.52.7) [FRONTEND+BACKEND]
+
+### Rückbau: RevenueCat/native In-App-Käufe wieder entfernt - kein Kauf in der App
+
+**Kontext**
+- Direkte Fortsetzung von 1.51.0/1.51.1 (RevenueCat-Einführung). Nutzer-
+  Entscheidung nach genauerer Abwägung: kein natives In-App-Kauf-Modell,
+  weder RevenueCat noch StoreKit/Play Billing direkt. Gründe: laufende
+  Zusatzkosten/-komplexität einer zweiten Zahlungsinfrastruktur neben
+  Stripe, und vor allem - Apple/Google-In-App-Käufe liefern keine
+  anpassbare Rechnung mit USt-IdNr., was für den B2B-lastigen Kundenkreis
+  (Immobilieninvestoren) ein echtes Problem waere. Stripe bleibt die
+  einzige Zahlungsquelle, fuer Web UND App.
+- Bewusst akzeptiertes Restrisiko (Nutzer-Entscheidung): die App zeigt
+  einen neutralen, preisfreien Link zur Website statt komplett auf jede
+  Erwaehnung von Pro/Abo zu verzichten (Praezedenzfall Basecamp "HEY",
+  2020 zunaechst von Apple abgelehnt fuer eine aehnliche Konstellation,
+  siehe Kommentar in NativeWebRedirectStep.jsx). Sollte Apple das in der
+  Review bemaengeln, ist der schnellste Fix: die Datei ersatzlos entfernen.
+
+**Entfernt**
+- `src/utils/nativePurchases.js`, `src/components/checkout/NativePurchaseStep.jsx`
+- `@revenuecat/purchases-capacitor` (npm-Abhaengigkeit + aus ios/android
+  per `npx cap sync` synchronisiert - nur noch 4 statt 5 Capacitor-Plugins)
+- `worker/src/revenuecat/` (kompletter Webhook), Route
+  `POST /api/v1/billing/webhook/revenuecat`, `REVENUECAT_WEBHOOK_AUTH` aus
+  `worker/src/types.ts`
+- `VITE_REVENUECAT_API_KEY_IOS`/`_ANDROID` aus `.env.example`,
+  `worker/.dev.vars.example`, `.github/workflows/mobile-ios.yml`
+- 7 `nativePurchase*`-i18n-Keys (alle 5 Sprachen)
+
+**Neu**
+- `src/components/checkout/NativeWebRedirectStep.jsx` ersetzt den nativen
+  Zahlungsschritt in `CheckoutWizard.jsx`: kein Preis, kein Kaufbutton, nur
+  ein neutraler Link, der den System-Browser mit immofuchs.info oeffnet
+  (`window.open(url, "_blank")` - Capacitor leitet das automatisch an
+  Safari/Chrome weiter statt an ein eingebettetes Fenster).
+- 3 neue `nativeWebRedirect*`-i18n-Keys (alle 5 Sprachen).
+- Migration `worker/migrations/0032_drop_revenuecat_columns.sql` - entfernt
+  die drei in 0031 hinzugefuegten Spalten wieder (harter Schnitt, keine
+  echten RevenueCat-Zeilen vorhanden, gleiches Vorgehen wie beim
+  Paddle-Rueckbau in Migration 0028).
+- `docs/app-store-google-play-setup.md` komplett ueberarbeitet: Abschnitt 0
+  dokumentiert die finale Zahlungsmodell-Entscheidung, alle RevenueCat-/
+  In-App-Purchase-Abschnitte (A3/A6, B4/B6, Teil C) als "ENTFAELLT" markiert
+  statt geloescht (Nachvollziehbarkeit, warum die Doku so aussieht).
+
+**Verifiziert:** `npm run build`, `npx tsc --noEmit` (Worker), Frontend-
+Vitest (424/424), Worker-Vitest (117/117), Migration 0032 lokal gegen D1
+angewendet. Noch NICHT deployed (dev/qa/main) - naechster Schritt nach
+Nutzer-Bestaetigung.
+
+**Betroffene Dateien:** `package.json`, `package-lock.json`, `ios/`,
+`android/`, `src/components/checkout/{CheckoutWizard,NativeWebRedirectStep}.jsx`,
+`src/i18n/account.js`, `.env.example`, `worker/.dev.vars.example`,
+`worker/src/types.ts`, `worker/src/routes/billing.ts`,
+`worker/migrations/0032_drop_revenuecat_columns.sql`,
+`.github/workflows/mobile-ios.yml`, `docs/app-store-google-play-setup.md`.
+Entfernt: `src/utils/nativePurchases.js`,
+`src/components/checkout/NativePurchaseStep.jsx`, `worker/src/revenuecat/`.
+
 ## 2026-09-03 (1.52.4)
 
 ### Doku: concurrency-Kommentare in den Deploy-Workflows nachgezogen

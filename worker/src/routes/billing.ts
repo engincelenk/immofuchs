@@ -16,7 +16,6 @@ import {
 } from "../stripe/checkout";
 import { findUsableDiscountByCode } from "../stripe/discounts";
 import { handleStripeWebhook, verifyStripeSignature } from "../stripe/webhook";
-import { handleRevenueCatWebhook, verifyRevenueCatAuth } from "../revenuecat/webhook";
 import { getInvoiceSummary } from "../stripe/transactions";
 import { getStripeClient } from "../stripe/client";
 import { getActiveSubscription, getLatestSubscriptionForUser, resetTestUserSubscription, ADMIN_TEST_SUBSCRIPTION_PREFIX } from "../db";
@@ -109,25 +108,6 @@ billingRoutes.post("/webhook", async (c) => {
     return c.json({ ok: true });
   } catch (err) {
     console.error("billing_webhook_failed", err instanceof Error ? err.message : "unknown");
-    return c.json({ error: "webhook_processing_failed" }, 500);
-  }
-});
-
-// Native In-App-Kaeufe (RevenueCat), siehe docs/app-store-google-play-setup.md
-// Teil C. Kein requireAuth/CSRF - RevenueCat authentifiziert sich ueber das
-// statische Authorization-Secret, nicht ueber Session/Origin (analog zum
-// Stripe-Webhook oben, nur mit anderem Auth-Mechanismus).
-billingRoutes.post("/webhook/revenuecat", async (c) => {
-  const authHeader = c.req.header("Authorization");
-  if (!verifyRevenueCatAuth(c.env, authHeader ?? null)) {
-    return c.json({ error: "invalid_auth" }, 401);
-  }
-  try {
-    const payload = await c.req.json();
-    await handleRevenueCatWebhook(c.env, payload);
-    return c.json({ ok: true });
-  } catch (err) {
-    console.error("revenuecat_webhook_failed", err instanceof Error ? err.message : "unknown");
     return c.json({ error: "webhook_processing_failed" }, 500);
   }
 });

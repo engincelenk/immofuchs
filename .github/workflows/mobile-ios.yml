@@ -41,11 +41,6 @@ jobs:
           VITE_ASSISTANT_URL: ${{ github.event.inputs.backend == 'prod' && 'https://immofuchs-assistant.engincelenk.workers.dev/api/assistant' || github.event.inputs.backend == 'qa' && 'https://immofuchs-assistant-qa.engincelenk.workers.dev/api/assistant' || 'https://api-dev.immofuchs.info/api/assistant' }}
           VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
           VITE_TURNSTILE_SITE_KEY: 0x4AAAAAAEW18bBEyl_o5nTS
-          # RevenueCat-Public-Key fuer native In-App-Kaeufe (siehe
-          # src/utils/nativePurchases.js, docs/app-store-google-play-setup.md
-          # Teil C) - oeffentlicher SDK-Key, aber trotzdem als Secret gepflegt,
-          # damit er sich ohne Code-Aenderung tauschen laesst.
-          VITE_REVENUECAT_API_KEY_IOS: ${{ secrets.VITE_REVENUECAT_API_KEY_IOS }}
         run: |
           npm ci
           npm run build
