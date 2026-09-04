@@ -518,6 +518,7 @@ export default function App() {
   const {
     savedList,
     saveObj,
+    updateObj,
     delObj,
     loadObj: loadObjRaw,
     isPro: isProSavedObjects,
@@ -590,6 +591,7 @@ export default function App() {
         tip: (k) => (TIPS[lang] || TIPS.de)[k],
         savedList,
         saveObj,
+        updateObj,
         delObj,
         loadObj,
         isProSavedObjects,

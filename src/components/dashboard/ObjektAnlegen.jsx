@@ -13,28 +13,69 @@ import { annahmenFuer, annahmenText } from "../../utils/annahmen.js";
 import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
 import { BL_O } from "../../data.js";
 
+// PLZ und Ort sind Pflicht: ohne sie laesst sich ein Objekt in der
+// Ortsansicht nicht einordnen, die Grunderwerbsteuer nicht aus dem Bundesland
+// ableiten und spaeter keine Lage anzeigen. Sie stehen deshalb gleich hinter
+// dem Namen, nicht als optionaler Nachtrag.
 const FELDER = [
-  { key: "name", label: "Name oder Adresse", typ: "text", platzhalter: "Murrstraße 2" },
-  { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", platzhalter: "199000" },
-  { key: "flaeche", label: "Wohnfläche", typ: "zahl", einheit: "m²", platzhalter: "47" },
-  { key: "kaltmiete", label: "Kaltmiete", typ: "zahl", einheit: "€/Monat", platzhalter: "750" },
+  { key: "name", label: "Name oder Adresse", typ: "text", platzhalter: "Murrstraße 2", pflicht: true },
+  { key: "plz", label: "PLZ", typ: "text", platzhalter: "74379", pflicht: true },
+  { key: "ort", label: "Ort", typ: "text", platzhalter: "Ingersheim", pflicht: true },
+  { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", platzhalter: "199000", pflicht: true },
+  { key: "flaeche", label: "Wohnfläche", typ: "zahl", einheit: "m²", platzhalter: "47", pflicht: true },
+  { key: "kaltmiete", label: "Kaltmiete", typ: "zahl", einheit: "€/Monat", platzhalter: "750", pflicht: true },
   { key: "eigenkapital", label: "Eigenkapital", typ: "zahl", einheit: "€", platzhalter: "60000" },
 ];
 
-export function ObjektAnlegen({ onAnlegen, onExpose, onAbbrechen, t }) {
-  const [werte, setWerte] = useState({});
-  const [bundesland, setBundesland] = useState("");
+// startwerte + bearbeiten: dieselbe Maske legt an und bearbeitet. Ein
+// getrenntes Bearbeiten-Formular waere eine zweite Stelle, an der die
+// Pflichtfelder und die Vorschau gepflegt werden muessten.
+export function ObjektAnlegen({
+  onAnlegen,
+  onExpose,
+  onAbbrechen,
+  t,
+  startwerte = null,
+  startName = "",
+  bearbeiten = false,
+}) {
+  const [werte, setWerte] = useState(() =>
+    startwerte
+      ? {
+          name: startName,
+          plz: startwerte.plz || "",
+          ort: startwerte.ort || "",
+          kaufpreis: startwerte.kaufpreis || "",
+          flaeche: startwerte.flaeche || "",
+          kaltmiete: startwerte.kaltmiete || "",
+          eigenkapital: startwerte.eigenkapital || "",
+        }
+      : {},
+  );
+  const [bundesland, setBundesland] = useState(startwerte?.bundesland || "");
 
   const setzen = (k, v) => setWerte((p) => ({ ...p, [k]: v }));
+  const fehlt = FELDER.filter(
+    (f) => f.pflicht && String(werte[f.key] ?? "").trim() === "",
+  ).map((f) => f.label);
   const vollstaendig =
-    (+werte.kaufpreis || 0) > 0 && (+werte.flaeche || 0) > 0 && (+werte.kaltmiete || 0) > 0;
+    fehlt.length === 0 &&
+    (+werte.kaufpreis || 0) > 0 &&
+    (+werte.flaeche || 0) > 0 &&
+    (+werte.kaltmiete || 0) > 0;
 
   // Live-Vorschau: das Ergebnis erscheint, sobald die drei tragenden Felder
   // stehen - nicht erst nach dem Absenden.
   const entwurf = vollstaendig
     ? {
+        // Beim Bearbeiten die uebrigen Felder des Objekts erhalten - sonst
+        // gingen Zinsbindung, AfA-Einstellungen und alles andere verloren,
+        // was nur im Rechner gesetzt wurde.
         ...annahmenFuer({ bundesland, flaeche: werte.flaeche }),
+        ...(startwerte || {}),
         bundesland,
+        plz: String(werte.plz || "").trim(),
+        ort: String(werte.ort || "").trim(),
         kaufpreis: String(werte.kaufpreis || ""),
         flaeche: String(werte.flaeche || ""),
         kaltmiete: String(werte.kaltmiete || ""),
@@ -99,6 +140,9 @@ export function ObjektAnlegen({ onAnlegen, onExpose, onAbbrechen, t }) {
             >
               {f.label}
               {f.einheit ? ` (${f.einheit})` : ""}
+              {!f.pflicht && (
+                <span style={{ color: "var(--ch)", fontWeight: 400 }}> · optional</span>
+              )}
             </span>
             <input
               type={f.typ === "zahl" ? "number" : "text"}
@@ -196,12 +240,14 @@ export function ObjektAnlegen({ onAnlegen, onExpose, onAbbrechen, t }) {
             cursor: vollstaendig ? "pointer" : "not-allowed",
           }}
         >
-          Objekt anlegen
+          {bearbeiten ? "Änderungen speichern" : "Objekt anlegen"}
         </button>
       </div>
       {!vollstaendig && (
         <div style={{ fontSize: 12, color: "var(--ch)", textAlign: "center", lineHeight: 1.5 }}>
-          Kaufpreis, Wohnfläche und Kaltmiete werden gebraucht — alles Weitere ist optional.
+          {fehlt.length > 0
+            ? `Es fehlt noch: ${fehlt.join(", ")}.`
+            : "Kaufpreis, Wohnfläche und Kaltmiete müssen größer als null sein."}
         </div>
       )}
     </div>

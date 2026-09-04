@@ -1,3 +1,31 @@
+## 2026-09-04 (1.53.2)
+
+### Objekte bearbeiten, PLZ und Ort als Pflichtfeld
+
+- **Bearbeiten:** Neuer Stift im Objektkopf oeffnet dieselbe Maske, die auch
+  anlegt - vorbefuellt mit den Werten des Objekts. Ein getrenntes
+  Bearbeiten-Formular waere eine zweite Stelle, an der Pflichtfelder und
+  Live-Vorschau gepflegt werden muessten.
+- Neu `updateObj(id, name, data)` in `useSavedObjects`: Pro ueber
+  `PUT /objects/:id` (Endpunkt inkl. Ownership-Check existierte bereits), Free
+  ueber den lokalen Stand. Score und Kennzahlen werden neu abgeleitet - sonst
+  zeigte die Karte nach dem Bearbeiten die alte Ampel.
+- Beim Bearbeiten bleiben alle uebrigen Felder erhalten (Zinsbindung, AfA,
+  KfW und alles andere, was nur im Rechner gesetzt wurde).
+
+- **PLZ und Ort sind jetzt Pflicht.** Ohne sie laesst sich ein Objekt in der
+  Ortsansicht nicht einordnen und die Lage nicht anzeigen. Der Knopf bleibt
+  gesperrt und nennt konkret, was fehlt ("Es fehlt noch: PLZ, Ort."), statt
+  nur allgemein auf Unvollstaendigkeit hinzuweisen. Eigenkapital ist als
+  einziges Feld ausdruecklich optional markiert.
+
+**Verifiziert** in der laufenden App: Anlegen ohne PLZ/Ort wird blockiert,
+Bearbeiten oeffnet vorbefuellt, Kaufpreis 199.000 -> 179.000 aendert den
+Cashflow von -35 EUR auf +106 EUR, Aenderung ueberlebt einen Reload, und das
+Objekt erscheint in der Ortsansicht unter "74379 Ingersheim".
+
+**Betroffene Dateien:** src/App.jsx, src/components/shell/Merkliste.jsx, src/components/dashboard/ObjektAnlegen.jsx, src/components/dashboard/ObjektDetail.jsx
+
 ## 2026-09-04 (1.53.1)
 
 ### Objektunterlagen, Lage und Ortsansicht - Phase E vervollstaendigt

@@ -5,6 +5,8 @@ import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
 import { Ueberblick } from "./Ueberblick.jsx";
 import { Stellschrauben } from "./Stellschrauben.jsx";
 import { ObjektUnterlagen, ObjektLage } from "./ObjektUnterlagen.jsx";
+import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
+import { Sheet } from "../ui/Sheet.jsx";
 import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
@@ -85,9 +87,10 @@ const FELD_GRUPPEN = [
 ];
 
 export function ObjektDetail({ objekt, onBack }) {
-  const { d, set, setTabExt, t, lang } = useApp();
+  const { d, set, setTabExt, t, lang, updateObj } = useApp();
   const locale = lang === "de" ? "de-DE" : "de-DE";
   const [chip, setChip] = useState("ueberblick");
+  const [bearbeiten, setBearbeiten] = useState(false);
 
   // A1: Die Ansicht steckt nicht mehr in inputData, sondern liegt daneben.
   const gespeichert = useMemo(
@@ -132,8 +135,46 @@ export function ObjektDetail({ objekt, onBack }) {
             {objekt.source === "expose-scan" && " · aus Exposé"}
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setBearbeiten(true)}
+          aria-label="Objekt bearbeiten"
+          style={{
+            width: 40,
+            height: 40,
+            flexShrink: 0,
+            borderRadius: 10,
+            border: "1px solid var(--cb)",
+            background: "var(--cc)",
+            color: "var(--ct)",
+            fontSize: 16,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          ✎
+        </button>
         <VollstaendigkeitsRing prozent={vollstaendigkeit} groesse={46} />
       </div>
+
+      <Sheet open={bearbeiten} onClose={() => setBearbeiten(false)} label="Objekt bearbeiten">
+        <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Objekt bearbeiten</div>
+        <ObjektAnlegen
+          t={t}
+          bearbeiten
+          startwerte={basis}
+          startName={objekt.title || ""}
+          onAbbrechen={() => setBearbeiten(false)}
+          onAnlegen={async (name, daten) => {
+            await updateObj(objekt.id, name, daten);
+            setBearbeiten(false);
+            // Zurueck zur Liste: das Objekt wird dort frisch aus dem
+            // aktualisierten Stand gerendert. Ohne das zeigte die
+            // Detailansicht weiter die Werte von vor der Bearbeitung.
+            onBack();
+          }}
+        />
+      </Sheet>
 
       {/* Chip-Leiste - Scrollverhalten wie .tbar in App.jsx */}
       <div

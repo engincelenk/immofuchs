@@ -300,6 +300,55 @@ export function useSavedObjects(setData) {
     [isPro, refreshFromServer],
   );
 
+  // Bestehendes Objekt bearbeiten. Pro geht ueber PUT /objects/:id (der
+  // Endpunkt existiert bereits samt Ownership-Check), Free ueber den lokalen
+  // Stand. Score und Kennzahlen werden neu abgeleitet, sonst zeigte die Karte
+  // nach dem Bearbeiten die alte Ampel.
+  const updateObj = useCallback(
+    async (id, name, data) => {
+      const kz = berechneObjektKennzahlen(data);
+      if (isPro) {
+        try {
+          const vorher = savedList.find((o) => o.id === id);
+          await apiFetch(`/objects/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              toServerPayload({
+                id,
+                name,
+                data,
+                letzteAnsicht: vorher?.letzteAnsicht || "haupt",
+              }),
+            ),
+          });
+        } catch (e) {
+          console.error("[merkliste] Bearbeiten fehlgeschlagen:", e);
+        }
+        await refreshFromServer();
+        return;
+      }
+      setSavedList((prev) => {
+        const next = prev.map((o) =>
+          o.id === id
+            ? {
+                ...o,
+                name: name.trim() || o.name,
+                data: { ...data },
+                date: new Date().toLocaleDateString("de-DE"),
+                score: kz.score,
+                scoreLabel: kz.scoreLabel,
+                kennzahlen: kz,
+              }
+            : o,
+        );
+        writeLocalList(next);
+        return next;
+      });
+    },
+    [isPro, refreshFromServer, savedList],
+  );
+
   const delObj = useCallback(
     async (id) => {
       if (isPro) {
@@ -328,7 +377,15 @@ export function useSavedObjects(setData) {
     [setData],
   );
 
-  return { savedList, saveObj, delObj, loadObj, isPro, freeLimit: TRIAL_OBJECT_LIMIT_GESAMT };
+  return {
+    savedList,
+    saveObj,
+    updateObj,
+    delObj,
+    loadObj,
+    isPro,
+    freeLimit: TRIAL_OBJECT_LIMIT_GESAMT,
+  };
 }
 
 // Gemeinsames Sheet-Bauteil statt eigenem Backdrop/Panel (UX-Audit
