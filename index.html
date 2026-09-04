@@ -49,10 +49,16 @@
          iframe ein. Ohne den Eintrag blockiert der Browser ihn still, die
          Karte bliebe ein leerer Rahmen. Es wird nur der Kartenausschnitt
          geladen; die Koordinaten dafuer kommen aus dem lokalen
-         PLZ-Datensatz, nicht aus einer Abfrage. -->
+         PLZ-Datensatz, nicht aus einer Abfrage.
+
+         Ebenfalls 2026-09-04: connect-src um photon.komoot.io - die
+         Adress-Vervollstaendigung im Objektformular fragt dort waehrend des
+         Tippens nach Strassen und Hausnummern. Das ist die einzige Stelle der
+         App, an der eine Nutzereingabe an einen Kartendienst geht; sie ist im
+         Feld sichtbar ausgewiesen und laeuft erst ab drei Zeichen. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://accounts.google.com/gsi/client https://appleid.cdn-apple.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://api.bundesbank.de https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://stats.g.doubleclick.net https://immofuchs-assistant.engincelenk.workers.dev https://immofuchs-assistant-dev.engincelenk.workers.dev https://immofuchs-assistant-qa.engincelenk.workers.dev https://api.immofuchs.info https://api-dev.immofuchs.info https://accounts.google.com https://appleid.apple.com https://api.stripe.com https://m.stripe.com https://m.stripe.network; frame-src https://js.stripe.com https://hooks.stripe.com https://www.openstreetmap.org; base-uri 'self'; form-action 'self' https://accounts.google.com https://appleid.apple.com;"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://accounts.google.com/gsi/client https://appleid.cdn-apple.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://api.bundesbank.de https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://stats.g.doubleclick.net https://immofuchs-assistant.engincelenk.workers.dev https://immofuchs-assistant-dev.engincelenk.workers.dev https://immofuchs-assistant-qa.engincelenk.workers.dev https://api.immofuchs.info https://api-dev.immofuchs.info https://accounts.google.com https://appleid.apple.com https://api.stripe.com https://m.stripe.com https://m.stripe.network https://photon.komoot.io; frame-src https://js.stripe.com https://hooks.stripe.com https://www.openstreetmap.org; base-uri 'self'; form-action 'self' https://accounts.google.com https://appleid.apple.com;"
     />
 
     <!-- ═══ SEO — Grundlagen ═══ -->

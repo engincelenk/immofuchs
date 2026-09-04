@@ -13,6 +13,7 @@ import { annahmenFuer, annahmenText } from "../../utils/annahmen.js";
 import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
 import { BL_O, BL_N } from "../../data.js";
 import { PLZ_DB } from "../../data/plzData.js";
+import { MIN_ZEICHEN, kuerzelFuerBundesland, sucheAdressen } from "../../utils/adressSuche.js";
 
 // PLZ und Ort sind Pflicht: ohne sie laesst sich ein Objekt in der
 // Ortsansicht nicht einordnen, die Grunderwerbsteuer nicht aus dem Bundesland
@@ -51,6 +52,10 @@ export function ObjektAnlegen({
           flaeche: startwerte.flaeche || "",
           kaltmiete: startwerte.kaltmiete || "",
           eigenkapital: startwerte.eigenkapital || "",
+          strasse: startwerte.strasse || "",
+          hausnummer: startwerte.hausnummer || "",
+          lat: startwerte.lat,
+          lon: startwerte.lon,
         }
       : {},
   );
@@ -82,6 +87,9 @@ export function ObjektAnlegen({
         bundesland,
         plz: String(werte.plz || "").trim(),
         ort: String(werte.ort || "").trim(),
+        ...(werte.strasse ? { strasse: String(werte.strasse) } : {}),
+        ...(werte.hausnummer ? { hausnummer: String(werte.hausnummer) } : {}),
+        ...(werte.lat != null ? { lat: werte.lat, lon: werte.lon } : {}),
         kaufpreis: String(werte.kaufpreis || ""),
         flaeche: String(werte.flaeche || ""),
         kaltmiete: String(werte.kaltmiete || ""),
@@ -131,8 +139,27 @@ export function ObjektAnlegen({
         <span style={{ flex: 1, height: 1, background: "var(--cb)" }} />
       </div>
 
-      {/* Weg 2: fuenf Felder */}
+      {/* Weg 2: Felder */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <AdressSuche
+          onTreffer={(tr) => {
+            const strasse = [tr.strasse, tr.hausnummer].filter(Boolean).join(" ");
+            if (strasse) setzen("name", strasse);
+            setzen("strasse", tr.strasse);
+            setzen("hausnummer", tr.hausnummer);
+            if (tr.plz) setzen("plz", tr.plz);
+            if (tr.ort) setzen("ort", tr.ort);
+            // Hausnummerngenaue Koordinaten - die Karte am Objekt nutzt sie
+            // statt der PLZ-Mitte.
+            setzen("lat", tr.lat);
+            setzen("lon", tr.lon);
+            const kuerzel =
+              kuerzelFuerBundesland(tr.bundeslandName, BL_N) ||
+              (tr.plz && PLZ_DB.byPlz[tr.plz]?.bl) ||
+              "";
+            if (kuerzel) setBundesland(kuerzel);
+          }}
+        />
         {FELDER.map((f) => (
           <Fragment key={f.key}>
           <label style={{ display: "block" }}>
@@ -274,6 +301,129 @@ export function ObjektAnlegen({
           {fehlt.length > 0
             ? `Es fehlt noch: ${fehlt.join(", ")}.`
             : "Kaufpreis, Wohnfläche und Kaltmiete müssen größer als null sein."}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Adress-Vervollstaendigung. Die einzige Stelle der App, an der eine Eingabe
+// den Browser verlaesst - deshalb steht der Hinweis darauf direkt am Feld und
+// nicht im Kleingedruckten. Entprellt (350 ms) und erst ab drei Zeichen, damit
+// nicht jeder Tastendruck eine Anfrage ausloest.
+function AdressSuche({ onTreffer }) {
+  const [text, setText] = useState("");
+  const [treffer, setTreffer] = useState([]);
+  const [offen, setOffen] = useState(false);
+  const [laedt, setLaedt] = useState(false);
+  const [fehler, setFehler] = useState(false);
+  const box = useRef(null);
+  const abbruch = useRef(null);
+
+  useEffect(() => {
+    const zu = (e) => {
+      if (box.current && !box.current.contains(e.target)) setOffen(false);
+    };
+    document.addEventListener("click", zu);
+    return () => document.removeEventListener("click", zu);
+  }, []);
+
+  useEffect(() => {
+    if (text.trim().length < MIN_ZEICHEN) {
+      setTreffer([]);
+      setOffen(false);
+      return undefined;
+    }
+    const zeit = setTimeout(async () => {
+      abbruch.current?.abort();
+      const c = new AbortController();
+      abbruch.current = c;
+      setLaedt(true);
+      setFehler(false);
+      try {
+        const ergebnis = await sucheAdressen(text, c.signal);
+        setTreffer(ergebnis);
+        setOffen(ergebnis.length > 0);
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          // Der Dienst ist ein Komfort, kein Muss: die Felder darunter lassen
+          // sich weiter von Hand ausfuellen.
+          setFehler(true);
+          setOffen(false);
+        }
+      } finally {
+        setLaedt(false);
+      }
+    }, 350);
+    return () => clearTimeout(zeit);
+  }, [text]);
+
+  return (
+    <div ref={box} style={{ position: "relative" }}>
+      <label style={{ display: "block" }}>
+        <span style={beschriftungStil}>Adresse suchen</span>
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          autoComplete="off"
+          style={eingabeStil}
+        />
+      </label>
+      <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 5, lineHeight: 1.45 }}>
+        {laedt
+          ? "Suche läuft …"
+          : fehler
+            ? "Die Adresssuche ist gerade nicht erreichbar — trage die Felder unten von Hand ein."
+            : "Sucht ab drei Zeichen bei OpenStreetMap. Nur der eingetippte Text wird übertragen, keine Objektdaten. Du kannst alles auch von Hand eintragen."}
+      </div>
+      {offen && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            zIndex: 40,
+            marginTop: 4,
+            background: "var(--cc)",
+            border: "1px solid var(--cb)",
+            borderRadius: 10,
+            overflow: "hidden",
+            boxShadow: "0 8px 24px rgba(0,0,0,.18)",
+          }}
+        >
+          {treffer.map((tr) => (
+            <button
+              key={tr.id}
+              type="button"
+              onClick={() => {
+                onTreffer(tr);
+                setText(tr.anzeige);
+                setOffen(false);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "10px 12px",
+                border: "none",
+                borderBottom: "1px solid var(--cb)",
+                background: "transparent",
+                color: "var(--ct)",
+                fontSize: 14,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              <span style={{ display: "block", fontWeight: 600 }}>{tr.zeile1 || tr.anzeige}</span>
+              {tr.zeile2 && (
+                <span style={{ display: "block", fontSize: 12, color: "var(--ch)" }}>
+                  {tr.zeile2}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       )}
     </div>

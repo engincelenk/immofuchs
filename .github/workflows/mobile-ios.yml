@@ -54,20 +54,6 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
-      - name: 🔍 Debug - MATCH_GIT_URL Laenge/Hash pruefen (kein Secret-Leak)
-        # Temporaerer Diagnose-Schritt (Live-Befund 2026-09-04): lokaler
-        # `git clone` mit derselben URL funktioniert, CI schlaegt mit
-        # identischem "invalid credentials" fehl - Verdacht auf einen beim
-        # Kopieren ins GitHub-Secret-Feld verstuemmelten Wert (z.B.
-        # angehaengter Zeilenumbruch). Nur Laenge/Hash werden ausgegeben,
-        # der eigentliche Wert bleibt geheim. Nach erfolgreichem Fund wieder
-        # entfernen.
-        env:
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-        run: |
-          echo "Laenge: ${#MATCH_GIT_URL}"
-          echo -n "$MATCH_GIT_URL" | shasum -a 256
-
       - name: 🔐 Fastlane match + Build + TestFlight-Upload
         env:
           # App Store Connect API Key (Empfehlung statt Apple-ID/Passwort -
@@ -80,10 +66,15 @@ jobs:
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           # Fastlane match - siehe docs/app-store-google-play-setup.md A10.5.
-          # MATCH_GIT_BASIC_AUTHORIZATION nur noetig, wenn das Zertifikats-Repo
-          # privat UND nicht per SSH-Deploy-Key, sondern per HTTPS+Token
-          # eingebunden ist (Base64 von "user:personal-access-token").
+          # MATCH_GIT_URL enthaelt den Zugriffs-Token direkt eingebettet
+          # (https://<user>:<token>@github.com/<user>/<repo>) - siehe
+          # fastlane/Matchfile. BEWUSST kein MATCH_GIT_BASIC_AUTHORIZATION
+          # mehr hier: Live-Befund 2026-09-04, ein fehlendes GitHub-Secret
+          # wird in `env:` zu einem LEEREN String statt komplett zu
+          # entfallen - und ein leerer String gilt in Ruby als "vorhanden",
+          # wodurch match faelschlich einen leeren, ungueltigen Auth-Header
+          # gebaut hat ("invalid credentials", obwohl MATCH_GIT_URL allein
+          # bereits korrekt authentifiziert haette).
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: bundle exec fastlane ios beta

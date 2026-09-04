@@ -223,8 +223,16 @@ export function ObjektLage({ data, titel }) {
   const ortsteil = [data?.plz, data?.ort].filter(Boolean).join(" ");
   const adresse = [strasse || titel, ortsteil].filter(Boolean).join(", ");
 
+  // Genaue Koordinaten schlagen die PLZ-Mitte: sie stammen aus der
+  // Adresssuche und treffen die Hausnummer.
+  const genau = data?.lat != null && data?.lon != null;
+
   useEffect(() => {
     let lebt = true;
+    if (genau) {
+      setKoord({ lat: +data.lat, lon: +data.lon });
+      return undefined;
+    }
     if (!data?.plz) return undefined;
     ladePlzGeo().then((map) => {
       if (lebt) setKoord(koordinateFuer(data.plz, map));
@@ -232,14 +240,14 @@ export function ObjektLage({ data, titel }) {
     return () => {
       lebt = false;
     };
-  }, [data?.plz]);
+  }, [genau, data?.lat, data?.lon, data?.plz]);
 
   if (!adresse) return null;
 
   const suche = encodeURIComponent(adresse);
   // Rund 1,5 km Kantenlaenge - nah genug, um die Strassen zu erkennen, weit
   // genug, dass die PLZ-Ungenauigkeit (etwa 110 m) nicht stoert.
-  const d = 0.008;
+  const d = genau ? 0.004 : 0.008;
   const bbox = koord
     ? `${(koord.lon - d).toFixed(4)},${(koord.lat - d / 1.6).toFixed(4)},${(koord.lon + d).toFixed(4)},${(koord.lat + d / 1.6).toFixed(4)}`
     : null;
@@ -303,9 +311,10 @@ export function ObjektLage({ data, titel }) {
         </a>
       </div>
 
-      {koord && (
+      {koord && !genau && (
         <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 10, lineHeight: 1.5 }}>
-          Der Pin zeigt die Mitte der Postleitzahl, nicht die genaue Hausnummer.
+          Der Pin zeigt die Mitte der Postleitzahl. Für die genaue Lage wähle die
+          Adresse beim Bearbeiten aus der Adresssuche.
         </div>
       )}
     </div>

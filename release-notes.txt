@@ -1,3 +1,37 @@
+## 2026-09-04 (1.56.0)
+
+### Adress-Vervollstaendigung mit hausnummerngenauem Kartenpin
+
+- Neues Feld "Adresse suchen" im Objektformular. Ein Treffer fuellt Name,
+  Strasse, Hausnummer, PLZ, Ort und Bundesland in einem Schritt und legt die
+  Koordinaten dazu.
+- Neu `src/utils/adressSuche.js`: Client fuer Photon (photon.komoot.io), einen
+  offenen Suchdienst auf OpenStreetMap-Daten - kostenlos, ohne Schluessel,
+  Ergebnisse auf Deutschland gefiltert und auf die Landesmitte gewichtet.
+- Die Karte am Objekt nutzt jetzt diese genauen Koordinaten statt der
+  PLZ-Mitte und zoomt entsprechend naeher. Ohne Adressauswahl bleibt es bei
+  der PLZ-Mitte, samt Hinweis darauf.
+- `index.html`: connect-src um photon.komoot.io erweitert.
+
+**Datenschutz - bewusste Entscheidung, im Feld ausgewiesen**
+
+Dies ist die einzige Stelle der App, an der eine Nutzereingabe den Browser
+verlaesst. Kennzahlen, Unterlagen und PLZ-Koordinaten bleiben weiterhin lokal.
+Deshalb:
+  - Anfragen erst ab drei Zeichen und entprellt (350 ms), nicht je Tastendruck
+  - uebertragen wird nur der eingetippte Text, nie Kaufpreis, Miete oder
+    andere Objektdaten
+  - laufende Anfragen werden abgebrochen, sobald weitergetippt wird
+  - der Hinweis darauf steht direkt unter dem Feld, nicht im Kleingedruckten
+  - faellt der Dienst aus, sagt das Feld es und alle Felder bleiben von Hand
+    ausfuellbar
+
+Vollstaendige deutsche Adressen offline vorzuhalten waere keine Alternative -
+der Datensatz liegt im Gigabyte-Bereich. Fuer PLZ und Ort allein braucht es
+den Dienst nicht, die stecken weiterhin lokal in data/plzData.js.
+
+**Betroffene Dateien:** index.html, src/utils/adressSuche.js, src/components/dashboard/ObjektAnlegen.jsx, src/components/dashboard/ObjektUnterlagen.jsx
+
 ## 2026-09-04 (1.55.0)
 
 ### Karte am Objekt statt Deutschlandkarte, PLZ-Vervollstaendigung, keine Beispielwerte
