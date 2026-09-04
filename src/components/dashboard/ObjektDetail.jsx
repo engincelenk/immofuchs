@@ -4,6 +4,7 @@ import { scoreBadgeColor, scoreBadgeText } from "./dashboardUtils.js";
 import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
 import { Ueberblick } from "./Ueberblick.jsx";
 import { Stellschrauben } from "./Stellschrauben.jsx";
+import { ObjektUnterlagen, ObjektLage } from "./ObjektUnterlagen.jsx";
 import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
@@ -30,6 +31,7 @@ const CHIPS = [
   { id: "sanierung", label: "Sanierung", rechner: "sanier" },
   { id: "steuer", label: "Steuer", rechner: "steuer6" },
   { id: "daten", label: "Alle Daten" },
+  { id: "unterlagen", label: "Unterlagen" },
 ];
 
 // Welche Reiter fuer diesen Datenstand sinnvoll sind.
@@ -206,6 +208,13 @@ export function ObjektDetail({ objekt, onBack }) {
           onOeffnen={inRechner}
           moeglich={hasFullInput}
         />
+      )}
+
+      {aktiv === "unterlagen" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <ObjektUnterlagen objektId={objekt.id} />
+          <ObjektLage data={basis} titel={objekt.title} />
+        </div>
       )}
 
       {aktiv === "daten" && (

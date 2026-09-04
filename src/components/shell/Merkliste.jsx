@@ -18,6 +18,7 @@ import { scoreBadgeColor, scoreBadgeText } from "../dashboard/dashboardUtils.js"
 import { ObjektKPIs, VollstaendigkeitsRing } from "../dashboard/ObjektKPIs.jsx";
 import { ObjektAnlegen } from "../dashboard/ObjektAnlegen.jsx";
 import { ObjektVergleich } from "../dashboard/ObjektVergleich.jsx";
+import { ObjektOrte } from "../dashboard/ObjektUnterlagen.jsx";
 import {
   berechneObjektKennzahlen,
   toResultData,
@@ -514,6 +515,8 @@ export function Merkliste() {
   // Phase E: Zeilen-Diff vor dem Finn-Chat - die Zahlen zuerst, die
   // Einordnung auf Wunsch.
   const [vergleichOffen, setVergleichOffen] = useState(false);
+  // Phase E: Toggle Liste | Orte.
+  const [ansicht, setAnsicht] = useState("liste");
   // Phase D: einmaliger Willkommenshinweis. Die Analyse-Vorlage macht das als
   // persoenlichen Brief - das schafft Vertrauen bei einer App, in die man
   // Geldzahlen eintippt. Bewusst schliessbar und nur einmal.
@@ -763,6 +766,21 @@ export function Merkliste() {
       >
         + Objekt anlegen
       </button>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {[
+          ["liste", "Liste"],
+          ["orte", "Orte"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setAnsicht(id)}
+            style={ansicht === id ? searchChipActiveStyle : searchChipStyle}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div style={{ fontSize: 13, color: "var(--ch)", marginBottom: 12, fontWeight: 500 }}>
         {savedList.length}
         {!isProSavedObjects ? `/${savedObjectsFreeLimit}` : ""}{" "}
@@ -856,7 +874,11 @@ export function Merkliste() {
           Keine Objekte gefunden.
         </div>
       )}
-      {filtered.map((obj) => {
+      {ansicht === "orte" && (
+        <ObjektOrte objekte={filtered} onOeffnen={openDetail} />
+      )}
+      {ansicht === "liste" &&
+        filtered.map((obj) => {
         const inputData = obj.inputData || { ...obj.data };
         // A3: sechs Objekt-Kennzahlen statt der frueheren rechnerspezifischen
         // Vorschau - seit A1 ist ein Objekt nicht mehr an einen Rechner

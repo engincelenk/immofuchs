@@ -1,3 +1,48 @@
+## 2026-09-04 (1.53.1)
+
+### Objektunterlagen, Lage und Ortsansicht - Phase E vervollstaendigt
+
+Schliesst die letzten offenen Punkte aus Phase E des Konzepts
+(docs/plans/neue-phase2/00-analyse-immorechner-und-konzept.md).
+
+**Objektunterlagen - bewusst lokal**
+- Neu `src/utils/objektUnterlagen.js`: Ablage in IndexedDB, nach Objekt
+  indiziert. Die Dateien verlassen den Browser nicht und werden nicht
+  hochgeladen - dasselbe Versprechen, das die Analyse-Vorlage gibt. Bei
+  Kaufvertraegen und Teilungserklaerungen schafft genau das Vertrauen und
+  erspart uns Server-Speicher, Loeschkonzept und Auftragsverarbeitung.
+- Grenzen: 20 MB je Datei, nur PDF und gaengige Bildformate. Beides wird
+  geprueft, bevor die Datenbank ueberhaupt geoeffnet wird.
+- Ohne IndexedDB (privater Modus) liefert das Laden eine leere Liste statt zu
+  werfen - die Ablage ist ein Extra, kein Blocker fuer die Objektansicht.
+- Neuer Reiter "Unterlagen" am Objekt mit sichtbarem Hinweis, dass die Dateien
+  auf einem anderen Geraet nicht erscheinen.
+
+**Lage**
+- Adresse plus Sprung in die Kartenanwendung. Eine eingebettete Karte mit Pin
+  braucht Koordinaten; `data/plzData.js` fuehrt nur PLZ, Ort und Bundesland,
+  deshalb bewusst der Link statt einer ungenauen Karte.
+
+**Ortsansicht statt Kartenansicht**
+- Umschalter "Liste | Orte" ueber der Objektliste. Gruppiert die Objekte nach
+  Ort, je Gruppe ein Kartenlink. Pins muesste man per Geocoding-Dienst
+  nachladen, also mit einem externen Request je Objekt - die Gruppierung
+  liefert denselben Nutzen ohne Datenabfluss.
+
+**Erklaerungen (Phase D)**
+- Kein Nachtrag noetig: die Rechner tragen bereits rund 80 Feld-Erklaerungen
+  ueber `tips.js` und `Tip.jsx`. Ergaenzt wurden in 1.53.0 die drei Kennzahlen
+  des Ueberblicks.
+
+**Tests:** neu `objektUnterlagen.test.js` (9 Faelle, inklusive Verhalten ohne
+IndexedDB). Gesamt 446 gruen.
+
+**Verifiziert** in der laufenden App: Datei-Upload, Anzeige mit Groesse,
+Persistenz ueber einen Reload hinweg, Ablehnung eines unerlaubten Dateityps,
+Ortsansicht und leerer Zustand.
+
+**Betroffene Dateien:** src/utils/objektUnterlagen.js, src/utils/objektUnterlagen.test.js, src/components/dashboard/ObjektUnterlagen.jsx, src/components/dashboard/ObjektDetail.jsx, src/components/shell/Merkliste.jsx
+
 ## 2026-09-04 (1.53.0)
 
 ### Objekt statt Rechner: Ueberblick, Stellschrauben und Chip-Navigation
