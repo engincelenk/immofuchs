@@ -21,7 +21,13 @@ on:
 jobs:
   build-and-upload:
     name: 🛠️ Build (macOS-Runner) & TestFlight-Upload
-    runs-on: macos-14
+    # macos-15 statt macos-14 (Live-Befund 2026-09-05): macos-14 liefert
+    # standardmaessig Xcode 15.4 - zu alt in zweierlei Hinsicht. Erstens ist
+    # Capacitor 8 (capacitor-swift-pm 8.5.0) fuer Xcode 16+ gebaut, dessen
+    # Package-Aufloesung dort haengen blieb. Zweitens - und unabhaengig davon
+    # zwingend - akzeptiert App Store Connect seit April 2025 keine Uploads
+    # mehr, die mit Xcode 15 gebaut wurden (Pflicht: Xcode 16 / iOS-18-SDK).
+    runs-on: macos-15
     # Ohne explizites Limit ist der GitHub-Standard 360 Minuten (6h) - Live-
     # Befund 2026-09-04: ein haengender xcodebuild-Schritt (siehe unten) hat
     # genau diese volle Zeit auf dem teuren macOS-Runner verbraucht, bevor
@@ -32,6 +38,14 @@ jobs:
     steps:
       - name: 🚚 Code aus GitHub auschecken
         uses: actions/checkout@v5
+
+      - name: 🧰 Xcode-Version explizit waehlen (16+, Pflicht fuer App Store)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: 🧾 Verwendete Xcode-Version protokollieren
+        run: xcodebuild -version
 
       - name: 🛠️ Node.js einrichten
         uses: actions/setup-node@v4
@@ -54,26 +68,27 @@ jobs:
       - name: 📱 Capacitor-Sync (kopiert dist/ nach ios/App/App/public)
         run: npx cap sync ios
 
+      - name: 📚 Swift-Package-Abhaengigkeiten aufloesen (vor Fastlane)
+        # Bewusst hier statt in Fastlanes build_app (dort per
+        # `skip_package_dependencies_resolution: true` abgeschaltet, siehe
+        # fastlane/Fastfile). Zwei Gruende, beide aus dem Live-Befund
+        # 2026-09-05:
+        #   1. Fastlane haengt an diesen Aufruf `-IDEPackageSupportUseBuiltinSCM
+        #      YES` als Kommandozeilen-Argument an. Kommandozeilen-Argumente
+        #      ueberschreiben `defaults write`, ein Umstellen per defaults war
+        #      deshalb wirkungslos. Hier ohne dieses Flag = normales System-git.
+        #   2. Eigener Schritt-Timeout: haengt die Aufloesung doch noch, bricht
+        #      es nach 10 Minuten sichtbar an DIESER Stelle ab, statt den
+        #      gesamten Job stumm bis zum Job-Timeout laufen zu lassen.
+        # Muss nach `npx cap sync ios` laufen (das schreibt Package.swift).
+        timeout-minutes: 10
+        run: xcodebuild -resolvePackageDependencies -scheme App -project ios/App/App.xcodeproj
+
       - name: 💎 Ruby + Bundler einrichten
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: true
-
-      - name: 🧩 Xcode auf System-git fuer Swift-Package-Aufloesung umstellen
-        # Live-Befund 2026-09-04: Xcode nutzt fuer SPM-Paketabrufe per Default
-        # sein eigenes, in Swift geschriebenes "Built-in SCM" statt normalem
-        # Kommandozeilen-git (sichtbar im Build-Log als
-        # "IDEPackageSupportUseBuiltinSCM = YES"). Dieses Modul blieb beim
-        # "Checking out X.X.X of package"-Schritt fuer die (oeffentlichen,
-        # keine Zugangsdaten benoetigenden) Capacitor-Swift-Packages
-        # unbegrenzt haengen - vermutlich eine interne Keychain-Abfrage ohne
-        # Timeout in der nicht-interaktiven CI-Umgebung. GIT_TERMINAL_PROMPT=0
-        # (siehe unten) griff NICHT, weil dieses Built-in-Modul kein
-        # eigenstaendiger git-Prozess ist und dessen Umgebungsvariablen
-        # ignoriert. Diese Xcode-Einstellung erzwingt stattdessen System-git,
-        # das GIT_TERMINAL_PROMPT respektiert.
-        run: defaults write com.apple.dt.Xcode IDEPackageSupportUseBuiltinSCM -bool NO
 
       - name: 🔐 Fastlane match + Build + TestFlight-Upload
         env:
@@ -98,14 +113,10 @@ jobs:
           # bereits korrekt authentifiziert haette).
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          # Live-Befund 2026-09-04: `xcodebuild -resolvePackageDependencies`
-          # blieb beim Abruf der (oeffentlichen, keine Zugangsdaten noetigen)
-          # Swift-Package-Abhaengigkeiten haengen - git fragt dabei das
-          # macOS-Schluesselbund nach Zugangsdaten, was in der
-          # nicht-interaktiven CI-Umgebung eine nie beantwortete
-          # Anmeldeabfrage ausloest statt einfach ohne Zugangsdaten
-          # fortzufahren. GIT_TERMINAL_PROMPT=0 laesst git in diesem Fall
-          # sofort scheitern (und damit anonym weitermachen) statt ewig zu
-          # warten.
+          # Allgemeine CI-Absicherung: git soll nie interaktiv nach
+          # Zugangsdaten fragen, sondern sofort scheitern. Hat den
+          # SPM-Haenger von 2026-09-04 allein NICHT behoben (die Aufloesung
+          # lief ueber Xcodes eingebautes SCM-Modul, kein git-Prozess) -
+          # bleibt hier trotzdem als sinnvolle Absicherung stehen.
           GIT_TERMINAL_PROMPT: "0"
         run: bundle exec fastlane ios beta

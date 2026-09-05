@@ -10,6 +10,14 @@ default_platform(:ios)
 platform :ios do
   desc "Baut die App und laedt sie zu TestFlight hoch"
   lane :beta do
+    # Pflichtschritt fuer match auf CI (Fastlane-Doku): legt einen temporaeren
+    # Schluesselbund an, entsperrt ihn und macht ihn zum Default - sonst
+    # importiert match die Zertifikate in den `login.keychain` des Runners.
+    # Live-Befund 2026-09-05: genau das loeste blockierende
+    # Schluesselbund-Abfragen aus, an denen der nachfolgende xcodebuild-
+    # Schritt ohne Timeout haengen blieb. Ausserhalb von CI ein No-Op.
+    setup_ci
+
     api_key = app_store_connect_api_key(
       key_id: ENV["ASC_KEY_ID"],
       issuer_id: ENV["ASC_ISSUER_ID"],
@@ -56,6 +64,12 @@ platform :ios do
       scheme: "App",
       export_method: "app-store",
       export_options: { signingStyle: "manual" },
+      # Die Swift-Packages werden bereits im Workflow-Schritt davor aufgeloest
+      # (.github/workflows/mobile-ios.yml) - dort ohne Fastlanes Flag
+      # `-IDEPackageSupportUseBuiltinSCM YES` und mit eigenem Timeout, statt
+      # unbegrenzt zu haengen. Ohne dieses skip wuerde gym die Aufloesung
+      # trotzdem ein zweites Mal mit genau diesem Flag anstossen.
+      skip_package_dependencies_resolution: true,
     )
 
     upload_to_testflight(
