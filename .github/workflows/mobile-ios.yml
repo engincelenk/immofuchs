@@ -22,6 +22,12 @@ jobs:
   build-and-upload:
     name: 🛠️ Build (macOS-Runner) & TestFlight-Upload
     runs-on: macos-14
+    # Ohne explizites Limit ist der GitHub-Standard 360 Minuten (6h) - Live-
+    # Befund 2026-09-04: ein haengender xcodebuild-Schritt (siehe unten) hat
+    # genau diese volle Zeit auf dem teuren macOS-Runner verbraucht, bevor
+    # GitHub den Job automatisch abgebrochen hat. 30 Minuten sind fuer diesen
+    # Build grosszuegig bemessen.
+    timeout-minutes: 30
 
     steps:
       - name: 🚚 Code aus GitHub auschecken
@@ -77,4 +83,14 @@ jobs:
           # bereits korrekt authentifiziert haette).
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          # Live-Befund 2026-09-04: `xcodebuild -resolvePackageDependencies`
+          # blieb beim Abruf der (oeffentlichen, keine Zugangsdaten noetigen)
+          # Swift-Package-Abhaengigkeiten haengen - git fragt dabei das
+          # macOS-Schluesselbund nach Zugangsdaten, was in der
+          # nicht-interaktiven CI-Umgebung eine nie beantwortete
+          # Anmeldeabfrage ausloest statt einfach ohne Zugangsdaten
+          # fortzufahren. GIT_TERMINAL_PROMPT=0 laesst git in diesem Fall
+          # sofort scheitern (und damit anonym weitermachen) statt ewig zu
+          # warten.
+          GIT_TERMINAL_PROMPT: "0"
         run: bundle exec fastlane ios beta
