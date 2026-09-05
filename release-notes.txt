@@ -1,3 +1,52 @@
+## 2026-09-05 (1.56.1) [CI]
+
+### Meilenstein: erster iOS-Build erfolgreich in TestFlight hochgeladen
+
+Der iOS-CI-Weg funktioniert vollstaendig - ohne eigenen Mac, komplett auf
+einem GitHub-Actions-macOS-Runner: signierte `App.ipa` erzeugt und an App
+Store Connect uebergeben ("Successfully uploaded the new binary"), Laufzeit
+des Fastlane-Teils ca. 3 Minuten.
+
+**Drei Ursachen, die vorher den Lauf blockierten (jeweils live gefunden):**
+- **Xcode 15.4 statt 16** (`macos-14`-Default). Capacitor 8 ist fuer
+  Xcode 16+ gebaut, dessen Package-Aufloesung blieb dort haengen - und App
+  Store Connect lehnt seit April 2025 ohnehin jeden mit Xcode 15 gebauten
+  Upload ab (Pflicht: iOS-18-SDK). Jetzt `macos-15` + explizite
+  Xcode-Wahl + Log-Ausgabe der verwendeten Version.
+- **Fehlendes `setup_ci`** im Fastfile - laut Fastlane-Doku Pflicht fuer
+  `match` auf CI. Ohne das importiert match Zertifikate in den
+  `login.keychain` des Runners statt in einen temporaeren Schluesselbund,
+  was blockierende Schluesselbund-Abfragen ausloeste.
+- **Package-Aufloesung durch gym**: Fastlane haengt
+  `-IDEPackageSupportUseBuiltinSCM YES` als Kommandozeilen-Argument an,
+  was jedes `defaults write` ueberschreibt (ein frueherer Fix-Versuch war
+  dadurch wirkungslos). Die Aufloesung laeuft jetzt als eigener
+  Workflow-Schritt vor Fastlane, ohne dieses Flag und mit eigenem
+  10-Minuten-Timeout; gym ueberspringt sie per
+  `skip_package_dependencies_resolution`.
+
+**Weitere Befunde derselben Fehlersuche (bereits einzeln committet):**
+- Ein in GitHub Actions geloeschtes Secret wird in einem `env:`-Block zu
+  einem LEEREN String statt zu entfallen - und ein leerer String gilt in
+  Ruby als "vorhanden". Ein leeres `MATCH_GIT_BASIC_AUTHORIZATION` liess
+  match dadurch einen ungueltigen Auth-Header bauen ("invalid
+  credentials"), obwohl die URL allein korrekt authentifiziert haette.
+  Konsequenz: solche Variablen ganz aus dem Workflow entfernen, nicht nur
+  das Secret loeschen.
+- `MATCH_GIT_URL` traegt den Zugriffs-Token direkt eingebettet.
+- Job-weites `timeout-minutes: 30` - ein frueherer Haenger hatte die
+  vollen 360 Minuten GitHub-Standard-Timeout auf dem teuren macOS-Runner
+  verbraucht.
+
+**Naechster offener Schritt:** ein aequivalenter
+`mobile-android.yml`-Workflow existiert noch nicht (Android braucht keinen
+Mac, laeuft auf `ubuntu-latest`). Testplan fuer beide Plattformen inkl.
+Testfaellen: `docs/app-store-google-play-setup.md` Teil D.
+
+**Betroffene Dateien:** `.github/workflows/mobile-ios.yml`,
+`fastlane/Fastfile`, `fastlane/Matchfile`,
+`docs/app-store-google-play-setup.md`.
+
 ## 2026-09-04 (1.56.0)
 
 ### Adress-Vervollstaendigung mit hausnummerngenauem Kartenpin
