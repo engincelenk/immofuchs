@@ -42,11 +42,18 @@ ${FORM}`;
 
 const HEBEL = `${HALTUNG}
 
-Deine Aufgabe: Erklaere, was sich aendern muesste, damit dieses Objekt traegt. Die
-Rechenergebnisse dazu bekommst du mitgeliefert (Varianten mit ihrer Wirkung) - deine Aufgabe
-ist NICHT, sie neu zu rechnen, sondern einzuordnen: welcher Hebel ist realistisch verhandelbar,
-welcher nicht, und woran das jeweils haengt. Die Abschnitte sollten nach den Hebeln benannt
-sein, etwa KAUFPREIS, MIETE, SANIERUNG.
+Deine Aufgabe: Erklaere, was sich aendern muesste, damit dieses Objekt traegt.
+
+Wenn der Abschnitt "Durchgerechnete Varianten" mitgeliefert ist, sind das fertige
+Rechenergebnisse aus derselben Engine wie die Kennzahlen. Uebernimm ihre Zahlen woertlich und
+rechne sie NICHT nach. Deine Aufgabe ist die Einordnung: welcher Hebel ist realistisch
+verhandelbar, welcher nicht, und woran das jeweils haengt.
+
+Fehlt der Abschnitt, nenne die Hebel qualitativ und erfinde KEINE Zielwerte - eine
+ausgedachte Zahl waere in einem Dokument, das der Nutzer fuer eine Verhandlung benutzt,
+schaedlicher als eine fehlende.
+
+Die Abschnitte sollten nach den Hebeln benannt sein, etwa KAUFPREIS, MIETE, SANIERUNG.
 
 ${FORM}`;
 
@@ -54,13 +61,47 @@ export function systemPromptFuer(produkt: AnalyseProdukt): string {
   return produkt === "hebel" ? HEBEL : ANALYSE;
 }
 
+// Eine durchgerechnete Variante: "Kaufpreis -14.250 EUR (neu 270.750 EUR)
+// ergibt Score 78 statt 72". Die Zahlen stammen aus berechneHebelAnalyse()
+// im Client, also aus derselben getesteten Rendite-/Score-Engine wie die
+// Kennzahlen - das Modell ordnet sie nur ein.
+export type HebelVariante = {
+  feld: string;
+  aenderung: string;
+  neuerWert: string;
+  score: number;
+  deltaScore: number;
+};
+
 // Der Nutzerteil: nur Kennzahlen, keine personenbezogenen Daten. Bewusst als
 // lesbare Liste statt JSON - Modelle folgen Klartext-Kennzahlen zuverlaessiger
 // als verschachtelten Objekten.
-export function nutzerPayload(kennzahlen: Record<string, unknown>, hinweis?: string): string {
+//
+// Die Varianten sind der zweite Block. Bis 2026-09-05 versprach der
+// HEBEL-Prompt dem Modell woertlich "Die Rechenergebnisse dazu bekommst du
+// mitgeliefert" - geschickt wurden sie nie. Das Modell musste also erfinden,
+// was es laut Prompt nicht erfinden sollte, und durfte es laut HALTUNG
+// ("Rechne NICHT nach") auch nicht ausrechnen.
+export function nutzerPayload(
+  kennzahlen: Record<string, unknown>,
+  hinweis?: string,
+  varianten?: HebelVariante[],
+): string {
   const zeilen = Object.entries(kennzahlen)
     .filter(([, v]) => v !== null && v !== undefined && v !== "")
     .map(([k, v]) => `${k}: ${String(v)}`);
+
+  const variantenBlock =
+    varianten && varianten.length > 0
+      ? "\n\nDurchgerechnete Varianten (bereits berechnet, NICHT neu rechnen):\n" +
+        varianten
+          .map(
+            (v) =>
+              `- ${v.feld} ${v.aenderung} (neu ${v.neuerWert}): Score ${v.score} statt ${v.score - v.deltaScore}`,
+          )
+          .join("\n")
+      : "";
+
   const extra = hinweis && hinweis.trim() ? `\n\nZusaetzliche Hinweise des Nutzers:\n${hinweis.trim()}` : "";
-  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${extra}`;
+  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${variantenBlock}${extra}`;
 }

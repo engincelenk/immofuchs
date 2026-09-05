@@ -1,3 +1,62 @@
+## 2026-09-05 (1.59.0)
+
+### Fix: Das Produkt "Was muesste sich aendern" bekommt endlich seine Zahlen
+
+Der HEBEL-Prompt sagte dem Modell woertlich: "Die Rechenergebnisse dazu
+bekommst du mitgeliefert (Varianten mit ihrer Wirkung) - deine Aufgabe ist
+NICHT, sie neu zu rechnen." Geschickt wurden sie nie. Der Client sendete nur
+13 Kennzahlen.
+
+Das Modell musste also erfinden, was es laut Prompt nicht erfinden sollte -
+und durfte es laut HALTUNG ("Rechne NICHT nach") auch nicht ausrechnen. Jede
+Zielzahl in diesem Produkt war bis hierher geraten. In einem Dokument, das
+der Nutzer fuer eine Kaufpreisverhandlung benutzt, ist das der teuerste
+denkbare Fehler.
+
+berechneHebelAnalyse() lag die ganze Zeit fertig und getestet daneben, wurde
+aber nur im Renditerechner benutzt.
+
+**Client**
+- Neu hebelVarianten() in aiTools.js: formt die Varianten der Hebel-Analyse
+  (Kaufpreis -5/-10 %, Miete +5 %, Sanierung -30 %) in die Form, die Worker
+  und Anzeige teilen.
+- Bewusst fertig formatierte Strings statt roher Zahlen: das Modell sieht
+  exakt die Zeichenfolge, die der Nutzer im Zahlenblock liest. Die Prosa kann
+  damit nicht von den angezeigten Zahlen abweichen.
+- Die Varianten werden MIT dem Ergebnis gespeichert. Wer den Kaufpreis
+  spaeter aendert, sieht weiter, auf welchen Zahlen die gespeicherte
+  Einschaetzung fusste.
+
+**Worker**
+- nutzerPayload() rendert einen zweiten Block "Durchgerechnete Varianten
+  (bereits berechnet, NICHT neu rechnen)".
+- leseVarianten() prueft die Form selbst, statt dem Client zu vertrauen:
+  hoechstens 6 Eintraege, Texte auf 40 Zeichen gekuerzt, Zeilenumbrueche
+  verworfen (sie wuerden den Promptblock aufbrechen), Zahlen gerundet.
+  Fehlerhafte Eintraege fliegen einzeln raus - eine unbrauchbare Variante
+  darf keine bezahlte Auswertung scheitern lassen.
+- Der HEBEL-Prompt verspricht die Varianten jetzt nur noch bedingt und
+  verbietet ausdruecklich erfundene Zielwerte, falls doch keine ankommen.
+
+**Anzeige**
+- Der Zahlenblock steht VOR dem Modelltext - er ist der belastbare Teil, der
+  Text ordnet ihn nur ein. Genau umgekehrt zur Vorlage-App, die ihre
+  Zielwerte vom Modell schaetzen laesst.
+- In der Karte nur der groesste Hebel, die volle Liste im Sheet. Vier Zeilen
+  je Produkt haetten den Reiter wieder gestreckt.
+- Ein Hebel ohne Wirkung (deltaScore 0) wird gedaempft dargestellt, nicht
+  gruen - er darf nicht wie ein Gewinn aussehen.
+
+**Tests**
+- 27 neue Tests (487 auf 514): Nutzlastform und Worker-Grenzen im Client,
+  Promptaufbau und Rueckrechnung des Ausgangsscores, Validator gegen
+  Zeilenumbrueche, Ueberlaenge, Nicht-Zahlen und gemischte Listen.
+
+ACHTUNG: Die CI deployt nur das Frontend. Diese Aenderung fasst worker/ an
+und braucht zusaetzlich ein eigenes wrangler deploy (dev: --env dev). Ohne
+das ignoriert der alte Worker das neue Feld stillschweigend - es bricht
+nichts, das Produkt bleibt nur auf dem alten Stand.
+
 ## 2026-09-05 (1.58.0)
 
 ### Objekt-Reiter verdichtet, AI-Engine wandert in den Ueberblick

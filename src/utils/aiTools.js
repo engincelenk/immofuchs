@@ -89,3 +89,38 @@ export function berechneHebelAnalyse(d, t, basisScore) {
   if (varianten.length === 0) return null;
   return { basisScore: basisScore.score, varianten, groessterHebel: varianten[0] };
 }
+
+// ── Varianten fuer die AI-Engine ────────────────────────────────────────────
+//
+// Bis 2026-09-05 versprach der HEBEL-Prompt dem Modell woertlich "Die
+// Rechenergebnisse dazu bekommst du mitgeliefert (Varianten mit ihrer
+// Wirkung)" - geschickt wurden sie nie. Das Modell musste also erfinden, was
+// es laut Prompt nicht erfinden sollte, und durfte es laut HALTUNG ("Rechne
+// NICHT nach") auch nicht ausrechnen. berechneHebelAnalyse() lag die ganze
+// Zeit fertig und getestet daneben, wurde aber nur im Renditerechner benutzt.
+//
+// Bewusst fertig formatierte Strings statt roher Zahlen: das Modell sieht
+// exakt die Zeichenfolge, die der Nutzer im Zahlenblock liest. So kann die
+// Prosa nicht von den angezeigten Zahlen abweichen. Deutsch fest verdrahtet -
+// die Prompts der AI-Engine sind es auch.
+const HEBEL_LABEL = {
+  kaufpreis: "Kaufpreis",
+  kaltmiete: "Kaltmiete",
+  renovierung: "Renovierungskosten",
+};
+
+export function hebelVarianten(d, t, locale = "de-DE") {
+  const analyse = berechneHebelAnalyse(d, t, berechneScore(d, t));
+  if (!analyse) return [];
+  const eur = (n) => `${Math.round(n).toLocaleString(locale)} \u20AC`;
+  return analyse.varianten.map((v) => {
+    const proMonat = v.unit === "\u20AC/Monat" ? "/Monat" : "";
+    return {
+      feld: HEBEL_LABEL[v.feld] || v.feld,
+      aenderung: `${v.delta > 0 ? "+" : "\u2212"}${eur(Math.abs(v.delta))}${proMonat}`,
+      neuerWert: `${eur((+d[v.feld] || 0) + v.delta)}${proMonat}`,
+      score: v.score,
+      deltaScore: v.deltaScore,
+    };
+  });
+}

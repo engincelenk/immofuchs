@@ -197,6 +197,8 @@ function ProduktZeile({
             </div>
           )}
 
+          <VariantenBlock varianten={ergebnis?.varianten} max={1} />
+
           <div
             style={{
               display: "flex",
@@ -271,6 +273,61 @@ function Bestaetigung({ produkt, ersetzt, onAbbrechen, onJa }) {
         Abbrechen
       </button>
       <span style={{ position: "absolute", left: -9999 }}>{produkt.titel}</span>
+    </div>
+  );
+}
+
+// Die durchgerechneten Varianten des Produkts "hebel" als Zahlenblock.
+//
+// Sie stehen VOR dem Modelltext, weil sie der belastbare Teil sind: sie
+// kommen aus der Rendite-/Score-Engine, nicht aus dem Modell. Der Text
+// darunter ordnet sie ein. Genau umgekehrt zur Vorlage-App, die ihre
+// Zielwerte vom Modell schaetzen laesst.
+//
+// In der Karte nur der groesste Hebel (max=1), die volle Liste im Sheet -
+// vier Zeilen je Produkt wuerden den Reiter wieder strecken.
+export function VariantenBlock({ varianten, max, titel }) {
+  if (!Array.isArray(varianten) || varianten.length === 0) return null;
+  const sichtbar = max ? varianten.slice(0, max) : varianten;
+  return (
+    <div style={{ marginTop: 12 }}>
+      {titel && <div style={gruppenTitel}>{titel}</div>}
+      {sichtbar.map((v, i) => (
+        <div
+          key={`${v.feld}-${v.aenderung}`}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: 12,
+            padding: "6px 0",
+            borderTop: i === 0 ? "none" : "1px solid var(--cb)",
+          }}
+        >
+          <span style={{ fontSize: 12.5, lineHeight: 1.45, color: "var(--ct)", minWidth: 0 }}>
+            {v.feld} <strong>{v.aenderung}</strong>
+            <span style={{ color: "var(--cl)" }}> → {v.neuerWert}</span>
+          </span>
+          <span
+            style={{
+              flexShrink: 0,
+              fontSize: 12.5,
+              fontWeight: 700,
+              fontVariantNumeric: "tabular-nums",
+              // Ein Hebel ohne Wirkung ist gedaempft, nicht gruen: deltaScore 0
+              // heisst "aendert nichts" und darf nicht wie ein Gewinn aussehen.
+              color: v.deltaScore > 0 ? "#2F6B4F" : v.deltaScore < 0 ? "#B3402A" : "var(--cl)",
+            }}
+          >
+            {v.score}/100
+          </span>
+        </div>
+      ))}
+      {!max && (
+        <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 8, lineHeight: 1.45 }}>
+          Gerechnet, nicht geschätzt — aus derselben Engine wie die Kennzahlen.
+        </div>
+      )}
     </div>
   );
 }

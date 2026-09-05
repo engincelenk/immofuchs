@@ -93,12 +93,18 @@ export function zahlenSnapshot(data, produktId = "analyse") {
   return s;
 }
 
-export function ergebnisAnlegen(produktId, inhalt, data) {
+// `extra` traegt gerechnete Beilagen zum Modelltext - heute die durchgerechneten
+// Varianten des Produkts "hebel". Sie werden MIT gespeichert, weil sie zum
+// Zeitpunkt der Auswertung galten: wer den Kaufpreis spaeter aendert, soll
+// weiter sehen koennen, auf welchen Zahlen die gespeicherte Einschaetzung
+// fusste. Neu gerechnet wuerden sie sonst still zur Aussage von gestern passen.
+export function ergebnisAnlegen(produktId, inhalt, data, extra = null) {
   return {
     produktId,
     inhalt,
     erstellt: new Date().toISOString(),
     basis: zahlenSnapshot(data, produktId),
+    ...(extra && Object.keys(extra).length > 0 ? extra : {}),
   };
 }
 

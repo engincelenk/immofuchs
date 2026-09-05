@@ -13,7 +13,12 @@ import { buildUserPayload } from "../promptBuilder";
 import { callModel, callVisionModel } from "../modelRouter";
 import { filterOutput } from "../outputFilter";
 import { EXPOSE_JSON_SCHEMA, EXPOSE_SYSTEM_PROMPT } from "../exposePrompt";
-import { nutzerPayload, systemPromptFuer, type AnalyseProdukt } from "../analysePrompt";
+import {
+  nutzerPayload,
+  systemPromptFuer,
+  type AnalyseProdukt,
+  type HebelVariante,
+} from "../analysePrompt";
 import { parseAnalyseOutput } from "../analyseOutput";
 import { parseExposeOutput } from "../exposeOutput";
 import { authenticate } from "../auth/session";
@@ -308,6 +313,43 @@ function extractTier(kontext: Record<string, unknown>): Tier {
 // dauerhaft wertvoll, nicht fluechtig wie eine Chatantwort.
 const ANALYSE_MAX_TOKENS = 900;
 
+// Hoechstens sechs Varianten, jedes Textfeld hoechstens 40 Zeichen: der
+// Client schickt heute vier kurze Zeilen, alles darueber hinaus ist entweder
+// ein Fehler oder ein Versuch, ueber ein strukturiertes Feld Text in den
+// Prompt zu bekommen. Fehlerhafte Eintraege werden verworfen, nicht
+// abgelehnt - eine unbrauchbare Variante darf keine bezahlte Auswertung
+// scheitern lassen.
+const VARIANTEN_MAX = 6;
+const VARIANTEN_TEXT_MAX = 40;
+
+export function leseVarianten(roh: unknown): HebelVariante[] | undefined {
+  if (!Array.isArray(roh)) return undefined;
+
+  const text = (v: unknown): string | null => {
+    if (typeof v !== "string") return null;
+    const s = v.trim().slice(0, VARIANTEN_TEXT_MAX);
+    // Zeilenumbrueche wuerden die Blockstruktur des Prompts aufbrechen.
+    return s && !/[\r\n]/.test(s) ? s : null;
+  };
+  const zahl = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
+
+  const sauber: HebelVariante[] = [];
+  for (const eintrag of roh.slice(0, VARIANTEN_MAX)) {
+    if (typeof eintrag !== "object" || eintrag === null || Array.isArray(eintrag)) continue;
+    const e = eintrag as Record<string, unknown>;
+    const feld = text(e.feld);
+    const aenderung = text(e.aenderung);
+    const neuerWert = text(e.neuerWert);
+    const score = zahl(e.score);
+    const deltaScore = zahl(e.deltaScore);
+    if (feld === null || aenderung === null || neuerWert === null) continue;
+    if (score === null || deltaScore === null) continue;
+    sauber.push({ feld, aenderung, neuerWert, score, deltaScore });
+  }
+  return sauber.length > 0 ? sauber : undefined;
+}
+
 export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promise<Response> {
   const env = c.env;
 
@@ -333,6 +375,12 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   // er nicht als Traeger fuer Prompt-Injection oder als Datenkanal dient.
   const hinweis = typeof b.hinweis === "string" ? b.hinweis.slice(0, 500) : "";
 
+  // Durchgerechnete Varianten fuer das Produkt "hebel". Sie stammen aus der
+  // Rendite-/Score-Engine des Clients - hier wird nur die Form geprueft.
+  // Genauso hart begrenzt wie der Hinweis: alles, was in den Prompt wandert,
+  // ist ein potenzieller Injection-Traeger, auch wenn es strukturiert aussieht.
+  const varianten = leseVarianten(b.varianten);
+
   const zugriff = await resolveZugriff(c.req.raw, env);
   if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
   if (zugriff.zugang !== "pro") return c.json({ error: "pro_required" }, 402);
@@ -355,7 +403,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
       env,
       "de",
       systemPromptFuer(produkt as AnalyseProdukt),
-      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis),
+      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis, varianten),
       ANALYSE_MAX_TOKENS,
     );
   } catch {

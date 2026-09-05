@@ -7,7 +7,7 @@ import { Stellschrauben } from "./Stellschrauben.jsx";
 import { ObjektUnterlagen, ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
-import { AiEngine } from "./AiEngine.jsx";
+import { AiEngine, VariantenBlock } from "./AiEngine.jsx";
 import {
   AI_PRODUKTE,
   alter,
@@ -18,6 +18,7 @@ import {
   produktFuer,
 } from "../../utils/aiEngine.js";
 import { apiFetch } from "../../utils/apiBase.js";
+import { hebelVarianten } from "../../utils/aiTools.js";
 import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
@@ -159,12 +160,16 @@ export function ObjektDetail({ objekt, onBack }) {
     if (!produkt || laufend) return;
     setAiFehler(null);
     setLaufend(produktId);
+    // Nur "hebel" braucht Varianten - fuer die Einordnung eines Objekts
+    // ("analyse") sind Was-waere-wenn-Rechnungen kein Eingangswert.
+    const varianten = produktId === "hebel" ? hebelVarianten(basis, t, locale) : [];
     try {
       const res = await apiFetch("/analyse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           produkt: produktId,
+          ...(varianten.length > 0 ? { varianten } : {}),
           // Nur Kennzahlen, keine Adresse und kein Name - das Modell braucht
           // sie nicht, also gehen sie auch nicht raus.
           kennzahlen: {
@@ -197,7 +202,12 @@ export function ObjektDetail({ objekt, onBack }) {
         return;
       }
       const { ergebnis } = await res.json();
-      const neu = ergebnisAnlegen(produktId, ergebnis, basis);
+      const neu = ergebnisAnlegen(
+        produktId,
+        ergebnis,
+        basis,
+        varianten.length > 0 ? { varianten } : null,
+      );
       await updateObj(objekt.id, objekt.title || "Objekt", basis, {
         resultData: mitErgebnis(objekt.kennzahlen || objekt.resultData, neu),
       });
@@ -512,6 +522,11 @@ function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
               {inhalt.kernaussage}
             </div>
           )}
+
+          {/* Der gerechnete Teil steht VOR dem Modelltext: er ist der
+              belastbare. Der Text darunter ordnet ihn nur ein. */}
+          <VariantenBlock varianten={ergebnis.varianten} titel="Durchgerechnete Varianten" />
+          {ergebnis.varianten?.length > 0 && <div style={{ height: 18 }} />}
 
           {(inhalt?.abschnitte || []).map((a) => (
             <div key={a.titel} style={{ marginBottom: 16 }}>
