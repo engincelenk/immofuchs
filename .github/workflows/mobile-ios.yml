@@ -60,6 +60,21 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
+      - name: 🧩 Xcode auf System-git fuer Swift-Package-Aufloesung umstellen
+        # Live-Befund 2026-09-04: Xcode nutzt fuer SPM-Paketabrufe per Default
+        # sein eigenes, in Swift geschriebenes "Built-in SCM" statt normalem
+        # Kommandozeilen-git (sichtbar im Build-Log als
+        # "IDEPackageSupportUseBuiltinSCM = YES"). Dieses Modul blieb beim
+        # "Checking out X.X.X of package"-Schritt fuer die (oeffentlichen,
+        # keine Zugangsdaten benoetigenden) Capacitor-Swift-Packages
+        # unbegrenzt haengen - vermutlich eine interne Keychain-Abfrage ohne
+        # Timeout in der nicht-interaktiven CI-Umgebung. GIT_TERMINAL_PROMPT=0
+        # (siehe unten) griff NICHT, weil dieses Built-in-Modul kein
+        # eigenstaendiger git-Prozess ist und dessen Umgebungsvariablen
+        # ignoriert. Diese Xcode-Einstellung erzwingt stattdessen System-git,
+        # das GIT_TERMINAL_PROMPT respektiert.
+        run: defaults write com.apple.dt.Xcode IDEPackageSupportUseBuiltinSCM -bool NO
+
       - name: 🔐 Fastlane match + Build + TestFlight-Upload
         env:
           # App Store Connect API Key (Empfehlung statt Apple-ID/Passwort -
