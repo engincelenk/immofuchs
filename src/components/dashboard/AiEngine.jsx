@@ -68,7 +68,7 @@ export function AiEngine({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {GRUPPEN.map((gruppe) => (
         <div key={gruppe.id}>
           <div style={gruppenTitel}>{gruppe.titel}</div>
@@ -152,21 +152,21 @@ function ProduktZeile({
       </div>
 
       {zustand === "offen" && (
-        <>
-          <div style={nutzenZeile}>{produkt.kurz}</div>
-          <button type="button" onClick={onStarten} style={knopf(produkt.id === "analyse")}>
-            {produkt.id === "expose" ? "Exposé hochladen" : produkt.titel}
+        <div style={aktionsZeile}>
+          <span style={nutzenZeile}>{produkt.kurz}</span>
+          <button type="button" onClick={onStarten} style={knopf}>
+            {produkt.aktion}
           </button>
-        </>
+        </div>
       )}
 
       {zustand === "gesperrt" && (
-        <>
-          <div style={nutzenZeile}>Braucht zuerst ein Exposé zu diesem Objekt.</div>
+        <div style={aktionsZeile}>
+          <span style={nutzenZeile}>Braucht zuerst ein Exposé zu diesem Objekt.</span>
           <button type="button" onClick={onVoraussetzung} style={textLink}>
             Exposé hochladen →
           </button>
-        </>
+        </div>
       )}
 
       {zustand === "laeuft" && <Laeuft produkt={produkt} />}
@@ -260,7 +260,7 @@ function Bestaetigung({ produkt, ersetzt, onAbbrechen, onJa }) {
       <div style={{ fontSize: 14, lineHeight: 1.55, color: "var(--cl)", marginBottom: 16 }}>
         Das ersetzt die Auswertung vom {ersetzt}.
       </div>
-      <button type="button" onClick={onJa} style={knopf(true)}>
+      <button type="button" onClick={onJa} style={knopfPrimaer}>
         Ja, neu erstellen
       </button>
       <button
@@ -307,11 +307,25 @@ const gruppenTitel = {
   marginBottom: 10,
 };
 
+// Nutzen und Aktion stehen in EINER Zeile, solange beides nebeneinander passt -
+// das spart je Produkt eine volle Knopfzeile. flexWrap statt Textmessung: passt
+// der Nutzentext nicht mehr neben den Knopf, rutscht der Knopf von selbst in
+// die naechste Zeile. Kein useLayoutEffect, kein Messen, kein Reflow-Flackern.
+const aktionsZeile = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: 8,
+  marginTop: 8,
+};
+
 const nutzenZeile = {
+  flex: "1 1 140px",
+  minWidth: 140,
   fontSize: 12.5,
   lineHeight: 1.45,
   color: "var(--cl)",
-  margin: "6px 0 12px",
 };
 
 const preisChip = {
@@ -360,23 +374,51 @@ const textLink = {
   textAlign: "left",
 };
 
-// Nur EIN gefuellter Knopf in der ganzen Sektion. Vier orange Vollflaechen
-// untereinander heben die Hierarchie auf und lassen den Reiter wie eine
-// Anzeigenwand wirken.
-function knopf(gefuellt) {
-  return {
-    width: "100%",
-    height: 44,
-    borderRadius: 10,
-    border: gefuellt ? "none" : "1.5px solid var(--cb)",
-    background: gefuellt ? "var(--ca)" : "var(--cc)",
-    color: gefuellt ? "#fff" : "var(--ct)",
-    fontSize: 15,
-    fontWeight: 700,
-    cursor: "pointer",
-    fontFamily: "inherit",
-  };
-}
+// NULL gefuellte Knoepfe in der Engine, und keiner ueber die volle Breite.
+//
+// Die frueher hier stehende Regel "nur EIN gefuellter Knopf" wird damit nicht
+// widerlegt, sondern verschaerft (UX-Review 2026-09-05): Seit die Engine als
+// Sektion im Ueberblick liegt, teilt sie sich den Screen mit dessen Inhalt.
+// Ein oranger Vollflaechen-Knopf mitten in vier gleichrangigen Produkten
+// lenkt dort nicht, er verwirrt - die Priorisierung "analyse zuerst" leistet
+// bereits die Reihenfolge in GRUPPEN.
+//
+// Auto-Breite statt 100 %: Die Verkleinerung ist HORIZONTAL. Die Hoehe bleibt
+// bei 44 px, nur die Breite faellt von 347 auf ~120 px. Die Trefferflaeche
+// bleibt damit unveraendert gross, es verschwindet nur die Flaeche, die einer
+// sekundaeren Aktion primaeres Gewicht gab.
+const knopf = {
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
+  height: 44,
+  padding: "0 16px",
+  borderRadius: 10,
+  border: "1.5px solid var(--cb)",
+  background: "var(--cc)",
+  color: "var(--ct)",
+  fontSize: 14,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+// Die einzige Ausnahme von "null gefuellte Knoepfe": der Bestaetigungsdialog.
+// Er ist ein eigener Screen mit genau einer Primaeraktion - dort ist die
+// Vollflaeche richtig, weil sie nicht mit anderen Produkten konkurriert.
+const knopfPrimaer = {
+  width: "100%",
+  height: 44,
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 15,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
 
 const bestaetigungKarte = {
   position: "relative",

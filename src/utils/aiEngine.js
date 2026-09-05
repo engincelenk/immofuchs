@@ -15,11 +15,18 @@ export const AI_ENGINE_NAME = "AI-Engine";
 
 // Produkte der Engine. `id` landet als Schluessel in resultData.ai und darf
 // sich deshalb nicht mehr aendern, sobald etwas gespeichert wurde.
+//
+// `aktion` ist bewusst ein VERB und nicht der Titel: bis zum UX-Review
+// 2026-09-05 trug der Knopf woertlich denselben String wie die Ueberschrift
+// zwei Zeilen darueber. Jede Karte sagte dieselbe Sache zweimal - das zweite
+// Mal als 347 px breite Flaeche. Vier Produkte mal 56 px = 224 px reine
+// Verdopplung, der teuerste Einzelposten des Befunds "Elemente zu lang".
 export const AI_PRODUKTE = [
   {
     id: "analyse",
     titel: "Immobilie analysieren",
     kurz: "Einschätzung zu Preis, Rendite und Tragfähigkeit",
+    aktion: "Analysieren",
     // Braucht ein gerechnetes Objekt, kein Exposé.
     braucht: "kennzahlen",
   },
@@ -27,18 +34,21 @@ export const AI_PRODUKTE = [
     id: "hebel",
     titel: "Was müsste sich ändern",
     kurz: "Welcher Kaufpreis oder welche Miete das Objekt trägt",
+    aktion: "Berechnen",
     braucht: "kennzahlen",
   },
   {
     id: "expose",
     titel: "Exposé-Scan",
     kurz: "PDF hochladen, Felder automatisch füllen",
+    aktion: "Exposé hochladen",
     braucht: "datei",
   },
   {
     id: "handout",
     titel: "Besichtigungshandout",
     kurz: "Fragenliste für den Termin, aus dem Exposé abgeleitet",
+    aktion: "Erstellen",
     // Folgeprodukt des Exposé-Scans - ohne dessen Ergebnis nicht moeglich.
     braucht: "expose",
   },

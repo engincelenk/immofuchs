@@ -5,8 +5,13 @@
 //
 // Wichtig (Konzept 3.9): Das Urteil ist KEINE KI. Es kommt aus dem Regelwerk
 // (investmentScore.js / rendite.js) und ist deshalb kostenlos, sofort und
-// deterministisch - kein Sparkle-Icon, kein Farbverlauf, kein Knopf. Nur der
-// Assistent darunter ist KI und traegt entsprechend Marineblau.
+// deterministisch - kein Sparkle-Icon, kein Farbverlauf, kein Knopf.
+//
+// Seit 2026-09-05 haengt die AI-Engine als aufklappbare Sektion UNTER diesem
+// Modul (gerendert von ObjektDetail.jsx, nicht von hier). Die Trennung ist
+// Absicht: dieses Modul bleibt frei von KI, deshalb steht das ✦ ausschliesslich
+// an der Sektion darunter. Der frueher hier stehende Finn-Knopf ist entfallen -
+// seine Prop onFinnFrage wurde vom einzigen Aufrufer nie uebergeben.
 import { Tip } from "../ui/Tip.jsx";
 import { fehlendeFelder } from "../../utils/objektKennzahlen.js";
 
@@ -118,7 +123,7 @@ function Balken({ label, wert, anteil, farbe, locale }) {
   );
 }
 
-export function Ueberblick({ kennzahlen, data, onFinnFrage, onStellschrauben, locale = "de-DE" }) {
+export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE" }) {
   if (!kennzahlen?.verfuegbar) {
     // Lehrender Empty-State (Konzept 3.6): nennt die fehlenden Felder, statt
     // nur zu melden, dass nichts da ist.
@@ -129,7 +134,7 @@ export function Ueberblick({ kennzahlen, data, onFinnFrage, onStellschrauben, lo
           background: "var(--cc)",
           border: "1px solid var(--cb)",
           borderRadius: 12,
-          padding: 20,
+          padding: 16,
           fontSize: 14,
           lineHeight: 1.55,
           color: "var(--ch)",
@@ -150,7 +155,7 @@ export function Ueberblick({ kennzahlen, data, onFinnFrage, onStellschrauben, lo
   const farbe = TIER_FARBE[tier] || "var(--ch)";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* Ampel + Urteil */}
       <div
         style={{
@@ -158,7 +163,7 @@ export function Ueberblick({ kennzahlen, data, onFinnFrage, onStellschrauben, lo
           border: "1px solid var(--cb)",
           borderRadius: 12,
           borderTop: `3px solid ${farbe}`,
-          padding: "18px 18px 20px",
+          padding: 16,
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
@@ -197,8 +202,8 @@ export function Ueberblick({ kennzahlen, data, onFinnFrage, onStellschrauben, lo
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))",
             gap: 12,
-            marginTop: 16,
-            paddingTop: 14,
+            marginTop: 12,
+            paddingTop: 12,
             borderTop: "1px solid var(--cb)",
           }}
         >
@@ -248,65 +253,49 @@ export function Ueberblick({ kennzahlen, data, onFinnFrage, onStellschrauben, lo
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Verhaeltnis vor Zahl */}
-      <div
-        style={{
-          background: "var(--cc)",
-          border: "1px solid var(--cb)",
-          borderRadius: 12,
-          padding: 18,
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-        }}
-      >
+        {/* Verhaeltnis vor Zahl - seit dem UX-Review 2026-09-05 eine SEKTION
+            dieser Karte, keine zweite Karte mehr. Zwei gleich schwere
+            Vollbreiten-Bloecke direkt untereinander erzeugen keine Hierarchie,
+            sondern eine Stapel-Liste: das Auge findet keinen Einstieg.
+            Die frueher hier stehende Zeile "Ueberschuss" ist ersatzlos
+            entfallen - sie zeigte exakt denselben Wert wie die KPI-Kachel
+            "Cashflow / Monat" 130 px weiter oben. */}
         <div
           style={{
-            fontSize: 11,
-            color: "var(--ch)",
-            textTransform: "uppercase",
-            letterSpacing: 0.6,
-            fontWeight: 600,
-          }}
-        >
-          Pro Monat
-        </div>
-        <Balken
-          label="Einnahmen"
-          wert={ein}
-          anteil={ein / max}
-          farbe="#2F6B4F"
-          locale={locale}
-        />
-        <Balken
-          label="Ausgaben"
-          wert={aus}
-          anteil={aus / max}
-          farbe="#B3402A"
-          locale={locale}
-        />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            paddingTop: 10,
+            marginTop: 12,
+            paddingTop: 12,
             borderTop: "1px solid var(--cb)",
-            fontSize: 14,
-            fontWeight: 700,
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
           }}
         >
-          <span>Überschuss</span>
-          <span
+          <div
             style={{
-              color: cf >= 0 ? "#2F6B4F" : "#B3402A",
-              fontVariantNumeric: "tabular-nums",
+              fontSize: 11,
+              color: "var(--cl)",
+              textTransform: "uppercase",
+              letterSpacing: 0.6,
+              fontWeight: 600,
             }}
           >
-            {cf >= 0 ? "+" : ""}
-            {eur(cf, locale)}
-          </span>
+            Pro Monat
+          </div>
+          <Balken
+            label="Einnahmen"
+            wert={ein}
+            anteil={ein / max}
+            farbe="#2F6B4F"
+            locale={locale}
+          />
+          <Balken
+            label="Ausgaben"
+            wert={aus}
+            anteil={aus / max}
+            farbe="#B3402A"
+            locale={locale}
+          />
         </div>
       </div>
 
@@ -333,32 +322,6 @@ export function Ueberblick({ kennzahlen, data, onFinnFrage, onStellschrauben, lo
           </button>
         )}
       </div>
-
-      {/* Nur DAS ist KI - kontextuell, mit vorformulierter Frage */}
-      {onFinnFrage && (
-        <button
-          type="button"
-          onClick={() => onFinnFrage("Warum ist das so?")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 9,
-            width: "100%",
-            padding: "13px 16px",
-            borderRadius: 12,
-            border: "1px solid #1E3A5F33",
-            background: "#1E3A5F0d",
-            color: "#1E3A5F",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: "inherit",
-            textAlign: "left",
-          }}
-        >
-          <span aria-hidden="true">✦</span> Warum ist das so? — Finn fragen
-        </button>
-      )}
     </div>
   );
 }

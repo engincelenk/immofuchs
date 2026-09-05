@@ -1,3 +1,66 @@
+## 2026-09-05 (1.58.0)
+
+### Objekt-Reiter verdichtet, AI-Engine wandert in den Ueberblick
+
+Befund aus dem UX-Review: In den Objekt-Reitern belegten Karten, Knoepfe und
+Zeilen alle dieselben 347 px. Gleiche Breite heisst gleiches Gewicht - es
+entstand keine Hierarchie, sondern eine Stapel-Liste ohne Einstiegspunkt.
+
+**AI-Engine ist kein eigener Reiter mehr**
+- Sie liegt jetzt als aufklappbare Sektion am Ende des Ueberblicks - dort, wo
+  der Nutzer die Kennzahlen gerade gelesen hat, auf die sie sich bezieht.
+- Zugeklappt EINE Zeile (~56 px), keine Karte: eine zweite Karte unter der
+  Hero-Karte waere genau der gleich schwere Block, den der Umbau beseitigt.
+  Die Kopfzeile bleibt trotzdem informativ ("2 von 4 erstellt - zuletzt
+  03.09." bzw. "Noch keine Auswertung") - dasselbe Muster wie die
+  Reglerkarten in Stellschrauben.
+- Standard zugeklappt, auch bei vorhandenen Ergebnissen: automatisches
+  Aufklappen wuerde den Ueberblick ausgerechnet fuer wiederkehrende Nutzer
+  wieder ueber 1.000 px strecken.
+- Das Fehlerband der Auswertung steht jetzt IN der Sektion statt ueber der
+  Chip-Leiste - vorher erschien es ohne sichtbaren Bezug am Seitenkopf.
+
+**Knoepfe: drei Stufen statt einer**
+- Voll/gefuellt nur noch fuer die eine Primaeraktion je Reiter, sonst
+  Auto-Breite mit Kontur oder Text-Link. Die Verkleinerung ist HORIZONTAL:
+  Hoehe bleibt 44 px, nur die Breite faellt (gemessen 347 auf 106-158 px).
+  Die Trefferflaeche bleibt damit unveraendert gross.
+- In der AI-Engine trug der Knopf woertlich denselben Text wie die
+  Ueberschrift zwei Zeilen darueber. Er traegt jetzt ein Verb
+  ("Analysieren", "Berechnen"); das Verb steht in der Produktregistry, also
+  an genau einer Stelle. Vier Produkte mal 56 px waren reine Verdopplung.
+- Null gefuellte Knoepfe in der Engine: seit sie sich den Screen mit dem
+  Ueberblick teilt, lenkt eine orange Vollflaeche zwischen vier
+  gleichrangigen Produkten nicht, sie verwirrt.
+
+**Reiter "Alle Daten" heisst "Daten" und ist deutlich kuerzer**
+- Vier Karten wurden EINE Karte mit Haarlinien-Sektionen.
+- Label-links/Wert-rechts wurde ein Zwei-Spalten-Raster (auto-fit
+  minmax(148px, 1fr) wie in ObjektKPIs) - "PLZ ..... 70190" verbrauchte
+  vorher 347 px fuer neun Zeichen.
+- Die Einheit haengt am Wert statt am Label ("Kaufpreis / 285.000 EUR" statt
+  "Kaufpreis (EUR) / 285.000"). Das verkuerzt genau die Labels, die in einer
+  151-px-Spalte kurz sein muessen. Zaehlbare Einheiten bekommen dabei einen
+  Singular ("1 Monat" statt "1 Monate"); einheitenlose Zahlen bleiben
+  unformatiert, ein Tausenderpunkt im Baujahr waere falsch.
+
+**Ueberblick**
+- "Pro Monat" ist eine Sektion der Hero-Karte statt einer zweiten Karte.
+- Die Zeile "Ueberschuss" ist entfallen - sie zeigte exakt denselben Wert wie
+  die KPI-Kachel "Cashflow / Monat" 130 px weiter oben.
+- Der Finn-Knopf ist geloescht: seine Prop onFinnFrage wurde vom einzigen
+  Aufrufer nie uebergeben, der Knopf war seit dem Umbau toter Code.
+
+**Chip-Leiste**
+- Fuenf statt sechs Chips, Hoehe 38 auf 40 (bessere Trefferflaeche),
+  schmaleres Padding: gemessen 545 auf 482 px.
+- Neu eine Verlaufskante rechts. Bisher gab es keinerlei Hinweis darauf, dass
+  hinter dem angeschnittenen Chip noch etwas liegt - genau der Grund, aus dem
+  die AI-Engine frueher auf Position 2 gezwungen wurde.
+
+Gemessen bei 375 px Viewport: Ueberblick 424 px Inhalt inklusive zugeklappter
+KI-Sektion, Daten 686 px (vorher der laengste Reiter der App).
+
 ## 2026-09-05 (1.57.0)
 
 ### ImmoFuchs AI-Engine: die vier KI-Produkte an einer Stelle
