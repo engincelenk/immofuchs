@@ -78,3 +78,29 @@ platform :ios do
     )
   end
 end
+
+platform :android do
+  desc "Laedt das bereits gebaute App Bundle in den Play-Internal-Testing-Track"
+  lane :beta do
+    # Bewusst NUR der Upload: gebaut wird per Gradle direkt im Workflow
+    # (.github/workflows/mobile-android.yml), nicht ueber Fastlanes
+    # gradle-Action. Grund: die Signatur-/versionCode-Logik steht bereits in
+    # android/app/build.gradle und liest Umgebungsvariablen - ein zweiter
+    # Build-Weg daneben waere eine zweite Wahrheit ueber dieselbe Sache.
+    upload_to_play_store(
+      track: "internal",
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      json_key: ENV["PLAY_SERVICE_ACCOUNT_JSON_PATH"],
+      # Store-Texte/Bilder werden in der Play Console gepflegt, nicht aus dem
+      # Repo hochgeladen - sonst wuerde ein CI-Lauf dort von Hand gepflegte
+      # Beschreibungen ueberschreiben.
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+      # Nur hochladen, nicht automatisch an Tester ausrollen - der letzte
+      # Schritt bleibt bewusst ein bewusster Klick in der Play Console.
+      release_status: "draft",
+    )
+  end
+end

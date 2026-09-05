@@ -1,13 +1,39 @@
 apply plugin: 'com.android.application'
 
+// Signatur und Versionsnummer kommen aus Umgebungsvariablen, damit weder
+// Keystore-Pfad noch Passwoerter im Repo landen (gesetzt von
+// .github/workflows/mobile-android.yml aus GitHub Secrets). Sind sie nicht
+// gesetzt - also bei jedem lokalen Build - faellt alles auf die
+// Debug-Signatur und versionCode 1 zurueck, der Build laeuft trotzdem.
+def keystorePathEnv = System.getenv("ANDROID_KEYSTORE_PATH")
+def versionCodeEnv = System.getenv("ANDROID_VERSION_CODE")
+
 android {
     namespace = "info.immofuchs.app"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    signingConfigs {
+        if (keystorePathEnv) {
+            release {
+                storeFile file(keystorePathEnv)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "info.immofuchs.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        // Google Play verlangt fuer JEDEN Upload einen hoeheren versionCode
+        // als beim vorherigen. In CI kommt er aus der GitHub-Actions-
+        // Laufnummer (fortlaufend, nie doppelt), analog zur Build-Nummer im
+        // iOS-Weg (fastlane/Fastfile). Bewusst einzeilig: Groovy beendet eine
+        // Anweisung am Zeilenende, sobald sie vollstaendig ist - ein
+        // umgebrochener Ternaer-Ausdruck waere ein Syntaxfehler.
+        versionCode versionCodeEnv ? versionCodeEnv.toInteger() : 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -20,6 +46,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Nur setzen, wenn oben tatsaechlich ein Keystore konfiguriert
+            // wurde - sonst bricht Gradle mit "signingConfig release not
+            // found" ab, statt einfach unsigniert zu bauen.
+            if (keystorePathEnv) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

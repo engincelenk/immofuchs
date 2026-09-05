@@ -20,6 +20,14 @@ ios/App/App.xcworkspace/xcuserdata/
 ios/App/App.xcodeproj/xcuserdata/
 ios/DerivedData/
 
+# Android-Signaturschluessel - NIEMALS einchecken. Wer den Upload-Key samt
+# Passwort hat, kann Updates unter eurem App-Namen veroeffentlichen. Der
+# Schluessel gehoert ausschliesslich in einen Passwort-Manager und als
+# Base64-GitHub-Secret (siehe docs/app-store-google-play-setup.md B3).
+*.keystore
+*.jks
+android/keystore.properties
+
 # Playwright (S6-5/S8-5)
 /playwright-report/
 /test-results/

@@ -1,3 +1,49 @@
+## 2026-09-05 (1.56.2) [CI]
+
+### Neu: Android-Build-Workflow (kein Mac noetig, ubuntu-latest)
+
+Gegenstueck zum iOS-Weg, aber auf einem normalen Linux-Runner - Android
+braucht keinen macOS-Runner, das ist rund Faktor 10 guenstiger pro Minute.
+
+**Neu: `.github/workflows/mobile-android.yml`**
+- Manuell ausgeloest, zwei Eingaben: Backend-Ziel (dev/qa/prod, identisch
+  zum iOS-Workflow) und `upload_to_play` (Standard: aus).
+- Baut die Web-Assets, `npx cap sync android`, JDK 21 (AGP 8.13/Gradle
+  8.14.3 verlangen mind. 17), stellt den Keystore aus einem Base64-Secret
+  wieder her, baut ein signiertes `.aab` per `./gradlew bundleRelease`.
+- Legt das Bundle IMMER als herunterladbares Artefakt ab. Grund: die
+  Google-Play-API kann fuer eine brandneue App kein erstes Bundle anlegen -
+  der allererste Upload muss von Hand ueber die Play Console laufen.
+- Optionaler Upload in den Internal-Testing-Track (neue `android beta`-Lane
+  im Fastfile, `upload_to_play_store` mit `release_status: "draft"` - liegt
+  danach bereit, wird aber nicht automatisch an Tester ausgerollt).
+- Job-Timeout 30 Minuten, gleiche Begruendung wie im iOS-Workflow.
+
+**Geaendert: `android/app/build.gradle`**
+- Signaturkonfiguration ergaenzt (fehlte komplett - `bundleRelease` haette
+  ein unsigniertes Bundle erzeugt). Keystore-Pfad und Passwoerter kommen
+  ausschliesslich aus Umgebungsvariablen, nichts davon im Repo.
+- `versionCode` kommt in CI aus der GitHub-Laufnummer statt fest auf 1 zu
+  stehen - Play verlangt fuer jeden Upload einen hoeheren Wert als zuvor.
+- Beides faellt ohne gesetzte Variablen sauber auf lokales Debug-Verhalten
+  zurueck, lokale Builds bleiben also unveraendert moeglich.
+
+**Weitere Korrekturen**
+- `android/gradlew` lag ohne Ausfuehrungsrecht im Repo (Dateimodus 100644,
+  weil unter Windows erzeugt) - auf dem Linux-Runner waere der Build sofort
+  mit "Permission denied" gescheitert. Jetzt 100755.
+- `.gitignore`: `*.keystore`, `*.jks` und `android/keystore.properties`
+  ergaenzt, damit ein Signaturschluessel nie versehentlich eingecheckt wird.
+
+**Noch offen (nur extern erledigbar):** Play-Console-Konto (25 $,
+1-2 Tage Verifizierung), Keystore erzeugen, die vier Android-Secrets
+hinterlegen. Schritt-fuer-Schritt in `docs/app-store-google-play-setup.md`
+B3 und D2.
+
+**Betroffene Dateien:** `.github/workflows/mobile-android.yml` (neu),
+`android/app/build.gradle`, `android/gradlew` (Dateimodus), `.gitignore`,
+`fastlane/Fastfile`, `docs/app-store-google-play-setup.md`.
+
 ## 2026-09-05 (1.56.1) [CI]
 
 ### Meilenstein: erster iOS-Build erfolgreich in TestFlight hochgeladen

@@ -1,0 +1,125 @@
+name: 🤖 Android Build & Play-Upload
+
+# Gegenstueck zu mobile-ios.yml, aber deutlich guenstiger: Android braucht
+# keinen macOS-Runner, ein normaler ubuntu-latest reicht (Faktor ~10 im
+# Minutenpreis). Nur manuell ausgeloest - siehe
+# docs/app-store-google-play-setup.md Teil B und D2.
+on:
+  workflow_dispatch:
+    inputs:
+      backend:
+        description: "Welcher Worker/Backend-Stand soll eingebaut werden?"
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+        default: dev
+      upload_to_play:
+        description: "Nach Google Play hochladen? (Beim ALLERERSTEN Mal nein - siehe Hinweis im Workflow)"
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    name: 🛠️ Build (Linux-Runner) & optionaler Play-Upload
+    runs-on: ubuntu-latest
+    # Gleiche Begruendung wie im iOS-Workflow: ohne Limit greift erst der
+    # GitHub-Standard von 360 Minuten. Ein Android-Build dauert wenige Minuten.
+    timeout-minutes: 30
+
+    steps:
+      - name: 🚚 Code aus GitHub auschecken
+        uses: actions/checkout@v5
+
+      - name: 🛠️ Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: 📦 Web-Assets bauen (dist/, wird per cap sync in die App kopiert)
+        env:
+          # Identisch zum iOS-Workflow gehalten, damit beide Apps denselben
+          # Web-Stand gegen dasselbe Backend bauen.
+          VITE_ASSISTANT_URL: ${{ github.event.inputs.backend == 'prod' && 'https://immofuchs-assistant.engincelenk.workers.dev/api/assistant' || github.event.inputs.backend == 'qa' && 'https://immofuchs-assistant-qa.engincelenk.workers.dev/api/assistant' || 'https://api-dev.immofuchs.info/api/assistant' }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+          VITE_TURNSTILE_SITE_KEY: 0x4AAAAAAEW18bBEyl_o5nTS
+        run: |
+          npm ci
+          npm run build
+
+      - name: 📱 Capacitor-Sync (kopiert dist/ nach android/app/src/main/assets/public)
+        run: npx cap sync android
+
+      - name: ☕ JDK 21 einrichten
+        # AGP 8.13 / Gradle 8.14.3 (siehe android/build.gradle) brauchen
+        # mindestens JDK 17; 21 ist die von Android Studio aktuell
+        # mitgelieferte und von AGP 8.13 empfohlene Version.
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: 🔑 Keystore aus Secret wiederherstellen
+        # Der Signaturschluessel liegt als Base64-String im GitHub-Secret und
+        # wird hier zu einer echten Datei gemacht. Der Runner ist nach dem
+        # Lauf weg, die Datei existiert also nirgends dauerhaft.
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Secret ANDROID_KEYSTORE_BASE64 fehlt - ohne Signaturschluessel laesst sich kein Release-Bundle bauen. Siehe docs/app-store-google-play-setup.md B3."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          echo "Keystore wiederhergestellt ($(wc -c < "$RUNNER_TEMP/release.keystore") Bytes)"
+
+      - name: 🏗️ Signiertes App Bundle (.aab) bauen
+        working-directory: android
+        env:
+          # Werden von android/app/build.gradle ausgelesen (signingConfigs).
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Play verlangt bei jedem Upload einen hoeheren versionCode als
+          # zuvor - die GitHub-Laufnummer zaehlt zuverlaessig hoch.
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: 📤 .aab als Artefakt bereitstellen (zum manuellen Hochladen)
+        # Wichtig fuer den ALLERERSTEN Upload: die Google-Play-API kann fuer
+        # eine brandneue App kein erstes Bundle anlegen - das muss einmal von
+        # Hand ueber die Play Console hochgeladen werden. Danach funktioniert
+        # der automatische Upload unten. Deshalb landet das Bundle immer auch
+        # als herunterladbares Artefakt hier.
+        uses: actions/upload-artifact@v4
+        with:
+          name: immofuchs-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 14
+
+      - name: 💎 Ruby + Bundler einrichten (nur fuer den Play-Upload)
+        if: ${{ github.event.inputs.upload_to_play == 'true' }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: 🚀 Upload in den Play-Internal-Testing-Track
+        if: ${{ github.event.inputs.upload_to_play == 'true' }}
+        env:
+          # Service-Account-JSON aus der Play Console (Setup > API-Zugriff).
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::Secret PLAY_SERVICE_ACCOUNT_JSON fehlt - ohne Service-Account darf CI nicht bei Google Play hochladen. Siehe docs/app-store-google-play-setup.md D2."
+            exit 1
+          fi
+          echo "$PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play-service-account.json"
+          PLAY_SERVICE_ACCOUNT_JSON_PATH="$RUNNER_TEMP/play-service-account.json" \
+            bundle exec fastlane android beta
