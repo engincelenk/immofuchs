@@ -304,8 +304,11 @@ export function useSavedObjects(setData) {
   // Endpunkt existiert bereits samt Ownership-Check), Free ueber den lokalen
   // Stand. Score und Kennzahlen werden neu abgeleitet, sonst zeigte die Karte
   // nach dem Bearbeiten die alte Ampel.
+  // extra.resultData: die AI-Engine legt ihre Ergebnisse dort ab. Ohne diesen
+  // Durchgriff wuerde toServerPayload() sie beim naechsten Speichern
+  // ueberschreiben - eine bezahlte Auswertung waere weg.
   const updateObj = useCallback(
-    async (id, name, data) => {
+    async (id, name, data, extra = {}) => {
       const kz = berechneObjektKennzahlen(data);
       if (isPro) {
         try {
@@ -313,14 +316,23 @@ export function useSavedObjects(setData) {
           await apiFetch(`/objects/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(
-              toServerPayload({
+            body: JSON.stringify({
+              ...toServerPayload({
                 id,
                 name,
                 data,
                 letzteAnsicht: vorher?.letzteAnsicht || "haupt",
               }),
-            ),
+              ...(extra.resultData
+                ? {
+                    resultData: {
+                      ...toResultData(kz),
+                      letzteAnsicht: vorher?.letzteAnsicht || "haupt",
+                      ...extra.resultData,
+                    },
+                  }
+                : {}),
+            }),
           });
         } catch (e) {
           console.error("[merkliste] Bearbeiten fehlgeschlagen:", e);
@@ -338,7 +350,9 @@ export function useSavedObjects(setData) {
                 date: new Date().toLocaleDateString("de-DE"),
                 score: kz.score,
                 scoreLabel: kz.scoreLabel,
-                kennzahlen: kz,
+                kennzahlen: extra.resultData
+                  ? { ...kz, ...extra.resultData }
+                  : { ...kz, ...(o.kennzahlen?.ai ? { ai: o.kennzahlen.ai } : {}) },
               }
             : o,
         );

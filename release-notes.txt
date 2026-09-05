@@ -1,3 +1,66 @@
+## 2026-09-05 (1.57.0)
+
+### ImmoFuchs AI-Engine: die vier KI-Produkte an einer Stelle
+
+Bisher lagen die KI-Funktionen verstreut: zwei im Renditerechner
+(`KiToolsSection`), zwei im Finn-Chat. Ergebnisse wurden NIRGENDS gespeichert -
+Chat zu, Analyse weg. Bei einem Pro-Feature ist das nicht haltbar.
+
+**Neuer Reiter "AI-Engine" am Objekt (Position 2)**
+- Buendelt alle vier Produkte: Immobilie analysieren, Was muesste sich aendern,
+  Exposé-Scan, Besichtigungshandout.
+- Neu `src/utils/aiEngine.js`: Produktregistry an EINER Stelle. Wer ein Produkt
+  hinzufuegt oder entfernt, fasst diese Datei an - nicht vier verstreute.
+- Ergebnisse werden am Objekt gespeichert (`resultData.ai[produktId]`,
+  serverseitig freies JSON - kein Schema-Eingriff).
+
+**Veralten-Erkennung**
+- Jedes Ergebnis speichert die Zahlen mit, auf die es sich bezog. Aendert sich
+  danach etwas, benennt das Band Feld UND Delta ("Kaufpreis 199.000 →
+  179.000") statt nur "veraltet". Ohne das muesste der Nutzer Kontingent
+  ausgeben, um herauszufinden, ob sich Kontingent lohnt.
+- Relevante Felder JE PRODUKT: das Handout haengt am Exposé, nicht am
+  Kaufpreis. Eine gemeinsame Liste haette Ergebnisse grundlos entwertet.
+
+**Worker: strukturierte Ausgabe statt Fliesstext**
+- Neu `POST /api/v1/analyse` (nur Pro), `analysePrompt.ts`, `analyseOutput.ts`.
+- Das Modell liefert `{kernaussage, kpis, abschnitte}` - der Reiter zeigt nur
+  die Kernaussage in drei Zeilen, der Rest steht im Sheet. Mit Fliesstext
+  waere der Reiter am Telefon zwangslaeufig eine Textwueste.
+- `parseAnalyseOutput` haertet nach: Markdown-Zaeune, Vorreden, zu viele
+  Felder, kaputte Typen. Reiner Fliesstext wird als Kernaussage gerettet.
+- `filterOutput` laeuft NACH dem Parsen: auf rohes JSON angewandt wuerde sein
+  Fallback-Satz zur "Kernaussage" - der Nutzer bekaeme eine Fehlermeldung als
+  Analyseergebnis serviert.
+- Fair-Use `ANALYSE_DAILY_LIMIT` (Default 20/Tag). Bei Modellfehler wird das
+  Kontingent zurueckgegeben - kein Verbrauch ohne Ergebnis.
+
+**Aufraeumen nach UX-Review**
+- `KiToolsSection` aus dem Renditerechner entfernt.
+- Chipleiste von neun auf sechs: Finanzierung/Miete/Sanierung/Steuer rendern
+  alle dasselbe (Ueberschrift + Knopf) und sind zu EINEM Chip "Rechner"
+  zusammengefasst. Erst dadurch passt die AI-Engine auf Position 2 - bei
+  375 px sind nur die ersten beiden Chips ohne Scrollen sichtbar.
+- Fuenfter Zustand "Voraussetzung fehlt": das Handout braucht ein Exposé. Das
+  ist VOR dem Verbrauch sichtbar, statt Kontingent fuer eine Fehlermeldung.
+- Bestaetigungsdialog gestuft statt immer - nur beim Ueberschreiben eines
+  vorhandenen Ergebnisses. Ein Dialog bei jedem Lauf wird reflexhaft
+  weggeklickt und schuetzt dann nicht mehr, wenn es zaehlt.
+- Nur EIN gefuellter Knopf in der Sektion. Vier orange Vollflaechen
+  untereinander heben die Hierarchie auf.
+- Kleintexte auf `--cl` statt `--ch`: --ch liefert auf Karten 3,48:1 und
+  faellt durch WCAG AA (4,5:1). Genau dort stehen Kosten und Zeitstempel.
+  BEFUND GILT PROJEKTWEIT - ausserhalb dieser Sektion noch offen.
+
+**Tests:** `aiEngine.test.js` (20), `analyseOutput.test.ts` (12). Gesamt 487
+im Frontend gruen, Worker kompiliert sauber.
+
+**ACHTUNG Deploy:** Die CI deployt nur das Frontend. Der neue Endpunkt braucht
+zusaetzlich `npx wrangler deploy --env dev` im worker/-Verzeichnis, sonst
+laeuft die AI-Engine gegen 404.
+
+**Betroffene Dateien:** src/utils/aiEngine.js, src/utils/aiEngine.test.js, src/components/dashboard/AiEngine.jsx, src/components/dashboard/ObjektDetail.jsx, src/components/shell/Merkliste.jsx, src/components/calculators/Renditerechner.jsx, worker/src/analysePrompt.ts, worker/src/analyseOutput.ts, worker/src/analyseOutput.test.ts, worker/src/routes/assistant.ts, worker/src/index.ts, worker/src/types.ts
+
 ## 2026-09-05 (1.56.2) [CI]
 
 ### Neu: Android-Build-Workflow (kein Mac noetig, ubuntu-latest)

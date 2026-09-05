@@ -13,6 +13,8 @@ import { buildUserPayload } from "../promptBuilder";
 import { callModel, callVisionModel } from "../modelRouter";
 import { filterOutput } from "../outputFilter";
 import { EXPOSE_JSON_SCHEMA, EXPOSE_SYSTEM_PROMPT } from "../exposePrompt";
+import { nutzerPayload, systemPromptFuer, type AnalyseProdukt } from "../analysePrompt";
+import { parseAnalyseOutput } from "../analyseOutput";
 import { parseExposeOutput } from "../exposeOutput";
 import { authenticate } from "../auth/session";
 import { ermittleZugang, type Zugang } from "../entitlement";
@@ -294,4 +296,93 @@ function extractTier(kontext: Record<string, unknown>): Tier {
     if (tier === "green" || tier === "yellow" || tier === "red") return tier;
   }
   return null;
+}
+
+// ── AI-Engine: strukturierte Objektauswertung ───────────────────────────────
+//
+// Neu 2026-09, deshalb versioniert unter /api/v1/ (die beiden Handler oben
+// bleiben unversioniert, weil sie Bestandsfunktionen sind).
+//
+// NUR PRO (Nutzerentscheidung 2026-09-05). Anders als beim Chat gibt es hier
+// kein Testkontingent: die Auswertung wird am Objekt gespeichert und ist damit
+// dauerhaft wertvoll, nicht fluechtig wie eine Chatantwort.
+const ANALYSE_MAX_TOKENS = 900;
+
+export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promise<Response> {
+  const env = c.env;
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  if (typeof body !== "object" || body === null) {
+    return c.json({ error: "invalid_body" }, 400);
+  }
+  const b = body as Record<string, unknown>;
+
+  const produkt = b.produkt === "hebel" ? "hebel" : b.produkt === "analyse" ? "analyse" : null;
+  if (!produkt) return c.json({ error: "unbekanntes_produkt" }, 400);
+
+  const kennzahlen = b.kennzahlen;
+  if (typeof kennzahlen !== "object" || kennzahlen === null || Array.isArray(kennzahlen)) {
+    return c.json({ error: "kennzahlen_fehlen" }, 400);
+  }
+  // Der Freitext-Hinweis geht mit an das Modell - deshalb hart begrenzt, damit
+  // er nicht als Traeger fuer Prompt-Injection oder als Datenkanal dient.
+  const hinweis = typeof b.hinweis === "string" ? b.hinweis.slice(0, 500) : "";
+
+  const zugriff = await resolveZugriff(c.req.raw, env);
+  if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
+  if (zugriff.zugang !== "pro") return c.json({ error: "pro_required" }, 402);
+
+  const sessionId = typeof b.sessionId === "string" ? b.sessionId : "";
+  if (!(await hasConsent(env, sessionId))) {
+    return c.json({ error: "consent_required" }, 412);
+  }
+
+  // Fair-Use wie beim Chat: die Auswertung ist teurer als eine Chatantwort,
+  // deshalb ein eigener, knapperer Zaehler je Nutzer und Tag.
+  const tagesLimit = parseInt(env.ANALYSE_DAILY_LIMIT || "", 10) || 20;
+  const limiter = env.RATE_LIMITER_DO.getByName(`analyse:${zugriff.user.id}`);
+  const rl = await limiter.checkAndIncrement(tagesLimit);
+  if (!rl.allowed) return c.json({ error: "rate_limit_exceeded" }, 429);
+
+  let roh: string;
+  try {
+    roh = await callModel(
+      env,
+      "de",
+      systemPromptFuer(produkt as AnalyseProdukt),
+      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis),
+      ANALYSE_MAX_TOKENS,
+    );
+  } catch {
+    // Kontingent zurueckgeben: der Nutzer hat kein Ergebnis bekommen.
+    await limiter.decrement();
+    return c.json({ error: "modell_nicht_erreichbar" }, 503);
+  }
+
+  const ergebnis = parseAnalyseOutput(roh);
+  if (!ergebnis) {
+    await limiter.decrement();
+    return c.json({ error: "unbrauchbare_antwort" }, 502);
+  }
+
+  // filterOutput NACH dem Parsen, nicht davor: es ersetzt bei Verdacht den
+  // gesamten Text durch einen Fallback-Satz. Auf das rohe JSON angewandt
+  // wuerde dieser Satz zur "Kernaussage" - der Nutzer bekaeme eine
+  // Fehlermeldung als Analyseergebnis serviert. Stattdessen pruefen wir den
+  // zusammengesetzten Text und verwerfen im Verdachtsfall das ganze Ergebnis.
+  const gesamttext = [
+    ergebnis.kernaussage,
+    ...ergebnis.abschnitte.map((a) => a.text),
+  ].join(" ");
+  if (filterOutput(gesamttext, "de") !== gesamttext) {
+    await limiter.decrement();
+    return c.json({ error: "unbrauchbare_antwort" }, 502);
+  }
+
+  return c.json({ produkt, ergebnis });
 }

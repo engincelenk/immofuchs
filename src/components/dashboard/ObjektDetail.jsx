@@ -7,6 +7,9 @@ import { Stellschrauben } from "./Stellschrauben.jsx";
 import { ObjektUnterlagen, ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
+import { AiEngine } from "./AiEngine.jsx";
+import { alter, ergebnisAnlegen, ergebnisFuer, mitErgebnis, produktFuer } from "../../utils/aiEngine.js";
+import { apiFetch } from "../../utils/apiBase.js";
 import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
@@ -25,26 +28,36 @@ import {
 // Rechner-Reiter erscheinen kontextabhaengig: Vorfaelligkeit erst bei
 // vorhandenem Kredit, Sanierung erst bei gesetztem Baujahr. Wer nichts
 // eingegeben hat, sieht auch keine leeren Reiter.
+// Chip-Reihenfolge nach dem UX-Review 2026-09-05:
+//
+// 1. Die AI-Engine steht auf Position 2, nicht am Ende. Bei 375 px sind nur
+//    die ersten beiden Chips ohne Scrollen sichtbar - was dahinter liegt,
+//    wird kaum gefunden.
+// 2. Die vier Rechner-Reiter sind zu EINEM Chip "Rechner" zusammengefasst.
+//    Sie rendern ohnehin alle dasselbe (Ueberschrift + Knopf), waren also
+//    vier Chips fuer vier Knoepfe. Damit sinkt die Leiste von neun auf sechs.
+const RECHNER = [
+  { id: "kredit", label: "Finanzierung", kurz: "Rate, Tilgungsplan, Restschuld" },
+  { id: "miete", label: "Miete & Recht", kurz: "Mieterhöhung, Kappungsgrenze" },
+  { id: "sanier", label: "Sanierung", kurz: "Kosten, Förderung, Amortisation" },
+  { id: "steuer6", label: "Steuer", kurz: "AfA und §6-Optimierung" },
+];
+
 const CHIPS = [
   { id: "ueberblick", label: "Überblick" },
+  { id: "ai", label: "AI-Engine" },
   { id: "stellschrauben", label: "Stellschrauben" },
-  { id: "finanzierung", label: "Finanzierung", rechner: "kredit" },
-  { id: "miete", label: "Miete & Recht", rechner: "miete" },
-  { id: "sanierung", label: "Sanierung", rechner: "sanier" },
-  { id: "steuer", label: "Steuer", rechner: "steuer6" },
+  { id: "rechner", label: "Rechner" },
   { id: "daten", label: "Alle Daten" },
   { id: "unterlagen", label: "Unterlagen" },
 ];
 
 // Welche Reiter fuer diesen Datenstand sinnvoll sind.
-function sichtbareChips(data) {
-  const hatKredit = (+data?.kaufpreis || 0) > (+data?.eigenkapital || 0);
-  const hatBaujahr = !!(data?.baujahr || data?.sBJ);
-  return CHIPS.filter((c) => {
-    if (c.id === "sanierung") return hatBaujahr;
-    if (c.id === "finanzierung") return hatKredit;
-    return true;
-  });
+function sichtbareChips() {
+  // Alle Chips immer sichtbar: die frueher kontextabhaengig ausgeblendeten
+  // Rechner stecken jetzt in EINEM Chip, dort sind einzelne Zeilen billiger
+  // auszublenden als ein ganzer Reiter.
+  return CHIPS;
 }
 
 const FELD_GRUPPEN = [
@@ -87,10 +100,16 @@ const FELD_GRUPPEN = [
 ];
 
 export function ObjektDetail({ objekt, onBack }) {
-  const { d, set, setTabExt, t, lang, updateObj } = useApp();
+  const { d, set, setTabExt, t, lang, updateObj, isProSavedObjects } = useApp();
+  const istPro = Boolean(isProSavedObjects);
   const locale = lang === "de" ? "de-DE" : "de-DE";
   const [chip, setChip] = useState("ueberblick");
   const [bearbeiten, setBearbeiten] = useState(false);
+  // AI-Engine: welches Produkt gerade laeuft, welcher Volltext offen ist,
+  // und ob der letzte Aufruf gescheitert ist.
+  const [laufend, setLaufend] = useState(null);
+  const [volltext, setVolltext] = useState(null);
+  const [aiFehler, setAiFehler] = useState(null);
 
   // A1: Die Ansicht steckt nicht mehr in inputData, sondern liegt daneben.
   const gespeichert = useMemo(
@@ -108,7 +127,71 @@ export function ObjektDetail({ objekt, onBack }) {
     [basis, t],
   );
   const vollstaendigkeit = berechneVollstaendigkeit(basis);
-  const chips = sichtbareChips(basis);
+  const chips = sichtbareChips();
+
+  // Ruft den Worker und legt das Ergebnis AM OBJEKT ab. Der Kern der
+  // Umstellung: was Kontingent kostet, muss beim naechsten Oeffnen wieder da
+  // sein - bis 2026-09 war jede Auswertung fluechtig.
+  async function starteProdukt(produktId) {
+    const produkt = produktFuer(produktId);
+    if (!produkt || laufend) return;
+    setAiFehler(null);
+    setLaufend(produktId);
+    try {
+      const res = await apiFetch("/analyse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          produkt: produktId,
+          // Nur Kennzahlen, keine Adresse und kein Name - das Modell braucht
+          // sie nicht, also gehen sie auch nicht raus.
+          kennzahlen: {
+            kaufpreis: basis.kaufpreis,
+            wohnflaeche: basis.flaeche,
+            kaltmieteMonat: basis.kaltmiete,
+            eigenkapital: basis.eigenkapital,
+            zinssatz: basis.zinssatz,
+            tilgung: basis.tilgung,
+            bundesland: basis.bundesland,
+            baujahr: basis.baujahr,
+            nettorendite: kennzahlenGespeichert?.nettoRendite,
+            bruttorendite: kennzahlenGespeichert?.bruttoRendite,
+            cashflowMonat: kennzahlenGespeichert?.cashflowMon,
+            kaufpreisfaktor: kennzahlenGespeichert?.faktor,
+            score: kennzahlenGespeichert?.score,
+          },
+          sessionId: objekt.id,
+        }),
+      });
+      if (!res.ok) {
+        const daten = await res.json().catch(() => ({}));
+        setAiFehler(
+          res.status === 402
+            ? "Diese Auswertung gehört zu ImmoFuchs Pro."
+            : daten.error === "rate_limit_exceeded"
+              ? "Tageslimit erreicht — morgen wieder verfügbar."
+              : "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.",
+        );
+        return;
+      }
+      const { ergebnis } = await res.json();
+      const neu = ergebnisAnlegen(produktId, ergebnis, basis);
+      await updateObj(objekt.id, objekt.title || "Objekt", basis, {
+        resultData: mitErgebnis(objekt.kennzahlen || objekt.resultData, neu),
+      });
+      setVolltext(produktId);
+    } catch {
+      setAiFehler("Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.");
+    } finally {
+      setLaufend(null);
+    }
+  }
+
+  // Der Exposé-Scan lebt weiterhin im Assistenten-Sheet (dort haengen Upload,
+  // Feld-Uebernahme und Handout). Von hier fuehrt der Weg dorthin.
+  function oeffneExpose() {
+    window.dispatchEvent(new CustomEvent("if:expose-oeffnen", { detail: { objektId: objekt.id } }));
+  }
 
   function inRechner(rechnerTab) {
     const { tab: _legacy, ...data } = gespeichert;
@@ -243,11 +326,37 @@ export function ObjektDetail({ objekt, onBack }) {
         />
       )}
 
-      {["finanzierung", "miete", "sanierung", "steuer"].includes(aktiv) && (
-        <RechnerReiter
-          chip={chips.find((c) => c.id === aktiv)}
-          onOeffnen={inRechner}
-          moeglich={hasFullInput}
+      {aktiv === "rechner" && (
+        <RechnerListe onOeffnen={inRechner} moeglich={hasFullInput} basis={basis} />
+      )}
+
+      {aktiv === "ai" && aiFehler && (
+        <div
+          style={{
+            background: "var(--bad-bg)",
+            border: "1px solid var(--bad-bd)",
+            color: "var(--bad-tx)",
+            borderRadius: 10,
+            padding: "10px 12px",
+            fontSize: 13,
+            lineHeight: 1.5,
+            marginBottom: 12,
+          }}
+        >
+          {aiFehler}
+        </div>
+      )}
+
+      {aktiv === "ai" && (
+        <AiEngine
+          objekt={objekt}
+          data={basis}
+          proAktiv={istPro}
+          laufend={laufend}
+          locale={locale}
+          onStarten={starteProdukt}
+          onOeffnen={(id) => setVolltext(id)}
+          onExpose={oeffneExpose}
         />
       )}
 
@@ -257,6 +366,13 @@ export function ObjektDetail({ objekt, onBack }) {
           <ObjektLage data={basis} titel={objekt.title} />
         </div>
       )}
+
+      <AiVolltext
+        produktId={volltext}
+        objekt={objekt}
+        locale={locale}
+        onSchliessen={() => setVolltext(null)}
+      />
 
       {aktiv === "daten" && (
         <AlleDaten
@@ -270,38 +386,119 @@ export function ObjektDetail({ objekt, onBack }) {
   );
 }
 
+// Volltext einer Auswertung im vorhandenen Bottom-Sheet - kein zweiter
+// Reiter, keine Navigation weg vom Objekt. Im Reiter steht nur die
+// Kernaussage; alles Weitere hier, damit der Reiter scanbar bleibt.
+function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
+  const ergebnis = produktId ? ergebnisFuer(objekt, produktId) : null;
+  const produkt = produktId ? produktFuer(produktId) : null;
+  const inhalt = ergebnis?.inhalt;
+  return (
+    <Sheet open={Boolean(ergebnis)} onClose={onSchliessen} label={produkt?.titel || "Auswertung"}>
+      {ergebnis && (
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800 }}>{produkt?.titel}</div>
+          <div style={{ fontSize: 11.5, color: "var(--cl)", marginTop: 3, marginBottom: 14 }}>
+            KI-generiert · {alter(ergebnis, locale)}
+          </div>
+
+          {inhalt?.kernaussage && (
+            <div style={{ fontSize: 15, lineHeight: 1.65, fontWeight: 600, marginBottom: 18 }}>
+              {inhalt.kernaussage}
+            </div>
+          )}
+
+          {(inhalt?.abschnitte || []).map((a) => (
+            <div key={a.titel} style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--cl)",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.6,
+                  fontWeight: 600,
+                  marginBottom: 5,
+                }}
+              >
+                {a.titel}
+              </div>
+              <div style={{ fontSize: 15, lineHeight: 1.65 }}>{a.text}</div>
+            </div>
+          ))}
+
+          {/* Nachvollziehbarkeit: auf welchen Zahlen fusst die Aussage? Das ist
+              zugleich der Anker der Veraltet-Erkennung. */}
+          {ergebnis.basis && Object.keys(ergebnis.basis).length > 0 && (
+            <div
+              style={{
+                marginTop: 18,
+                paddingTop: 14,
+                borderTop: "1px solid var(--cb)",
+                fontSize: 11.5,
+                color: "var(--cl)",
+                lineHeight: 1.6,
+              }}
+            >
+              Grundlage:{" "}
+              {Object.entries(ergebnis.basis)
+                .map(([k, v]) => `${k} ${v}`)
+                .join(" · ")}
+            </div>
+          )}
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
 // Phase C: Der Rechner bleibt der Rechner - der Reiter fuehrt hin und nimmt
 // die Objektdaten mit, statt die Rechnerlogik zu duplizieren.
-function RechnerReiter({ chip, onOeffnen, moeglich }) {
-  if (!chip) return null;
+// Phase C: Der Rechner bleibt der Rechner - die Zeile fuehrt hin und nimmt
+// die Objektdaten mit, statt die Rechnerlogik zu duplizieren. Seit dem
+// UX-Review als EINE Liste statt vier Reiter, die alle dasselbe zeigten.
+function RechnerListe({ onOeffnen, moeglich, basis }) {
+  const hatBaujahr = !!(basis?.baujahr || basis?.sBJ);
+  const sichtbar = RECHNER.filter((r) => r.id !== "sanier" || hatBaujahr);
   return (
-    <div
-      style={{
-        background: "var(--cc)",
-        border: "1px solid var(--cb)",
-        borderRadius: 12,
-        padding: 20,
-      }}
-    >
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{chip.label}</div>
-      <div style={{ fontSize: 14, color: "var(--ch)", lineHeight: 1.55, marginBottom: 16 }}>
-        {moeglich
-          ? "Öffnet den Rechner mit den Werten dieses Objekts. Änderungen dort gelten für dieses Objekt."
-          : "Für diesen Rechner fehlen noch Objektdaten. Lege zuerst Kaufpreis, Wohnfläche und Kaltmiete an."}
-      </div>
-      <button
-        type="button"
-        disabled={!moeglich}
-        onClick={() => onOeffnen(chip.rechner)}
-        style={{
-          ...primaryBtnStyle,
-          marginTop: 0,
-          opacity: moeglich ? 1 : 0.5,
-          cursor: moeglich ? "pointer" : "not-allowed",
-        }}
-      >
-        {chip.label} öffnen →
-      </button>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {!moeglich && (
+        <div style={{ fontSize: 13, color: "var(--cl)", lineHeight: 1.5, marginBottom: 2 }}>
+          Für die Rechner fehlen noch Objektdaten. Lege zuerst Kaufpreis,
+          Wohnfläche und Kaltmiete an.
+        </div>
+      )}
+      {sichtbar.map((r) => (
+        <button
+          key={r.id}
+          type="button"
+          disabled={!moeglich}
+          onClick={() => onOeffnen(r.id)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            width: "100%",
+            textAlign: "left",
+            background: "var(--cc)",
+            border: "1px solid var(--cb)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            cursor: moeglich ? "pointer" : "not-allowed",
+            opacity: moeglich ? 1 : 0.55,
+            fontFamily: "inherit",
+          }}
+        >
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--ct)" }}>
+              {r.label}
+            </span>
+            <span style={{ display: "block", fontSize: 12.5, color: "var(--cl)", marginTop: 2 }}>
+              {r.kurz}
+            </span>
+          </span>
+          <span style={{ color: "var(--ca)", fontWeight: 700, fontSize: 15 }}>→</span>
+        </button>
+      ))}
     </div>
   );
 }

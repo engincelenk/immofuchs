@@ -249,6 +249,9 @@ export interface Env {
   // Feature-Gating (4.0a, 4.18, 4.9)
   OBJECTS_SOFT_CAP?: string;
   FINN_PRO_DAILY_LIMIT?: string;
+  // AI-Engine (2026-09): Fair-Use je Pro-Nutzer und Tag fuer die
+  // strukturierte Objektauswertung. Ohne Wert greift der Default 20.
+  ANALYSE_DAILY_LIMIT?: string;
   // Free-Kontingent seit 2026-08-18 kein Tageslimit mehr, sondern insgesamt
   // N Anfragen je Rechnertyp (dauerhaft, siehe SessionRateLimiter).
   FINN_FREE_MAX_TOKENS?: string;

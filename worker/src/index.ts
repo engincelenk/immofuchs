@@ -9,7 +9,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env } from "./types";
-import { handleAssistant, handleExposeExtract } from "./routes/assistant";
+import { handleAssistant, handleExposeExtract, handleObjektAnalyse } from "./routes/assistant";
 import { authRoutes } from "./routes/auth";
 import { billingRoutes } from "./routes/billing";
 import { accountRoutes } from "./routes/account";
@@ -50,6 +50,8 @@ app.onError((err, c) => {
 // ═══ Bestehende Endpunkte, unversioniert (Stabilitaetsregel) ═══
 app.post("/api/assistant", (c) => handleAssistant(c));
 app.post("/api/expose-extract", (c) => handleExposeExtract(c));
+// AI-Engine (2026-09): strukturierte Objektauswertung, nur Pro.
+app.post("/api/v1/analyse", (c) => handleObjektAnalyse(c));
 
 // ═══ Kommerzialisierung, /api/v1/... ═══
 app.route("/api/v1/auth", authRoutes);
