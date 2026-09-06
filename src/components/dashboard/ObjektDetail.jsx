@@ -19,6 +19,7 @@ import {
 } from "../../utils/aiEngine.js";
 import { apiFetch } from "../../utils/apiBase.js";
 import { hebelVarianten } from "../../utils/aiTools.js";
+import { getSessionId } from "../../utils/assistantSession.js";
 import { ladeMietReferenz, referenzMiete } from "../../utils/mietReferenz.js";
 import { berechnePreisSchaetzung, preisZeilen } from "../../utils/preisSchaetzung.js";
 import {
@@ -128,6 +129,8 @@ export function ObjektDetail({ objekt, onBack }) {
   const [laufend, setLaufend] = useState(null);
   const [volltext, setVolltext] = useState(null);
   const [aiFehler, setAiFehler] = useState(null);
+  // Welches Produkt auf die KI-Einwilligung wartet (null = keines).
+  const [aiConsent, setAiConsent] = useState(null);
   // Die AI-Sektion im Ueberblick startet ZU - auch wenn bereits Ergebnisse
   // vorliegen. Automatisches Aufklappen wuerde den Ueberblick ausgerechnet
   // fuer die wiederkehrenden Nutzer wieder auf ueber 1.000 px strecken. Dass
@@ -220,17 +223,29 @@ export function ObjektDetail({ objekt, onBack }) {
             kaufpreisfaktor: kennzahlenGespeichert?.faktor,
             score: kennzahlenGespeichert?.score,
           },
-          sessionId: objekt.id,
+          // Die KI-Session des Geraets, NICHT die Objekt-ID. Der Worker
+          // prueft daran die Einwilligung; mit der Objekt-ID gab es die
+          // naturgemaess nie und jeder Aufruf endete in 412.
+          sessionId: getSessionId(),
         }),
       });
       if (!res.ok) {
         const daten = await res.json().catch(() => ({}));
+        // 412 ist kein Fehler, sondern eine offene Frage: die Einwilligung in
+        // die KI-Nutzung fehlt noch. Sie als "nicht erreichbar" auszugeben
+        // war der Grund, warum der Zustand monatelang unerkannt blieb.
+        if (res.status === 412 || daten.error === "consent_required") {
+          setAiConsent(produktId);
+          return;
+        }
         setAiFehler(
           res.status === 402
             ? "Diese Auswertung gehört zu ImmoFuchs Pro."
-            : daten.error === "rate_limit_exceeded"
-              ? "Tageslimit erreicht — morgen wieder verfügbar."
-              : "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.",
+            : res.status === 401
+              ? "Bitte melde dich an, um die Auswertung zu starten."
+              : daten.error === "rate_limit_exceeded"
+                ? "Tageslimit erreicht — morgen wieder verfügbar."
+                : "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.",
         );
         return;
       }
@@ -248,6 +263,24 @@ export function ObjektDetail({ objekt, onBack }) {
     } finally {
       setLaufend(null);
     }
+  }
+
+  // Einwilligung erteilen und den blockierten Lauf sofort wiederholen -
+  // dasselbe Muster wie giveConsentAndRetry() im Assistenten.
+  async function einwilligenUndStarten() {
+    const produktId = aiConsent;
+    setAiConsent(null);
+    try {
+      await apiFetch("/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: getSessionId() }),
+      });
+    } catch {
+      setAiFehler("Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.");
+      return;
+    }
+    if (produktId) starteProdukt(produktId);
   }
 
   // Der Exposé-Scan lebt weiterhin im Assistenten-Sheet (dort haengen Upload,
@@ -377,6 +410,26 @@ export function ObjektDetail({ objekt, onBack }) {
                 Chip-Leiste: sonst stuende eine Fehlermeldung ohne sichtbaren
                 Bezug am Kopf der Seite. */}
             {aiFehler && <div style={fehlerBand}>{aiFehler}</div>}
+            {aiConsent && (
+              <div style={consentBand}>
+                <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+                  Für die Auswertung werden die Kennzahlen dieses Objekts an unseren
+                  KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" onClick={einwilligenUndStarten} style={consentJa}>
+                    Einverstanden, starten
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiConsent(null)}
+                    style={consentNein}
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </div>
+            )}
             <AiEngine
               objekt={objekt}
               data={basis}
@@ -795,6 +848,39 @@ const feldWert = {
   fontWeight: 700,
   fontVariantNumeric: "tabular-nums",
   marginTop: 4,
+};
+
+// Die Einwilligung traegt bewusst NICHT die Fehlerfarbe: es ist kein Fehler,
+// sondern eine Frage, die der Nutzer im selben Zug beantworten kann.
+const consentBand = {
+  background: "var(--ci)",
+  border: "1px solid var(--cb)",
+  borderRadius: 12,
+  padding: "14px 16px",
+  marginBottom: 12,
+};
+
+const consentJa = {
+  display: "inline-flex",
+  alignItems: "center",
+  height: 44,
+  padding: "0 16px",
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 13.5,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+const consentNein = {
+  ...consentJa,
+  background: "var(--cc)",
+  color: "var(--ct)",
+  border: "1.5px solid var(--cb)",
+  fontWeight: 600,
 };
 
 const fehlerBand = {

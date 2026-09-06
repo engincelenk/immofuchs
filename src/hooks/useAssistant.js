@@ -4,8 +4,8 @@ import { analysiereExpose } from "../utils/finnAnalyse.js";
 import { autoSaveExposeObject } from "../utils/autoSaveExposeObject.js";
 import { apiFetch } from "../utils/apiBase.js";
 import { nativeAuthHeaders } from "../utils/nativeAuth.js";
+import { getSessionId } from "../utils/assistantSession.js";
 
-const SESSION_KEY = "if_assistant_session"; // Naming-Konvention wie if_landed in App.jsx
 const MAX_HISTORY_TURNS = 3; // letzte 3 Frage/Antwort-Paare, Kostenbegrenzung (Konzept 2.6)
 
 // Der Expose-Endpunkt liegt auf demselben Worker wie der Chat, nur unter einem
@@ -15,20 +15,6 @@ const MAX_HISTORY_TURNS = 3; // letzte 3 Frage/Antwort-Paare, Kostenbegrenzung (
 function exposeUrl() {
   const base = import.meta.env.VITE_ASSISTANT_URL || "";
   return base.replace(/\/api\/assistant\/?$/, "/api/expose-extract");
-}
-
-function getSessionId() {
-  let id = null;
-  try {
-    id = localStorage.getItem(SESSION_KEY);
-  } catch {}
-  if (!id) {
-    id = crypto.randomUUID();
-    try {
-      localStorage.setItem(SESSION_KEY, id);
-    } catch {}
-  }
-  return id;
 }
 
 export function useAssistant() {
