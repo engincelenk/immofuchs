@@ -40,34 +40,45 @@ import {
 // Rechner-Reiter erscheinen kontextabhaengig: Vorfaelligkeit erst bei
 // vorhandenem Kredit, Sanierung erst bei gesetztem Baujahr. Wer nichts
 // eingegeben hat, sieht auch keine leeren Reiter.
-// Chip-Leiste nach den UX-Reviews 2026-09-05:
+// Chip-Leiste nach den UX-Reviews 2026-09-05/06:
 //
-// 1. Die vier Rechner-Reiter sind zu EINEM Chip "Rechner" zusammengefasst.
-//    Sie rendern ohnehin alle dasselbe (Ueberschrift + Knopf), waren also
-//    vier Chips fuer vier Knoepfe.
+// 1. Die vier Rechner-Reiter sind zu EINEM Chip zusammengefasst. Sie rendern
+//    ohnehin alle dasselbe (Ueberschrift + Knopf), waren also vier Chips fuer
+//    vier Knoepfe.
 // 2. Die AI-Engine hat KEINEN eigenen Chip mehr. Sie liegt als aufklappbare
 //    Sektion am Ende des Ueberblicks - dort, wo der Nutzer die Kennzahlen
-//    gerade gelesen hat, auf die sich die Auswertung bezieht. Damit sinkt die
-//    Leiste von neun ueber sechs auf fuenf Chips.
-//    Das frueher hier notierte Argument "AI auf Position 2, weil bei 375 px
-//    nur die ersten beiden Chips sichtbar sind" ist damit gegenstandslos. Der
-//    dahinterliegende Befund gilt weiter - er wird jetzt von der Verlaufskante
-//    am rechten Rand der Leiste getragen statt von der Reihenfolge.
-// 3. "Alle Daten" heisst "Daten". Das Wort "Alle" trug keine Information, die
-//    der Reiter nicht selbst liefert, kostete aber 38 px in einer Leiste, die
-//    ohnehin breiter ist als der Bildschirm.
+//    gerade gelesen hat, auf die sich die Auswertung bezieht.
+// 3. "Rechner" und "Daten" sind zu EINEM Chip "Belege" verschmolzen
+//    (UX-Review 2026-09-06, docs/plans/neue-phase2/00-analyse: Tiefenstufe 3
+//    heisst dort "Belege"). Beide Reiter beantworteten dieselbe Frage - "wie
+//    kommen die Zahlen zustande?" - nur einmal als Feldraster, einmal als
+//    Linkliste. Damit sinkt die Leiste von fuenf auf vier Chips.
+//
+//    Der Renditerechner fehlte in der alten Rechner-Liste komplett (nur
+//    kredit/miete/sanier/steuer6) und war nur ueber den nichtssagenden Knopf
+//    "Im Rechner oeffnen" am Ende von "Daten" erreichbar - ausgerechnet der
+//    Rechner mit der mit Abstand groessten Zusatztiefe (Tilgungsplan,
+//    AfA/Steuervorteil, Stresstest, Exit-Saldo, PDF-Export) war so gut wie
+//    unsichtbar. Er steht jetzt als ERSTE, benannte Zeile in RECHNER, und
+//    Vorfaelligkeit - vorher aus der Objektansicht ueberhaupt nicht
+//    erreichbar - ist ergaenzt.
 const RECHNER = [
+  {
+    id: "haupt",
+    label: "Rendite",
+    kurz: "Vollständige Rechnung: Cashflow, AfA/Steuervorteil, Tilgungsplan, Stresstest",
+  },
   { id: "kredit", label: "Finanzierung", kurz: "Rate, Tilgungsplan, Restschuld" },
   { id: "miete", label: "Miete & Recht", kurz: "Mieterhöhung, Kappungsgrenze" },
   { id: "sanier", label: "Sanierung", kurz: "Kosten, Förderung, Amortisation" },
   { id: "steuer6", label: "Steuer", kurz: "AfA und §6-Optimierung" },
+  { id: "vfe", label: "Vorfälligkeit", kurz: "Kosten der vorzeitigen Ablösung, BGH-konform" },
 ];
 
 const CHIPS = [
   { id: "ueberblick", label: "Überblick" },
   { id: "stellschrauben", label: "Stellschrauben" },
-  { id: "rechner", label: "Rechner" },
-  { id: "daten", label: "Daten" },
+  { id: "belege", label: "Belege" },
   { id: "unterlagen", label: "Unterlagen" },
 ];
 
@@ -78,6 +89,15 @@ function sichtbareChips() {
   // auszublenden als ein ganzer Reiter.
   return CHIPS;
 }
+
+// Jeder Reiter beantwortet eine Frage des Nutzers, keine Werkzeugkategorie
+// (UX-Review 2026-09-06). Rein informativ, keine Navigationslogik.
+const REITER_FRAGE = {
+  ueberblick: "Lohnt sich dieses Objekt?",
+  stellschrauben: "Was, wenn du anders finanzierst?",
+  belege: "Wie kommen die Zahlen zustande?",
+  unterlagen: "Was liegt zu diesem Objekt vor?",
+};
 
 const FELD_GRUPPEN = [
   {
@@ -145,6 +165,16 @@ export function ObjektDetail({ objekt, onBack }) {
   // Zahl = EUR/m2. Die drei Zustaende sind unterscheidbar, weil "laedt noch"
   // und "gibt es nicht" dem Nutzer Verschiedenes sagen muessen.
   const [ortsMiete, setOrtsMiete] = useState(undefined);
+  // Sofort sichtbarer Stand nach "Fuer dieses Objekt uebernehmen"
+  // (Stellschrauben, UX-Review 2026-09-06): updateObj() persistiert, aber der
+  // Prop `objekt` selbst aendert sich dadurch nicht - Merkliste haelt
+  // detailObj unabhaengig davon. Ohne diese lokale Ueberlagerung zeigte der
+  // Ueberblick nach dem Uebernehmen weiter die ALTEN Zahlen, bis der Nutzer
+  // das Objekt verlaesst und neu oeffnet. Bezieht sich immer auf dasselbe
+  // objekt.id: ein echter Objektwechsel geht immer ueber onBack() und damit
+  // ueber ein Neu-Mounten dieser Komponente (siehe Merkliste.jsx - solange
+  // detailObj gesetzt ist, kann kein zweiter openDetail()-Aufruf dazwischen).
+  const [lokaleAenderung, setLokaleAenderung] = useState(null);
 
   // A1: Die Ansicht steckt nicht mehr in inputData, sondern liegt daneben.
   const gespeichert = useMemo(
@@ -156,7 +186,7 @@ export function ObjektDetail({ objekt, onBack }) {
   // Ueberblick und Stellschrauben arbeiten auf den Daten DIESES Objekts,
   // nicht auf dem globalen Rechner-State - sonst zeigte das Objekt die Zahlen
   // eines fremden Rechnerstands.
-  const basis = hasFullInput ? gespeichert : d;
+  const basis = lokaleAenderung || (hasFullInput ? gespeichert : d);
   const kennzahlenGespeichert = useMemo(
     () => berechneObjektKennzahlen(basis, t),
     [basis, t],
@@ -292,7 +322,11 @@ export function ObjektDetail({ objekt, onBack }) {
   function inRechner(rechnerTab) {
     const { tab: _legacy, ...data } = gespeichert;
     Object.entries(data).forEach(([k, v]) => set(k, v));
-    setTabExt(rechnerTab);
+    // Zweites Argument = Rundweg-Zustand in App.jsx (aktivesObjekt): traegt
+    // die Ruecksprungleiste "<- Objekt: {Name}" UND sorgt dafuer, dass
+    // "Speichern" im Rechner dieses Objekt aktualisiert statt ein neues
+    // anzulegen (UX-Review 2026-09-06).
+    setTabExt(rechnerTab, { id: objekt.id, name: objekt.title || "Objekt" });
   }
 
   const aktiv = chips.find((c) => c.id === chip) ? chip : "ueberblick";
@@ -398,6 +432,10 @@ export function ObjektDetail({ objekt, onBack }) {
         <div aria-hidden="true" className="objekt-chips-fade" />
       </div>
 
+      {/* Jeder Reiter beantwortet eine Frage, keine Werkzeugkategorie
+          (UX-Review 2026-09-06) - siehe REITER_FRAGE oben. */}
+      {REITER_FRAGE[aktiv] && <div style={reiterFrageStil}>{REITER_FRAGE[aktiv]}</div>}
+
       {aktiv === "ueberblick" && (
         <>
           <Ueberblick
@@ -405,6 +443,8 @@ export function ObjektDetail({ objekt, onBack }) {
             data={basis}
             locale={locale}
             onStellschrauben={() => setChip("stellschrauben")}
+            onBelege={() => setChip("belege")}
+            onBearbeiten={() => setBearbeiten(true)}
           />
           <AiSektion
             zusammenfassung={aiZusammenfassung(objekt, locale)}
@@ -456,16 +496,26 @@ export function ObjektDetail({ objekt, onBack }) {
           t={t}
           locale={locale}
           onUebernehmen={(werte) => {
-            // Uebernehmen schreibt die Reglerwerte in den Rechner-State und
-            // oeffnet den Renditerechner - dort wird gespeichert.
-            Object.entries(werte).forEach(([k, v]) => set(k, v));
-            setTabExt("haupt");
+            // Bis 2026-09-06 schrieb "Uebernehmen" in den globalen
+            // Rechner-State und oeffnete den Renditerechner - das Etikett
+            // "Fuer DIESES Objekt uebernehmen" stimmte damit nicht: am Objekt
+            // landete nichts, bis der Nutzer im Rechner zusaetzlich auf
+            // Speichern drueckte, was dort IMMER ein zweites, neues Objekt
+            // anlegte (SaveBtn rief ausnahmslos saveObj() auf). Jetzt schreibt
+            // der Knopf direkt ans Objekt und der Nutzer bleibt darin.
+            const neueDaten = { ...basis, ...werte };
+            setLokaleAenderung(neueDaten);
+            setChip("ueberblick");
+            updateObj(objekt.id, objekt.title || "Objekt", neueDaten);
           }}
         />
       )}
 
-      {aktiv === "rechner" && (
-        <RechnerListe onOeffnen={inRechner} moeglich={hasFullInput} basis={basis} />
+      {aktiv === "belege" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <AlleDaten data={basis} objekt={objekt} locale={locale} />
+          <RechnerListe onOeffnen={inRechner} moeglich={hasFullInput} basis={basis} />
+        </div>
       )}
 
       {aktiv === "unterlagen" && (
@@ -482,14 +532,6 @@ export function ObjektDetail({ objekt, onBack }) {
         onSchliessen={() => setVolltext(null)}
       />
 
-      {aktiv === "daten" && (
-        <AlleDaten
-          data={basis}
-          objekt={objekt}
-          locale={locale}
-          onOeffnen={hasFullInput ? () => inRechner(objekt.letzteAnsicht || "haupt") : null}
-        />
-      )}
     </div>
   );
 }
@@ -722,7 +764,13 @@ function RechnerListe({ onOeffnen, moeglich, basis }) {
 // auto-fit minmax() statt fester Spaltenzahl: bei 319 px Inhaltsbreite ergeben
 // sich zwei Spalten, auf sehr schmalen Geraeten faellt das Raster von selbst
 // auf eine zurueck. Dasselbe Muster wie in ObjektKPIs.jsx - kein neues.
-function AlleDaten({ data, objekt, locale, onOeffnen }) {
+// Der Reiter "Belege" (bis 2026-09-06 zwei getrennte Reiter "Rechner" und
+// "Daten") beantwortet "wie kommen die Zahlen zustande?" - dieses Feldraster
+// zeigt die Rohwerte, RechnerListe darunter die Wege zu den vollen
+// Berechnungen. Der fruehere Trittstein-Knopf "Im Rechner oeffnen" ist
+// entfallen: Rendite steht jetzt als erste Zeile in RechnerListe, ein
+// zweiter Weg zum selben Ziel waere Redundanz.
+function AlleDaten({ data, objekt, locale }) {
   const gesetzt = (v) => v != null && String(v).trim() !== "" && String(v) !== "0";
   const gruppen = FELD_GRUPPEN.map((g) => ({
     titel: g.titel,
@@ -786,12 +834,6 @@ function AlleDaten({ data, objekt, locale, onOeffnen }) {
           </div>
         )}
       </div>
-
-      {onOeffnen && (
-        <button onClick={onOeffnen} style={primaryBtnStyle}>
-          Im Rechner öffnen →
-        </button>
-      )}
     </div>
   );
 }
@@ -862,6 +904,15 @@ const feldWert = {
 
 // Die Einwilligung traegt bewusst NICHT die Fehlerfarbe: es ist kein Fehler,
 // sondern eine Frage, die der Nutzer im selben Zug beantworten kann.
+// Frage-Ueberschrift je Reiter (REITER_FRAGE oben) - kein Kartenrahmen, ein
+// Satz reicht, um dem Reiter seinen Zweck zu geben statt nur einen Namen.
+const reiterFrageStil = {
+  fontSize: 15,
+  fontWeight: 700,
+  color: "var(--ct)",
+  margin: "0 0 12px",
+};
+
 const consentBand = {
   background: "var(--ci)",
   border: "1px solid var(--cb)",
@@ -919,17 +970,3 @@ const backBtnStyle = {
   fontFamily: "inherit",
 };
 
-
-const primaryBtnStyle = {
-  marginTop: 4,
-  width: "100%",
-  height: 44,
-  borderRadius: 10,
-  border: "none",
-  background: "var(--ca)",
-  color: "#fff",
-  fontSize: 15,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "inherit",
-};

@@ -1,3 +1,85 @@
+## 2026-09-06 (1.67.0)
+
+### Roter Faden am Objekt: sieben Fixes aus dem UX-Review
+
+Zwei Agenten haben unabhaengig denselben Befund geliefert: Die Objektansicht
+rechnet gut, schliesst aber nie ab, und der Renditerechner war von dort aus
+praktisch unsichtbar - nicht Redundanz war das Problem, sondern dass die
+Arbeitsteilung nirgends ausgesprochen wurde. Sieben Fixes, keine
+Architekturaenderung.
+
+**1. Objekt anlegen oeffnet sofort**
+saveObj() gibt jetzt das angelegte Objekt zurueck, "Objekt anlegen" oeffnet
+es direkt - "Objekt anlegen -> Urteil sehen" ohne Zwischenschritt, wie der
+Kommentar dort schon seit dem B3-Umbau versprach, aber nie einloeste.
+
+**2. "Fuer dieses Objekt uebernehmen" schreibt jetzt tatsaechlich ans Objekt**
+Der Knopf in Stellschrauben schrieb in den globalen Rechner-State und
+oeffnete den Renditerechner - das Etikett log. Am Objekt landete nichts, bis
+der Nutzer im Rechner zusaetzlich auf Speichern drueckte, was dort IMMER ein
+zweites, neues Objekt anlegte (SaveBtn rief ausnahmslos saveObj() mit
+frischer UUID auf). Jetzt ruft der Knopf updateObj() auf demselben Objekt
+auf und bleibt im Objekt - eine lokale Ueberlagerung zeigt die neuen Zahlen
+sofort im Ueberblick, ohne auf einen Server-Roundtrip zu warten.
+
+**3. Ein Primaerknopf unter dem Urteil**
+Bisher endete die Seite nach dem Urteil - der einzige Vorwaertsweg war ein
+12,5-px-Textlink in einer Fussnote, und auf dem ganzen Bildschirm stand kein
+einziger gefuellter Knopf. Jetzt: Cashflow negativ -> "Was muesste sich
+aendern?" (fuehrt zu Stellschrauben), Cashflow tragfaehig -> "Zahlen im
+Detail pruefen" (fuehrt zu Belege). Fehlen die Kennzahlen komplett, bekommt
+der lehrende Empty-State einen Knopf "Fehlende Angaben ergaenzen" statt nur
+einen Satz.
+
+**4. "Rechner" + "Daten" -> EIN Reiter "Belege"**
+Beide beantworteten dieselbe Frage - "wie kommen die Zahlen zustande?" - nur
+einmal als Feldraster, einmal als Linkliste. Der Renditerechner fehlte dabei
+in der alten Rechner-Liste komplett (nur Finanzierung/Miete/Sanierung/
+Steuer) und war nur ueber den nichtssagenden Knopf "Im Rechner oeffnen" am
+Ende von "Daten" erreichbar - ausgerechnet der Rechner mit der groessten
+Zusatztiefe (Tilgungsplan, AfA/Steuervorteil, Stresstest, Exit-Saldo,
+PDF-Export) war so gut wie unsichtbar. Er steht jetzt als ERSTE, benannte
+Zeile; Vorfaelligkeit - vorher aus der Objektansicht ueberhaupt nicht
+erreichbar - ist ergaenzt. Damit sinkt die Chip-Leiste von fuenf auf vier.
+
+**5. Der Rundweg Objekt -> Rechner -> zurueck schliesst sich**
+Bis hierher gab es KEINEN Rueckweg: wer aus einem Objekt in einen Rechner
+sprang, war im Rechner-Tab, der Objektkontext war weg. Neu in App.jsx:
+aktivesObjekt haelt fest, aus welchem Objekt ein Rechner geoeffnet wurde -
+gesetzt von inRechner() (ObjektDetail.jsx), geloescht von jeder regulaeren
+Navigation (Sidebar, Tableiste, "Alle Rechner", Trial-Gate-Dismiss, goHome).
+Eine Leiste "<- Objekt: {Name}" fuehrt zurueck und oeffnet ueber ein
+Custom-Event ("if:objekt-oeffnen") wieder GENAU das Objekt, aus dem der
+Rechner kam - auch nachdem Merkliste beim Tab-Wechsel komplett unmountet.
+
+**6. SaveBtn schreibt ans Objekt zurueck**
+Kam der Rechner aus einem Objekt, zeigt der Speichern-Knopf jetzt "Am
+Objekt speichern" und ruft updateObj() auf - kein Name-Dialog, keine neue
+UUID, kein Duplikat. Das Kontingent-Limit fuer neue Objekte gilt hier
+folgerichtig nicht, weil nichts Neues entsteht.
+
+**7. Je Reiter die Nutzerfrage als Ueberschrift**
+Ueberblick/Stellschrauben/Belege/Unterlagen hiessen nach Werkzeugen, nicht
+nach dem, was der Nutzer dort beantwortet bekommt. Jeder Reiter zeigt jetzt
+seine Frage ("Lohnt sich dieses Objekt?", "Was, wenn du anders
+finanzierst?", "Wie kommen die Zahlen zustande?", "Was liegt zu diesem
+Objekt vor?") als Ueberschrift.
+
+**Nebenbei entfernt**
+Der Rechnertyp-Filter in der Objektliste ("Alle Rechner / Rendite / Kredit /
+...") widersprach dem eigenen Datenmodell: Ein Objekt ist seit Schritt A1
+nicht mehr an EINEN Rechner gebunden, letzteAnsicht ist nur noch
+UI-Erinnerung. Ein Filter, der danach gruppiert, bot eine Facette an, die es
+nicht mehr geben soll.
+
+Verifiziert im Browser (dev-Worker, lokale Objektliste): Anlegen oeffnet
+sofort, Primaerknopf wechselt korrekt zwischen "Was muesste sich aendern"
+und "Zahlen im Detail pruefen" je nach Cashflow-Vorzeichen, Belege zeigt
+Rendite als erste Zeile, Rundweg Objekt -> Rechner -> zurueck landet wieder
+im selben Objekt, Uebernehmen aktualisiert das BESTEHENDE Objekt (Anzahl
+gespeicherter Objekte blieb bei 1, persistierter Kaufpreis zeigt den neuen
+Wert), Rechner-Filter ist aus der Liste verschwunden.
+
 ## 2026-09-06 (1.66.0)
 
 ### Exposé-Scan und Handout raus aus Finn - beides liegt jetzt am Objekt

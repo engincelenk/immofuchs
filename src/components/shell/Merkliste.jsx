@@ -35,11 +35,6 @@ const CheckoutWizard = lazyWithReload(
 );
 
 const MAX_COMPARE = 5;
-// Gueltige Rechner-Tab-Ids (spiegelt tabLabel/tabColor unten) - als Konstante
-// statt aus dem pro-Render neu erzeugten tabLabel-Objekt abgeleitet, damit
-// useMemo-Deps sauber bleiben (tabLabel haette bei jedem Render eine neue
-// Objektidentitaet).
-const RECHNER_TABS = ["haupt", "kredit", "miete", "sanier"];
 const searchChipStyle = {
   height: 38,
   padding: "0 12px",
@@ -284,7 +279,11 @@ export function useSavedObjects(setData) {
           console.error("[merkliste] Speichern fehlgeschlagen:", e);
         }
         await refreshFromServer();
-        return;
+        // "obj" bleibt trotz Server-Speicherung die richtige Rueckgabe: es
+        // traegt dieselbe id/Kennzahlen, die der frische Server-Datensatz
+        // gleich darauf auch haben wird - genug, um die Detailansicht sofort
+        // zu oeffnen, ohne auf den Refresh zu warten (2026-09-06, P1).
+        return obj;
       }
       setSavedList((prev) => {
         // Hoechstens TRIAL_OBJECT_LIMIT_GESAMT Objekte insgesamt: ein neuer
@@ -297,6 +296,7 @@ export function useSavedObjects(setData) {
         writeLocalList(next);
         return next;
       });
+      return obj;
     },
     [isPro, refreshFromServer],
   );
@@ -487,13 +487,82 @@ export function SaveModal({ open, onClose, onSave, defaultName, lang }) {
 }
 
 export function SaveBtn({ tab }) {
-  const { d, saveObj, lang, savedList, isProSavedObjects, savedObjectsFreeLimit } = useApp();
+  const {
+    d,
+    saveObj,
+    updateObj,
+    lang,
+    savedList,
+    isProSavedObjects,
+    savedObjectsFreeLimit,
+    aktivesObjekt,
+  } = useApp();
   const t = T[lang] || T.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const [open, setOpen] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [speichertGerade, setSpeichertGerade] = useState(false);
+  const [amObjektGespeichert, setAmObjektGespeichert] = useState(false);
   const hasData = d.kaufpreis || d.vergleichsmiete;
   if (!hasData) return null;
+
+  // Kam der Rechner aus einem Objekt (App.jsx aktivesObjekt, gesetzt von
+  // inRechner() in ObjektDetail.jsx), schreibt Speichern seit 2026-09-06 AN
+  // DIESES OBJEKT zurueck statt ein neues anzulegen. Vorher rief dieser
+  // Knopf ausnahmslos saveObj() mit einer frischen UUID auf - jeder Rundweg
+  // Objekt -> Rechner -> Speichern erzeugte damit ein Duplikat (UX-Review
+  // 2026-09-06). Das Kontingent-Limit fuer NEUE Objekte gilt hier folgerichtig
+  // nicht: es wird nichts Neues angelegt.
+  if (aktivesObjekt) {
+    return (
+      <button
+        className="no-print"
+        disabled={speichertGerade}
+        onClick={async () => {
+          setSpeichertGerade(true);
+          try {
+            await updateObj(aktivesObjekt.id, aktivesObjekt.name, d);
+            setAmObjektGespeichert(true);
+            setTimeout(() => setAmObjektGespeichert(false), 2500);
+          } finally {
+            setSpeichertGerade(false);
+          }
+        }}
+        style={{
+          width: "100%",
+          padding: "12px",
+          borderRadius: 12,
+          border: "1.5px solid var(--ca)",
+          background: "transparent",
+          color: "var(--ca)",
+          fontSize: 15,
+          fontWeight: 600,
+          cursor: speichertGerade ? "default" : "pointer",
+          opacity: speichertGerade ? 0.6 : 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          marginTop: 8,
+          boxSizing: "border-box",
+        }}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+        </svg>
+        {amObjektGespeichert ? "Gespeichert ✓" : "Am Objekt speichern"}
+      </button>
+    );
+  }
   // Kontingent erreicht: Upgrade-Hinweis statt stillschweigendem Verdraengen
   // des bisherigen Eintrags. Seit 2026-08-25 die Gesamtzahl ueber alle
   // Rechnertypen (5), nicht mehr je Rechnertyp.
@@ -651,7 +720,6 @@ export function Merkliste() {
   // Filter nach Rechnertyp (Konzept-Dok 8.3, "Sortiermoeglichkeit nach
   // Rechner") - "alle" statt null, damit der Vergleich in filtered() ohne
   // Sonderfall auskommt.
-  const [rechnerFilter, setRechnerFilter] = useState("alle");
   // Seit 2026-08-25 ist savedObjectsFreeLimit bereits die Gesamtzahl - die
   // vorherige Hochrechnung (Limit je Rechner x Anzahl Rechnertypen) entfaellt.
   const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
@@ -668,13 +736,6 @@ export function Merkliste() {
     [at.hintVergleich],
     compareIds.length >= 2 && !compareSheetOpen,
   );
-  const tabLabel = {
-    haupt: t.haupt || "Rendite",
-    kredit: t.kredit || "Kredit",
-    miete: t.miete || "Miete",
-    sanier: t.sanier || "Sanierung",
-  };
-
   const toggleCompare = (id) => {
     setCompareIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
@@ -707,13 +768,6 @@ export function Merkliste() {
   // A2: frueher hatten nur Exposé-Objekte einen Score, deshalb war der
   // Filter bedingt. Jetzt bekommt jedes Objekt mit Kaufpreis eine Ampel.
   const hasScores = savedList.some((o) => o.score != null);
-  // Filterleiste nach Rechnertyp nur zeigen, wenn ueberhaupt mehr als eine
-  // Rechnerart gespeichert ist - sonst ein Filter ohne Wirkung (gleiche
-  // Projektregel wie bei hasScores oben).
-  const rechnerTypesPresent = useMemo(
-    () => [...new Set(savedList.map((o) => o.letzteAnsicht))].filter((tab) => RECHNER_TABS.includes(tab)),
-    [savedList],
-  );
   const filtered = useMemo(() => {
     let list = savedList;
     if (query.trim()) {
@@ -722,16 +776,15 @@ export function Merkliste() {
         (o) => o.name.toLowerCase().includes(q) || (o.ort || "").toLowerCase().includes(q),
       );
     }
-    if (rechnerFilter !== "alle") list = list.filter((o) => o.letzteAnsicht === rechnerFilter);
     if (onlyGut) list = list.filter((o) => o.scoreLabel === "gut");
     if (sortByScore) list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
     return list;
-  }, [savedList, query, rechnerFilter, onlyGut, sortByScore]);
+  }, [savedList, query, onlyGut, sortByScore]);
 
   // Detailansicht (ehemals eigener Pro-Tab "Objekte") - ObjektDetail erwartet
   // die rohe Server-Objektform; fuer Free-Objekte (kein Server-Datensatz)
   // wird sie hier aus dem lokalen {id,name,date,tab,data}-Snapshot nachgebaut.
-  function openDetail(obj) {
+  const openDetail = useCallback((obj) => {
     setDetailObj({
       id: obj.id,
       title: obj.name,
@@ -747,13 +800,23 @@ export function Merkliste() {
       inputData: obj.inputData || { ...obj.data },
       letzteAnsicht: obj.letzteAnsicht || "haupt",
     });
-  }
-  // Muss in JEDEN Rueckgabezweig - auch in den der Detailansicht. Von dort
-  // kommt das Event, und wuerde das Sheet dort fehlen, passierte nach dem
-  // Klick sichtbar nichts.
-  //
-  // Nach dem Schliessen wird die Liste neu geladen: autoSaveExposeObject legt
-  // das Objekt serverseitig an, ohne dass diese Komponente davon erfaehrt.
+  }, []);
+
+  // Ruecksprung Objekt -> Rechner -> zurueck (App.jsx aktivesObjekt,
+  // UX-Review 2026-09-06): Der Rechner sendet dieses Event mit der Objekt-ID,
+  // wenn der Nutzer ueber die Leiste "<- Objekt: {Name}" zurueckwechselt.
+  // Ohne diesen Listener wuerde der Rueckweg nur in der LISTE landen statt
+  // wieder GENAU im Objekt, aus dem der Rechner geoeffnet wurde.
+  useEffect(() => {
+    const handler = (e) => {
+      const id = e.detail?.id;
+      const treffer = id && savedList.find((o) => o.id === id);
+      if (treffer) openDetail(treffer);
+    };
+    window.addEventListener("if:objekt-oeffnen", handler);
+    return () => window.removeEventListener("if:objekt-oeffnen", handler);
+  }, [savedList, openDetail]);
+
   // Der Exposé-Scan ist jetzt eine eigene Ansicht am Objekt, kein Chatfenster
   // mehr (2026-09-06). Muss in JEDEN Rueckgabezweig - auch in den der
   // Detailansicht: von dort kommt das Event, und fehlte das Sheet dort,
@@ -783,8 +846,12 @@ export function Merkliste() {
   // B3: legt das Objekt aus den fuenf Feldern an und oeffnet es direkt -
   // "Objekt anlegen -> Urteil sehen" ohne Zwischenschritt.
   const objektAnlegen = async (name, daten) => {
-    await saveObj(name, daten, "haupt");
+    const neu = await saveObj(name, daten, "haupt");
     setAnlegenOffen(false);
+    // Der staerkste Moment des Produkts (Konzept 3.1) - bis 2026-09-06 landete
+    // der Nutzer stattdessen in der Liste und musste seine neue Karte selbst
+    // finden.
+    if (neu) openDetail(neu);
   };
 
   const anlegenSheet = (
@@ -970,25 +1037,6 @@ export function Merkliste() {
           </>
         )}
       </div>
-      {rechnerTypesPresent.length > 1 && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-          <button
-            onClick={() => setRechnerFilter("alle")}
-            style={rechnerFilter === "alle" ? searchChipActiveStyle : searchChipStyle}
-          >
-            Alle Rechner
-          </button>
-          {rechnerTypesPresent.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setRechnerFilter(tab)}
-              style={rechnerFilter === tab ? searchChipActiveStyle : searchChipStyle}
-            >
-              {tabLabel[tab]}
-            </button>
-          ))}
-        </div>
-      )}
       {limitReached && (
         <button
           onClick={() => setShowUpgrade(true)}

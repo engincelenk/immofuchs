@@ -67,6 +67,20 @@ const FELD_NAME = {
   plz: "PLZ",
 };
 
+const primaerKnopfStil = {
+  display: "block",
+  width: "100%",
+  height: 44,
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 15,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
 function eur(v, locale = "de-DE") {
   return Number.isFinite(v) ? `${Math.round(v).toLocaleString(locale)} €` : "–";
 }
@@ -123,7 +137,14 @@ function Balken({ label, wert, anteil, farbe, locale }) {
   );
 }
 
-export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE" }) {
+export function Ueberblick({
+  kennzahlen,
+  data,
+  onStellschrauben,
+  onBelege,
+  onBearbeiten,
+  locale = "de-DE",
+}) {
   if (!kennzahlen?.verfuegbar) {
     // Lehrender Empty-State (Konzept 3.6): nennt die fehlenden Felder, statt
     // nur zu melden, dass nichts da ist.
@@ -135,14 +156,22 @@ export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE
           border: "1px solid var(--cb)",
           borderRadius: 12,
           padding: 16,
-          fontSize: 13.5,
-          lineHeight: 1.55,
-          color: "var(--ch)",
         }}
       >
-        Für eine Einschätzung fehlen noch{" "}
-        <strong style={{ color: "var(--ct)" }}>{fehlt.join(", ")}</strong>. Trage sie ein, dann
-        erscheinen Rendite, Cashflow und die Bewertung hier.
+        <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ch)" }}>
+          Für eine Einschätzung fehlen noch{" "}
+          <strong style={{ color: "var(--ct)" }}>{fehlt.join(", ")}</strong>. Trage sie ein, dann
+          erscheinen Rendite, Cashflow und die Bewertung hier.
+        </div>
+        {onBearbeiten && (
+          <button
+            type="button"
+            onClick={onBearbeiten}
+            style={{ ...primaerKnopfStil, marginTop: 12 }}
+          >
+            Fehlende Angaben ergänzen →
+          </button>
+        )}
       </div>
     );
   }
@@ -298,6 +327,21 @@ export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE
           />
         </div>
       </div>
+
+      {/* Der einzige gefuellte Knopf des Reiters, Ziel haengt vom Urteil ab:
+          bei Zuzahlung fuehrt er zum Hebel, sonst zu den Zahlen dahinter.
+          Ohne ihn endete die Seite bisher nach dem Urteil - der teuerste
+          Bruch im roten Faden, weil hier eine Entscheidung ansteht. */}
+      {cf < 0 && onStellschrauben && (
+        <button type="button" onClick={onStellschrauben} style={primaerKnopfStil}>
+          Was müsste sich ändern? →
+        </button>
+      )}
+      {cf >= 0 && onBelege && (
+        <button type="button" onClick={onBelege} style={primaerKnopfStil}>
+          Zahlen im Detail prüfen →
+        </button>
+      )}
 
       {/* Annahmen offenlegen (Konzept 3.7, Punkt 5) */}
       <div style={{ fontSize: 12.5, color: "var(--cl)", lineHeight: 1.5, padding: "0 2px" }}>

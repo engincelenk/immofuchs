@@ -362,6 +362,17 @@ export default function App() {
   // oft nur eine schnelle Zahl und kommt weiter direkt in einem Rechner an,
   // weil startApp() den gewuenschten Tab uebergibt.
   const [tab, setTab] = useState("saved");
+  // Rundweg Objekt -> Rechner -> zurueck (UX-Review 2026-09-06): haelt fest,
+  // aus welchem Objekt ein Rechner geoeffnet wurde. Traegt zwei Dinge:
+  // (a) eine Ruecksprungleiste "<- Objekt: {Name}" im Rechner, (b) den
+  // Speichern-Knopf dort schreibt damit in DIESES Objekt zurueck statt ein
+  // neues anzulegen - vorher erzeugte jeder Rundweg ein Duplikat, weil
+  // SaveBtn ausnahmslos saveObj() (neue UUID) aufrief.
+  // { id, name } | null. Wird von inRechner() (ObjektDetail.jsx) gesetzt und
+  // von jeder REGULAEREN Navigation (Sidebar, Tableiste, "Alle Rechner",
+  // Trial-Gate-Dismiss, goHome) wieder geloescht - siehe die jeweiligen
+  // setAktivesObjekt(null)-Aufrufe unten.
+  const [aktivesObjekt, setAktivesObjekt] = useState(null);
   // Aktiven Tab in der scrollbaren .tbar sichtbar halten (Konzept 8.5b) -
   // sonst verschwindet er bei vielen Tabs auf schmalen Screens seitlich aus
   // dem sichtbaren Bereich, sobald der Nutzer selbst gescrollt hat.
@@ -583,6 +594,7 @@ export default function App() {
   const goHome = () => {
     sessionStorage.removeItem("if_landed");
     setLanded(false);
+    setAktivesObjekt(null);
     setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
   };
   if (!landed)
@@ -617,10 +629,12 @@ export default function App() {
         isProSavedObjects,
         savedObjectsFreeLimit,
         refreshObjekte,
-        setTabExt: (id) => {
+        setTabExt: (id, herkunftObjekt = null) => {
+          setAktivesObjekt(herkunftObjekt);
           setTab(id);
           setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
         },
+        aktivesObjekt,
         // Nach dem Abmelden gebraucht (Nutzer-Meldung 2026-08-27: "wenn man
         // sich ausloggt bleibt man an der stelle wo man auf der seite war").
         // Die Funktion gab es hier schon fuer das Logo in der Kopfzeile, sie
@@ -966,41 +980,115 @@ export default function App() {
           tab={tab}
           onWechsel={(id) => {
             tabSwitchHaptic();
+            setAktivesObjekt(null);
             setTab(id);
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         />
         <div className="content" id="hauptinhalt" tabIndex={-1}>
+          {/* Ruecksprung Objekt -> Rechner (UX-Review 2026-09-06): der
+              einzige Vorwaerts-UND-Rueckweg zwischen Objekt und Rechner.
+              Klick oeffnet wieder GENAU das Objekt, aus dem der Rechner kam -
+              Merkliste haengt dafuer an "if:objekt-oeffnen" (siehe dort). */}
+          {tab !== "saved" && aktivesObjekt && (
+            <button
+              type="button"
+              className="no-print"
+              onClick={() => {
+                const ziel = aktivesObjekt;
+                setAktivesObjekt(null);
+                setTab("saved");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                setTimeout(
+                  () =>
+                    window.dispatchEvent(
+                      new CustomEvent("if:objekt-oeffnen", { detail: { id: ziel.id } }),
+                    ),
+                  60,
+                );
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                height: 40,
+                padding: "0 4px",
+                marginBottom: 12,
+                background: "none",
+                border: "none",
+                color: "var(--ca)",
+                fontSize: 13.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              ← Objekt: {aktivesObjekt.name}
+            </button>
+          )}
           {tab === "haupt" && (
-            <CalculatorTrialGate rechner={tabZuRechner("haupt")} onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate
+            rechner={tabZuRechner("haupt")}
+            onDismiss={() => {
+              setAktivesObjekt(null);
+              setTab("saved");
+            }}
+          >
               <Haupt />
             </CalculatorTrialGate>
           )}
           {tab === "kredit" && (
-            <CalculatorTrialGate rechner={tabZuRechner("kredit")} onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate
+            rechner={tabZuRechner("kredit")}
+            onDismiss={() => {
+              setAktivesObjekt(null);
+              setTab("saved");
+            }}
+          >
               <Kredit />
             </CalculatorTrialGate>
           )}
           {tab === "miete" && (
-            <CalculatorTrialGate rechner={tabZuRechner("miete")} onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate
+            rechner={tabZuRechner("miete")}
+            onDismiss={() => {
+              setAktivesObjekt(null);
+              setTab("saved");
+            }}
+          >
               <Miete />
             </CalculatorTrialGate>
           )}
           {tab === "sanier" && (
-            <CalculatorTrialGate rechner={tabZuRechner("sanier")} onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate
+            rechner={tabZuRechner("sanier")}
+            onDismiss={() => {
+              setAktivesObjekt(null);
+              setTab("saved");
+            }}
+          >
               <Sanier />
             </CalculatorTrialGate>
           )}
           {tab === "steuer6" && (
             <CalculatorTrialGate
               rechner={tabZuRechner("steuer6")}
-              onDismiss={() => setTab("saved")}
+              onDismiss={() => {
+                setAktivesObjekt(null);
+                setTab("saved");
+              }}
             >
               <SteuerTrick />
             </CalculatorTrialGate>
           )}
           {tab === "vfe" && (
-            <CalculatorTrialGate rechner={tabZuRechner("vfe")} onDismiss={() => setTab("saved")}>
+            <CalculatorTrialGate
+            rechner={tabZuRechner("vfe")}
+            onDismiss={() => {
+              setAktivesObjekt(null);
+              setTab("saved");
+            }}
+          >
               <Vorfaelligkeit />
             </CalculatorTrialGate>
           )}
@@ -1102,6 +1190,7 @@ export default function App() {
                 className="tbtn"
                 onClick={() => {
                   tabSwitchHaptic();
+                  setAktivesObjekt(null);
                   setTab(tb.id);
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
@@ -1149,6 +1238,7 @@ export default function App() {
               key={tb.id}
               onClick={() => {
                 tabSwitchHaptic();
+                setAktivesObjekt(null);
                 setTab(tb.id);
                 setTabMenuOpen(false);
                 window.scrollTo({ top: 0, behavior: "smooth" });
