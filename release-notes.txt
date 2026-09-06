@@ -1,3 +1,50 @@
+## 2026-09-06 (1.63.0)
+
+### Objektbereich auf Desktop verdichtet
+
+Nachtrag zur Seitennavigation: der Inhalt DARIN war noch einspaltig.
+
+**Der Regler**
+Das war der Ausgangsbefund. Die Reglerkarten stehen auf Desktop jetzt
+zweispaltig: Karte rund 545 px, Karteninnenraum 518, davon 96 fuer die
+beiden Schrittknoepfe - bleiben 415 px Reglerbahn (gemessen, vorher rund
+1160). Die Untergrenze liegt bei 396 px: Kaufpreis 20.000 bis 2.000.000 bei
+5.000er Schritten sind 396 erreichbare Werte, unter einem Pixel je Wert ist
+nicht mehr jeder Wert mit der Maus treffbar. 415 liegt knapp darueber, ohne
+in die Gegenrichtung zu kippen - bei 1160 px kostete ein Weg von 300.000 auf
+1.200.000 rund 520 px Mauswanderung bei gedrueckter Taste.
+Die Ergebnisleiste spannt ueber beide Spalten und bleibt klebend am unteren
+Rand, damit der Wert beim Regeln sichtbar bleibt.
+
+**Karten nebeneinander**
+- Objektliste: Raster mit auto-fill und 340 px Mindestbreite - gemessen drei
+  Spalten a 358 px. auto-fill statt auto-fit, damit ein einzelnes Objekt
+  nicht wieder ueber die volle Breite laeuft.
+- Unterlagen, Rechner-Liste und AI-Produkte: auto-fit ab 360 px. Dort SOLL
+  die einzelne Karte die Breite fuellen, sonst stuende sie neben Leerraum.
+- Fliesstext-Hinweise spannen ueber beide Spalten.
+
+**Chip-Leiste**
+Auf Desktop kein Scroll mehr, sondern umbrechend und linksbuendig; die
+Verlaufskante entfaellt. Sie ist ein Scroll-Hinweis - fuenf Chips brauchen
+rund 620 px und passen in 1116 px dreifach, ein Hinweis auf nicht
+vorhandenes Scrollen ist Rauschen. Dafuer klebt die Leiste jetzt unter der
+Kopfzeile, damit die Reiter bei langen Kartenstapeln erreichbar bleiben.
+
+**Doppeltes Padding**
+.content bringt auf Desktop 32 px mit, Objektdetail und -liste legten 14
+bzw. 16 px drauf - zusammen mehr als der Header. Auf Desktop jetzt 0.
+
+**Technisch**
+Die betroffenen Layoutwerte lagen als Inline-Styles in den Komponenten.
+Inline schlaegt jede Media Query, deshalb sind sie in Klassen umgezogen
+(.objekt-detail, .objekt-liste, .objekt-chips, .objekt-karten,
+.objekt-raster, .stellschrauben). Die Basisregeln tragen 1:1 die bisherigen
+Werte - Mobile aendert sich dadurch nicht.
+
+Gegenprobe bei 375 px: Padding 12px 14px 100px, Chips scrollen mit
+Verlaufskante, Regler einspaltig 190 px, Tableiste unten. Unveraendert.
+
 ## 2026-09-06 (1.62.0)
 
 ### Exposé-Einstieg beim Anlegen + Desktop-Seitennavigation

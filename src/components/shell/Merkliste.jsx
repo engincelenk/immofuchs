@@ -859,7 +859,7 @@ export function Merkliste() {
       </div>
     );
   return (
-    <div style={{ padding: "16px 16px 100px" }}>
+    <div className="objekt-liste">
       {!willkommenWeg && (
         <div
           style={{
@@ -1031,8 +1031,9 @@ export function Merkliste() {
       {ansicht === "orte" && (
         <ObjektOrte objekte={filtered} onOeffnen={openDetail} />
       )}
-      {ansicht === "liste" &&
-        filtered.map((obj) => {
+      {ansicht === "liste" && (
+        <div className="objekt-karten">
+          {filtered.map((obj) => {
         const inputData = obj.inputData || { ...obj.data };
         // A3: sechs Objekt-Kennzahlen statt der frueheren rechnerspezifischen
         // Vorschau - seit A1 ist ein Objekt nicht mehr an einen Rechner
@@ -1191,7 +1192,9 @@ export function Merkliste() {
             </label>
           </div>
         );
-      })}
+          })}
+        </div>
+      )}
       {confirmDel &&
         createPortal(
           <div

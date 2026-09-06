@@ -265,7 +265,7 @@ export function ObjektDetail({ objekt, onBack }) {
   const aktiv = chips.find((c) => c.id === chip) ? chip : "ueberblick";
 
   return (
-    <div style={{ padding: "12px 14px 100px" }}>
+    <div className="objekt-detail">
       <button onClick={onBack} style={backBtnStyle}>
         ← Zurück
       </button>
@@ -327,18 +327,8 @@ export function ObjektDetail({ objekt, onBack }) {
           dem angeschnittenen Chip noch etwas liegt. Ohne sie endet die Leiste
           fuer das Auge am Bildschirmrand - der Grund, warum frueher der
           zweitwichtigste Reiter auf Position 2 gezwungen wurde. */}
-      <div style={{ position: "relative", margin: "0 -14px 12px" }}>
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            overflowX: "auto",
-            scrollSnapType: "x proximity",
-            WebkitOverflowScrolling: "touch",
-            scrollbarWidth: "none",
-            padding: "2px 14px 10px",
-          }}
-        >
+      <div className="objekt-chips-wrap">
+        <div className="objekt-chips">
           {chips.map((c) => {
             const on = c.id === aktiv;
             return (
@@ -367,18 +357,7 @@ export function ObjektDetail({ objekt, onBack }) {
             );
           })}
         </div>
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            bottom: 10,
-            width: 24,
-            pointerEvents: "none",
-            background: "linear-gradient(to right, transparent, var(--bg))",
-          }}
-        />
+        <div aria-hidden="true" className="objekt-chips-fade" />
       </div>
 
       {aktiv === "ueberblick" && (
@@ -432,7 +411,7 @@ export function ObjektDetail({ objekt, onBack }) {
       )}
 
       {aktiv === "unterlagen" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="objekt-raster">
           <ObjektUnterlagen objektId={objekt.id} />
           <ObjektLage data={basis} titel={objekt.title} />
         </div>
@@ -619,9 +598,12 @@ function RechnerListe({ onOeffnen, moeglich, basis }) {
   const hatBaujahr = !!(basis?.baujahr || basis?.sBJ);
   const sichtbar = RECHNER.filter((r) => r.id !== "sanier" || hatBaujahr);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="objekt-raster">
       {!moeglich && (
-        <div style={{ fontSize: 13.5, color: "var(--cl)", lineHeight: 1.5, marginBottom: 4 }}>
+        <div
+          className="objekt-raster-breit"
+          style={{ fontSize: 13.5, color: "var(--cl)", lineHeight: 1.5, marginBottom: 4 }}
+        >
           Für die Rechner fehlen noch Objektdaten. Lege zuerst Kaufpreis,
           Wohnfläche und Kaltmiete an.
         </div>

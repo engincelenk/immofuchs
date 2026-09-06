@@ -158,7 +158,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="stellschrauben">
       <Karte
         titel="Kaufpreis"
         wert={eur(kaufpreis, locale)}
@@ -353,6 +353,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
       {/* Mitlaufendes Ergebnis - fix unter den Reglern */}
       {kennzahlen?.verfuegbar && (
         <div
+          className="stellschrauben-breit"
           style={{
             background: "var(--ci)",
             border: "1px solid var(--cb)",

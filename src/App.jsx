@@ -781,6 +781,25 @@ export default function App() {
       .skip-link{position:absolute;left:-9999px;top:0;z-index:200;background:var(--cc);color:var(--ct);
         padding:12px 16px;border:1px solid var(--cb);border-radius:0 0 10px 0;font-weight:700;text-decoration:none}
       .skip-link:focus{left:0}
+      /* Objektbereich: bis hierher steckten diese Werte als Inline-Styles in
+         den Komponenten. Inline schlaegt jede Media Query - ohne den Umzug
+         in Klassen liesse sich das Doppel-Padding auf Desktop nicht
+         aufloesen. Die Werte sind 1:1 die bisherigen, Mobile aendert sich
+         dadurch nicht. */
+      .objekt-detail{padding:12px 14px 100px}
+      .objekt-liste{padding:16px 16px 100px}
+      .objekt-chips-wrap{position:relative;margin:0 -14px 12px}
+      .objekt-chips{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;
+        -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 14px 10px}
+      .objekt-chips::-webkit-scrollbar{display:none}
+      .objekt-chips-fade{position:absolute;top:0;right:0;bottom:10px;width:24px;pointer-events:none;
+        background:linear-gradient(to right,transparent,var(--bg))}
+      /* Mobile unveraendert: einspaltig mit 12px Abstand. Nur damit die
+         Desktop-Query das display ueberhaupt umschalten kann - inline
+         gesetzt liesse es sich nicht ueberschreiben. */
+      .stellschrauben{display:flex;flex-direction:column;gap:12px}
+      .objekt-karten{display:flex;flex-direction:column;gap:12px}
+      .objekt-raster{display:flex;flex-direction:column;gap:12px}
       /* ── DESKTOP-SEITENNAVIGATION (2026-09-06) ──────────────────────────
          Alles, was die App vom hochskalierten Telefon zum Desktop-Layout
          macht, steht in DIESEM einen Block. Unterhalb aendert sich dadurch
@@ -814,6 +833,37 @@ export default function App() {
            Box-Modell-Argument von damals (Padding auf .hdr-inner, nicht auf
            .hdr) bleibt unangetastet. */
         .hdr-inner{max-width:none;padding-left:24px}
+
+        /* ── Verdichtung im Objektbereich ──────────────────────────────────
+           Das Eigen-Padding der Objektansichten entfaellt: .content bringt
+           auf Desktop bereits 32px mit, zusammen waeren es 46-48px links -
+           mehr als der Header. Der negative Rand der Chip-Leiste muss im
+           selben Zug weg, sonst ragt sie 14px heraus. */
+        .objekt-detail{padding:0 0 40px}
+        .objekt-liste{padding:0 0 40px}
+        .objekt-chips-wrap{margin:0 0 16px;position:sticky;top:86px;z-index:20;background:var(--bg)}
+        /* Fuenf Chips brauchen rund 620px - in 1116px passen sie dreifach.
+           Ein Scroll-Hinweis ohne Scroll-Bedarf ist reines Rauschen. */
+        .objekt-chips{overflow-x:visible;flex-wrap:wrap;padding:8px 0}
+        .objekt-chips-fade{display:none}
+
+        /* Karten nebeneinander statt als Vollbreiten-Streifen. auto-fill
+           haelt die Spaltenbreite konstant, auch wenn nur ein Objekt da ist -
+           eine einzelne Karte ueber 1116px waere genau das Problem zurueck. */
+        .objekt-karten{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+        /* auto-fit statt auto-fill: hier SOLL die einzelne Karte die Breite
+           fuellen, weil sie sonst neben Leerraum steht. */
+        .objekt-raster{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;align-items:start}
+        /* Bloecke mit Balken, Tabellen oder Fliesstext ueber beide Spalten. */
+        .objekt-raster-breit{grid-column:1 / -1}
+
+        /* Stellschrauben zweispaltig. Das ist die eigentliche Antwort auf den
+           1500px-Regler: Karte ~550px, Karteninnenraum ~518px, davon 96px
+           fuer die beiden Schrittknoepfe - bleiben rund 420px Reglerbahn.
+           Untergrenze waeren 396px (Kaufpreis 20.000-2.000.000 bei 5.000er
+           Schritten = 396 erreichbare Werte, ein Pixel je Wert). */
+        .stellschrauben{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+        .stellschrauben-breit{grid-column:1 / -1}
       }
       /* LANDSCAPE-HANDY (Bugreport 2026-08-26, Screenshot): ab 700px Breite
          greift oben das Desktop-Split-Layout und zeigt Eingabe- und

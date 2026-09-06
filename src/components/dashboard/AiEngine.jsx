@@ -77,7 +77,7 @@ export function AiEngine({
       {GRUPPEN.map((gruppe) => (
         <div key={gruppe.id}>
           <div style={gruppenTitel}>{gruppe.titel}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="objekt-raster">
             {gruppe.produkte.map((id) => {
               const produkt = AI_PRODUKTE.find((p) => p.id === id);
               if (!produkt) return null;
