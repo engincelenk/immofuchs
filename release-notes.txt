@@ -1,3 +1,38 @@
+## 2026-09-06 (1.66.0)
+
+### Exposé-Scan und Handout raus aus Finn - beides liegt jetzt am Objekt
+
+Der Upload lag bisher ausschliesslich in Finns Chat-Sheet: als Bueroklammer
+neben dem Eingabefeld, das Ergebnis als Chatnachricht mit der Rolle "expose",
+das Besichtigungshandout darunter. Das vermischte zwei Dinge, die nichts
+miteinander zu tun haben - ein Gespraech und eine Dateiverarbeitung - und
+versteckte die staerkste Funktion der App in einem Chatfenster.
+
+Jetzt gilt die Trennung sauber: **Finn ist Gespraechspartner. Alles
+Gerechnete und alles Verarbeitende haengt am Objekt.**
+
+**Neu: ObjektExpose.jsx**
+Eigenstaendige Ansicht mit Dateiauswahl, Fortschritt, Ergebniskarte und
+Handout - ohne Chat. Wiederverwendet wird der komplette bestehende Weg
+(extrahiereExpose -> /api/expose-extract -> autoSaveExposeObject,
+ExposeResultCard, FinnHandoutPanel); neu ist nur der Rahmen.
+
+**Finn: von 641 auf 337 Zeilen**
+Entfallen sind Bueroklammer, verstecktes Datei-Feld, Thumbnail-Leiste,
+Auswerten-Knopf, Upload-Consent-Bubble, Exposé-Nachrichtenrolle,
+Ergebniskarte, Handout-Panel, der Disclaimer nach der Uebernahme, der
+"Zum Rechner"-Ausgang, der Upload-Vorschlagschip und der
+autoOpenUpload-Fernsteuerungspfad samt seiner Mobile-Sonderbehandlung.
+
+**Startseiten-Link umgehaengt**
+"Jetzt hochladen" im Hero sprang bisher in den Renditerechner und riss dort
+Finns Datei-Dialog auf. Der Weg fuehrt jetzt in den Objektbereich und
+oeffnet dort den Exposé-Scan. Damit entfaellt auch die Krueckenkonstruktion
+autoExpose/clearAutoExpose im AppContext.
+
+Der KI-Consent (localStorage-Schluessel if_expose_consent) bleibt derselbe:
+Wer im Chat bereits zugestimmt hat, wird am Objekt nicht erneut gefragt.
+
 ## 2026-09-06 (1.65.0)
 
 ### Fix: Gemini-Modell abgeschaltet + Fallback war kaputt

@@ -18,6 +18,7 @@ import { scoreBadgeColor, scoreBadgeText } from "../dashboard/dashboardUtils.js"
 import { ObjektKPIs, VollstaendigkeitsRing } from "../dashboard/ObjektKPIs.jsx";
 import { ObjektAnlegen } from "../dashboard/ObjektAnlegen.jsx";
 import { ObjektVergleich } from "../dashboard/ObjektVergleich.jsx";
+import { ObjektExpose } from "../dashboard/ObjektExpose.jsx";
 import { ObjektOrte } from "../dashboard/ObjektUnterlagen.jsx";
 import {
   berechneObjektKennzahlen,
@@ -600,9 +601,6 @@ export function Merkliste() {
   // /api/expose-extract, autoSaveExposeObject legt das Objekt an. Neu ist
   // ausschliesslich der Einstieg.
   const [exposeOffen, setExposeOffen] = useState(false);
-  // Getrennt vom Offen-Zustand, damit der Datei-Dialog je Oeffnen genau
-  // einmal aufgeht und nicht erneut, sobald das Sheet nur neu rendert.
-  const [exposeAutoUpload, setExposeAutoUpload] = useState(false);
 
   // Ein Einstieg, zwei Ausloeser: der Knopf in "Objekt anlegen" und die
   // AI-Engine am Objekt (ObjektDetail sendet dafuer ein Fenster-Event, weil
@@ -615,7 +613,6 @@ export function Merkliste() {
   const oeffneExpose = useCallback(() => {
     setAnlegenOffen(false);
     setExposeOffen(true);
-    setExposeAutoUpload(true);
   }, []);
 
   // Bis 2026-09-06 hoerte auf dieses Event niemand zu - der Knopf "Exposé
@@ -757,24 +754,21 @@ export function Merkliste() {
   //
   // Nach dem Schliessen wird die Liste neu geladen: autoSaveExposeObject legt
   // das Objekt serverseitig an, ohne dass diese Komponente davon erfaehrt.
+  // Der Exposé-Scan ist jetzt eine eigene Ansicht am Objekt, kein Chatfenster
+  // mehr (2026-09-06). Muss in JEDEN Rueckgabezweig - auch in den der
+  // Detailansicht: von dort kommt das Event, und fehlte das Sheet dort,
+  // passierte nach dem Klick sichtbar nichts.
+  //
+  // Nach dem Schliessen wird die Liste neu geladen: autoSaveExposeObject legt
+  // das Objekt serverseitig an, ohne dass diese Komponente davon erfaehrt.
   const exposeSheet = (
-    <AssistantSheet
+    <ObjektExpose
       open={exposeOffen}
       onClose={() => {
         setExposeOffen(false);
-        setExposeAutoUpload(false);
         refreshObjekte?.();
       }}
-      // Muss aus UPLOAD_RECHNER stammen (AssistantSheet.jsx), sonst blendet
-      // das Sheet den Datei-Knopf aus.
-      rechner="renditerechner"
-      kontext={{}}
-      contextLabel={at.contextExpose}
-      suggested={[]}
       lang={lang}
-      t={at}
-      autoOpenUpload={exposeAutoUpload}
-      onAutoOpenUploadHandled={() => setExposeAutoUpload(false)}
     />
   );
 

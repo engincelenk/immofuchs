@@ -38,7 +38,7 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 
 export default function Haupt() {
-  const { d, set, t, tip, setTabExt, lang, mietQuelleRef, autoExpose, clearAutoExpose } = useApp();
+  const { d, set, t, tip, setTabExt, lang, mietQuelleRef } = useApp();
   const [view, setView] = useState("input");
   const [secAllOpen, setSecAllOpen] = useState(false);
   const [secAllKey, setSecAllKey] = useState(0);
@@ -1850,8 +1850,6 @@ export default function Haupt() {
                 financeScore: score?.verfuegbar ? score.score : null,
               }
             }
-            autoOpenUpload={autoExpose}
-            onAutoOpenUploadHandled={clearAutoExpose}
           />
         );
       })()}

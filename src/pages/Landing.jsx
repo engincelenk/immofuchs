@@ -944,8 +944,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 weil Titel, Beschreibung und CTA neben dem Bild stehen.
                 "Jetzt hochladen" ist ein gefuellter Orange-Pill statt einer
                 Textzeile (Nutzerwunsch: soll deutlich sichtbarer sein).
-                Klick springt in den Renditerechner UND stoesst dort
-                automatisch den Upload-Dialog an (App.jsx autoExpose). */}
+                Klick fuehrt seit 2026-09-06 in den Objektbereich und oeffnet
+                dort den Exposé-Scan (App.jsx startApp, opts.openUpload) - der
+                Scan haengt jetzt am Objekt, nicht mehr im Chat. */}
             <button
               onClick={() => onStart("haupt", { openUpload: true })}
               className="hero-upload-spot"

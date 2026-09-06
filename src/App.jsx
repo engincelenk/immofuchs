@@ -399,13 +399,6 @@ export default function App() {
     sessionStorage.setItem("if_landed", "1");
     return true;
   });
-  // Deep-Link "Exposé hochladen" vom Hero-Spotlight auf der Startseite: wird
-  // beim Wechsel in den Renditerechner einmal an AssistantWidget/AssistantSheet
-  // durchgereicht, die daraus denselben Weg wie ein manueller Klick auf 📎
-  // anstossen. clearAutoExpose() wird von AssistantSheet nach dem Verbrauch
-  // aufgerufen, damit ein spaeteres Wieder-Oeffnen des Sheets nicht erneut
-  // den Datei-Dialog aufreisst.
-  const [autoExpose, setAutoExpose] = useState(false);
   // Liste aller Rechner, erreichbar ueber den festen Knopf rechts an der
   // Tab-Leiste (Nutzer-Feedback 2026-08-12).
   const [tabMenuOpen, setTabMenuOpen] = useState(false);
@@ -571,10 +564,17 @@ export default function App() {
   ];
 
   const startApp = (startTab, opts) => {
+    // Der Exposé-Wunsch von der Startseite fuehrt seit 2026-09-06 in den
+    // Objektbereich, nicht mehr in den Renditerechner: Der Scan liegt jetzt
+    // am Objekt (ObjektExpose.jsx), Finn ist reiner Chat. Merkliste hoert auf
+    // das Event und oeffnet die Ansicht.
+    if (opts?.openUpload) {
+      setTab("saved");
+      setTimeout(() => window.dispatchEvent(new CustomEvent("if:expose-oeffnen")), 60);
+    }
     // Ohne expliziten Rechner landet der Nutzer bei seinen Objekten (A5).
-    if (startTab && tabs.find((x) => x.id === startTab)) setTab(startTab);
+    else if (startTab && tabs.find((x) => x.id === startTab)) setTab(startTab);
     else setTab("saved");
-    setAutoExpose(Boolean(opts?.openUpload));
     sessionStorage.setItem("if_landed", "1");
     setLanded(true);
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -617,8 +617,6 @@ export default function App() {
         isProSavedObjects,
         savedObjectsFreeLimit,
         refreshObjekte,
-        autoExpose,
-        clearAutoExpose: () => setAutoExpose(false),
         setTabExt: (id) => {
           setTab(id);
           setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
