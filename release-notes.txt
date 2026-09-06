@@ -1,3 +1,60 @@
+## 2026-09-06 (1.62.0)
+
+### Exposé-Einstieg beim Anlegen + Desktop-Seitennavigation
+
+**Exposé beim Objekt anlegen**
+
+ObjektAnlegen hatte den Knopf "Exposé hochladen" seit jeher - er haengt aber
+an der Prop `onExpose`, und die wurde vom Aufrufer nie uebergeben. Der
+staerkste Weg ins Produkt war damit unsichtbar. Ebenso tot: das Event
+`if:expose-oeffnen`, das die AI-Engine am Objekt sendet - es hoerte niemand
+zu, der Knopf dort tat schlicht nichts.
+
+Beides ist jetzt verdrahtet. Der bestehende Weg wird vollstaendig
+wiederverwendet (AssistantSheet oeffnet den Datei-Dialog,
+useAssistant.extrahiereExpose ruft /api/expose-extract,
+autoSaveExposeObject legt das Objekt an) - neu ist ausschliesslich der
+Einstieg. Nach dem Schliessen wird die Objektliste neu geladen, weil der
+Scan serverseitig anlegt, ohne dass die Liste davon erfaehrt.
+
+**Desktop-Seitennavigation ab 1280 px**
+
+Die Navigation war auf JEDER Fenstergroesse eine Handy-Tableiste am unteren
+Rand - auf 1900 px eine 640 px breite Insel unten in der Mitte. Ab 1280 px
+Breite und 600 px Hoehe steht sie jetzt links: 240 px, sieben Ziele in zwei
+Gruppen ("Objekte", "Rechner"), Aktiv-Zustand dreifach kodiert (Flaeche,
+Balken, Schriftgewicht - nicht nur Farbe).
+
+- Die Tableiste verschwindet exakt dann, wenn die Sidebar erscheint.
+- Neu eine Sprungmarke "Zum Inhalt springen": Die Sidebar schiebt sieben
+  Links vor jeden Seiteninhalt. Ohne sie waere sie fuer Tastaturnutzer ein
+  Rueckschritt gegenueber der bisherigen Leiste am DOM-Ende.
+- `scroll-padding-top: 150px`, damit angesprungener Inhalt nicht unter
+  Kopfzeile und klebender Leiste verschwindet.
+- Druckansicht blendet Sidebar und Sprungmarke aus.
+
+Die zusaetzliche Bedingung `min-height: 600px` ist kein Beiwerk: Ohne sie
+haette ein Fenster von 1400x450 gleichzeitig die Landscape-Handy-Ausnahme
+und den Sidebar-Block getroffen; bei gleicher Spezifitaet gewinnt die
+spaetere Regel, das Handy im Querformat haette eine Sidebar bekommen.
+
+Gemessen: 1440x900 Sidebar 240 / Inhalt 1170, Tableiste aus. 1279x900,
+768x1024 (iPad hoch), 1400x450 (Handy quer) und 375x812 unveraendert -
+Sidebar aus, Tableiste an.
+
+**Zu breite Elemente**
+
+- `.content` von 1400 auf 1180 px. Bei 1400 lief einspaltiger Fliesstext
+  ueber rund 175 Zeichen je Zeile; beim Zeilenruecksprung verliert das Auge
+  dort die Spur.
+- Das Sheet "Objekt anlegen" hatte KEIN `size`-Prop. Sheet.jsx faellt dann
+  auf `maxWidth: "none"` zurueck - das Panel war so breit wie das Fenster,
+  auf 1900 px also ein 1870 px breites Feld fuer eine PLZ. Jetzt
+  `min(720px, 100vw)`, wie beim Rechner-Sheet laengst ueblich.
+- Zahlenfelder bekommen inhaltsgerechte Obergrenzen (Kaufpreis/Kaltmiete/
+  Eigenkapital 220, Wohnflaeche 160, Bundesland 280). Die Breite eines
+  Eingabefelds ist eine Zusage darueber, wie viel hineingehoert.
+
 ## 2026-09-06 (1.61.0)
 
 ### Design-Token --ch abgedunkelt + Abstands- und Schriftskala

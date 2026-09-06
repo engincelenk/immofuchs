@@ -399,6 +399,11 @@ export function useSavedObjects(setData) {
     loadObj,
     isPro,
     freeLimit: TRIAL_OBJECT_LIMIT_GESAMT,
+    // Neu 2026-09-06: Der Exposé-Scan legt sein Objekt ueber
+    // autoSaveExposeObject direkt per apiFetch an, nicht ueber saveObj -
+    // dieser Hook erfaehrt davon nichts. Ohne einen Refresh von aussen
+    // bliebe die Liste nach dem Scan leer.
+    refreshFromServer,
   };
 }
 
@@ -567,8 +572,8 @@ export function Merkliste() {
     lang,
     isProSavedObjects,
     savedObjectsFreeLimit,
-  } =
-    useApp();
+    refreshObjekte,
+  } = useApp();
   const t = T[lang] || T.de;
   const locale = LANG_LOCALE[lang] || "de-DE";
   const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
@@ -583,6 +588,41 @@ export function Merkliste() {
   const [detailObj, setDetailObj] = useState(null);
   // B3: Objekt anlegen mit fuenf Feldern statt vierzig.
   const [anlegenOffen, setAnlegenOffen] = useState(false);
+  // Exposé-Weg beim Anlegen (2026-09-06). ObjektAnlegen hatte den Knopf schon
+  // immer, er haengt aber an der Prop `onExpose` - und die wurde von hier nie
+  // uebergeben. Der staerkste Weg ins Produkt war damit unsichtbar: PDF
+  // hinein, Felder gefuellt, Objekt angelegt.
+  //
+  // Wiederverwendet wird der bestehende Weg vollstaendig: AssistantSheet
+  // stoesst den Datei-Dialog an, useAssistant.extrahiereExpose ruft
+  // /api/expose-extract, autoSaveExposeObject legt das Objekt an. Neu ist
+  // ausschliesslich der Einstieg.
+  const [exposeOffen, setExposeOffen] = useState(false);
+  // Getrennt vom Offen-Zustand, damit der Datei-Dialog je Oeffnen genau
+  // einmal aufgeht und nicht erneut, sobald das Sheet nur neu rendert.
+  const [exposeAutoUpload, setExposeAutoUpload] = useState(false);
+
+  // Ein Einstieg, zwei Ausloeser: der Knopf in "Objekt anlegen" und die
+  // AI-Engine am Objekt (ObjektDetail sendet dafuer ein Fenster-Event, weil
+  // dort kein Assistent haengt).
+  //
+  // Steht bewusst HIER oben bei den uebrigen Hooks und nicht weiter unten
+  // beim Sheet: darunter liegt ein fruehes `return` fuer die Detailansicht -
+  // ein Hook dahinter waere bedingt und damit ein Verstoss gegen die
+  // Hook-Regeln.
+  const oeffneExpose = useCallback(() => {
+    setAnlegenOffen(false);
+    setExposeOffen(true);
+    setExposeAutoUpload(true);
+  }, []);
+
+  // Bis 2026-09-06 hoerte auf dieses Event niemand zu - der Knopf "Exposé
+  // hochladen" in der AI-Engine tat schlicht nichts.
+  useEffect(() => {
+    const handler = () => oeffneExpose();
+    window.addEventListener("if:expose-oeffnen", handler);
+    return () => window.removeEventListener("if:expose-oeffnen", handler);
+  }, [oeffneExpose]);
   // Phase E: Zeilen-Diff vor dem Finn-Chat - die Zahlen zuerst, die
   // Einordnung auf Wunsch.
   const [vergleichOffen, setVergleichOffen] = useState(false);
@@ -709,7 +749,40 @@ export function Merkliste() {
       letzteAnsicht: obj.letzteAnsicht || "haupt",
     });
   }
-  if (detailObj) return <ObjektDetail objekt={detailObj} onBack={() => setDetailObj(null)} />;
+  // Muss in JEDEN Rueckgabezweig - auch in den der Detailansicht. Von dort
+  // kommt das Event, und wuerde das Sheet dort fehlen, passierte nach dem
+  // Klick sichtbar nichts.
+  //
+  // Nach dem Schliessen wird die Liste neu geladen: autoSaveExposeObject legt
+  // das Objekt serverseitig an, ohne dass diese Komponente davon erfaehrt.
+  const exposeSheet = (
+    <AssistantSheet
+      open={exposeOffen}
+      onClose={() => {
+        setExposeOffen(false);
+        setExposeAutoUpload(false);
+        refreshObjekte?.();
+      }}
+      // Muss aus UPLOAD_RECHNER stammen (AssistantSheet.jsx), sonst blendet
+      // das Sheet den Datei-Knopf aus.
+      rechner="renditerechner"
+      kontext={{}}
+      contextLabel={at.contextExpose}
+      suggested={[]}
+      lang={lang}
+      t={at}
+      autoOpenUpload={exposeAutoUpload}
+      onAutoOpenUploadHandled={() => setExposeAutoUpload(false)}
+    />
+  );
+
+  if (detailObj)
+    return (
+      <>
+        <ObjektDetail objekt={detailObj} onBack={() => setDetailObj(null)} />
+        {exposeSheet}
+      </>
+    );
 
   // B3: legt das Objekt aus den fuenf Feldern an und oeffnet es direkt -
   // "Objekt anlegen -> Urteil sehen" ohne Zwischenschritt.
@@ -719,11 +792,20 @@ export function Merkliste() {
   };
 
   const anlegenSheet = (
-    <Sheet open={anlegenOffen} onClose={() => setAnlegenOffen(false)} label="Objekt anlegen">
+    // size ist Pflicht: ohne die Prop faellt Sheet.jsx auf maxWidth "none"
+    // zurueck (Sheet.jsx:178) und das Panel wird so breit wie das Fenster -
+    // auf einem 1900-px-Bildschirm ein 1870 px breites Feld fuer eine PLZ.
+    <Sheet
+      open={anlegenOffen}
+      onClose={() => setAnlegenOffen(false)}
+      label="Objekt anlegen"
+      size="min(720px, 100vw)"
+    >
       <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Objekt anlegen</div>
       <ObjektAnlegen
         t={t}
         onAnlegen={objektAnlegen}
+        onExpose={oeffneExpose}
         onAbbrechen={() => setAnlegenOffen(false)}
       />
     </Sheet>
@@ -773,6 +855,7 @@ export function Merkliste() {
           + Objekt anlegen
         </button>
         {anlegenSheet}
+        {exposeSheet}
       </div>
     );
   return (
@@ -1238,6 +1321,7 @@ export function Merkliste() {
         </div>
       )}
       {anlegenSheet}
+        {exposeSheet}
       <Sheet
         open={vergleichOffen}
         onClose={() => setVergleichOffen(false)}

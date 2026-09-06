@@ -22,12 +22,24 @@ import { MIN_ZEICHEN, kuerzelFuerBundesland, sucheAdressen } from "../../utils/a
 // Reihenfolge folgt dem Denken beim Anlegen: erst wo, dann was es kostet.
 // PLZ und Ort stehen deshalb direkt hinter dem Namen (eingefuegt beim
 // Rendern), nicht hinter den Geldbetraegen.
+//
+// `maxBreite` deckelt die Feldbreite nach dem erwarteten Inhalt. Die Breite
+// eines Eingabefelds ist eine Zusage daran, wie viel hineingehoert - ein
+// 690 px breites Feld fuer "60" (Quadratmeter) verspricht etwas anderes, als
+// es meint. Der Name bleibt ungedeckelt, dort sind lange Adressen normal.
 const FELDER = [
   { key: "name", label: "Name oder Adresse", typ: "text", pflicht: true },
-  { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", pflicht: true },
-  { key: "flaeche", label: "Wohnfläche", typ: "zahl", einheit: "m²", pflicht: true },
-  { key: "kaltmiete", label: "Kaltmiete", typ: "zahl", einheit: "€/Monat", pflicht: true },
-  { key: "eigenkapital", label: "Eigenkapital", typ: "zahl", einheit: "€" },
+  { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", pflicht: true, maxBreite: 220 },
+  { key: "flaeche", label: "Wohnfläche", typ: "zahl", einheit: "m²", pflicht: true, maxBreite: 160 },
+  {
+    key: "kaltmiete",
+    label: "Kaltmiete",
+    typ: "zahl",
+    einheit: "€/Monat",
+    pflicht: true,
+    maxBreite: 220,
+  },
+  { key: "eigenkapital", label: "Eigenkapital", typ: "zahl", einheit: "€", maxBreite: 220 },
 ];
 
 // startwerte + bearbeiten: dieselbe Maske legt an und bearbeitet. Ein
@@ -183,7 +195,7 @@ export function ObjektAnlegen({
               inputMode={f.typ === "zahl" ? "decimal" : undefined}
               value={werte[f.key] || ""}
               onChange={(e) => setzen(f.key, e.target.value)}
-              style={eingabeStil}
+              style={f.maxBreite ? { ...eingabeStil, maxWidth: f.maxBreite } : eingabeStil}
             />
           </label>
           {f.key === "name" && (
@@ -223,7 +235,7 @@ export function ObjektAnlegen({
           <select
             value={bundesland}
             onChange={(e) => setBundesland(e.target.value)}
-            style={eingabeStil}
+            style={{ ...eingabeStil, maxWidth: 280 }}
           >
             {BL_O.map((o) => (
               <option key={o.v} value={o.v}>

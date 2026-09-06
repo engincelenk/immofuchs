@@ -15,6 +15,7 @@ import { Vorfaelligkeit } from "./components/extras/Vorfaelligkeit.jsx";
 import { Landing } from "./pages/Landing.jsx";
 import { useSavedObjects, Merkliste } from "./components/shell/Merkliste.jsx";
 import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
+import { Sidebar } from "./components/shell/Sidebar.jsx";
 import { ProHeaderButton } from "./components/account/ProHeaderButton.jsx";
 import { CalculatorTrialGate } from "./components/account/CalculatorTrialGate.jsx";
 import { tabZuRechner } from "./utils/assistantContext.js";
@@ -541,6 +542,7 @@ export default function App() {
     loadObj: loadObjRaw,
     isPro: isProSavedObjects,
     freeLimit: savedObjectsFreeLimit,
+    refreshFromServer: refreshObjekte,
   } = useSavedObjects(setData);
   // Ein gespeichertes Objekt ist ein Snapshot: sein nichtUml wurde damals
   // bewusst so gespeichert und darf beim Laden nicht ueberschrieben werden.
@@ -614,6 +616,7 @@ export default function App() {
         loadObj,
         isProSavedObjects,
         savedObjectsFreeLimit,
+        refreshObjekte,
         autoExpose,
         clearAutoExpose: () => setAutoExpose(false),
         setTabExt: (id) => {
@@ -642,6 +645,7 @@ export default function App() {
          "Analyse & Kennzahlen", Bugreport 2026-07-29). clip klippt genauso,
          erzeugt aber keinen Scroll-Container. Die hidden-Zeile davor ist die
          Rueckfallebene fuer Safari < 16. Nicht zu hidden zurueckdrehen. */
+      html{scroll-padding-top:150px}
       .shell{max-width:1400px;margin:0 auto;padding:calc(78px + env(safe-area-inset-top)) 0 calc(72px + env(safe-area-inset-bottom));min-height:100dvh;overflow-x:hidden;overflow-x:clip;overflow-y:visible;position:relative;width:100%}
       /* Horizontales Padding synchron mit .content (Bugreport 2026-08-10:
          Logo/Sprachauswahl fluchten auf breiten Screens - z.B. 1920px - noch
@@ -702,7 +706,11 @@ export default function App() {
         box-shadow:-8px 0 10px -6px rgba(0,0,0,.14)}
       .tbtn{flex:0 0 auto;min-width:64px;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border:none;background:none;cursor:pointer;min-height:48px;scroll-snap-align:center}
       .tbtn span{font-size:11px;font-weight:600;letter-spacing:.3px}
-      .content{padding:14px 14px;max-width:1400px;margin:0 auto;width:100%;overflow-x:hidden;overflow-x:clip;overflow-y:visible}
+      /* 1180 statt 1400 px (2026-09-06): Bei 1400 px lief einspaltiger
+         Fliesstext ueber rund 175 Zeichen je Zeile - beim Zeilenruecksprung
+         verliert das Auge dort die Spur (optimal sind 50-75). 1180 px laesst
+         dem .split-Ergebnisbereich bei 1:1,25 immer noch rund 620 px. */
+      .content{padding:14px 14px;max-width:1180px;margin:0 auto;width:100%;overflow-x:hidden;overflow-x:clip;overflow-y:visible}
       .ls{font-size:14px;padding:8px 10px;border:1px solid var(--cb);border-radius:8px;background:var(--ci);color:var(--ct);cursor:pointer;font-family:inherit;min-height:38px}
       /* MOBILE-FIRST DEFAULTS — apply to all viewports < 700px */
       .if-row{display:grid;grid-template-columns:1fr;gap:0}
@@ -753,6 +761,60 @@ export default function App() {
         .content{padding:28px 40px}
         .hdr-inner{padding-left:40px;padding-right:40px}
       }
+      /* Sidebar-Grundform. display:none ist der Ausgangszustand - sichtbar
+         wird sie ausschliesslich durch den Block oben. */
+      .sidebar{display:none;position:fixed;left:0;top:calc(78px + env(safe-area-inset-top));bottom:0;width:240px;z-index:40;
+        flex-direction:column;gap:4px;padding:16px 12px;background:var(--cc);border-right:1px solid var(--cb);overflow-y:auto}
+      .sidebar-gruppe{display:flex;flex-direction:column;gap:4px;margin-bottom:16px}
+      .sidebar-label{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--ch);padding:0 12px;margin-bottom:4px}
+      .sidebar-item{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border:none;border-radius:10px;
+        background:none;color:var(--ct);font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;text-align:left;
+        position:relative;transition:background 120ms ease}
+      .sidebar-item:hover{background:var(--ci)}
+      /* Der Aktiv-Zustand ist dreifach kodiert - Flaeche, Balken und Gewicht.
+         Nur ueber Farbe waere er fuer Farbfehlsichtige nicht erkennbar. */
+      .sidebar-item.aktiv{background:var(--ci);color:var(--ca);font-weight:700}
+      .sidebar-item.aktiv::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 2px 2px 0;background:var(--ca)}
+      /* Sprungmarke: Die Sidebar schiebt sieben Links vor jeden Seiteninhalt.
+         Ohne diesen Link waere sie fuer Tastaturnutzer ein Rueckschritt
+         gegenueber der bisherigen Tableiste, die am DOM-Ende stand. */
+      .skip-link{position:absolute;left:-9999px;top:0;z-index:200;background:var(--cc);color:var(--ct);
+        padding:12px 16px;border:1px solid var(--cb);border-radius:0 0 10px 0;font-weight:700;text-decoration:none}
+      .skip-link:focus{left:0}
+      /* ── DESKTOP-SEITENNAVIGATION (2026-09-06) ──────────────────────────
+         Alles, was die App vom hochskalierten Telefon zum Desktop-Layout
+         macht, steht in DIESEM einen Block. Unterhalb aendert sich dadurch
+         keine einzige Regel - das war die Bedingung.
+
+         Warum 1280px: Sidebar (240) + Padding (2x32) laesst 984px fuer den
+         Inhalt. Das .split-Layout laeuft heute schon ab 1024px Viewport mit
+         968px Innenbreite produktiv - 984 ist also messbar mehr als der
+         bereits akzeptierte Fall, keine Schaetzung.
+
+         Warum zusaetzlich min-height:600px: Ohne die Bedingung wuerde ein
+         Fenster von z.B. 1400x450 gleichzeitig die Landscape-Handy-Ausnahme
+         weiter unten (min-width:700px and max-height:500px) UND diesen Block
+         treffen. Bei gleicher Spezifitaet gewinnt die spaetere Regel - das
+         Handy im Querformat bekaeme eine Sidebar. Mit min-height:600px
+         schliessen sich beide sauber aus. Die Luecke 500-600px ist Absicht:
+         dort bleibt alles wie bisher. */
+      @media(min-width:1280px) and (min-height:600px){
+        .sidebar{display:flex}
+        /* Die Tableiste verschwindet exakt dann, wenn die Sidebar erscheint -
+           nie vorher, sonst gaebe es ein Fenster ohne jede Navigation. */
+        .tbar-wrap{display:none}
+        /* padding-bottom war der Platz fuer die Tableiste. Ohne sie bliebe
+           dort toter Raum. */
+        .shell{max-width:none;padding-left:240px;padding-bottom:40px}
+        .content{max-width:1180px;padding:32px 32px 48px}
+        /* Das Logo steht jetzt ueber der Sidebar-Spalte und liest sich als
+           deren Kopf. Bewusste Abweichung vom Bugreport 2026-08-10: dort
+           sollten Logo und Inhaltskante fluchten. Der Inhalt ist hier in der
+           Restbreite zentriert, eine Flucht ist geometrisch unmoeglich. Das
+           Box-Modell-Argument von damals (Padding auf .hdr-inner, nicht auf
+           .hdr) bleibt unangetastet. */
+        .hdr-inner{max-width:none;padding-left:24px}
+      }
       /* LANDSCAPE-HANDY (Bugreport 2026-08-26, Screenshot): ab 700px Breite
          greift oben das Desktop-Split-Layout und zeigt Eingabe- und
          Ergebnis-Spalte gleichzeitig - ein quer liegendes Handy ist aber oft
@@ -797,7 +859,8 @@ export default function App() {
         .mob-next-btn{display:block}
       }
       @media print{
-        .tbar,.tbar-wrap,.hdr,.mob-toggle,.inp-pane,.no-print{display:none!important}
+        .tbar,.tbar-wrap,.hdr,.mob-toggle,.inp-pane,.no-print,.sidebar,.skip-link{display:none!important}
+        .shell{padding-left:0!important}
         .res-pane{display:block!important}
         .split{display:block!important}
         .shell{padding:0;max-width:100%}
@@ -807,6 +870,9 @@ export default function App() {
       }`}
       </style>
       <div className="shell" dir="ltr">
+        <a className="skip-link" href="#hauptinhalt">
+          Zum Inhalt springen
+        </a>
         <div className="hdr">
           <div className="hdr-inner">
             <button
@@ -847,7 +913,16 @@ export default function App() {
             </div>
           </div>
         </div>
-        <div className="content">
+        <Sidebar
+          tabs={tabs}
+          tab={tab}
+          onWechsel={(id) => {
+            tabSwitchHaptic();
+            setTab(id);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+        <div className="content" id="hauptinhalt" tabIndex={-1}>
           {tab === "haupt" && (
             <CalculatorTrialGate rechner={tabZuRechner("haupt")} onDismiss={() => setTab("saved")}>
               <Haupt />
