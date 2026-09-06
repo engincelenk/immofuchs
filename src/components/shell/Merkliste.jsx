@@ -1129,20 +1129,44 @@ export function Merkliste() {
                 </div>
               )}
             </div>
+            {/* "Details" ist neu (2026-09-06) und die Primaeraktion der Karte.
+                Bis hierher war die Detailansicht ausschliesslich ueber einen
+                Tap auf den Kartenkopf erreichbar - ein unsichtbares Ziel.
+                Wer das nicht zufaellig traf, kam nie zu Kennzahlen,
+                Stellschrauben und KI-Auswertung. Die Karte bleibt zusaetzlich
+                anklickbar; der Knopf ersetzt sie nicht, er macht sie sichtbar. */}
             <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => openDetail(obj)}
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 10,
+                  border: "none",
+                  background: "var(--ca)",
+                  color: "#fff",
+                  fontSize: 13.5,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Details →
+              </button>
               {loadable && (
                 <button
                   onClick={() => loadObj(obj, setTabExt)}
                   style={{
                     flex: 1,
-                    height: 38,
+                    height: 44,
                     borderRadius: 10,
                     border: "1.5px solid var(--ca)",
                     background: "transparent",
                     color: "var(--ca)",
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: 600,
                     cursor: "pointer",
+                    fontFamily: "inherit",
                   }}
                 >
                   {t.loadBtn || "↩ Laden"}
@@ -1150,10 +1174,11 @@ export function Merkliste() {
               )}
               <button
                 onClick={() => setConfirmDel(obj.id)}
+                aria-label="Objekt löschen"
                 style={{
-                  height: 38,
-                  width: loadable ? 38 : undefined,
-                  flex: loadable ? undefined : 1,
+                  height: 44,
+                  width: 44,
+                  flexShrink: 0,
                   borderRadius: 10,
                   border: "1.5px solid var(--cb)",
                   background: "transparent",
