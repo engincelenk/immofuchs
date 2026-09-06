@@ -641,7 +641,7 @@ function RechnerListe({ onOeffnen, moeglich, basis }) {
             background: "var(--cc)",
             border: "1px solid var(--cb)",
             borderRadius: 12,
-            padding: "14px 16px",
+            padding: "12px 14px",
             cursor: moeglich ? "pointer" : "not-allowed",
             opacity: moeglich ? 1 : 0.55,
             fontFamily: "inherit",
@@ -705,7 +705,7 @@ function AlleDaten({ data, objekt, locale, onOeffnen }) {
       )}
 
       {/* Metadaten - Orientierung bei mehreren Objekten */}
-      <div style={{ fontSize: 12, color: "var(--ch)", padding: "2px 4px", lineHeight: 1.6 }}>
+      <div style={{ fontSize: 12, color: "var(--cl)", padding: "2px 4px", lineHeight: 1.6 }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Quelle</span>
           <span>{objekt.source === "expose-scan" ? "Exposé-Scan" : "Manuell"}</span>
@@ -718,24 +718,29 @@ function AlleDaten({ data, objekt, locale, onOeffnen }) {
               : objekt.date || "—"}
           </span>
         </div>
-      </div>
-
-      {objekt.score != null && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 4px" }}>
-          <span
-            style={{
-              background: scoreBadgeColor(objekt.scoreLabel),
-              color: "#fff",
-              fontSize: 12,
-              fontWeight: 700,
-              padding: "4px 10px",
-              borderRadius: 20,
-            }}
+        {/* Die Bewertung ist eine Metazeile wie die beiden darueber, keine
+            eigene Sektion: als alleinstehender Chip belegte sie eine ganze
+            Zeile von 347 px fuer rund 110 px Inhalt. */}
+        {objekt.score != null && (
+          <div
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
           >
-            {scoreBadgeText(objekt.scoreLabel)} ({objekt.score})
-          </span>
-        </div>
-      )}
+            <span>Bewertung</span>
+            <span
+              style={{
+                background: scoreBadgeColor(objekt.scoreLabel),
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "3px 9px",
+                borderRadius: 20,
+              }}
+            >
+              {scoreBadgeText(objekt.scoreLabel)} ({objekt.score})
+            </span>
+          </div>
+        )}
+      </div>
 
       {onOeffnen && (
         <button onClick={onOeffnen} style={primaryBtnStyle}>
@@ -828,8 +833,11 @@ const backBtnStyle = {
   fontSize: 14,
   fontWeight: 600,
   cursor: "pointer",
-  padding: "6px 0",
-  marginBottom: 4,
+  // 6px Polsterung ergab 28 px Trefferflaeche - unter jedem Richtwert.
+  // Der negative Rand haelt den Text trotzdem buendig zur Spalte.
+  minHeight: 44,
+  padding: "0 4px",
+  marginLeft: -4,
   fontFamily: "inherit",
 };
 

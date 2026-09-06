@@ -81,7 +81,7 @@ export function ObjektUnterlagen({ objektId }) {
       <div
         style={{
           fontSize: 11,
-          color: "var(--ch)",
+          color: "var(--cl)",
           textTransform: "uppercase",
           letterSpacing: 0.6,
           fontWeight: 600,
@@ -90,7 +90,7 @@ export function ObjektUnterlagen({ objektId }) {
       >
         Objektunterlagen
       </div>
-      <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5, marginBottom: 12 }}>
+      <div style={{ fontSize: 12.5, color: "var(--cl)", lineHeight: 1.5, marginBottom: 12 }}>
         Unterlagen bleiben lokal in diesem Browser und werden nicht hochgeladen.
         Auf einem anderen Gerät sind sie deshalb nicht sichtbar.
       </div>
@@ -178,7 +178,7 @@ export function ObjektUnterlagen({ objektId }) {
                 >
                   {f.name}
                 </span>
-                <span style={{ display: "block", fontSize: 11.5, color: "var(--ch)" }}>
+                <span style={{ display: "block", fontSize: 11.5, color: "var(--cl)" }}>
                   {formatGroesse(f.groesse)}
                 </span>
               </button>
@@ -187,8 +187,8 @@ export function ObjektUnterlagen({ objektId }) {
                 onClick={() => loeschen(f.id)}
                 aria-label={`${f.name} löschen`}
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 40,
+                  height: 40,
                   flexShrink: 0,
                   borderRadius: 8,
                   border: "1px solid var(--cb)",
@@ -264,7 +264,7 @@ export function ObjektLage({ data, titel }) {
       <div
         style={{
           fontSize: 11,
-          color: "var(--ch)",
+          color: "var(--cl)",
           textTransform: "uppercase",
           letterSpacing: 0.6,
           fontWeight: 600,
@@ -312,7 +312,7 @@ export function ObjektLage({ data, titel }) {
       </div>
 
       {koord && !genau && (
-        <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 10, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 11.5, color: "var(--cl)", marginTop: 10, lineHeight: 1.5 }}>
           Der Pin zeigt die Mitte der Postleitzahl. Für die genaue Lage wähle die
           Adresse beim Bearbeiten aus der Adresssuche.
         </div>
@@ -366,7 +366,7 @@ export function ObjektOrte({ objekte, onOeffnen }) {
         >
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 15, fontWeight: 700 }}>{ort}</span>
-            <span style={{ fontSize: 12, color: "var(--ch)" }}>
+            <span style={{ fontSize: 12, color: "var(--cl)" }}>
               {liste.length} {liste.length === 1 ? "Objekt" : "Objekte"}
             </span>
           </div>

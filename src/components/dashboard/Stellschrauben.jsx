@@ -30,8 +30,8 @@ function ReglerZeile({ label, unit, value, onChange, min, max, step }) {
     onChange(String(+next.toFixed(4)));
   };
   const knopf = {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     flexShrink: 0,
     borderRadius: 10,
     border: "1px solid var(--cb)",
@@ -275,7 +275,10 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
           max={Math.max(50000, Math.round((kaufpreis + nbk) * 1.1))}
           step={1000}
         />
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+        {/* gap 8 statt 6: Die Chips sind 34 px hoch und damit kleiner als das
+            44-px-Ziel. Die WCAG-2.2-Ausnahme "adequate spacing" greift aber
+            erst ab 8 px Abstand zwischen den Zielen. */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
           {presets.map((p) => (
             <button
               key={p.l}
@@ -299,7 +302,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 8, lineHeight: 1.45 }}>
+        <div style={{ fontSize: 11.5, color: "var(--cl)", marginTop: 8, lineHeight: 1.45 }}>
           Beleihungsauslauf — wie viel des Kaufpreises die Bank finanziert.
         </div>
       </Karte>

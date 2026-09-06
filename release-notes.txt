@@ -1,3 +1,32 @@
+## 2026-09-06 (1.60.1)
+
+### UX-Politur: Kontrast und Trefferflaechen
+
+Restarbeiten aus dem UX-Review vom 05.09.2026 (P2-8 und P3).
+
+**Kontrast**
+- --ch (#8A8A80) liefert auf Kartenweiss nur 3,48:1 und faellt damit durch
+  WCAG AA (4,5:1). --cl (#3D3D3A) liefert 10,9:1.
+- Zehn Stellen mit Kleintext bis 12,5 px, der Information traegt, tragen jetzt
+  --cl: Kennzahlen-Labels im Ueberblick, Annahmenzeile, Metadaten der
+  Datenansicht, Hinweise in Stellschrauben und Unterlagen.
+- Bewusst NICHT flaechig getauscht: --ch bleibt dort, wo es Hierarchie
+  traegt. Der eigentlich richtige Fix waere ein dunkleres --ch-Token - das
+  ist aber ein dokumentiertes Design-Token und braucht eine Entscheidung.
+
+**Trefferflaechen**
+- "Zurueck" hatte 28 px Hoehe, jetzt 44 (negativer Rand haelt den Text
+  buendig zur Spalte).
+- Loeschknopf an Unterlagen 32 auf 40 px, Schrittknoepfe der Regler 38 auf 40.
+- Preset-Chips: Abstand 6 auf 8 px. Die Chips sind 34 px hoch; die
+  WCAG-2.2-Ausnahme "adequate spacing" greift erst ab 8 px.
+
+**Verdichtung**
+- Die Bewertung ist eine Metazeile wie Quelle und Bearbeitungsdatum, keine
+  eigene Sektion. Als alleinstehender Chip belegte sie eine ganze Zeile von
+  347 px fuer rund 110 px Inhalt.
+- Rechner-Zeilen von ~62 auf ~56 px.
+
 ## 2026-09-06 (1.60.0)
 
 ### Neues KI-Produkt "Preis einordnen" - mit amtlicher Datengrundlage

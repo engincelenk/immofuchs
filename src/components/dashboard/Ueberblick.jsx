@@ -231,7 +231,7 @@ export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE
               <div
                 style={{
                   fontSize: 11,
-                  color: "var(--ch)",
+                  color: "var(--cl)",
                   marginBottom: 2,
                   display: "inline-flex",
                   alignItems: "center",
@@ -300,7 +300,7 @@ export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE
       </div>
 
       {/* Annahmen offenlegen (Konzept 3.7, Punkt 5) */}
-      <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5, padding: "0 2px" }}>
+      <div style={{ fontSize: 12.5, color: "var(--cl)", lineHeight: 1.5, padding: "0 2px" }}>
         Gerechnet mit {(+data?.zinssatz || 0).toString().replace(".", ",")} % Zins,{" "}
         {(+data?.tilgung || 0).toString().replace(".", ",")} % Tilgung.{" "}
         {onStellschrauben && (
