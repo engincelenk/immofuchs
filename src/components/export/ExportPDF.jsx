@@ -47,7 +47,9 @@ export function ExportPDF({ title, rechner }) {
       "var(--cc)": "#fff",
       "var(--ct)": "#1a1a1a",
       "var(--cl)": "#3d3d3a",
-      "var(--ch)": "#8a8a80",
+      // Muss mit ROOT_TOKENS_CSS in App.jsx uebereinstimmen - sonst traegt
+      // das PDF den alten, nicht AA-konformen Grauton weiter.
+      "var(--ch)": "#6c6c62",
       "var(--cb)": "#e5e5dc",
       "var(--ci)": "#fafaf7",
       "var(--cro)": "#f0f0ea",

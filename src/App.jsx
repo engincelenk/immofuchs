@@ -297,8 +297,26 @@ const STATUS_TOKENS_DARK =
 const DARK_TOKENS =
   "--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--cro:#202020;--ca-bg:#3a2414;--ca-bd:#5a3a1e;--hdr-bg:rgba(24,24,24,.92);" +
   STATUS_TOKENS_DARK;
+// --ch war bis 2026-09-06 #8a8a80. Das lieferte auf keinem einzigen
+// Untergrund der App genug Kontrast: 3,48:1 auf Kartenweiss, 3,19:1 auf der
+// Seitenflaeche, 3,05:1 auf Chips - WCAG AA verlangt 4,5:1 fuer Text unter
+// 18,66 px fett bzw. 24 px normal, und darunter liegt in dieser App jeder
+// einzelne --ch-Text. Der Token trug damit einen Fehler durch die ganze
+// Oberflaeche, den einzelne Ausnahmen nie eingefangen haetten.
+//
+// #6c6c62 liefert 4,64:1 im schlechtesten Fall (auf --cro). Bewusst nicht
+// der rechnerische Grenzwert #6e6e64 (exakt 4,50): eine Rundung im
+// Renderer oder ein spaeter leicht abgedunkelter Chip-Hintergrund wuerde
+// dort sofort wieder darunter fallen.
+//
+// Der Farbton bleibt derselbe leicht olivfarbene Grauton (Blau 10 Stufen
+// unter Rot/Gruen), nur dunkler - die Anmutung aendert sich nicht, und der
+// Abstand zu --cl (9,5:1 bis 10,9:1) bleibt gross genug fuer die Hierarchie.
+//
+// Der Dunkelmodus ist NICHT betroffen: --ch #9a9a90 liefert dort bereits
+// 5,06:1 bis 6,26:1.
 const ROOT_TOKENS_CSS =
-  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#8a8a80;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f;--hdr-bg:rgba(245,245,240,.92);" +
+  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#6c6c62;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f;--hdr-bg:rgba(245,245,240,.92);" +
   STATUS_TOKENS_LIGHT +
   "}" +
   `:root[data-theme="dark"]{${DARK_TOKENS}}` +

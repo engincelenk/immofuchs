@@ -1,3 +1,55 @@
+## 2026-09-06 (1.61.0)
+
+### Design-Token --ch abgedunkelt + Abstands- und Schriftskala
+
+**--ch: #8A8A80 auf #6C6C62**
+
+Der gedaempfte Textton erreichte auf KEINEM Untergrund der App genug
+Kontrast: 3,48:1 auf Kartenweiss, 3,19:1 auf der Seitenflaeche, 3,33:1 auf
+Eingabefeldern, 3,05:1 auf Chips. WCAG AA verlangt 4,5:1 fuer Text unter
+18,66 px fett bzw. 24 px normal - und darunter liegt in dieser App jeder
+einzelne --ch-Text. Der Token trug damit einen Fehler durch die gesamte
+Oberflaeche, den einzelne Ausnahmen nie eingefangen haetten.
+
+Neu gemessen im laufenden Hellmodus: 5,15:1 auf Karte, 4,85:1 auf der Seite,
+5,07:1 auf Eingabefeldern, 4,64:1 auf Chips.
+
+Bewusst nicht der rechnerische Grenzwert #6E6E64 (exakt 4,50) - eine Rundung
+im Renderer oder ein spaeter leicht abgedunkelter Chip-Hintergrund faellt
+dort sofort wieder darunter. Der Farbton bleibt derselbe leicht olivfarbene
+Grauton, nur dunkler; der Abstand zu --cl (9,5:1 bis 10,9:1) bleibt gross
+genug fuer die Hierarchie.
+
+Der Dunkelmodus war NICHT betroffen: --ch #9A9A90 liefert dort bereits
+5,06:1 bis 6,26:1 und bleibt unveraendert.
+
+Mitgezogen, weil sie eine Kopie des Tokens halten:
+- ExportPDF.jsx - sonst traegt das PDF den alten Ton weiter.
+- dashboardUtils.js - Fallback-Badge mit weisser Schrift, vorher 3,48:1.
+- CLAUDE.md - die Token-Tabelle nennt jetzt den neuen Wert.
+
+**Abstands- und Schriftskala (P2-7)**
+
+In den sechs Objekt-Modulen liefen dreizehn Schriftgrade (11 / 11,5 / 12 /
+12,5 / 13 / 13,5 / 14 / 14,5 / 15 / 16 / 17 / 19 / 20) und Abstaende in
+1er-Schritten von 1 bis 20 nebeneinander. 13 / 13,5 / 14 / 14,5 lagen so
+dicht beieinander, dass sie als eine Groesse gelesen wurden - deshalb wirkte
+alles gleich schwer.
+
+- Schrift jetzt 11 / 12,5 / 13,5 / 15 / 20.
+- Abstaende jetzt 4 / 8 / 12 / 16.
+- 81 Stellen angepasst.
+
+Ausgenommen und begruendet:
+- 16 px bleibt am Zahleneingabefeld der Rueckwaertsrechnung (iOS-Zoom-Schutz,
+  CLAUDE.md).
+- 17 und 19 px bleiben an zwei aria-hidden-Glyphen - das sind Icons, kein Text.
+- ObjektAnlegen.jsx wurde nicht angefasst: das Formular war nicht Teil des
+  UX-Reviews und traegt eigene Eingabefelder.
+
+Der Gewinn ist hier nicht Hoehe - die Reiter bleiben praktisch gleich lang -
+sondern unterscheidbare Gewichte.
+
 ## 2026-09-06 (1.60.1)
 
 ### UX-Politur: Kontrast und Trefferflaechen

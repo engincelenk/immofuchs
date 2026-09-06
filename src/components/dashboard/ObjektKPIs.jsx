@@ -47,7 +47,7 @@ export function ObjektKPIs({ kennzahlen, t, locale = "de-DE" }) {
             style={{
               fontSize: 11,
               color: "var(--ch)",
-              marginBottom: 2,
+              marginBottom: 4,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -57,7 +57,7 @@ export function ObjektKPIs({ kennzahlen, t, locale = "de-DE" }) {
           </div>
           <div
             style={{
-              fontSize: 14,
+              fontSize: 13.5,
               fontWeight: 700,
               color: f.color || "var(--ct)",
               fontVariantNumeric: "tabular-nums",

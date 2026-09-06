@@ -8,7 +8,9 @@ tatsaechlich ausgelieferten, live getesteten Code angeglichen.)
 Accent:    #E8600A  (Fuchs-Orange, CSS-Token --ca; dunkel --ca-dk #C44D00)
 Primary:   #1E3A5F  (Marineblau — Akzent fuer einzelne KPI-/Sektionsfarben)
 Surface:   #F5F5F0  (Seitenhintergrund --bg; Karten #FFFFFF --cc; Input --ci #FAFAF7)
-Text:      #1A1A1A  (--ct; gedaempft --ch #8A8A80)
+Text:      #1A1A1A  (--ct; gedaempft --ch #6C6C62 — am 2026-09-06 von
+           #8A8A80 abgedunkelt, das erreichte nur 3,05–3,48:1 und fiel
+           damit ueberall durch WCAG AA; jetzt mind. 4,64:1)
 Border:    #E5E5DC  (--cb)
 Radius:    12px
 Font:      'DM Sans' → sans-serif

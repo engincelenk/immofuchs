@@ -113,7 +113,7 @@ export function ObjektUnterlagen({ objektId }) {
           border: "1.5px solid var(--ca)",
           background: "transparent",
           color: "var(--ca)",
-          fontSize: 14,
+          fontSize: 13.5,
           fontWeight: 600,
           cursor: laedt ? "wait" : "pointer",
           fontFamily: "inherit",
@@ -123,13 +123,13 @@ export function ObjektUnterlagen({ objektId }) {
       </button>
 
       {fehler && (
-        <div style={{ marginTop: 10, fontSize: 13, color: "#B3402A", lineHeight: 1.45 }}>
+        <div style={{ marginTop: 8, fontSize: 13.5, color: "#B3402A", lineHeight: 1.45 }}>
           {fehler}
         </div>
       )}
 
       {dateien.length === 0 ? (
-        <div style={{ marginTop: 12, fontSize: 13, color: "var(--ch)" }}>
+        <div style={{ marginTop: 12, fontSize: 13.5, color: "var(--ch)" }}>
           Noch keine Unterlagen hinterlegt — Exposé, Kaufvertrag oder Teilungserklärung
           gehören typischerweise hierher.
         </div>
@@ -141,7 +141,7 @@ export function ObjektUnterlagen({ objektId }) {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
+                gap: 8,
                 padding: "9px 11px",
                 borderRadius: 10,
                 background: "var(--ci)",
@@ -178,7 +178,7 @@ export function ObjektUnterlagen({ objektId }) {
                 >
                   {f.name}
                 </span>
-                <span style={{ display: "block", fontSize: 11.5, color: "var(--cl)" }}>
+                <span style={{ display: "block", fontSize: 11, color: "var(--cl)" }}>
                   {formatGroesse(f.groesse)}
                 </span>
               </button>
@@ -268,7 +268,7 @@ export function ObjektLage({ data, titel }) {
           textTransform: "uppercase",
           letterSpacing: 0.6,
           fontWeight: 600,
-          marginBottom: 10,
+          marginBottom: 8,
         }}
       >
         Lage
@@ -285,12 +285,12 @@ export function ObjektLage({ data, titel }) {
             border: "1px solid var(--cb)",
             borderRadius: 10,
             display: "block",
-            marginBottom: 10,
+            marginBottom: 8,
           }}
         />
       )}
 
-      <div style={{ fontSize: 14, color: "var(--ct)", marginBottom: 12 }}>{adresse}</div>
+      <div style={{ fontSize: 13.5, color: "var(--ct)", marginBottom: 12 }}>{adresse}</div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <a
@@ -312,7 +312,7 @@ export function ObjektLage({ data, titel }) {
       </div>
 
       {koord && !genau && (
-        <div style={{ fontSize: 11.5, color: "var(--cl)", marginTop: 10, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 8, lineHeight: 1.5 }}>
           Der Pin zeigt die Mitte der Postleitzahl. Für die genaue Lage wähle die
           Adresse beim Bearbeiten aus der Adresssuche.
         </div>
@@ -330,7 +330,7 @@ const kartenLinkStil = {
   borderRadius: 10,
   border: "1.5px solid var(--cb)",
   color: "var(--ct)",
-  fontSize: 14,
+  fontSize: 13.5,
   fontWeight: 600,
   textDecoration: "none",
 };
@@ -364,9 +364,9 @@ export function ObjektOrte({ objekte, onOeffnen }) {
             padding: "14px 16px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
             <span style={{ fontSize: 15, fontWeight: 700 }}>{ort}</span>
-            <span style={{ fontSize: 12, color: "var(--cl)" }}>
+            <span style={{ fontSize: 12.5, color: "var(--cl)" }}>
               {liste.length} {liste.length === 1 ? "Objekt" : "Objekte"}
             </span>
           </div>
@@ -402,8 +402,8 @@ export function ObjektOrte({ objekte, onOeffnen }) {
               rel="noopener noreferrer"
               style={{
                 display: "inline-block",
-                marginTop: 10,
-                fontSize: 13,
+                marginTop: 8,
+                fontSize: 13.5,
                 fontWeight: 600,
                 color: "var(--ca)",
                 textDecoration: "none",

@@ -93,8 +93,8 @@ function Balken({ label, wert, anteil, farbe, locale }) {
         style={{
           display: "flex",
           justifyContent: "space-between",
-          fontSize: 13,
-          marginBottom: 5,
+          fontSize: 13.5,
+          marginBottom: 4,
         }}
       >
         <span style={{ color: "var(--ch)" }}>{label}</span>
@@ -135,7 +135,7 @@ export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE
           border: "1px solid var(--cb)",
           borderRadius: 12,
           padding: 16,
-          fontSize: 14,
+          fontSize: 13.5,
           lineHeight: 1.55,
           color: "var(--ch)",
         }}
@@ -166,13 +166,13 @@ export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE
           padding: 16,
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
           <span style={{ fontSize: 20, fontWeight: 800, color: farbe }}>
             {TIER_WORT[tier] || "Einschätzung"}
           </span>
           {kennzahlen.score != null && (
             <span
-              style={{ fontSize: 13, color: "var(--ch)", fontVariantNumeric: "tabular-nums" }}
+              style={{ fontSize: 13.5, color: "var(--ch)", fontVariantNumeric: "tabular-nums" }}
             >
               {kennzahlen.score}/100
             </span>
@@ -180,7 +180,7 @@ export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE
           <span
             style={{
               marginLeft: "auto",
-              fontSize: 12,
+              fontSize: 12.5,
               fontWeight: 700,
               padding: "3px 9px",
               borderRadius: 999,
@@ -232,7 +232,7 @@ export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE
                 style={{
                   fontSize: 11,
                   color: "var(--cl)",
-                  marginBottom: 2,
+                  marginBottom: 4,
                   display: "inline-flex",
                   alignItems: "center",
                 }}
@@ -242,7 +242,7 @@ export function Ueberblick({ kennzahlen, data, onStellschrauben, locale = "de-DE
               </div>
               <div
                 style={{
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: 700,
                   color: k.c || "var(--ct)",
                   fontVariantNumeric: "tabular-nums",

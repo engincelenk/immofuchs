@@ -77,7 +77,7 @@ export function AiEngine({
       {GRUPPEN.map((gruppe) => (
         <div key={gruppe.id}>
           <div style={gruppenTitel}>{gruppe.titel}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {gruppe.produkte.map((id) => {
               const produkt = AI_PRODUKTE.find((p) => p.id === id);
               if (!produkt) return null;
@@ -101,7 +101,7 @@ export function AiEngine({
         </div>
       ))}
 
-      <div style={{ fontSize: 11.5, color: "var(--cl)", lineHeight: 1.5 }}>
+      <div style={{ fontSize: 11, color: "var(--cl)", lineHeight: 1.5 }}>
         Texte der AI-Engine sind KI-generiert und ersetzen keine Beratung.
       </div>
 
@@ -157,13 +157,13 @@ function ProduktZeile({
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--ct)" }}>
             {produkt.titel}
           </span>
           {(zustand === "fertig" || zustand === "veraltet") && (
-            <span style={{ display: "block", fontSize: 11.5, color: "var(--cl)", marginTop: 2 }}>
+            <span style={{ display: "block", fontSize: 11, color: "var(--cl)", marginTop: 4 }}>
               KI-generiert · {alter(ergebnis, locale)}
             </span>
           )}
@@ -197,7 +197,7 @@ function ProduktZeile({
 
       {(zustand === "fertig" || zustand === "veraltet") && (
         <>
-          <div style={{ display: "flex", gap: 9, marginTop: 12 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <span
               style={{
                 width: 3,
@@ -206,13 +206,13 @@ function ProduktZeile({
                 background: zustand === "veraltet" ? "var(--warn-bd)" : KI,
               }}
             />
-            <span style={{ fontSize: 14, lineHeight: 1.55, color: "var(--ct)" }}>
+            <span style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ct)" }}>
               {kurzfassung(ergebnis)}
             </span>
           </div>
 
           {kpisVon(ergebnis).length > 0 && (
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
               {kpisVon(ergebnis).map((k) => (
                 <span key={k.label} style={kpiChip}>
                   {k.label} {k.wert}
@@ -229,7 +229,7 @@ function ProduktZeile({
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 10,
+              gap: 8,
               marginTop: 12,
             }}
           >
@@ -259,8 +259,8 @@ function Laeuft({ produkt }) {
     return () => clearInterval(t);
   }, []);
   return (
-    <div aria-busy="true" style={{ marginTop: 10 }}>
-      <div style={{ fontSize: 12.5, color: "var(--cl)", marginBottom: 10 }}>{PHASEN[phase]}</div>
+    <div aria-busy="true" style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 12.5, color: "var(--cl)", marginBottom: 8 }}>{PHASEN[phase]}</div>
       {[100, 78, 46].map((breite) => (
         <div
           key={breite}
@@ -283,8 +283,8 @@ function Laeuft({ produkt }) {
 function Bestaetigung({ produkt, ersetzt, onAbbrechen, onJa }) {
   return (
     <div style={bestaetigungKarte}>
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Neu erstellen?</div>
-      <div style={{ fontSize: 14, lineHeight: 1.55, color: "var(--cl)", marginBottom: 16 }}>
+      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>Neu erstellen?</div>
+      <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--cl)", marginBottom: 16 }}>
         Das ersetzt die Auswertung vom {ersetzt}.
       </div>
       <button type="button" onClick={onJa} style={knopfPrimaer}>
@@ -293,7 +293,7 @@ function Bestaetigung({ produkt, ersetzt, onAbbrechen, onJa }) {
       <button
         type="button"
         onClick={onAbbrechen}
-        style={{ ...textLink, display: "block", width: "100%", textAlign: "center", marginTop: 6, minHeight: 44 }}
+        style={{ ...textLink, display: "block", width: "100%", textAlign: "center", marginTop: 4, minHeight: 44 }}
       >
         Abbrechen
       </button>
@@ -436,7 +436,7 @@ const gruppenTitel = {
   textTransform: "uppercase",
   letterSpacing: 0.6,
   fontWeight: 600,
-  marginBottom: 10,
+  marginBottom: 8,
 };
 
 // Nutzen und Aktion stehen in EINER Zeile, solange beides nebeneinander passt -
@@ -472,7 +472,7 @@ const preisChip = {
 };
 
 const kpiChip = {
-  fontSize: 12,
+  fontSize: 12.5,
   fontWeight: 700,
   color: "var(--ct)",
   background: "var(--cro)",
@@ -487,10 +487,10 @@ const veraltetBand = {
   color: "var(--warn-tx)",
   borderRadius: 8,
   padding: "6px 10px",
-  fontSize: 11.5,
+  fontSize: 11,
   fontWeight: 600,
   lineHeight: 1.4,
-  marginBottom: 10,
+  marginBottom: 8,
 };
 
 const textLink = {
@@ -498,7 +498,7 @@ const textLink = {
   border: "none",
   padding: 0,
   color: "var(--ca)",
-  fontSize: 13,
+  fontSize: 13.5,
   fontWeight: 600,
   cursor: "pointer",
   fontFamily: "inherit",
@@ -529,7 +529,7 @@ const knopf = {
   border: "1.5px solid var(--cb)",
   background: "var(--cc)",
   color: "var(--ct)",
-  fontSize: 14,
+  fontSize: 13.5,
   fontWeight: 600,
   whiteSpace: "nowrap",
   cursor: "pointer",

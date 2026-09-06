@@ -101,17 +101,17 @@ function Karte({ titel, wert, offen, onToggle, children }) {
           <span
             style={{
               display: "block",
-              fontSize: 13,
+              fontSize: 13.5,
               color: "var(--ca)",
               fontWeight: 600,
               fontVariantNumeric: "tabular-nums",
-              marginTop: 1,
+              marginTop: 4,
             }}
           >
             {wert}
           </span>
         </span>
-        <span style={{ color: "var(--ch)", fontSize: 13 }}>{offen ? "▲" : "▼"}</span>
+        <span style={{ color: "var(--ch)", fontSize: 13.5 }}>{offen ? "▲" : "▼"}</span>
       </button>
       {offen && (
         <div style={{ padding: "4px 16px 16px", borderTop: "1px solid var(--cb)" }}>{children}</div>
@@ -158,7 +158,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Karte
         titel="Kaufpreis"
         wert={eur(kaufpreis, locale)}
@@ -176,8 +176,8 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
         />
 
         {/* Rueckwaertsrechnung - reine Mathematik, kein LLM, kein Kontingent */}
-        <div style={{ marginTop: 10, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
-          <div style={{ fontSize: 13, color: "var(--ct)", marginBottom: 8, fontWeight: 600 }}>
+        <div style={{ marginTop: 8, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
+          <div style={{ fontSize: 13.5, color: "var(--ct)", marginBottom: 8, fontWeight: 600 }}>
             Welcher Kaufpreis bringt mir …
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -204,7 +204,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
                 fontFamily: "inherit",
               }}
             />
-            <span style={{ fontSize: 13, color: "var(--ch)" }}>% Nettorendite</span>
+            <span style={{ fontSize: 13.5, color: "var(--ch)" }}>% Nettorendite</span>
             <button
               type="button"
               onClick={() => setMaxKp(loeseMaximalenKaufpreis(d, t || {}, ziel))}
@@ -216,7 +216,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
                 border: "1.5px solid var(--ca)",
                 background: "transparent",
                 color: "var(--ca)",
-                fontSize: 14,
+                fontSize: 13.5,
                 fontWeight: 600,
                 cursor: ziel ? "pointer" : "not-allowed",
                 opacity: ziel ? 1 : 0.5,
@@ -227,7 +227,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
             </button>
           </div>
           {maxKp !== undefined && (
-            <div style={{ marginTop: 10, fontSize: 13.5, lineHeight: 1.5 }}>
+            <div style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.5 }}>
               {maxKp == null ? (
                 <span style={{ color: "var(--ch)" }}>
                   Diese Zielrendite ist mit den aktuellen Werten nicht erreichbar.
@@ -302,7 +302,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 11.5, color: "var(--cl)", marginTop: 8, lineHeight: 1.45 }}>
+        <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 8, lineHeight: 1.45 }}>
           Beleihungsauslauf — wie viel des Kaufpreises die Bank finanziert.
         </div>
       </Karte>
@@ -369,7 +369,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
             { l: "Einnahmen / Monat", v: eur(kennzahlen.einnahmenMon, locale) },
             { l: "Ausgaben / Monat", v: eur(kennzahlen.ausgabenMon, locale) },
           ].map((r) => (
-            <div key={r.l} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+            <div key={r.l} style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5 }}>
               <span style={{ color: "var(--ch)" }}>{r.l}</span>
               <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{r.v}</span>
             </div>
@@ -380,7 +380,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
               justifyContent: "space-between",
               paddingTop: 8,
               borderTop: "1px solid var(--cb)",
-              fontSize: 14,
+              fontSize: 13.5,
               fontWeight: 700,
             }}
           >
@@ -406,7 +406,7 @@ export function Stellschrauben({ startwerte, onUebernehmen, t, locale = "de-DE" 
                 border: "none",
                 background: "var(--ca)",
                 color: "#fff",
-                fontSize: 14.5,
+                fontSize: 15,
                 fontWeight: 700,
                 cursor: "pointer",
                 fontFamily: "inherit",

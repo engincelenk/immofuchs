@@ -276,7 +276,7 @@ export function ObjektDetail({ objekt, onBack }) {
           <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>
             {objekt.title || "Objekt"}
           </div>
-          <div style={{ fontSize: 13, color: "var(--ch)", marginTop: 3 }}>
+          <div style={{ fontSize: 13.5, color: "var(--ch)", marginTop: 4 }}>
             {[objekt.plz, objekt.ort].filter(Boolean).join(" ") || "Ohne Adresse"}
             {objekt.source === "expose-scan" && " · aus Exposé"}
           </div>
@@ -304,7 +304,7 @@ export function ObjektDetail({ objekt, onBack }) {
       </div>
 
       <Sheet open={bearbeiten} onClose={() => setBearbeiten(false)} label="Objekt bearbeiten">
-        <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Objekt bearbeiten</div>
+        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>Objekt bearbeiten</div>
         <ObjektAnlegen
           t={t}
           bearbeiten
@@ -331,7 +331,7 @@ export function ObjektDetail({ objekt, onBack }) {
         <div
           style={{
             display: "flex",
-            gap: 6,
+            gap: 8,
             overflowX: "auto",
             scrollSnapType: "x proximity",
             WebkitOverflowScrolling: "touch",
@@ -491,7 +491,7 @@ function AiSektion({ zusammenfassung, offen, onToggle, children }) {
           fontFamily: "inherit",
         }}
       >
-        <span aria-hidden="true" style={{ flexShrink: 0, color: KI_FARBE, fontSize: 14 }}>
+        <span aria-hidden="true" style={{ flexShrink: 0, color: KI_FARBE, fontSize: 13.5 }}>
           ✦
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
@@ -502,7 +502,7 @@ function AiSektion({ zusammenfassung, offen, onToggle, children }) {
             {zusammenfassung}
           </span>
         </span>
-        <span aria-hidden="true" style={{ flexShrink: 0, fontSize: 13, color: "var(--ch)" }}>
+        <span aria-hidden="true" style={{ flexShrink: 0, fontSize: 13.5, color: "var(--ch)" }}>
           {offen ? "▲" : "▼"}
         </span>
       </button>
@@ -544,13 +544,13 @@ function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
     <Sheet open={Boolean(ergebnis)} onClose={onSchliessen} label={produkt?.titel || "Auswertung"}>
       {ergebnis && (
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800 }}>{produkt?.titel}</div>
-          <div style={{ fontSize: 11.5, color: "var(--cl)", marginTop: 3, marginBottom: 14 }}>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>{produkt?.titel}</div>
+          <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 4, marginBottom: 12 }}>
             KI-generiert · {alter(ergebnis, locale)}
           </div>
 
           {inhalt?.kernaussage && (
-            <div style={{ fontSize: 15, lineHeight: 1.65, fontWeight: 600, marginBottom: 18 }}>
+            <div style={{ fontSize: 15, lineHeight: 1.65, fontWeight: 600, marginBottom: 16 }}>
               {inhalt.kernaussage}
             </div>
           )}
@@ -576,7 +576,7 @@ function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
                   textTransform: "uppercase",
                   letterSpacing: 0.6,
                   fontWeight: 600,
-                  marginBottom: 5,
+                  marginBottom: 4,
                 }}
               >
                 {a.titel}
@@ -590,10 +590,10 @@ function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
           {ergebnis.basis && Object.keys(ergebnis.basis).length > 0 && (
             <div
               style={{
-                marginTop: 18,
-                paddingTop: 14,
+                marginTop: 16,
+                paddingTop: 12,
                 borderTop: "1px solid var(--cb)",
-                fontSize: 11.5,
+                fontSize: 11,
                 color: "var(--cl)",
                 lineHeight: 1.6,
               }}
@@ -619,9 +619,9 @@ function RechnerListe({ onOeffnen, moeglich, basis }) {
   const hatBaujahr = !!(basis?.baujahr || basis?.sBJ);
   const sichtbar = RECHNER.filter((r) => r.id !== "sanier" || hatBaujahr);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {!moeglich && (
-        <div style={{ fontSize: 13, color: "var(--cl)", lineHeight: 1.5, marginBottom: 2 }}>
+        <div style={{ fontSize: 13.5, color: "var(--cl)", lineHeight: 1.5, marginBottom: 4 }}>
           Für die Rechner fehlen noch Objektdaten. Lege zuerst Kaufpreis,
           Wohnfläche und Kaltmiete an.
         </div>
@@ -651,7 +651,7 @@ function RechnerListe({ onOeffnen, moeglich, basis }) {
             <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--ct)" }}>
               {r.label}
             </span>
-            <span style={{ display: "block", fontSize: 12.5, color: "var(--cl)", marginTop: 2 }}>
+            <span style={{ display: "block", fontSize: 12.5, color: "var(--cl)", marginTop: 4 }}>
               {r.kurz}
             </span>
           </span>
@@ -705,7 +705,7 @@ function AlleDaten({ data, objekt, locale, onOeffnen }) {
       )}
 
       {/* Metadaten - Orientierung bei mehreren Objekten */}
-      <div style={{ fontSize: 12, color: "var(--cl)", padding: "2px 4px", lineHeight: 1.6 }}>
+      <div style={{ fontSize: 12.5, color: "var(--cl)", padding: "2px 4px", lineHeight: 1.6 }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Quelle</span>
           <span>{objekt.source === "expose-scan" ? "Exposé-Scan" : "Manuell"}</span>
@@ -821,7 +821,7 @@ const fehlerBand = {
   color: "var(--bad-tx)",
   borderRadius: 10,
   padding: "10px 12px",
-  fontSize: 13,
+  fontSize: 13.5,
   lineHeight: 1.5,
   marginBottom: 12,
 };
@@ -830,7 +830,7 @@ const backBtnStyle = {
   background: "none",
   border: "none",
   color: "var(--ca)",
-  fontSize: 14,
+  fontSize: 13.5,
   fontWeight: 600,
   cursor: "pointer",
   // 6px Polsterung ergab 28 px Trefferflaeche - unter jedem Richtwert.
