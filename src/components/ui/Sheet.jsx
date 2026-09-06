@@ -56,6 +56,12 @@ export function Sheet({
   size,
   showGrabber,
   initialFocusRef,
+  // Randlos: fuer Sheets, deren Inhalt bewusst bis an die Panelkante laeuft -
+  // Listen mit durchlaufenden Trennlinien oder Auswahlzeilen mit
+  // vollflaechigem Hintergrund. Eine Trennlinie, die 16px vor dem Rand endet,
+  // trennt optisch nicht mehr; eine Auswahlmarkierung mit Rand liest sich als
+  // Karte statt als Listeneintrag.
+  bleed = false,
   children,
 }) {
   const panelRef = useRef(null);
@@ -181,6 +187,27 @@ export function Sheet({
       boxShadow: "0 -8px 30px rgba(0,0,0,.18)",
       maxHeight: "85vh",
       paddingBottom: "calc(6px + env(safe-area-inset-bottom))",
+      // Horizontaler Innenabstand gehoert hierher, nicht in jeden Aufrufer
+      // (Befund 2026-09-06): Von sechs Bottom-Sheets hatten VIER keinen -
+      // Formularfelder und Fliesstext klebten am Geraeterand. Ein Container,
+      // der per Default 0 liefert, ist eine Falle, in die jedes neue Sheet
+      // erneut tappt. Der umgekehrte Fehler (vergessenes `bleed`) faellt im
+      // Review sofort auf und macht nichts kaputt.
+      //
+      // 16px, weil: gleicher Wert wie .objekt-liste, aus der dieses Sheet
+      // geoeffnet wird - die linke Textkante springt beim Oeffnen nicht.
+      // Ausserdem exakt der Eckenradius (16px 16px 0 0), der Text beginnt
+      // also dort, wo die Rundung auslaeuft.
+      //
+      // env() statt Media Query: im Querformat liegt das Panel unter der
+      // Notch, dort braucht es links mehr. Eine Klassenloesung muesste in
+      // ROOT_TOKENS_CSS - das ist ein Design-Token-Block und bleibt unberuehrt.
+      ...(bleed
+        ? null
+        : {
+            paddingLeft: "calc(16px + env(safe-area-inset-left))",
+            paddingRight: "calc(16px + env(safe-area-inset-right))",
+          }),
     };
   } else if (variant === "left" || variant === "right") {
     panelStyle = {

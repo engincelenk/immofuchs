@@ -1,3 +1,57 @@
+## 2026-09-06 (1.64.0)
+
+### Fix: AI-Engine war nie funktionsfaehig + Sheet-Raender + Details-Knopf
+
+**Die KI-Produkte liefen nie**
+
+Der Worker prueft vor jedem KI-Aufruf, ob fuer die mitgesendete sessionId
+eine Einwilligung vorliegt (worker/src/consent.ts). ObjektDetail schickte
+statt der KI-Session des Geraets die ID DES OBJEKTS - eine UUID, fuer die es
+naturgemaess nie eine Einwilligung gab. Der Worker antwortete deshalb
+ausnahmslos mit 412 consent_required.
+
+Sichtbar wurde das nie, weil der Client 412 nicht gesondert behandelte: der
+Fall fiel in den Sammelzweig, und der Nutzer las "Die Auswertung ist gerade
+nicht erreichbar". Kein einziges Produkt der AI-Engine konnte je durchlaufen.
+
+- Neu src/utils/assistantSession.js: getSessionId() liegt nicht mehr privat
+  in useAssistant.js. Damit gilt eine Einwilligung fuer Chat, Exposé-Scan und
+  AI-Engine gemeinsam - gefragt wird einmal je Geraet, nicht je Objekt.
+- 412 erscheint jetzt als das, was es ist: eine Frage. Die Einwilligung wird
+  direkt in der KI-Sektion abgefragt, danach laeuft der blockierte Aufruf
+  automatisch weiter.
+- 401 bekommt eine eigene Meldung statt in "nicht erreichbar" zu verschwinden.
+
+**Sheets klebten am Geraeterand**
+
+Sheet.jsx setzte fuer die bottom-Variante kein horizontales Padding. Von
+sechs Bottom-Sheets hatten VIER deshalb keines: "Objekt anlegen", "Objekt
+bearbeiten", "Objekte vergleichen" und der Auswertungs-Volltext -
+Formularfelder und Fliesstext begannen bei x=0. Das ist nicht nur Optik: ein
+Eingabefeld am Viewport-Rand bekommt seinen Fokusring angeschnitten.
+
+Zentral geloest statt je Aufrufer - ein Container, der per Default 0 liefert,
+ist eine Falle, in die jedes neue Sheet erneut tappt. 16 px, weil das der
+Wert der Objektliste ist, aus der das Sheet geoeffnet wird (die linke
+Textkante springt beim Oeffnen nicht) und zugleich der Eckenradius.
+env(safe-area-inset-left/right) kommt dazu, damit das Panel im Querformat
+nicht unter die Notch laeuft.
+
+Neue Prop `bleed` fuer die zwei Sheets, deren Inhalt bewusst bis an die Kante
+laeuft: "Alle Rechner" (Auswahlzeile mit vollflaechigem Hintergrund) und das
+Kontomenue (durchlaufende Trennlinien).
+
+Nebenbefund mitbehoben: Drei Sheets hatten kein `size` und waren auf Desktop
+fensterbreit - derselbe Fehler wie zuvor bei "Objekt anlegen".
+
+**Objektkarte: "Details" als sichtbare Primaeraktion**
+
+Die Detailansicht war ausschliesslich ueber einen Tap auf den Kartenkopf
+erreichbar - ein unsichtbares Ziel. Sichtbar standen nur "Laden" und "X".
+Wer den Tap nicht zufaellig traf, kam nie zu Kennzahlen, Stellschrauben und
+KI-Auswertung. Die Karte bleibt zusaetzlich anklickbar. Trefferflaechen der
+Zeile von 38 auf 44 px.
+
 ## 2026-09-06 (1.63.0)
 
 ### Objektbereich auf Desktop verdichtet

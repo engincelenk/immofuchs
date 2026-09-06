@@ -57,6 +57,9 @@ export function AccountMenu({
       anchorRef={anchorRef}
       label={t.accountMenuAria}
       size={isDesktop ? 300 : undefined}
+      // Die Gruppentrennlinien im Kontomenue laufen ueber die volle Breite -
+      // eine Linie, die vor dem Rand endet, trennt optisch nicht mehr.
+      bleed
     >
       <AccountMenuPanel
         t={t}

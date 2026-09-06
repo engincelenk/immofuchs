@@ -1136,6 +1136,10 @@ export default function App() {
           variant="bottom"
           label={t.alleRechner}
           size="min(640px, 100vw)"
+          // Die aktive Rechnerzeile hat einen vollflaechigen Hintergrund - mit
+          // Innenabstand endete er 16px vor dem Rand und laese sich als Karte
+          // statt als Listenauswahl.
+          bleed
         >
           <div
             style={{ padding: "14px 18px 6px", fontSize: 13, fontWeight: 800, color: "var(--ct)" }}

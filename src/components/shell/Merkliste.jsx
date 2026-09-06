@@ -434,7 +434,9 @@ export function SaveModal({ open, onClose, onSave, defaultName, lang }) {
       label={t.saveModalTitle || "Objekt speichern"}
       initialFocusRef={inp}
     >
-      <div style={{ padding: "0 20px 36px" }}>
+      {/* Seitlich kein eigenes Padding mehr - das liefert jetzt Sheet.jsx.
+          Damit fluchtet dieses Sheet zugleich mit allen anderen (16 statt 20). */}
+      <div style={{ padding: "0 0 36px" }}>
         <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, color: "var(--ct)" }}>
           {t.saveModalTitle || "Objekt speichern"}
         </div>
@@ -1354,6 +1356,7 @@ export function Merkliste() {
         open={vergleichOffen}
         onClose={() => setVergleichOffen(false)}
         label="Objekte vergleichen"
+        size="min(720px, 100vw)"
       >
         <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 14 }}>
           Objekte vergleichen

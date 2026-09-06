@@ -336,7 +336,12 @@ export function ObjektDetail({ objekt, onBack }) {
         <VollstaendigkeitsRing prozent={vollstaendigkeit} groesse={46} />
       </div>
 
-      <Sheet open={bearbeiten} onClose={() => setBearbeiten(false)} label="Objekt bearbeiten">
+      <Sheet
+        open={bearbeiten}
+        onClose={() => setBearbeiten(false)}
+        label="Objekt bearbeiten"
+        size="min(720px, 100vw)"
+      >
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>Objekt bearbeiten</div>
         <ObjektAnlegen
           t={t}
@@ -573,7 +578,12 @@ function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
   const produkt = produktId ? produktFuer(produktId) : null;
   const inhalt = ergebnis?.inhalt;
   return (
-    <Sheet open={Boolean(ergebnis)} onClose={onSchliessen} label={produkt?.titel || "Auswertung"}>
+    <Sheet
+      open={Boolean(ergebnis)}
+      onClose={onSchliessen}
+      label={produkt?.titel || "Auswertung"}
+      size="min(720px, 100vw)"
+    >
       {ergebnis && (
         <div>
           <div style={{ fontSize: 20, fontWeight: 800 }}>{produkt?.titel}</div>
