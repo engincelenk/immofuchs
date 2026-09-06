@@ -6,14 +6,16 @@ const TEMPERATURE = 0.3; // niedrig fuer konsistentere Antworten, siehe Konzept 
 const MODEL_TIMEOUT_MS = 20000; // Schutz gegen haengende/degradierte Model-Calls (siehe release-notes.txt)
 
 const WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-// "gemini-2.0-flash-lite" wurde von Google zum 01.06.2026 abgeschaltet
-// (bestaetigte Deprecation, siehe release-notes.txt 2026-07-28) - jeder
-// Gemini-Call lief seitdem sofort in einen Fehler und fiel auf den
-// schwaecheren Workers-AI-Fallback zurueck, ohne dass das sichtbar war.
-// Ersetzt durch "gemini-2.5-flash-lite". Ueber env.GEMINI_MODEL ohne Redeploy
-// wechselbar (Dashboard-Var, analog zu EXPOSE_GEMINI_MODEL), damit der naechste
-// Google-Deprecation-Zyklus keinen Code-Redeploy mehr braucht.
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
+// Google-Deprecation, zweiter Durchlauf. "gemini-2.0-flash-lite" fiel zum
+// 01.06.2026 weg, der Nachfolger "gemini-2.5-flash-lite" jetzt ebenfalls:
+// Google antwortet seit 2026-09 mit 404 "This model is no longer available to
+// new users. Please update your code to use models/gemini-3.5-flash-lite".
+//
+// Beide Male lief derselbe Ablauf: Der Gemini-Call scheiterte, der Code fiel
+// still auf Workers AI zurueck - und weil der Fallback selbst kaputt war
+// (siehe callWorkersAI), wurde aus einer Modell-Umbenennung ein kompletter
+// Ausfall der AI-Engine. Ueber env.GEMINI_MODEL ohne Redeploy wechselbar.
+const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 // Alle Sprachen primaer ueber Gemini (bessere Antwortqualitaet als das kostenlose
 // Llama 3.3 auch fuer DE/EN, siehe release-notes.txt) - Workers AI nur noch als
@@ -41,7 +43,20 @@ export async function callModel(
     // (429) - schwaechere Antwortqualitaet, aber besser als ein harter Fehler.
     // env.AI.run kennt keinen Cancel, daher hier der withTimeout-Wrapper.
     logFallbackAlert("gemini_call_failed_fallback_workers_ai", err);
-    return withTimeout(callWorkersAI(env, systemPrompt, userPayload, maxTokens), MODEL_TIMEOUT_MS);
+    // Scheitert AUCH der Fallback, muss der urspruengliche Grund mitkommen.
+    // Sonst steht am Ende nur "workers_ai_unexpected_response" und der
+    // eigentliche Ausloeser - der Gemini-Fehler - ist nicht mehr feststellbar
+    // (Befund 2026-09-06).
+    try {
+      return await withTimeout(
+        callWorkersAI(env, systemPrompt, userPayload, maxTokens),
+        MODEL_TIMEOUT_MS,
+      );
+    } catch (fallbackErr) {
+      const primaer = err instanceof Error ? err.message : "unknown_error";
+      const sekundaer = fallbackErr instanceof Error ? fallbackErr.message : "unknown_error";
+      throw new Error(`gemini=${primaer} | fallback=${sekundaer}`);
+    }
   }
 }
 
@@ -91,11 +106,24 @@ async function callWorkersAI(
   });
 
   if (typeof result === "string") return result;
-  if (result && typeof result === "object" && "response" in result) {
-    const response = (result as { response?: unknown }).response;
-    if (typeof response === "string") return response;
+  if (result && typeof result === "object") {
+    const obj = result as { response?: unknown; choices?: unknown };
+    if (typeof obj.response === "string") return obj.response;
+    // OpenAI-kompatible Form (Befund 2026-09-06): Workers AI liefert fuer
+    // llama-3.3-70b `{choices:[{message:{content}}]}`. Der Code kannte nur
+    // die aeltere `{response}`-Form und warf deshalb, OBWOHL das Modell
+    // korrekt geantwortet hatte. Damit war der Fallback wirkungslos - genau
+    // dann, wenn er gebraucht wurde.
+    if (Array.isArray(obj.choices)) {
+      const inhalt = (obj.choices[0] as { message?: { content?: unknown } } | undefined)?.message
+        ?.content;
+      if (typeof inhalt === "string") return inhalt;
+    }
   }
-  throw new Error("workers_ai_unexpected_response");
+  // Die tatsaechliche Form mitgeben - "unexpected" allein sagt nicht, WAS kam.
+  throw new Error(
+    `workers_ai_unexpected_response:${JSON.stringify(result)?.slice(0, 60) ?? typeof result}`,
+  );
 }
 
 // ═══ Vision-Call fuer /api/expose-extract ═══
@@ -111,7 +139,7 @@ const VISION_TIMEOUT_MS = 60000; // 15 Bilder brauchen deutlich laenger als ein 
 // "gemini-2.0-flash-lite" ist seit 01.06.2026 abgeschaltet). Ueber
 // EXPOSE_GEMINI_MODEL ohne Redeploy wechselbar, falls sich die
 // Extraktionsqualitaet als zu schwach erweist.
-const DEFAULT_VISION_MODEL = "gemini-2.5-flash-lite";
+const DEFAULT_VISION_MODEL = "gemini-3.5-flash-lite";
 
 // Fallback-Modell auf Workers AI. Die urspruengliche Spec-Annahme "kein
 // Vision-Fallback moeglich" galt fuer Llama 3.3 (Text-Chat) - inzwischen liegen
@@ -305,7 +333,11 @@ async function callGemini(
   }
 
   if (!res.ok) {
-    throw new Error(`gemini_request_failed_${res.status}`);
+    // Googles Fehlertext mitgeben: bei 404 nennt er das Modell, bei 400 das
+    // beanstandete Feld. Ohne ihn ist ein blosses "failed_404" nicht
+    // diagnostizierbar (Befund 2026-09-06).
+    const detail = (await res.text().catch(() => "")).slice(0, 200).replace(/\s+/g, " ");
+    throw new Error(`gemini_request_failed_${res.status}:${detail}`);
   }
 
   const json = (await res.json()) as {

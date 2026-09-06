@@ -428,9 +428,15 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
       nutzerPayload(kennzahlen as Record<string, unknown>, hinweis, varianten, zahlen),
       ANALYSE_MAX_TOKENS,
     );
-  } catch {
+  } catch (err) {
     // Kontingent zurueckgeben: der Nutzer hat kein Ergebnis bekommen.
     await limiter.decrement();
+    // Den Grund NICHT verschlucken (Befund 2026-09-06): Dieser Zweig hat
+    // wochenlang jeden Modellfehler in ein nacktes 503 verwandelt, ohne eine
+    // Spur zu hinterlassen - die Ursache war dadurch von aussen nicht
+    // feststellbar.
+    const grund = err instanceof Error ? err.message : "unknown_error";
+    console.error("analyse_model_call_failed", JSON.stringify({ produkt, grund }));
     return c.json({ error: "modell_nicht_erreichbar" }, 503);
   }
 

@@ -1,3 +1,55 @@
+## 2026-09-06 (1.65.0)
+
+### Fix: Gemini-Modell abgeschaltet + Fallback war kaputt
+
+Nach dem Consent-Fix (1.64.0) lief die AI-Engine immer noch nicht - jetzt mit
+503 statt 412. Ursache waren ZWEI voneinander unabhaengige Fehler, die sich
+gegenseitig verdeckt haben.
+
+**1. Das Gemini-Modell ist abgeschaltet**
+
+Google antwortet auf "gemini-2.5-flash-lite" mit 404: "This model is no
+longer available to new users. Please update your code to use
+models/gemini-3.5-flash-lite". Betroffen waren Textmodell UND Vision-Modell
+(Exposé-Scan), beide standen auf demselben Wert.
+
+Das ist der zweite Durchlauf desselben Musters: "gemini-2.0-flash-lite" fiel
+zum 01.06.2026 weg und wurde damals durch 2.5 ersetzt. Jetzt 3.5.
+
+**2. Der Fallback war wirkungslos - genau dann, wenn er gebraucht wurde**
+
+Faellt Gemini aus, soll Workers AI (Llama 3.3) einspringen. Das tat es auch:
+Das Modell lieferte eine korrekte Antwort. Nur kannte callWorkersAI() lediglich
+die aeltere Form `{response: "..."}` - Workers AI liefert fuer llama-3.3-70b
+aber die OpenAI-kompatible Form `{choices:[{message:{content}}]}`. Der Code
+warf deshalb `workers_ai_unexpected_response`, OBWOHL die Antwort da war.
+
+Aus einer blossen Modell-Umbenennung wurde so ein kompletter Ausfall statt
+einer stillen Qualitaetsminderung.
+
+**3. Warum das so lange unentdeckt blieb**
+
+Der catch-Zweig in handleObjektAnalyse verschluckte den Grund vollstaendig -
+jeder Modellfehler wurde zu einem nackten 503, ohne Logeintrag. Und scheiterte
+auch der Fallback, ueberschrieb dessen Meldung die urspruengliche
+Gemini-Ursache. Beides ist behoben:
+- Der Grund wird geloggt (nicht an den Client ausgegeben).
+- Scheitern beide Wege, nennt die Meldung BEIDE Ursachen.
+- Bei einem Gemini-HTTP-Fehler wird Googles Fehlertext mitgefuehrt - er nennt
+  bei 404 das Modell und bei 400 das beanstandete Feld.
+
+**Neue E2E-Abdeckung**
+
+e2e/analyse.e2e.test.ts (6 Faelle) gegen den dev-Worker: 401 ohne Session,
+400 bei unbekanntem Produkt und fehlenden Kennzahlen, alle drei Produkte
+bekannt, 412 bei frischer sessionId (genau der Fehler aus 1.64.0) und der
+Erfolgspfad nach erteilter Einwilligung. Der letzte Fall ist der einzige
+echte Modell-Aufruf der Suite - bewusst, denn nur er belegt, dass
+Einwilligung und Auswertung an derselben Kennung haengen.
+
+Gemessen nach dem Fix: /api/assistant 200, /api/v1/analyse 200 mit
+vollstaendigem Ergebnis (kernaussage, kpis, abschnitte).
+
 ## 2026-09-06 (1.64.0)
 
 ### Fix: AI-Engine war nie funktionsfaehig + Sheet-Raender + Details-Knopf
