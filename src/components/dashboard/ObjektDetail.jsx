@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { scoreBadgeColor, scoreBadgeText } from "./dashboardUtils.js";
 import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
@@ -7,7 +7,7 @@ import { Stellschrauben } from "./Stellschrauben.jsx";
 import { ObjektUnterlagen, ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
-import { AiEngine, VariantenBlock } from "./AiEngine.jsx";
+import { AiEngine, VariantenBlock, ZahlenBlock } from "./AiEngine.jsx";
 import {
   AI_PRODUKTE,
   alter,
@@ -19,6 +19,8 @@ import {
 } from "../../utils/aiEngine.js";
 import { apiFetch } from "../../utils/apiBase.js";
 import { hebelVarianten } from "../../utils/aiTools.js";
+import { ladeMietReferenz, referenzMiete } from "../../utils/mietReferenz.js";
+import { berechnePreisSchaetzung, preisZeilen } from "../../utils/preisSchaetzung.js";
 import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
@@ -133,6 +135,13 @@ export function ObjektDetail({ objekt, onBack }) {
   // persistiert: ein je Objekt gemerkter Aufklappzustand ist mehr
   // Komplexitaet, als er wert ist.
   const [aiOffen, setAiOffen] = useState(false);
+  // Ortsuebliche Miete fuer die PLZ dieses Objekts. Die Tabelle (53 KB) wird
+  // erst geladen, wenn die AI-Sektion aufgeklappt wird - sie soll das
+  // Haupt-Bundle nicht belasten, genau wie plz-geo.txt.
+  // undefined = noch nicht geladen, null = fuer diese PLZ keine Referenz,
+  // Zahl = EUR/m2. Die drei Zustaende sind unterscheidbar, weil "laedt noch"
+  // und "gibt es nicht" dem Nutzer Verschiedenes sagen muessen.
+  const [ortsMiete, setOrtsMiete] = useState(undefined);
 
   // A1: Die Ansicht steckt nicht mehr in inputData, sondern liegt daneben.
   const gespeichert = useMemo(
@@ -152,6 +161,24 @@ export function ObjektDetail({ objekt, onBack }) {
   const vollstaendigkeit = berechneVollstaendigkeit(basis);
   const chips = sichtbareChips();
 
+  // Erst beim Aufklappen laden, und nur einmal je Objekt. Ein Fehlschlag
+  // bleibt still: die Preiseinordnung zeigt dann "keine Mietreferenz", alle
+  // anderen Produkte laufen unveraendert weiter.
+  useEffect(() => {
+    if (!aiOffen || !basis?.plz) return;
+    let aktiv = true;
+    ladeMietReferenz()
+      .then(() => {
+        if (aktiv) setOrtsMiete(referenzMiete(basis.plz));
+      })
+      .catch(() => {
+        if (aktiv) setOrtsMiete(null);
+      });
+    return () => {
+      aktiv = false;
+    };
+  }, [aiOffen, basis?.plz]);
+
   // Ruft den Worker und legt das Ergebnis AM OBJEKT ab. Der Kern der
   // Umstellung: was Kontingent kostet, muss beim naechsten Oeffnen wieder da
   // sein - bis 2026-09 war jede Auswertung fluechtig.
@@ -163,6 +190,11 @@ export function ObjektDetail({ objekt, onBack }) {
     // Nur "hebel" braucht Varianten - fuer die Einordnung eines Objekts
     // ("analyse") sind Was-waere-wenn-Rechnungen kein Eingangswert.
     const varianten = produktId === "hebel" ? hebelVarianten(basis, t, locale) : [];
+    // Die Preiseinordnung wird VOR dem Modellaufruf gerechnet und mitgesendet.
+    // Das Modell schaetzt hier nichts - es ordnet fertige Zahlen ein.
+    const schaetzung =
+      produktId === "preis" ? berechnePreisSchaetzung(basis, t, ortsMiete) : null;
+    const zahlen = schaetzung?.verfuegbar ? preisZeilen(schaetzung, locale) : [];
     try {
       const res = await apiFetch("/analyse", {
         method: "POST",
@@ -170,6 +202,7 @@ export function ObjektDetail({ objekt, onBack }) {
         body: JSON.stringify({
           produkt: produktId,
           ...(varianten.length > 0 ? { varianten } : {}),
+          ...(zahlen.length > 0 ? { zahlen } : {}),
           // Nur Kennzahlen, keine Adresse und kein Name - das Modell braucht
           // sie nicht, also gehen sie auch nicht raus.
           kennzahlen: {
@@ -202,12 +235,10 @@ export function ObjektDetail({ objekt, onBack }) {
         return;
       }
       const { ergebnis } = await res.json();
-      const neu = ergebnisAnlegen(
-        produktId,
-        ergebnis,
-        basis,
-        varianten.length > 0 ? { varianten } : null,
-      );
+      const neu = ergebnisAnlegen(produktId, ergebnis, basis, {
+        ...(varianten.length > 0 ? { varianten } : {}),
+        ...(zahlen.length > 0 ? { zahlen } : {}),
+      });
       await updateObj(objekt.id, objekt.title || "Objekt", basis, {
         resultData: mitErgebnis(objekt.kennzahlen || objekt.resultData, neu),
       });
@@ -376,6 +407,7 @@ export function ObjektDetail({ objekt, onBack }) {
               onStarten={starteProdukt}
               onOeffnen={(id) => setVolltext(id)}
               onExpose={oeffneExpose}
+              referenzMiete={ortsMiete}
             />
           </AiSektion>
         </>
@@ -526,7 +558,14 @@ function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
           {/* Der gerechnete Teil steht VOR dem Modelltext: er ist der
               belastbare. Der Text darunter ordnet ihn nur ein. */}
           <VariantenBlock varianten={ergebnis.varianten} titel="Durchgerechnete Varianten" />
-          {ergebnis.varianten?.length > 0 && <div style={{ height: 18 }} />}
+          <ZahlenBlock
+            zahlen={ergebnis.zahlen}
+            titel="Gerechnete Werte"
+            quelle="Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022). Neuvermietungen liegen darüber."
+          />
+          {(ergebnis.varianten?.length > 0 || ergebnis.zahlen?.length > 0) && (
+            <div style={{ height: 18 }} />
+          )}
 
           {(inhalt?.abschnitte || []).map((a) => (
             <div key={a.titel} style={{ marginBottom: 16 }}>

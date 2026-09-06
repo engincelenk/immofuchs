@@ -28,7 +28,7 @@ import {
 const KI = "#1E3A5F";
 
 const GRUPPEN = [
-  { id: "objekt", titel: "Für dieses Objekt", produkte: ["analyse", "hebel"] },
+  { id: "objekt", titel: "Für dieses Objekt", produkte: ["analyse", "hebel", "preis"] },
   { id: "vorbereiten", titel: "Vorbereiten", produkte: ["handout", "expose"] },
 ];
 
@@ -40,6 +40,7 @@ export function AiEngine({
   onStarten,
   onOeffnen,
   onExpose,
+  referenzMiete,
   locale = "de-DE",
 }) {
   const [bestaetigung, setBestaetigung] = useState(null);
@@ -53,6 +54,10 @@ export function AiEngine({
     // Kontingent für eine Fehlermeldung auszugeben wäre der schlimmste
     // denkbare Vertrauensbruch in einem limitierten Produkt.
     if (produkt.braucht === "expose" && !ergebnisFuer(objekt, "expose")) return "gesperrt";
+    // Dieselbe Regel für die Preiseinordnung: ohne Ortsreferenz gäbe es nichts
+    // zu vergleichen, und das Produkt würde zu genau der Schätzung aus dem
+    // Nichts, die es vermeiden soll.
+    if (produkt.braucht === "plz" && !(referenzMiete > 0)) return "gesperrt";
     return "offen";
   };
 
@@ -88,6 +93,7 @@ export function AiEngine({
                   onStarten={() => (id === "expose" ? onExpose() : starten(produkt))}
                   onOeffnen={() => onOeffnen(id)}
                   onVoraussetzung={() => onExpose()}
+                  gesperrtText={gesperrtText(produkt, data, referenzMiete)}
                 />
               );
             })}
@@ -115,6 +121,21 @@ export function AiEngine({
   );
 }
 
+// Warum ein Produkt gesperrt ist, in einem Satz. Der Grund muss VOR dem
+// Klick stehen: Kontingent für eine Fehlermeldung auszugeben wäre der
+// schlimmste denkbare Vertrauensbruch in einem limitierten Produkt.
+function gesperrtText(produkt, data, referenzMiete) {
+  if (produkt.braucht === "expose") return "Braucht zuerst ein Exposé zu diesem Objekt.";
+  if (produkt.braucht === "plz") {
+    if (!data?.plz) return "Trage die PLZ ein, dann lässt sich der Ort vergleichen.";
+    // undefined heisst "laedt noch" - das ist etwas anderes als "gibt es
+    // nicht" und darf nicht so aussehen.
+    if (referenzMiete === undefined) return "Ortsdaten werden geladen …";
+    return "Für diese PLZ liegt keine Mietreferenz vor.";
+  }
+  return "Noch nicht möglich.";
+}
+
 function ProduktZeile({
   produkt,
   zustand,
@@ -125,6 +146,7 @@ function ProduktZeile({
   onStarten,
   onOeffnen,
   onVoraussetzung,
+  gesperrtText: grund,
 }) {
   const gesperrt = zustand === "gesperrt";
   return (
@@ -162,10 +184,12 @@ function ProduktZeile({
 
       {zustand === "gesperrt" && (
         <div style={aktionsZeile}>
-          <span style={nutzenZeile}>Braucht zuerst ein Exposé zu diesem Objekt.</span>
-          <button type="button" onClick={onVoraussetzung} style={textLink}>
-            Exposé hochladen →
-          </button>
+          <span style={nutzenZeile}>{grund}</span>
+          {produkt.braucht === "expose" && (
+            <button type="button" onClick={onVoraussetzung} style={textLink}>
+              Exposé hochladen →
+            </button>
+          )}
         </div>
       )}
 
@@ -198,6 +222,7 @@ function ProduktZeile({
           )}
 
           <VariantenBlock varianten={ergebnis?.varianten} max={1} />
+          <ZahlenBlock zahlen={ergebnis?.zahlen} max={2} />
 
           <div
             style={{
@@ -326,6 +351,56 @@ export function VariantenBlock({ varianten, max, titel }) {
       {!max && (
         <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 8, lineHeight: 1.45 }}>
           Gerechnet, nicht geschätzt — aus derselben Engine wie die Kennzahlen.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Die gerechneten Label-Wert-Zeilen des Produkts "preis".
+//
+// Wie der VariantenBlock stehen sie VOR dem Modelltext: sie sind der
+// belastbare Teil (amtliche Ortsmiete plus Rendite-Engine), der Text ordnet
+// nur ein. Die Quellenzeile ist keine Höflichkeit, sondern Bedingung der
+// Open-Data-Lizenz des Zensus - und zugleich das, was die Zahl überhaupt
+// überprüfbar macht.
+export function ZahlenBlock({ zahlen, max, titel, quelle }) {
+  if (!Array.isArray(zahlen) || zahlen.length === 0) return null;
+  const sichtbar = max ? zahlen.slice(0, max) : zahlen;
+  return (
+    <div style={{ marginTop: 12 }}>
+      {titel && <div style={gruppenTitel}>{titel}</div>}
+      {sichtbar.map((z, i) => (
+        <div
+          key={z.label}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: 12,
+            padding: "6px 0",
+            borderTop: i === 0 ? "none" : "1px solid var(--cb)",
+          }}
+        >
+          <span style={{ fontSize: 12.5, lineHeight: 1.45, color: "var(--cl)", minWidth: 0 }}>
+            {z.label}
+          </span>
+          <span
+            style={{
+              flexShrink: 0,
+              fontSize: 12.5,
+              fontWeight: 700,
+              fontVariantNumeric: "tabular-nums",
+              color: "var(--ct)",
+            }}
+          >
+            {z.wert}
+          </span>
+        </div>
+      ))}
+      {!max && quelle && (
+        <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 8, lineHeight: 1.45 }}>
+          {quelle}
         </div>
       )}
     </div>

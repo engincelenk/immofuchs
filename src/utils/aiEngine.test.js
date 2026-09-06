@@ -27,16 +27,20 @@ const daten = {
 };
 
 describe("Produktregistry", () => {
-  it("kennt die vier Produkte mit eindeutigen Ids", () => {
+  it("kennt die Produkte mit eindeutigen Ids", () => {
     const ids = AI_PRODUKTE.map((p) => p.id);
-    expect(ids).toEqual(["analyse", "hebel", "expose", "handout"]);
+    expect(ids).toEqual(["analyse", "hebel", "preis", "expose", "handout"]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("jedes Produkt nennt seine Voraussetzung", () => {
+  it("jedes Produkt nennt seine Voraussetzung, einen Titel und ein Aktionsverb", () => {
     for (const p of AI_PRODUKTE) {
-      expect(["kennzahlen", "datei", "expose"]).toContain(p.braucht);
+      expect(["kennzahlen", "datei", "expose", "plz"]).toContain(p.braucht);
       expect(p.titel.length).toBeGreaterThan(0);
+      // Das Aktionsverb ist Pflicht: ohne es faellt der Knopf auf den Titel
+      // zurueck - genau die Verdopplung, die der UX-Review beseitigt hat.
+      expect(p.aktion?.length).toBeGreaterThan(0);
+      expect(p.aktion).not.toBe(p.titel);
     }
   });
 

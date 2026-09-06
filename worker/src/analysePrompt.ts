@@ -11,7 +11,7 @@
 // kann der Client die Kernaussage in drei Zeilen zeigen und den Rest
 // nachladen.
 
-export type AnalyseProdukt = "analyse" | "hebel";
+export type AnalyseProdukt = "analyse" | "hebel" | "preis";
 
 const FORM = `Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Markdown-Zaun, ohne Vorrede:
 {
@@ -57,8 +57,38 @@ Die Abschnitte sollten nach den Hebeln benannt sein, etwa KAUFPREIS, MIETE, SANI
 
 ${FORM}`;
 
+// Preiseinordnung. Bewusst KEINE Bewertung: das Modell kennt weder Lage noch
+// Zustand noch Vergleichsfaelle. Es bekommt eine amtliche Ortsmiete, die
+// Mietannahme des Nutzers und den daraus gerechneten Preis - und ordnet nur
+// ein, was diese Abweichung fuer den Kauf bedeutet.
+//
+// Die harte Regel steht hier, weil genau sie den Unterschied zur
+// Vorlage-App ausmacht, die einen Punktwert auf den Euro genau raten laesst.
+const PREIS = `${HALTUNG}
+
+Deine Aufgabe: Ordne die Mietannahme dieses Objekts gegen das oertliche
+Mietniveau ein und sage, was das fuer den aufgerufenen Kaufpreis bedeutet.
+
+Die mitgelieferten Werte unter "Gerechnete Werte" sind fertig berechnet.
+Uebernimm sie woertlich. Nenne KEINE eigene Zahl, die dort nicht steht -
+insbesondere keinen geschaetzten Verkehrswert und keinen Quadratmeterpreis,
+den du selbst gebildet hast. Du bewertest die Immobilie NICHT.
+
+Die Ortsmiete stammt aus dem Zensus 2022 und ist eine BESTANDSMIETE ueber
+alle Vertragsalter. Neuvermietungen liegen darueber, in angespannten Maerkten
+deutlich. Sage das, wenn die Mietannahme darueber liegt: eine Abweichung nach
+oben ist nicht automatisch unrealistisch, sie ist begruendungsbeduerftig.
+Moegliche Gruende sind Sanierungsstand, Ausstattung, Lage im Ort oder eine
+moeblierte Vermietung.
+
+Die Abschnitte sollten MIETNIVEAU, PREIS und RISIKO heissen.
+
+${FORM}`;
+
 export function systemPromptFuer(produkt: AnalyseProdukt): string {
-  return produkt === "hebel" ? HEBEL : ANALYSE;
+  if (produkt === "hebel") return HEBEL;
+  if (produkt === "preis") return PREIS;
+  return ANALYSE;
 }
 
 // Eine durchgerechnete Variante: "Kaufpreis -14.250 EUR (neu 270.750 EUR)
@@ -82,14 +112,25 @@ export type HebelVariante = {
 // mitgeliefert" - geschickt wurden sie nie. Das Modell musste also erfinden,
 // was es laut Prompt nicht erfinden sollte, und durfte es laut HALTUNG
 // ("Rechne NICHT nach") auch nicht ausrechnen.
+// Eine fertig gerechnete Label-Wert-Zeile, wie sie der Nutzer im Zahlenblock
+// sieht - Traeger des Produkts "preis".
+export type GerechneteZahl = { label: string; wert: string };
+
 export function nutzerPayload(
   kennzahlen: Record<string, unknown>,
   hinweis?: string,
   varianten?: HebelVariante[],
+  zahlen?: GerechneteZahl[],
 ): string {
   const zeilen = Object.entries(kennzahlen)
     .filter(([, v]) => v !== null && v !== undefined && v !== "")
     .map(([k, v]) => `${k}: ${String(v)}`);
+
+  const zahlenBlock =
+    zahlen && zahlen.length > 0
+      ? "\n\nGerechnete Werte (bereits berechnet, NICHT neu rechnen, keine eigenen Zahlen bilden):\n" +
+        zahlen.map((z) => `- ${z.label}: ${z.wert}`).join("\n")
+      : "";
 
   const variantenBlock =
     varianten && varianten.length > 0
@@ -103,5 +144,5 @@ export function nutzerPayload(
       : "";
 
   const extra = hinweis && hinweis.trim() ? `\n\nZusaetzliche Hinweise des Nutzers:\n${hinweis.trim()}` : "";
-  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${variantenBlock}${extra}`;
+  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${zahlenBlock}${variantenBlock}${extra}`;
 }

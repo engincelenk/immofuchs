@@ -38,6 +38,16 @@ export const AI_PRODUKTE = [
     braucht: "kennzahlen",
   },
   {
+    id: "preis",
+    titel: "Preis einordnen",
+    kurz: "Deine Mietannahme gegen die ortsübliche Miete am Ort",
+    aktion: "Einordnen",
+    // Ohne PLZ gibt es keine Ortsreferenz - und ohne Ortsreferenz waere die
+    // Einordnung genau die Schaetzung aus dem Nichts, die dieses Produkt
+    // vermeiden soll.
+    braucht: "plz",
+  },
+  {
     id: "expose",
     titel: "Exposé-Scan",
     kurz: "PDF hochladen, Felder automatisch füllen",
@@ -74,6 +84,9 @@ export function produktFuer(id) {
 const RELEVANTE_FELDER = {
   analyse: ["kaufpreis", "kaltmiete", "eigenkapital", "zinssatz", "tilgung", "flaeche"],
   hebel: ["kaufpreis", "kaltmiete", "renovierung", "zinssatz", "tilgung"],
+  // Die Preiseinordnung haengt an Miete, Flaeche, Preis und Ort - nicht an
+  // der Finanzierung. Ein geaenderter Zinssatz entwertet sie nicht.
+  preis: ["kaufpreis", "kaltmiete", "flaeche", "plz"],
   // Der Expose-Scan bezieht sich auf die hochgeladene Datei, nicht auf die
   // Eingabefelder - er veraltet nicht, wenn der Nutzer Zahlen anpasst.
   expose: [],
@@ -137,6 +150,7 @@ const FELD_NAME = {
   zinssatz: "Zinssatz",
   tilgung: "Tilgung",
   flaeche: "Wohnfläche",
+  plz: "PLZ",
 };
 
 export function geaenderteFelder(ergebnis, data) {

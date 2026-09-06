@@ -17,6 +17,7 @@ import {
   nutzerPayload,
   systemPromptFuer,
   type AnalyseProdukt,
+  type GerechneteZahl,
   type HebelVariante,
 } from "../analysePrompt";
 import { parseAnalyseOutput } from "../analyseOutput";
@@ -322,15 +323,35 @@ const ANALYSE_MAX_TOKENS = 900;
 const VARIANTEN_MAX = 6;
 const VARIANTEN_TEXT_MAX = 40;
 
+// Gemeinsam fuer beide Zahlenkanaele: gekuerzt, getrimmt, ohne
+// Zeilenumbrueche. Ein Umbruch koennte eine eigene Prompt-Zeile vortaeuschen.
+function promptText(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim().slice(0, VARIANTEN_TEXT_MAX);
+  return s && !/[\r\n]/.test(s) ? s : null;
+}
+
+// Die Label-Wert-Zeilen des Produkts "preis" (ortsuebliche Miete, eigene
+// Annahme, Abweichung, Preis bei Ortsmiete). Dieselben Grenzen wie bei den
+// Varianten - der Kanal ist derselbe, nur die Form ist flacher.
+export function leseZahlen(roh: unknown): GerechneteZahl[] | undefined {
+  if (!Array.isArray(roh)) return undefined;
+  const sauber: GerechneteZahl[] = [];
+  for (const eintrag of roh.slice(0, VARIANTEN_MAX)) {
+    if (typeof eintrag !== "object" || eintrag === null || Array.isArray(eintrag)) continue;
+    const e = eintrag as Record<string, unknown>;
+    const label = promptText(e.label);
+    const wert = promptText(e.wert);
+    if (label === null || wert === null) continue;
+    sauber.push({ label, wert });
+  }
+  return sauber.length > 0 ? sauber : undefined;
+}
+
 export function leseVarianten(roh: unknown): HebelVariante[] | undefined {
   if (!Array.isArray(roh)) return undefined;
 
-  const text = (v: unknown): string | null => {
-    if (typeof v !== "string") return null;
-    const s = v.trim().slice(0, VARIANTEN_TEXT_MAX);
-    // Zeilenumbrueche wuerden die Blockstruktur des Prompts aufbrechen.
-    return s && !/[\r\n]/.test(s) ? s : null;
-  };
+  const text = promptText;
   const zahl = (v: unknown): number | null =>
     typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
 
@@ -364,7 +385,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   }
   const b = body as Record<string, unknown>;
 
-  const produkt = b.produkt === "hebel" ? "hebel" : b.produkt === "analyse" ? "analyse" : null;
+  const produkt = (["analyse", "hebel", "preis"] as const).find((p) => p === b.produkt) ?? null;
   if (!produkt) return c.json({ error: "unbekanntes_produkt" }, 400);
 
   const kennzahlen = b.kennzahlen;
@@ -380,6 +401,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   // Genauso hart begrenzt wie der Hinweis: alles, was in den Prompt wandert,
   // ist ein potenzieller Injection-Traeger, auch wenn es strukturiert aussieht.
   const varianten = leseVarianten(b.varianten);
+  const zahlen = leseZahlen(b.zahlen);
 
   const zugriff = await resolveZugriff(c.req.raw, env);
   if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
@@ -403,7 +425,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
       env,
       "de",
       systemPromptFuer(produkt as AnalyseProdukt),
-      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis, varianten),
+      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis, varianten, zahlen),
       ANALYSE_MAX_TOKENS,
     );
   } catch {

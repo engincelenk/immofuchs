@@ -70,3 +70,45 @@ describe("systemPromptFuer", () => {
     expect(systemPromptFuer("analyse")).not.toContain("Durchgerechnete Varianten");
   });
 });
+
+describe("nutzerPayload - gerechnete Werte (Produkt preis)", () => {
+  const ZAHLEN = [
+    { label: "Ortsübliche Miete", wert: "9,30 €/m²" },
+    { label: "Deine Mietannahme", wert: "14,40 €/m²" },
+  ];
+
+  it("rendert den Zahlenblock als Label-Wert-Liste", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, ZAHLEN);
+    expect(p).toContain("Gerechnete Werte");
+    expect(p).toContain("- Ortsübliche Miete: 9,30 €/m²");
+    expect(p).toContain("- Deine Mietannahme: 14,40 €/m²");
+  });
+
+  it("verbietet im Blocktitel ausdruecklich eigene Zahlen", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, ZAHLEN);
+    expect(p).toContain("keine eigenen Zahlen bilden");
+  });
+
+  it("nennt ohne Zahlen keinen Zahlenblock", () => {
+    expect(nutzerPayload(KENNZAHLEN)).not.toContain("Gerechnete Werte");
+    expect(nutzerPayload(KENNZAHLEN, "", undefined, [])).not.toContain("Gerechnete Werte");
+  });
+});
+
+describe("systemPromptFuer - preis", () => {
+  it("verbietet einen geschaetzten Verkehrswert", () => {
+    const p = systemPromptFuer("preis");
+    expect(p).toContain("KEINE eigene Zahl");
+    expect(p).toContain("bewertest die Immobilie NICHT");
+  });
+
+  it("benennt die Zensus-Zahl als Bestandsmiete", () => {
+    expect(systemPromptFuer("preis")).toContain("BESTANDSMIETE");
+  });
+
+  it("ist ein anderer Prompt als analyse und hebel", () => {
+    const p = systemPromptFuer("preis");
+    expect(p).not.toBe(systemPromptFuer("analyse"));
+    expect(p).not.toBe(systemPromptFuer("hebel"));
+  });
+});

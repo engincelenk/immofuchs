@@ -1,3 +1,71 @@
+## 2026-09-06 (1.60.0)
+
+### Neues KI-Produkt "Preis einordnen" - mit amtlicher Datengrundlage
+
+Die Vorlage-App laesst ein Sprachmodell "190.000 EUR" auf den Euro genau
+schaetzen. Das ist Scheingenauigkeit: das Modell kennt weder Lage noch
+Zustand noch Vergleichsfaelle, es mustert Sprache.
+
+ImmoFuchs macht bewusst etwas anderes und Kleineres, das dafuer belegbar ist:
+Nicht den Wert der Immobilie schaetzen, sondern die MIETANNAHME pruefen, auf
+der die ganze Rendite steht - und zeigen, was der Preis waere, wenn die Miete
+dem Ortsniveau entspraeche. Der Kaufpreis steht im Expose, die Miete ist die
+Annahme. Faellt sie, faellt alles.
+
+**Datengrundlage (kostenlos, amtlich, offline)**
+- Zensus 2022, "Durchschnittliche Nettokaltmiete" auf dem 1-km-Gitter
+  (Statistisches Bundesamt, Open Data, freie Nutzung mit Quellenangabe).
+- Neu scripts/build_miete_referenz.py: laedt das Gitter, projiziert die
+  PLZ-Koordinaten aus plz-geo.txt nach EPSG:3035 (ETRS89-LAEA, Formeln direkt
+  im Skript - eine Projektion rechtfertigt keine Geo-Abhaengigkeit im Build)
+  und mittelt alle Gitterzellen im Umkreis von 3 km.
+- Ergebnis: public/miete-referenz.txt, 53 KB fuer 10.767 Postleitzahlen.
+  Muenchen 14,4 - Stuttgart 11,5 - Hamburg 10,8 - Berlin-Mitte 9,3 -
+  Leipzig 7,0 EUR/m2, Median 6,4.
+- Statische Datei statt Dienst, dieselbe Begruendung wie bei plz-geo.txt:
+  kein Laufzeit-Request je Objekt, kein Datenabfluss darueber, keine
+  Rate-Limits, kein API-Schluessel, funktioniert offline. Geladen wird sie
+  erst beim Aufklappen der AI-Sektion.
+
+**Ehrlichkeit ueber die Zahl**
+Der Zensus erfasst BESTANDSMIETEN ueber alle Vertragsalter. Neuvermietungen
+liegen darueber, in angespannten Maerkten deutlich. Das steht im
+Ergebnis-Sheet, im Prompt und im Code - wer diese Zahl als "Marktmiete"
+ausgibt, unterschaetzt das Potenzial systematisch.
+
+**Die Spanne wird nicht erfunden**
+Kein Prozentband um einen Mittelwert. Die Spanne liegt zwischen zwei
+gerechneten Ankern: dem hinterlegten Kaufpreis und dem Preis, der bei
+ortsueblicher Miete dieselbe Nettorendite braechte. Letzterer kommt aus
+loeseMaximalenKaufpreis() - derselben getesteten Bisektion, mit der auch die
+Stellschrauben rechnen, keine zweite Formel fuer dieselbe Frage.
+
+Beispiel (Stuttgart, 60 m2, 900 EUR Kaltmiete, 300.000 EUR):
+Ortsmiete 11,50 - Annahme 15,00 - Abweichung +30 % - Preis bei ortsueblicher
+Miete 221.000 EUR.
+
+**Worker**
+- Neues Produkt "preis" mit eigenem Prompt. Er verbietet ausdruecklich jede
+  eigene Zahl, insbesondere einen geschaetzten Verkehrswert: das Modell
+  bewertet nicht, es ordnet fertige Zahlen ein.
+- Zweiter gepruefter Zahlenkanal leseZahlen() neben leseVarianten(), gleiche
+  Grenzen: max 6 Zeilen, 40 Zeichen, keine Zeilenumbrueche (die koennten eine
+  eigene Prompt-Zeile vortaeuschen).
+- Die PLZ geht weiterhin NICHT an das Modell. Es sieht die Ortsmiete als
+  Zahl, nicht den Ort - die Datensparsamkeit der AI-Engine bleibt unangetastet.
+
+**Sperrlogik**
+Ohne PLZ oder ohne Referenz fuer diese PLZ ist das Produkt gesperrt, mit
+Begruendung VOR dem Klick. "Laedt noch" und "gibt es nicht" sind
+unterscheidbar - sie sagen dem Nutzer Verschiedenes.
+
+**Tests**
+27 neue (514 auf 541): Rechenweg und Formatierung der Einordnung,
+Kodierung/Dekodierung der Referenztabelle, Validator des zweiten
+Zahlenkanals, Promptregeln gegen erfundene Werte.
+
+ACHTUNG: Fasst worker/ an - braucht ein eigenes wrangler deploy (--env dev).
+
 ## 2026-09-05 (1.59.0)
 
 ### Fix: Das Produkt "Was muesste sich aendern" bekommt endlich seine Zahlen
