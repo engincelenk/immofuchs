@@ -21,10 +21,14 @@ export const AI_ENGINE_NAME = "AI-Engine";
 // zwei Zeilen darueber. Jede Karte sagte dieselbe Sache zweimal - das zweite
 // Mal als 347 px breite Flaeche. Vier Produkte mal 56 px = 224 px reine
 // Verdopplung, der teuerste Einzelposten des Befunds "Elemente zu lang".
+// Titel-Ueberarbeitung 2026-09-07 (UX-Review): vorher trugen die drei
+// Kernprodukte grammatisch verschiedene Formen (Imperativ ohne Objekt, halber
+// Fragesatz, Imperativ) - schwer auf einen Blick als zusammengehoerige
+// Gruppe erkennbar. Jetzt einheitlich "<Gegenstand> analysieren".
 export const AI_PRODUKTE = [
   {
     id: "analyse",
-    titel: "Immobilie analysieren",
+    titel: "Objekt analysieren",
     kurz: "Einschätzung zu Preis, Rendite und Tragfähigkeit",
     aktion: "Analysieren",
     // Braucht ein gerechnetes Objekt, kein Exposé.
@@ -32,16 +36,16 @@ export const AI_PRODUKTE = [
   },
   {
     id: "hebel",
-    titel: "Was müsste sich ändern",
+    titel: "Verbesserungshebel analysieren",
     kurz: "Welcher Kaufpreis oder welche Miete das Objekt trägt",
-    aktion: "Berechnen",
+    aktion: "Analysieren",
     braucht: "kennzahlen",
   },
   {
     id: "preis",
-    titel: "Preis einordnen",
+    titel: "Kaufpreis analysieren",
     kurz: "Deine Mietannahme gegen die ortsübliche Miete am Ort",
-    aktion: "Einordnen",
+    aktion: "Analysieren",
     // Ohne PLZ gibt es keine Ortsreferenz - und ohne Ortsreferenz waere die
     // Einordnung genau die Schaetzung aus dem Nichts, die dieses Produkt
     // vermeiden soll.

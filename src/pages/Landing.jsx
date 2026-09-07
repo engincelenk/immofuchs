@@ -944,9 +944,12 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 weil Titel, Beschreibung und CTA neben dem Bild stehen.
                 "Jetzt hochladen" ist ein gefuellter Orange-Pill statt einer
                 Textzeile (Nutzerwunsch: soll deutlich sichtbarer sein).
-                Klick fuehrt seit 2026-09-06 in den Objektbereich und oeffnet
-                dort den Exposé-Scan (App.jsx startApp, opts.openUpload) - der
-                Scan haengt jetzt am Objekt, nicht mehr im Chat. */}
+                Klick fuehrt seit 2026-09-06 in den Objektbereich (App.jsx
+                startApp, opts.openUpload) - der Scan haengt am Objekt, nicht
+                mehr im Chat. Seit 2026-09-07 oeffnet das Ziel dort "Objekt
+                anlegen" mit dem Exposé-Upload ganz oben, nicht mehr den
+                Scan direkt als eigenstaendiges Feature: der Scan ist ein Weg,
+                ein Objekt anzulegen, kein eigener Einstiegspunkt mehr. */}
             <button
               onClick={() => onStart("haupt", { openUpload: true })}
               className="hero-upload-spot"

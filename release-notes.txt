@@ -1,3 +1,61 @@
+## 2026-09-07 (1.68.0)
+
+### KI-Auswertungen kaputt, Objekt-Screen weiter verschlankt, drei Kleinfixes
+
+Nutzerbefund: "Immobilie analysieren", "Was muesste sich aendern?" und
+"Preis einordnen" verbrauchten Kontingent, zeigten aber nie ein Ergebnis.
+Zwei echte Bugs, plus eine laengst faellige naechste Runde am UX-Review vom
+06.09., plus drei kleinere, unabhaengige Fixes.
+
+**1. KI-Ergebnisse verschwanden nach dem Aufruf (Root Cause)**
+Zwei Bugs griffen ineinander: `openDetail()` (Merkliste.jsx) vergass das
+Feld `kennzahlen` beim Oeffnen eines Objekts - jede bereits gespeicherte
+Auswertung war beim naechsten Besuch unsichtbar, und der naechste KI-Aufruf
+ueberschrieb serverseitig sogar Ergebnisse anderer Produkte, weil der Client
+von deren Existenz nichts wusste. Zusaetzlich aktualisierte `starteProdukt()`
+nach einem erfolgreichen Aufruf nur den Server, nie die lokale Objekt-Prop -
+das Ergebnis-Sheet oeffnete sich deshalb nie, obwohl die Antwort laengst da
+war. Beide Stellen bekommen jetzt dieselbe lokale Ueberlagerung wie
+"Stellschrauben uebernehmen" es seit dem 06.09. schon vormacht.
+Nebenbefund: der produktive Cloudflare-Worker war seit dem 03.08. nicht neu
+deployed - ein bereits gemergter Modell-Fix (06.09.) und ein Apple-Login-Fix
+(28.08.) haengen deshalb vermutlich noch in Prod fest und brauchen einen
+separaten `wrangler deploy`.
+
+**2. KI-Sektion immer aufgeklappt, einheitliche Knopfnamen**
+Kein Dropdown mehr im Ueberblick - die drei Auswertungen stehen sofort
+sichtbar. Titel vereinheitlicht: "Objekt analysieren" / "Verbesserungshebel
+analysieren" / "Kaufpreis analysieren" (vorher drei verschiedene
+grammatische Formen). Besichtigungshandout ist jetzt auch nutzbar, wenn
+Daten manuell eingepflegt wurden, nicht nur nach einem Exposé-Scan.
+
+**3. Chip-Leiste komplett aufgeloest**
+Stellschrauben-Tab entfernt (gehoert inhaltlich zum Renditerechner). Belege
+und Unterlagen sind jetzt aufklappbare Sektionen unter Ueberblick statt
+eigener Reiter. Lage steht ganz unten, ohne eingebettete OpenStreetMap-Karte
+(nur noch Adresse + externe Kartenlinks). Direkte Rechner-Verlinkungen
+(RechnerListe) entfernt - ein einziger Knopf "Im Renditerechner oeffnen"
+fuehrt jetzt zum Rechner.
+
+**4. Exposé-Scan nur noch ueber "Objekt anlegen"**
+Die Landing-Page-Kachel "Jetzt hochladen" oeffnete bisher einen objektlosen
+Scan-Dialog. Sie oeffnet jetzt "Objekt anlegen", das den Exposé-Upload
+ohnehin schon oben anbietet. Neu: liefert ein Scan mehr als 5-6 uebernehmbare
+Felder, zeigt ein kurzer Bestaetigungs-Stepper (Eckdaten/Einnahmen/
+Finanzierung/Laufende Kosten) die Werte gruppiert zur Kontrolle, statt sie
+stumm zu uebernehmen. Der bestehende Weg am Objekt selbst (AiEngine-Produkt
+"Exposé-Scan" fuer ein bereits gespeichertes Objekt) ist unveraendert.
+
+**5. Vorfaelligkeitsrechner zeigt sofort ein Ergebnis**
+Die Beispiel-Defaults nutzten feste Kalenderdaten; sobald das Tagesdatum den
+fixen Kuendigungstermin ueberholte, blieb die Ergebnisseite leer. Datumswerte
+sind jetzt relativ zu "heute" berechnet.
+
+**6. Profilseite wieder so breit wie Objektseiten**
+`MyAccount.jsx` hatte keinen Breakpoint fuer die am 06.09. eingefuehrte
+240px-Sidebar und zentrierte weiter eigenstaendig auf 1400px. Ab 1280px
+Breite jetzt exakt dieselbe Inhaltsbreite wie Objektseiten/Landingpage.
+
 ## 2026-09-06 (1.67.0)
 
 ### Roter Faden am Objekt: sieben Fixes aus dem UX-Review

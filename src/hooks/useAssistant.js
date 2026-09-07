@@ -157,7 +157,12 @@ export function useAssistant() {
   // Phase 2 "extracting": ein einziger, nicht streamender Modell-Call. Es gibt
   // hier bewusst keinen Feld-fuer-Feld-Fortschritt, weil die Antwort als ein
   // Stueck kommt - alles andere waere vorgetaeuschter Fortschritt.
-  const extrahiereExpose = useCallback(async (bilder, pdf, lang) => {
+  // autoSave (Default true, siehe Aufruf unten): Pro-Nutzer bekommen sonst
+  // ausnahmslos ein automatisch angelegtes Objekt VOR jeder Bestaetigung.
+  // ObjektAnlegen.jsx uebergibt hier bewusst false - dort entsteht das Objekt
+  // regulaer erst am Ende des (ggf. Review-Stepper-)Flows ueber onAnlegen,
+  // ein zusaetzliches Auto-Save waere ein zweites, doppeltes Objekt.
+  const extrahiereExpose = useCallback(async (bilder, pdf, lang, autoSave = true) => {
     lastExposeAttemptRef.current = { bilder, pdf, lang };
     // Die Fehlertexte des Uploads sind eigene: "Für heute war's das mit
     // Fragen" waere hier schlicht falsch, es ging um ein Exposé.
@@ -262,7 +267,7 @@ export function useAssistant() {
       // Fuer Pro-Nutzer erzeugt derselbe Scan automatisch ein Objekt in der
       // Merkliste (Spec 4.8/4.17, S5b-3) - fire-and-forget, blockiert die
       // Chat-Anzeige nicht und scheitert im Fehlerfall still.
-      autoSaveExposeObject(ergebnis);
+      if (autoSave) autoSaveExposeObject(ergebnis);
     } catch (err) {
       console.error("expose_extract_request_failed", "network_or_parse_error", err);
       setExposeFehler("fehlerDienst");

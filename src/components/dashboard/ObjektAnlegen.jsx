@@ -14,6 +14,29 @@ import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
 import { BL_O, BL_N } from "../../data.js";
 import { PLZ_DB } from "../../data/plzData.js";
 import { MIN_ZEICHEN, kuerzelFuerBundesland, sucheAdressen } from "../../utils/adressSuche.js";
+import { useApp } from "../../context/AppContext.jsx";
+import { useAssistant } from "../../hooks/useAssistant.js";
+import { EXPOSE_T } from "../../i18n/expose.js";
+import { baueZeilen, uebernehmeZeilen } from "../../utils/exposeMapping.js";
+import {
+  MAX_PDF_PAGES,
+  UPLOAD_FEHLER,
+  pruefeAuswahl,
+  schaetzePdfSeiten,
+} from "../../utils/exposeUpload.js";
+import { ExposeUploadProgress } from "../assistant/ExposeUploadProgress.jsx";
+import { ObjektAnlegenExposeReview } from "./ObjektAnlegenExposeReview.jsx";
+
+// 2026-09-07: Ab wie vielen uebernehmbaren Feldern der Review-Stepper statt
+// der bisherigen Direktuebernahme in die fuenf Kernfelder erscheint. "5 oder
+// weniger" bleibt der bisherige Weg (Konzept-Vorgabe), "mehr als 5" oeffnet
+// den Stepper (ObjektAnlegenExposeReview.jsx).
+const EXPOSE_REVIEW_SCHWELLE = 5;
+
+// Dieselbe Kennung wie im globalen Exposé-Sheet (ObjektExpose.jsx) - ein
+// einmal gegebenes Einverstaendnis gilt fuer beide Wege, der Nutzer wird
+// nicht doppelt gefragt.
+const CONSENT_KEY = "if_expose_consent";
 
 // PLZ und Ort sind Pflicht: ohne sie laesst sich ein Objekt in der
 // Ortsansicht nicht einordnen, die Grunderwerbsteuer nicht aus dem Bundesland
@@ -73,6 +96,130 @@ export function ObjektAnlegen({
   );
   const [bundesland, setBundesland] = useState(startwerte?.bundesland || "");
 
+  // 2026-09-07: eigene, lokale Exposé-Extraktion statt des globalen,
+  // objektlosen ObjektExpose-Sheets - siehe Kommentar am Exposé-Knopf unten.
+  // Nur aktiv, wenn kein `onExpose` von aussen uebergeben wird (das bleibt
+  // ausschliesslich der Weg aus ObjektDetail.jsx fuer ein BESTEHENDES Objekt).
+  const { lang } = useApp() || {};
+  const xt = EXPOSE_T[lang] || EXPOSE_T.de;
+  const {
+    messages: exMessages,
+    status: exStatus,
+    extrahiereExpose,
+    uploadFortschritt,
+    exposeFehler,
+    recordConsent,
+  } = useAssistant();
+  const exFileRef = useRef(null);
+  const [exposeUiOffen, setExposeUiOffen] = useState(false);
+  const [exBilder, setExBilder] = useState([]);
+  const [exPdf, setExPdf] = useState(null);
+  const [exThumbs, setExThumbs] = useState([]);
+  const [exAuswahlFehler, setExAuswahlFehler] = useState(null);
+  const [exConsentOffen, setExConsentOffen] = useState(false);
+  // Review-Stepper (ObjektAnlegenExposeReview.jsx) bei mehr als
+  // EXPOSE_REVIEW_SCHWELLE uebernehmbaren Feldern - sonst null, das Formular
+  // bleibt sichtbar.
+  const [reviewData, setReviewData] = useState(null);
+  const exVerarbeitetIndex = useRef(-1);
+  const exLaeuft = exStatus === "uploading" || exStatus === "extracting";
+
+  useEffect(() => {
+    return () => exThumbs.forEach((url) => URL.revokeObjectURL(url));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Wertet ein frisch eingetroffenes Extraktionsergebnis aus: bei mehr als
+  // EXPOSE_REVIEW_SCHWELLE uebernehmbaren Feldern oeffnet der Review-Stepper
+  // VOR der Objekterstellung, sonst werden die Werte wie bisher direkt in die
+  // fuenf Kernfelder uebernommen. `autoSave:false` (siehe useAssistant.js)
+  // verhindert dabei ein zusaetzliches, automatisch angelegtes Objekt - hier
+  // entsteht das Objekt ausschliesslich ueber onAnlegen.
+  useEffect(() => {
+    if (onExpose) return; // onExpose vorhanden -> alter Weg (ObjektDetail.jsx), hier nichts tun
+    const idx = exMessages.length - 1;
+    if (idx < 0 || idx === exVerarbeitetIndex.current) return;
+    const nachricht = exMessages[idx];
+    if (nachricht.role !== "expose") return;
+    exVerarbeitetIndex.current = idx;
+    const zeilen = baueZeilen(nachricht.ergebnis, {}, xt);
+    const uebernehmbareZeilen = zeilen.filter((z) => z.uebernehmbar);
+    if (uebernehmbareZeilen.length > EXPOSE_REVIEW_SCHWELLE) {
+      setReviewData({ zeilen, ergebnis: nachricht.ergebnis });
+    } else {
+      const auswahl = new Set(uebernehmbareZeilen.map((z) => z.key));
+      const lokalesSetzen = (k, v) => (k === "bundesland" ? setBundesland(v) : setzen(k, v));
+      uebernehmeZeilen(zeilen, auswahl, lokalesSetzen, nachricht.ergebnis);
+    }
+    setExposeUiOffen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exMessages]);
+
+  const exDateiDialog = () => {
+    let bekannt = false;
+    try {
+      bekannt = localStorage.getItem(CONSENT_KEY) === "1";
+    } catch {
+      bekannt = false;
+    }
+    if (!bekannt) {
+      setExConsentOffen(true);
+      return;
+    }
+    exFileRef.current?.click();
+  };
+
+  const exConsentGeben = () => {
+    try {
+      localStorage.setItem(CONSENT_KEY, "1");
+    } catch {
+      /* Speicher blockiert - dann wird beim naechsten Mal erneut gefragt */
+    }
+    setExConsentOffen(false);
+    recordConsent();
+    exFileRef.current?.click();
+  };
+
+  const exHandleDateien = async (e) => {
+    const gewaehlt = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (gewaehlt.length === 0) return;
+    const geprueft = pruefeAuswahl(gewaehlt, exBilder, exPdf);
+    if (geprueft.fehler) {
+      setExAuswahlFehler(geprueft.fehler);
+      return;
+    }
+    if (geprueft.pdf) {
+      const seiten = await schaetzePdfSeiten(geprueft.pdf);
+      if (seiten !== null && seiten > MAX_PDF_PAGES) {
+        setExAuswahlFehler(UPLOAD_FEHLER.PDF_ZU_VIELE_SEITEN);
+        return;
+      }
+    }
+    setExAuswahlFehler(null);
+    setExBilder((alt) => [...alt, ...geprueft.bilder]);
+    setExThumbs((alt) => [...alt, ...geprueft.bilder.map((f) => URL.createObjectURL(f))]);
+    if (geprueft.pdf) setExPdf(geprueft.pdf);
+  };
+
+  const exEntferneBild = (index) => {
+    URL.revokeObjectURL(exThumbs[index]);
+    setExThumbs((alt) => alt.filter((_, i) => i !== index));
+    setExBilder((alt) => alt.filter((_, i) => i !== index));
+  };
+
+  const exStarten = () => {
+    if (exBilder.length === 0 && !exPdf) return;
+    const zuSenden = exBilder;
+    const pdfZuSenden = exPdf;
+    exThumbs.forEach((url) => URL.revokeObjectURL(url));
+    setExThumbs([]);
+    setExBilder([]);
+    setExPdf(null);
+    setExAuswahlFehler(null);
+    extrahiereExpose(zuSenden, pdfZuSenden, lang || "de", false);
+  };
+
   const setzen = (k, v) => setWerte((p) => ({ ...p, [k]: v }));
   const fehlt = [
     ...FELDER.filter((f) => f.pflicht && String(werte[f.key] ?? "").trim() === "").map(
@@ -110,26 +257,36 @@ export function ObjektAnlegen({
     : null;
   const kz = entwurf ? berechneObjektKennzahlen(entwurf, t) : null;
 
+  // 2026-09-07: mehr als EXPOSE_REVIEW_SCHWELLE uebernehmbare Felder - der
+  // Review-Stepper uebernimmt ab hier vollstaendig, inklusive der finalen
+  // Objekterstellung ueber onAnlegen. Erst NACH allen obigen Hooks pruefen,
+  // sonst waeren die Hooks je nach reviewData bedingt.
+  if (reviewData) {
+    return (
+      <ObjektAnlegenExposeReview
+        zeilen={reviewData.zeilen}
+        ergebnis={reviewData.ergebnis}
+        startWerte={{ name: werte.name, ...werte, bundesland }}
+        t={t}
+        onAnlegen={onAnlegen}
+        onAbbrechen={() => setReviewData(null)}
+      />
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Weg 1: Exposé */}
-      {onExpose && (
+      {/* Weg 1: Exposé. `onExpose` von aussen (ObjektDetail.jsx, Weg fuer ein
+          BESTEHENDES Objekt) hat Vorrang und bleibt unveraendert. Ohne
+          `onExpose` (Neuanlage aus Merkliste.jsx) laeuft die Extraktion
+          seit 2026-09-07 lokal hier, statt das globale, objektlose
+          ObjektExpose-Sheet zu oeffnen - so entsteht kein zweites Objekt
+          nebenher. */}
+      {onExpose ? (
         <button
           type="button"
           onClick={onExpose}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            width: "100%",
-            padding: "16px",
-            borderRadius: 12,
-            border: "1px solid #1E3A5F33",
-            background: "#1E3A5F0d",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            textAlign: "left",
-          }}
+          style={exposeKnopfStil}
         >
           <span style={{ fontSize: 22 }} aria-hidden="true">
             📄
@@ -143,6 +300,119 @@ export function ObjektAnlegen({
             </span>
           </span>
         </button>
+      ) : (
+        <div>
+          <button
+            type="button"
+            onClick={() => setExposeUiOffen((v) => !v)}
+            style={exposeKnopfStil}
+          >
+            <span style={{ fontSize: 22 }} aria-hidden="true">
+              📄
+            </span>
+            <span>
+              <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#1E3A5F" }}>
+                Exposé hochladen
+              </span>
+              <span style={{ display: "block", fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>
+                PDF hinein, Felder automatisch gefüllt
+              </span>
+            </span>
+          </button>
+          {exposeUiOffen && (
+            <div
+              style={{
+                marginTop: 10,
+                border: "1px solid var(--cb)",
+                borderRadius: 12,
+                background: "var(--ci)",
+                padding: 14,
+              }}
+            >
+              <input
+                ref={exFileRef}
+                type="file"
+                accept="image/*,application/pdf"
+                multiple
+                onChange={exHandleDateien}
+                style={{ display: "none" }}
+                tabIndex={-1}
+              />
+              {exConsentOffen && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, lineHeight: 1.55, marginBottom: 10 }}>
+                    {xt.consentText}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button type="button" onClick={exConsentGeben} style={exKnopfPrimaer}>
+                      {xt.consentOk || "Verstanden"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExConsentOffen(false)}
+                      style={exKnopfZweit}
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              )}
+              {exThumbs.length > 0 && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                  {exThumbs.map((url, i) => (
+                    <button
+                      key={url}
+                      type="button"
+                      onClick={() => exEntferneBild(i)}
+                      aria-label={`Bild ${i + 1} entfernen`}
+                      style={{
+                        width: 56,
+                        height: 56,
+                        padding: 0,
+                        borderRadius: 10,
+                        border: "1px solid var(--cb)",
+                        backgroundImage: `url(${url})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        cursor: "pointer",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+              {exPdf && (
+                <div style={{ fontSize: 12.5, color: "var(--ch)", marginBottom: 10 }}>
+                  PDF ausgewählt: {exPdf.name}
+                </div>
+              )}
+              {exAuswahlFehler && (
+                <div style={{ fontSize: 12.5, color: "#B3402A", marginBottom: 10 }}>
+                  {xt["fehler" + exAuswahlFehler[0].toUpperCase() + exAuswahlFehler.slice(1)]}
+                </div>
+              )}
+              {!exLaeuft && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" onClick={exDateiDialog} style={exKnopfZweit}>
+                    📄 Datei auswählen
+                  </button>
+                  {(exBilder.length > 0 || exPdf) && (
+                    <button type="button" onClick={exStarten} style={exKnopfPrimaer}>
+                      Auswerten
+                    </button>
+                  )}
+                </div>
+              )}
+              {exLaeuft && (
+                <ExposeUploadProgress phase={exStatus} fortschritt={uploadFortschritt} t={xt} />
+              )}
+              {exposeFehler && (
+                <div style={{ fontSize: 12.5, color: "#B3402A", marginTop: 10 }}>
+                  {xt[exposeFehler]}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -593,4 +863,41 @@ const knopfStil = {
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "inherit",
+};
+
+const exposeKnopfStil = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  width: "100%",
+  padding: "16px",
+  borderRadius: 12,
+  border: "1px solid #1E3A5F33",
+  background: "#1E3A5F0d",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  textAlign: "left",
+};
+
+const exKnopfPrimaer = {
+  display: "inline-flex",
+  alignItems: "center",
+  height: 40,
+  padding: "0 14px",
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+const exKnopfZweit = {
+  ...exKnopfPrimaer,
+  background: "var(--cc)",
+  color: "var(--ct)",
+  border: "1.5px solid var(--cb)",
+  fontWeight: 600,
 };

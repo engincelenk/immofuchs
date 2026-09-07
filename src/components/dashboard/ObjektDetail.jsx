@@ -3,7 +3,6 @@ import { useApp } from "../../context/AppContext.jsx";
 import { scoreBadgeColor, scoreBadgeText } from "./dashboardUtils.js";
 import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
 import { Ueberblick } from "./Ueberblick.jsx";
-import { Stellschrauben } from "./Stellschrauben.jsx";
 import { ObjektUnterlagen, ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
@@ -30,75 +29,24 @@ import {
 // Schritt A4 und C des Umbauplans (docs/plans/neue-phase2/01-umbauplan-phase-a-b.md).
 //
 // Aus der frueheren schlanken Detailkarte mit einem "Im Rechner oeffnen"-Knopf
-// wird der Objekt-Container mit Chip-Leiste. Von links nach rechts steigt die
-// Detailtiefe: der Einsteiger bleibt beim Ueberblick, der Profi wischt weiter.
+// wird der Objekt-Container. Die frueher hier stehende Chip-Leiste ist mit
+// dem UX-Review 2026-09-07 entfallen (siehe Kommentar unten) - die einzige
+// verbliebene Verlinkung zu einem Rechner ist der "Laden"-Knopf im
+// Ueberblick, der in den Renditerechner fuehrt.
 //
-// Die Chip-Leiste uebernimmt bewusst das Scrollverhalten der bestehenden
-// .tbar aus App.jsx (overflow-x:auto + scroll-snap) - kein neues Muster,
-// nur eine Ebene tiefer.
-//
-// Rechner-Reiter erscheinen kontextabhaengig: Vorfaelligkeit erst bei
-// vorhandenem Kredit, Sanierung erst bei gesetztem Baujahr. Wer nichts
-// eingegeben hat, sieht auch keine leeren Reiter.
-// Chip-Leiste nach den UX-Reviews 2026-09-05/06:
-//
-// 1. Die vier Rechner-Reiter sind zu EINEM Chip zusammengefasst. Sie rendern
-//    ohnehin alle dasselbe (Ueberschrift + Knopf), waren also vier Chips fuer
-//    vier Knoepfe.
-// 2. Die AI-Engine hat KEINEN eigenen Chip mehr. Sie liegt als aufklappbare
-//    Sektion am Ende des Ueberblicks - dort, wo der Nutzer die Kennzahlen
-//    gerade gelesen hat, auf die sich die Auswertung bezieht.
-// 3. "Rechner" und "Daten" sind zu EINEM Chip "Belege" verschmolzen
-//    (UX-Review 2026-09-06, docs/plans/neue-phase2/00-analyse: Tiefenstufe 3
-//    heisst dort "Belege"). Beide Reiter beantworteten dieselbe Frage - "wie
-//    kommen die Zahlen zustande?" - nur einmal als Feldraster, einmal als
-//    Linkliste. Damit sinkt die Leiste von fuenf auf vier Chips.
-//
-//    Der Renditerechner fehlte in der alten Rechner-Liste komplett (nur
-//    kredit/miete/sanier/steuer6) und war nur ueber den nichtssagenden Knopf
-//    "Im Rechner oeffnen" am Ende von "Daten" erreichbar - ausgerechnet der
-//    Rechner mit der mit Abstand groessten Zusatztiefe (Tilgungsplan,
-//    AfA/Steuervorteil, Stresstest, Exit-Saldo, PDF-Export) war so gut wie
-//    unsichtbar. Er steht jetzt als ERSTE, benannte Zeile in RECHNER, und
-//    Vorfaelligkeit - vorher aus der Objektansicht ueberhaupt nicht
-//    erreichbar - ist ergaenzt.
-const RECHNER = [
-  {
-    id: "haupt",
-    label: "Rendite",
-    kurz: "Vollständige Rechnung: Cashflow, AfA/Steuervorteil, Tilgungsplan, Stresstest",
-  },
-  { id: "kredit", label: "Finanzierung", kurz: "Rate, Tilgungsplan, Restschuld" },
-  { id: "miete", label: "Miete & Recht", kurz: "Mieterhöhung, Kappungsgrenze" },
-  { id: "sanier", label: "Sanierung", kurz: "Kosten, Förderung, Amortisation" },
-  { id: "steuer6", label: "Steuer", kurz: "AfA und §6-Optimierung" },
-  { id: "vfe", label: "Vorfälligkeit", kurz: "Kosten der vorzeitigen Ablösung, BGH-konform" },
-];
-
-const CHIPS = [
-  { id: "ueberblick", label: "Überblick" },
-  { id: "stellschrauben", label: "Stellschrauben" },
-  { id: "belege", label: "Belege" },
-  { id: "unterlagen", label: "Unterlagen" },
-];
-
-// Welche Reiter fuer diesen Datenstand sinnvoll sind.
-function sichtbareChips() {
-  // Alle Chips immer sichtbar: die frueher kontextabhaengig ausgeblendeten
-  // Rechner stecken jetzt in EINEM Chip, dort sind einzelne Zeilen billiger
-  // auszublenden als ein ganzer Reiter.
-  return CHIPS;
-}
-
-// Jeder Reiter beantwortet eine Frage des Nutzers, keine Werkzeugkategorie
-// (UX-Review 2026-09-06). Rein informativ, keine Navigationslogik.
-const REITER_FRAGE = {
-  ueberblick: "Lohnt sich dieses Objekt?",
-  stellschrauben: "Was, wenn du anders finanzierst?",
-  belege: "Wie kommen die Zahlen zustande?",
-  unterlagen: "Was liegt zu diesem Objekt vor?",
-};
-
+// UX-Review 2026-09-07: die Chip-Leiste (Ueberblick/Stellschrauben/Belege/
+// Unterlagen) ist entfallen. Stellschrauben gehoert inhaltlich zum
+// Renditerechner (dort bereits editierbar) und wurde hier nie zu Ende
+// gepflegt; Belege und Unterlagen beantworten dieselbe Frage wie der
+// Ueberblick ("wie kommen die Zahlen zustande, was liegt vor") und stehen
+// jetzt als aufklappbare Sektionen direkt darunter - eine Seite statt vier
+// Reiter mit je einem Klick Umweg.
+// Hinweis 2026-09-07: ObjektAnlegenExposeReview.jsx (Exposé-Review-Stepper
+// beim Anlegen) verwendet dieselben vier Themen-Namen (Eckdaten/Einnahmen/
+// Finanzierung/Laufende Kosten). Nicht von hier importiert - ObjektAnlegen.jsx
+// wird auch von DIESER Datei importiert (Bearbeiten-Sheet unten), ein Import
+// in Gegenrichtung waere ein Zirkelbezug. Bei Aenderungen an den Themennamen
+// dort mitziehen.
 const FELD_GRUPPEN = [
   {
     titel: "Eckdaten",
@@ -142,7 +90,6 @@ export function ObjektDetail({ objekt, onBack }) {
   const { d, set, setTabExt, t, lang, updateObj, isProSavedObjects } = useApp();
   const istPro = Boolean(isProSavedObjects);
   const locale = lang === "de" ? "de-DE" : "de-DE";
-  const [chip, setChip] = useState("ueberblick");
   const [bearbeiten, setBearbeiten] = useState(false);
   // AI-Engine: welches Produkt gerade laeuft, welcher Volltext offen ist,
   // und ob der letzte Aufruf gescheitert ist.
@@ -151,16 +98,11 @@ export function ObjektDetail({ objekt, onBack }) {
   const [aiFehler, setAiFehler] = useState(null);
   // Welches Produkt auf die KI-Einwilligung wartet (null = keines).
   const [aiConsent, setAiConsent] = useState(null);
-  // Die AI-Sektion im Ueberblick startet ZU - auch wenn bereits Ergebnisse
-  // vorliegen. Automatisches Aufklappen wuerde den Ueberblick ausgerechnet
-  // fuer die wiederkehrenden Nutzer wieder auf ueber 1.000 px strecken. Dass
-  // etwas da ist, sagt die Kopfzeile der Sektion ohnehin. Bewusst nicht
-  // persistiert: ein je Objekt gemerkter Aufklappzustand ist mehr
-  // Komplexitaet, als er wert ist.
-  const [aiOffen, setAiOffen] = useState(false);
   // Ortsuebliche Miete fuer die PLZ dieses Objekts. Die Tabelle (53 KB) wird
-  // erst geladen, wenn die AI-Sektion aufgeklappt wird - sie soll das
-  // Haupt-Bundle nicht belasten, genau wie plz-geo.txt.
+  // erst geladen, wenn eine PLZ vorliegt - sie soll das Haupt-Bundle nicht
+  // belasten, genau wie plz-geo.txt. Bis 2026-09-07 erst beim Aufklappen der
+  // (damals einklappbaren) AI-Sektion; die Sektion steht seither immer offen
+  // im Ueberblick (UX-Review), das Laden haengt deshalb nur noch an der PLZ.
   // undefined = noch nicht geladen, null = fuer diese PLZ keine Referenz,
   // Zahl = EUR/m2. Die drei Zustaende sind unterscheidbar, weil "laedt noch"
   // und "gibt es nicht" dem Nutzer Verschiedenes sagen muessen.
@@ -174,7 +116,15 @@ export function ObjektDetail({ objekt, onBack }) {
   // objekt.id: ein echter Objektwechsel geht immer ueber onBack() und damit
   // ueber ein Neu-Mounten dieser Komponente (siehe Merkliste.jsx - solange
   // detailObj gesetzt ist, kann kein zweiter openDetail()-Aufruf dazwischen).
-  const [lokaleAenderung, setLokaleAenderung] = useState(null);
+  // Bug-Fix 2026-09-07, gleiches Muster wie lokaleAenderung oben: updateObj()
+  // persistiert eine neue KI-Auswertung nur am Server, der Prop `objekt`
+  // aendert sich dadurch nicht. Ohne diese Ueberlagerung las AiVolltext das
+  // ALTE objekt, fand kein Ergebnis und das Sheet oeffnete sich nie - obwohl
+  // die Antwort laengst da war und Kontingent verbraucht wurde.
+  const [lokaleAiErgebnisse, setLokaleAiErgebnisse] = useState(null);
+  const objektAnzeige = lokaleAiErgebnisse
+    ? { ...objekt, kennzahlen: lokaleAiErgebnisse }
+    : objekt;
 
   // A1: Die Ansicht steckt nicht mehr in inputData, sondern liegt daneben.
   const gespeichert = useMemo(
@@ -186,31 +136,30 @@ export function ObjektDetail({ objekt, onBack }) {
   // Ueberblick und Stellschrauben arbeiten auf den Daten DIESES Objekts,
   // nicht auf dem globalen Rechner-State - sonst zeigte das Objekt die Zahlen
   // eines fremden Rechnerstands.
-  const basis = lokaleAenderung || (hasFullInput ? gespeichert : d);
+  const basis = hasFullInput ? gespeichert : d;
   const kennzahlenGespeichert = useMemo(
     () => berechneObjektKennzahlen(basis, t),
     [basis, t],
   );
   const vollstaendigkeit = berechneVollstaendigkeit(basis);
-  const chips = sichtbareChips();
 
   // Erst beim Aufklappen laden, und nur einmal je Objekt. Ein Fehlschlag
   // bleibt still: die Preiseinordnung zeigt dann "keine Mietreferenz", alle
   // anderen Produkte laufen unveraendert weiter.
   useEffect(() => {
-    if (!aiOffen || !basis?.plz) return;
-    let aktiv = true;
+    if (!basis?.plz) return;
+    let lebt = true;
     ladeMietReferenz()
       .then(() => {
-        if (aktiv) setOrtsMiete(referenzMiete(basis.plz));
+        if (lebt) setOrtsMiete(referenzMiete(basis.plz));
       })
       .catch(() => {
-        if (aktiv) setOrtsMiete(null);
+        if (lebt) setOrtsMiete(null);
       });
     return () => {
-      aktiv = false;
+      lebt = false;
     };
-  }, [aiOffen, basis?.plz]);
+  }, [basis?.plz]);
 
   // Ruft den Worker und legt das Ergebnis AM OBJEKT ab. Der Kern der
   // Umstellung: was Kontingent kostet, muss beim naechsten Oeffnen wieder da
@@ -284,8 +233,16 @@ export function ObjektDetail({ objekt, onBack }) {
         ...(varianten.length > 0 ? { varianten } : {}),
         ...(zahlen.length > 0 ? { zahlen } : {}),
       });
+      // Basis fuer den Merge ist die bereits ueberlagerte Ansicht, nicht das
+      // stale objekt - sonst wuerde ein zweiter Produktaufruf im selben
+      // Besuch das Ergebnis des ersten wieder verlieren (Bug B, siehe oben).
+      const neuResultData = mitErgebnis(
+        lokaleAiErgebnisse || objekt.kennzahlen || objekt.resultData,
+        neu,
+      );
+      setLokaleAiErgebnisse(neuResultData);
       await updateObj(objekt.id, objekt.title || "Objekt", basis, {
-        resultData: mitErgebnis(objekt.kennzahlen || objekt.resultData, neu),
+        resultData: neuResultData,
       });
       setVolltext(produktId);
     } catch {
@@ -328,8 +285,6 @@ export function ObjektDetail({ objekt, onBack }) {
     // anzulegen (UX-Review 2026-09-06).
     setTabExt(rechnerTab, { id: objekt.id, name: objekt.title || "Objekt" });
   }
-
-  const aktiv = chips.find((c) => c.id === chip) ? chip : "ueberblick";
 
   return (
     <div className="objekt-detail">
@@ -394,140 +349,72 @@ export function ObjektDetail({ objekt, onBack }) {
         />
       </Sheet>
 
-      {/* Chip-Leiste - Scrollverhalten wie .tbar in App.jsx.
-          Die Verlaufskante rechts ist der einzige Hinweis darauf, dass hinter
-          dem angeschnittenen Chip noch etwas liegt. Ohne sie endet die Leiste
-          fuer das Auge am Bildschirmrand - der Grund, warum frueher der
-          zweitwichtigste Reiter auf Position 2 gezwungen wurde. */}
-      <div className="objekt-chips-wrap">
-        <div className="objekt-chips">
-          {chips.map((c) => {
-            const on = c.id === aktiv;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setChip(c.id)}
-                style={{
-                  flexShrink: 0,
-                  scrollSnapAlign: "start",
-                  height: 40,
-                  padding: "0 13px",
-                  borderRadius: 999,
-                  border: `1.5px solid ${on ? "var(--ca)" : "var(--cb)"}`,
-                  background: on ? "var(--ca)" : "var(--cc)",
-                  color: on ? "#fff" : "var(--ct)",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {c.label}
+      <Ueberblick
+        kennzahlen={kennzahlenGespeichert}
+        data={basis}
+        locale={locale}
+        onRechnerLaden={() => inRechner("haupt")}
+        onBearbeiten={() => setBearbeiten(true)}
+      />
+
+      <AiSektion zusammenfassung={aiZusammenfassung(objektAnzeige, locale)}>
+        {/* Das Fehlerband gehoert IN die Sektion, direkt bei den Knoepfen,
+            auf die es sich bezieht. */}
+        {aiFehler && <div style={fehlerBand}>{aiFehler}</div>}
+        {aiConsent && (
+          <div style={consentBand}>
+            <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+              Für die Auswertung werden die Kennzahlen dieses Objekts an unseren
+              KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" onClick={einwilligenUndStarten} style={consentJa}>
+                Einverstanden, starten
               </button>
-            );
-          })}
-        </div>
-        <div aria-hidden="true" className="objekt-chips-fade" />
-      </div>
-
-      {/* Jeder Reiter beantwortet eine Frage, keine Werkzeugkategorie
-          (UX-Review 2026-09-06) - siehe REITER_FRAGE oben. */}
-      {REITER_FRAGE[aktiv] && <div style={reiterFrageStil}>{REITER_FRAGE[aktiv]}</div>}
-
-      {aktiv === "ueberblick" && (
-        <>
-          <Ueberblick
-            kennzahlen={kennzahlenGespeichert}
-            data={basis}
-            locale={locale}
-            onStellschrauben={() => setChip("stellschrauben")}
-            onBelege={() => setChip("belege")}
-            onBearbeiten={() => setBearbeiten(true)}
-          />
-          <AiSektion
-            zusammenfassung={aiZusammenfassung(objekt, locale)}
-            offen={aiOffen}
-            onToggle={() => setAiOffen((o) => !o)}
-          >
-            {/* Das Fehlerband gehoert IN die Sektion, nicht ueber die
-                Chip-Leiste: sonst stuende eine Fehlermeldung ohne sichtbaren
-                Bezug am Kopf der Seite. */}
-            {aiFehler && <div style={fehlerBand}>{aiFehler}</div>}
-            {aiConsent && (
-              <div style={consentBand}>
-                <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-                  Für die Auswertung werden die Kennzahlen dieses Objekts an unseren
-                  KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" onClick={einwilligenUndStarten} style={consentJa}>
-                    Einverstanden, starten
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAiConsent(null)}
-                    style={consentNein}
-                  >
-                    Abbrechen
-                  </button>
-                </div>
-              </div>
-            )}
-            <AiEngine
-              objekt={objekt}
-              data={basis}
-              proAktiv={istPro}
-              laufend={laufend}
-              locale={locale}
-              onStarten={starteProdukt}
-              onOeffnen={(id) => setVolltext(id)}
-              onExpose={oeffneExpose}
-              referenzMiete={ortsMiete}
-            />
-          </AiSektion>
-        </>
-      )}
-
-      {aktiv === "stellschrauben" && (
-        <Stellschrauben
-          startwerte={basis}
-          t={t}
+              <button type="button" onClick={() => setAiConsent(null)} style={consentNein}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+        <AiEngine
+          objekt={objektAnzeige}
+          data={basis}
+          hasFullInput={hasFullInput}
+          proAktiv={istPro}
+          laufend={laufend}
           locale={locale}
-          onUebernehmen={(werte) => {
-            // Bis 2026-09-06 schrieb "Uebernehmen" in den globalen
-            // Rechner-State und oeffnete den Renditerechner - das Etikett
-            // "Fuer DIESES Objekt uebernehmen" stimmte damit nicht: am Objekt
-            // landete nichts, bis der Nutzer im Rechner zusaetzlich auf
-            // Speichern drueckte, was dort IMMER ein zweites, neues Objekt
-            // anlegte (SaveBtn rief ausnahmslos saveObj() auf). Jetzt schreibt
-            // der Knopf direkt ans Objekt und der Nutzer bleibt darin.
-            const neueDaten = { ...basis, ...werte };
-            setLokaleAenderung(neueDaten);
-            setChip("ueberblick");
-            updateObj(objekt.id, objekt.title || "Objekt", neueDaten);
-          }}
+          onStarten={starteProdukt}
+          onOeffnen={(id) => setVolltext(id)}
+          onExpose={oeffneExpose}
+          referenzMiete={ortsMiete}
         />
-      )}
+      </AiSektion>
 
-      {aktiv === "belege" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <AlleDaten data={basis} objekt={objekt} locale={locale} />
-          <RechnerListe onOeffnen={inRechner} moeglich={hasFullInput} basis={basis} />
-        </div>
-      )}
+      {/* Ehemals eigene Reiter "Belege"/"Unterlagen" (UX-Review 2026-09-07):
+          beide beantworten dieselbe Frage wie der Ueberblick ("wie kommen die
+          Zahlen zustande, was liegt vor") und stehen deshalb als aufklappbare
+          Sektionen direkt darunter, aufgeklappt untereinander statt in einem
+          eigenen Reiter. Direkte Rechner-Verlinkungen (ehem. RechnerListe)
+          sind entfallen - der einzige Weg zu den Rechnern ist jetzt der
+          "Laden"-Knopf im Ueberblick oben, der in den Renditerechner fuehrt. */}
+      <Klappsektion titel="Belege" untertitel="Wie kommen die Zahlen zustande?">
+        <AlleDaten data={basis} objekt={objekt} locale={locale} />
+      </Klappsektion>
 
-      {aktiv === "unterlagen" && (
-        <div className="objekt-raster">
-          <ObjektUnterlagen objektId={objekt.id} />
-          <ObjektLage data={basis} titel={objekt.title} />
-        </div>
-      )}
+      <Klappsektion titel="Unterlagen" untertitel="Was liegt zu diesem Objekt vor?">
+        <ObjektUnterlagen objektId={objekt.id} />
+      </Klappsektion>
+
+      {/* Lage ganz unten, nicht mehr in einem eigenen Reiter, ohne
+          eingebettete Karte (UX-Review 2026-09-07) - siehe ObjektLage. */}
+      <div style={{ marginTop: 16 }}>
+        <ObjektLage data={basis} titel={objekt.title} />
+      </div>
 
       <AiVolltext
         produktId={volltext}
-        objekt={objekt}
+        objekt={objektAnzeige}
         locale={locale}
         onSchliessen={() => setVolltext(null)}
       />
@@ -541,20 +428,57 @@ export function ObjektDetail({ objekt, onBack }) {
 // Regelwerk, kein Modell - und traegt deshalb bewusst kein Sparkle.
 const KI_FARBE = "#1E3A5F";
 
-// Die AI-Engine als aufklappbare Sektion am Ende des Ueberblicks (UX-Review
-// 2026-09-05). Vorher ein eigener Chip - dort lag sie aber getrennt von den
-// Kennzahlen, auf die sie sich bezieht, und streckte als Reiter 649 px.
+// Die AI-Engine als Sektion am Ende des Ueberblicks (UX-Review 2026-09-05).
+// Vorher ein eigener Chip - dort lag sie aber getrennt von den Kennzahlen,
+// auf die sie sich bezieht.
 //
-// Zugeklappt EINE Zeile, keine Karte: eine zweite Karte unter der Hero-Karte
-// waere genau der gleich schwere Vollbreiten-Block, den der Umbau beseitigt.
-// Die Kopfzeile bleibt trotzdem informativ - dasselbe Muster wie die
-// Reglerkarten in Stellschrauben.jsx, die ihren Wert auch zugeklappt zeigen.
-function AiSektion({ zusammenfassung, offen, onToggle, children }) {
+// Bis 2026-09-07 aufklappbar und standardmaessig zu: Nutzer, fuer die genau
+// diese drei Auswertungen der Kern des Objekt-Screens sind, mussten dafuer
+// erst einen Pfeil treffen, und ein bereits fertiges Ergebnis blieb hinter
+// dem Klapptext verborgen. Die Sektion steht deshalb jetzt immer offen -
+// anders als Belege/Unterlagen (Klappsektion unten), die Zusatzbelege statt
+// des Kerngeschehens sind.
+function AiSektion({ zusammenfassung, children }) {
+  return (
+    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          minHeight: 44,
+          padding: "8px 2px",
+        }}
+      >
+        <span aria-hidden="true" style={{ flexShrink: 0, color: KI_FARBE, fontSize: 13.5 }}>
+          ✦
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>
+            KI-Auswertung
+          </span>
+          <span style={{ display: "block", fontSize: 11, color: "var(--cl)", marginTop: 4 }}>
+            {zusammenfassung}
+          </span>
+        </span>
+      </div>
+      <div style={{ marginTop: 12 }}>{children}</div>
+    </div>
+  );
+}
+
+// Generische aufklappbare Sektion fuer Belege/Unterlagen (UX-Review
+// 2026-09-07): beide waren eigene Reiter, beantworten aber dieselbe Frage wie
+// der Ueberblick darueber - deshalb hier als Sektion statt als Wechsel der
+// ganzen Seite. Standardmaessig zu, anders als die AI-Sektion: das sind
+// Zusatzbelege, die man bei Bedarf nachschlaegt, nicht der Kern des Screens.
+function Klappsektion({ titel, untertitel, children }) {
+  const [offen, setOffen] = useState(false);
   return (
     <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
       <button
         type="button"
-        onClick={onToggle}
+        onClick={() => setOffen((o) => !o)}
         aria-expanded={offen}
         style={{
           display: "flex",
@@ -570,16 +494,15 @@ function AiSektion({ zusammenfassung, offen, onToggle, children }) {
           fontFamily: "inherit",
         }}
       >
-        <span aria-hidden="true" style={{ flexShrink: 0, color: KI_FARBE, fontSize: 13.5 }}>
-          ✦
-        </span>
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>
-            KI-Auswertung
+            {titel}
           </span>
-          <span style={{ display: "block", fontSize: 11, color: "var(--cl)", marginTop: 4 }}>
-            {zusammenfassung}
-          </span>
+          {untertitel && (
+            <span style={{ display: "block", fontSize: 11, color: "var(--cl)", marginTop: 4 }}>
+              {untertitel}
+            </span>
+          )}
         </span>
         <span aria-hidden="true" style={{ flexShrink: 0, fontSize: 13.5, color: "var(--ch)" }}>
           {offen ? "▲" : "▼"}
@@ -691,61 +614,6 @@ function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
         </div>
       )}
     </Sheet>
-  );
-}
-
-// Phase C: Der Rechner bleibt der Rechner - der Reiter fuehrt hin und nimmt
-// die Objektdaten mit, statt die Rechnerlogik zu duplizieren.
-// Phase C: Der Rechner bleibt der Rechner - die Zeile fuehrt hin und nimmt
-// die Objektdaten mit, statt die Rechnerlogik zu duplizieren. Seit dem
-// UX-Review als EINE Liste statt vier Reiter, die alle dasselbe zeigten.
-function RechnerListe({ onOeffnen, moeglich, basis }) {
-  const hatBaujahr = !!(basis?.baujahr || basis?.sBJ);
-  const sichtbar = RECHNER.filter((r) => r.id !== "sanier" || hatBaujahr);
-  return (
-    <div className="objekt-raster">
-      {!moeglich && (
-        <div
-          className="objekt-raster-breit"
-          style={{ fontSize: 13.5, color: "var(--cl)", lineHeight: 1.5, marginBottom: 4 }}
-        >
-          Für die Rechner fehlen noch Objektdaten. Lege zuerst Kaufpreis,
-          Wohnfläche und Kaltmiete an.
-        </div>
-      )}
-      {sichtbar.map((r) => (
-        <button
-          key={r.id}
-          type="button"
-          disabled={!moeglich}
-          onClick={() => onOeffnen(r.id)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            width: "100%",
-            textAlign: "left",
-            background: "var(--cc)",
-            border: "1px solid var(--cb)",
-            borderRadius: 12,
-            padding: "12px 14px",
-            cursor: moeglich ? "pointer" : "not-allowed",
-            opacity: moeglich ? 1 : 0.55,
-            fontFamily: "inherit",
-          }}
-        >
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--ct)" }}>
-              {r.label}
-            </span>
-            <span style={{ display: "block", fontSize: 12.5, color: "var(--cl)", marginTop: 4 }}>
-              {r.kurz}
-            </span>
-          </span>
-          <span style={{ color: "var(--ca)", fontWeight: 700, fontSize: 15 }}>→</span>
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -904,15 +772,6 @@ const feldWert = {
 
 // Die Einwilligung traegt bewusst NICHT die Fehlerfarbe: es ist kein Fehler,
 // sondern eine Frage, die der Nutzer im selben Zug beantworten kann.
-// Frage-Ueberschrift je Reiter (REITER_FRAGE oben) - kein Kartenrahmen, ein
-// Satz reicht, um dem Reiter seinen Zweck zu geben statt nur einen Namen.
-const reiterFrageStil = {
-  fontSize: 15,
-  fontWeight: 700,
-  color: "var(--ct)",
-  margin: "0 0 12px",
-};
-
 const consentBand = {
   background: "var(--ci)",
   border: "1px solid var(--cb)",

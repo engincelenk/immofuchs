@@ -576,12 +576,14 @@ export default function App() {
 
   const startApp = (startTab, opts) => {
     // Der Exposé-Wunsch von der Startseite fuehrt seit 2026-09-06 in den
-    // Objektbereich, nicht mehr in den Renditerechner: Der Scan liegt jetzt
-    // am Objekt (ObjektExpose.jsx), Finn ist reiner Chat. Merkliste hoert auf
-    // das Event und oeffnet die Ansicht.
+    // Objektbereich. Seit 2026-09-07 landet er dort im "Objekt
+    // anlegen"-Sheet (Exposé-Upload ganz oben) statt direkt im
+    // objektlosen Scan-Sheet - der Scan ist kein eigenstaendiges Feature
+    // mehr, sondern ein Weg, ein Objekt anzulegen. Merkliste hoert auf
+    // dieses eigene Event und oeffnet den Anlegen-Flow.
     if (opts?.openUpload) {
       setTab("saved");
-      setTimeout(() => window.dispatchEvent(new CustomEvent("if:expose-oeffnen")), 60);
+      setTimeout(() => window.dispatchEvent(new CustomEvent("if:objekt-anlegen-oeffnen")), 60);
     }
     // Ohne expliziten Rechner landet der Nutzer bei seinen Objekten (A5).
     else if (startTab && tabs.find((x) => x.id === startTab)) setTab(startTab);

@@ -35,6 +35,7 @@ const GRUPPEN = [
 export function AiEngine({
   objekt,
   data,
+  hasFullInput,
   proAktiv,
   laufend,
   onStarten,
@@ -49,11 +50,15 @@ export function AiEngine({
     if (laufend === produkt.id) return "laeuft";
     const e = ergebnisFuer(objekt, produkt.id);
     if (e) return istVeraltet(e, data) ? "veraltet" : "fertig";
-    // Das Handout ist ein Folgeprodukt des Exposé-Scans. Ohne dessen Ergebnis
-    // gibt es keine Findings - das muss VOR dem Verbrauch sichtbar sein.
-    // Kontingent für eine Fehlermeldung auszugeben wäre der schlimmste
-    // denkbare Vertrauensbruch in einem limitierten Produkt.
-    if (produkt.braucht === "expose" && !ergebnisFuer(objekt, "expose")) return "gesperrt";
+    // Das Handout braucht Grundlagen ueber das Objekt - entweder aus dem
+    // Exposé-Scan oder aus manuell eingepflegten Daten (UX-Review 2026-09-07:
+    // vorher zwingend an ein Exposé-Scan-Ergebnis gekoppelt, obwohl ein
+    // vollstaendig von Hand angelegtes Objekt dieselbe Grundlage bietet).
+    // Ohne beides gibt es keine Findings - das muss VOR dem Verbrauch
+    // sichtbar sein. Kontingent für eine Fehlermeldung auszugeben wäre der
+    // schlimmste denkbare Vertrauensbruch in einem limitierten Produkt.
+    if (produkt.braucht === "expose" && !ergebnisFuer(objekt, "expose") && !hasFullInput)
+      return "gesperrt";
     // Dieselbe Regel für die Preiseinordnung: ohne Ortsreferenz gäbe es nichts
     // zu vergleichen, und das Produkt würde zu genau der Schätzung aus dem
     // Nichts, die es vermeiden soll.

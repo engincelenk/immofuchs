@@ -27,10 +27,25 @@ export function Vorfaelligkeit() {
     return (da * (zP + tP)) / 100 / 12;
   }, [d]);
 
-  // Beispiel-Defaults beim ersten Öffnen setzen
+  // Beispiel-Defaults beim ersten Öffnen setzen. Alle Datumswerte relativ zu
+  // "heute" berechnet statt als fixe Kalenderdaten (Bugreport 2026-09-07):
+  // "vfeAbloeseTermin" lag als fester Wert "2026-09-01" irgendwann in der
+  // Vergangenheit relativ zu "heute" (vfeRestschuldDatum), die R-Berechnung
+  // verlangt aber ablT > rsDate - sobald das Tagesdatum den fixen
+  // Kündigungstermin überholt, blieb die Ergebnisseite dauerhaft leer.
   useEffect(() => {
-    if (!d.vfeAuszahlung) set("vfeAuszahlung", "2019-03-01");
-    if (!d.vfeSollzinsbindungsEnde) set("vfeSollzinsbindungsEnde", "2029-03-01");
+    const iso = (date) => date.toISOString().split("T")[0];
+    const heute = new Date();
+    if (!d.vfeAuszahlung) {
+      const ausz = new Date(heute);
+      ausz.setFullYear(ausz.getFullYear() - 5);
+      set("vfeAuszahlung", iso(ausz));
+    }
+    if (!d.vfeSollzinsbindungsEnde) {
+      const zbEnde = new Date(heute);
+      zbEnde.setFullYear(zbEnde.getFullYear() + 5);
+      set("vfeSollzinsbindungsEnde", iso(zbEnde));
+    }
     if (!d.vfeRestschuld) {
       const da = Math.max(0, (+d.kaufpreis || 300000) - (+d.eigenkapital || 60000));
       set("vfeRestschuld", String(da || 240000));
@@ -43,8 +58,12 @@ export function Vorfaelligkeit() {
       const r = Math.round((da * (zP + tP)) / 100 / 12);
       if (r > 0) set("vfeMonatsRate", String(r));
     }
-    if (!d.vfeAbloeseTermin) set("vfeAbloeseTermin", "2026-09-01");
-    if (!d.vfeRestschuldDatum) set("vfeRestschuldDatum", new Date().toISOString().split("T")[0]);
+    if (!d.vfeAbloeseTermin) {
+      const abloese = new Date(heute);
+      abloese.setMonth(abloese.getMonth() + 1);
+      set("vfeAbloeseTermin", iso(abloese));
+    }
+    if (!d.vfeRestschuldDatum) set("vfeRestschuldDatum", iso(heute));
   }, []);
 
   const R = useMemo(() => {

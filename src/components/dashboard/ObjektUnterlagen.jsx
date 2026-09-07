@@ -209,14 +209,13 @@ export function ObjektUnterlagen({ objektId }) {
   );
 }
 
-// Lage am Objekt: kleiner Kartenausschnitt mit Pin plus Sprung in die
-// Kartenanwendung - das Muster aus der Analyse-Vorlage.
+// Lage am Objekt: Adresse plus Sprung in die Kartenanwendung.
 //
-// Der Ausschnitt kommt als OpenStreetMap-Einbettung. Die Koordinaten dafuer
-// liefert der lokale GeoNames-Datensatz (utils/plzGeo.js) anhand der PLZ; die
-// Karte selbst laedt OSM erst, wenn dieser Bereich sichtbar ist. Ohne
-// Koordinaten bleibt der Adressblock samt Link stehen, die Karte entfaellt
-// still - besser als ein leerer Rahmen.
+// Bis 2026-09-07 mit eingebetteter OpenStreetMap-Kachel (UX-Review: entfernt -
+// die Karte kostete einen Request und 190px Hoehe fuer denselben Nutzen, den
+// die beiden Links darunter bereits bieten). Die Koordinatenermittlung bleibt
+// bestehen, weil "genau" vs. "nur PLZ-Mitte" weiterhin den Hinweistext unten
+// steuert.
 export function ObjektLage({ data, titel }) {
   const [koord, setKoord] = useState(null);
   const strasse = [data?.strasse, data?.hausnummer].filter(Boolean).join(" ");
@@ -245,12 +244,6 @@ export function ObjektLage({ data, titel }) {
   if (!adresse) return null;
 
   const suche = encodeURIComponent(adresse);
-  // Rund 1,5 km Kantenlaenge - nah genug, um die Strassen zu erkennen, weit
-  // genug, dass die PLZ-Ungenauigkeit (etwa 110 m) nicht stoert.
-  const d = genau ? 0.004 : 0.008;
-  const bbox = koord
-    ? `${(koord.lon - d).toFixed(4)},${(koord.lat - d / 1.6).toFixed(4)},${(koord.lon + d).toFixed(4)},${(koord.lat + d / 1.6).toFixed(4)}`
-    : null;
 
   return (
     <div
@@ -273,22 +266,6 @@ export function ObjektLage({ data, titel }) {
       >
         Lage
       </div>
-
-      {bbox && (
-        <iframe
-          title={`Karte ${adresse}`}
-          loading="lazy"
-          src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${koord.lat},${koord.lon}`}
-          style={{
-            width: "100%",
-            height: 190,
-            border: "1px solid var(--cb)",
-            borderRadius: 10,
-            display: "block",
-            marginBottom: 8,
-          }}
-        />
-      )}
 
       <div style={{ fontSize: 13.5, color: "var(--ct)", marginBottom: 12 }}>{adresse}</div>
 

@@ -140,8 +140,7 @@ function Balken({ label, wert, anteil, farbe, locale }) {
 export function Ueberblick({
   kennzahlen,
   data,
-  onStellschrauben,
-  onBelege,
+  onRechnerLaden,
   onBearbeiten,
   locale = "de-DE",
 }) {
@@ -328,43 +327,22 @@ export function Ueberblick({
         </div>
       </div>
 
-      {/* Der einzige gefuellte Knopf des Reiters, Ziel haengt vom Urteil ab:
-          bei Zuzahlung fuehrt er zum Hebel, sonst zu den Zahlen dahinter.
-          Ohne ihn endete die Seite bisher nach dem Urteil - der teuerste
-          Bruch im roten Faden, weil hier eine Entscheidung ansteht. */}
-      {cf < 0 && onStellschrauben && (
-        <button type="button" onClick={onStellschrauben} style={primaerKnopfStil}>
-          Was müsste sich ändern? →
-        </button>
-      )}
-      {cf >= 0 && onBelege && (
-        <button type="button" onClick={onBelege} style={primaerKnopfStil}>
-          Zahlen im Detail prüfen →
+      {/* Der einzige gefuellte Knopf des Reiters (UX-Review 2026-09-07: ein
+          Knopf statt zwei, unabhaengig vom Urteil - Stellschrauben und Belege
+          sind keine eigenen Reiter mehr, der Rechner ist der einzige Ort, an
+          dem sich etwas an der Rechnung aendern laesst). Ohne ihn endete die
+          Seite bisher nach dem Urteil - der teuerste Bruch im roten Faden,
+          weil hier eine Entscheidung ansteht. */}
+      {onRechnerLaden && (
+        <button type="button" onClick={onRechnerLaden} style={primaerKnopfStil}>
+          Im Renditerechner öffnen →
         </button>
       )}
 
       {/* Annahmen offenlegen (Konzept 3.7, Punkt 5) */}
       <div style={{ fontSize: 12.5, color: "var(--cl)", lineHeight: 1.5, padding: "0 2px" }}>
         Gerechnet mit {(+data?.zinssatz || 0).toString().replace(".", ",")} % Zins,{" "}
-        {(+data?.tilgung || 0).toString().replace(".", ",")} % Tilgung.{" "}
-        {onStellschrauben && (
-          <button
-            type="button"
-            onClick={onStellschrauben}
-            style={{
-              background: "none",
-              border: "none",
-              padding: 0,
-              color: "var(--ca)",
-              fontWeight: 600,
-              fontSize: 12.5,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            Annahmen anpassen →
-          </button>
-        )}
+        {(+data?.tilgung || 0).toString().replace(".", ",")} % Tilgung.
       </div>
     </div>
   );

@@ -685,12 +685,24 @@ export function Merkliste() {
   }, []);
 
   // Bis 2026-09-06 hoerte auf dieses Event niemand zu - der Knopf "Exposé
-  // hochladen" in der AI-Engine tat schlicht nichts.
+  // hochladen" in der AI-Engine tat schlicht nichts. Bleibt fuer den
+  // AiEngine-Weg an einem BESTEHENDEN Objekt unveraendert (ObjektDetail.jsx
+  // dispatcht mit objektId im detail).
   useEffect(() => {
     const handler = () => oeffneExpose();
     window.addEventListener("if:expose-oeffnen", handler);
     return () => window.removeEventListener("if:expose-oeffnen", handler);
   }, [oeffneExpose]);
+
+  // 2026-09-07: der Exposé-Wunsch von der Startseite (Landing.jsx Hero-Kachel,
+  // App.jsx startApp/opts.openUpload) fuehrt jetzt in "Objekt anlegen" statt
+  // direkt in den objektlosen Scan - der Scan ist dort oben bereits die erste
+  // Kachel (ObjektAnlegen.jsx, Weg 1).
+  useEffect(() => {
+    const handler = () => setAnlegenOffen(true);
+    window.addEventListener("if:objekt-anlegen-oeffnen", handler);
+    return () => window.removeEventListener("if:objekt-anlegen-oeffnen", handler);
+  }, []);
   // Phase E: Zeilen-Diff vor dem Finn-Chat - die Zahlen zuerst, die
   // Einordnung auf Wunsch.
   const [vergleichOffen, setVergleichOffen] = useState(false);
@@ -795,6 +807,13 @@ export function Merkliste() {
       scoreLabel: obj.scoreLabel ?? null,
       kaufpreis: obj.kaufpreis ?? obj.data?.kaufpreis ?? null,
       wohnflaeche: obj.wohnflaeche ?? obj.data?.wohnflaeche ?? obj.data?.flaeche ?? null,
+      // Bug-Fix 2026-09-07: fehlte hier komplett - ohne dieses Feld sah
+      // ObjektDetail beim (Wieder-)Oeffnen NIE gespeicherte KI-Auswertungen
+      // (ergebnisseLesen liest objekt.kennzahlen.ai), jedes Produkt stand
+      // dauerhaft auf "offen", und der naechste KI-Aufruf ueberschrieb am
+      // Server sogar bereits vorhandene Ergebnisse anderer Produkte, weil der
+      // Client von deren Existenz nichts wusste.
+      kennzahlen: obj.kennzahlen ?? null,
       source: obj.source || "manuell",
       updatedAt: obj.updatedAt || null,
       inputData: obj.inputData || { ...obj.data },
@@ -865,10 +884,16 @@ export function Merkliste() {
       size="min(720px, 100vw)"
     >
       <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Objekt anlegen</div>
+      {/* Kein onExpose mehr hier (2026-09-07): der Exposé-Weg beim Anlegen
+          eines NEUEN Objekts laeuft jetzt lokal in ObjektAnlegen selbst (eigene
+          Extraktion mit autoSave:false, siehe useAssistant.js), statt das
+          globale, objektlose ObjektExpose-Sheet zu oeffnen - das vermeidet ein
+          doppelt angelegtes Objekt. Der onExpose-Pfad (oeffneExpose oben)
+          bleibt ausschliesslich fuer ObjektDetail.jsx reserviert (Exposé an
+          einem BESTEHENDEN Objekt, AiEngine-Produkt "expose"). */}
       <ObjektAnlegen
         t={t}
         onAnlegen={objektAnlegen}
-        onExpose={oeffneExpose}
         onAbbrechen={() => setAnlegenOffen(false)}
       />
     </Sheet>
