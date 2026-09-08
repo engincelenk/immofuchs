@@ -1,3 +1,38 @@
+## 2026-09-09 (1.75.2)
+
+### Apple-Login: der eigentliche Fehler war das Format des privaten Schluessels
+
+Nachtrag zu 1.75.1. Die dortige Cookie-Aenderung war eine Vermutung, keine
+Diagnose - der Login schlug danach unveraendert fehl. Der tatsaechliche Fehler
+liess sich mit der Bibliothek des Workers selbst nachweisen:
+
+    Base64-Form   : SCHEITERT -> "pkcs8" must be PKCS#8 formatted string
+    Dekodiert PEM : importPKCS8 OK
+
+Der Schluessel aus dem Apple Developer Portal lag Base64-kodiert vor (uebliche
+Praxis, weil ein mehrzeiliges PEM in .dev.vars und CI-Variablen unhandlich
+ist), `importPKCS8()` akzeptiert aber ausschliesslich rohes PKCS#8-PEM. Damit
+warf `generateAppleClientSecret()`, der Callback flog in seinen catch-Block
+und leitete mit `login_error=oauth_failed` zurueck. Fuer den Nutzer sah der
+Login aus, als haette er geklappt - es entstand nur nie eine Session, deshalb
+blieb "Anmelden" stehen.
+
+Sichtbar war das von aussen nicht: `/apple/start` und Apples Anmeldeseite
+brauchen nur die Client-ID und funktionierten die ganze Zeit korrekt. Erst der
+Rueckweg scheiterte.
+
+Behoben an zwei Stellen: der Schluessel liegt jetzt dekodiert im
+Cloudflare-Secret, UND `normalisierePrivateKey()` akzeptiert ab sofort beide
+Ablageformen (Erkennung am BEGIN-Marker, sonst Base64-Dekodierung). Ohne den
+zweiten Teil waere lokales `wrangler dev` weiterhin an genau diesem Fehler
+gescheitert, waehrend der deployte Worker laeuft - eine Falle, die beim
+naechsten Mal Stunden gekostet haette. Sieben neue Tests decken beide Formen
+ab, inklusive eines Tests, der den urspruenglichen Fehler festhaelt.
+
+Die Cookie-Aenderung aus 1.75.1 (SameSite=None fuer den Apple-Callback) bleibt
+bestehen: sie ist fuer Apples Cross-Site-POST-Callback sachlich richtig, war
+aber nicht die Ursache dieses Fehlers.
+
 ## 2026-09-09 (1.75.1)
 
 ### Apple-Login: eingeloggt am Server, aber "Anmelden" blieb sichtbar

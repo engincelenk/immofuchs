@@ -27,6 +27,30 @@ export function buildAppleAuthUrl(env: Env, redirectUri: string, state: string):
   return `${APPLE_AUTH_URL}?${params.toString()}`;
 }
 
+// Der Schluessel aus dem Apple Developer Portal (.p8-Datei) ist rohes PKCS#8-PEM.
+// Weil ein mehrzeiliger Wert in .dev.vars und in CI-Variablen unhandlich ist,
+// wird er in der Praxis haeufig Base64-kodiert abgelegt - genau das war am
+// 2026-09-09 die Ursache eines fehlschlagenden Apple-Logins: importPKCS8()
+// akzeptiert ausschliesslich PEM ("pkcs8 must be PKCS#8 formatted string"),
+// der Callback flog damit in seinen catch-Block und leitete mit
+// login_error=oauth_failed zurueck - fuer den Nutzer sah der Login aus, als
+// haette er geklappt, es entstand nur nie eine Session.
+//
+// Statt eine der beiden Formen zur einzig richtigen zu erklaeren (und die
+// andere still scheitern zu lassen), werden hier beide akzeptiert: erkannt
+// wird am BEGIN-Marker, alles andere wird als Base64 behandelt und dekodiert.
+export function normalisierePrivateKey(roh: string): string {
+  const wert = roh.trim();
+  if (wert.includes("BEGIN")) return wert;
+  try {
+    return atob(wert.replace(/\s+/g, ""));
+  } catch {
+    // Weder PEM noch gueltiges Base64 - unveraendert weiterreichen, damit
+    // importPKCS8() den aussagekraeftigen Originalfehler wirft.
+    return wert;
+  }
+}
+
 // Apple verlangt statt eines statischen Client-Secrets einen selbst signierten
 // JWT (ES256), max. 6 Monate gueltig - hier bewusst kurzlebig (10 Minuten,
 // pro Token-Exchange frisch erzeugt), das ist der von Apple empfohlene Weg
@@ -35,7 +59,7 @@ async function generateAppleClientSecret(env: Env): Promise<string> {
   if (!env.APPLE_TEAM_ID || !env.APPLE_KEY_ID || !env.APPLE_PRIVATE_KEY || !env.APPLE_CLIENT_ID) {
     throw new Error("apple_oauth_not_configured");
   }
-  const privateKey = await importPKCS8(env.APPLE_PRIVATE_KEY, "ES256");
+  const privateKey = await importPKCS8(normalisierePrivateKey(env.APPLE_PRIVATE_KEY), "ES256");
   const now = Math.floor(Date.now() / 1000);
   return new SignJWT({})
     .setProtectedHeader({ alg: "ES256", kid: env.APPLE_KEY_ID })
