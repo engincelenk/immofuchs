@@ -1,3 +1,34 @@
+## 2026-09-08 (1.73.0)
+
+### Ortsmiete aus dem Zensus 2022 auf das aktuelle Jahr hochgerechnet
+
+Die Preiseinordnung am Objekt vergleicht die eigene Mietannahme mit der
+ortsueblichen Miete aus dem Zensus 2022 (Stichtag 15.05.2022, siehe
+mietReferenz.js) - eine eingefrorene Momentaufnahme, die mit jedem Jahr
+veralteter wird und die Marktmiete zunehmend unterschaetzt. Sie bleibt die
+Grundlage (PLZ-genau, aus dem 1-km-Gitter gemittelt), wird jetzt aber mit
+einem Fortschreibungsfaktor je Bundesland auf das aktuelle Jahr skaliert.
+
+**Warum ein Mietenindex und kein Haeuserpreisindex:** Ein Haeuserpreisindex
+war zunaechst im Gespraech, ist aber die falsche Groesse - er misst
+Kaufpreise, nicht Mieten. Verwendet wird stattdessen die GENESIS-Tabelle
+61111-0020 "Index der Nettokaltmieten: Bundeslaender, Jahre" (Statistisches
+Bundesamt/Destatis, Basis 2020=100, jaehrlich seit 2005). Der Faktor je
+Bundesland ist Indexwert(neuestes vollstaendiges Jahr) / Indexwert(2022) -
+gegen 2022 und nicht gegen die Indexbasis 2020, weil der Zensus selbst
+Stichtag 2022 hat. Aktuell (Stand 2025): 1,027 (Mecklenburg-Vorpommern) bis
+1,087 (Baden-Wuerttemberg) - die Mietentwicklung laeuft regional spuerbar
+auseinander, ein bundesweiter Schnitt haette das verdeckt.
+
+Neu: scripts/build_mieten_fortschreibung.py (laedt und parst die
+oeffentliche, anmeldefreie CSV, schreibt public/mieten-fortschreibung.json)
+und src/utils/mietenFortschreibung.js (Lade-/Zugriffslogik, Faktor 1 als
+ehrlicher Fallback bei fehlendem Bundesland oder ungeladener Tabelle). Die
+Quellenangabe im Sheet nennt jetzt beide Quellen: Zensus 2022 fuer den
+Grundwert, Destatis-Mietenindex 61111-0020 fuer die Hochrechnung samt Jahr.
+Lizenz beider Quellen: dl-de/by-2.0, Namensnennung "© Statistisches
+Bundesamt (Destatis), <Jahr>".
+
 ## 2026-09-08 (1.72.0)
 
 ### Desktop-Breiten wieder buendig, Belege lesbar, Auswertungen vollstaendig

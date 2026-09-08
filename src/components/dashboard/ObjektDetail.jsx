@@ -20,6 +20,11 @@ import { apiFetch } from "../../utils/apiBase.js";
 import { hebelVarianten } from "../../utils/aiTools.js";
 import { getSessionId } from "../../utils/assistantSession.js";
 import { ladeMietReferenz, referenzMiete } from "../../utils/mietReferenz.js";
+import {
+  fortschreibungsfaktor,
+  fortschreibungsMeta,
+  ladeMietenFortschreibung,
+} from "../../utils/mietenFortschreibung.js";
 import { berechnePreisSchaetzung, preisZeilen } from "../../utils/preisSchaetzung.js";
 import {
   berechneObjektKennzahlen,
@@ -150,17 +155,28 @@ export function ObjektDetail({ objekt, onBack }) {
   useEffect(() => {
     if (!basis?.plz) return;
     let lebt = true;
-    ladeMietReferenz()
-      .then(() => {
-        if (lebt) setOrtsMiete(referenzMiete(basis.plz));
-      })
-      .catch(() => {
-        if (lebt) setOrtsMiete(null);
-      });
+    // Zwei unabhaengige Tabellen, parallel geladen: die Zensus-Ortsmiete
+    // (PLZ-genau) und der Destatis-Fortschreibungsfaktor (bundeslandweit),
+    // der sie auf das aktuelle Jahr hochrechnet. Faellt die Fortschreibung
+    // aus, bleibt der Faktor bei 1 (siehe mietenFortschreibung.js) - die
+    // Zensuszahl zeigt dann unveraendert weiter an, statt ganz zu fehlen.
+    Promise.all([
+      ladeMietReferenz().catch(() => null),
+      ladeMietenFortschreibung().catch(() => null),
+    ]).then(() => {
+      if (!lebt) return;
+      const basisMiete = referenzMiete(basis.plz);
+      if (basisMiete == null) {
+        setOrtsMiete(null);
+        return;
+      }
+      const faktor = fortschreibungsfaktor(basis.bundesland);
+      setOrtsMiete(Math.round(basisMiete * faktor * 100) / 100);
+    });
     return () => {
       lebt = false;
     };
-  }, [basis?.plz]);
+  }, [basis?.plz, basis?.bundesland]);
 
   // Ruft den Worker und legt das Ergebnis AM OBJEKT ab. Der Kern der
   // Umstellung: was Kontingent kostet, muss beim naechsten Oeffnen wieder da
@@ -571,6 +587,15 @@ function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
   const ergebnis = produktId ? ergebnisFuer(objekt, produktId) : null;
   const produkt = produktId ? produktFuer(produktId) : null;
   const inhalt = ergebnis?.inhalt;
+  // Die Fortschreibung ist eine ERGAENZUNG der Zensus-Quelle, keine
+  // Ablösung - beide bleiben in der Quellenangabe sichtbar. Solange die
+  // Fortschreibungstabelle noch nicht geladen ist (fortschreibungsMeta()
+  // liefert dann null), zeigt die Zeile nur den Zensus-Teil, der fuer sich
+  // genommen bereits wahr ist.
+  const fortschreibung = fortschreibungsMeta();
+  const ortsMieteQuelle = fortschreibung
+    ? `Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022), hochgerechnet auf ${fortschreibung.stand} mit dem Destatis-Mietenindex (Tabelle 61111-0020). Neuvermietungen liegen darüber.`
+    : "Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022). Neuvermietungen liegen darüber.";
   return (
     <Sheet
       open={Boolean(ergebnis)}
@@ -597,7 +622,7 @@ function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
           <ZahlenBlock
             zahlen={ergebnis.zahlen}
             titel="Gerechnete Werte"
-            quelle="Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022). Neuvermietungen liegen darüber."
+            quelle={ortsMieteQuelle}
           />
           {(ergebnis.varianten?.length > 0 || ergebnis.zahlen?.length > 0) && (
             <div style={{ height: 18 }} />
