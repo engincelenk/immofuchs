@@ -3,7 +3,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import { scoreBadgeColor, scoreBadgeText } from "./dashboardUtils.js";
 import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
 import { Ueberblick } from "./Ueberblick.jsx";
-import { ObjektUnterlagen, ObjektLage } from "./ObjektUnterlagen.jsx";
+import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
 import { AiEngine, VariantenBlock, ZahlenBlock } from "./AiEngine.jsx";
@@ -266,7 +266,12 @@ export function ObjektDetail({ objekt, onBack }) {
       await updateObj(objekt.id, objekt.title || "Objekt", basis, {
         resultData: neuResultData,
       });
-      setVolltext(produktId);
+      // Das Handout ist seit 2026-09-08 eine Fragenliste zum Abhaken und steht
+      // vollstaendig in der Produktkarte. Das Sheet zeigt Kernaussage,
+      // gerechnete Beilagen und Grundlage - beim Handout also WENIGER als die
+      // Karte darunter. Es hier aufzuziehen wuerde die frisch erzeugten Fragen
+      // verdecken; erreichbar bleibt es ueber "Grundlage & Quellen".
+      setVolltext(produktId === "handout" ? null : produktId);
     } catch {
       setAiFehler("Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.");
     } finally {
@@ -424,9 +429,11 @@ export function ObjektDetail({ objekt, onBack }) {
         <AlleDaten data={basis} objekt={objekt} locale={locale} />
       </Klappsektion>
 
-      <Klappsektion titel="Unterlagen" untertitel="Was liegt zu diesem Objekt vor?">
-        <ObjektUnterlagen objektId={objekt.id} />
-      </Klappsektion>
+      {/* Die Sektion "Unterlagen" (lokale Dateiablage) ist am 2026-09-08
+          entfallen. Sie lag rein im Browser des jeweiligen Geraets, war damit
+          auf keinem zweiten Geraet sichtbar und hat als Ablage mehr
+          versprochen, als sie halten konnte. ObjektUnterlagen.jsx bleibt
+          vorerst im Code, wird aber nirgends mehr gerendert. */}
 
       {/* Lage ganz unten, nicht mehr in einem eigenen Reiter, ohne
           eingebettete Karte (UX-Review 2026-09-07) - siehe ObjektLage. */}
@@ -669,12 +676,13 @@ function AlleDaten({ data, objekt, locale }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <style>{felderRasterCss}</style>
       {gruppen.length > 0 && (
         <div style={datenKarte}>
           {gruppen.map((g, i) => (
             <div key={g.titel} style={i === 0 ? undefined : gruppenTrenner}>
               <div style={gruppenTitel}>{g.titel}</div>
-              <div style={felderRaster}>
+              <div className="objekt-felder">
                 {g.zeilen.map(([k, label, einheit]) => (
                   <div key={k}>
                     <div style={feldLabel}>{label}</div>
@@ -772,12 +780,28 @@ const gruppenTitel = {
   marginBottom: 8,
 };
 
-const felderRaster = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))",
-  columnGap: 16,
-  rowGap: 12,
-};
+// Raster der Feldpaare (Bugreport 2026-09-08: "sieht aus als ob random Text
+// irgendwo steht").
+//
+// Vorher: repeat(auto-fit, minmax(148px, 1fr)). Auf Mobil ergab das die
+// gewollten zwei Spalten - auf einer 1116px breiten Desktop-Karte aber
+// SIEBEN. Eine Gruppe mit drei Feldern verteilte sich dann ueber die ganze
+// Breite, mit vier leeren Spalten dahinter: Label und Wert standen weit
+// voneinander entfernt im Nichts, ohne erkennbare Zeilenstruktur.
+//
+// auto-fit ist genau dafuer das falsche Werkzeug - es fuellt die Breite, statt
+// eine Lesestruktur zu halten. Feste Spaltenzahl je Stufe, gedeckelt bei vier:
+// darueber wird die Zuordnung Label->Wert ueber die Distanz unlesbar, egal wie
+// viel Platz da ist. Der Rest der Breite bleibt bewusst leer.
+// Die Spaltenzahl steht KOMPLETT im Stylesheet, nicht teilweise inline:
+// ein Inline-Style gewinnt gegen jede Klassenregel (ausser !important), die
+// Media Queries unten waeren sonst wirkungslos.
+const felderRasterCss = `
+.objekt-felder{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  column-gap:24px;row-gap:14px;max-width:900px}
+@media(min-width:700px){ .objekt-felder{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media(min-width:1000px){ .objekt-felder{grid-template-columns:repeat(4,minmax(0,1fr))} }
+`;
 
 const feldLabel = {
   fontSize: 11,
@@ -785,11 +809,13 @@ const feldLabel = {
   lineHeight: 1.3,
 };
 
+// Wert direkt unter dem Label, gleiche Spalte, enger Abstand: das Paar muss
+// als EINE Einheit lesbar sein, sonst sucht das Auge bei jedem Feld neu.
 const feldWert = {
   fontSize: 13.5,
   fontWeight: 700,
   fontVariantNumeric: "tabular-nums",
-  marginTop: 4,
+  marginTop: 2,
 };
 
 // Die Einwilligung traegt bewusst NICHT die Fehlerfarbe: es ist kein Fehler,

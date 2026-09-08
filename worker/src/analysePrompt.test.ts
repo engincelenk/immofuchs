@@ -95,6 +95,36 @@ describe("nutzerPayload - gerechnete Werte (Produkt preis)", () => {
   });
 });
 
+// Das Handout hat seit 2026-09-08 eine eigene Form: eine Fragenliste, die der
+// Nutzer einzeln abwaehlt und ausdruckt. Diese Tests halten die Trennung fest -
+// eine versehentlich zurueckgebaute Abschnittsform waere im Client sofort eine
+// leere Karte, weil parseHandoutOutput dann keine Fragen faende.
+describe("systemPromptFuer - handout", () => {
+  it("verlangt eine Fragenliste statt Abschnitten", () => {
+    const p = systemPromptFuer("handout");
+    expect(p).toContain('"fragen"');
+    expect(p).toContain('"vorOrt"');
+    expect(p).toContain('"kern"');
+    expect(p).not.toContain('"abschnitte"');
+    expect(p).not.toContain('"kpis"');
+  });
+
+  it("deckelt die Fragenzahl schon im Prompt", () => {
+    expect(systemPromptFuer("handout")).toContain("Hoechstens 12 fragen");
+  });
+
+  it("laesst die Befunde weiterhin die Quelle der Fragen sein", () => {
+    expect(systemPromptFuer("handout")).toContain("Bisherige Befunde");
+  });
+
+  it("aendert die Form der drei anderen Produkte nicht", () => {
+    for (const produkt of ["analyse", "hebel", "preis"] as const) {
+      expect(systemPromptFuer(produkt)).toContain('"abschnitte"');
+      expect(systemPromptFuer(produkt)).not.toContain('"fragen"');
+    }
+  });
+});
+
 describe("systemPromptFuer - preis", () => {
   it("verbietet einen geschaetzten Verkehrswert", () => {
     const p = systemPromptFuer("preis");

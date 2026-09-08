@@ -22,6 +22,7 @@ import {
   istVeraltet,
   veraltetText,
 } from "../../utils/aiEngine.js";
+import { HandoutFragen } from "./HandoutFragen.jsx";
 
 // Marineblau ist in der App die "Denk-Farbe" fuer KI. Sie markiert hier
 // ausschliesslich modellgenerierten Fliesstext - nie gerechnete Zahlen.
@@ -92,6 +93,7 @@ export function AiEngine({
                   produkt={produkt}
                   zustand={zustandVon(produkt)}
                   ergebnis={ergebnisFuer(objekt, id)}
+                  objekt={objekt}
                   data={data}
                   proAktiv={proAktiv}
                   locale={locale}
@@ -146,6 +148,7 @@ function ProduktZeile({
   produkt,
   zustand,
   ergebnis,
+  objekt,
   data,
   proAktiv,
   locale,
@@ -155,6 +158,11 @@ function ProduktZeile({
   gesperrtText: grund,
 }) {
   const gesperrt = zustand === "gesperrt";
+  // Das Handout liefert seit 2026-09-08 eine Fragenliste statt Abschnitten
+  // (worker/src/analyseOutput.ts). Aeltere, vor der Umstellung gespeicherte
+  // Handouts haben keine `fragen` - fuer sie bleibt es beim Abschnittstext,
+  // sonst waere eine bezahlte Auswertung nachtraeglich leer.
+  const fragen = fragenVon(ergebnis);
   return (
     <div style={{ ...karte, ...(zustand === "veraltet" ? { borderColor: "var(--warn-bd)" } : {}) }}>
       {zustand === "veraltet" && (
@@ -217,14 +225,45 @@ function ProduktZeile({
             </span>
           </div>
 
-          {kpisVon(ergebnis).length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-              {kpisVon(ergebnis).map((k) => (
-                <span key={k.label} style={kpiChip}>
-                  {k.label} {k.wert}
-                </span>
+          {/* Der volle Modelltext steht seit 2026-09-08 direkt hier, nicht
+              mehr nur im Sheet hinter "Ganzen Text lesen". Nutzerwunsch:
+              generierte Texte komplett ausgeben - dieselbe Begruendung wie
+              beim Aufklappen der AI-Sektion: was Kontingent gekostet hat,
+              darf nicht hinter einem weiteren Klick liegen. Das Sheet bleibt
+              fuer Grundlage/Varianten/Quellenangaben. */}
+          {/* Das Handout ist kein Text zum Lesen, sondern eine Liste zum
+              Abhaken - deshalb hier eine eigene Renderstrecke statt der
+              Abschnitte. Alle anderen Produkte bleiben unveraendert.
+              kernaussage roh statt ueber kurzfassung(): dort steht ein
+              Platzhaltersatz, wenn das Modell keine geliefert hat - der
+              gehoert in die Karte, aber nicht in ein gedrucktes Dokument. */}
+          {fragen.length > 0 ? (
+            <HandoutFragen
+              objekt={objekt}
+              data={data}
+              fragen={fragen}
+              kernaussage={ergebnis?.inhalt?.kernaussage || ""}
+              erstellt={ergebnis?.erstellt}
+            />
+          ) : (
+            <>
+              {abschnitteVon(ergebnis).map((a) => (
+                <div key={a.titel} style={{ marginTop: 12 }}>
+                  <div style={gruppenTitel}>{a.titel}</div>
+                  <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--ct)" }}>{a.text}</div>
+                </div>
               ))}
-            </div>
+
+              {kpisVon(ergebnis).length > 0 && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                  {kpisVon(ergebnis).map((k) => (
+                    <span key={k.label} style={kpiChip}>
+                      {k.label} {k.wert}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           <VariantenBlock varianten={ergebnis?.varianten} max={1} />
@@ -234,14 +273,25 @@ function ProduktZeile({
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: fragen.length > 0 ? "flex-end" : "space-between",
               gap: 8,
               marginTop: 12,
             }}
           >
-            <button type="button" onClick={onOeffnen} style={textLink}>
-              Ganzen Text lesen →
-            </button>
+            {/* Der Text steht jetzt vollstaendig oben - das Sheet traegt nur
+                noch das Drumherum (gerechnete Varianten, Quellenangabe der
+                Ortsmiete, Grundlage der Auswertung). Das Etikett sagt das
+                jetzt auch, statt einen Text zu versprechen, der schon da ist.
+
+                Beim Handout gibt es dieses Drumherum nicht: keine Varianten,
+                keine Ortsmiete, und die Veraltet-Basis ist bewusst leer
+                (RELEVANTE_FELDER.handout). Der Link fuehrte dort in ein Sheet,
+                das WENIGER zeigt als die Karte - deshalb entfaellt er. */}
+            {fragen.length === 0 && (
+              <button type="button" onClick={onOeffnen} style={textLink}>
+                Grundlage & Quellen →
+              </button>
+            )}
             <button type="button" onClick={onStarten} style={{ ...textLink, color: "var(--cl)" }}>
               ↻ Neu
             </button>
@@ -426,6 +476,18 @@ function kurzfassung(ergebnis) {
 function kpisVon(ergebnis) {
   const k = ergebnis?.inhalt?.kpis;
   return Array.isArray(k) ? k.filter((x) => x?.label && x?.wert) : [];
+}
+
+function abschnitteVon(ergebnis) {
+  const a = ergebnis?.inhalt?.abschnitte;
+  return Array.isArray(a) ? a.filter((x) => x?.titel && x?.text) : [];
+}
+
+// Die Fragenliste des Handouts. Nur dieses Produkt hat sie - und auch dort
+// nur, wenn das Ergebnis nach der Umstellung vom 2026-09-08 entstanden ist.
+function fragenVon(ergebnis) {
+  const f = ergebnis?.inhalt?.fragen;
+  return Array.isArray(f) ? f.filter((x) => x?.id && x?.frage) : [];
 }
 
 // ── Stile ───────────────────────────────────────────────────────────────────

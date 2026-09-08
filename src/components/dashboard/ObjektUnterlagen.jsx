@@ -269,6 +269,9 @@ export function ObjektLage({ data, titel }) {
 
       <div style={{ fontSize: 13.5, color: "var(--ct)", marginBottom: 12 }}>{adresse}</div>
 
+      {/* Nur noch EIN Kartenlink (2026-09-08): zwei Knoepfe fuer dasselbe Ziel
+          zwangen zu einer Entscheidung, die niemanden interessiert - wer die
+          Lage sehen will, will sie sehen, nicht den Anbieter waehlen. */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${suche}`}
@@ -277,14 +280,6 @@ export function ObjektLage({ data, titel }) {
           style={kartenLinkStil}
         >
           <span aria-hidden="true">📍</span> In Google Maps öffnen
-        </a>
-        <a
-          href={`https://www.openstreetmap.org/search?query=${suche}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={kartenLinkStil}
-        >
-          OpenStreetMap
         </a>
       </div>
 

@@ -838,15 +838,33 @@ export default function App() {
         .tbar-wrap{display:none}
         /* padding-bottom war der Platz fuer die Tableiste. Ohne sie bliebe
            dort toter Raum. */
-        .shell{max-width:none;padding-left:240px;padding-bottom:40px}
-        .content{max-width:1180px;padding:32px 32px 48px}
-        /* Das Logo steht jetzt ueber der Sidebar-Spalte und liest sich als
-           deren Kopf. Bewusste Abweichung vom Bugreport 2026-08-10: dort
-           sollten Logo und Inhaltskante fluchten. Der Inhalt ist hier in der
-           Restbreite zentriert, eine Flucht ist geometrisch unmoeglich. Das
-           Box-Modell-Argument von damals (Padding auf .hdr-inner, nicht auf
-           .hdr) bleibt unangetastet. */
-        .hdr-inner{max-width:none;padding-left:24px}
+        /* Sidebar UND Inhalt bilden zusammen denselben 1400px-Block, auf den
+           auch die Landingpage (.lp-container) und MyAccount (.ma-body)
+           zentrieren (Bugreport 2026-09-08).
+
+           Vorher stand hier max-width:none: die Sidebar klebte am linken
+           Viewportrand, der Inhalt zentrierte sich in der Restbreite. Auf
+           einem 2560px-Monitor lag die Inhaltsspalte damit rund 120px weiter
+           rechts als auf der Landingpage und war 220px schmaler - beim
+           Wechseln zwischen beiden Seiten sprang das Layout sichtbar.
+
+           Die Sidebar ist position:fixed und kennt den zentrierten Block
+           nicht von selbst; left wandert deshalb rechnerisch mit. max() haelt
+           sie bei schmalen Fenstern am Rand, sonst rutschte sie ins
+           Negative. */
+        .shell{max-width:1400px;margin:0 auto;padding-left:240px;padding-bottom:40px}
+        .sidebar{left:max(0px, calc(50vw - 700px))}
+        .content{max-width:1160px;padding:32px 32px 48px}
+        /* Das Logo steht ueber der Sidebar-Spalte und liest sich als deren
+           Kopf. Seit dem Breiten-Fix 2026-09-08 zentriert der Header auf
+           denselben 1400px-Block wie .shell und die Landingpage - damit
+           fluchtet die linke Logokante wieder mit der Sidebar UND mit dem
+           Landingpage-Inhalt. Genau die Flucht, die der Kommentar hier vorher
+           fuer "geometrisch unmoeglich" erklaerte: sie war es nur, solange
+           .shell max-width:none trug. Das Box-Modell-Argument aus dem
+           Bugreport 2026-08-10 (Padding auf .hdr-inner, nicht auf .hdr)
+           bleibt unangetastet. */
+        .hdr-inner{max-width:1400px;padding-left:24px}
 
         /* ── Verdichtung im Objektbereich ──────────────────────────────────
            Das Eigen-Padding der Objektansichten entfaellt: .content bringt

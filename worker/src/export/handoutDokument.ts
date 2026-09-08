@@ -46,6 +46,17 @@ interface Checkeintrag {
   quelle?: unknown;
 }
 
+// Zwei Herkuenfte, ein Dokument (2026-09-08):
+//   1. Exposé-Scan (FinnHandoutPanel): schickt Findings, Preistabelle,
+//      bekannte Fakten, Verdict - alles aus der clientseitigen Exposé-Analyse.
+//   2. AI-Engine am Objekt (HandoutFragen): kennt kein Exposé, sondern nur die
+//      Fragen des Modells und die Eckdaten des gespeicherten Objekts.
+//
+// Deshalb sind die Exposé-Bloecke seit 2026-09-08 OPTIONAL: fehlt das Feld
+// ganz, entfaellt der Block. Die Unterscheidung laeuft ueber "Feld vorhanden?",
+// nicht ueber "Feld leer?" - der Exposé-Weg schickt immer ein Array, ein leeres
+// Findings-Array bedeutet dort "nichts gefunden" und muss weiterhin den
+// Leer-Satz zeigen. Sein Dokument sieht damit exakt aus wie vorher.
 export interface HandoutAnfrage {
   analyse?: {
     adresse?: unknown;
@@ -57,6 +68,9 @@ export interface HandoutAnfrage {
     preistabelle?: unknown;
     bekannt?: unknown;
     checkliste?: unknown;
+    // Nur der Objekt-Weg: der eine Punkt, an dem der Termin haengt. Steht im
+    // Dokument dort, wo beim Exposé-Weg das Verdict die Einordnung liefert.
+    kernaussage?: unknown;
   };
   auswahl?: unknown;
   labels?: Record<string, unknown>;
@@ -170,8 +184,11 @@ export function baueHandoutDokument(anfrage: HandoutAnfrage, basisUrl: string): 
   const adresse = text(a.adresse, 160);
   const titel = text(a.titel, 200);
   const score = Number(a.verdictScore);
-  const findingsHtml =
-    findings.length > 0
+  // Ohne Findings-Feld (Objekt-Weg) faellt der ganze Block weg. Mit leerem
+  // Array (Exposé-Weg, nichts gefunden) bleibt es beim Leer-Satz wie bisher.
+  const findingsHtml = !Array.isArray(a.findings)
+    ? ""
+    : findings.length > 0
       ? `${sektion(labels.findings)}<table style="width:100%;border-collapse:collapse;margin-bottom:18px">${findings
           .map((f) => findingZeile(f, labels, lang))
           .join("")}</table>`
@@ -180,6 +197,20 @@ export function baueHandoutDokument(anfrage: HandoutAnfrage, basisUrl: string): 
     ? `<div style="font-size:11px;color:${C.akzentDunkel};font-weight:700;margin-top:2px">${esc(
         fuelle(labels.pdfVerdict, { score: score.toFixed(1).replace(".", ",") }),
       )}</div>`
+    : "";
+  // Die Kernaussage traegt beim Objekt-Weg, was beim Exposé-Weg Verdict und
+  // Findings tragen: warum dieser Termin ueberhaupt vorbereitet wird.
+  const kernaussage = text(a.kernaussage, 400);
+  const kernaussageHtml = kernaussage
+    ? `<div style="border-left:3px solid ${C.akzent};padding:2px 0 2px 10px;margin-bottom:16px;font-size:12px;line-height:1.55">${esc(kernaussage)}</div>`
+    : "";
+  const objekttyp = typeof a.objekttyp === "string" ? text(a.objekttyp, 40) : "";
+  const objekttypHtml = objekttyp
+    ? `<div style="font-size:11px;color:${C.leise};margin-top:4px">${esc(objekttyp === "Haus" ? "Haus" : "Eigentumswohnung")} · Kauf</div>`
+    : "";
+  const verdictLabel = text(a.verdictLabel, 60);
+  const verdictLabelHtml = verdictLabel
+    ? `<div style="font-size:11px;color:${C.leise};margin-top:2px">${esc(verdictLabel)}</div>`
     : "";
   const vorOrtHtml =
     vorOrt.length > 0
@@ -201,18 +232,23 @@ body{font-family:'DM Sans',sans-serif;background:#fff;color:${C.text};padding:28
     <img src="${esc(logoUrl(basisUrl))}" alt="" style="height:52px;width:auto;display:block">
     <div>
       <div style="font-size:24px;font-weight:700;letter-spacing:-.4px;line-height:1">immo<span style="color:${C.akzent}">fuchs</span>.info</div>
-      <div style="font-size:11px;color:${C.leise};margin-top:4px">${esc(a.objekttyp === "Haus" ? "Haus" : "Eigentumswohnung")} · Kauf</div>
+      ${objekttypHtml}
     </div>
   </div>
   <div style="text-align:right">
     <div style="font-size:14px;font-weight:700">${esc(labels.titel)}</div>
-    <div style="font-size:11px;color:${C.leise};margin-top:2px">${esc(text(a.verdictLabel, 60))}</div>
+    ${verdictLabelHtml}
     ${verdictHtml}
   </div>
 </div>
 
-<div style="margin-bottom:6px;font-size:15px;font-weight:700">${esc(adresse || "—")}</div>
-<div style="margin-bottom:14px;font-size:11.5px;color:${C.leise}">${esc(titel)}</div>
+<!-- Ohne Adresse ruecht der Titel in die Kopfzeile nach, statt dort einen
+     Gedankenstrich zu zeigen und den Namen des Objekts darunter zu verstecken.
+     Mit Adresse (Regelfall, und beim Exposé-Weg praktisch immer) unveraendert. -->
+<div style="margin-bottom:6px;font-size:15px;font-weight:700">${esc(adresse || titel || "—")}</div>
+<div style="margin-bottom:14px;font-size:11.5px;color:${C.leise}">${esc(adresse ? titel : "")}</div>
+
+${kernaussageHtml}
 
 <div style="background:${C.zart};border-radius:6px;padding:7px 10px;font-size:10px;line-height:1.45;color:${C.text};margin-bottom:16px">${esc(labels.automatisiert)}</div>
 

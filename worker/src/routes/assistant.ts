@@ -21,7 +21,12 @@ import {
   type GerechneteZahl,
   type HebelVariante,
 } from "../analysePrompt";
-import { parseAnalyseOutput } from "../analyseOutput";
+import {
+  parseAnalyseOutput,
+  parseHandoutOutput,
+  type AnalyseErgebnis,
+  type HandoutErgebnis,
+} from "../analyseOutput";
 import { parseExposeOutput } from "../exposeOutput";
 import { authenticate } from "../auth/session";
 import { ermittleZugang, type Zugang } from "../entitlement";
@@ -313,7 +318,11 @@ function extractTier(kontext: Record<string, unknown>): Tier {
 // NUR PRO (Nutzerentscheidung 2026-09-05). Anders als beim Chat gibt es hier
 // kein Testkontingent: die Auswertung wird am Objekt gespeichert und ist damit
 // dauerhaft wertvoll, nicht fluechtig wie eine Chatantwort.
-const ANALYSE_MAX_TOKENS = 900;
+// 2026-09-08 von 900 auf 1500 angehoben: mit vier Abschnitten a 160 Woertern
+// (siehe FORM in analysePrompt.ts) reichten 900 Tokens nicht mehr - das Modell
+// brach mitten im JSON ab, der Parser verwarf die Antwort, und das Kontingent
+// war fuer nichts verbraucht.
+const ANALYSE_MAX_TOKENS = 1500;
 
 // Hoechstens sechs Varianten, jedes Textfeld hoechstens 40 Zeichen: der
 // Client schickt heute vier kurze Zeilen, alles darueber hinaus ist entweder
@@ -469,7 +478,12 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
     return c.json({ error: "modell_nicht_erreichbar" }, 503);
   }
 
-  const ergebnis = parseAnalyseOutput(roh);
+  // Das Handout liefert eine Fragenliste statt Abschnitten und braucht
+  // deshalb seinen eigenen Parser (analyseOutput.ts). Die Verzweigung sitzt
+  // hier und nur hier - die drei anderen Produkte bleiben unveraendert beim
+  // generischen Schema.
+  const ergebnis: AnalyseErgebnis | HandoutErgebnis | null =
+    produkt === "handout" ? parseHandoutOutput(roh) : parseAnalyseOutput(roh);
   if (!ergebnis) {
     await limiter.decrement();
     return c.json({ error: "unbrauchbare_antwort" }, 502);
@@ -480,9 +494,12 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   // wuerde dieser Satz zur "Kernaussage" - der Nutzer bekaeme eine
   // Fehlermeldung als Analyseergebnis serviert. Stattdessen pruefen wir den
   // zusammengesetzten Text und verwerfen im Verdachtsfall das ganze Ergebnis.
+  // Beim Handout sind die Fragen dieser Text: sie sind das Ergebnis.
   const gesamttext = [
     ergebnis.kernaussage,
-    ...ergebnis.abschnitte.map((a) => a.text),
+    ...("fragen" in ergebnis
+      ? ergebnis.fragen.map((f) => f.frage)
+      : ergebnis.abschnitte.map((a) => a.text)),
   ].join(" ");
   if (filterOutput(gesamttext, "de") !== gesamttext) {
     await limiter.decrement();

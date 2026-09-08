@@ -132,3 +132,91 @@ describe("Handout-Dokument", () => {
     expect(html).toContain("−4.200 €");
   });
 });
+
+// Zweite Herkunft seit 2026-09-08: die AI-Engine am Objekt. Sie kennt kein
+// Exposé, also weder Findings noch Preistabelle noch Verdict - nur die Fragen
+// des Modells und die Eckdaten des gespeicherten Objekts.
+//
+// Die Bloecke von oben sind deshalb optional geworden. Die Unterscheidung
+// laeuft ueber "Feld vorhanden?", nicht ueber "Feld leer?": ein leeres
+// findings-Array heisst beim Exposé-Weg "nichts gefunden" und muss weiterhin
+// den Leer-Satz zeigen - genau das prueft der Test "kommt ohne Findings aus"
+// oben, und er laeuft unveraendert weiter.
+const OBJEKT: HandoutAnfrage = {
+  lang: "de",
+  labels: LABELS,
+  auswahl: ["1-zustand", "2-zustand"],
+  analyse: {
+    titel: "Kapitalanlage Ingersheim",
+    adresse: "74379 Ingersheim",
+    kernaussage: "Am Termin hängt alles am Sanierungsstand der Heizung.",
+    checkliste: [
+      { id: "1-zustand", frage: "Wann wurde die Heizung erneuert?", kategorie: "ZUSTAND" },
+      { id: "2-zustand", frage: "Feuchtigkeitsspuren im Keller?", kategorie: "ZUSTAND", quelle: "vor_ort" },
+    ],
+  },
+};
+
+describe("Handout-Dokument - Fragenliste vom Objekt (ohne Exposé)", () => {
+  it("laesst die Exposé-Bloecke weg, statt leere Ueberschriften zu drucken", () => {
+    const html = baueHandoutDokument(OBJEKT, BASIS);
+    expect(html).not.toContain(LABELS.findings);
+    expect(html).not.toContain(LABELS.leer);
+    expect(html).not.toContain(LABELS.preis);
+    expect(html).not.toContain(LABELS.bekannt);
+    expect(html).not.toContain("Finn-Einschätzung");
+    // Ohne bekannten Objekttyp keine geratene "Eigentumswohnung" im Kopf.
+    expect(html).not.toContain("Eigentumswohnung");
+  });
+
+  it("traegt Kernaussage, Adresse und beide Fragenbloecke", () => {
+    const html = baueHandoutDokument(OBJEKT, BASIS);
+    expect(html).toContain("Am Termin hängt alles am Sanierungsstand der Heizung.");
+    expect(html).toContain("74379 Ingersheim");
+    expect(html).toContain(LABELS.offen);
+    expect(html).toContain("Wann wurde die Heizung erneuert?");
+    expect(html).toContain(LABELS.vorOrt);
+    expect(html).toContain("Feuchtigkeitsspuren im Keller?");
+  });
+
+  it("bleibt ein vollstaendiges Dokument mit Kopf, GR-01-Hinweis und Fusszeile", () => {
+    const html = baueHandoutDokument(OBJEKT, BASIS);
+    expect(html).toContain("<!DOCTYPE html>");
+    expect(html).toContain(LABELS.titel);
+    expect(html).toContain(LABELS.automatisiert);
+    expect(html).toContain("Erstellt mit Finn · immofuchs.info");
+  });
+
+  it("druckt auch hier nur die ausgewaehlten Fragen", () => {
+    const html = baueHandoutDokument({ ...OBJEKT, auswahl: ["1-zustand"] }, BASIS);
+    expect(html).toContain("Wann wurde die Heizung erneuert?");
+    expect(html).not.toContain("Feuchtigkeitsspuren im Keller?");
+  });
+
+  it("nimmt den Titel in die Kopfzeile, wenn keine Adresse vorliegt", () => {
+    const html = baueHandoutDokument(
+      { ...OBJEKT, analyse: { ...OBJEKT.analyse, adresse: undefined } },
+      BASIS,
+    );
+    expect(html).toContain("Kapitalanlage Ingersheim");
+    expect(html).not.toContain(">—<");
+  });
+
+  it("maskiert Freitext des Modells", () => {
+    const html = baueHandoutDokument(
+      {
+        ...OBJEKT,
+        auswahl: ["x"],
+        analyse: {
+          ...OBJEKT.analyse,
+          kernaussage: "<img onerror=alert(1)>",
+          checkliste: [{ id: "x", frage: "<script>alert(1)</script>", kategorie: "ZUSTAND" }],
+        },
+      },
+      BASIS,
+    );
+    expect(html).not.toContain("<script>alert(1)</script>");
+    expect(html).not.toContain("<img onerror");
+    expect(html).toContain("&lt;script&gt;");
+  });
+});

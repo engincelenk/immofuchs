@@ -13,13 +13,24 @@
 
 export type AnalyseProdukt = "analyse" | "hebel" | "preis" | "handout";
 
+// Laengen 2026-09-08 angehoben (Nutzerwunsch "generierte Texte komplett
+// ausgeben"): Der Client zeigt die Abschnitte jetzt direkt in der Karte statt
+// nur die Kernaussage hinter einem "Ganzen Text lesen"-Link. Die vorherigen
+// 90 Woerter je Abschnitt waren auf eine dreizeilige Vorschau ausgelegt und
+// schnitten Begruendungen mitten im Gedanken ab.
+//
+// Die Obergrenzen bleiben trotzdem bestehen: ohne sie laeuft das Modell in
+// die Token-Grenze und liefert abgeschnittenes, unparsbares JSON - genau der
+// Fall, den parseAnalyseOutput als "unbrauchbare_antwort" verwerfen muesste,
+// nachdem das Kontingent schon verbraucht ist.
 const FORM = `Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Markdown-Zaun, ohne Vorrede:
 {
-  "kernaussage": "Ein Absatz, hoechstens 240 Zeichen. Das Fazit steht im ERSTEN Satz.",
+  "kernaussage": "Ein Absatz, hoechstens 400 Zeichen. Das Fazit steht im ERSTEN Satz.",
   "kpis": [{"label": "kurz", "wert": "z.B. 3,4 %", "ton": "gut|neutral|schwach"}],
-  "abschnitte": [{"titel": "GROSSBUCHSTABEN, ein bis zwei Woerter", "text": "hoechstens 90 Woerter"}]
+  "abschnitte": [{"titel": "GROSSBUCHSTABEN, ein bis zwei Woerter", "text": "hoechstens 160 Woerter"}]
 }
-Hoechstens 3 kpis und hoechstens 3 abschnitte.`;
+Hoechstens 3 kpis und hoechstens 4 abschnitte. Schoepfe die Laenge aus, wenn es etwas zu sagen
+gibt - aber fuelle nicht mit Allgemeinplaetzen auf, wenn die Datenlage duenn ist.`;
 
 const HALTUNG = `Du bewertest aus der Sicht eines erfahrenen, nuechternen Kapitalanlegers in Deutschland.
 
@@ -118,13 +129,34 @@ ${FORM}`;
 // Verhandlungsposition zu verderben. Genau das ist der Mehrwert gegenueber
 // einer generischen Checkliste aus dem Netz.
 //
-// Die Form bleibt bewusst dieselbe wie bei den anderen Produkten
-// (kernaussage/kpis/abschnitte) - der Client rendert alle vier Produkte mit
-// demselben Code, ein eigenes Schema waere eine zweite Renderstrecke fuer
-// denselben Zweck.
+// EIGENE FORM statt FORM (Nutzer-Vorgabe 2026-09-08): Bis dahin lieferte auch
+// dieses Produkt kernaussage/kpis/abschnitte - also Fliesstext. Das war die
+// falsche Form fuer den Zweck. Der Nutzer soll einzelne Fragen abwaehlen und
+// den Rest ausdrucken; an einem Absatz kann man nichts abwaehlen. Genau das
+// konnte das aeltere Handout im Exposé-Kontext (FinnHandoutPanel) laengst.
+//
+// Die drei anderen Produkte behalten FORM unveraendert - der Client
+// unterscheidet nach Produkt, siehe parseHandoutOutput in analyseOutput.ts.
+const HANDOUT_FORM = `Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Markdown-Zaun, ohne Vorrede:
+{
+  "kernaussage": "Ein Absatz, hoechstens 400 Zeichen: der eine Punkt, an dem der Termin haengt.",
+  "fragen": [
+    {
+      "frage": "Die Frage im Wortlaut, in dem man sie stellen wuerde. Hoechstens 200 Zeichen.",
+      "kategorie": "EIN Wort in Grossbuchstaben, z.B. ZUSTAND, UNTERLAGEN, VERHANDLUNG, MIETE, KOSTEN, LAGE",
+      "kern": true,
+      "vorOrt": false
+    }
+  ]
+}
+Hoechstens 12 fragen, und keine Frage doppelt.
+"kern": true nur bei den Fragen, ohne deren Antwort man nicht entscheiden kann - hoechstens 5 davon.
+"vorOrt": true, wenn man es beim Termin selbst anschaut, statt jemanden zu fragen.
+Lieber acht Fragen, die aus den Befunden dieses Objekts folgen, als zwoelf mit Fuellmaterial.`;
+
 const HANDOUT = `${HALTUNG}
 
-Deine Aufgabe: Erstelle die Vorbereitung fuer den Besichtigungstermin dieses Objekts.
+Deine Aufgabe: Erstelle die Fragenliste fuer den Besichtigungstermin dieses Objekts.
 
 Wenn der Abschnitt "Bisherige Befunde" mitgeliefert ist, stammt er aus den bereits
 erstellten Auswertungen zu genau diesem Objekt. Leite deine Fragen DARAUS ab, statt eine
@@ -132,14 +164,11 @@ allgemeine Checkliste zu wiederholen: Was in den Befunden unsicher, auffaellig o
 begruendungsbeduerftig ist, gehoert vor Ort geklaert. Wiederhole die Befunde nicht, sondern
 mache Fragen daraus.
 
-Formuliere in den Abschnitten jeweils konkrete Fragen, die vor Ort gestellt oder geprueft
-werden - eine Frage je Zeile, in der Sprache, in der man sie tatsaechlich stellen wuerde.
+Jede Frage ist eine einzelne, konkrete Frage - kein Themenblock, keine Aufzaehlung mehrerer
+Fragen in einem Eintrag. Formuliere sie so, wie man sie beim Termin tatsaechlich stellt.
 Keine Fragen, deren Antwort bereits in den Kennzahlen steht.
 
-Die Abschnitte sollten typischerweise ZUSTAND, UNTERLAGEN und VERHANDLUNG heissen.
-Die kernaussage nennt den einen Punkt, an dem der Termin haengt.
-
-${FORM}`;
+${HANDOUT_FORM}`;
 
 export function systemPromptFuer(produkt: AnalyseProdukt): string {
   if (produkt === "hebel") return HEBEL;

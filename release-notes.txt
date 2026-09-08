@@ -1,3 +1,100 @@
+## 2026-09-08 (1.72.0)
+
+### Desktop-Breiten wieder buendig, Belege lesbar, Auswertungen vollstaendig
+
+Vier Befunde aus einem Durchgang am Desktop.
+
+**1. Rechner- und Landingpage-Inhalt lagen unterschiedlich breit und versetzt**
+`.shell` verlor ab 1280px sein max-width:1400px: die Sidebar klebte am linken
+Viewportrand, der Inhalt zentrierte sich in der Restbreite. Auf einem breiten
+Monitor lag die Rechnerspalte damit rund 120px weiter rechts und war 220px
+schmaler als Landingpage (.lp-container) und Profil (.ma-body) - beim
+Wechseln sprang das Layout sichtbar.
+
+Jetzt bilden Sidebar und Inhalt EINEN 1400px-Block, zentriert wie die beiden
+anderen Bereiche. Die Sidebar ist position:fixed und kennt diesen Block nicht
+von selbst, ihr left wandert deshalb rechnerisch mit
+(max(0px, calc(50vw - 700px))). Der Header zentriert auf denselben Block und
+fluchtet damit wieder mit Sidebar UND Landingpage-Inhalt - genau die Flucht,
+die der Kommentar an dieser Stelle bis heute fuer "geometrisch unmoeglich"
+erklaerte. Sie war es nur, solange max-width:none dort stand.
+
+**2. Belege sahen aus wie zufaellig verteilter Text**
+Das Feldraster nutzte auto-fit mit minmax(148px, 1fr). Auf dem Handy ergab
+das die gewollten zwei Spalten - auf der 1116px breiten Desktop-Karte aber
+SIEBEN. Eine Gruppe mit drei Feldern verteilte sich ueber die volle Breite,
+mit vier leeren Spalten dahinter: Label und Wert standen weit voneinander
+entfernt im Nichts. auto-fit fuellt die Breite, statt eine Lesestruktur zu
+halten. Jetzt feste Spaltenzahl je Stufe (2/3/4), gedeckelt bei vier und auf
+900px begrenzt; der Rest der Breite bleibt bewusst leer.
+
+**3. Auswertungstexte standen nur zur Haelfte in der Karte**
+Sichtbar war die Kernaussage, alles Weitere lag hinter "Ganzen Text lesen".
+Dieselbe Begruendung wie beim Aufklappen der AI-Sektion: was Kontingent
+gekostet hat, darf nicht hinter einem weiteren Klick liegen. Die Abschnitte
+stehen jetzt direkt in der Karte, das Sheet traegt nur noch Grundlage,
+Varianten und Quellenangaben - und heisst deshalb "Grundlage & Quellen".
+Passend dazu angehoben: Kernaussage 240 -> 400 Zeichen, Abschnittstext
+90 -> 160 Woerter, drei -> vier Abschnitte, Token-Budget 900 -> 1500 (ohne das
+letzte waere das JSON mitten in der Antwort abgebrochen).
+
+**4. Kleinkram**
+Der zweite Kartenlink (OpenStreetMap) ist entfallen - zwei Knoepfe fuer
+dasselbe Ziel zwangen zu einer Entscheidung, die niemanden interessiert. Die
+Sektion "Unterlagen" ist entfallen: die Ablage lag rein im Browser des
+jeweiligen Geraets, war auf keinem zweiten sichtbar und versprach als Ablage
+mehr, als sie halten konnte.
+
+**Nicht behoben, weil kein Code-Fehler:** Der Apple-Login scheitert an einer
+fehlenden Return-URL im Apple Developer Portal. Einzutragen ist
+https://api-dev.immofuchs.info/api/v1/auth/apple/callback (Service-ID ->
+Sign in with Apple -> Configure), dazu die Domain api-dev.immofuchs.info.
+Apple prueft exakt; fehlt der Eintrag, endet der Flow in invalid_client.
+
+## 2026-09-08 (1.71.0)
+
+### Das Besichtigungshandout wird eine Fragenliste zum Abhaken - mit PDF
+
+Seit 1.70.0 hat das Handout ein Backend, lieferte aber dieselbe Form wie die
+drei Auswertungen: Kernaussage plus Abschnitte, also Fliesstext. Das war die
+falsche Form fuer den Zweck. Was der Nutzer zum Termin braucht, ist eine
+Liste, aus der er einzelne Fragen abwaehlt und den Rest ausdruckt - an einem
+Absatz kann man nichts abwaehlen. Genau das konnte das aeltere Handout aus
+dem Exposé-Scan (FinnHandoutPanel) laengst; die AI-Engine am Objekt kann es
+jetzt auch.
+
+**Worker: eigenes Schema nur fuer dieses Produkt**
+Der HANDOUT-Prompt verlangt jetzt {kernaussage, fragen:[{frage, kategorie,
+kern, vorOrt}]}, ein zweiter Parser (parseHandoutOutput) haertet die Antwort
+und vergibt stabile IDs ("3-unterlagen") - sie verbinden die Auswahl im
+Browser mit den Fragen im gedruckten Dokument. Hoechstens 12 Fragen: mehr
+passen weder auf die eine A4-Seite, die man mitnimmt, noch in ein Kontingent,
+das bei abgeschnittenem JSON ohne Ergebnis verbraucht waere. Die drei anderen
+Produkte bleiben unveraendert beim generischen Schema; der Aufrufer waehlt
+den Parser nach Produkt.
+
+Der Fliesstext-Rettungsanker unterscheidet sich bewusst vom generischen
+Parser: dort wird Prosa zur Kernaussage, hier werden Zeilen, die auf "?"
+enden, zu Fragen. Eine Fragenliste ohne Fragen waere nicht bedienbar.
+
+**Objekt-Screen: Kaestchen, Vorauswahl, Gedaechtnis**
+Die Handout-Karte zeigt die Fragen getrennt nach "An den Makler" und "Vor Ort
+pruefen", vorausgewaehlt ist alles, was das Modell als kern markiert hat. Die
+Auswahl ueberlebt den Reload (Ablage aus finnAuswahl.js, Schluessel je Objekt
+UND je Lauf - nach einem Neu-Erstellen wuerden die wiederverwendeten IDs sonst
+Haken auf fremde Fragen setzen).
+
+**PDF ueber denselben Endpunkt wie das Finn-Handout**
+/export/handout kann jetzt beide Herkuenfte: Findings, Preistabelle und
+Verdict sind optional, fehlt das Feld ganz, entfaellt der Block. Ein leeres
+Findings-Array heisst weiterhin "nichts gefunden" und zeigt den Leer-Satz -
+das Exposé-Dokument sieht damit exakt aus wie vorher. Neu ist ein optionaler
+Kernaussage-Block. Ohne Abo fuehrt der Knopf in den Kauf-Assistenten, nicht
+in eine Fehlermeldung (der Worker antwortet ohnehin mit 402).
+
+Aeltere, vor der Umstellung gespeicherte Handouts behalten ihre Abschnitts-
+ansicht - eine bezahlte Auswertung darf nicht nachtraeglich leer werden.
+
 ## 2026-09-08 (1.70.0)
 
 ### Besichtigungshandout existiert wirklich, und "Objekt analysieren" erfindet keine Preise mehr
