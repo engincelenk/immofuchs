@@ -1,3 +1,27 @@
+## 2026-09-09 (1.75.1)
+
+### Apple-Login: eingeloggt am Server, aber "Anmelden" blieb sichtbar
+
+Nach dem Setzen der APPLE_*-Secrets und der Domain-Konfiguration im Apple
+Developer Portal lief der Login bis zu Apples eigener Anmeldeseite durch -
+aber nach erfolgreicher Anmeldung zeigte die App weiterhin "Anmelden" statt
+den eingeloggten Zustand.
+
+Ursache: derselbe Bug-Typ wie der bereits behobene OAuth-State-Cookie-Fehler
+(Commit 50178b0, 28.08.) - nur eine Ebene tiefer. Apple ruft den Callback per
+`response_mode=form_post` auf, das ist ein Cross-Site-POST von
+appleid.apple.com. Der damalige Fix stellte das State-Cookie auf
+SameSite=None um, das SESSION-Cookie direkt danach im selben Response blieb
+aber bei SameSite=Lax. Das fiel nie auf, weil vor dem State-Fix jeder
+Apple-Login schon vorher scheiterte - dieser Code-Pfad wurde nie erreicht.
+Jetzt, wo der Login bis dorthin durchlaeuft, trifft er auf dasselbe Problem
+eine Stufe spaeter: Safari persistiert das Lax-Cookie in diesem
+Cross-Site-POST-Kontext nicht zuverlaessig.
+
+Neue Funktion `buildSessionCookieCrossSite()` (SameSite=None), ausschliesslich
+fuer den Apple-Callback. Google/Magic-Link/Passwort bleiben unveraendert bei
+SameSite=Lax - dort besteht dieselbe Cross-Site-POST-Situation nicht.
+
 ## 2026-09-09 (1.75.0)
 
 ### Zwei Objektarten in "Meine Objekte", fuenf neue KI-Produkte fuer die Nicht-Rendite-Rechner

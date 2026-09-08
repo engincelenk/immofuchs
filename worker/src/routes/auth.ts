@@ -212,7 +212,14 @@ authRoutes.post("/apple/callback", async (c) => {
     if (!result.ok) {
       return c.redirect(`${base}/?login_error=oauth_email_taken&providers=${encodeURIComponent(result.providers.join(","))}`, 302);
     }
-    const { cookie } = await login(c.env, result.user.id, c.req.header("User-Agent") || null);
+    // crossSite: true - Apple ruft diesen Callback per response_mode=form_post
+    // auf (Cross-Site-POST von appleid.apple.com), dasselbe Set-Cookie-Problem
+    // wie beim OAuth-State-Cookie (siehe Kommentar bei
+    // buildSessionCookieCrossSite in session.ts). Google/Magic-Link/Passwort
+    // rufen login() weiterhin ohne dieses Flag auf.
+    const { cookie } = await login(c.env, result.user.id, c.req.header("User-Agent") || null, {
+      crossSite: true,
+    });
     c.header("Set-Cookie", cookie, { append: true });
     return c.redirect(`${base}/?login_success=1`, 302);
   } catch (err) {

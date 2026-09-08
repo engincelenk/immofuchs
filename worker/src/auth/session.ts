@@ -12,6 +12,20 @@ export function buildSessionCookie(sessionId: string): string {
   return `${COOKIE_NAME}=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${SESSION_MAX_AGE_S}`;
 }
 
+// Cross-Site-Variante, NUR fuer den Apple-Callback (Bugreport 2026-09-09):
+// Apple nutzt response_mode=form_post, der Callback ist damit ein
+// Cross-Site-POST von appleid.apple.com. Dieselbe Ursache wie beim
+// OAuth-State-Cookie (Fix 50178b0, 28.08.) - dort wurde SameSite=None fuer
+// die Apple-Routen ergaenzt, das SESSION-Cookie direkt danach im selben
+// Response aber uebersehen. Fiel vorher nicht auf: bis 50178b0 scheiterte
+// jeder Apple-Login schon am State-Abgleich, dieser Code-Pfad wurde nie
+// erreicht. Login/Google/Magic-Link/Passwort bleiben bei Lax (keine
+// Cross-Site-POST-Situation, keine Notwendigkeit, das schwaechere SameSite
+// dort einzufuehren).
+export function buildSessionCookieCrossSite(sessionId: string): string {
+  return `${COOKIE_NAME}=${sessionId}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${SESSION_MAX_AGE_S}`;
+}
+
 export function buildClearSessionCookie(): string {
   return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
 }
@@ -58,9 +72,13 @@ export async function login(
   env: Env,
   userId: string,
   userAgent: string | null,
+  opts: { crossSite?: boolean } = {},
 ): Promise<{ session: SessionRow; cookie: string }> {
   const session = await createSession(env.DB, userId, userAgent);
-  return { session, cookie: buildSessionCookie(session.id) };
+  const cookie = opts.crossSite
+    ? buildSessionCookieCrossSite(session.id)
+    : buildSessionCookie(session.id);
+  return { session, cookie };
 }
 
 export async function logout(env: Env, sessionId: string): Promise<void> {
