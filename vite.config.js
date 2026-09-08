@@ -46,6 +46,11 @@ export default defineConfig({
     // sonst faelschlich aufgreifen (dasselbe Muster wie beim fruehen
     // 1.55.99-Playwright-Setup, siehe dessen release-notes.txt-Eintrag).
     // Eigene Befehle: `npm run test:e2e` / `npm run test:browser`.
-    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
+    // .claude/worktrees/**: Agenten-Sitzungen legen dort eigene Arbeitskopien
+    // des Repos an (eigener Branch, eigener Stand). Ohne diesen Ausschluss
+    // sammelt Vitest deren Testdateien mit ein - am 2026-09-08 waren das 68
+    // "Fehler" aus einer verwaisten Kopie, die mit dem Arbeitsstand nichts zu
+    // tun hatten, inklusive der dort NICHT ausgeschlossenen e2e-Suite.
+    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**", "**/.claude/worktrees/**"],
   },
 });

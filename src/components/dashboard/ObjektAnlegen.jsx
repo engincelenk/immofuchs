@@ -1,55 +1,45 @@
-// Schritt B3 des Umbauplans - der Erstkontakt: fuenf Felder statt vierzig.
+// Einstieg fuer "Objekt anlegen" und "Objekt bearbeiten" - zwei Modi, eine
+// Komponente, damit die Aufrufer (Merkliste.jsx, ObjektDetail.jsx) nicht
+// zwischen zwei Importen unterscheiden muessen.
 //
-// Zwei gleichrangige Wege nebeneinander. Der Exposé-Weg steht bewusst an
-// Position 1 (Konzept 3.9): PDF hinein, vierzig Felder gefuellt - das ist der
-// eigentliche KI-Moment und unschlagbar gegenueber Handeingabe. In der
-// Analyse-Vorlage liegt der Upload in den Objektdaten vergraben; dort
-// verschenkt sie ihre staerkste Karte.
+//   bearbeiten=false → mehrstufiger Assistent (ObjektAnlegenWizard.jsx)
+//   bearbeiten=true  → einfaches Formular, genau wie bisher
 //
-// Nach dem Absenden erscheint sofort ein Ergebnis - mit offengelegten
-// Annahmen (utils/annahmen.js), nicht mit verschwiegenen.
-import { Fragment, useState, useRef, useEffect } from "react";
+// Der Bearbeiten-Modus bleibt bewusst ein Formular: dort existiert das Objekt
+// laengst, der Nutzer kommt mit einem konkreten Aenderungswunsch und will
+// nicht durch acht Schritte laufen, um ein Feld zu korrigieren.
+//
+// Der Anlege-Weg ist seit 2026-09-07 der Wizard. Vorher fragte diese Datei
+// fuenf Felder ab und alles Weitere (Zins, Baujahr, Steuersatz, ...) war beim
+// Anlegen nicht erreichbar; ein Exposé-Scan mit vielen Treffern oeffnete
+// zusaetzlich einen eigenen Review-Stepper (ObjektAnlegenExposeReview.jsx).
+// Beide Wege sind in den Wizard aufgegangen - der Exposé-Scan fuellt jetzt
+// dieselben thematischen Schritte vor, statt einen zweiten Flow zu oeffnen.
+import { Fragment, useState } from "react";
 import { annahmenFuer, annahmenText } from "../../utils/annahmen.js";
 import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
 import { BL_O, BL_N } from "../../data.js";
 import { PLZ_DB } from "../../data/plzData.js";
-import { MIN_ZEICHEN, kuerzelFuerBundesland, sucheAdressen } from "../../utils/adressSuche.js";
-import { useApp } from "../../context/AppContext.jsx";
-import { useAssistant } from "../../hooks/useAssistant.js";
+import { kuerzelFuerBundesland } from "../../utils/adressSuche.js";
 import { EXPOSE_T } from "../../i18n/expose.js";
+import { useApp } from "../../context/AppContext.jsx";
 import { baueZeilen, uebernehmeZeilen } from "../../utils/exposeMapping.js";
 import {
-  MAX_PDF_PAGES,
-  UPLOAD_FEHLER,
-  pruefeAuswahl,
-  schaetzePdfSeiten,
-} from "../../utils/exposeUpload.js";
-import { ExposeUploadProgress } from "../assistant/ExposeUploadProgress.jsx";
-import { ObjektAnlegenExposeReview } from "./ObjektAnlegenExposeReview.jsx";
+  AdressSuche,
+  ExposePanel,
+  ObjektAnlegenWizard,
+  PlzOrtFelder,
+  beschriftungStil,
+  eingabeStil,
+  exposeKnopfStil,
+  knopfStil,
+} from "./ObjektAnlegenWizard.jsx";
 
-// 2026-09-07: Ab wie vielen uebernehmbaren Feldern der Review-Stepper statt
-// der bisherigen Direktuebernahme in die fuenf Kernfelder erscheint. "5 oder
-// weniger" bleibt der bisherige Weg (Konzept-Vorgabe), "mehr als 5" oeffnet
-// den Stepper (ObjektAnlegenExposeReview.jsx).
-const EXPOSE_REVIEW_SCHWELLE = 5;
-
-// Dieselbe Kennung wie im globalen Exposé-Sheet (ObjektExpose.jsx) - ein
-// einmal gegebenes Einverstaendnis gilt fuer beide Wege, der Nutzer wird
-// nicht doppelt gefragt.
-const CONSENT_KEY = "if_expose_consent";
-
-// PLZ und Ort sind Pflicht: ohne sie laesst sich ein Objekt in der
-// Ortsansicht nicht einordnen, die Grunderwerbsteuer nicht aus dem Bundesland
-// ableiten und spaeter keine Lage anzeigen. Sie stehen deshalb gleich hinter
-// dem Namen, nicht als optionaler Nachtrag.
-// Reihenfolge folgt dem Denken beim Anlegen: erst wo, dann was es kostet.
-// PLZ und Ort stehen deshalb direkt hinter dem Namen (eingefuegt beim
-// Rendern), nicht hinter den Geldbetraegen.
-//
-// `maxBreite` deckelt die Feldbreite nach dem erwarteten Inhalt. Die Breite
-// eines Eingabefelds ist eine Zusage daran, wie viel hineingehoert - ein
-// 690 px breites Feld fuer "60" (Quadratmeter) verspricht etwas anderes, als
-// es meint. Der Name bleibt ungedeckelt, dort sind lange Adressen normal.
+// Die Felder des Bearbeiten-Formulars. `maxBreite` deckelt die Feldbreite nach
+// dem erwarteten Inhalt - die Breite eines Eingabefelds ist eine Zusage
+// darueber, wie viel hineingehoert; ein 690 px breites Feld fuer "60"
+// (Quadratmeter) verspricht etwas anderes, als es meint. Der Name bleibt
+// ungedeckelt, dort sind lange Adressen normal.
 const FELDER = [
   { key: "name", label: "Name oder Adresse", typ: "text", pflicht: true },
   { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", pflicht: true, maxBreite: 220 },
@@ -65,162 +55,87 @@ const FELDER = [
   { key: "eigenkapital", label: "Eigenkapital", typ: "zahl", einheit: "€", maxBreite: 220 },
 ];
 
-// startwerte + bearbeiten: dieselbe Maske legt an und bearbeitet. Ein
-// getrenntes Bearbeiten-Formular waere eine zweite Stelle, an der die
-// Pflichtfelder und die Vorschau gepflegt werden muessten.
 export function ObjektAnlegen({
   onAnlegen,
   onExpose,
   onAbbrechen,
+  onFertig,
   t,
   startwerte = null,
   startName = "",
   bearbeiten = false,
 }) {
-  const [werte, setWerte] = useState(() =>
-    startwerte
-      ? {
-          name: startName,
-          plz: startwerte.plz || "",
-          ort: startwerte.ort || "",
-          kaufpreis: startwerte.kaufpreis || "",
-          flaeche: startwerte.flaeche || "",
-          kaltmiete: startwerte.kaltmiete || "",
-          eigenkapital: startwerte.eigenkapital || "",
-          strasse: startwerte.strasse || "",
-          hausnummer: startwerte.hausnummer || "",
-          lat: startwerte.lat,
-          lon: startwerte.lon,
-        }
-      : {},
+  // Keine Hooks vor dieser Weiche - beide Zweige sind eigenstaendige
+  // Komponenten mit eigenem State.
+  if (!bearbeiten) {
+    return (
+      <ObjektAnlegenWizard
+        t={t}
+        onAnlegen={onAnlegen}
+        onFertig={onFertig}
+        onAbbrechen={onAbbrechen}
+      />
+    );
+  }
+  return (
+    <BearbeitenFormular
+      t={t}
+      onAnlegen={onAnlegen}
+      onExpose={onExpose}
+      onAbbrechen={onAbbrechen}
+      startwerte={startwerte}
+      startName={startName}
+    />
   );
-  const [bundesland, setBundesland] = useState(startwerte?.bundesland || "");
+}
 
-  // 2026-09-07: eigene, lokale Exposé-Extraktion statt des globalen,
-  // objektlosen ObjektExpose-Sheets - siehe Kommentar am Exposé-Knopf unten.
-  // Nur aktiv, wenn kein `onExpose` von aussen uebergeben wird (das bleibt
-  // ausschliesslich der Weg aus ObjektDetail.jsx fuer ein BESTEHENDES Objekt).
+function BearbeitenFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, startName }) {
   const { lang } = useApp() || {};
-  const xt = EXPOSE_T[lang] || EXPOSE_T.de;
-  const {
-    messages: exMessages,
-    status: exStatus,
-    extrahiereExpose,
-    uploadFortschritt,
-    exposeFehler,
-    recordConsent,
-  } = useAssistant();
-  const exFileRef = useRef(null);
-  const [exposeUiOffen, setExposeUiOffen] = useState(false);
-  const [exBilder, setExBilder] = useState([]);
-  const [exPdf, setExPdf] = useState(null);
-  const [exThumbs, setExThumbs] = useState([]);
-  const [exAuswahlFehler, setExAuswahlFehler] = useState(null);
-  const [exConsentOffen, setExConsentOffen] = useState(false);
-  // Review-Stepper (ObjektAnlegenExposeReview.jsx) bei mehr als
-  // EXPOSE_REVIEW_SCHWELLE uebernehmbaren Feldern - sonst null, das Formular
-  // bleibt sichtbar.
-  const [reviewData, setReviewData] = useState(null);
-  const exVerarbeitetIndex = useRef(-1);
-  const exLaeuft = exStatus === "uploading" || exStatus === "extracting";
-
-  useEffect(() => {
-    return () => exThumbs.forEach((url) => URL.revokeObjectURL(url));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Wertet ein frisch eingetroffenes Extraktionsergebnis aus: bei mehr als
-  // EXPOSE_REVIEW_SCHWELLE uebernehmbaren Feldern oeffnet der Review-Stepper
-  // VOR der Objekterstellung, sonst werden die Werte wie bisher direkt in die
-  // fuenf Kernfelder uebernommen. `autoSave:false` (siehe useAssistant.js)
-  // verhindert dabei ein zusaetzliches, automatisch angelegtes Objekt - hier
-  // entsteht das Objekt ausschliesslich ueber onAnlegen.
-  useEffect(() => {
-    if (onExpose) return; // onExpose vorhanden -> alter Weg (ObjektDetail.jsx), hier nichts tun
-    const idx = exMessages.length - 1;
-    if (idx < 0 || idx === exVerarbeitetIndex.current) return;
-    const nachricht = exMessages[idx];
-    if (nachricht.role !== "expose") return;
-    exVerarbeitetIndex.current = idx;
-    const zeilen = baueZeilen(nachricht.ergebnis, {}, xt);
-    const uebernehmbareZeilen = zeilen.filter((z) => z.uebernehmbar);
-    if (uebernehmbareZeilen.length > EXPOSE_REVIEW_SCHWELLE) {
-      setReviewData({ zeilen, ergebnis: nachricht.ergebnis });
-    } else {
-      const auswahl = new Set(uebernehmbareZeilen.map((z) => z.key));
-      const lokalesSetzen = (k, v) => (k === "bundesland" ? setBundesland(v) : setzen(k, v));
-      uebernehmeZeilen(zeilen, auswahl, lokalesSetzen, nachricht.ergebnis);
-    }
-    setExposeUiOffen(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exMessages]);
-
-  const exDateiDialog = () => {
-    let bekannt = false;
-    try {
-      bekannt = localStorage.getItem(CONSENT_KEY) === "1";
-    } catch {
-      bekannt = false;
-    }
-    if (!bekannt) {
-      setExConsentOffen(true);
-      return;
-    }
-    exFileRef.current?.click();
-  };
-
-  const exConsentGeben = () => {
-    try {
-      localStorage.setItem(CONSENT_KEY, "1");
-    } catch {
-      /* Speicher blockiert - dann wird beim naechsten Mal erneut gefragt */
-    }
-    setExConsentOffen(false);
-    recordConsent();
-    exFileRef.current?.click();
-  };
-
-  const exHandleDateien = async (e) => {
-    const gewaehlt = Array.from(e.target.files || []);
-    e.target.value = "";
-    if (gewaehlt.length === 0) return;
-    const geprueft = pruefeAuswahl(gewaehlt, exBilder, exPdf);
-    if (geprueft.fehler) {
-      setExAuswahlFehler(geprueft.fehler);
-      return;
-    }
-    if (geprueft.pdf) {
-      const seiten = await schaetzePdfSeiten(geprueft.pdf);
-      if (seiten !== null && seiten > MAX_PDF_PAGES) {
-        setExAuswahlFehler(UPLOAD_FEHLER.PDF_ZU_VIELE_SEITEN);
-        return;
-      }
-    }
-    setExAuswahlFehler(null);
-    setExBilder((alt) => [...alt, ...geprueft.bilder]);
-    setExThumbs((alt) => [...alt, ...geprueft.bilder.map((f) => URL.createObjectURL(f))]);
-    if (geprueft.pdf) setExPdf(geprueft.pdf);
-  };
-
-  const exEntferneBild = (index) => {
-    URL.revokeObjectURL(exThumbs[index]);
-    setExThumbs((alt) => alt.filter((_, i) => i !== index));
-    setExBilder((alt) => alt.filter((_, i) => i !== index));
-  };
-
-  const exStarten = () => {
-    if (exBilder.length === 0 && !exPdf) return;
-    const zuSenden = exBilder;
-    const pdfZuSenden = exPdf;
-    exThumbs.forEach((url) => URL.revokeObjectURL(url));
-    setExThumbs([]);
-    setExBilder([]);
-    setExPdf(null);
-    setExAuswahlFehler(null);
-    extrahiereExpose(zuSenden, pdfZuSenden, lang || "de", false);
-  };
+  const [werte, setWerte] = useState(() => ({
+    name: startName,
+    plz: startwerte?.plz || "",
+    ort: startwerte?.ort || "",
+    kaufpreis: startwerte?.kaufpreis || "",
+    flaeche: startwerte?.flaeche || "",
+    kaltmiete: startwerte?.kaltmiete || "",
+    eigenkapital: startwerte?.eigenkapital || "",
+    strasse: startwerte?.strasse || "",
+    hausnummer: startwerte?.hausnummer || "",
+    lat: startwerte?.lat,
+    lon: startwerte?.lon,
+  }));
+  const [bundesland, setBundesland] = useState(startwerte?.bundesland || "");
+  // Exposé-Werte, fuer die es hier kein Eingabefeld gibt (Baujahr,
+  // Renovierungskosten, Energiekennwerte, ...). Ohne diesen Zwischenspeicher
+  // gingen sie beim Speichern verloren, weil der Entwurf unten nur die
+  // sichtbaren Felder zusammensetzt.
+  const [exposeExtra, setExposeExtra] = useState({});
+  const [exposeOffen, setExposeOffen] = useState(false);
 
   const setzen = (k, v) => setWerte((p) => ({ ...p, [k]: v }));
+
+  // Direkte Uebernahme in die Felder - kein Stepper: wer ein bestehendes
+  // Objekt bearbeitet, will das Ergebnis sofort im Formular sehen.
+  const exposeUebernehmen = (ergebnis) => {
+    const xt = EXPOSE_T[lang] || EXPOSE_T.de;
+    const zeilen = baueZeilen(ergebnis, {}, xt);
+    const auswahl = new Set(zeilen.filter((z) => z.uebernehmbar).map((z) => z.key));
+    const sichtbar = new Set([...FELDER.map((f) => f.key), "plz", "ort", "strasse", "hausnummer"]);
+    const extra = {};
+    uebernehmeZeilen(
+      zeilen,
+      auswahl,
+      (k, v) => {
+        if (k === "bundesland") setBundesland(v);
+        else if (sichtbar.has(k)) setzen(k, v);
+        else extra[k] = v;
+      },
+      ergebnis,
+    );
+    setExposeExtra((p) => ({ ...p, ...extra }));
+    setExposeOffen(false);
+  };
+
   const fehlt = [
     ...FELDER.filter((f) => f.pflicht && String(werte[f.key] ?? "").trim() === "").map(
       (f) => f.label,
@@ -238,11 +153,12 @@ export function ObjektAnlegen({
   // stehen - nicht erst nach dem Absenden.
   const entwurf = vollstaendig
     ? {
-        // Beim Bearbeiten die uebrigen Felder des Objekts erhalten - sonst
-        // gingen Zinsbindung, AfA-Einstellungen und alles andere verloren,
-        // was nur im Rechner gesetzt wurde.
+        // Die uebrigen Felder des Objekts erhalten - sonst gingen Zinsbindung,
+        // AfA-Einstellungen und alles andere verloren, was nur im Rechner
+        // gesetzt wurde.
         ...annahmenFuer({ bundesland, flaeche: werte.flaeche }),
         ...(startwerte || {}),
+        ...exposeExtra,
         bundesland,
         plz: String(werte.plz || "").trim(),
         ort: String(werte.ort || "").trim(),
@@ -257,37 +173,12 @@ export function ObjektAnlegen({
     : null;
   const kz = entwurf ? berechneObjektKennzahlen(entwurf, t) : null;
 
-  // 2026-09-07: mehr als EXPOSE_REVIEW_SCHWELLE uebernehmbare Felder - der
-  // Review-Stepper uebernimmt ab hier vollstaendig, inklusive der finalen
-  // Objekterstellung ueber onAnlegen. Erst NACH allen obigen Hooks pruefen,
-  // sonst waeren die Hooks je nach reviewData bedingt.
-  if (reviewData) {
-    return (
-      <ObjektAnlegenExposeReview
-        zeilen={reviewData.zeilen}
-        ergebnis={reviewData.ergebnis}
-        startWerte={{ name: werte.name, ...werte, bundesland }}
-        t={t}
-        onAnlegen={onAnlegen}
-        onAbbrechen={() => setReviewData(null)}
-      />
-    );
-  }
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Weg 1: Exposé. `onExpose` von aussen (ObjektDetail.jsx, Weg fuer ein
-          BESTEHENDES Objekt) hat Vorrang und bleibt unveraendert. Ohne
-          `onExpose` (Neuanlage aus Merkliste.jsx) laeuft die Extraktion
-          seit 2026-09-07 lokal hier, statt das globale, objektlose
-          ObjektExpose-Sheet zu oeffnen - so entsteht kein zweites Objekt
-          nebenher. */}
+      {/* `onExpose` von aussen hat Vorrang und oeffnet den bestehenden,
+          globalen Weg. Ohne die Prop laeuft die Extraktion lokal hier. */}
       {onExpose ? (
-        <button
-          type="button"
-          onClick={onExpose}
-          style={exposeKnopfStil}
-        >
+        <button type="button" onClick={onExpose} style={exposeKnopfStil}>
           <span style={{ fontSize: 22 }} aria-hidden="true">
             📄
           </span>
@@ -301,118 +192,11 @@ export function ObjektAnlegen({
           </span>
         </button>
       ) : (
-        <div>
-          <button
-            type="button"
-            onClick={() => setExposeUiOffen((v) => !v)}
-            style={exposeKnopfStil}
-          >
-            <span style={{ fontSize: 22 }} aria-hidden="true">
-              📄
-            </span>
-            <span>
-              <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#1E3A5F" }}>
-                Exposé hochladen
-              </span>
-              <span style={{ display: "block", fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>
-                PDF hinein, Felder automatisch gefüllt
-              </span>
-            </span>
-          </button>
-          {exposeUiOffen && (
-            <div
-              style={{
-                marginTop: 10,
-                border: "1px solid var(--cb)",
-                borderRadius: 12,
-                background: "var(--ci)",
-                padding: 14,
-              }}
-            >
-              <input
-                ref={exFileRef}
-                type="file"
-                accept="image/*,application/pdf"
-                multiple
-                onChange={exHandleDateien}
-                style={{ display: "none" }}
-                tabIndex={-1}
-              />
-              {exConsentOffen && (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, lineHeight: 1.55, marginBottom: 10 }}>
-                    {xt.consentText}
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button type="button" onClick={exConsentGeben} style={exKnopfPrimaer}>
-                      {xt.consentOk || "Verstanden"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setExConsentOffen(false)}
-                      style={exKnopfZweit}
-                    >
-                      Abbrechen
-                    </button>
-                  </div>
-                </div>
-              )}
-              {exThumbs.length > 0 && (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-                  {exThumbs.map((url, i) => (
-                    <button
-                      key={url}
-                      type="button"
-                      onClick={() => exEntferneBild(i)}
-                      aria-label={`Bild ${i + 1} entfernen`}
-                      style={{
-                        width: 56,
-                        height: 56,
-                        padding: 0,
-                        borderRadius: 10,
-                        border: "1px solid var(--cb)",
-                        backgroundImage: `url(${url})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                        cursor: "pointer",
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-              {exPdf && (
-                <div style={{ fontSize: 12.5, color: "var(--ch)", marginBottom: 10 }}>
-                  PDF ausgewählt: {exPdf.name}
-                </div>
-              )}
-              {exAuswahlFehler && (
-                <div style={{ fontSize: 12.5, color: "#B3402A", marginBottom: 10 }}>
-                  {xt["fehler" + exAuswahlFehler[0].toUpperCase() + exAuswahlFehler.slice(1)]}
-                </div>
-              )}
-              {!exLaeuft && (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" onClick={exDateiDialog} style={exKnopfZweit}>
-                    📄 Datei auswählen
-                  </button>
-                  {(exBilder.length > 0 || exPdf) && (
-                    <button type="button" onClick={exStarten} style={exKnopfPrimaer}>
-                      Auswerten
-                    </button>
-                  )}
-                </div>
-              )}
-              {exLaeuft && (
-                <ExposeUploadProgress phase={exStatus} fortschritt={uploadFortschritt} t={xt} />
-              )}
-              {exposeFehler && (
-                <div style={{ fontSize: 12.5, color: "#B3402A", marginTop: 10 }}>
-                  {xt[exposeFehler]}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <ExposePanel
+          offen={exposeOffen}
+          onToggle={() => setExposeOffen((v) => !v)}
+          onErgebnis={exposeUebernehmen}
+        />
       )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -421,7 +205,6 @@ export function ObjektAnlegen({
         <span style={{ flex: 1, height: 1, background: "var(--cb)" }} />
       </div>
 
-      {/* Weg 2: Felder */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <AdressSuche
           onTreffer={(tr) => {
@@ -444,62 +227,43 @@ export function ObjektAnlegen({
         />
         {FELDER.map((f) => (
           <Fragment key={f.key}>
-          <label style={{ display: "block" }}>
-            <span
-              style={{
-                display: "block",
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--ct)",
-                marginBottom: 5,
-              }}
-            >
-              {f.label}
-              {f.einheit ? ` (${f.einheit})` : ""}
-              {!f.pflicht && (
-                <span style={{ color: "var(--ch)", fontWeight: 400 }}> · optional</span>
-              )}
-            </span>
-            <input
-              type={f.typ === "zahl" ? "number" : "text"}
-              inputMode={f.typ === "zahl" ? "decimal" : undefined}
-              value={werte[f.key] || ""}
-              onChange={(e) => setzen(f.key, e.target.value)}
-              style={f.maxBreite ? { ...eingabeStil, maxWidth: f.maxBreite } : eingabeStil}
-            />
-          </label>
-          {f.key === "name" && (
-            <PlzOrtFelder
-              plz={werte.plz || ""}
-              ort={werte.ort || ""}
-              onPlz={(v) => setzen("plz", v)}
-              onOrt={(v) => setzen("ort", v)}
-              onTreffer={(tr) => {
-                setzen("plz", tr.plz);
-                setzen("ort", tr.ort);
-                setBundesland(tr.bl);
-              }}
-            />
-          )}
+            <label style={{ display: "block" }}>
+              <span style={beschriftungStil}>
+                {f.label}
+                {f.einheit ? ` (${f.einheit})` : ""}
+                {!f.pflicht && (
+                  <span style={{ color: "var(--ch)", fontWeight: 400 }}> · optional</span>
+                )}
+              </span>
+              <input
+                type={f.typ === "zahl" ? "number" : "text"}
+                inputMode={f.typ === "zahl" ? "decimal" : undefined}
+                value={werte[f.key] || ""}
+                onChange={(e) => setzen(f.key, e.target.value)}
+                style={f.maxBreite ? { ...eingabeStil, maxWidth: f.maxBreite } : eingabeStil}
+              />
+            </label>
+            {f.key === "name" && (
+              <PlzOrtFelder
+                plz={werte.plz || ""}
+                ort={werte.ort || ""}
+                onPlz={(v) => setzen("plz", v)}
+                onOrt={(v) => setzen("ort", v)}
+                onTreffer={(tr) => {
+                  setzen("plz", tr.plz);
+                  setzen("ort", tr.ort);
+                  setBundesland(tr.bl);
+                }}
+              />
+            )}
           </Fragment>
         ))}
 
         <label style={{ display: "block" }}>
-          <span
-            style={{
-              display: "block",
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--ct)",
-              marginBottom: 5,
-            }}
-          >
+          <span style={beschriftungStil}>
             Bundesland
             {bundesland && (
-              <span style={{ color: "var(--ch)", fontWeight: 400 }}>
-                {" "}
-                · aus der PLZ übernommen
-              </span>
+              <span style={{ color: "var(--ch)", fontWeight: 400 }}> · aus der PLZ übernommen</span>
             )}
           </span>
           <select
@@ -556,16 +320,19 @@ export function ObjektAnlegen({
         <button
           type="button"
           onClick={onAbbrechen}
-          style={{ ...knopfStil, background: "transparent", color: "var(--ch)", border: "1px solid var(--cb)" }}
+          style={{
+            ...knopfStil,
+            background: "transparent",
+            color: "var(--ch)",
+            border: "1px solid var(--cb)",
+          }}
         >
           Abbrechen
         </button>
         <button
           type="button"
           disabled={!vollstaendig}
-          onClick={() =>
-            onAnlegen(werte.name?.trim() || "Neues Objekt", entwurf)
-          }
+          onClick={() => onAnlegen(werte.name?.trim() || "Neues Objekt", entwurf)}
           style={{
             ...knopfStil,
             flex: 2,
@@ -575,7 +342,7 @@ export function ObjektAnlegen({
             cursor: vollstaendig ? "pointer" : "not-allowed",
           }}
         >
-          {bearbeiten ? "Änderungen speichern" : "Objekt anlegen"}
+          Änderungen speichern
         </button>
       </div>
       {!vollstaendig && (
@@ -588,316 +355,3 @@ export function ObjektAnlegen({
     </div>
   );
 }
-
-// Adress-Vervollstaendigung. Die einzige Stelle der App, an der eine Eingabe
-// den Browser verlaesst - deshalb steht der Hinweis darauf direkt am Feld und
-// nicht im Kleingedruckten. Entprellt (350 ms) und erst ab drei Zeichen, damit
-// nicht jeder Tastendruck eine Anfrage ausloest.
-function AdressSuche({ onTreffer }) {
-  const [text, setText] = useState("");
-  const [treffer, setTreffer] = useState([]);
-  const [offen, setOffen] = useState(false);
-  const [laedt, setLaedt] = useState(false);
-  const [fehler, setFehler] = useState(false);
-  const box = useRef(null);
-  const abbruch = useRef(null);
-
-  useEffect(() => {
-    const zu = (e) => {
-      if (box.current && !box.current.contains(e.target)) setOffen(false);
-    };
-    document.addEventListener("click", zu);
-    return () => document.removeEventListener("click", zu);
-  }, []);
-
-  useEffect(() => {
-    if (text.trim().length < MIN_ZEICHEN) {
-      setTreffer([]);
-      setOffen(false);
-      return undefined;
-    }
-    const zeit = setTimeout(async () => {
-      abbruch.current?.abort();
-      const c = new AbortController();
-      abbruch.current = c;
-      setLaedt(true);
-      setFehler(false);
-      try {
-        const ergebnis = await sucheAdressen(text, c.signal);
-        setTreffer(ergebnis);
-        setOffen(ergebnis.length > 0);
-      } catch (e) {
-        if (e.name !== "AbortError") {
-          // Der Dienst ist ein Komfort, kein Muss: die Felder darunter lassen
-          // sich weiter von Hand ausfuellen.
-          setFehler(true);
-          setOffen(false);
-        }
-      } finally {
-        setLaedt(false);
-      }
-    }, 350);
-    return () => clearTimeout(zeit);
-  }, [text]);
-
-  return (
-    <div ref={box} style={{ position: "relative" }}>
-      <label style={{ display: "block" }}>
-        <span style={beschriftungStil}>Adresse suchen</span>
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          autoComplete="off"
-          style={eingabeStil}
-        />
-      </label>
-      <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 5, lineHeight: 1.45 }}>
-        {laedt
-          ? "Suche läuft …"
-          : fehler
-            ? "Die Adresssuche ist gerade nicht erreichbar — trage die Felder unten von Hand ein."
-            : "Sucht ab drei Zeichen bei OpenStreetMap. Nur der eingetippte Text wird übertragen, keine Objektdaten. Du kannst alles auch von Hand eintragen."}
-      </div>
-      {offen && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            zIndex: 40,
-            marginTop: 4,
-            background: "var(--cc)",
-            border: "1px solid var(--cb)",
-            borderRadius: 10,
-            overflow: "hidden",
-            boxShadow: "0 8px 24px rgba(0,0,0,.18)",
-          }}
-        >
-          {treffer.map((tr) => (
-            <button
-              key={tr.id}
-              type="button"
-              onClick={() => {
-                onTreffer(tr);
-                setText(tr.anzeige);
-                setOffen(false);
-              }}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "10px 12px",
-                border: "none",
-                borderBottom: "1px solid var(--cb)",
-                background: "transparent",
-                color: "var(--ct)",
-                fontSize: 14,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              <span style={{ display: "block", fontWeight: 600 }}>{tr.zeile1 || tr.anzeige}</span>
-              {tr.zeile2 && (
-                <span style={{ display: "block", fontSize: 12, color: "var(--ch)" }}>
-                  {tr.zeile2}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// PLZ und Ort mit Vervollstaendigung aus PLZ_DB (10.813 Eintraege, liegt
-// bereits im Bundle). PLZ vollstaendig eingetippt fuellt Ort und Bundesland;
-// beim Ort erscheint ein Vorschlagsmenue. Dieselbe Mechanik wie in
-// ui/PLZSearch.jsx, aber auf lokalem Formular-State statt dem globalen
-// d-State - deshalb hier eine eigene, schlanke Fassung.
-function PlzOrtFelder({ plz, ort, onPlz, onOrt, onTreffer }) {
-  const [vorschlaege, setVorschlaege] = useState([]);
-  const [offen, setOffen] = useState(false);
-  const box = useRef(null);
-
-  useEffect(() => {
-    const zu = (e) => {
-      if (box.current && !box.current.contains(e.target)) setOffen(false);
-    };
-    document.addEventListener("click", zu);
-    return () => document.removeEventListener("click", zu);
-  }, []);
-
-  const plzGeaendert = (v) => {
-    const nur = v.replace(/\D/g, "").slice(0, 5);
-    onPlz(nur);
-    if (nur.length === 5) {
-      const treffer = PLZ_DB.byPlz[nur];
-      if (treffer) onTreffer({ plz: nur, ort: treffer.ort, bl: treffer.bl });
-    }
-  };
-
-  const ortGeaendert = (v) => {
-    onOrt(v);
-    if (v.trim().length >= 2) {
-      const l = v.trim().toLowerCase();
-      const namen = PLZ_DB.allOrts.filter((o) => o.startsWith(l)).slice(0, 6);
-      setVorschlaege(namen.map((o) => PLZ_DB.byOrt[o][0]));
-      setOffen(namen.length > 0);
-    } else {
-      setOffen(false);
-    }
-  };
-
-  const gefundenerOrt = plz.length === 5 ? PLZ_DB.byPlz[plz]?.ort : null;
-
-  return (
-    <div style={{ display: "flex", gap: 10 }}>
-      <label style={{ display: "block", width: 120, flexShrink: 0 }}>
-        <span style={beschriftungStil}>PLZ</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={plz}
-          onChange={(e) => plzGeaendert(e.target.value)}
-          style={eingabeStil}
-        />
-        {gefundenerOrt && (
-          <span style={{ display: "block", fontSize: 11.5, color: "var(--ch)", marginTop: 4 }}>
-            {gefundenerOrt}
-          </span>
-        )}
-      </label>
-      <div ref={box} style={{ position: "relative", flex: 1, minWidth: 0 }}>
-        <label style={{ display: "block" }}>
-          <span style={beschriftungStil}>Ort</span>
-          <input
-            type="text"
-            value={ort}
-            onChange={(e) => ortGeaendert(e.target.value)}
-            autoComplete="off"
-            style={eingabeStil}
-          />
-        </label>
-        {offen && (
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              right: 0,
-              zIndex: 30,
-              marginTop: 4,
-              background: "var(--cc)",
-              border: "1px solid var(--cb)",
-              borderRadius: 10,
-              overflow: "hidden",
-              boxShadow: "0 8px 24px rgba(0,0,0,.18)",
-            }}
-          >
-            {vorschlaege.map((v) => (
-              <button
-                key={`${v.plz}-${v.ort}`}
-                type="button"
-                onClick={() => {
-                  onTreffer({ plz: v.plz, ort: v.ort, bl: v.bl });
-                  setOffen(false);
-                }}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "10px 12px",
-                  border: "none",
-                  borderBottom: "1px solid var(--cb)",
-                  background: "transparent",
-                  color: "var(--ct)",
-                  fontSize: 14,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                {v.ort}
-                <span style={{ color: "var(--ch)", fontSize: 12 }}>
-                  {" "}
-                  · {v.plz} · {BL_N[v.bl] || v.bl}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const beschriftungStil = {
-  display: "block",
-  fontSize: 13,
-  fontWeight: 600,
-  color: "var(--ct)",
-  marginBottom: 5,
-};
-
-const eingabeStil = {
-  width: "100%",
-  height: 44,
-  borderRadius: 10,
-  border: "1px solid var(--cb)",
-  background: "var(--ci)",
-  color: "var(--ct)",
-  // 16 px verhindert den iOS-Zoom beim Fokus (Projektregel aus CLAUDE.md)
-  fontSize: 16,
-  padding: "0 12px",
-  fontFamily: "inherit",
-  boxSizing: "border-box",
-};
-
-const knopfStil = {
-  flex: 1,
-  height: 46,
-  borderRadius: 10,
-  fontSize: 15,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "inherit",
-};
-
-const exposeKnopfStil = {
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  width: "100%",
-  padding: "16px",
-  borderRadius: 12,
-  border: "1px solid #1E3A5F33",
-  background: "#1E3A5F0d",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  textAlign: "left",
-};
-
-const exKnopfPrimaer = {
-  display: "inline-flex",
-  alignItems: "center",
-  height: 40,
-  padding: "0 14px",
-  borderRadius: 10,
-  border: "none",
-  background: "var(--ca)",
-  color: "#fff",
-  fontSize: 13,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "inherit",
-};
-
-const exKnopfZweit = {
-  ...exKnopfPrimaer,
-  background: "var(--cc)",
-  color: "var(--ct)",
-  border: "1.5px solid var(--cb)",
-  fontWeight: 600,
-};

@@ -57,7 +57,7 @@ export function AiEngine({
     // Ohne beides gibt es keine Findings - das muss VOR dem Verbrauch
     // sichtbar sein. Kontingent für eine Fehlermeldung auszugeben wäre der
     // schlimmste denkbare Vertrauensbruch in einem limitierten Produkt.
-    if (produkt.braucht === "expose" && !ergebnisFuer(objekt, "expose") && !hasFullInput)
+    if (produkt.braucht === "grundlage" && !ergebnisFuer(objekt, "expose") && !hasFullInput)
       return "gesperrt";
     // Dieselbe Regel für die Preiseinordnung: ohne Ortsreferenz gäbe es nichts
     // zu vergleichen, und das Produkt würde zu genau der Schätzung aus dem
@@ -130,7 +130,8 @@ export function AiEngine({
 // Klick stehen: Kontingent für eine Fehlermeldung auszugeben wäre der
 // schlimmste denkbare Vertrauensbruch in einem limitierten Produkt.
 function gesperrtText(produkt, data, referenzMiete) {
-  if (produkt.braucht === "expose") return "Braucht zuerst ein Exposé zu diesem Objekt.";
+  if (produkt.braucht === "grundlage")
+    return "Braucht zuerst Objektdaten — trage sie ein oder lade ein Exposé hoch.";
   if (produkt.braucht === "plz") {
     if (!data?.plz) return "Trage die PLZ ein, dann lässt sich der Ort vergleichen.";
     // undefined heisst "laedt noch" - das ist etwas anderes als "gibt es
@@ -190,7 +191,7 @@ function ProduktZeile({
       {zustand === "gesperrt" && (
         <div style={aktionsZeile}>
           <span style={nutzenZeile}>{grund}</span>
-          {produkt.braucht === "expose" && (
+          {produkt.braucht === "grundlage" && (
             <button type="button" onClick={onVoraussetzung} style={textLink}>
               Exposé hochladen →
             </button>

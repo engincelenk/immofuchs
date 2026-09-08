@@ -862,14 +862,27 @@ export function Merkliste() {
       </>
     );
 
-  // B3: legt das Objekt aus den fuenf Feldern an und oeffnet es direkt -
+  // B3: legt das Objekt aus den Kerndaten an und oeffnet es direkt -
   // "Objekt anlegen -> Urteil sehen" ohne Zwischenschritt.
-  const objektAnlegen = async (name, daten) => {
+  //
+  // opts.imWizard (2026-09-07): der Anlege-Assistent legt das Objekt bereits
+  // nach Schritt 1 an und laeuft danach weiter (jeder folgende Schritt
+  // speichert per updateObj nach). Das Sheet darf dabei NICHT schliessen und
+  // die Detailansicht noch nicht aufgehen - beides passiert erst, wenn der
+  // Assistent ueber onFertig Bescheid gibt.
+  const objektAnlegen = async (name, daten, opts = {}) => {
     const neu = await saveObj(name, daten, "haupt");
+    if (opts.imWizard) return neu;
     setAnlegenOffen(false);
     // Der staerkste Moment des Produkts (Konzept 3.1) - bis 2026-09-06 landete
     // der Nutzer stattdessen in der Liste und musste seine neue Karte selbst
     // finden.
+    if (neu) openDetail(neu);
+    return neu;
+  };
+
+  const objektAnlegenFertig = (neu) => {
+    setAnlegenOffen(false);
     if (neu) openDetail(neu);
   };
 
@@ -894,6 +907,7 @@ export function Merkliste() {
       <ObjektAnlegen
         t={t}
         onAnlegen={objektAnlegen}
+        onFertig={objektAnlegenFertig}
         onAbbrechen={() => setAnlegenOffen(false)}
       />
     </Sheet>

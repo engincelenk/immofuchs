@@ -17,6 +17,7 @@ import {
   nutzerPayload,
   systemPromptFuer,
   type AnalyseProdukt,
+  type Befund,
   type GerechneteZahl,
   type HebelVariante,
 } from "../analysePrompt";
@@ -348,6 +349,30 @@ export function leseZahlen(roh: unknown): GerechneteZahl[] | undefined {
   return sauber.length > 0 ? sauber : undefined;
 }
 
+// Die Kernaussagen bereits erstellter Auswertungen - Traeger des Produkts
+// "handout". Sie stammen zwar urspruenglich aus unserem eigenen Modell, kommen
+// aber ueber den Client zurueck und sind damit derselbe Injection-Kanal wie
+// jeder andere Fremdtext: gekuerzt, ohne Zeilenumbrueche, Anzahl begrenzt.
+// Groesseres Textlimit als bei den Varianten, weil eine Kernaussage
+// bauartbedingt ein ganzer Satz ist (Prompt-Vorgabe: bis 240 Zeichen).
+const BEFUNDE_MAX = 3;
+const BEFUND_TEXT_MAX = 260;
+
+export function leseBefunde(roh: unknown): Befund[] | undefined {
+  if (!Array.isArray(roh)) return undefined;
+  const sauber: Befund[] = [];
+  for (const eintrag of roh.slice(0, BEFUNDE_MAX)) {
+    if (typeof eintrag !== "object" || eintrag === null || Array.isArray(eintrag)) continue;
+    const e = eintrag as Record<string, unknown>;
+    const produkt = promptText(e.produkt);
+    const roheAussage = typeof e.kernaussage === "string" ? e.kernaussage.trim() : "";
+    const kernaussage = roheAussage.slice(0, BEFUND_TEXT_MAX).replace(/[\r\n]+/g, " ").trim();
+    if (produkt === null || !kernaussage) continue;
+    sauber.push({ produkt, kernaussage });
+  }
+  return sauber.length > 0 ? sauber : undefined;
+}
+
 export function leseVarianten(roh: unknown): HebelVariante[] | undefined {
   if (!Array.isArray(roh)) return undefined;
 
@@ -385,7 +410,8 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   }
   const b = body as Record<string, unknown>;
 
-  const produkt = (["analyse", "hebel", "preis"] as const).find((p) => p === b.produkt) ?? null;
+  const produkt =
+    (["analyse", "hebel", "preis", "handout"] as const).find((p) => p === b.produkt) ?? null;
   if (!produkt) return c.json({ error: "unbekanntes_produkt" }, 400);
 
   const kennzahlen = b.kennzahlen;
@@ -402,6 +428,9 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   // ist ein potenzieller Injection-Traeger, auch wenn es strukturiert aussieht.
   const varianten = leseVarianten(b.varianten);
   const zahlen = leseZahlen(b.zahlen);
+  // Nur das Handout setzt auf frueheren Auswertungen auf - fuer die anderen
+  // Produkte waere ein fremder Modelltext im Prompt reines Risiko ohne Nutzen.
+  const befunde = produkt === "handout" ? leseBefunde(b.befunde) : undefined;
 
   const zugriff = await resolveZugriff(c.req.raw, env);
   if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
@@ -425,7 +454,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
       env,
       "de",
       systemPromptFuer(produkt as AnalyseProdukt),
-      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis, varianten, zahlen),
+      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis, varianten, zahlen, befunde),
       ANALYSE_MAX_TOKENS,
     );
   } catch (err) {

@@ -61,10 +61,14 @@ export const AI_PRODUKTE = [
   {
     id: "handout",
     titel: "Besichtigungshandout",
-    kurz: "Fragenliste für den Termin, aus dem Exposé abgeleitet",
+    kurz: "Fragen für den Termin, abgeleitet aus deinen Auswertungen",
     aktion: "Erstellen",
-    // Folgeprodukt des Exposé-Scans - ohne dessen Ergebnis nicht moeglich.
-    braucht: "expose",
+    // Braucht eine Grundlage ueber das Objekt: entweder einen Exposé-Scan
+    // oder von Hand eingepflegte Daten (Nutzer-Vorgabe 2026-09-07, vorher
+    // zwingend Exposé). Die drei Auswertungen oben gehen zusaetzlich als
+    // "Befunde" in den Prompt ein, sofern vorhanden - siehe
+    // ObjektDetail.starteProdukt() und worker/src/analysePrompt.ts.
+    braucht: "grundlage",
   },
 ];
 

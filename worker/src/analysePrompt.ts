@@ -11,7 +11,7 @@
 // kann der Client die Kernaussage in drei Zeilen zeigen und den Rest
 // nachladen.
 
-export type AnalyseProdukt = "analyse" | "hebel" | "preis";
+export type AnalyseProdukt = "analyse" | "hebel" | "preis" | "handout";
 
 const FORM = `Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Markdown-Zaun, ohne Vorrede:
 {
@@ -32,11 +32,32 @@ Regeln:
 - Keine Rechts-, Steuer- oder Anlageberatung. Keine Empfehlung zu kaufen oder nicht zu kaufen.
 - Wenn der Cashflow negativ ist, sage das klar und nenne die Groessenordnung der Zuzahlung.`;
 
+// Die Zahlen-Disziplin des PREIS-Prompts galt bis 2026-09-07 nur dort - hier
+// stand "Gehe auf Preisniveau ein" ohne jede Referenz und ohne Sperre. Das
+// Modell hat daraufhin genau das getan, was der Kommentar unten an der
+// Vorlage-App kritisiert: Verkehrswerte und Quadratmeterpreise auf den Euro
+// genau erfunden ("Realistischer Einkaufspreis 175.000 EUR"), ohne eine
+// einzige Vergleichszahl zu kennen. Die Regel steht jetzt in beiden Prompts.
+//
+// Die ortsuebliche Miete wird als "Gerechnete Werte" mitgeliefert, sobald sie
+// fuer die PLZ vorliegt (siehe ObjektDetail.starteProdukt) - damit hat auch
+// dieses Produkt einen Anker statt nur Sprachgefuehl.
 const ANALYSE = `${HALTUNG}
 
-Deine Aufgabe: Ordne dieses Objekt ein. Gehe auf Preisniveau, Rendite, Cashflow-Tragfaehigkeit
-und das groesste Risiko ein. Die Abschnitte sollten typischerweise RENDITE, CASHFLOW und RISIKO
+Deine Aufgabe: Ordne dieses Objekt ein. Gehe auf Rendite, Cashflow-Tragfaehigkeit und das
+groesste Risiko ein. Die Abschnitte sollten typischerweise RENDITE, CASHFLOW und RISIKO
 heissen.
+
+Zum Preis: Du kennst weder Lage im Ort noch Zustand noch Vergleichsfaelle. Nenne deshalb
+KEINEN geschaetzten Verkehrswert, KEINEN Zielkaufpreis und KEINEN Quadratmeterpreis, den du
+selbst gebildet hast - auch nicht als Spanne und auch nicht mit "etwa" davor. Erlaubt sind
+ausschliesslich Zahlen, die dir unter "Kennzahlen des Objekts" oder "Gerechnete Werte"
+uebergeben wurden.
+
+Du darfst sagen, dass der aufgerufene Preis gemessen an Rendite und Cashflow hoch ist, und
+woran das haengt. Eine erfundene Zielzahl dagegen waere in einem Dokument, das der Nutzer
+fuer eine Kaufentscheidung benutzt, schaedlicher als eine fehlende - fuer belastbare
+Zielpreise gibt es das eigene Produkt "Kaufpreis analysieren".
 
 ${FORM}`;
 
@@ -85,9 +106,45 @@ Die Abschnitte sollten MIETNIVEAU, PREIS und RISIKO heissen.
 
 ${FORM}`;
 
+// Besichtigungshandout. Das einzige Produkt, das nicht bewertet, sondern
+// VORBEREITET - und das einzige, das auf den anderen aufsetzt: die drei
+// Auswertungen am Objekt (Einordnung, Hebel, Kaufpreis) werden ihm als
+// "Bisherige Befunde" mitgegeben und sollen zu Fragen werden, die man vor
+// Ort tatsaechlich stellen kann.
+//
+// Warum daraus Fragen und keine Thesen: Am Objekt weiss der Kaeufer bereits,
+// WAS unklar ist (das steht in den Befunden). Was ihm im Termin fehlt, ist
+// die Formulierung, mit der er es herausbekommt, ohne sich seine
+// Verhandlungsposition zu verderben. Genau das ist der Mehrwert gegenueber
+// einer generischen Checkliste aus dem Netz.
+//
+// Die Form bleibt bewusst dieselbe wie bei den anderen Produkten
+// (kernaussage/kpis/abschnitte) - der Client rendert alle vier Produkte mit
+// demselben Code, ein eigenes Schema waere eine zweite Renderstrecke fuer
+// denselben Zweck.
+const HANDOUT = `${HALTUNG}
+
+Deine Aufgabe: Erstelle die Vorbereitung fuer den Besichtigungstermin dieses Objekts.
+
+Wenn der Abschnitt "Bisherige Befunde" mitgeliefert ist, stammt er aus den bereits
+erstellten Auswertungen zu genau diesem Objekt. Leite deine Fragen DARAUS ab, statt eine
+allgemeine Checkliste zu wiederholen: Was in den Befunden unsicher, auffaellig oder
+begruendungsbeduerftig ist, gehoert vor Ort geklaert. Wiederhole die Befunde nicht, sondern
+mache Fragen daraus.
+
+Formuliere in den Abschnitten jeweils konkrete Fragen, die vor Ort gestellt oder geprueft
+werden - eine Frage je Zeile, in der Sprache, in der man sie tatsaechlich stellen wuerde.
+Keine Fragen, deren Antwort bereits in den Kennzahlen steht.
+
+Die Abschnitte sollten typischerweise ZUSTAND, UNTERLAGEN und VERHANDLUNG heissen.
+Die kernaussage nennt den einen Punkt, an dem der Termin haengt.
+
+${FORM}`;
+
 export function systemPromptFuer(produkt: AnalyseProdukt): string {
   if (produkt === "hebel") return HEBEL;
   if (produkt === "preis") return PREIS;
+  if (produkt === "handout") return HANDOUT;
   return ANALYSE;
 }
 
@@ -116,11 +173,19 @@ export type HebelVariante = {
 // sieht - Traeger des Produkts "preis".
 export type GerechneteZahl = { label: string; wert: string };
 
+// Eine bereits erstellte Auswertung dieses Objekts, verdichtet auf Titel und
+// Kernaussage - Traeger des Produkts "handout". Bewusst NUR die Kernaussage
+// und nicht der ganze Text: das Handout soll Fragen ableiten, nicht die
+// Analysen nacherzaehlen, und jeder zusaetzlich uebergebene Satz ist ein
+// weiterer Injection-Traeger im Prompt.
+export type Befund = { produkt: string; kernaussage: string };
+
 export function nutzerPayload(
   kennzahlen: Record<string, unknown>,
   hinweis?: string,
   varianten?: HebelVariante[],
   zahlen?: GerechneteZahl[],
+  befunde?: Befund[],
 ): string {
   const zeilen = Object.entries(kennzahlen)
     .filter(([, v]) => v !== null && v !== undefined && v !== "")
@@ -143,6 +208,12 @@ export function nutzerPayload(
           .join("\n")
       : "";
 
+  const befundeBlock =
+    befunde && befunde.length > 0
+      ? "\n\nBisherige Befunde zu diesem Objekt (Ergebnisse frueherer Auswertungen, NICHT wiederholen - daraus Fragen ableiten):\n" +
+        befunde.map((b) => `- ${b.produkt}: ${b.kernaussage}`).join("\n")
+      : "";
+
   const extra = hinweis && hinweis.trim() ? `\n\nZusaetzliche Hinweise des Nutzers:\n${hinweis.trim()}` : "";
-  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${zahlenBlock}${variantenBlock}${extra}`;
+  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${zahlenBlock}${variantenBlock}${befundeBlock}${extra}`;
 }

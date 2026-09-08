@@ -1,3 +1,98 @@
+## 2026-09-08 (1.70.0)
+
+### Besichtigungshandout existiert wirklich, und "Objekt analysieren" erfindet keine Preise mehr
+
+Zwei Befunde aus der Nachpruefung der Punkte von 1.68.0 - beide waren dort
+als erledigt gemeldet, waren es aber nicht.
+
+**1. Das Besichtigungshandout hatte gar kein Backend**
+Der Worker kannte nur "analyse", "hebel" und "preis" (assistant.ts) - das
+Produkt "handout" lief in ein hartes 400 "unbekanntes_produkt". Vorher fiel
+das nicht auf, weil der Knopf durch die Exposé-Sperre praktisch nie
+erreichbar war; mit der Lockerung aus 1.68.0 fuehrte er direkt in eine
+Fehlermeldung. Jetzt gibt es einen echten HANDOUT-Prompt, und er bekommt,
+was der Nutzer verlangt hatte: die Kernaussagen der drei bereits erstellten
+Auswertungen als "Bisherige Befunde", aus denen er FRAGEN fuer den Termin
+ableitet, statt eine generische Checkliste zu wiederholen. Abschnitte:
+ZUSTAND, UNTERLAGEN, VERHANDLUNG.
+
+Der neue Befund-Kanal ist wie die Varianten- und Zahlenkanaele hart
+begrenzt (hoechstens 3 Befunde, 260 Zeichen, Zeilenumbrueche geglaettet):
+Die Texte stammen zwar aus unserem eigenen Modell, kommen aber ueber den
+Client zurueck und sind damit derselbe Injection-Kanal wie jeder Fremdtext.
+Sechs neue Tests decken das ab.
+
+**2. "Objekt analysieren" durfte Preise erfinden - der PREIS-Prompt nicht**
+Der PREIS-Prompt verbietet seit jeher ausdruecklich selbst gebildete
+Verkehrswerte und Quadratmeterpreise. Der ANALYSE-Prompt verlangte dagegen
+"Gehe auf Preisniveau ein" - ohne diese Sperre und ohne eine einzige
+Vergleichszahl. Das Modell hat daraufhin genau das getan, was der Kommentar
+im selben File an der Vorlage-App kritisiert: Zielpreise auf den Euro genau
+geraten ("Realistischer Einkaufspreis 175.000 EUR"), ohne Lage, Zustand oder
+Vergleichsfaelle zu kennen.
+
+Die Sperre steht jetzt in beiden Prompts, und "analyse" bekommt zusaetzlich
+dieselbe gerechnete Zensus-Ortsmiete mitgeliefert wie die Preiseinordnung -
+sie war im Client laengst geladen, ging aber nie an dieses Produkt. Fuer
+belastbare Zielpreise verweist der Prompt jetzt auf das dafuer gebaute
+Produkt "Kaufpreis analysieren".
+
+**Nebenbei:** Vitest sammelte Testdateien aus verwaisten Agenten-Worktrees
+unter .claude/worktrees/ ein - 68 "Fehler", die mit dem Arbeitsstand nichts
+zu tun hatten. Der Pfad ist jetzt ausgeschlossen (vite.config.js).
+
+## 2026-09-07 (1.69.0)
+
+### "Objekt anlegen" wird ein mehrstufiger Assistent ueber alle Rechnerfelder
+
+Bis jetzt fragte das Anlegen genau fuenf Felder ab (Name, Kaufpreis,
+Wohnflaeche, Kaltmiete, Eigenkapital). Alles andere - Zins, Tilgung, Baujahr,
+Steuersatz, Renovierung, Wertsteigerung - war beim Anlegen schlicht nicht
+erreichbar und musste spaeter im Renditerechner nachgetragen werden. Ein
+Exposé-Scan mit vielen Treffern oeffnete zusaetzlich einen zweiten,
+eigenstaendigen Review-Stepper. Zwei Wege, zwei Oberflaechen, dasselbe Ziel.
+
+Jetzt fuehrt ein Assistent durch acht Schritte:
+
+  0  Einstieg      - "Aus Exposé auslesen" oder "Manuell eingeben"
+  1  Kerndaten     - Adresse, PLZ/Ort, Kaufpreis, Flaeche, Miete, Eigenkapital
+  2  Einnahmen & Mietsituation
+  3  Finanzierung
+  4  Kaufnebenkosten
+  5  Laufende Kosten
+  6  Steuer & Abschreibung (inkl. Neubau-Block ab Baujahr 2023)
+  7  Wertentwicklung
+  8  Fertig - Cashflow live, dann direkt in die Objektansicht
+
+Damit sind saemtliche Eingabefelder des Renditerechners beim Anlegen
+erreichbar; reine Ergebnisfelder (Preis je m², Grunderwerbsteuersatz,
+Sonder-AfA je m²) bleiben aussen vor, sie werden gerechnet, nicht getippt.
+
+**Das Objekt entsteht schon nach Schritt 1, nicht am Ende.** Wer in Schritt 4
+von 8 abbricht, verliert nichts - ab da speichert jeder Schritt per
+`updateObj` am bestehenden Objekt weiter. Jeder Schritt ab 2 hat "Spaeter
+ergaenzen", zusaetzlich fuehrt "Rest spaeter ergaenzen" direkt zum Abschluss.
+
+**Der Exposé-Weg fuellt jetzt dieselben Schritte vor**, statt einen zweiten
+Flow zu oeffnen: erkannte Werte landen im Entwurf, der Nutzer bestaetigt sie
+in den thematischen Schritten. ObjektAnlegenExposeReview.jsx ist damit
+aufgeloest (Datei geloescht, Inhalt in ObjektAnlegenWizard.jsx aufgegangen).
+Auch Felder ohne eigenes Eingabefeld (Energiekennwert, Heizungsalter) gehen
+nicht mehr verloren.
+
+**"Objekt bearbeiten" bleibt ein einfaches Formular** - wer ein Feld
+korrigieren will, laeuft nicht durch acht Schritte.
+
+Uebergaenge: Crossfade + leichtes translateX (210 ms ease-out), bei
+`prefers-reduced-motion` nur Opacity. Segmentierter Fortschrittsbalken ueber
+alle acht Schritte.
+
+Geaendert: src/components/dashboard/ObjektAnlegen.jsx,
+src/components/shell/Merkliste.jsx
+Neu: src/components/dashboard/ObjektAnlegenWizard.jsx
+Geloescht: src/components/dashboard/ObjektAnlegenExposeReview.jsx
+
+
 ## 2026-09-07 (1.68.0)
 
 ### KI-Auswertungen kaputt, Objekt-Screen weiter verschlankt, drei Kleinfixes

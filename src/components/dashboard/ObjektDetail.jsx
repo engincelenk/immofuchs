@@ -41,12 +41,13 @@ import {
 // Ueberblick ("wie kommen die Zahlen zustande, was liegt vor") und stehen
 // jetzt als aufklappbare Sektionen direkt darunter - eine Seite statt vier
 // Reiter mit je einem Klick Umweg.
-// Hinweis 2026-09-07: ObjektAnlegenExposeReview.jsx (Exposé-Review-Stepper
-// beim Anlegen) verwendet dieselben vier Themen-Namen (Eckdaten/Einnahmen/
-// Finanzierung/Laufende Kosten). Nicht von hier importiert - ObjektAnlegen.jsx
-// wird auch von DIESER Datei importiert (Bearbeiten-Sheet unten), ein Import
-// in Gegenrichtung waere ein Zirkelbezug. Bei Aenderungen an den Themennamen
-// dort mitziehen.
+// Hinweis 2026-09-08: ObjektAnlegenWizard.jsx (Schritt-fuer-Schritt-Anlage)
+// gruppiert dieselben Felder in eigene Schritte. Bewusst NICHT von hier
+// importiert - ObjektAnlegen.jsx wird auch von DIESER Datei importiert
+// (Bearbeiten-Sheet unten), ein Import in Gegenrichtung waere ein
+// Zirkelbezug. Dieses Raster hier zeigt nur an, was gespeichert IST; der
+// Wizard fragt ab, was gespeichert WERDEN soll. Beide duerfen deshalb
+// auseinanderlaufen, ohne dass etwas bricht.
 const FELD_GRUPPEN = [
   {
     titel: "Eckdaten",
@@ -174,9 +175,29 @@ export function ObjektDetail({ objekt, onBack }) {
     const varianten = produktId === "hebel" ? hebelVarianten(basis, t, locale) : [];
     // Die Preiseinordnung wird VOR dem Modellaufruf gerechnet und mitgesendet.
     // Das Modell schaetzt hier nichts - es ordnet fertige Zahlen ein.
-    const schaetzung =
-      produktId === "preis" ? berechnePreisSchaetzung(basis, t, ortsMiete) : null;
+    //
+    // Seit 2026-09-07 bekommt auch "analyse" diese Zahlen: Der Prompt dort
+    // verlangte eine Einordnung des Preisniveaus, lieferte dem Modell aber
+    // keine einzige Vergleichszahl - es hat daraufhin Verkehrswerte erfunden.
+    // Der Anker gehoert zum Prompt-Fix (siehe worker/src/analysePrompt.ts).
+    const brauchtOrtsmiete = produktId === "preis" || produktId === "analyse";
+    const schaetzung = brauchtOrtsmiete ? berechnePreisSchaetzung(basis, t, ortsMiete) : null;
     const zahlen = schaetzung?.verfuegbar ? preisZeilen(schaetzung, locale) : [];
+    // Das Handout ist das einzige Produkt, das auf den anderen aufsetzt: es
+    // bekommt die Kernaussagen der bereits erstellten Auswertungen mit und
+    // leitet daraus die Fragen fuer den Termin ab (Nutzer-Vorgabe 2026-09-07).
+    // Nur die Kernaussage, nicht der ganze Text - das Handout soll Fragen
+    // stellen, nicht die Analysen nacherzaehlen.
+    const befunde =
+      produktId === "handout"
+        ? ["analyse", "hebel", "preis"]
+            .map((id) => {
+              const e = ergebnisFuer(objektAnzeige, id);
+              const kern = e?.inhalt?.kernaussage;
+              return kern ? { produkt: produktFuer(id)?.titel || id, kernaussage: kern } : null;
+            })
+            .filter(Boolean)
+        : [];
     try {
       const res = await apiFetch("/analyse", {
         method: "POST",
@@ -185,6 +206,7 @@ export function ObjektDetail({ objekt, onBack }) {
           produkt: produktId,
           ...(varianten.length > 0 ? { varianten } : {}),
           ...(zahlen.length > 0 ? { zahlen } : {}),
+          ...(befunde.length > 0 ? { befunde } : {}),
           // Nur Kennzahlen, keine Adresse und kein Name - das Modell braucht
           // sie nicht, also gehen sie auch nicht raus.
           kennzahlen: {
