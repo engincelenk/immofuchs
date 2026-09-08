@@ -6,10 +6,9 @@ import { Ueberblick } from "./Ueberblick.jsx";
 import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
-import { AiEngine, VariantenBlock, ZahlenBlock } from "./AiEngine.jsx";
+import { AiEngine } from "./AiEngine.jsx";
 import {
   AI_PRODUKTE,
-  alter,
   ergebnisAnlegen,
   ergebnisFuer,
   ergebnisseLesen,
@@ -22,7 +21,6 @@ import { getSessionId } from "../../utils/assistantSession.js";
 import { ladeMietReferenz, referenzMiete } from "../../utils/mietReferenz.js";
 import {
   fortschreibungsfaktor,
-  fortschreibungsMeta,
   ladeMietenFortschreibung,
 } from "../../utils/mietenFortschreibung.js";
 import { berechnePreisSchaetzung, preisZeilen } from "../../utils/preisSchaetzung.js";
@@ -97,10 +95,11 @@ export function ObjektDetail({ objekt, onBack }) {
   const istPro = Boolean(isProSavedObjects);
   const locale = lang === "de" ? "de-DE" : "de-DE";
   const [bearbeiten, setBearbeiten] = useState(false);
-  // AI-Engine: welches Produkt gerade laeuft, welcher Volltext offen ist,
-  // und ob der letzte Aufruf gescheitert ist.
+  // AI-Engine: welches Produkt gerade laeuft, und ob der letzte Aufruf
+  // gescheitert ist. Der fruehere "volltext"-State (welches Sheet offen ist)
+  // ist mit dem UX-Review 2026-09-09 entfallen - Grundlage & Quellen klappen
+  // jetzt in der Karte selbst auf, siehe AiEngine.jsx/GrundlageUndQuellen.
   const [laufend, setLaufend] = useState(null);
-  const [volltext, setVolltext] = useState(null);
   const [aiFehler, setAiFehler] = useState(null);
   // Welches Produkt auf die KI-Einwilligung wartet (null = keines).
   const [aiConsent, setAiConsent] = useState(null);
@@ -282,12 +281,9 @@ export function ObjektDetail({ objekt, onBack }) {
       await updateObj(objekt.id, objekt.title || "Objekt", basis, {
         resultData: neuResultData,
       });
-      // Das Handout ist seit 2026-09-08 eine Fragenliste zum Abhaken und steht
-      // vollstaendig in der Produktkarte. Das Sheet zeigt Kernaussage,
-      // gerechnete Beilagen und Grundlage - beim Handout also WENIGER als die
-      // Karte darunter. Es hier aufzuziehen wuerde die frisch erzeugten Fragen
-      // verdecken; erreichbar bleibt es ueber "Grundlage & Quellen".
-      setVolltext(produktId === "handout" ? null : produktId);
+      // Kein Sheet mehr, das sich nach einem Lauf oeffnen muesste (UX-Review
+      // 2026-09-09) - die Karte in AiEngine.jsx zeigt das frische Ergebnis
+      // ueber lokaleAiErgebnisse sofort selbst an.
     } catch {
       setAiFehler("Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.");
     } finally {
@@ -428,7 +424,6 @@ export function ObjektDetail({ objekt, onBack }) {
           laufend={laufend}
           locale={locale}
           onStarten={starteProdukt}
-          onOeffnen={(id) => setVolltext(id)}
           onExpose={oeffneExpose}
           referenzMiete={ortsMiete}
         />
@@ -456,14 +451,6 @@ export function ObjektDetail({ objekt, onBack }) {
       <div style={{ marginTop: 16 }}>
         <ObjektLage data={basis} titel={objekt.title} />
       </div>
-
-      <AiVolltext
-        produktId={volltext}
-        objekt={objektAnzeige}
-        locale={locale}
-        onSchliessen={() => setVolltext(null)}
-      />
-
     </div>
   );
 }
@@ -578,97 +565,6 @@ function aiZusammenfassung(objekt, locale) {
       : null;
 
   return `${vorhanden.length} von ${AI_PRODUKTE.length} erstellt${datum ? ` · zuletzt ${datum}` : ""}`;
-}
-
-// Volltext einer Auswertung im vorhandenen Bottom-Sheet - kein zweiter
-// Reiter, keine Navigation weg vom Objekt. Im Reiter steht nur die
-// Kernaussage; alles Weitere hier, damit der Reiter scanbar bleibt.
-function AiVolltext({ produktId, objekt, locale, onSchliessen }) {
-  const ergebnis = produktId ? ergebnisFuer(objekt, produktId) : null;
-  const produkt = produktId ? produktFuer(produktId) : null;
-  const inhalt = ergebnis?.inhalt;
-  // Die Fortschreibung ist eine ERGAENZUNG der Zensus-Quelle, keine
-  // Ablösung - beide bleiben in der Quellenangabe sichtbar. Solange die
-  // Fortschreibungstabelle noch nicht geladen ist (fortschreibungsMeta()
-  // liefert dann null), zeigt die Zeile nur den Zensus-Teil, der fuer sich
-  // genommen bereits wahr ist.
-  const fortschreibung = fortschreibungsMeta();
-  const ortsMieteQuelle = fortschreibung
-    ? `Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022), hochgerechnet auf ${fortschreibung.stand} mit dem Destatis-Mietenindex (Tabelle 61111-0020). Neuvermietungen liegen darüber.`
-    : "Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022). Neuvermietungen liegen darüber.";
-  return (
-    <Sheet
-      open={Boolean(ergebnis)}
-      onClose={onSchliessen}
-      label={produkt?.titel || "Auswertung"}
-      size="min(720px, 100vw)"
-    >
-      {ergebnis && (
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 800 }}>{produkt?.titel}</div>
-          <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 4, marginBottom: 12 }}>
-            KI-generiert · {alter(ergebnis, locale)}
-          </div>
-
-          {inhalt?.kernaussage && (
-            <div style={{ fontSize: 15, lineHeight: 1.65, fontWeight: 600, marginBottom: 16 }}>
-              {inhalt.kernaussage}
-            </div>
-          )}
-
-          {/* Der gerechnete Teil steht VOR dem Modelltext: er ist der
-              belastbare. Der Text darunter ordnet ihn nur ein. */}
-          <VariantenBlock varianten={ergebnis.varianten} titel="Durchgerechnete Varianten" />
-          <ZahlenBlock
-            zahlen={ergebnis.zahlen}
-            titel="Gerechnete Werte"
-            quelle={ortsMieteQuelle}
-          />
-          {(ergebnis.varianten?.length > 0 || ergebnis.zahlen?.length > 0) && (
-            <div style={{ height: 18 }} />
-          )}
-
-          {(inhalt?.abschnitte || []).map((a) => (
-            <div key={a.titel} style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--cl)",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.6,
-                  fontWeight: 600,
-                  marginBottom: 4,
-                }}
-              >
-                {a.titel}
-              </div>
-              <div style={{ fontSize: 15, lineHeight: 1.65 }}>{a.text}</div>
-            </div>
-          ))}
-
-          {/* Nachvollziehbarkeit: auf welchen Zahlen fusst die Aussage? Das ist
-              zugleich der Anker der Veraltet-Erkennung. */}
-          {ergebnis.basis && Object.keys(ergebnis.basis).length > 0 && (
-            <div
-              style={{
-                marginTop: 16,
-                paddingTop: 12,
-                borderTop: "1px solid var(--cb)",
-                fontSize: 11,
-                color: "var(--cl)",
-                lineHeight: 1.6,
-              }}
-            >
-              Grundlage:{" "}
-              {Object.entries(ergebnis.basis)
-                .map(([k, v]) => `${k} ${v}`)
-                .join(" · ")}
-            </div>
-          )}
-        </div>
-      )}
-    </Sheet>
-  );
 }
 
 // Tiefenstufe 3: alle Felder, gruppiert. Seit dem UX-Review 2026-09-05 in EINER

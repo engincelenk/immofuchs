@@ -23,6 +23,7 @@ import {
   veraltetText,
 } from "../../utils/aiEngine.js";
 import { HandoutFragen } from "./HandoutFragen.jsx";
+import { fortschreibungsMeta } from "../../utils/mietenFortschreibung.js";
 
 // Marineblau ist in der App die "Denk-Farbe" fuer KI. Sie markiert hier
 // ausschliesslich modellgenerierten Fliesstext - nie gerechnete Zahlen.
@@ -40,7 +41,6 @@ export function AiEngine({
   proAktiv,
   laufend,
   onStarten,
-  onOeffnen,
   onExpose,
   referenzMiete,
   locale = "de-DE",
@@ -98,7 +98,6 @@ export function AiEngine({
                   proAktiv={proAktiv}
                   locale={locale}
                   onStarten={() => (id === "expose" ? onExpose() : starten(produkt))}
-                  onOeffnen={() => onOeffnen(id)}
                   onVoraussetzung={() => onExpose()}
                   gesperrtText={gesperrtText(produkt, data, referenzMiete)}
                 />
@@ -153,7 +152,6 @@ function ProduktZeile({
   proAktiv,
   locale,
   onStarten,
-  onOeffnen,
   onVoraussetzung,
   gesperrtText: grund,
 }) {
@@ -163,6 +161,11 @@ function ProduktZeile({
   // Handouts haben keine `fragen` - fuer sie bleibt es beim Abschnittstext,
   // sonst waere eine bezahlte Auswertung nachtraeglich leer.
   const fragen = fragenVon(ergebnis);
+  // Grundlage & Quellen (UX-Review 2026-09-09): stand bis dahin nur im
+  // separaten Sheet hinter "Grundlage & Quellen →", erreichbar per Klick, aber
+  // NICHT sichtbar ohne Navigation weg von der Karte. Jetzt eine Aufklapp-
+  // Sektion direkt hier - derselbe Inhalt 1:1, nur ohne Sheet-Umweg.
+  const [aufgeklappt, setAufgeklappt] = useState(false);
   return (
     <div style={{ ...karte, ...(zustand === "veraltet" ? { borderColor: "var(--warn-bd)" } : {}) }}>
       {zustand === "veraltet" && (
@@ -278,25 +281,66 @@ function ProduktZeile({
               marginTop: 12,
             }}
           >
-            {/* Der Text steht jetzt vollstaendig oben - das Sheet traegt nur
-                noch das Drumherum (gerechnete Varianten, Quellenangabe der
-                Ortsmiete, Grundlage der Auswertung). Das Etikett sagt das
-                jetzt auch, statt einen Text zu versprechen, der schon da ist.
+            {/* Aufklappen statt Sheet-Link (UX-Review 2026-09-09): derselbe
+                Inhalt wie vorher im Sheet (volle Varianten-/Zahlenliste samt
+                Quellenangabe, Grundlage der Auswertung), jetzt direkt in der
+                Karte statt hinter einer Navigation.
 
                 Beim Handout gibt es dieses Drumherum nicht: keine Varianten,
                 keine Ortsmiete, und die Veraltet-Basis ist bewusst leer
-                (RELEVANTE_FELDER.handout). Der Link fuehrte dort in ein Sheet,
-                das WENIGER zeigt als die Karte - deshalb entfaellt er. */}
+                (RELEVANTE_FELDER.handout) - deshalb entfaellt der Umschalter
+                dort komplett, nicht nur der Link. */}
             {fragen.length === 0 && (
-              <button type="button" onClick={onOeffnen} style={textLink}>
-                Grundlage & Quellen →
+              <button
+                type="button"
+                onClick={() => setAufgeklappt((o) => !o)}
+                aria-expanded={aufgeklappt}
+                style={textLink}
+              >
+                Grundlage & Quellen {aufgeklappt ? "▲" : "▼"}
               </button>
             )}
             <button type="button" onClick={onStarten} style={{ ...textLink, color: "var(--cl)" }}>
               ↻ Neu
             </button>
           </div>
+
+          {fragen.length === 0 && aufgeklappt && <GrundlageUndQuellen ergebnis={ergebnis} />}
         </>
+      )}
+    </div>
+  );
+}
+
+// Ehemals der Inhalt des Sheets (ObjektDetail.AiVolltext), 1:1 uebernommen:
+// die vollstaendige Varianten-/Zahlenliste samt Quellenangabe, und die
+// Grundlage, auf der die Auswertung fusst - dieselbe Angabe, an der auch die
+// Veraltet-Erkennung haengt (istVeraltet()/veraltetText()). Nur der Rahmen
+// hat sich geaendert: Aufklapp-Sektion in der Karte statt eigenes Sheet.
+function GrundlageUndQuellen({ ergebnis }) {
+  const fortschreibung = fortschreibungsMeta();
+  const ortsMieteQuelle = fortschreibung
+    ? `Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022), hochgerechnet auf ${fortschreibung.stand} mit dem Destatis-Mietenindex (Tabelle 61111-0020). Neuvermietungen liegen darüber.`
+    : "Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022). Neuvermietungen liegen darüber.";
+  const basis = ergebnis?.basis;
+  return (
+    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
+      <VariantenBlock varianten={ergebnis?.varianten} titel="Durchgerechnete Varianten" />
+      <ZahlenBlock zahlen={ergebnis?.zahlen} titel="Gerechnete Werte" quelle={ortsMieteQuelle} />
+      {basis && Object.keys(basis).length > 0 && (
+        <div
+          style={{
+            marginTop: ergebnis?.varianten?.length > 0 || ergebnis?.zahlen?.length > 0 ? 16 : 0,
+            fontSize: 11,
+            color: "var(--cl)",
+            lineHeight: 1.6,
+          }}
+        >
+          Grundlage:{" "}
+          {Object.entries(basis)
+            .map(([k, v]) => `${k} ${v}`)
+            .join(" · ")}
+        </div>
       )}
     </div>
   );
@@ -307,6 +351,25 @@ function ProduktZeile({
 // vorgetaeuschte Genauigkeit.
 const PHASEN = ["Kennzahlen lesen …", "Mit Marktwerten vergleichen …", "Einschätzung formulieren …"];
 
+// KI-Sterne + Schimmer (Nutzerwunsch 2026-09-09): der reine Phasentext war
+// korrekt, aber leblos - 5-30 s ohne jede Bewegung im Bild fuehlten sich
+// laenger an, als sie waren. Die Sterne laufen in --ca (Marken-Orange), NICHT
+// in KI_FARBE (Marineblau) - die ist im Rest der Datei ausschliesslich
+// modellgeneriertem FLIESSTEXT vorbehalten, ein Ladeeffekt ist keiner.
+// prefers-reduced-motion friert beides ein statt es abzuschalten: ein
+// stehendes Muster sagt weiterhin "hier laedt etwas", nur ohne Bewegung.
+const KI_LADEEFFEKT_CSS = `
+@keyframes ai-stern-glitzern{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes ai-balken-schimmer{0%{background-position:160% 0}100%{background-position:-60% 0}}
+.ai-stern{display:inline-block;animation:ai-stern-glitzern 1.6s ease-in-out infinite}
+.ai-balken{background-color:var(--cro);background-image:linear-gradient(90deg,var(--cro) 0%,var(--cro) 35%,var(--ca) 50%,var(--cro) 65%,var(--cro) 100%);
+  background-size:300% 100%;animation:ai-balken-schimmer 1.8s linear infinite}
+@media(prefers-reduced-motion: reduce){
+  .ai-stern{animation:none;opacity:.9}
+  .ai-balken{animation:none;background-image:none}
+}
+`;
+
 function Laeuft({ produkt }) {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
@@ -316,15 +379,32 @@ function Laeuft({ produkt }) {
   }, []);
   return (
     <div aria-busy="true" style={{ marginTop: 8 }}>
-      <div style={{ fontSize: 12.5, color: "var(--cl)", marginBottom: 8 }}>{PHASEN[phase]}</div>
+      <style>{KI_LADEEFFEKT_CSS}</style>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        {[0, 180, 360].map((verzoegerung, i) => (
+          <span
+            key={verzoegerung}
+            className="ai-stern"
+            aria-hidden="true"
+            style={{
+              color: "var(--ca)",
+              fontSize: i === 1 ? 15 : 10,
+              animationDelay: `${verzoegerung}ms`,
+            }}
+          >
+            ✦
+          </span>
+        ))}
+        <span style={{ fontSize: 12.5, color: "var(--cl)" }}>{PHASEN[phase]}</span>
+      </div>
       {[100, 78, 46].map((breite) => (
         <div
           key={breite}
+          className="ai-balken"
           style={{
             height: 11,
             width: `${breite}%`,
             borderRadius: 4,
-            background: "var(--cro)",
             marginBottom: 8,
           }}
         />

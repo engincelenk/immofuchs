@@ -203,20 +203,17 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
             .ma-hdr{padding-left:40px;padding-right:40px}
             .ma-body{padding:28px 40px 40px}
           }
-          /* Ab hier zeigt App.jsx die 240px-Sidebar und stellt .hdr-inner/
-             .content auf eigene Masse um (siehe dort, selbe Media-Query:
-             min-width:1280px and min-height:600px). Dieser Bereich hat
-             keine eigene Sidebar-Spalte, muss aber dieselbe wirksame
-             Inhaltsbreite zeigen wie Objektseiten/Landingpage - sonst wirkt
-             die Profilseite ab dieser Breite sichtbar breiter (UX-Audit
-             2026-09-07). Werte 1:1 von App.jsx uebernommen: .hdr-inner geht
-             dort auf max-width:none + padding-left:24px (padding-right
-             bleibt bei 40px aus der Stufe darueber), .content auf
-             max-width:1180px + padding:32px 32px 48px. */
-          @media(min-width:1280px) and (min-height:600px){
-            .ma-hdr{max-width:none;padding-left:24px}
-            .ma-body{max-width:1180px;padding:32px 32px 48px}
-          }
+          /* Bugreport 2026-09-08: die Media-Query, die hier ab 1280px auf
+             max-width:1180px verschmaelerte (Begruendung: "dieselbe
+             Inhaltsbreite wie App.jsx nach der Sidebar zeigen"), war ein
+             Fehlschluss - MyAccount wird NIE innerhalb von .shell gerendert
+             und hat deshalb gar keine Sidebar-Spalte zu beruecksichtigen.
+             Die Verschmaelerung machte die Profilseite auf breiten
+             Bildschirmen enger als die Landingpage (.lp-container bleibt
+             durchgaengig bei 1400px), statt sie anzugleichen - also das
+             Gegenteil der beabsichtigten Wirkung. Ersatzlos entfernt: ohne
+             eigene Regel bleibt .ma-body bei der Stufe darueber (1400px),
+             genau wie .lp-container. */
         `}</style>
         <div className="ma-hdr-bar">
         <div className="ma-hdr">

@@ -23,6 +23,7 @@ import {
   ladeAuswahl,
   speichereAuswahl,
 } from "../../utils/handoutAuswahl.js";
+import { katalogFuerObjekt, ergaenzeUmKatalog } from "../../utils/handoutEckdaten.js";
 
 const CheckoutWizard = lazyWithReload(
   () => import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
@@ -59,7 +60,20 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
     () => objektHandoutSchluessel(objekt?.id, erstellt),
     [objekt?.id, erstellt],
   );
-  const [auswahl, setAuswahl] = useAuswahl(fragen, schluessel);
+
+  // Eckdaten und der volle 44-Fragen-Katalog kommen aus derselben Quelle wie
+  // beim Handout aus dem Expose-Scan (finnAbgleich.js/finnFragenkatalog.js,
+  // siehe handoutEckdaten.js fuer den Adapter auf die Objektfelder).
+  // Die zwoelf Fragen des Modells bleiben unberuehrt - sie werden nur um die
+  // noch offenen Katalogfragen ERGAENZT (Nutzerfeedback: "Eckdaten fehlen ...
+  // es waren auch mehr Checkboxen integriert"), abzueglich Dopplungen.
+  const katalog = useMemo(() => katalogFuerObjekt(objekt, data), [objekt, data]);
+  const alleFragen = useMemo(
+    () => ergaenzeUmKatalog(fragen, katalog),
+    [fragen, katalog],
+  );
+
+  const [auswahl, setAuswahl] = useAuswahl(alleFragen, schluessel);
   const [zeigeUpgrade, setZeigeUpgrade] = useState(false);
   const [fehler, setFehler] = useState(null);
 
@@ -68,13 +82,13 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
   // gedruckten Dokument (quelle === "vor_ort").
   const { anMakler, vorOrt } = useMemo(
     () => ({
-      anMakler: fragen.filter((f) => !f.vorOrt),
-      vorOrt: fragen.filter((f) => f.vorOrt),
+      anMakler: alleFragen.filter((f) => !f.vorOrt),
+      vorOrt: alleFragen.filter((f) => f.vorOrt),
     }),
-    [fragen],
+    [alleFragen],
   );
 
-  const alleIds = fragen.map((f) => f.id);
+  const alleIds = alleFragen.map((f) => f.id);
   const alleGewaehlt = alleIds.length > 0 && alleIds.every((id) => auswahl.has(id));
 
   const toggle = (id) => {
@@ -103,13 +117,18 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
         // Findings, Preistabelle und Verdict stammen aus dem Exposé-Kontext
         // und fehlen hier bewusst - der Worker laesst diese Bloecke seit
         // 2026-09-08 weg, statt leere Ueberschriften zu drucken.
+        // `bekannt` und `objekttyp` kommen aus demselben Katalogabgleich wie
+        // die zusaetzlichen Fragen oben (handoutEckdaten.js) - erst damit
+        // zeigt das PDF die Eckdaten-Spalte, die im Expose-Weg schon immer da war.
         analyse: {
           titel: objekt?.title || "Objekt",
           adresse: [data?.plz || objekt?.plz, data?.ort || objekt?.ort]
             .filter(Boolean)
             .join(" "),
           kernaussage,
-          checkliste: fragen.map((f) => ({
+          objekttyp: katalog.objekttyp,
+          bekannt: katalog.bekannt,
+          checkliste: alleFragen.map((f) => ({
             id: f.id,
             frage: f.frage,
             kategorie: f.kategorie,

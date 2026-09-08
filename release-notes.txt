@@ -1,3 +1,51 @@
+## 2026-09-09 (1.74.0)
+
+### Grundlage & Quellen ohne Sheet, altes Breitenverhaeltnis zurueck, Handout mit echtem Fragenkatalog
+
+Fuenf Nutzerbefunde aus dem ersten Blick auf den gestrigen Stand.
+
+**1. "Grundlage & Quellen" klappt jetzt in der Karte auf, kein Sheet mehr**
+Der Link fuehrte weg von der Karte in ein separates Sheet - derselbe Bruch,
+den "generierte Texte komplett ausgeben" (1.72.0) schon fuer den Haupttext
+behoben hatte, hier aber uebersehen. Volltext, gerechnete Varianten/Zahlen
+samt Quellenangabe und die Grundlage der Auswertung stehen jetzt 1:1 wie
+vorher im Sheet, nur als Aufklapp-Sektion direkt in der Karte. AiVolltext,
+der volltext-State und das onOeffnen-Durchreichen sind ersatzlos entfallen.
+
+**2. Breite zurueck auf den alten Rendite-mit-Seitenmenue-Stand**
+Der Zentrierungs-Fix von gestern (Sidebar+Inhalt auf einen 1400px-Block wie
+die Landingpage) liess den Rechnerbereich auf breiten Monitoren durch grosse
+leere Seitenraender enger wirken - das Gegenteil der Absicht. Zurueckgesetzt
+auf: Sidebar am linken Viewportrand, Inhalt bis 1180px in der Restbreite.
+Zusaetzlicher Befund dabei: die MyAccount-Verschmaelerung von gestern beruhte
+auf einer falschen Annahme - MyAccount haengt nie in der Sidebar-Ansicht und
+haette nie verschmaelert werden sollen. Ersatzlos entfernt.
+
+**3. KI-Sterne und Schimmer-Effekt beim Laden**
+Der reine Phasentext war korrekt, aber leblos ueber 5-30 Sekunden. Drei
+funkelnde Sterne (in Marken-Orange, nicht im fuer Modelltext reservierten
+Marineblau) plus ein Schimmer-Effekt auf den Platzhalterbalken, beides mit
+prefers-reduced-motion-Ruecksicht.
+
+**4. Besichtigungshandout nutzt jetzt den alten 44-Fragen-Katalog**
+Das gestern gebaute Handout zeigte nur bis zu 12 vom Modell frei generierte
+Fragen und keine Eckdaten-Spalte im PDF. Das aeltere Handout aus dem
+Exposé-Scan (FinnHandoutPanel) konnte beides laengst: ein automatisch
+befuellter "Bereits bekannt"-Block und ein statischer Katalog mit 44 Fragen
+ueber 11 Kategorien, aus dem nur die fuer dieses Objekt noch unbeantworteten
+uebrig bleiben. Ein duenner Adapter (handoutEckdaten.js) fuehrt die flachen
+Renditerechner-Felder eines Objekts in genau die Form, die dieser Katalog
+schon immer erwartet hat - derselbe Katalog, dieselbe Logik, keine Aenderung
+an finnFragenkatalog.js/finnAbgleich.js/FinnHandoutPanel.jsx. Ergebnis: die
+Eckdaten-Spalte ist jetzt gefuellt, und zu den 12 KI-Fragen kommen die noch
+offenen Katalogfragen hinzu (haeufig 25-35 zusaetzlich, je nach Datenstand).
+Felder, die nur einen technischen Default-Wert tragen (Maklerprovision,
+Wohneinheiten etc.), werden bewusst NICHT als "bekannt" ausgegeben - das
+waeren erfundene statt echte Fakten.
+
+**5. Kartenlink am Orte-Tab zeigt jetzt auf Google Maps**
+Vorher OpenStreetMap.
+
 ## 2026-09-08 (1.73.0)
 
 ### Ortsmiete aus dem Zensus 2022 auf das aktuelle Jahr hochgerechnet

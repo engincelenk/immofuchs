@@ -838,33 +838,26 @@ export default function App() {
         .tbar-wrap{display:none}
         /* padding-bottom war der Platz fuer die Tableiste. Ohne sie bliebe
            dort toter Raum. */
-        /* Sidebar UND Inhalt bilden zusammen denselben 1400px-Block, auf den
-           auch die Landingpage (.lp-container) und MyAccount (.ma-body)
-           zentrieren (Bugreport 2026-09-08).
-
-           Vorher stand hier max-width:none: die Sidebar klebte am linken
-           Viewportrand, der Inhalt zentrierte sich in der Restbreite. Auf
-           einem 2560px-Monitor lag die Inhaltsspalte damit rund 120px weiter
-           rechts als auf der Landingpage und war 220px schmaler - beim
-           Wechseln zwischen beiden Seiten sprang das Layout sichtbar.
-
-           Die Sidebar ist position:fixed und kennt den zentrierten Block
-           nicht von selbst; left wandert deshalb rechnerisch mit. max() haelt
-           sie bei schmalen Fenstern am Rand, sonst rutschte sie ins
-           Negative. */
-        .shell{max-width:1400px;margin:0 auto;padding-left:240px;padding-bottom:40px}
-        .sidebar{left:max(0px, calc(50vw - 700px))}
-        .content{max-width:1160px;padding:32px 32px 48px}
-        /* Das Logo steht ueber der Sidebar-Spalte und liest sich als deren
-           Kopf. Seit dem Breiten-Fix 2026-09-08 zentriert der Header auf
-           denselben 1400px-Block wie .shell und die Landingpage - damit
-           fluchtet die linke Logokante wieder mit der Sidebar UND mit dem
-           Landingpage-Inhalt. Genau die Flucht, die der Kommentar hier vorher
-           fuer "geometrisch unmoeglich" erklaerte: sie war es nur, solange
-           .shell max-width:none trug. Das Box-Modell-Argument aus dem
-           Bugreport 2026-08-10 (Padding auf .hdr-inner, nicht auf .hdr)
-           bleibt unangetastet. */
-        .hdr-inner{max-width:1400px;padding-left:24px}
+        .shell{max-width:none;padding-left:240px;padding-bottom:40px}
+        .content{max-width:1180px;padding:32px 32px 48px}
+        /* Bugreport 2026-09-08: der Versuch vom Vortag, Sidebar+Inhalt auf
+           denselben 1400px-Block wie die Landingpage zu zentrieren, hat den
+           Rechnerbereich auf breiten Monitoren enger und "eingekastelt"
+           wirken lassen (grosse leere Raender links und rechts) statt breiter
+           - genau das Gegenteil des gewuenschten Effekts. Zurueck auf die
+           Rendite-Seite-mit-Seitenmenue-Breite von vorher: Sidebar klebt am
+           linken Viewportrand, .content darf bis 1180px nutzen und zentriert
+           sich in der verbleibenden Breite - auf breiten Bildschirmen
+           spuerbar mehr Platz als die zentrierte 1400px-Box. Dass diese
+           Breite dadurch nicht mehr exakt mit der Landingpage fluchtet, ist
+           hier ausdruecklich in Kauf genommen (Nutzer-Vorgabe: "breiter als
+           jetzt" wiegt schwerer als Millimeter-Flucht). Das Logo steht ueber
+           der Sidebar-Spalte und liest sich als deren Kopf - eine Flucht mit
+           der Inhaltskante ist bei zentriertem Inhalt in der Restbreite
+           geometrisch unmoeglich, das Box-Modell-Argument aus dem Bugreport
+           2026-08-10 (Padding auf .hdr-inner, nicht auf .hdr) bleibt
+           unangetastet. */
+        .hdr-inner{max-width:none;padding-left:24px}
 
         /* ── Verdichtung im Objektbereich ──────────────────────────────────
            Das Eigen-Padding der Objektansichten entfaellt: .content bringt

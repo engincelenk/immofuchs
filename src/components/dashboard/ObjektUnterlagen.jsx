@@ -369,7 +369,7 @@ export function ObjektOrte({ objekte, onOeffnen }) {
           ))}
           {ort !== "Ohne Ortsangabe" && (
             <a
-              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(ort)}`}
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ort)}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{
