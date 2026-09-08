@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { isK15 } from "../../data/plzData.js";
+import { apiV1 } from "../../utils/apiBase.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtDat } from "../../utils/helpers.js";
 import { buildMP } from "../../utils/mietprognose.js";
@@ -12,10 +13,32 @@ import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
+import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 
 export default function Miete() {
-  const { d, set, t, tip, lang } = useApp();
+  const { d, set, t, tip, lang, aktivesObjekt } = useApp();
   const [view, setView] = useState("input");
+  // plzData.js laedt die Kappungsgrenzen-Liste selbst beim Modulimport, legt
+  // aber keinen Ladezustand nach aussen - nur isK15() (liefert bis dahin
+  // false = 20 %, siehe dortiger Kommentar). Fuer die KI-Karte muss aber
+  // unterscheidbar sein, ob "20 %" der echte Wert ist oder nur "noch nicht
+  // geladen" - eine falsche Kappungsgrenze an ein bezahltes, limitiertes
+  // KI-Produkt zu senden waere schlimmer als eine kurze Wartezeit. Deshalb
+  // hier ein zweiter, sehr kleiner Request an denselben Endpunkt, rein als
+  // Fertig-Signal - die Antwort selbst wird verworfen, isK15() bleibt die
+  // einzige Quelle fuer den Wert.
+  const [k15Geladen, setK15Geladen] = useState(false);
+  useEffect(() => {
+    let lebt = true;
+    fetch(apiV1("/kappungsgrenze"))
+      .catch(() => {})
+      .finally(() => {
+        if (lebt) setK15Geladen(true);
+      });
+    return () => {
+      lebt = false;
+    };
+  }, []);
   const R = useMemo(() => {
     const mi = +d.kaltmiete || 0,
       qm = +d.flaeche || 1,
@@ -341,6 +364,41 @@ export default function Miete() {
                 })()}
               </div>
               <SaveBtn tab="miete" />
+              {aktivesObjekt?.art === "rechnerErgebnis" && aktivesObjekt?.rechnerTyp === "miete" && (
+                <RechnerAiKarte
+                  produktId="miete"
+                  titel="Mieterhöhung analysieren"
+                  kurz="Einschätzung zur nächsten Mieterhöhung und zur Kappungsgrenze"
+                  data={d}
+                  kennzahlen={{
+                    vergleichsmieteProQm: d.vergleichsmiete,
+                    aktuelleKaltmiete: d.kaltmiete,
+                    flaeche: d.flaeche,
+                    ort: d.ort,
+                    bundeslandCode: d.bundesland,
+                    letzteErhoehungDatum: d.letzteErhDatum,
+                    letzteErhoehungBetrag: d.letzteErhMiete,
+                    kappungsgrenzeProzent: R.kP,
+                    naechsteErhoehungDatum: R.rows?.[0]?.datum
+                      ? R.rows[0].datum.toISOString().split("T")[0]
+                      : null,
+                    naechsteErhoehungBetrag: R.rows?.[0]?.mE ?? null,
+                  }}
+                  zahlen={
+                    // Berlin/Hamburg gelten unabhaengig von der geladenen Liste
+                    // (siehe R oben) - nur ausserhalb davon haengt der Wert an
+                    // isK15(), das erst nach dem Laden zuverlaessig ist.
+                    !k15Geladen && !(d.bundesland === "BE" || d.bundesland === "HH") && !isK15(d.ort)
+                      ? [{ label: "Kappungsgrenze", wert: "wird geladen …" }]
+                      : [
+                          {
+                            label: "Kappungsgrenze",
+                            wert: R.k15 ? "15 % (angespannter Wohnungsmarkt)" : "20 % (Regelfall)",
+                          },
+                        ]
+                  }
+                />
+              )}
               <ExportPDF title={t.mieteFull || t.miete} rechner="miete" />
               <Legal items={LEG.miete} />
             </>

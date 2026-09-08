@@ -9,9 +9,10 @@ import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { SaveBtn } from "../shell/Merkliste.jsx";
+import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 
 export function Vorfaelligkeit() {
-  const { d, set, t, lang } = useApp();
+  const { d, set, t, lang, aktivesObjekt } = useApp();
   const vt = VFE_T[lang] || VFE_T.de;
   const loc = { de: "de-DE", en: "en-GB", tr: "tr-TR", zh: "zh-CN", hi: "hi-IN" }[lang] || "de-DE";
   const [view, setView] = useState("input");
@@ -709,6 +710,28 @@ export function Vorfaelligkeit() {
                 {vt.disclaimer}
               </div>
               <SaveBtn tab="vfe" />
+              {aktivesObjekt?.art === "rechnerErgebnis" && aktivesObjekt?.rechnerTyp === "vfe" && (
+                <RechnerAiKarte
+                  produktId="vfe"
+                  titel="Vorfälligkeitsentschädigung analysieren"
+                  kurz="Einschätzung zur Vorfälligkeitsentschädigung im Marktvergleich"
+                  data={d}
+                  kennzahlen={{
+                    restschuld: d.vfeRestschuld,
+                    sollzinssatz: effZinsDisp,
+                    zinsbindungsende: d.vfeSollzinsbindungsEnde,
+                    abloeseTermin: d.vfeAbloeseTermin,
+                    wiederanlagezinsGenutzt: d.vfeWiederanlagezins || String(PFANDBRIEF.zins),
+                    vorfaelligkeitsentschaedigung: Math.round(R.nettovfe),
+                  }}
+                  zahlen={[
+                    {
+                      label: `Pfandbrief-Wiederanlagezins (Stand ${PFANDBRIEF.stand})`,
+                      wert: `${String(PFANDBRIEF.zins).replace(".", ",")} %`,
+                    },
+                  ]}
+                />
+              )}
               <ExportPDF title={t.vfeFull || t.vfe} rechner="vorfaelligkeit" />
             </>
           )}

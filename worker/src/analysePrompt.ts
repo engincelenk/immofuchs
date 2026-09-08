@@ -11,7 +11,16 @@
 // kann der Client die Kernaussage in drei Zeilen zeigen und den Rest
 // nachladen.
 
-export type AnalyseProdukt = "analyse" | "hebel" | "preis" | "handout";
+export type AnalyseProdukt =
+  | "analyse"
+  | "hebel"
+  | "preis"
+  | "handout"
+  | "kredit"
+  | "miete"
+  | "sanier"
+  | "vfe"
+  | "steuer6";
 
 // Laengen 2026-09-08 angehoben (Nutzerwunsch "generierte Texte komplett
 // ausgeben"): Der Client zeigt die Abschnitte jetzt direkt in der Karte statt
@@ -170,10 +179,119 @@ Keine Fragen, deren Antwort bereits in den Kennzahlen steht.
 
 ${HANDOUT_FORM}`;
 
+// ── Produkte der fuenf Nicht-Rendite-Rechner ─────────────────────────────────
+//
+// Anders als ANALYSE/HEBEL/PREIS werten diese fuenf kein Objekt aus, sondern
+// die Eingaben eines einzelnen Rechners (Finanzierung, Mieterhoehung,
+// Sanierung, Vorfaelligkeit, §6-Optimierung). Dieselbe FORM, dieselbe
+// Zahlen-Disziplin wie PREIS: das Modell uebernimmt ausschliesslich Zahlen aus
+// dem "Kennzahlen"- oder "Gerechnete Werte"-Block und erfindet keine eigenen
+// Markt-, Foerder- oder Steuerzahlen (siehe Kommentar zu PREIS oben,
+// "Scheingenauigkeit").
+
+const KREDIT = `${HALTUNG}
+
+Deine Aufgabe: Bewerte die Finanzierungsannahmen dieser Berechnung - Zinssatz, Tilgung und
+Zinsbindung - gegen die aktuelle Marktlage.
+
+Der Referenzzins unter "Gerechnete Werte" stammt aus einer aktuellen Marktdatenquelle und ist
+bereits richtig. Uebernimm ihn woertlich. Nenne KEINEN eigenen Zinssatz, den du selbst
+geschaetzt hast - insbesondere keinen "aktuellen Marktzins", der dort nicht steht. Ordne
+stattdessen ein, wie der Zinssatz dieser Finanzierung im Vergleich dazu steht - z.B. wie
+viele Prozentpunkte darueber oder darunter - und was das fuer Monatsrate und Zinsbindung
+bedeutet.
+
+Die Abschnitte sollten ZINSSATZ, RATE und ZINSBINDUNG heissen.
+
+${FORM}`;
+
+const MIETE = `${HALTUNG}
+
+Deine Aufgabe: Ordne die geplante Mieterhoehung rechtlich ein (§ 558 BGB, Kappungsgrenze).
+
+Ob der Ort in einem Gebiet mit abgesenkter Kappungsgrenze liegt (15 statt 20 Prozent in drei
+Jahren, "angespannter Wohnungsmarkt"), bekommst du unter "Gerechnete Werte" mitgeliefert und
+bereits korrekt ermittelt - urteile NICHT selbst, ob ein Ort angespannt ist, das ist bereits
+ein Fakt, kein Interpretationsspielraum. Uebernimm diesen Prozentsatz woertlich, nenne
+KEINEN eigenen. Ist dort zusaetzlich die bereits genutzte bzw.
+verbleibende Kappung angegeben, uebernimm auch diese woertlich; fehlt sie, rechne sie NICHT
+selbst nach - arbeite dann nur mit der Kappungsgrenze selbst. Erklaere, was die mitgelieferten
+Werte fuer die geplante Erhoehung bedeuten: passt sie in die Kappungsgrenze (bzw. die
+verbleibende, falls bekannt), welche Frist gilt bis zur naechsten Erhoehung.
+
+Die Abschnitte sollten RECHTSLAGE, SPIELRAUM und FRIST heissen.
+
+${FORM}`;
+
+const SANIER = `${HALTUNG}
+
+Deine Aufgabe: Ordne die geplante Sanierung ein - Foerderfaehigkeit, Amortisationsdauer und
+energetischer Nutzen.
+
+Foerdersatz und Hoechstbetrag eines passenden KfW- oder BAFA-Programms bekommst du, wenn
+vorhanden, unter "Gerechnete Werte" mitgeliefert. Uebernimm diese Zahlen woertlich. Erfinde
+KEINEN eigenen Foerdersatz und KEINEN eigenen Hoechstbetrag - Foerderprogramme aendern sich
+haeufig, eine selbst erfundene Zahl waere hier besonders schaedlich, weil sie eine
+Finanzierungsplanung falsch aufstellen wuerde. Fehlt der Zahlenblock, sprich nur qualitativ
+ueber die Foerderfaehigkeit, ohne eine Zahl zu nennen.
+
+Die Abschnitte sollten FÖRDERUNG, AMORTISATION und PRIORITÄT heissen.
+
+${FORM}`;
+
+const VFE = `${HALTUNG}
+
+Deine Aufgabe: Ordne die berechnete Vorfaelligkeitsentschaedigung ein - BGH-Konformitaet der
+Berechnung, Zeitpunkt der Abloesung, moegliche Alternativen.
+
+Der aktuelle Wiederanlagezins (Pfandbrief-Referenz) unter "Gerechnete Werte" ist bereits
+berechnet und massgeblich fuer die Hoehe der Entschaedigung. Uebernimm ihn woertlich, erfinde
+KEINEN eigenen Zinssatz. Ordne ein, wie dieser Referenzzins die Hoehe der Entschaedigung
+beeinflusst, und ob ein Sondertilgungsrecht die Summe druecken wuerde.
+
+Die Abschnitte sollten HÖHE, ZEITPUNKT und ALTERNATIVE heissen.
+
+${FORM}`;
+
+// Eckwerte des deutschen Einkommensteuertarifs 2026 als STATISCHER Fakt im
+// Prompt-Text, analog zum Zensus-Stichtag im PREIS-Prompt - kein Client-Wert,
+// weil sich der Tarif nicht objektspezifisch, sondern jaehrlich per Gesetz
+// aendert. Recherchiert 2026-09-08 (Steuerfortentwicklungsgesetz), uebereinstimmend
+// bestaetigt durch mehrere unabhaengige Quellen (siehe Meldung an den Auftraggeber).
+// Bei einer Aktualisierung fuer einen spaeteren Veranlagungszeitraum: diese drei
+// Zahlen pruefen und den Kommentar mit dem neuen Recherchedatum versehen.
+//   Grundfreibetrag:                 12.348 EUR zu versteuerndes Einkommen (Ledige)
+//   42 %-Satz ("Spitzensteuersatz"): ab 69.879 EUR (Ledige) / 139.758 EUR (Zusammenveranlagung)
+//   45 %-Satz ("Reichensteuer"):     ab 277.826 EUR (unveraendert seit mehreren Jahren)
+const STEUER6 = `${HALTUNG}
+
+Deine Aufgabe: Ordne die §6-Steueroptimierung dieser Berechnung ein - passt der angegebene
+Grenzsteuersatz zur aktuellen Tarifstruktur, und was bedeutet der Hebel ueber Sanierungs-
+bzw. Anschaffungskosten fuer die Einkommensteuer.
+
+Fester Fakt zum Veranlagungszeitraum 2026 (deutscher Einkommensteuertarif): Grundfreibetrag
+12.348 EUR, 42 % Spitzensteuersatz ab 69.879 EUR zu versteuerndem Einkommen (139.758 EUR bei
+Zusammenveranlagung), 45 % Reichensteuer ab 277.826 EUR. Nutze ausschliesslich diese Werte,
+um den vom Nutzer angegebenen Grenzsteuersatz einzuordnen - liegt er plausibel in einer
+dieser Zonen oder weicht er auffaellig ab.
+
+Alle uebrigen Zahlen (Sanierungskosten, Kaufpreis, noetige Betraege) bekommst du unter
+"Kennzahlen des Objekts" fertig berechnet mitgeliefert. Uebernimm sie woertlich, erfinde
+KEINE eigenen Betraege oder Steuersaetze ausserhalb der oben genannten Tarifwerte.
+
+Die Abschnitte sollten GRENZSTEUERSATZ, HEBEL und GRENZEN heissen.
+
+${FORM}`;
+
 export function systemPromptFuer(produkt: AnalyseProdukt): string {
   if (produkt === "hebel") return HEBEL;
   if (produkt === "preis") return PREIS;
   if (produkt === "handout") return HANDOUT;
+  if (produkt === "kredit") return KREDIT;
+  if (produkt === "miete") return MIETE;
+  if (produkt === "sanier") return SANIER;
+  if (produkt === "vfe") return VFE;
+  if (produkt === "steuer6") return STEUER6;
   return ANALYSE;
 }
 

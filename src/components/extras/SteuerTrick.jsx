@@ -8,6 +8,7 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { Tip } from "../ui/Tip.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
+import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 
 // Euro-Eingabe mit Tausenderpunkten in der Anzeige (Nutzer-Vorgabe
 // 2026-08-28, "10000" -> "10.000") - dieser Rechner nutzt (anders als die
@@ -49,7 +50,7 @@ export function SteuerTrick() {
   // dadurch hatte dieser Rechner keine Speicherfunktion (Konzept-Dok 8.3
   // Punkt 2). Jetzt wie die anderen 5 Rechner ueber d/set gefuehrt, damit
   // SaveBtn/Merkliste greifen.
-  const { lang, d, set } = useApp();
+  const { lang, d, set, aktivesObjekt } = useApp();
   const st = STEUER_T[lang] || STEUER_T.de;
   const ls = d.steuer6Ls ?? "50000";
   const gst = d.steuer6Gst ?? "42";
@@ -441,6 +442,27 @@ export function SteuerTrick() {
                 {st.disclaimer}
               </div>
               <SaveBtn tab="steuer6" />
+              {aktivesObjekt?.art === "rechnerErgebnis" && aktivesObjekt?.rechnerTyp === "steuer6" && (
+                <RechnerAiKarte
+                  produktId="steuer6"
+                  titel="Steueroptimierung analysieren"
+                  kurz="Einschätzung zur Rückwärtsrechnung auf Basis deines Steuersatzes"
+                  data={d}
+                  kennzahlen={{
+                    grenzsteuersatzProzent: grenzSatz,
+                    lohnsteuerJahr: lohnsteuer,
+                    grundstueckswert: grundstueck,
+                    notwendigeSanierungskosten: Math.round(sanK),
+                    gebaeudewertZiel: Math.round(gebW),
+                    gesamtkaufpreisZiel: Math.round(gesKP),
+                  }}
+                  // Keine zusaetzlichen Marktzahlen: der Worker-Prompt fuer
+                  // dieses Produkt traegt die aktuellen Steuertarif-Eckwerte
+                  // bereits fest im Text (Absprache mit dem Worker-Agent),
+                  // ein Datensatz dafuer existiert hier nicht.
+                  zahlen={[]}
+                />
+              )}
               <ExportPDF title={(T[lang] || T.de).steuer6Full || (T[lang] || T.de).steuer6} rechner="steuertrick" />
 
               {/* ═══ KI-ASSISTENT (Phase 3, Sprint 5 — Konzept Abschnitt 5) ═══ */}

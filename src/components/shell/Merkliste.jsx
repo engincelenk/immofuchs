@@ -63,6 +63,18 @@ const searchChipActiveStyle = {
 // pruefen jetzt dieselbe Zahl auf dieselbe Weise (TRIAL_MERKLISTE_GESAMT in
 // worker/src/trialLimits.ts).
 const TRIAL_OBJECT_LIMIT_GESAMT = 5;
+
+// Icon+Label je Rechnertyp fuer Merkliste-Karten mit
+// kennzahlen.art==="rechnerErgebnis" (Auftrag 2026-09-08, Teil 4). Eigene,
+// lokale Konstante statt der IC-SVGs aus App.jsx - die sind dort nicht
+// exportiert.
+const RECHNER_TYP_INFO = {
+  kredit: { icon: "🏦", label: "Kreditrechner" },
+  miete: { icon: "📈", label: "Mieterhöhungsrechner" },
+  sanier: { icon: "🔧", label: "Sanierungsrechner" },
+  vfe: { icon: "⚖️", label: "Vorfälligkeitsrechner" },
+  steuer6: { icon: "🧾", label: "Steueroptimierung §6" },
+};
 const LOCAL_STORAGE_KEY = "if_saved_v1";
 const PRO_MIRROR_KEY = "if_saved_pro_mirror_v1"; // Offline-Spiegelung (4.17)
 
@@ -97,6 +109,31 @@ function writeLocalList(list) {
 // die Ansicht wandert als "letzteAnsicht" daneben - eine reine
 // UI-Erinnerung, keine Identitaet mehr.
 export function toServerPayload(local) {
+  // Zwei-Produkte-Umbau (Auftrag 2026-09-08): ein Rechner-Ergebnis (Kredit-,
+  // Miet-, Sanier-, VfE- oder Steuer6-Rechner) ist kein Rendite-Objekt und
+  // bekommt deshalb weder Kaufpreis/Wohnflaeche noch eine Score-Ampel - die
+  // volle berechneObjektKennzahlen()-Rechnung waere hier nur Unsinns-Zahlen.
+  // Fehlt local.kennzahlen.art (jeder Aufruf vor diesem Umbau, siehe
+  // objektMapping.test.js), bleibt exakt der bisherige Pfad.
+  if (local.kennzahlen?.art === "rechnerErgebnis") {
+    return {
+      id: local.id,
+      title: local.name,
+      plz: local.data?.plz || null,
+      ort: local.data?.ort || null,
+      kaufpreis: null,
+      wohnflaeche: null,
+      score: null,
+      scoreLabel: null,
+      inputData: { ...local.data },
+      resultData: {
+        art: "rechnerErgebnis",
+        rechnerTyp: local.kennzahlen.rechnerTyp,
+        letzteAnsicht: local.letzteAnsicht || "haupt",
+      },
+      source: "manuell",
+    };
+  }
   const kaufpreis = Number(local.data?.kaufpreis);
   const wohnflaeche = Number(local.data?.wohnflaeche ?? local.data?.flaeche);
   // A2: score/scoreLabel standen hier bis 2026-09 hart auf null - nur der
@@ -252,7 +289,7 @@ export function useSavedObjects(setData) {
   }, [isPro, refreshFromServer]);
 
   const saveObj = useCallback(
-    async (name, data, tab) => {
+    async (name, data, tab, opts = {}) => {
       const obj = {
         id: crypto.randomUUID(),
         name: name.trim() || "Objekt",
@@ -263,10 +300,15 @@ export function useSavedObjects(setData) {
         data: { ...data },
         // A2: auch der Free-Pfad (localStorage) fuehrt Score und Kennzahlen
         // mit - sonst haette nur die Pro-Liste eine Ampel.
-        ...(() => {
-          const kz = berechneObjektKennzahlen(data);
-          return { score: kz.score, scoreLabel: kz.scoreLabel, kennzahlen: kz };
-        })(),
+        // opts.rechnerErgebnis (2026-09-08): ein Ergebnis der 5 Nebenrechner
+        // ist kein Rendite-Objekt - berechneObjektKennzahlen() liefe hier ins
+        // Leere (kein Kaufpreis) und ergaebe eine falsche/leere Ampel.
+        ...(opts.rechnerErgebnis
+          ? { score: null, scoreLabel: null, kennzahlen: { art: "rechnerErgebnis", rechnerTyp: tab } }
+          : (() => {
+              const kz = berechneObjektKennzahlen(data);
+              return { score: kz.score, scoreLabel: kz.scoreLabel, kennzahlen: kz };
+            })()),
       };
       if (isPro) {
         try {
@@ -318,11 +360,17 @@ export function useSavedObjects(setData) {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              // 2026-09-08: vorher?.kennzahlen wird durchgereicht, damit
+              // toServerPayload() bei einem Rechner-Ergebnis in seinem
+              // eigenen Zweig bleibt - sonst wuerde "Am Objekt speichern"
+              // (SaveBtn, aktivesObjekt-Zweig) es hier stillschweigend zu
+              // einem Rendite-Objekt mit Unsinns-Score degradieren.
               ...toServerPayload({
                 id,
                 name,
                 data,
                 letzteAnsicht: vorher?.letzteAnsicht || "haupt",
+                kennzahlen: vorher?.kennzahlen,
               }),
               ...(extra.resultData
                 ? {
@@ -342,21 +390,33 @@ export function useSavedObjects(setData) {
         return;
       }
       setSavedList((prev) => {
-        const next = prev.map((o) =>
-          o.id === id
-            ? {
-                ...o,
-                name: name.trim() || o.name,
-                data: { ...data },
-                date: new Date().toLocaleDateString("de-DE"),
-                score: kz.score,
-                scoreLabel: kz.scoreLabel,
-                kennzahlen: extra.resultData
-                  ? { ...kz, ...extra.resultData }
-                  : { ...kz, ...(o.kennzahlen?.ai ? { ai: o.kennzahlen.ai } : {}) },
-              }
-            : o,
-        );
+        const next = prev.map((o) => {
+          if (o.id !== id) return o;
+          // Free-Pfad-Pendant zum Pro-Zweig oben: art/rechnerTyp bleiben
+          // erhalten statt mit dem frisch berechneten kz ueberschrieben zu
+          // werden.
+          const istRechnerErgebnis = o.kennzahlen?.art === "rechnerErgebnis";
+          return {
+            ...o,
+            name: name.trim() || o.name,
+            data: { ...data },
+            date: new Date().toLocaleDateString("de-DE"),
+            score: istRechnerErgebnis ? null : kz.score,
+            scoreLabel: istRechnerErgebnis ? null : kz.scoreLabel,
+            // Bug-Fix 2026-09-09: bei einem Rechner-Ergebnis wurde
+            // extra.resultData (z.B. ein neues KI-Ergebnis aus
+            // RechnerAiKarte.jsx) bisher stillschweigend verworfen - o.kennzahlen
+            // ging unveraendert durch. Jetzt wird gemergt (art/rechnerTyp bleiben
+            // erhalten, da RechnerAiKarte sie in extra.resultData mitschickt).
+            kennzahlen: istRechnerErgebnis
+              ? extra.resultData
+                ? { ...o.kennzahlen, ...extra.resultData }
+                : o.kennzahlen
+              : extra.resultData
+                ? { ...kz, ...extra.resultData }
+                : { ...kz, ...(o.kennzahlen?.ai ? { ai: o.kennzahlen.ai } : {}) },
+          };
+        });
         writeLocalList(next);
         return next;
       });
@@ -627,7 +687,10 @@ export function SaveBtn({ tab }) {
         defaultName={defaultName}
         onClose={() => setOpen(false)}
         onSave={(name) => {
-          saveObj(name, d, tab);
+          // tab !== "haupt": jeder Nebenrechner (Kredit/Miete/Sanier/VfE/
+          // Steuer6) legt ein Rechner-Ergebnis an, kein Rendite-Objekt
+          // (Auftrag 2026-09-08).
+          saveObj(name, d, tab, { rechnerErgebnis: tab !== "haupt" });
           setOpen(false);
         }}
       />
@@ -645,6 +708,7 @@ export function Merkliste() {
     isProSavedObjects,
     savedObjectsFreeLimit,
     refreshObjekte,
+    set,
   } = useApp();
   const t = T[lang] || T.de;
   const locale = LANG_LOCALE[lang] || "de-DE";
@@ -708,6 +772,12 @@ export function Merkliste() {
   const [vergleichOffen, setVergleichOffen] = useState(false);
   // Phase E: Toggle Liste | Orte.
   const [ansicht, setAnsicht] = useState("liste");
+  // Zwei-Produkte-Umbau (Auftrag 2026-09-08): Objekte (Rendite) und
+  // Rechner-Ergebnisse (Kredit/Miete/Sanier/VfE/Steuer6) landen in derselben
+  // Liste, sind inhaltlich aber verschieden genug (keine Score-Ampel, keine
+  // KPIs), dass sie getrennte Reiter brauchen statt gemeinsam durcheinander
+  // zu stehen.
+  const [listArt, setListArt] = useState("objekte");
   // Phase D: einmaliger Willkommenshinweis. Die Analyse-Vorlage macht das als
   // persoenlichen Brief - das schafft Vertrauen bei einer App, in die man
   // Geldzahlen eintippt. Bewusst schliessbar und nur einmal.
@@ -773,25 +843,41 @@ export function Merkliste() {
   });
   const compareRechner = tabZuRechner(compareObjs[0]?.letzteAnsicht);
 
+  // Gibt es ueberhaupt Rechner-Ergebnisse, zeigt sich der Reiter erst dann -
+  // sonst ein Umschalter, der auf einer leeren Seite landet.
+  const hatRechnerErgebnisse = savedList.some(
+    (o) => o.kennzahlen?.art === "rechnerErgebnis",
+  );
+  const listeVorArt = useMemo(
+    () =>
+      savedList.filter((o) =>
+        listArt === "rechner"
+          ? o.kennzahlen?.art === "rechnerErgebnis"
+          : o.kennzahlen?.art !== "rechnerErgebnis",
+      ),
+    [savedList, listArt],
+  );
   // Score existiert nur fuer Objekte aus dem Exposé-Scan-Auto-Save (Pro) -
   // Suchleiste bleibt immer sichtbar, Score-Filter/-Sortierung nur wenn es
   // ueberhaupt Objekte mit Score gibt (sonst ein Filter, der nie etwas
   // findet - vgl. Projektregel "keine halbfertigen Zustaende").
   // A2: frueher hatten nur Exposé-Objekte einen Score, deshalb war der
   // Filter bedingt. Jetzt bekommt jedes Objekt mit Kaufpreis eine Ampel.
-  const hasScores = savedList.some((o) => o.score != null);
+  // Rechner-Ergebnisse haben nie einen Score - auf diesem Reiter blendet
+  // sich der Filter/die Sortierung damit automatisch aus.
+  const hasScores = listeVorArt.some((o) => o.score != null);
   const filtered = useMemo(() => {
-    let list = savedList;
+    let list = listeVorArt;
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(
         (o) => o.name.toLowerCase().includes(q) || (o.ort || "").toLowerCase().includes(q),
       );
     }
-    if (onlyGut) list = list.filter((o) => o.scoreLabel === "gut");
-    if (sortByScore) list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    if (hasScores && onlyGut) list = list.filter((o) => o.scoreLabel === "gut");
+    if (hasScores && sortByScore) list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
     return list;
-  }, [savedList, query, onlyGut, sortByScore]);
+  }, [listeVorArt, query, onlyGut, sortByScore, hasScores]);
 
   // Detailansicht (ehemals eigener Pro-Tab "Objekte") - ObjektDetail erwartet
   // die rohe Server-Objektform; fuer Free-Objekte (kein Server-Datensatz)
@@ -821,16 +907,46 @@ export function Merkliste() {
     });
   }, []);
 
+  // Pendant zu ObjektDetail.jsx inRechner() (Auftrag 2026-09-08): oeffnet ein
+  // Rechner-Ergebnis wieder in GENAU dem Rechner, in dem es entstand -
+  // ObjektDetail (Rendite-Detailseite) waere hier die falsche Ansicht, ein
+  // Kredit- oder Sanier-Ergebnis hat keinen Kaufpreis/Score.
+  const ladeRechnerErgebnis = useCallback(
+    (obj) => {
+      const gespeichert = obj.inputData || obj.data || {};
+      const { tab: _legacy, ...felder } = gespeichert;
+      Object.entries(felder).forEach(([k, v]) => set(k, v));
+      const rechnerTyp = obj.kennzahlen?.rechnerTyp;
+      setTabExt(obj.letzteAnsicht || rechnerTyp, {
+        id: obj.id,
+        name: obj.name,
+        art: "rechnerErgebnis",
+        rechnerTyp,
+      });
+    },
+    [set, setTabExt],
+  );
+
   // Ruecksprung Objekt -> Rechner -> zurueck (App.jsx aktivesObjekt,
   // UX-Review 2026-09-06): Der Rechner sendet dieses Event mit der Objekt-ID,
   // wenn der Nutzer ueber die Leiste "<- Objekt: {Name}" zurueckwechselt.
   // Ohne diesen Listener wuerde der Rueckweg nur in der LISTE landen statt
   // wieder GENAU im Objekt, aus dem der Rechner geoeffnet wurde.
+  //
+  // 2026-09-08: bei einem Rechner-Ergebnis fehlt eine Detailseite (siehe
+  // ladeRechnerErgebnis oben) - hier reicht der Wechsel auf den passenden
+  // Listen-Reiter, openDetail() wuerde sonst die Rendite-Detailseite mit
+  // leeren Kennzahlen oeffnen.
   useEffect(() => {
     const handler = (e) => {
       const id = e.detail?.id;
       const treffer = id && savedList.find((o) => o.id === id);
-      if (treffer) openDetail(treffer);
+      if (!treffer) return;
+      if (treffer.kennzahlen?.art === "rechnerErgebnis") {
+        setListArt("rechner");
+        return;
+      }
+      openDetail(treffer);
     };
     window.addEventListener("if:objekt-oeffnen", handler);
     return () => window.removeEventListener("if:objekt-oeffnen", handler);
@@ -1037,6 +1153,26 @@ export function Merkliste() {
           </button>
         ))}
       </div>
+      {/* Zwei-Produkte-Reiter (Auftrag 2026-09-08): nur sichtbar, sobald es
+          mindestens ein Rechner-Ergebnis gibt - vorher gaebe es einen
+          Umschalter, der auf einer leeren Seite landet. */}
+      {hatRechnerErgebnisse && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          {[
+            ["objekte", "Objekte"],
+            ["rechner", "Rechner-Ergebnisse"],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setListArt(id)}
+              style={listArt === id ? searchChipActiveStyle : searchChipStyle}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       <div style={{ fontSize: 13, color: "var(--ch)", marginBottom: 12, fontWeight: 500 }}>
         {savedList.length}
         {!isProSavedObjects ? `/${savedObjectsFreeLimit}` : ""}{" "}
@@ -1112,19 +1248,36 @@ export function Merkliste() {
         </div>
       )}
       {ansicht === "orte" && (
-        <ObjektOrte objekte={filtered} onOeffnen={openDetail} />
+        <ObjektOrte
+          objekte={filtered}
+          onOeffnen={(o) =>
+            o.kennzahlen?.art === "rechnerErgebnis" ? ladeRechnerErgebnis(o) : openDetail(o)
+          }
+        />
       )}
       {ansicht === "liste" && (
         <div className="objekt-karten">
           {filtered.map((obj) => {
         const inputData = obj.inputData || { ...obj.data };
+        // Zwei-Produkte-Umbau (Auftrag 2026-09-08): ein Rechner-Ergebnis hat
+        // keinen Kaufpreis/Score - die Karte zeigt statt der Ampel/KPIs nur
+        // Icon+Rechnername+Datum, statt "Details"/"Laden" nur einen Knopf
+        // zurueck in den Rechner (ladeRechnerErgebnis).
+        const istRechnerErgebnis = obj.kennzahlen?.art === "rechnerErgebnis";
+        const rechnerInfo = istRechnerErgebnis
+          ? RECHNER_TYP_INFO[obj.kennzahlen?.rechnerTyp] || { icon: "🧮", label: "Rechner-Ergebnis" }
+          : null;
+        const oeffnenAktion = () =>
+          istRechnerErgebnis ? ladeRechnerErgebnis(obj) : openDetail(obj);
         // A3: sechs Objekt-Kennzahlen statt der frueheren rechnerspezifischen
         // Vorschau - seit A1 ist ein Objekt nicht mehr an einen Rechner
         // gebunden. Bevorzugt der beim Speichern abgelegte Stand (resultData),
         // sonst frisch gerechnet (Free-Pfad/localStorage, Altbestand).
-        const kennzahlen = obj.kennzahlen?.score != null
-          ? { verfuegbar: true, kaufpreis: obj.kaufpreis ?? +inputData.kaufpreis, ...obj.kennzahlen }
-          : berechneObjektKennzahlen(inputData, t);
+        const kennzahlen = istRechnerErgebnis
+          ? null
+          : obj.kennzahlen?.score != null
+            ? { verfuegbar: true, kaufpreis: obj.kaufpreis ?? +inputData.kaufpreis, ...obj.kennzahlen }
+            : berechneObjektKennzahlen(inputData, t);
         const vollstaendigkeit = berechneVollstaendigkeit(inputData);
         // Exposé-Scan-Auto-Save legt Objekte nur mit {tab,quelle} an (siehe
         // autoSaveExposeObject.js) - fuer diese gibt es nichts Sinnvolles zum
@@ -1144,9 +1297,9 @@ export function Merkliste() {
             <div
               role="button"
               tabIndex={0}
-              onClick={() => openDetail(obj)}
+              onClick={oeffnenAktion}
               onKeyDown={(e) => {
-                if (e.key === "Enter") openDetail(obj);
+                if (e.key === "Enter") oeffnenAktion();
               }}
               style={{
                 display: "flex",
@@ -1182,26 +1335,56 @@ export function Merkliste() {
                   flexShrink: 0,
                 }}
               >
-                {obj.score != null && (
+                {istRechnerErgebnis ? (
                   <span
                     style={{
-                      background: scoreBadgeColor(obj.scoreLabel),
-                      color: "#fff",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "var(--ci)",
+                      border: "1px solid var(--cb)",
+                      borderRadius: 20,
+                      padding: "4px 10px",
                       fontSize: 11,
                       fontWeight: 700,
-                      padding: "3px 9px",
-                      borderRadius: 20,
+                      color: "var(--ct)",
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {scoreBadgeText(obj.scoreLabel)}
+                    <span aria-hidden="true">{rechnerInfo.icon}</span>
+                    {rechnerInfo.label}
                   </span>
+                ) : (
+                  <>
+                    {obj.score != null && (
+                      <span
+                        style={{
+                          background: scoreBadgeColor(obj.scoreLabel),
+                          color: "#fff",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: "3px 9px",
+                          borderRadius: 20,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {scoreBadgeText(obj.scoreLabel)}
+                      </span>
+                    )}
+                    <VollstaendigkeitsRing prozent={vollstaendigkeit} />
+                  </>
                 )}
-                <VollstaendigkeitsRing prozent={vollstaendigkeit} />
               </div>
             </div>
             <div style={{ marginBottom: 12 }}>
-              {kennzahlen?.verfuegbar ? (
+              {istRechnerErgebnis ? (
+                // Keine Nachrechnung hier (Auftrag 2026-09-08): die exakte
+                // Formel liegt im jeweiligen Rechner, ein Nachbau riskiert
+                // eine leise falsche Zahl neben der echten.
+                <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5 }}>
+                  {rechnerInfo.icon} {rechnerInfo.label} · {obj.date}
+                </div>
+              ) : kennzahlen?.verfuegbar ? (
                 <ObjektKPIs kennzahlen={kennzahlen} t={t} locale={locale} />
               ) : (
                 // Lehrender Empty-State statt leerer Flaeche (Konzept 3.6):
@@ -1219,41 +1402,63 @@ export function Merkliste() {
                 Stellschrauben und KI-Auswertung. Die Karte bleibt zusaetzlich
                 anklickbar; der Knopf ersetzt sie nicht, er macht sie sichtbar. */}
             <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => openDetail(obj)}
-                style={{
-                  flex: 1,
-                  height: 44,
-                  borderRadius: 10,
-                  border: "none",
-                  background: "var(--ca)",
-                  color: "#fff",
-                  fontSize: 13.5,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                Details →
-              </button>
-              {loadable && (
+              {istRechnerErgebnis ? (
                 <button
-                  onClick={() => loadObj(obj, setTabExt)}
+                  onClick={() => ladeRechnerErgebnis(obj)}
                   style={{
                     flex: 1,
                     height: 44,
                     borderRadius: 10,
-                    border: "1.5px solid var(--ca)",
-                    background: "transparent",
-                    color: "var(--ca)",
+                    border: "none",
+                    background: "var(--ca)",
+                    color: "#fff",
                     fontSize: 13.5,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: "pointer",
                     fontFamily: "inherit",
                   }}
                 >
-                  {t.loadBtn || "↩ Laden"}
+                  Im Rechner öffnen →
                 </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => openDetail(obj)}
+                    style={{
+                      flex: 1,
+                      height: 44,
+                      borderRadius: 10,
+                      border: "none",
+                      background: "var(--ca)",
+                      color: "#fff",
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Details →
+                  </button>
+                  {loadable && (
+                    <button
+                      onClick={() => loadObj(obj, setTabExt)}
+                      style={{
+                        flex: 1,
+                        height: 44,
+                        borderRadius: 10,
+                        border: "1.5px solid var(--ca)",
+                        background: "transparent",
+                        color: "var(--ca)",
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {t.loadBtn || "↩ Laden"}
+                    </button>
+                  )}
+                </>
               )}
               <button
                 onClick={() => setConfirmDel(obj.id)}

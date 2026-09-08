@@ -420,7 +420,9 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   const b = body as Record<string, unknown>;
 
   const produkt =
-    (["analyse", "hebel", "preis", "handout"] as const).find((p) => p === b.produkt) ?? null;
+    (
+      ["analyse", "hebel", "preis", "handout", "kredit", "miete", "sanier", "vfe", "steuer6"] as const
+    ).find((p) => p === b.produkt) ?? null;
   if (!produkt) return c.json({ error: "unbekanntes_produkt" }, 400);
 
   const kennzahlen = b.kennzahlen;

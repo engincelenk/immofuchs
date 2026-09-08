@@ -1,3 +1,42 @@
+## 2026-09-09 (1.75.0)
+
+### Zwei Objektarten in "Meine Objekte", fuenf neue KI-Produkte fuer die Nicht-Rendite-Rechner
+
+Bis jetzt landete jede Speicherung aus Kredit-/Miete-/Sanierungs-/Vorfaelligkeits-/
+§6-Rechner als vollwertiges "Objekt" mit Rendite-Score - eine reine Kreditrechnung
+bekam damit eine Score-Ampel, die fuer sie keinen Sinn ergibt, und liess sich nicht
+mehr gezielt in ihren Rechner zurueckladen (Zustand vor dem Objekt-zentralisierten
+Speichern von 2026-09-06 war hier tatsaechlich besser).
+
+**Zwei Objektarten, keine DB-Migration**
+`resultData.art` unterscheidet jetzt `"objekt"` (Rendite, Standardfall - fehlt das
+Feld, gilt das als Default fuer Altbestand) von `"rechnerErgebnis"` (mit
+`resultData.rechnerTyp`). "Meine Objekte" hat einen neuen Reiter "Rechner-Ergebnisse"
+(nur sichtbar, sobald es welche gibt). Ein Klick dort laedt direkt in den passenden
+Rechner - kein Umweg mehr ueber eine Rendite-Detailseite, die fuer diese Daten
+ohnehin nichts anzuzeigen haette.
+
+**Fuenf neue KI-Produkte, je Rechner genau eines**
+Finanzierung/Mieterhoehung/Sanierung/Ablösekosten/Steueroptimierung analysieren -
+gespeist mit echten, im Projekt bereits vorhandenen Referenzdaten statt Web-
+Recherche: Marktzins (MARKET_RATES), Kappungsgrenze 15/20% je Ort (dieselbe Liste,
+die der Mieterhoehungsrechner schon nutzt), KfW-/BAFA-Foerderdaten, Pfandbrief-
+Wiederanlagezins, und die recherchierten Einkommensteuer-Tarifeckwerte 2026
+(Grundfreibetrag 12.348 EUR, 42% ab 69.879 EUR, 45% ab 277.826 EUR) fest im Prompt.
+Dieselbe Zahlen-Disziplin wie bei den drei bestehenden Objekt-Produkten: das Modell
+uebernimmt nur mitgelieferte Zahlen, erfindet nie eigene Markt-, Foerder- oder
+Steuerwerte. Die KI-Karte erscheint direkt im jeweiligen Rechner, sobald man von
+einem gespeicherten Rechner-Ergebnis aus dort ist - die drei bestehenden
+Objekt-Produkte (Objekt/Hebel/Kaufpreis analysieren) bleiben unveraendert.
+
+**Technisch**: der Fetch/Consent/Rate-Limit-Ablauf der KI-Aufrufe ist jetzt in
+`src/utils/aiAnalyse.js` extrahiert und wird von ObjektDetail UND den 5 neuen
+Rechner-Karten gemeinsam genutzt - keine fuenffache Kopie derselben
+Fehlerbehandlung. Ein bereits im Review gefundener Bug wurde vor dem Merge behoben:
+im Free-Tier-Pfad von `updateObj()` ging ein neues KI-Ergebnis an einem
+Rechner-Ergebnis bisher verloren, weil `kennzahlen` dort unveraendert durchgereicht
+wurde statt gemergt.
+
 ## 2026-09-09 (1.74.0)
 
 ### Grundlage & Quellen ohne Sheet, altes Breitenverhaeltnis zurueck, Handout mit echtem Fragenkatalog

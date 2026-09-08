@@ -87,3 +87,50 @@ describe("Objekt-Mapping A1 - ein Objekt, mehrere Blickwinkel", () => {
     expect(zurueck.data).toEqual({ quelle: "expose-scan" });
   });
 });
+
+// Zwei-Produkte-Umbau (Auftrag 2026-09-08): ein Rechner-Ergebnis (Kredit-,
+// Miet-, Sanier-, VfE- oder Steuer6-Rechner) ist kein Rendite-Objekt.
+// toServerPayload() darf hier nicht berechneObjektKennzahlen() aufrufen -
+// die Tests oben (ohne local.kennzahlen) muessen dabei unveraendert gruen
+// bleiben (Rueckwaertskompatibilitaet, Pruefpunkt der Aufgabenstellung).
+describe("Objekt-Mapping — Rechner-Ergebnisse (art:\"rechnerErgebnis\")", () => {
+  const rechnerLokal = {
+    id: "obj-kredit-1",
+    name: "Kredit München",
+    date: "08.09.2026",
+    letzteAnsicht: "kredit",
+    data: { kaufpreis: "300000", eigenkapital: "60000", zinssatz: "3.8" },
+    kennzahlen: { art: "rechnerErgebnis", rechnerTyp: "kredit" },
+  };
+
+  it("setzt kaufpreis/wohnflaeche/score/scoreLabel auf null", () => {
+    const payload = toServerPayload(rechnerLokal);
+    expect(payload.kaufpreis).toBeNull();
+    expect(payload.wohnflaeche).toBeNull();
+    expect(payload.score).toBeNull();
+    expect(payload.scoreLabel).toBeNull();
+  });
+
+  it("baut resultData mit art und rechnerTyp statt der vollen Rechnung", () => {
+    const payload = toServerPayload(rechnerLokal);
+    expect(payload.resultData).toEqual({
+      art: "rechnerErgebnis",
+      rechnerTyp: "kredit",
+      letzteAnsicht: "kredit",
+    });
+    expect(payload.inputData).toEqual(rechnerLokal.data);
+  });
+
+  it("faellt ohne letzteAnsicht auf haupt zurueck, wie im Objekt-Pfad", () => {
+    const { letzteAnsicht: _weg, ...ohne } = rechnerLokal;
+    expect(toServerPayload(ohne).resultData.letzteAnsicht).toBe("haupt");
+  });
+
+  it("Rueckwaertskompatibilitaet: fehlt kennzahlen.art, bleibt der heutige Objekt-Pfad", () => {
+    const { kennzahlen: _weg, ...ohneArt } = rechnerLokal;
+    const payload = toServerPayload(ohneArt);
+    expect(payload.resultData).not.toHaveProperty("art");
+    expect(payload.resultData).not.toHaveProperty("rechnerTyp");
+    expect(payload.kaufpreis).toBe(300000);
+  });
+});

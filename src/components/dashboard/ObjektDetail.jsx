@@ -18,6 +18,7 @@ import {
 import { apiFetch } from "../../utils/apiBase.js";
 import { hebelVarianten } from "../../utils/aiTools.js";
 import { getSessionId } from "../../utils/assistantSession.js";
+import { rufeAnalyseAuf, analyseFehlertext } from "../../utils/aiAnalyse.js";
 import { ladeMietReferenz, referenzMiete } from "../../utils/mietReferenz.js";
 import {
   fortschreibungsfaktor,
@@ -214,59 +215,39 @@ export function ObjektDetail({ objekt, onBack }) {
             .filter(Boolean)
         : [];
     try {
-      const res = await apiFetch("/analyse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          produkt: produktId,
-          ...(varianten.length > 0 ? { varianten } : {}),
-          ...(zahlen.length > 0 ? { zahlen } : {}),
-          ...(befunde.length > 0 ? { befunde } : {}),
-          // Nur Kennzahlen, keine Adresse und kein Name - das Modell braucht
-          // sie nicht, also gehen sie auch nicht raus.
-          kennzahlen: {
-            kaufpreis: basis.kaufpreis,
-            wohnflaeche: basis.flaeche,
-            kaltmieteMonat: basis.kaltmiete,
-            eigenkapital: basis.eigenkapital,
-            zinssatz: basis.zinssatz,
-            tilgung: basis.tilgung,
-            bundesland: basis.bundesland,
-            baujahr: basis.baujahr,
-            nettorendite: kennzahlenGespeichert?.nettoRendite,
-            bruttorendite: kennzahlenGespeichert?.bruttoRendite,
-            cashflowMonat: kennzahlenGespeichert?.cashflowMon,
-            kaufpreisfaktor: kennzahlenGespeichert?.faktor,
-            score: kennzahlenGespeichert?.score,
-          },
-          // Die KI-Session des Geraets, NICHT die Objekt-ID. Der Worker
-          // prueft daran die Einwilligung; mit der Objekt-ID gab es die
-          // naturgemaess nie und jeder Aufruf endete in 412.
-          sessionId: getSessionId(),
-        }),
-      });
+      // Nur Kennzahlen, keine Adresse und kein Name - das Modell braucht sie
+      // nicht, also gehen sie auch nicht raus.
+      const kennzahlen = {
+        kaufpreis: basis.kaufpreis,
+        wohnflaeche: basis.flaeche,
+        kaltmieteMonat: basis.kaltmiete,
+        eigenkapital: basis.eigenkapital,
+        zinssatz: basis.zinssatz,
+        tilgung: basis.tilgung,
+        bundesland: basis.bundesland,
+        baujahr: basis.baujahr,
+        nettorendite: kennzahlenGespeichert?.nettoRendite,
+        bruttorendite: kennzahlenGespeichert?.bruttoRendite,
+        cashflowMonat: kennzahlenGespeichert?.cashflowMon,
+        kaufpreisfaktor: kennzahlenGespeichert?.faktor,
+        score: kennzahlenGespeichert?.score,
+      };
+      // Fetch, Consent-/Pro-/Login-/Rate-Limit-Erkennung liegen seit dem
+      // Umbau in aiAnalyse.js - derselbe Kern, den jetzt auch RechnerAiKarte.jsx
+      // an den 5 Nicht-Rendite-Rechnern nutzt (siehe dort).
+      const res = await rufeAnalyseAuf({ produkt: produktId, kennzahlen, zahlen, varianten, befunde });
       if (!res.ok) {
-        const daten = await res.json().catch(() => ({}));
         // 412 ist kein Fehler, sondern eine offene Frage: die Einwilligung in
         // die KI-Nutzung fehlt noch. Sie als "nicht erreichbar" auszugeben
         // war der Grund, warum der Zustand monatelang unerkannt blieb.
-        if (res.status === 412 || daten.error === "consent_required") {
+        if (res.art === "consent") {
           setAiConsent(produktId);
           return;
         }
-        setAiFehler(
-          res.status === 402
-            ? "Diese Auswertung gehört zu ImmoFuchs Pro."
-            : res.status === 401
-              ? "Bitte melde dich an, um die Auswertung zu starten."
-              : daten.error === "rate_limit_exceeded"
-                ? "Tageslimit erreicht — morgen wieder verfügbar."
-                : "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.",
-        );
+        setAiFehler(analyseFehlertext(res.art));
         return;
       }
-      const { ergebnis } = await res.json();
-      const neu = ergebnisAnlegen(produktId, ergebnis, basis, {
+      const neu = ergebnisAnlegen(produktId, res.ergebnis, basis, {
         ...(varianten.length > 0 ? { varianten } : {}),
         ...(zahlen.length > 0 ? { zahlen } : {}),
       });

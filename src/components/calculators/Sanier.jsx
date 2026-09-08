@@ -23,6 +23,7 @@ import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
+import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 
 const EC_O = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
 const EC_C = [
@@ -98,7 +99,7 @@ function TierSel({ value, onChange, tiers }) {
 }
 
 export default function Sanier() {
-  const { d, set, t, tip, lang } = useApp();
+  const { d, set, t, tip, lang, aktivesObjekt } = useApp();
   const [view, setView] = useState("input");
   const [act, setAct] = useState({
     fenster: false,
@@ -1375,6 +1376,59 @@ export default function Sanier() {
                 )}
               </div>
               <SaveBtn tab="sanier" />
+              {aktivesObjekt?.art === "rechnerErgebnis" && aktivesObjekt?.rechnerTyp === "sanier" && (
+                <RechnerAiKarte
+                  produktId="sanier"
+                  titel="Sanierung analysieren"
+                  kurz="Einschätzung zu Kosten, Förderung und Amortisation"
+                  data={d}
+                  kennzahlen={{
+                    sanierungskostenBrutto: R.tK,
+                    foerderungGesamt: R.tFo + R.tFoLand,
+                    sanierungskostenNetto: R.ne,
+                    baujahr: d.baujahr,
+                    massnahmen: R.ALL.filter((m) => act[m.k]).map((m) => m.n),
+                    amortisationJahre: R.amJ,
+                    energieklasseVorher: EC_O[R.ecV],
+                    energieklasseNachher: EC_O[R.ecN],
+                  }}
+                  zahlen={(() => {
+                    // Vereinfachung: die tatsaechliche Foerderquote im
+                    // Rechner haengt von Bonus-Kombinationen ab (iSFP,
+                    // Klimageschwindigkeitsbonus, Landesbonus - siehe FQ/hFQ
+                    // oben) und geht bereits GERECHNET als foerderungGesamt
+                    // in die Kennzahlen ein. Hier reichen die groben
+                    // KFW-Basisquoten als Marktvergleich, keine zweite
+                    // Nachrechnung der vollen Bonuslogik. BAFA.basisfoerderung
+                    // deckt sich der Hoehe nach mit KFW.basisfoerderung (beide
+                    // 15 %) - referenziert wird nur EINE Quelle, damit sich
+                    // Kennzahl und Zahlen-Benchmark nicht scheinbar
+                    // widersprechen.
+                    const z = [
+                      {
+                        label: "Förderquote Einzelmaßnahme (BAFA/KfW-Basis)",
+                        wert: `${KFW.basisfoerderung} %`,
+                      },
+                    ];
+                    if (act.heizung) {
+                      z.push({
+                        label: "Förderquote Heizungstausch (BEG-Grundförderung)",
+                        wert: `${KFW.heizungGrundfoerderung} %`,
+                      });
+                    }
+                    z.push({ label: "Maximale Gesamtförderung (Deckel)", wert: `${KFW.maxFoerderung} %` });
+                    // Der Worker-Prompt fuer "sanier" (worker/src/analysePrompt.ts)
+                    // erwartet neben dem Foerdersatz auch einen Hoechstbetrag
+                    // unter "Gerechnete Werte" - KFW.maxInvestition ist der
+                    // dafuer vorgesehene Deckel je Wohneinheit.
+                    z.push({
+                      label: "Max. förderfähige Investitionskosten je Wohneinheit",
+                      wert: `${KFW.maxInvestition.toLocaleString("de-DE")} €`,
+                    });
+                    return z;
+                  })()}
+                />
+              )}
               <ExportPDF title={t.sanierFull || t.sanier} rechner="sanierung" />
               <Legal items={LEG.sanier} />
             </>

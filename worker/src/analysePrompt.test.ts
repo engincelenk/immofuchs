@@ -142,3 +142,80 @@ describe("systemPromptFuer - preis", () => {
     expect(p).not.toBe(systemPromptFuer("hebel"));
   });
 });
+
+// Die fuenf Produkte der Nicht-Rendite-Rechner: kein Objekt, sondern die
+// Eingaben eines einzelnen Rechners. Dieselbe Zahlen-Disziplin wie preis - das
+// Modell darf nur mit mitgelieferten Zahlen arbeiten, nie eigene Markt-,
+// Foerder- oder Steuerzahlen erfinden.
+describe("systemPromptFuer - die fuenf Rechner-Produkte", () => {
+  const rechnerProdukte = ["kredit", "miete", "sanier", "vfe", "steuer6"] as const;
+
+  it("liefert fuer jedes der fuenf Produkte einen nicht-leeren, eigenstaendigen Prompt", () => {
+    const prompts = rechnerProdukte.map((p) => systemPromptFuer(p));
+    for (const p of prompts) {
+      expect(p.length).toBeGreaterThan(0);
+      expect(p).toContain('"kernaussage"');
+      expect(p).toContain('"abschnitte"');
+    }
+    // Paarweise verschieden - kein Copy-Paste-Ueberrest.
+    for (let i = 0; i < prompts.length; i++) {
+      for (let j = i + 1; j < prompts.length; j++) {
+        expect(prompts[i]).not.toBe(prompts[j]);
+      }
+    }
+  });
+
+  it("verbietet allen fuenf Produkten, eigene Zahlen zu erfinden", () => {
+    for (const produkt of rechnerProdukte) {
+      const p = systemPromptFuer(produkt);
+      expect(p).toMatch(/KEINEN?\s+eigene[nrs]?/);
+      // steuer6 braucht keine externe Referenzzahl (der einzige Fakt - die
+      // Tarifeckwerte - steht als fester Text im Prompt, nicht im
+      // "Gerechnete Werte"-Kanal) - seine eigenen Zahlen (Sanierungskosten,
+      // Kaufpreis) laufen ueber "Kennzahlen des Objekts", siehe Test unten.
+      if (produkt === "steuer6") {
+        expect(p).toContain("Kennzahlen des Objekts");
+      } else {
+        expect(p).toContain("Gerechnete Werte");
+      }
+    }
+  });
+
+  it("kredit: verlangt eine Einordnung gegen den mitgelieferten Referenzzins, keinen eigenen", () => {
+    const p = systemPromptFuer("kredit");
+    expect(p).toContain("Referenzzins");
+    expect(p).toContain("ZINSSATZ");
+  });
+
+  it("miete: liest die Kappungsgrenzen-Einordnung vom Client, urteilt nicht selbst ueber den Ort", () => {
+    const p = systemPromptFuer("miete");
+    expect(p).toContain("Kappungsgrenze");
+    expect(p).toContain("urteile NICHT selbst");
+  });
+
+  it("sanier: verbietet erfundene Foerdersaetze und -hoechstbetraege", () => {
+    const p = systemPromptFuer("sanier");
+    expect(p).toContain("KEINEN eigenen Foerdersatz");
+    expect(p).toContain("FÖRDERUNG");
+  });
+
+  it("vfe: bindet die Hoehe der Entschaedigung an den mitgelieferten Wiederanlagezins", () => {
+    const p = systemPromptFuer("vfe");
+    expect(p).toContain("Wiederanlagezins");
+    expect(p).toContain("Sondertilgungsrecht");
+  });
+
+  it("steuer6: traegt die recherchierten Tarifeckwerte 2026 als festen Fakt im Prompt", () => {
+    const p = systemPromptFuer("steuer6");
+    expect(p).toContain("12.348");
+    expect(p).toContain("69.879");
+    expect(p).toContain("277.826");
+  });
+
+  it("aendert die Form der vier bestehenden Objekt-Produkte nicht", () => {
+    for (const produkt of ["analyse", "hebel", "preis", "handout"] as const) {
+      const vorher = systemPromptFuer(produkt);
+      expect(vorher).toBe(systemPromptFuer(produkt));
+    }
+  });
+});

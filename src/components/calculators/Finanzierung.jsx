@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { GREST, KFW_KREDIT } from "../../data.js";
+import { GREST, KFW_KREDIT, MARKET_RATES } from "../../data.js";
 import { berechneKfwPlan, teileFinanzierung } from "../../utils/kfwDarlehen.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
@@ -13,9 +13,10 @@ import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { rate } from "../../utils/bands.js";
+import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 
 export default function Kredit() {
-  const { d, set, t, tip, lang } = useApp();
+  const { d, set, t, tip, lang, aktivesObjekt } = useApp();
   const [view, setView] = useState("input");
   const [sondTP, setSondTP] = useState("5");
 
@@ -682,6 +683,33 @@ export default function Kredit() {
                 {R.bel >= 80 && R.bel <= 90 && <Ins emoji="🏦" text={t.adv11} type="info" />}
               </div>
               <SaveBtn tab="kredit" />
+              {/* Nur sichtbar, wenn dieser Rechner ueber ein gespeichertes
+                  Kredit-Rechnerergebnis (Merkliste) geoeffnet wurde - nicht
+                  am Kredit-Tab eines Rendite-Objekts, dort gibt es die drei
+                  Objekt-KI-Produkte bereits in ObjektDetail. */}
+              {aktivesObjekt?.art === "rechnerErgebnis" && aktivesObjekt?.rechnerTyp === "kredit" && (
+                <RechnerAiKarte
+                  produktId="kredit"
+                  titel="Finanzierung analysieren"
+                  kurz="Einschätzung zu Zins, Tilgung und Belastung im Marktvergleich"
+                  data={d}
+                  kennzahlen={{
+                    kaufpreis: d.kaufpreis,
+                    eigenkapital: d.eigenkapital,
+                    zinssatz: d.zinssatz,
+                    tilgung: d.tilgung,
+                    zinsbindungJahre: d.zinsbindung,
+                    monatlicheRate: Math.round(R.rateJ1),
+                    beleihungsauslaufProzent: Math.round(R.bel * 10) / 10,
+                  }}
+                  zahlen={[
+                    {
+                      label: `Marktdurchschnitt Zinssatz (Stand ${MARKET_RATES.stand})`,
+                      wert: `${String(MARKET_RATES.avg).replace(".", ",")} %`,
+                    },
+                  ]}
+                />
+              )}
               <ExportPDF title={t.kreditFull || t.kredit} rechner="finanzierung" />
               <Legal items={LEG.kredit} />
             </>
