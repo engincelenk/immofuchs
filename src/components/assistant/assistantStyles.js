@@ -19,8 +19,8 @@ export const ASSISTANT_SHEET_CSS = `
   .if-asst-backdrop{position:fixed;inset:0;background:rgba(15,20,30,.32);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:1090}
   .if-asst-backdrop.open{opacity:1;pointer-events:auto}
 
-  .if-asst-sheet{position:fixed;left:0;right:0;bottom:0;height:100vh;height:100dvh;background:var(--bg);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(20,30,50,.25);transform:translateY(105%);visibility:hidden;transition:transform .32s cubic-bezier(.32,.72,0,1),visibility 0s linear .32s;z-index:1091;display:flex;flex-direction:column;overflow:hidden}
-  .if-asst-sheet.open{transform:translateY(0);visibility:visible;transition:transform .32s cubic-bezier(.32,.72,0,1)}
+  .if-asst-sheet{position:fixed;left:0;right:0;bottom:0;height:100vh;height:100dvh;background:var(--bg);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(20,30,50,.25);transform:translateY(105%);visibility:hidden;transition:transform .32s var(--ease-drawer),visibility 0s linear .32s;z-index:1091;display:flex;flex-direction:column;overflow:hidden}
+  .if-asst-sheet.open{transform:translateY(0);visibility:visible;transition:transform .32s var(--ease-drawer)}
   .if-asst-sheet.minimized{height:auto}
 
   .if-asst-context{font-size:11px;color:var(--ch);text-align:center;padding:6px 16px 8px;flex:none}

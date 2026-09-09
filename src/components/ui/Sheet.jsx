@@ -241,8 +241,8 @@ export function Sheet({
     ? {
         transition:
           variant === "anchored"
-            ? `transform ${motionMs}ms cubic-bezier(.32,.72,0,1), opacity ${motionMs}ms ease`
-            : `transform ${motionMs}ms cubic-bezier(.32,.72,0,1)`,
+            ? `transform ${motionMs}ms var(--ease-drawer), opacity ${motionMs}ms ease`
+            : `transform ${motionMs}ms var(--ease-drawer)`,
       }
     : {};
 

@@ -1,3 +1,17 @@
+## 2026-09-09 (1.79.0)
+
+### Geteilte Animations-Tokens (--ease-out, --ease-in-out, --ease-drawer)
+
+Motion-Audit (Skill improve-animations) ergab: Farb-/Radius-/Font-Tokens sind
+seit Laengerem in App.jsx (ROOT_TOKENS_CSS) zentralisiert, Animationskurven
+aber nicht - die iOS-artige Schublade-Kurve `cubic-bezier(.32,.72,0,1)` war
+wortgleich zweimal von Hand eingetippt (Sheet.jsx fuer alle Schubladen/
+Popover-Overlays, assistantStyles.js fuer das Finn-Chat-Fenster). Jetzt als
+`--ease-drawer` Token in ROOT_TOKENS_CSS, beide Stellen verweisen darauf.
+Zusaetzlich `--ease-out`/`--ease-in-out` als Grundlage fuer sechs weitere
+geplante Animations-Verbesserungen (plans/README.md) ergaenzt - rein additiv,
+keine sichtbare Verhaltensaenderung an bestehenden Uebergaengen.
+
 ## 2026-09-09 (1.78.0)
 
 ### Kaufabschluss: "Los geht's" warf im Admin-Kauf-Flow einen Absturz

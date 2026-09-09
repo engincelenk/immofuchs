@@ -317,7 +317,7 @@ const DARK_TOKENS =
 // Der Dunkelmodus ist NICHT betroffen: --ch #9a9a90 liefert dort bereits
 // 5,06:1 bis 6,26:1.
 const ROOT_TOKENS_CSS =
-  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#6c6c62;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f;--hdr-bg:rgba(245,245,240,.92);" +
+  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#6c6c62;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f;--hdr-bg:rgba(245,245,240,.92);--ease-out:cubic-bezier(0.23,1,0.32,1);--ease-in-out:cubic-bezier(0.77,0,0.175,1);--ease-drawer:cubic-bezier(0.32,0.72,0,1);" +
   STATUS_TOKENS_LIGHT +
   "}" +
   `:root[data-theme="dark"]{${DARK_TOKENS}}` +
