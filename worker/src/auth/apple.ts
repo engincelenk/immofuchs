@@ -176,7 +176,16 @@ export async function exchangeAppleCode(
       const b64 = (s: string) => JSON.parse(atob(s.replace(/-/g, "+").replace(/_/g, "/")));
       const h = b64(kopf);
       const p = b64(nutz);
-      jwtInfo = ` | jwt: alg=${h.alg} kid=${h.kid} iss=${p.iss} sub=${p.sub} aud=${p.aud} gueltig=${p.exp - p.iat}s`;
+      // kid NIE roh ausgeben (Vorfall 2026-09-09): steht versehentlich der
+      // private Schluessel im APPLE_KEY_ID-Secret, landet er sonst im Klartext
+      // im Log. Eine Apple-Key-ID ist immer genau 10 Zeichen - alles andere
+      // wird nur nach Laenge und Form beschrieben, nicht nach Inhalt.
+      const kid = String(h.kid ?? "");
+      const kidInfo =
+        /^[A-Z0-9]{10}$/.test(kid)
+          ? kid
+          : `UNGUELTIG (${kid.length} Zeichen${kid.includes("BEGIN") ? ", enthaelt einen PEM-Schluessel" : ""}) - erwartet werden 10 Zeichen`;
+      jwtInfo = ` | jwt: alg=${h.alg} kid=${kidInfo} iss=${p.iss} sub=${p.sub} aud=${p.aud} gueltig=${p.exp - p.iat}s`;
     } catch {
       jwtInfo = " | jwt: nicht lesbar";
     }
