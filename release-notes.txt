@@ -1,3 +1,69 @@
+## 2026-09-09 (1.77.0)
+
+### App-Ansicht nur noch nach Anmeldung
+
+Ein Klick auf einen Rechner auf der Landingpage fuehrte auch ohne Konto in die
+vollstaendige Oberflaeche: Seitenmenue, "Meine Objekte", "+ Objekt anlegen".
+Gesperrt waren dort nur die sechs Rechner selbst (CalculatorTrialGate), nicht
+die Objektverwaltung. Der Einstieg haing allein an `landed` - einem reinen
+Sitzungsmerker ohne jeden Kontobezug.
+
+Jetzt zweifach abgesichert:
+
+Zentral in App.jsx wird die App-Ansicht nur noch gerendert, wenn ein Konto
+angemeldet ist. Geprueft wird erst, wenn das Konto tatsaechlich abgefragt wurde
+(`initialLoading === false`, dieselbe Unterscheidung wie in
+useCalculatorTrial) - waehrend des ersten /me-Aufrufs ist `isLoggedIn`
+grundsaetzlich false, eine Pruefung darauf wuerde jeden Angemeldeten bei jedem
+Neuladen kurz auf die Landingpage werfen.
+
+Auf der Landingpage laufen alle Einstiege (Rechnerkarten, Expose-Upload,
+Maskottchen, Seitennavigation) ueber eine gemeinsame Pruefung. Ohne Anmeldung
+oeffnet sich der Login-Dialog, statt dass scheinbar nichts passiert - und nach
+erfolgreicher Anmeldung fuehrt derselbe Weg wie bisher direkt in den Rechner.
+
+### Service Worker lieferte dauerhaft veraltete Versionen aus
+
+Der Grund, warum neue Deployments im Browser nicht ankamen - und zwar
+unabhaengig vom Leeren des Caches immer wieder aufs Neue:
+
+`fetchWithTimeout(request, 800)` brach nach 800ms ab und lieferte die
+gecachte Seite. Die kurz darauf eintreffende Netzwerk-Antwort wurde dabei
+ersatzlos VERWORFEN, nicht in den Cache geschrieben. Antwortete der Server
+langsamer als 800ms, bekam der Browser also dauerhaft die alte index.html -
+und damit dauerhaft die alten, gehashten Bundle-Namen. Der Cache konnte sich
+aus eigener Kraft nie wieder aktualisieren; nur manuelles Loeschen der
+Website-Daten half, bis zum naechsten langsamen Ladevorgang.
+
+Drei Korrekturen:
+- Eine nach dem Timeout eintreffende Antwort wird jetzt in den Cache
+  geschrieben. Dieser Aufruf zeigt noch den alten Stand, der naechste ist
+  aktuell.
+- Der kurze Timeout gilt nur noch offline. Online sind es 6 Sekunden - er war
+  fuer den Offline-Fall gedacht, nicht als Versionsbremse.
+- Fehlt ein Asset im Cache (typisch direkt nach einem Deploy: die frische
+  index.html verweist auf nie gecachte Bundle-Namen), wird ohne Timeout erneut
+  geladen, statt die Seite mit einer leeren Antwort kaputtzumachen.
+
+### Apple-Login: Nachweis, dass Key-ID und Schluessel vertauscht sind
+
+Die erweiterte Diagnose liefert jetzt eindeutig:
+
+    kid = UNGUELTIG (257 Zeichen, enthaelt einen PEM-Schluessel)
+          - erwartet werden 10 Zeichen
+    key: roh=257z begin=ja end=ja zeilen=1 nutzlast=200z der=150b
+
+In APPLE_KEY_ID steht der private Schluessel statt der zehnstelligen Key-ID;
+beide Secrets sind 257 Zeichen lang, enthalten also denselben PEM-Block. Der
+Schluessel selbst ist unbeschaedigt - 150 DER-Bytes sind ein gueltiges
+P-256-PKCS#8 mit eingebettetem oeffentlichen Teil (138 Bytes gelten fuer die
+Variante ohne diesen Teil, beide kommen vor).
+
+Unabhaengig davon nachgewiesen: Apples Authorize-Seite akzeptiert die Anfrage
+(HTTP 200, App-Name "Immofuchs apple ID login", korrekte Return-URL). Services
+-ID, Return-URLs und Portal-Konfiguration sind damit in Ordnung; es fehlt
+ausschliesslich die richtige Key-ID im Secret.
+
 ## 2026-09-09 (1.76.1)
 
 ### Spannbreite: Korrektur des Fehlschlusses aus 1.76.0

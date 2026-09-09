@@ -110,13 +110,27 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
     isPro: isProSavedObjects,
     freeLimit: savedObjectsFreeLimit,
   } = useSavedObjects();
+  // Die App-Ansicht ist seit 2026-09-09 nur angemeldet erreichbar (siehe
+  // App.jsx). Dort wird ein nicht angemeldeter Nutzer auf die Landingpage
+  // zurueckgeworfen - ohne diesen Umweg passierte auf einen Rechnerklick
+  // scheinbar nichts. Deshalb hier gar nicht erst hineinfuehren, sondern den
+  // Login oeffnen: derselbe Dialog, den auch der "Anmelden"-Knopf zeigt, und
+  // nach erfolgreicher Anmeldung landet man ohnehin im Rechner (openMode
+  // "login" ruft onStart("haupt") beim Schliessen).
+  const starteRechner = (tab, opts) => {
+    if (!account?.isLoggedIn) {
+      setOpenMode("login");
+      return;
+    }
+    onStart(tab, opts);
+  };
   const landingCtxValue = {
     lang,
     setLang,
     savedList,
     isProSavedObjects,
     savedObjectsFreeLimit,
-    setTabExt: (id) => onStart(id),
+    setTabExt: (id) => starteRechner(id),
   };
 
   // Bugfix 2026-08-18 ("Links im Menü funktionieren nicht"): aus der
@@ -953,7 +967,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 Scan direkt als eigenstaendiges Feature: der Scan ist ein Weg,
                 ein Objekt anzulegen, kein eigener Einstiegspunkt mehr. */}
             <button
-              onClick={() => onStart("haupt", { openUpload: true })}
+              onClick={() => starteRechner("haupt", { openUpload: true })}
               className="hero-upload-spot"
               style={{
                 display: "block",
@@ -1207,7 +1221,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
 
           {/* ── HERO: Renditerechner ── */}
           <button
-            onClick={() => onStart("haupt")}
+            onClick={() => starteRechner("haupt")}
             style={{
               display: "block",
               background: "transparent",
@@ -1379,7 +1393,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             ].map((c, i) => (
               <button
                 key={i}
-                onClick={() => onStart(c.tab)}
+                onClick={() => starteRechner(c.tab)}
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -1871,7 +1885,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         .lp-cta{display:none!important}
       }
     `}</style>
-      <LandingMascot onStart={onStart} lang={lang} />
+      <LandingMascot onStart={starteRechner} lang={lang} />
     </div>
   );
 }

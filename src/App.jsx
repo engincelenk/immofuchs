@@ -599,7 +599,20 @@ export default function App() {
     setAktivesObjekt(null);
     setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
   };
-  if (!landed)
+  // Die App-Ansicht (Seitenmenue, "Meine Objekte", "+ Objekt anlegen") ist
+  // seit der Nutzer-Vorgabe 2026-09-09 ausschliesslich fuer angemeldete
+  // Nutzer. Vorher genuegte `landed` - ein Klick auf einen Rechner auf der
+  // Landingpage fuehrte also auch ohne Konto in die vollstaendige Oberflaeche;
+  // gesperrt waren dort nur die sechs Rechner selbst (CalculatorTrialGate),
+  // nicht die Objektverwaltung.
+  //
+  // Geprueft wird erst, wenn das Konto wirklich abgefragt wurde
+  // (initialLoading === false, dieselbe Unterscheidung wie in
+  // useCalculatorTrial): waehrend des ersten /me-Aufrufs ist isLoggedIn
+  // grundsaetzlich false, ein Test darauf wuerde jeden Angemeldeten bei jedem
+  // Neuladen kurz auf die Landingpage werfen.
+  const kontoGeprueft = account?.initialLoading === false;
+  if (!landed || (kontoGeprueft && !account?.isLoggedIn))
     return (
       <>
         <style>{`${FONT_CSS}${ROOT_TOKENS_CSS}html{overflow-y:scroll}html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y;scrollbar-gutter:stable}*{box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased;position:relative}section,footer,header{min-width:0;max-width:100%}`}</style>
