@@ -733,11 +733,16 @@ export default function App() {
         box-shadow:-8px 0 10px -6px rgba(0,0,0,.14)}
       .tbtn{flex:0 0 auto;min-width:64px;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border:none;background:none;cursor:pointer;min-height:48px;scroll-snap-align:center}
       .tbtn span{font-size:11px;font-weight:600;letter-spacing:.3px}
-      /* 1180 statt 1400 px (2026-09-06): Bei 1400 px lief einspaltiger
-         Fliesstext ueber rund 175 Zeichen je Zeile - beim Zeilenruecksprung
-         verliert das Auge dort die Spur (optimal sind 50-75). 1180 px laesst
-         dem .split-Ergebnisbereich bei 1:1,25 immer noch rund 620 px. */
-      .content{padding:14px 14px;max-width:1180px;margin:0 auto;width:100%;overflow-x:hidden;overflow-x:clip;overflow-y:visible}
+      /* Ohne Deckelung (Nutzer-Vorgabe 2026-09-09: "alle Rechner, Objekte und
+         das Profil gleich und einheitlich, volle Breite mit Abstand"). Die
+         vorherige Begrenzung auf 1180px (davor 1400px) stammte aus der Sorge
+         um die Zeilenlaenge - bei 1400px lief einspaltiger Fliesstext ueber
+         rund 175 Zeichen je Zeile, optimal sind 50-75. Diese Sorge wiegt hier
+         weniger schwer, weil der Rechnerbereich ab 1024px zweispaltig ist
+         (.split) und die Breite sich damit auf zwei Karten verteilt. Wo
+         einspaltiger Text laenger wird, deckelt der jeweilige Abschnitt
+         selbst - nicht mehr der Rahmen um alles herum. */
+      .content{padding:14px 14px;max-width:none;margin:0 auto;width:100%;overflow-x:hidden;overflow-x:clip;overflow-y:visible}
       .ls{font-size:14px;padding:8px 10px;border:1px solid var(--cb);border-radius:8px;background:var(--ci);color:var(--ct);cursor:pointer;font-family:inherit;min-height:38px}
       /* MOBILE-FIRST DEFAULTS — apply to all viewports < 700px */
       .if-row{display:grid;grid-template-columns:1fr;gap:0}
@@ -852,7 +857,14 @@ export default function App() {
         /* padding-bottom war der Platz fuer die Tableiste. Ohne sie bliebe
            dort toter Raum. */
         .shell{max-width:none;padding-left:240px;padding-bottom:40px}
-        .content{max-width:1180px;padding:32px 32px 48px}
+        /* Keine Deckelung mehr (Nutzer-Vorgabe 2026-09-09): der Inhalt soll
+           die Flaeche rechts der Sidebar vollstaendig nutzen, mit Abstand,
+           aber ohne den breiten Leerrand, den ein 1180px-Kasten auf grossen
+           Monitoren stehen liess. Ab dieser Breite ist .split zweispaltig -
+           die Breite verteilt sich also auf zwei Karten und nicht auf eine
+           einzelne, ueberlange Textzeile. Landingpage und Konto folgen
+           derselben Regel, damit alle Ansichten gleich wirken. */
+        .content{max-width:none;padding:32px 32px 48px}
         /* Bugreport 2026-09-08: der Versuch vom Vortag, Sidebar+Inhalt auf
            denselben 1400px-Block wie die Landingpage zu zentrieren, hat den
            Rechnerbereich auf breiten Monitoren enger und "eingekastelt"

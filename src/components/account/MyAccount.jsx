@@ -468,27 +468,15 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
             </nav>
           )}
 
-          {/* Inhaltsspalte gedeckelt, damit Zeilen wie "E-Mail ........
-              adresse@... ändern" auf grossen Schirmen nicht so weit
-              auseinanderlaufen, dass Beschriftung und Wert nicht mehr
-              erkennbar zusammengehoeren. Der Deckel lag bis 2026-09-09 bei
-              900px - das war der Grund, warum die Profilseite deutlich
-              schmaler wirkte als die Rechner (Nutzer-Befund). Jetzt exakt die
-              1180px des Rechnerinhalts (.content in App.jsx): gleiche Breite
-              wie dort, und der Zusammenhalt der Zeilen bleibt gewahrt, weil
-              der Rechner mit derselben Breite arbeitet. */}
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              maxWidth: isDesktop ? 1180 : "none",
-              // Im Restplatz zentrieren statt links am Menue zu kleben - so
-              // verhaelt sich die Spalte genau wie .content im Rechner
-              // (Sidebar links, Inhalt mittig im Rest). Ohne das saemmelte
-              // sich auf breiten Monitoren der gesamte Leerraum rechts.
-              margin: isDesktop ? "0 auto" : undefined,
-            }}
-          >
+          {/* Ohne Deckelung, wie .content im Rechner (Nutzer-Vorgabe
+              2026-09-09: alle Ansichten gleich und einheitlich ueber die
+              volle Breite). Der Deckel lag zuvor bei 900px, kurzzeitig bei
+              1180px - beides liess auf breiten Monitoren einen Leerrand
+              stehen, den es im Rechner nicht gibt. Der urspruengliche Zweck
+              war, dass Zeilen wie "E-Mail ........ adresse@... ändern" nicht
+              auseinanderlaufen; wo das noetig ist, begrenzt das der jeweilige
+              Abschnitt selbst. */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <ActiveSection
               t={t}
               account={account}

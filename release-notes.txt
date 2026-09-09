@@ -1,3 +1,35 @@
+## 2026-09-09 (1.77.2)
+
+### Volle Breite jetzt auch im Rechner-, Objekt- und Profilbereich
+
+Nachtrag zu 1.77.1, das nur Landingpage und Konto-Aussenrahmen betraf. Der
+Rechnerinhalt selbst (.content) blieb auf 1180px gedeckelt und liess damit auf
+einem 2560px-Monitor rechts einen breiten Streifen leer, obwohl die Sidebar
+links am Rand klebt. Nutzer-Vorgabe: "die rechte Seite soll die komplette
+rechte Seite fuellen, natuerlich mit entsprechendem Abstand" und "fuer alle
+Rechner und Objekte, auch Profil soll gleich und einheitlich sein".
+
+Damit faellt die Deckelung an allen drei verbliebenen Stellen:
+- .content (Rechner und "Meine Objekte") - vorher 1180px
+- die Inhaltsspalte im Profil - vorher 1180px, davor 900px
+
+Gemessen bei 2560px Viewport: .content laeuft jetzt von 240 (Sidebar-Kante)
+bis 2530, es bleiben 30px Rand - vorher endete der Inhalt bei rund 1720.
+
+Zur aufgegebenen Begruendung: die Deckelung stammte aus der Sorge um die
+Zeilenlaenge (bei 1400px lief einspaltiger Fliesstext ueber rund 175 Zeichen,
+optimal sind 50-75). Sie wiegt hier weniger schwer, weil der Rechnerbereich ab
+1024px zweispaltig ist (.split, 1fr/1.25fr) - die zusaetzliche Breite verteilt
+sich also auf zwei Karten statt auf eine ueberlange Textzeile. Die
+Ergebnisspalte hat keine eigene Deckelung und waechst entsprechend mit. Wo
+einspaltiger Text laenger wird, muss ihn kuenftig der jeweilige Abschnitt
+begrenzen, nicht mehr der Rahmen um alles herum.
+
+Einschraenkung bei der Pruefung: das zweispaltige Rechnerlayout liess sich
+lokal nicht rendern, weil die Rechner hinter der Anmeldung liegen. Geprueft
+wurden .content und die Objektliste (fuellen die Breite) sowie der Umstand,
+dass die Ergebnisspalte keine eigene Breitengrenze mitbringt.
+
 ## 2026-09-09 (1.77.1)
 
 ### Spannbreite: das Problem war kein Wert, sondern die feste Deckelung
