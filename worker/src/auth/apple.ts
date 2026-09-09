@@ -189,8 +189,16 @@ export async function exchangeAppleCode(
     } catch {
       jwtInfo = " | jwt: nicht lesbar";
     }
+    // Zusaetzlich die Struktur des Schluessels (nur Masse, nie Inhalt): bei
+    // invalid_client bleiben nach korrekten Bezeichnern nur noch zwei
+    // Moeglichkeiten - der Schluessel gehoert nicht zu dieser Key-ID, oder er
+    // ist unvollstaendig. Ein P-256-Schluessel hat exakt 138 DER-Bytes; weicht
+    // die Zahl ab, ist er beschaedigt, stimmt sie, ist es ein Zuordnungs-
+    // fehler zwischen Key-ID und Schluessel. Damit beantwortet EIN
+    // Login-Versuch beide Fragen statt zwei.
+    const keyInfo = ` | key: ${beschreibeKeyStruktur(env.APPLE_PRIVATE_KEY || "")}`;
     throw new Error(
-      `apple_token_exchange_failed_${res.status}${detail ? `: ${detail.slice(0, 200)}` : ""}${jwtInfo}`,
+      `apple_token_exchange_failed_${res.status}${detail ? `: ${detail.slice(0, 200)}` : ""}${jwtInfo}${keyInfo}`,
     );
   }
   const body = (await res.json()) as { id_token?: string };

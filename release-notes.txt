@@ -1,3 +1,52 @@
+## 2026-09-09 (1.76.1)
+
+### Spannbreite: Korrektur des Fehlschlusses aus 1.76.0
+
+In 1.76.0 wurden Landingpage und Konto von 1400px auf die 1180px des
+Rechnerinhalts gesetzt - mit der Annahme, gleiche Kastenbreite ergebe gleiche
+optische Breite. Das war falsch und machte beide Seiten SCHMALER. Gemessen bei
+1600px Viewport:
+
+    Rechner (Sidebar + Inhalt)   0 .. 1495   fuellt das Fenster
+    Rechner-Inhalt allein      315 .. 1495   1180 breit
+    Landing mit 1180           195 .. 1375   schmale zentrierte Insel
+    Landing mit 1400            85 .. 1485   fluchtet mit dem Rechner
+
+Der Rechner wirkt breit, weil er das Fenster fuellt: seine Sidebar sitzt bei
+x=0, .shell hat max-width:none, und der 1180px-Inhalt zentriert sich in der
+Restbreite. Ein gleich breiter Kasten auf einer Seite ohne Sidebar steht
+dagegen als schmale Insel in der Mitte. 1400px trifft die Aussenkante des
+Rechners auf 10px genau und erfuellt damit die Vorgabe "alle Seiten an die
+Breite von Rechner anpassen".
+
+Der eigentliche Grund fuer die schmale Profilseite lag zudem woanders: die
+Inhaltsspalte in MyAccount war getrennt auf 900px gedeckelt und damit
+schmaler als jeder Rechner. Sie steht jetzt auf 1180px - exakt die Breite des
+Rechnerinhalts. Der Deckel bleibt bestehen, damit Zeilen wie
+"E-Mail ........ aendern" nicht auseinanderlaufen; er liegt nur nicht mehr
+unter der Rechnerbreite.
+
+### Apple-Login: Key-ID enthielt den privaten Schluessel
+
+Das Live-Log zeigte den erzeugten JWT mit `kid=-----BEGIN PRIVATE KEY-----...`
+statt einer zehnstelligen Key-ID: beim Rotieren waren die Werte von
+APPLE_KEY_ID und APPLE_PRIVATE_KEY vertauscht worden. Apple antwortet darauf
+korrekt mit `invalid_client`. Team-ID und Services-ID waren dabei richtig.
+
+Zwei Konsequenzen im Code:
+
+Die JWT-Diagnose gab die `kid` roh aus - in der Annahme, dort stehe eine
+harmlose Kennung. Stand dort der private Schluessel, landete er im Klartext im
+Log. Die `kid` wird jetzt nur noch ausgegeben, wenn sie dem Apple-Format
+entspricht (zehn Zeichen A-Z/0-9), sonst nur nach Laenge und Form beschrieben.
+
+Ausserdem meldet ein fehlgeschlagener Token-Tausch jetzt zusaetzlich die
+Struktur des hinterlegten Schluessels (nur Masse, nie Inhalt). Bei
+`invalid_client` mit korrekten Bezeichnern bleiben genau zwei Ursachen: der
+Schluessel gehoert nicht zu dieser Key-ID, oder er ist unvollstaendig. Ein
+P-256-Schluessel hat exakt 138 DER-Bytes - damit unterscheidet ein einziger
+Login-Versuch beide Faelle, statt zwei Runden zu brauchen.
+
 ## 2026-09-09 (1.76.0)
 
 ### Apple-Login: die eigentliche Ursache war ein geloeschter Wert, kein Formatfehler

@@ -185,10 +185,11 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
              Breakpoint) - dadurch beginnen Logo UND Bereichsliste automatisch
              auf derselben senkrechten Kante wie der Inhalt im Rechner. */
           .ma-hdr-bar{position:sticky;top:0;z-index:5;background:var(--hdr-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);padding-top:env(safe-area-inset-top)}
-          /* 1180 statt 1400 (Nutzer-Vorgabe 2026-09-09, siehe .lp-container in
-             Landing.jsx): die Rechneransicht ist jetzt app-weite Referenzbreite. */
-          .ma-hdr{max-width:1180px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px}
-          .ma-body{max-width:1180px;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
+          /* 1400 wie .lp-container - Begruendung dort (gemessen 2026-09-09):
+             der Rechner fuellt das Fenster, ein 1180px-Kasten hier waere
+             optisch schmaler, nicht gleich breit. */
+          .ma-hdr{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px}
+          .ma-body{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
           /* Schriftzug-Bild seit 2026-08-20 (app-weit ein Logo-File): nur
              die Hoehe steuern, Werte wie .hdr-logo-img in App.jsx. */
           .ma-logo{height:40px;width:auto}
@@ -465,12 +466,16 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
             </nav>
           )}
 
-          {/* Inhaltsspalte gedeckelt: Ohne Deckel zoegen sich Zeilen wie
-              "E-Mail ........ adresse@... ändern" auf einem 1920er-Schirm
-              ueber ueber 1000px auseinander - Beschriftung und Wert haetten
-              dann kaum noch erkennbar zusammengehoert. Die Bereichsliste
-              bleibt davon unberuehrt und sitzt weiter buendig unter dem Logo. */}
-          <div style={{ flex: 1, minWidth: 0, maxWidth: isDesktop ? 900 : "none" }}>
+          {/* Inhaltsspalte gedeckelt, damit Zeilen wie "E-Mail ........
+              adresse@... ändern" auf grossen Schirmen nicht so weit
+              auseinanderlaufen, dass Beschriftung und Wert nicht mehr
+              erkennbar zusammengehoeren. Der Deckel lag bis 2026-09-09 bei
+              900px - das war der Grund, warum die Profilseite deutlich
+              schmaler wirkte als die Rechner (Nutzer-Befund). Jetzt exakt die
+              1180px des Rechnerinhalts (.content in App.jsx): gleiche Breite
+              wie dort, und der Zusammenhalt der Zeilen bleibt gewahrt, weil
+              der Rechner mit derselben Breite arbeitet. */}
+          <div style={{ flex: 1, minWidth: 0, maxWidth: isDesktop ? 1180 : "none" }}>
             <ActiveSection
               t={t}
               account={account}
