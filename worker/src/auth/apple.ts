@@ -69,6 +69,32 @@ export function normalisierePrivateKey(roh: string): string {
   }
 }
 
+// Beschreibt einen unbrauchbaren Schluesselwert AUSSCHLIESSLICH strukturell.
+// Bewusst kein Schluesselmaterial: nur Laengen, Marker-Vorkommen und ob sich
+// die Nutzlast als Base64 dekodieren laesst. Genau diese drei Angaben trennen
+// die realistischen Fehlerursachen voneinander (abgeschnitten / falsch kopiert
+// / falsche Kurve / gar kein Key).
+export function beschreibeKeyStruktur(roh: string): string {
+  const wert = roh.trim();
+  const teile = [
+    `roh=${wert.length}z`,
+    `begin=${wert.includes("BEGIN") ? "ja" : "nein"}`,
+    `end=${wert.includes("END") ? "ja" : "nein"}`,
+    `zeilen=${wert.split("\n").length}`,
+  ];
+  const nutzlast = wert
+    .replace(/-----BEGIN [^-]+-----/, "")
+    .replace(/-----END [^-]+-----/, "")
+    .replace(/\s+/g, "");
+  teile.push(`nutzlast=${nutzlast.length}z`);
+  try {
+    teile.push(`der=${atob(nutzlast).length}b (erwartet 138b fuer P-256)`);
+  } catch {
+    teile.push("der=kein gueltiges Base64");
+  }
+  return teile.join(" ");
+}
+
 // Apple verlangt statt eines statischen Client-Secrets einen selbst signierten
 // JWT (ES256), max. 6 Monate gueltig - hier bewusst kurzlebig (10 Minuten,
 // pro Token-Exchange frisch erzeugt), das ist der von Apple empfohlene Weg
@@ -77,7 +103,24 @@ async function generateAppleClientSecret(env: Env): Promise<string> {
   if (!env.APPLE_TEAM_ID || !env.APPLE_KEY_ID || !env.APPLE_PRIVATE_KEY || !env.APPLE_CLIENT_ID) {
     throw new Error("apple_oauth_not_configured");
   }
-  const privateKey = await importPKCS8(normalisierePrivateKey(env.APPLE_PRIVATE_KEY), "ES256");
+  let privateKey: Awaited<ReturnType<typeof importPKCS8>>;
+  try {
+    privateKey = await importPKCS8(normalisierePrivateKey(env.APPLE_PRIVATE_KEY), "ES256");
+  } catch (e) {
+    // Scheitert der Import, sagt jose nur "pkcs8 must be PKCS#8 formatted
+    // string" - das beantwortet nicht, WAS am hinterlegten Wert falsch ist.
+    // Weil sich ein Secret nicht zurueckauslesen laesst, ist eine strukturelle
+    // Beschreibung der einzige Weg zur Diagnose ohne Raten. Ein P-256-Key hat
+    // nach Base64-Dekodierung exakt 138 DER-Bytes (~185 Base64-Zeichen) - eine
+    // kleinere Zahl beweist einen abgeschnittenen Copy-Paste, eine voellig
+    // andere ein falsches Format. Es wird ausschliesslich Metadatum geloggt,
+    // NIE Schluesselmaterial.
+    throw new Error(
+      `apple_private_key_unbrauchbar: ${beschreibeKeyStruktur(env.APPLE_PRIVATE_KEY)} | jose: ${
+        e instanceof Error ? e.message : String(e)
+      }`,
+    );
+  }
   const now = Math.floor(Date.now() / 1000);
   return new SignJWT({})
     .setProtectedHeader({ alg: "ES256", kid: env.APPLE_KEY_ID })

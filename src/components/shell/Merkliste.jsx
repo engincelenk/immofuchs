@@ -54,6 +54,57 @@ const searchChipActiveStyle = {
   color: "#fff",
   borderColor: "var(--ca)",
 };
+// Objektart und Ansicht sahen bis 2026-09-09 beide wie Chips aus, obwohl sie
+// voellig Verschiedenes tun: die Objektart wechselt den INHALT (andere Daten,
+// andere Karten, anderer Oeffnen-Knopf), die Ansicht nur die DARSTELLUNG
+// derselben Daten. Gleiches Aussehen bei ungleicher Bedeutung war der Kern der
+// Verwirrung - deshalb jetzt zwei bewusst verschiedene Muster: Reiter mit
+// Unterstrich fuer den Inhalt, gerahmter Segment-Umschalter fuer die Ansicht.
+// Der aktive Reiter ist nicht nur farblich markiert (WCAG 1.4.1), sondern auch
+// ueber Unterstrich und Fettung.
+const reiterStyle = {
+  flex: 1,
+  height: 44,
+  padding: "0 4px",
+  // Durchgaengig dieselbe Eigenschaftsebene: React warnt, sobald eine Kurzform
+  // (border/borderBottom) und eine Einzeleigenschaft (borderBottomColor) fuer
+  // denselben Wert gemischt werden. Der aktive Reiter aendert nur borderColor.
+  borderWidth: "0 0 2px",
+  borderStyle: "solid",
+  borderColor: "transparent",
+  background: "transparent",
+  color: "var(--ch)",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  whiteSpace: "nowrap",
+};
+const reiterActiveStyle = {
+  ...reiterStyle,
+  color: "var(--ct)",
+  fontWeight: 700,
+  borderColor: "transparent transparent var(--ca)",
+};
+const segmentStyle = {
+  width: 44,
+  height: 44,
+  border: "none",
+  background: "transparent",
+  color: "var(--ch)",
+  fontSize: 15,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  borderRadius: 8,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+const segmentActiveStyle = {
+  ...segmentStyle,
+  background: "var(--ca)",
+  color: "#fff",
+};
 // Kontingent der Testphase (Nutzer-Vorgabe 2026-08-25): 5 Objekte INSGESAMT
 // fuer die ganze Phase. Pro speichert unbegrenzt.
 //
@@ -848,6 +899,8 @@ export function Merkliste() {
   const hatRechnerErgebnisse = savedList.some(
     (o) => o.kennzahlen?.art === "rechnerErgebnis",
   );
+  const anzahlRechner = savedList.filter((o) => o.kennzahlen?.art === "rechnerErgebnis").length;
+  const anzahlObjekte = savedList.length - anzahlRechner;
   const listeVorArt = useMemo(
     () =>
       savedList.filter((o) =>
@@ -857,6 +910,15 @@ export function Merkliste() {
       ),
     [savedList, listArt],
   );
+  // Beim Reiterwechsel gelten Suche und Score-Filter nicht weiter: sie wurden
+  // fuer den anderen Inhalt gesetzt und wuerden auf dem neuen Reiter still
+  // Treffer verstecken (Score gibt es dort ohnehin nicht).
+  const wechsleArt = (id) => {
+    setListArt(id);
+    setQuery("");
+    setOnlyGut(false);
+    setSortByScore(false);
+  };
   // Score existiert nur fuer Objekte aus dem Exposé-Scan-Auto-Save (Pro) -
   // Suchleiste bleibt immer sichtbar, Score-Filter/-Sortierung nur wenn es
   // ueberhaupt Objekte mit Score gibt (sonst ein Filter, der nie etwas
@@ -878,6 +940,21 @@ export function Merkliste() {
     if (hasScores && sortByScore) list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
     return list;
   }, [listeVorArt, query, onlyGut, sortByScore, hasScores]);
+  // Der Zaehler zeigte bisher immer savedList.length - also ALLE Eintraege,
+  // auch die des anderen Reiters ("5 Objekte gespeichert" bei 3 sichtbaren
+  // Karten). Jetzt wird getrennt: waehrend gefiltert wird die Trefferzahl,
+  // sonst das Kontingent (das gilt weiterhin ueber beide Arten zusammen).
+  const wirdGefiltert = query.trim() !== "" || (hasScores && onlyGut);
+  const zaehlerText = wirdGefiltert
+    ? `${filtered.length} von ${listeVorArt.length}`
+    : `${savedList.length}${!isProSavedObjects ? `/${savedObjectsFreeLimit}` : ""} ${
+        savedList.length === 1
+          ? t.countSingular || "Objekt gespeichert"
+          : t.countPlural || "Objekte gespeichert"
+      }`;
+  // Die Orte-Ansicht bleibt als Wunsch gespeichert, greift aber nur auf dem
+  // Objekte-Reiter - Rechner-Ergebnisse haben keinen Ort zum Gruppieren.
+  const ansichtEffektiv = listArt === "rechner" ? "liste" : ansicht;
 
   // Detailansicht (ehemals eigener Pro-Tab "Objekte") - ObjektDetail erwartet
   // die rohe Server-Objektform; fuer Free-Objekte (kein Server-Datensatz)
@@ -1138,58 +1215,64 @@ export function Merkliste() {
       >
         + Objekt anlegen
       </button>
-      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-        {[
-          ["liste", "Liste"],
-          ["orte", "Orte"],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setAnsicht(id)}
-            style={ansicht === id ? searchChipActiveStyle : searchChipStyle}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
       {/* Zwei-Produkte-Reiter (Auftrag 2026-09-08): nur sichtbar, sobald es
           mindestens ein Rechner-Ergebnis gibt - vorher gaebe es einen
           Umschalter, der auf einer leeren Seite landet. */}
       {hatRechnerErgebnisse && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        <div
+          role="tablist"
+          aria-label="Objektart"
+          style={{
+            display: "flex",
+            gap: 20,
+            borderBottom: "1px solid var(--cb)",
+            marginBottom: 14,
+          }}
+        >
           {[
-            ["objekte", "Objekte"],
-            ["rechner", "Rechner-Ergebnisse"],
-          ].map(([id, label]) => (
+            ["objekte", "Objekte", anzahlObjekte],
+            ["rechner", "Rechner-Ergebnisse", anzahlRechner],
+          ].map(([id, label, anzahl]) => (
             <button
               key={id}
               type="button"
-              onClick={() => setListArt(id)}
-              style={listArt === id ? searchChipActiveStyle : searchChipStyle}
+              role="tab"
+              aria-selected={listArt === id}
+              tabIndex={listArt === id ? 0 : -1}
+              onClick={() => wechsleArt(id)}
+              style={listArt === id ? reiterActiveStyle : reiterStyle}
             >
-              {label}
+              {label} ({anzahl})
             </button>
           ))}
         </div>
       )}
-      <div style={{ fontSize: 13, color: "var(--ch)", marginBottom: 12, fontWeight: 500 }}>
-        {savedList.length}
-        {!isProSavedObjects ? `/${savedObjectsFreeLimit}` : ""}{" "}
-        {savedList.length === 1
-          ? t.countSingular || "Objekt gespeichert"
-          : t.countPlural || "Objekte gespeichert"}
-      </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 12,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Suche nach Name oder Ort…"
+          placeholder={
+            listArt === "rechner" ? "Suche nach Name…" : "Suche nach Name oder Ort…"
+          }
+          aria-label="Gespeicherte Eintraege durchsuchen"
           style={{
-            flex: "1 1 160px",
-            height: 38,
+            // Basis 260px: auf dem Handy passt daneben kein Umschalter mehr,
+            // die Zeile bricht um und das Suchfeld bekommt die volle Breite -
+            // auf dem Desktop dehnt es sich stattdessen und teilt sich die
+            // Zeile mit Umschalter und Zaehler.
+            flex: "1 1 260px",
+            height: 44,
             padding: "0 12px",
-            fontSize: 14,
+            // 16px ist Projektregel (iOS zoomt sonst beim Fokus hinein).
+            fontSize: 16,
             border: "1px solid var(--cb)",
             borderRadius: 10,
             background: "var(--ci)",
@@ -1198,20 +1281,69 @@ export function Merkliste() {
             boxSizing: "border-box",
           }}
         />
-        {hasScores && (
-          <>
-            <button
-              onClick={() => setOnlyGut((v) => !v)}
-              style={onlyGut ? searchChipActiveStyle : searchChipStyle}
-            >
-              Score „Gut"
-            </button>
-            <button onClick={() => setSortByScore((v) => !v)} style={searchChipStyle}>
-              Sortierung: {sortByScore ? "Score" : "Neueste"}
-            </button>
-          </>
+        {/* Die Orte-Gruppierung ergibt nur fuer Rendite-Objekte Sinn: Kredit-,
+            Sanierungs- und Vorfaelligkeitsrechnungen haben gar keinen Ort.
+            Deshalb wird der Umschalter dort ausgeblendet statt deaktiviert -
+            ein grauer Knopf ohne Erklaerung wirft nur Fragen auf. Der zuletzt
+            gewaehlte Wert bleibt erhalten und ist beim Zurueckwechseln wieder da. */}
+        {listArt === "objekte" && (
+          <div
+            role="group"
+            aria-label="Ansicht"
+            style={{
+              display: "flex",
+              border: "1px solid var(--cb)",
+              borderRadius: 10,
+              background: "var(--ci)",
+              padding: 2,
+              flexShrink: 0,
+            }}
+          >
+            {[
+              ["liste", "☰", "Als Liste anzeigen"],
+              ["orte", "📍", "Nach Ort gruppieren"],
+            ].map(([id, icon, beschriftung]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={ansicht === id}
+                aria-label={beschriftung}
+                title={beschriftung}
+                onClick={() => setAnsicht(id)}
+                style={ansicht === id ? segmentActiveStyle : segmentStyle}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
         )}
+        <div
+          aria-live="polite"
+          style={{
+            fontSize: 12.5,
+            color: "var(--ch)",
+            fontWeight: 500,
+            whiteSpace: "nowrap",
+            marginLeft: "auto",
+          }}
+        >
+          {zaehlerText}
+        </div>
       </div>
+      {hasScores && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <button
+            onClick={() => setOnlyGut((v) => !v)}
+            aria-pressed={onlyGut}
+            style={onlyGut ? searchChipActiveStyle : searchChipStyle}
+          >
+            Score „Gut"
+          </button>
+          <button onClick={() => setSortByScore((v) => !v)} style={searchChipStyle}>
+            Sortierung: {sortByScore ? "Score" : "Neueste"}
+          </button>
+        </div>
+      )}
       {limitReached && (
         <button
           onClick={() => setShowUpgrade(true)}
@@ -1240,14 +1372,20 @@ export function Merkliste() {
           <CheckoutWizard onClose={() => setShowUpgrade(false)} />
         </Suspense>
       )}
-      {filtered.length === 0 && (
+      {/* Frueher wurde bei 0 Treffern zusaetzlich noch ObjektOrte gerendert -
+          der Leerzustand erschien doppelt. */}
+      {filtered.length === 0 ? (
         <div
           style={{ textAlign: "center", padding: "32px 20px", color: "var(--ch)", fontSize: 13 }}
         >
-          Keine Objekte gefunden.
+          {wirdGefiltert
+            ? "Keine Treffer für deine Suche."
+            : listArt === "rechner"
+              ? "Noch keine Rechner-Ergebnisse gespeichert."
+              : "Noch keine Objekte gespeichert."}
         </div>
-      )}
-      {ansicht === "orte" && (
+      ) : null}
+      {filtered.length > 0 && ansichtEffektiv === "orte" && (
         <ObjektOrte
           objekte={filtered}
           onOeffnen={(o) =>
@@ -1255,7 +1393,7 @@ export function Merkliste() {
           }
         />
       )}
-      {ansicht === "liste" && (
+      {ansichtEffektiv === "liste" && (
         <div className="objekt-karten">
           {filtered.map((obj) => {
         const inputData = obj.inputData || { ...obj.data };

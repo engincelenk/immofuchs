@@ -196,7 +196,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             // auf 0 und ueberschrieb damit die Klassenregel, da Inline-Styles
             // jede externe/embedded CSS-Regel schlagen - Logo/Menue sassen
             // dadurch buendig am Rand statt eingerueckt wie der uebrige Inhalt).
-            maxWidth: 1400,
+            // 1180 seit 2026-09-09 - muss mit .lp-container fluchten, sonst
+            // sitzt das Logo nicht mehr ueber der Inhaltskante.
+            maxWidth: 1180,
             margin: "0 auto",
             paddingTop: 14,
             paddingBottom: 14,
@@ -1784,7 +1786,11 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
          Rechner-Karten-Abschnitt angewendet - dort wuerden die
          objectFit:cover-Bildboxen bei einer breiteren Spalte anders
          zugeschnitten wirken. */
-      .lp-container{max-width:1400px;margin:0 auto;padding:0 14px;box-sizing:border-box}
+      /* 1180 statt 1400 (Nutzer-Vorgabe 2026-09-09): die Rechneransicht
+         (.content in App.jsx) gilt jetzt app-weit als Referenzbreite, damit
+         Landingpage, Konto und Rechner dieselbe Spannbreite haben. Aendert
+         sich der Wert dort, gehoert er hier und in MyAccount.jsx mitgezogen. */
+      .lp-container{max-width:1180px;margin:0 auto;padding:0 14px;box-sizing:border-box}
       @media(min-width:700px){.lp-container{padding-left:28px;padding-right:28px}}
       @media(min-width:1100px){.lp-container{padding-left:40px;padding-right:40px}}
       .hero-upload-spot{transition:border-color .2s,box-shadow .2s}

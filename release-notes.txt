@@ -1,3 +1,80 @@
+## 2026-09-09 (1.76.0)
+
+### Apple-Login: die eigentliche Ursache war ein geloeschter Wert, kein Formatfehler
+
+Belegt statt vermutet. `wrangler secret list --env dev` zeigt auf dem
+dev-Worker nur zwei der vier noetigen Apple-Werte:
+
+    APPLE_CLIENT_ID   vorhanden
+    APPLE_TEAM_ID     vorhanden
+    APPLE_KEY_ID      FEHLT
+    APPLE_PRIVATE_KEY FEHLT
+
+Passend dazu meldet der Callback im Live-Log `apple_oauth_not_configured` -
+`generateAppleClientSecret()` bricht ab, bevor ueberhaupt ein Schluessel
+geparst wird. Alle vorherigen Formatfehler waren damit Symptome auf dem Weg,
+nicht die Ursache.
+
+Der Grund fuer das Fehlen: die beiden Werte wurden ueber die Cloudflare-
+Oberflaeche als *Variablen* (Klartext) eingetragen, nicht als *Secrets*.
+Klartext-Variablen werden bei jedem `wrangler deploy` durch den
+`[env.dev.vars]`-Block aus wrangler.toml ERSETZT - und dort steht kein
+Apple-Eintrag. Jedes Deployment loescht sie also wieder. Verschluesselte
+Secrets sind davon nicht betroffen. `APPLE_KEY_ID` (W2FCKZKFKU, kein
+Geheimnis) ist jetzt als echtes Secret gesetzt; `APPLE_PRIVATE_KEY` muss
+einmalig als Secret nachgezogen werden, dann ueberlebt es Deployments.
+
+Zusaetzlich meldet ein fehlgeschlagener Schluessel-Import jetzt nicht mehr nur
+"pkcs8 must be PKCS#8 formatted string", sondern beschreibt den hinterlegten
+Wert strukturell (Laenge, Marker, dekodierte DER-Bytes gegen die 138 Byte, die
+ein P-256-Schluessel hat). Damit ist ein abgeschnittener Copy-Paste von einem
+falschen Format unterscheidbar, ohne je Schluesselmaterial zu loggen - ein
+Secret laesst sich nicht zurueckauslesen, eine strukturelle Beschreibung ist
+der einzige Weg zur Diagnose ohne Raten.
+
+### Einheitliche Inhaltsbreite auf allen Seiten
+
+Landingpage und Kontobereich standen auf 1400px, der Rechnerbereich auf
+1180px. Nutzer-Vorgabe: die Rechnerbreite ist die richtige. Landingpage
+(.lp-container, .lp-hdr-inner) und Konto (.ma-hdr, .ma-body) laufen jetzt
+ebenfalls auf 1180px. Das kehrt die Entscheidung vom 2026-09-08 bewusst um -
+damals war die Landingpage der Bezugspunkt, jetzt ist es der Rechner.
+
+### Filterleiste in "Meine Objekte" neu geordnet
+
+Objektart und Ansicht sahen beide wie Chips aus, obwohl sie Verschiedenes
+tun: die Objektart wechselt den INHALT, die Ansicht nur dessen DARSTELLUNG.
+Gleiches Aussehen bei ungleicher Bedeutung war der Kern der Verwirrung.
+
+    vorher: [Liste][Orte] und [Objekte][Rechner-Ergebnisse] als zwei
+            gleich aussehende, gestapelte Chip-Reihen
+    jetzt:  Reiter mit Unterstrich und Anzahl ("Objekte (3)" /
+            "Rechner-Ergebnisse (2)") oben, darunter eine Zeile aus
+            Suchfeld, kompaktem Ansichts-Umschalter und Zaehler
+
+Die Orte-Gruppierung erscheint nur noch auf dem Objekte-Reiter -
+Kredit-, Sanierungs- und Vorfaelligkeitsrechnungen haben gar keinen Ort zum
+Gruppieren. Der zuletzt gewaehlte Wert bleibt gemerkt. Beim Reiterwechsel
+werden Suche und Score-Filter zurueckgesetzt, weil sie fuer den anderen
+Inhalt gesetzt waren und dort still Treffer verstecken wuerden.
+
+Drei Fehler, die dabei auffielen, sind mit behoben:
+- Der Zaehler zeigte immer alle Eintraege ("5 Objekte gespeichert" bei drei
+  sichtbaren Karten). Jetzt: waehrend gefiltert wird die Trefferzahl
+  ("1 von 3"), sonst das Kontingent.
+- Das Suchfeld hatte 14px und verletzte damit die Projektregel von 16px auf
+  Mobilgeraeten (iOS zoomt sonst beim Fokus hinein).
+- Bei null Treffern wurde der Leerzustand doppelt gerendert. Sein Text
+  unterscheidet jetzt ausserdem zwischen "nichts gespeichert" und "keine
+  Treffer fuer die Suche" und nennt den richtigen Reiter.
+
+Zugaenglichkeit: die Reiter sind als role="tablist"/role="tab" mit
+aria-selected ausgezeichnet, der Ansichts-Umschalter als role="group" mit
+aria-pressed und sprechenden aria-labels (die Icons allein haben keinen
+Namen), der Zaehler als aria-live-Bereich. Trefferflaechen 44px. Der aktive
+Reiter ist nicht allein durch Farbe erkennbar (Unterstrich und Fettung),
+damit er WCAG 1.4.1 erfuellt.
+
 ## 2026-09-09 (1.75.3)
 
 ### Apple-Login: Parser haelt jetzt auch beim Handy-Copy-Paste zerstoerte Zeilenumbrueche aus
