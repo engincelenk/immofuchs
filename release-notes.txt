@@ -1,3 +1,38 @@
+## 2026-09-09 (1.77.1)
+
+### Spannbreite: das Problem war kein Wert, sondern die feste Deckelung
+
+Dritter und letzter Anlauf. Zuvor 1400px, dann 1180px, dann wieder 1400px -
+keiner der Werte half, weil ein zentrierter Kasten fester Breite dem Rechner
+prinzipiell nicht folgen kann. Der Rechner skaliert mit dem Fenster: .shell
+hat max-width:none, die Sidebar klebt am linken Rand, der Inhalt zentriert
+sich in der Restbreite. Gemessen:
+
+    Viewport 1600:  Rechner 0..1495   Kasten(1400)   85..1485   unauffaellig
+    Viewport 2560:  Rechner 0..1990   Kasten(1400)  565..1965   schmale Insel
+
+Auf einem 2560px breiten Monitor blieben links 565px und rechts 595px leer,
+waehrend der Rechner am Bildschirmrand beginnt. Genau deshalb war die
+Aenderung auf dem Entwicklungsrechner (1600px) unsichtbar und auf dem
+Monitor des Nutzers wirkungslos - und nicht, wie zunaechst vermutet, wegen
+des Caches.
+
+Landingpage (.lp-container, .lp-hdr-inner) und Kontobereich (.ma-hdr,
+.ma-body) haben jetzt keine feste Deckelung mehr, sondern dieselbe Regel wie
+.shell: volle Breite, gesteuert nur ueber das responsive Seitenpadding
+(14/28/40px je Breakpoint). Bei 2560px fuellt die Landingpage damit 0..2530
+statt 565..1965.
+
+Die Inhaltsspalte im Profil zentriert sich zusaetzlich im verbleibenden Platz
+(margin:0 auto) statt links am Bereichsmenue zu kleben - sonst haette sich
+der gesamte Leerraum rechts gesammelt. Damit verhaelt sie sich genau wie
+.content im Rechner: Menue links, Inhalt mittig im Rest. Ihre Deckelung
+bleibt bei 1180px, der Breite des Rechnerinhalts, damit Zeilen wie
+"E-Mail ........ aendern" nicht auseinanderlaufen.
+
+Geprueft bei 2560px, 1440px und 375px - mobil unveraendert, kein
+horizontaler Ueberlauf.
+
 ## 2026-09-09 (1.77.0)
 
 ### App-Ansicht nur noch nach Anmeldung

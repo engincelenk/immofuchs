@@ -211,8 +211,8 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             // jede externe/embedded CSS-Regel schlagen - Logo/Menue sassen
             // dadurch buendig am Rand statt eingerueckt wie der uebrige Inhalt).
             // Muss mit .lp-container fluchten, sonst sitzt das Logo nicht
-            // mehr ueber der Inhaltskante.
-            maxWidth: 1400,
+            // mehr ueber der Inhaltskante - dort jetzt ohne feste Deckelung.
+            maxWidth: "none",
             margin: "0 auto",
             paddingTop: 14,
             paddingBottom: 14,
@@ -1800,17 +1800,27 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
          Rechner-Karten-Abschnitt angewendet - dort wuerden die
          objectFit:cover-Bildboxen bei einer breiteren Spalte anders
          zugeschnitten wirken. */
-      /* 1400, nicht 1180 (gemessen 2026-09-09, zweiter Anlauf): Der Versuch,
-         hier die 1180px des Rechnerinhalts zu uebernehmen, machte die Seite
-         SCHMALER statt gleich breit. Grund: der Rechner fuellt das Fenster -
-         seine Sidebar sitzt bei x=0, .shell hat max-width:none, der 1180px-
-         Inhalt zentriert sich in der Restbreite. Bei 1600px Viewport reicht
-         der Rechner damit von 0 bis 1495, ein 1180px-Container hier aber nur
-         von 195 bis 1375. Gleiche Kastenbreite heisst also gerade NICHT
-         gleiche optische Breite. 1400px trifft die Aussenkante des Rechners
-         (85..1485 bei 1600px Viewport) und ist die Vorgabe des Nutzers:
-         "alle Seiten an die Breite von Rechner anpassen". */
-      .lp-container{max-width:1400px;margin:0 auto;padding:0 14px;box-sizing:border-box}
+      /* Keine feste Deckelung (gemessen 2026-09-09, dritter Anlauf).
+         Vorgeschichte: erst 1400px, dann 1180px (der Breite des
+         Rechnerinhalts), dann wieder 1400px - keiner der Werte loeste das
+         Problem, weil das Problem kein Wert ist.
+
+         Der Rechner SKALIERT mit dem Fenster: .shell hat max-width:none, die
+         Sidebar klebt bei x=0, der Inhalt zentriert sich in der Restbreite.
+         Ein zentrierter Kasten mit fester Breite kann das prinzipiell nicht
+         einholen - er behaelt links wie rechts denselben Rand, der auf
+         breiten Schirmen immer groesser wird:
+
+             Viewport 1600:  Rechner 0..1495, Kasten(1400)   85..1485  ok
+             Viewport 2560:  Rechner 0..1990, Kasten(1400)  565..1965  Insel
+
+         Auf einem 2560er-Monitor blieben links 565px und rechts 595px leer,
+         waehrend der Rechner am linken Rand beginnt - genau der vom Nutzer
+         gemeldete Unterschied. Deshalb hier dieselbe Regel wie bei .shell:
+         volle Breite, gesteuert nur ueber das responsive Seitenpadding
+         (14/28/40px je Breakpoint). Wo Zeilenlaengen wichtig sind, deckeln
+         die einzelnen Abschnitte weiterhin selbst. */
+      .lp-container{max-width:none;margin:0 auto;padding:0 14px;box-sizing:border-box}
       @media(min-width:700px){.lp-container{padding-left:28px;padding-right:28px}}
       @media(min-width:1100px){.lp-container{padding-left:40px;padding-right:40px}}
       .hero-upload-spot{transition:border-color .2s,box-shadow .2s}

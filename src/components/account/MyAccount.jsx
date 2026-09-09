@@ -185,11 +185,13 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
              Breakpoint) - dadurch beginnen Logo UND Bereichsliste automatisch
              auf derselben senkrechten Kante wie der Inhalt im Rechner. */
           .ma-hdr-bar{position:sticky;top:0;z-index:5;background:var(--hdr-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--cb);padding-top:env(safe-area-inset-top)}
-          /* 1400 wie .lp-container - Begruendung dort (gemessen 2026-09-09):
-             der Rechner fuellt das Fenster, ein 1180px-Kasten hier waere
-             optisch schmaler, nicht gleich breit. */
-          .ma-hdr{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px}
-          .ma-body{max-width:1400px;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
+          /* Ohne feste Deckelung wie .lp-container - ausfuehrliche Begruendung
+             dort: ein zentrierter Kasten fester Breite bleibt auf breiten
+             Monitoren eine Insel, waehrend der Rechner mitskaliert. Die
+             Zeilenlaenge im Inhalt begrenzt stattdessen die Inhaltsspalte
+             weiter unten (1180px, die Breite des Rechnerinhalts). */
+          .ma-hdr{max-width:none;margin:0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;height:78px;padding:0 14px}
+          .ma-body{max-width:none;margin:0 auto;width:100%;box-sizing:border-box;padding:14px 14px 40px}
           /* Schriftzug-Bild seit 2026-08-20 (app-weit ein Logo-File): nur
              die Hoehe steuern, Werte wie .hdr-logo-img in App.jsx. */
           .ma-logo{height:40px;width:auto}
@@ -475,7 +477,18 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
               1180px des Rechnerinhalts (.content in App.jsx): gleiche Breite
               wie dort, und der Zusammenhalt der Zeilen bleibt gewahrt, weil
               der Rechner mit derselben Breite arbeitet. */}
-          <div style={{ flex: 1, minWidth: 0, maxWidth: isDesktop ? 1180 : "none" }}>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              maxWidth: isDesktop ? 1180 : "none",
+              // Im Restplatz zentrieren statt links am Menue zu kleben - so
+              // verhaelt sich die Spalte genau wie .content im Rechner
+              // (Sidebar links, Inhalt mittig im Rest). Ohne das saemmelte
+              // sich auf breiten Monitoren der gesamte Leerraum rechts.
+              margin: isDesktop ? "0 auto" : undefined,
+            }}
+          >
             <ActiveSection
               t={t}
               account={account}
