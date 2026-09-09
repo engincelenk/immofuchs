@@ -34,6 +34,16 @@ describe("normalisierePrivateKey", () => {
     expect(normalisierePrivateKey(mitUmbruechen)).toBe(TEST_PEM);
   });
 
+  it("baut ein PEM mit verlorenen Zeilenumbruechen wieder zusammen (Copy-Paste vom Handy)", () => {
+    const flachgefaltet = TEST_PEM.replace(/\n/g, " ");
+    expect(normalisierePrivateKey(flachgefaltet)).toBe(TEST_PEM);
+  });
+
+  it("baut ein PEM ohne jegliche Zeilenumbrueche wieder zusammen", () => {
+    const ohneUmbrueche = TEST_PEM.replace(/\n/g, "");
+    expect(normalisierePrivateKey(ohneUmbrueche)).toBe(TEST_PEM);
+  });
+
   it("reicht unbrauchbare Eingaben durch, statt sie zu verschlucken", () => {
     // Wichtig fuer die Fehlersuche: importPKCS8() soll seinen eigenen,
     // aussagekraeftigen Fehler werfen duerfen.

@@ -1,3 +1,29 @@
+## 2026-09-09 (1.75.3)
+
+### Apple-Login: Parser haelt jetzt auch beim Handy-Copy-Paste zerstoerte Zeilenumbrueche aus
+
+Nachtrag zu 1.75.2. Der bekannte, im Apple Portal registrierte Schluessel
+(57K5X4A6MR) war unwiederbringlich verloren - Apple gibt die .p8-Datei nur
+einmalig beim Erstellen heraus, und diese war nie gesichert worden. Es musste
+ein komplett neuer Schluessel (W2FCKZKFKU) im Portal erzeugt werden. Der Nutzer
+war unterwegs (kein PC-Zugriff) und musste den neuen Schluessel direkt ueber
+die Variablen/Secrets-Oberflaeche des Cloudflare Dashboards vom Handy aus
+eintragen - dabei falten mobile Texteingabefelder die Zeilenumbrueche einer
+PEM-Datei beim Kopieren erfahrungsgemaess zusammen oder lassen sie ganz weg.
+Naechster Login-Versuch scheiterte prompt mit einem neuen, spezifischeren
+Fehler: `"pkcs8" must be PKCS#8 formatted string`.
+
+`normalisierePrivateKey()` verliess sich bisher darauf, dass ein vorhandenes
+PEM seine Zeilenumbrueche zwischen BEGIN/END-Marker und Base64-Block behaelt -
+genau die Annahme, die beim mobilen Einfuegen nicht mehr gilt. Der Parser baut
+jetzt aus jeder erkennbaren Form (PEM mit intakten Umbruechen, PEM mit
+verlorenen/verschobenen Umbruechen, oder die komplette PEM-Datei Base64-kodiert
+als eine Zeile) ein kanonisches PEM mit 64-Zeichen-Zeilen neu zusammen -
+unabhaengig davon, wie das Einfuegen die Formatierung zerstoert hat. Vier neue
+Tests in apple.test.ts sichern das ab, zwei davon reproduzieren exakt das
+"Zeilenumbrueche komplett verloren" / "zu Leerzeichen zusammengefaltet"-Muster
+eines Handy-Copy-Pastes.
+
 ## 2026-09-09 (1.75.2)
 
 ### Apple-Login: der eigentliche Fehler war das Format des privaten Schluessels

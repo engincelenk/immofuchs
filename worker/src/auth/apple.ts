@@ -28,25 +28,43 @@ export function buildAppleAuthUrl(env: Env, redirectUri: string, state: string):
 }
 
 // Der Schluessel aus dem Apple Developer Portal (.p8-Datei) ist rohes PKCS#8-PEM.
-// Weil ein mehrzeiliger Wert in .dev.vars und in CI-Variablen unhandlich ist,
-// wird er in der Praxis haeufig Base64-kodiert abgelegt - genau das war am
-// 2026-09-09 die Ursache eines fehlschlagenden Apple-Logins: importPKCS8()
-// akzeptiert ausschliesslich PEM ("pkcs8 must be PKCS#8 formatted string"),
-// der Callback flog damit in seinen catch-Block und leitete mit
-// login_error=oauth_failed zurueck - fuer den Nutzer sah der Login aus, als
-// haette er geklappt, es entstand nur nie eine Session.
+// Weil ein mehrzeiliger Wert in .dev.vars/CI-Variablen unhandlich ist, wird er
+// oft Base64-kodiert abgelegt (2026-09-09, erster Fund) - und beim manuellen
+// Einfuegen ueber das Cloudflare-Dashboard vom Handy aus (zweiter Fund,
+// gleicher Tag) falten mobile Textfelder die Zeilenumbrueche der PEM-Datei
+// beim Kopieren gern zu Leerzeichen zusammen oder lassen sie ganz weg -
+// importPKCS8() verlangt aber echte Zeilenumbrueche zwischen den
+// BEGIN/END-Markern und dem Base64-Block ("pkcs8 must be PKCS#8 formatted
+// string"). Beide Faelle fuehrten zum selben Symptom: Login sah erfolgreich
+// aus, es entstand aber nie eine Session.
 //
-// Statt eine der beiden Formen zur einzig richtigen zu erklaeren (und die
-// andere still scheitern zu lassen), werden hier beide akzeptiert: erkannt
-// wird am BEGIN-Marker, alles andere wird als Base64 behandelt und dekodiert.
+// Deshalb wird hier nicht nur zwischen PEM und Base64 unterschieden, sondern
+// aus jeder erkennbaren Form (PEM mit intakten Umbruechen, PEM mit verlorenen/
+// verschobenen Umbruechen, oder die ganze PEM-Datei Base64-kodiert als eine
+// Zeile) ein sauberes, kanonisches PEM mit 64-Zeichen-Zeilen zurueckgebaut -
+// unabhaengig davon, wie das Einfuegen die Formatierung zerstoert hat.
+function zuKanonischemPem(wert: string): string | null {
+  const nutzlast = wert
+    .replace(/-----BEGIN [^-]+-----/, "")
+    .replace(/-----END [^-]+-----/, "")
+    .replace(/\s+/g, "");
+  if (!nutzlast) return null;
+  const zeilen = nutzlast.match(/.{1,64}/g) ?? [nutzlast];
+  return `-----BEGIN PRIVATE KEY-----\n${zeilen.join("\n")}\n-----END PRIVATE KEY-----`;
+}
+
 export function normalisierePrivateKey(roh: string): string {
   const wert = roh.trim();
-  if (wert.includes("BEGIN")) return wert;
+  if (wert.includes("BEGIN")) return zuKanonischemPem(wert) ?? wert;
+  // Kein Marker vorhanden: entweder die ganze PEM-Datei wurde als ein
+  // Base64-String abgelegt (Marker stecken dann erst NACH dem Dekodieren
+  // im Klartext), oder es ist gar kein Schluessel - dann soll importPKCS8()
+  // seinen eigenen, aussagekraeftigen Fehler werfen duerfen.
   try {
-    return atob(wert.replace(/\s+/g, ""));
+    const dekodiert = atob(wert.replace(/\s+/g, ""));
+    if (!dekodiert.includes("BEGIN")) return wert;
+    return zuKanonischemPem(dekodiert) ?? wert;
   } catch {
-    // Weder PEM noch gueltiges Base64 - unveraendert weiterreichen, damit
-    // importPKCS8() den aussagekraeftigen Originalfehler wirft.
     return wert;
   }
 }
@@ -94,7 +112,34 @@ export async function exchangeAppleCode(
     }),
   });
   if (!res.ok) {
-    throw new Error(`apple_token_exchange_failed_${res.status}`);
+    // Apples Grund NICHT verschlucken (Bugreport 2026-09-09): der Status
+    // allein ("400") sagt nichts - Apple liefert im Body {"error":"..."} und
+    // unterscheidet damit die eigentlichen Faelle: invalid_client (JWT bzw.
+    // Team-/Key-ID/Services-ID passen nicht zusammen), invalid_grant (Code
+    // verbraucht/abgelaufen oder redirect_uri weicht ab), invalid_request.
+    // Ohne dieses Feld ist die Fehlersuche reines Raten - dieselbe Lehre wie
+    // bei analyse_model_call_failed (routes/assistant.ts). Der Body enthaelt
+    // keine Geheimnisse, nur den Fehlercode.
+    const detail = await res.text().catch(() => "");
+    // Bei invalid_client sagt Apple NICHT, welcher Bestandteil nicht passt.
+    // Deshalb hier die nicht-geheimen Kopfdaten des selbst signierten JWT
+    // mitgeben: kid (muss die Key-ID sein), iss (Team-ID), sub (Services-ID),
+    // aud und Laufzeit. Damit ist ohne Raten erkennbar, ob einer der drei
+    // Bezeichner falsch im Secret liegt. Signatur und Schluessel bleiben
+    // aussen vor - beides taucht hier bewusst NICHT auf.
+    let jwtInfo = "";
+    try {
+      const [kopf, nutz] = clientSecret.split(".");
+      const b64 = (s: string) => JSON.parse(atob(s.replace(/-/g, "+").replace(/_/g, "/")));
+      const h = b64(kopf);
+      const p = b64(nutz);
+      jwtInfo = ` | jwt: alg=${h.alg} kid=${h.kid} iss=${p.iss} sub=${p.sub} aud=${p.aud} gueltig=${p.exp - p.iat}s`;
+    } catch {
+      jwtInfo = " | jwt: nicht lesbar";
+    }
+    throw new Error(
+      `apple_token_exchange_failed_${res.status}${detail ? `: ${detail.slice(0, 200)}` : ""}${jwtInfo}`,
+    );
   }
   const body = (await res.json()) as { id_token?: string };
   if (!body.id_token) throw new Error("apple_id_token_missing");
