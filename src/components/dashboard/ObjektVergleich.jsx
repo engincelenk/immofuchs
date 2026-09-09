@@ -131,7 +131,11 @@ export function ObjektVergleich({ objekte, t, locale = "de-DE", onFinnFrage }) {
             borderRadius: 12,
             border: "1px solid #1E3A5F33",
             background: "#1E3A5F0d",
-            color: "#1E3A5F",
+            // var(--primary-tx) statt #1E3A5F (Bugreport 2026-09-09): Rahmen
+            // und Flaechenton (mit Alpha) bleiben unveraendert - nur reines
+            // Marineblau als TEXTFARBE war im Dark Mode auf dieser Karte kaum
+            // lesbar.
+            color: "var(--primary-tx)",
             fontSize: 14,
             fontWeight: 600,
             cursor: "pointer",

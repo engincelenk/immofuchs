@@ -19,7 +19,15 @@ import { purchasePlanLabelKey } from "./planPricing.js";
 // startAppTrialIfNew in worker/src/routes/account.ts): die laeuft VOR jedem
 // Kauf und hat mit diesem Bildschirm nichts zu tun.
 export function PurchaseConfirmation({ t, account, plan, onDone }) {
-  const { goHome } = useApp();
+  // Bewusst gegen einen fehlenden Kontext abgesichert (Bugreport 2026-09-09,
+  // "Los geht's" warf `x is not a function"): dieser Bildschirm laeuft in zwei
+  // Umgebungen. In der App liefert App.jsx den vollstaendigen Kontext samt
+  // goHome - auf der Landingpage stellt Landing.jsx dagegen einen verkuerzten
+  // Kontext bereit (lang, savedList, setTabExt ...), in dem es kein goHome
+  // gibt. Wurde der Kauf von dort abgeschlossen, brach der Klick ab, bevor
+  // onDone() lief: das Fenster blieb offen und liess sich nur noch ueber das
+  // Kreuz schliessen.
+  const { goHome } = useApp() || {};
   const subscription = account?.me?.subscription;
   const isTrial = subscription?.status === "trialing";
 
@@ -29,8 +37,11 @@ export function PurchaseConfirmation({ t, account, plan, onDone }) {
   // Renditerechner) - unabhaengig davon, ob dieser Bildschirm im Wizard oder
   // als eigenstaendiges Fenster (PurchaseConfirmModal.jsx) auftaucht.
   function handleDone() {
-    goHome();
-    onDone();
+    // Auf der Landingpage gibt es kein goHome - dort ist der Nutzer bereits
+    // da, wo goHome ihn hinbringen wuerde. Das Schliessen darf davon in
+    // keinem Fall abhaengen, deshalb steht onDone() nicht dahinter.
+    if (typeof goHome === "function") goHome();
+    onDone?.();
   }
 
   // Die Zeile hiess bis 2026-08-27 nur "Plan: ImmoFuchs Pro" - eine Aussage,

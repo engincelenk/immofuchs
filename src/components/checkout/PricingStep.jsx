@@ -119,6 +119,13 @@ function TermOption({ selected, onClick, label, badge, strikePrice, price, perMo
         border: `2px solid ${selected ? "var(--ca)" : "var(--cb)"}`,
         borderRadius: 12,
         background: selected ? "var(--ca-bg)" : "var(--cc)",
+        // Ohne diese Zeile erbt der Knopf NICHT die Textfarbe der Seite:
+        // <button> hat als Browser-Vorgabe `color: buttontext`, also Schwarz.
+        // Im Dunkelmodus stand "Jährlich"/"Monatlich" damit in reinem Schwarz
+        // auf dunklem Grund (gemessener Kontrast 1,34 bzw. 1,44 - praktisch
+        // unlesbar), ebenso der Preis im Chip daneben, der die Farbe von hier
+        // erbt. Bugreport 2026-09-09.
+        color: "var(--ct)",
         cursor: "pointer",
         fontFamily: "inherit",
         textAlign: "left",

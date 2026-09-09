@@ -608,7 +608,13 @@ export function ObjektAnlegenWizard({ t, onAnlegen, onFertig, onAbbrechen }) {
             ...knopfStil,
             flex: "none",
             background: "transparent",
-            color: "var(--ch)",
+            // var(--ch) statt --ct (Bugreport 2026-09-09): --ch ist fuer
+            // gedaempften HINWEISTEXT gedacht (Kontrast ~5,5:1 auf dieser
+            // Karte, WCAG-AA-Grenzwert), nicht fuer die Beschriftung eines
+            // klickbaren Knopfs - daneben wirkte "Abbrechen" kaum lesbar.
+            // --ct entspricht der Konvention aus secondaryBtnStyle
+            // (checkoutStyles.js) fuer sekundaere Aktions-Buttons.
+            color: "var(--ct)",
             border: "1px solid var(--cb)",
           }}
         >
@@ -1248,7 +1254,14 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
           📄
         </span>
         <span>
-          <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#1E3A5F" }}>
+          {/* var(--primary-tx) statt des festen Hex-Werts (Bugreport
+              2026-09-09): #1E3A5F ist reines Hell-Modus-Marineblau als
+              TEXTFARBE auf dem Kartenhintergrund - im Dark Mode praktisch
+              unlesbar (dunkles Navy auf dunkler Karte). --primary-tx wurde
+              genau fuer diesen Fall angelegt (siehe App.jsx ROOT_TOKENS_CSS,
+              Beispiel dort: SelbsttraegerCheck.jsx) und wechselt im Dark Mode
+              auf ein helles Blau (#7fb3e0). */}
+          <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--primary-tx)" }}>
             {titel || "Exposé hochladen"}
           </span>
           <span style={{ display: "block", fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>

@@ -1,3 +1,66 @@
+## 2026-09-09 (1.78.0)
+
+### Kaufabschluss: "Los geht's" warf im Admin-Kauf-Flow einen Absturz
+
+Fehler nur beim Kauf ueber den Test-Admin-Zugang, nicht bei "Test Monatlich":
+`Uncaught TypeError: x is not a function` beim Klick auf "Los geht's" auf dem
+Bestaetigungsbildschirm - das Fenster liess sich danach nur noch ueber das
+Kreuz schliessen.
+
+Ursache: PurchaseConfirmation.jsx ruft `goHome()` aus dem App-Kontext auf.
+Dieser Bildschirm laeuft aber in zwei Umgebungen - im App-Kontext (App.jsx)
+mit vollstaendigem Funktionsumfang inklusive goHome, und auf der Landingpage
+(Landing.jsx) mit einem bewusst verkuerzten Kontext ohne goHome. Schliesst ein
+Nutzer den Kauf von der Landingpage aus ab, existierte die Funktion dort
+schlicht nicht - der Aufruf brach ab, bevor `onDone()` lief, das Fenster blieb
+offen. `goHome` wird jetzt nur aufgerufen, wenn es tatsaechlich eine Funktion
+ist; das Schliessen selbst haengt nicht mehr davon ab.
+
+### Dark Mode: mehrere Textstellen kaum lesbar
+
+Zwei unabhaengige Ursachen, beide nur im Dark Mode sichtbar:
+
+1. Die Laufzeit-Auswahl im Kauf-Dialog ("Jährlich"/"Monatlich", PricingStep.jsx)
+   stand in reinem Schwarz auf dunklem Kartenhintergrund - gemessener Kontrast
+   1,34 bzw. 1,44 (WCAG verlangt mind. 4,5). Grund: der `<button>` bekam keine
+   eigene Textfarbe und fiel auf die Browser-Vorgabe `buttontext` (Schwarz)
+   zurueck - Label und Preis-Chip daneben erben diese Farbe. Jetzt
+   `color: var(--ct)` auf dem Knopf gesetzt, Kontrast danach 13,74 bzw. 12,73.
+
+2. "Aus Exposé auslesen" (mehrfach im Code) sowie "Neuer Nutzer registriert"
+   im Admin-Dashboard nutzten das feste Hex `#1E3A5F` (Marineblau) als
+   TEXTFARBE auf Kartenhintergrund - im Dark Mode faktisch unlesbares dunkles
+   Navy auf dunkler Karte. Der App-weite Token `--primary-tx` wurde genau fuer
+   diesen Fall angelegt (App.jsx ROOT_TOKENS_CSS, hell `#1e3a5f`, dunkel
+   `#7fb3e0`), stand an diesen vier Stellen aber noch nicht: ExposePanel in
+   ObjektAnlegenWizard.jsx, das Pendant in ObjektAnlegen.jsx, der
+   Vergleichs-Knopf in ObjektVergleich.jsx (nur die Textfarbe, Rahmen/
+   Flaechenton mit Alpha bleiben unveraendert) und ACTIVITY_KINDS in
+   AdminDashboardView.jsx. Alle vier jetzt auf `var(--primary-tx)`.
+
+   "Abbrechen" im "Objekt anlegen"-Dialog stand zusaetzlich auf `var(--ch)`
+   (gedaempfter Hinweistext, Kontrast ~5,5:1 - WCAG-AA-Grenzwert, aber blass
+   fuer eine Knopfbeschriftung) statt auf `var(--ct)` wie die uebrigen
+   sekundaeren Aktions-Buttons im Checkout (secondaryBtnStyle-Konvention).
+
+   Gegenprobe: die Segmentfarben im Vermoegensquellen-Chart
+   (VermoegensQuelleChart.jsx) nutzen dasselbe Marineblau, aber ausschliesslich
+   als FLAECHE (Ringsegment, kleiner Legenden-Punkt) - dort steht nie Text in
+   dieser Farbe, deshalb bleibt der Chart unveraendert.
+
+### Exposé-Auswertung mit demselben Ladeeffekt wie die Objekt-KI-Services
+
+Nutzer-Vorgabe: "auch hier Expose auswerten mit Effekt versehen, wie bei
+Objekt KI-Services". Die Auswerten-Phase (ein einzelner, nicht streamender
+Modell-Aufruf ohne zaehlbaren Fortschritt) zeigt jetzt denselben
+Sterne-Glitzer- und Balken-Schimmer-Effekt wie RechnerAiKarte.jsx - eigene
+CSS-Klassen (expu-*), da beide Vorbilder ihr CSS nicht exportieren.
+
+Bewusst NICHT auf die Hochladen-Phase angewendet: die hat einen echten,
+zaehlbaren Fortschritt (ein Bild = ein Schritt) mit Prozentbalken - ein
+Schimmer-Platzhalter fuer unbekannte Dauer waere dort eine Verschlechterung
+gegenueber der bereits vorhandenen genauen Anzeige.
+
 ## 2026-09-09 (1.77.2)
 
 ### Volle Breite jetzt auch im Rechner-, Objekt- und Profilbereich

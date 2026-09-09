@@ -183,7 +183,10 @@ function BearbeitenFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, s
             📄
           </span>
           <span>
-            <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#1E3A5F" }}>
+            {/* var(--primary-tx) statt #1E3A5F (Bugreport 2026-09-09, wie
+                ObjektAnlegenWizard.jsx ExposePanel): im Dark Mode war dunkles
+                Navy auf der Karte kaum lesbar. */}
+            <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--primary-tx)" }}>
               Exposé hochladen
             </span>
             <span style={{ display: "block", fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>

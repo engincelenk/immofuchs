@@ -25,7 +25,9 @@ const TILES = [
 // Beschriftung und Farbe je Ereignisart. Die Schluessel kommen 1:1 aus
 // listAdminActivity (worker/src/db.ts).
 const ACTIVITY_KINDS = {
-  "user.registered": { label: "Neuer Nutzer registriert", color: "#1E3A5F" },
+  // var(--primary-tx) statt #1E3A5F (Bugreport 2026-09-09): als TEXTFARBE auf
+  // Kartenhintergrund ist festes Marineblau im Dark Mode kaum lesbar.
+  "user.registered": { label: "Neuer Nutzer registriert", color: "var(--primary-tx)" },
   "subscription.started": { label: "Subscription abgeschlossen", color: "#22c55e" },
   "subscription.canceled": { label: "Subscription gekündigt", color: "#c0392b" },
   "admin.action": { label: "Admin-Aktion", color: "var(--ca-dk)" },
