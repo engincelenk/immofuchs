@@ -27,7 +27,7 @@ import { rufeAnalyseAuf, analyseFehlertext, erteileConsent } from "../../utils/a
 // dann wieder "offen", bis erneut ausgewertet wird - das entspricht keinem
 // Datenverlust, das Ergebnis liegt weiterhin unter resultData.ai.<produktId>
 // am Server).
-export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahlen }) {
+export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahlen, standortFakten }) {
   const { aktivesObjekt, updateObj, isProSavedObjects } = useApp();
   const [ergebnis, setErgebnis] = useState(null);
   // Snapshot der `kennzahlen`, wie sie beim letzten Lauf ans Modell gingen -
@@ -59,7 +59,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
     setConsent(false);
     setLaufend(true);
     try {
-      const res = await rufeAnalyseAuf({ produkt: produktId, kennzahlen, zahlen });
+      const res = await rufeAnalyseAuf({ produkt: produktId, kennzahlen, zahlen, standortFakten });
       if (!res.ok) {
         if (res.art === "consent") setConsent(true);
         else setFehler(analyseFehlertext(res.art));

@@ -26,6 +26,14 @@ import {
 } from "../../utils/mietenFortschreibung.js";
 import { berechnePreisSchaetzung, preisZeilen } from "../../utils/preisSchaetzung.js";
 import {
+  ladeRegionalpreise,
+  regionalFakten,
+  regionalPreis,
+  regionalpreiseStand,
+  regionalpreisZeilen,
+} from "../../utils/regionalpreis.js";
+import { fmt, fmtP } from "../../utils/helpers.js";
+import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
 } from "../../utils/objektKennzahlen.js";
@@ -113,6 +121,7 @@ export function ObjektDetail({ objekt, onBack }) {
   // Zahl = EUR/m2. Die drei Zustaende sind unterscheidbar, weil "laedt noch"
   // und "gibt es nicht" dem Nutzer Verschiedenes sagen muessen.
   const [ortsMiete, setOrtsMiete] = useState(undefined);
+  const [regGeladen, setRegGeladen] = useState(false);
   // Sofort sichtbarer Stand nach "Fuer dieses Objekt uebernehmen"
   // (Stellschrauben, UX-Review 2026-09-06): updateObj() persistiert, aber der
   // Prop `objekt` selbst aendert sich dadurch nicht - Merkliste haelt
@@ -163,8 +172,10 @@ export function ObjektDetail({ objekt, onBack }) {
     Promise.all([
       ladeMietReferenz().catch(() => null),
       ladeMietenFortschreibung().catch(() => null),
+      ladeRegionalpreise().catch(() => null),
     ]).then(() => {
       if (!lebt) return;
+      setRegGeladen(true);
       const basisMiete = referenzMiete(basis.plz);
       if (basisMiete == null) {
         setOrtsMiete(null);
@@ -198,7 +209,22 @@ export function ObjektDetail({ objekt, onBack }) {
     // Der Anker gehoert zum Prompt-Fix (siehe worker/src/analysePrompt.ts).
     const brauchtOrtsmiete = produktId === "preis" || produktId === "analyse";
     const schaetzung = brauchtOrtsmiete ? berechnePreisSchaetzung(basis, t, ortsMiete) : null;
-    const zahlen = schaetzung?.verfuegbar ? preisZeilen(schaetzung, locale) : [];
+    // Regionaler Kaufpreis-Richtwert (2026-09-10, KI-Wow-Feature C.6-C.8):
+    // dieselbe Idee wie die Ortsmiete oben, diesmal fuer den Kaufpreis statt
+    // die Miete. Auch fuer "hebel" - der Kaufpreis-Hebel laesst sich erst
+    // einordnen, wenn bekannt ist, ob er ueber oder unter dem regionalen
+    // Niveau liegt.
+    const brauchtRegionalpreis =
+      produktId === "preis" || produktId === "analyse" || produktId === "hebel";
+    const regRef = brauchtRegionalpreis ? regionalPreis(basis.bundesland, basis.ort) : null;
+    const zahlen = [
+      ...(schaetzung?.verfuegbar ? preisZeilen(schaetzung, locale) : []),
+      ...(regRef ? regionalpreisZeilen(basis, regRef, locale) : []),
+    ];
+    // Standort-Fakten (Backlog C.8): nur Bundesland-Ebene, siehe
+    // regionalFakten()-Kommentar - keine zusaetzliche Preisgabe, da
+    // "bundesland" ohnehin schon Teil der Kennzahlen unten ist.
+    const standortFakten = brauchtRegionalpreis ? regionalFakten(basis.bundesland) : [];
     // Das Handout ist das einzige Produkt, das auf den anderen aufsetzt: es
     // bekommt die Kernaussagen der bereits erstellten Auswertungen mit und
     // leitet daraus die Fragen fuer den Termin ab (Nutzer-Vorgabe 2026-09-07).
@@ -235,7 +261,14 @@ export function ObjektDetail({ objekt, onBack }) {
       // Fetch, Consent-/Pro-/Login-/Rate-Limit-Erkennung liegen seit dem
       // Umbau in aiAnalyse.js - derselbe Kern, den jetzt auch RechnerAiKarte.jsx
       // an den 5 Nicht-Rendite-Rechnern nutzt (siehe dort).
-      const res = await rufeAnalyseAuf({ produkt: produktId, kennzahlen, zahlen, varianten, befunde });
+      const res = await rufeAnalyseAuf({
+        produkt: produktId,
+        kennzahlen,
+        zahlen,
+        varianten,
+        befunde,
+        standortFakten,
+      });
       if (!res.ok) {
         // 412 ist kein Fehler, sondern eine offene Frage: die Einwilligung in
         // die KI-Nutzung fehlt noch. Sie als "nicht erreichbar" auszugeben
@@ -377,6 +410,8 @@ export function ObjektDetail({ objekt, onBack }) {
         onBearbeiten={() => setBearbeiten(true)}
       />
 
+      <RegionalSnapshot objekt={objekt} basis={basis} regGeladen={regGeladen} />
+
       <AiSektion zusammenfassung={aiZusammenfassung(objektAnzeige, locale)}>
         {/* Das Fehlerband gehoert IN die Sektion, direkt bei den Knoepfen,
             auf die es sich bezieht. */}
@@ -432,6 +467,61 @@ export function ObjektDetail({ objekt, onBack }) {
       <div style={{ marginTop: 16 }}>
         <ObjektLage data={basis} titel={objekt.title} />
       </div>
+    </div>
+  );
+}
+
+// Portfolio-Tracking ueber Zeit (2026-09-10, Backlog D.12). Zeigt den bei
+// Anlage eingefrorenen regionalen Richtwert (siehe regionalSnapshot() in
+// Merkliste.jsx/toServerPayload). Ohne Snapshot (Objekt vor dieser
+// Funktion angelegt, oder Regionaldaten waren beim Speichern nicht
+// geladen) wird nichts angezeigt - kein nachtraeglich erfundener Wert.
+//
+// Ein echter Zeitvergleich ("seit Kauf um X% gestiegen") ist erst moeglich,
+// sobald ein SPAETERES Quartal geladen ist als das des Snapshots - bei nur
+// einem Datenstand (aktuell Q2 2026) gibt es nichts zu vergleichen. Dieser
+// Zustand wird ehrlich benannt statt einen Trend aus einem einzigen Punkt
+// vorzutaeuschen.
+function RegionalSnapshot({ objekt, basis, regGeladen }) {
+  const snapshot = objekt?.kennzahlen?.regionalSnapshot;
+  if (!snapshot) return null;
+
+  const aktuellerStand = regGeladen ? regionalpreiseStand() : null;
+  const aktuellerRef = regGeladen ? regionalPreis(basis?.bundesland, basis?.ort) : null;
+  const neuereDatenVorhanden =
+    aktuellerStand && aktuellerStand !== snapshot.stand && aktuellerRef?.kaufWohnung > 0;
+
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        paddingTop: 12,
+        borderTop: "1px solid var(--cb)",
+        fontSize: 12.5,
+        color: "var(--cl)",
+      }}
+    >
+      <div style={{ fontWeight: 700, color: "var(--ct)", marginBottom: 4 }}>
+        Regionaler Richtwert bei Aufnahme
+      </div>
+      <div>
+        {fmt(snapshot.regionalerRichtwertQm)} €/m² ({snapshot.stand})
+      </div>
+      {neuereDatenVorhanden ? (
+        <div style={{ marginTop: 4 }}>
+          Aktuell: {fmt(aktuellerRef.kaufWohnung)} €/m² ({aktuellerStand}) —{" "}
+          {fmtP(
+            Math.abs((aktuellerRef.kaufWohnung / snapshot.regionalerRichtwertQm - 1) * 100),
+            0,
+          )}{" "}
+          {aktuellerRef.kaufWohnung > snapshot.regionalerRichtwertQm ? "gestiegen" : "gesunken"}{" "}
+          seit Aufnahme
+        </div>
+      ) : (
+        <div style={{ marginTop: 4, fontStyle: "italic" }}>
+          Vergleich folgt, sobald ein neueres Quartal vorliegt.
+        </div>
+      )}
     </div>
   );
 }

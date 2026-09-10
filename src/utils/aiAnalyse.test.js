@@ -81,16 +81,24 @@ describe("rufeAnalyseAuf", () => {
     expect(res).toEqual({ ok: false, art: "fehler" });
   });
 
-  it("laesst leere zahlen/varianten/befunde weg statt leerer Arrays zu senden", async () => {
+  it("laesst leere zahlen/varianten/befunde/standortFakten weg statt leerer Arrays zu senden", async () => {
     apiFetch.mockResolvedValue(antwort(200, { ergebnis: {} }));
-    await rufeAnalyseAuf({ produkt: "kredit", kennzahlen: {}, zahlen: [], varianten: [], befunde: [] });
+    await rufeAnalyseAuf({
+      produkt: "kredit",
+      kennzahlen: {},
+      zahlen: [],
+      varianten: [],
+      befunde: [],
+      standortFakten: [],
+    });
     const body = JSON.parse(apiFetch.mock.calls[0][1].body);
     expect(body).not.toHaveProperty("zahlen");
     expect(body).not.toHaveProperty("varianten");
     expect(body).not.toHaveProperty("befunde");
+    expect(body).not.toHaveProperty("standortFakten");
   });
 
-  it("sendet zahlen/varianten/befunde mit, wenn vorhanden", async () => {
+  it("sendet zahlen/varianten/befunde/standortFakten mit, wenn vorhanden", async () => {
     apiFetch.mockResolvedValue(antwort(200, { ergebnis: {} }));
     await rufeAnalyseAuf({
       produkt: "kredit",
@@ -98,11 +106,13 @@ describe("rufeAnalyseAuf", () => {
       zahlen: [{ label: "x", wert: "y" }],
       varianten: [{ feld: "a" }],
       befunde: [{ produkt: "analyse", kernaussage: "k" }],
+      standortFakten: ["Starke Exportwirtschaft."],
     });
     const body = JSON.parse(apiFetch.mock.calls[0][1].body);
     expect(body.zahlen).toEqual([{ label: "x", wert: "y" }]);
     expect(body.varianten).toEqual([{ feld: "a" }]);
     expect(body.befunde).toEqual([{ produkt: "analyse", kernaussage: "k" }]);
+    expect(body.standortFakten).toEqual(["Starke Exportwirtschaft."]);
   });
 });
 

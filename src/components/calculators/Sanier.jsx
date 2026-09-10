@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import {
   KFW,
@@ -24,6 +24,7 @@ import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
+import { ladeRegionalpreise, regionalPreis, regionalFakten } from "../../utils/regionalpreis.js";
 
 const EC_O = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
 const EC_C = [
@@ -101,6 +102,16 @@ function TierSel({ value, onChange, tiers }) {
 export default function Sanier() {
   const { d, set, t, tip, lang, aktivesObjekt } = useApp();
   const [view, setView] = useState("input");
+  // Regionaler Richtwert fuer die Werteinschaetzung nach Sanierung (Backlog
+  // B.4): dieser Rechner hat kein eigenes Kaufpreis-/Ort-Feld, nutzt aber
+  // d.kaufpreis/d.ort/d.bundesland aus dem geteilten Objekt-State (falls im
+  // Renditerechner-Tab desselben Objekts bereits gesetzt).
+  const [regGeladen, setRegGeladen] = useState(false);
+  useEffect(() => {
+    ladeRegionalpreise()
+      .then(() => setRegGeladen(true))
+      .catch(() => {});
+  }, []);
   const [act, setAct] = useState({
     fenster: false,
     fassade: false,
@@ -1382,6 +1393,7 @@ export default function Sanier() {
                   titel="Sanierung analysieren"
                   kurz="Einschätzung zu Kosten, Förderung und Amortisation"
                   data={d}
+                  standortFakten={regGeladen ? regionalFakten(d.bundesland) : []}
                   kennzahlen={{
                     sanierungskostenBrutto: R.tK,
                     foerderungGesamt: R.tFo + R.tFoLand,
@@ -1425,6 +1437,35 @@ export default function Sanier() {
                       label: "Max. förderfähige Investitionskosten je Wohneinheit",
                       wert: `${KFW.maxInvestition.toLocaleString("de-DE")} €`,
                     });
+                    // Werteinschaetzung nach Sanierung (Backlog B.4): Kaufpreis
+                    // + Nettosanierungskosten je m² gegen den regionalen
+                    // Kaufpreis-Richtwert gespiegelt - zeigt, ob der Gesamt-
+                    // aufwand nach Sanierung noch im regionalen Rahmen liegt.
+                    // Nur wenn Kaufpreis/Flaeche/Ort tatsaechlich gesetzt sind
+                    // (dieser Rechner hat kein eigenes Kaufpreis-Feld).
+                    if (regGeladen) {
+                      const kaufpreis = +d.kaufpreis || 0;
+                      const flaeche = +d.sanFl || +d.flaeche || 0;
+                      if (kaufpreis > 0 && flaeche > 0) {
+                        const regRef = regionalPreis(d.bundesland, d.ort);
+                        if (regRef?.kaufWohnung > 0) {
+                          const aufwandJeQm = (kaufpreis + R.ne) / flaeche;
+                          const abweichung = (aufwandJeQm / regRef.kaufWohnung - 1) * 100;
+                          z.push({
+                            label: "Regionaler Kaufpreis-Richtwert",
+                            wert: `${fmt(regRef.kaufWohnung, 2)} €/m²`,
+                          });
+                          z.push({
+                            label: "Gesamtaufwand nach Sanierung je m² (Kaufpreis + Nettokosten)",
+                            wert: `${fmt(aufwandJeQm, 2)} €/m²`,
+                          });
+                          z.push({
+                            label: "Abweichung vom Richtwert",
+                            wert: `${abweichung > 0 ? "+" : "−"}${fmt(Math.abs(abweichung), 0)} %`,
+                          });
+                        }
+                      }
+                    }
                     return z;
                   })()}
                 />
@@ -1465,16 +1506,35 @@ export default function Sanier() {
           <AssistantGate
             active={!!R}
             rechner="sanierung"
-            buildKontext={() =>
-              buildAssistantContext("sanierung", d, {
+            buildKontext={() => {
+              // Regionaler Richtwert fuer Finn (Backlog B.4/C.8) - wie beim
+              // Renditerechner nur die fertig gerechnete Abweichung, kein
+              // Ort/Bundesland im Kontext (siehe ASSISTANT_FIELDS.sanierung).
+              const kaufpreis = +d.kaufpreis || 0;
+              const flaeche = +d.sanFl || +d.flaeche || 0;
+              const regRef =
+                regGeladen && kaufpreis > 0 && flaeche > 0
+                  ? regionalPreis(d.bundesland, d.ort)
+                  : null;
+              const regional =
+                regRef?.kaufWohnung > 0
+                  ? {
+                      regionalerKaufpreisRichtwertQm: regRef.kaufWohnung,
+                      abweichungGesamtaufwandVomRichtwertProzent: Math.round(
+                        ((kaufpreis + R.ne) / flaeche / regRef.kaufWohnung - 1) * 100,
+                      ),
+                    }
+                  : {};
+              return buildAssistantContext("sanierung", d, {
                 gesamtkosten: R.tK,
                 foerderung: R.tFo + R.tFoLand,
                 nettokosten: R.ne,
                 amortisationJahre: R.amJ,
                 energieeinsparungProzent: Math.round((1 - R.eM) * 100),
                 bewertung: null,
-              })
-            }
+                ...regional,
+              });
+            }}
             contextLabel={at.contextSanierung}
             suggested={suggested}
             lang={lang}

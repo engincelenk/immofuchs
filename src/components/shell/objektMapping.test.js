@@ -1,5 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { toServerPayload, fromServerObject } from "./Merkliste.jsx";
+import { regionalSnapshot } from "../../utils/regionalpreis.js";
+
+// Merkliste.jsx importiert regionalSnapshot() als fertige Funktion - gemockt
+// wird deshalb genau dieser Export, nicht regionalPreis() darunter (dessen
+// interner Aufruf in der echten regionalSnapshot()-Implementierung waere
+// vom Mock nicht erreichbar, siehe ESM-Modulscope).
+vi.mock("../../utils/regionalpreis.js", async (importOriginal) => {
+  const original = await importOriginal();
+  return { ...original, regionalSnapshot: vi.fn(), ladeRegionalpreise: vi.fn() };
+});
 
 // Schritt A1 des Umbauplans (docs/plans/neue-phase2/01-umbauplan-phase-a-b.md):
 // Ein Objekt ist nicht mehr an genau einen Rechner gebunden. inputData ist der
@@ -132,5 +142,37 @@ describe("Objekt-Mapping — Rechner-Ergebnisse (art:\"rechnerErgebnis\")", () =
     expect(payload.resultData).not.toHaveProperty("art");
     expect(payload.resultData).not.toHaveProperty("rechnerTyp");
     expect(payload.kaufpreis).toBe(300000);
+  });
+});
+
+// Backlog B.5/D.12 (2026-09-10): der regionale Snapshot wird bei Neuanlage
+// einmal berechnet und danach nie wieder ueberschrieben - sonst waere ein
+// spaeterer Vergleich "damals vs. heute" wertlos.
+describe("Objekt-Mapping — regionaler Snapshot (B.5/D.12)", () => {
+  const snapshotJetzt = { stand: "Q2 2026", kaufpreisQm: 4285.71, regionalerRichtwertQm: 4730, ebene: "kreis" };
+  const snapshotDamals = { stand: "Q1 2026", kaufpreisQm: 4000, regionalerRichtwertQm: 4500, ebene: "kreis" };
+
+  beforeEach(() => {
+    vi.mocked(regionalSnapshot).mockReset();
+  });
+
+  it("berechnet bei Neuanlage (kein bisheriger Snapshot) einen frischen Snapshot", () => {
+    vi.mocked(regionalSnapshot).mockReturnValue(snapshotJetzt);
+    const payload = toServerPayload(lokal);
+    expect(payload.resultData.regionalSnapshot).toEqual(snapshotJetzt);
+  });
+
+  it("behaelt einen bereits vorhandenen Snapshot unveraendert, auch wenn sich die Regionaldaten geaendert haben", () => {
+    vi.mocked(regionalSnapshot).mockReturnValue(snapshotJetzt);
+    const mitAltemSnapshot = { ...lokal, kennzahlen: { regionalSnapshot: snapshotDamals } };
+    const payload = toServerPayload(mitAltemSnapshot);
+    expect(payload.resultData.regionalSnapshot).toEqual(snapshotDamals);
+    expect(regionalSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("laesst regionalSnapshot ganz weg, wenn keine Regionaldaten verfuegbar sind", () => {
+    vi.mocked(regionalSnapshot).mockReturnValue(null);
+    const payload = toServerPayload(lokal);
+    expect(payload.resultData).not.toHaveProperty("regionalSnapshot");
   });
 });

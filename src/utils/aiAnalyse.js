@@ -17,7 +17,14 @@ import { getSessionId } from "./assistantSession.js";
 //
 // `art` sagt dem Aufrufer, WELCHER Zustand/Hinweistext folgt - "consent" ist
 // dabei bewusst kein Fehler, sondern eine offene Frage (siehe unten).
-export async function rufeAnalyseAuf({ produkt, kennzahlen, zahlen, varianten, befunde }) {
+export async function rufeAnalyseAuf({
+  produkt,
+  kennzahlen,
+  zahlen,
+  varianten,
+  befunde,
+  standortFakten,
+}) {
   try {
     const res = await apiFetch("/analyse", {
       method: "POST",
@@ -27,6 +34,7 @@ export async function rufeAnalyseAuf({ produkt, kennzahlen, zahlen, varianten, b
         ...(varianten && varianten.length > 0 ? { varianten } : {}),
         ...(zahlen && zahlen.length > 0 ? { zahlen } : {}),
         ...(befunde && befunde.length > 0 ? { befunde } : {}),
+        ...(standortFakten && standortFakten.length > 0 ? { standortFakten } : {}),
         kennzahlen,
         // Die KI-Session des Geraets, NICHT eine Objekt-ID - der Worker
         // prueft daran die Einwilligung (siehe assistantSession.js). Gilt

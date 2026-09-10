@@ -31,11 +31,50 @@ import { Detail } from "../tables/Detail.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { BreakEvenCards } from "./SelbsttraegerCheck.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
+import { ladeRegionalpreise, regionalPreis } from "../../utils/regionalpreis.js";
 import { Legal } from "../ui/LangSel.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
+
+// Regionaler Kaufpreis-Realitaetscheck (2026-09-09, Wow-Feature Idee B.2):
+// vergleicht den eingegebenen Kaufpreis je m² (R.pQm) gegen den regionalen
+// Richtwert (Kreis, sonst Landesdurchschnitt) aus regionalpreis.js. Bewusst
+// symmetrische Toleranz von 10/25% wie preisSchaetzung.js's 8%-Muster -
+// keine Bewertung "gut/schlecht", nur eine Einordnung der Abweichung.
+// Referenzwert ist immer kaufWohnung: der Renditerechner richtet sich an
+// Kapitalanleger, die ganz ueberwiegend Eigentumswohnungen kaufen, nicht
+// Haeuser (die sind selten Kapitalanlage-Objekte).
+function RegionalpreisHinweis({ regGeladen, d, R, t }) {
+  if (!regGeladen) return null;
+  const preisQm = R?.pQm;
+  if (!(preisQm > 0)) return null;
+  const ref = regionalPreis(d.bundesland, d.ort);
+  if (!ref || !(ref.kaufWohnung > 0)) return null;
+
+  const abweichung = (preisQm / ref.kaufWohnung - 1) * 100;
+  const absAbw = Math.abs(abweichung);
+  const stufe = absAbw <= 10 ? "ok" : absAbw <= 25 ? "warn" : "bad";
+  const richtung = abweichung > 0 ? t.regDrueber : t.regDrunter;
+
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        padding: "6px 10px",
+        background: `var(--${stufe}-bg)`,
+        borderRadius: 6,
+        marginTop: -6,
+        marginBottom: 10,
+        color: `var(--${stufe}-tx)`,
+      }}
+    >
+      {t.regRichtwert}: {fmt(ref.kaufWohnung)} €/m² —{" "}
+      {absAbw <= 10 ? t.regImRahmen : `${fmtP(absAbw, 0)} ${richtung}`}
+    </div>
+  );
+}
 
 export default function Haupt() {
   const { d, set, t, tip, setTabExt, lang, mietQuelleRef } = useApp();
@@ -75,6 +114,15 @@ export default function Haupt() {
     // werden. Im normalen Betrieb ist der Ref hier laengst null - der Effekt
     // steigt dann oben aus.
   }, [d.kaltmiete, d.flaeche]);
+  // Regionaler Kaufpreis-Richtwert (2026-09-09): einmalig laden, dann
+  // synchron per regionalPreis() abfragbar - gleiches Muster wie
+  // ladeMietReferenz()/referenzMiete(). Kein Re-Fetch je Tastendruck.
+  const [regGeladen, setRegGeladen] = useState(false);
+  useEffect(() => {
+    ladeRegionalpreise()
+      .then(() => setRegGeladen(true))
+      .catch(() => {});
+  }, []);
   const R = useMemo(() => computeRendite(d, t), [d, t]);
   // Stufe 1 des Investment-Score-Umbaus (2026-08-27): zusaetzliche Kennzahlen
   // (DSCR, Break-even-Miete/-Leerstand, ...) ohne Aggregation zu einem Score -
@@ -185,6 +233,7 @@ export default function Haupt() {
               hint={t.flaeche}
             />
           </Row>
+          <RegionalpreisHinweis regGeladen={regGeladen} d={d} R={R} t={t} />
           <F
             label={t.kaltmiete + " /m²"}
             unit="€/m²"
@@ -1833,11 +1882,28 @@ export default function Haupt() {
             rechner="renditerechner"
             buildKontext={() => {
               const kpF = R.kpF;
+              // Regionaler Richtwert fuer Finn (2026-09-10, C.9): dieselbe
+              // Zahl wie die Ampel oben im Formular, diesmal als Kennzahl im
+              // Chat-Kontext - bewusst OHNE bundesland/ort selbst im Kontext
+              // (buildAssistantContext schickt fuer diesen Rechner ohnehin
+              // keine Adresse, siehe ASSISTANT_FIELDS.renditerechner), nur
+              // die fertig gerechnete Abweichung.
+              const regRef = regGeladen ? regionalPreis(d.bundesland, d.ort) : null;
+              const regional =
+                regRef && R?.pQm > 0 && regRef.kaufWohnung > 0
+                  ? {
+                      regionalerKaufpreisRichtwertQm: regRef.kaufWohnung,
+                      abweichungVomRegionalenRichtwertProzent: Math.round(
+                        (R.pQm / regRef.kaufWohnung - 1) * 100,
+                      ),
+                    }
+                  : {};
               return buildAssistantContext("renditerechner", d, {
                 nettoRendite: R.nR,
                 bruttoRendite: R.bR,
                 kaufpreisfaktor: kpF,
                 bewertung: { tier: nrTier },
+                ...regional,
               });
             }}
             contextLabel={at.contextRendite}

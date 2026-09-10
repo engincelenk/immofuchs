@@ -3,17 +3,52 @@ import { useApp } from "../../context/AppContext.jsx";
 import { isK15 } from "../../data/plzData.js";
 import { apiV1 } from "../../utils/apiBase.js";
 import { LEG } from "../../i18n/legal.js";
-import { fmt, fmtE, fmtDat } from "../../utils/helpers.js";
+import { fmt, fmtE, fmtP, fmtDat } from "../../utils/helpers.js";
 import { buildMP } from "../../utils/mietprognose.js";
 import { F, Row, Sec, Ins, VT } from "../ui/atoms.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
+import { ladeRegionalpreise, regionalPreis } from "../../utils/regionalpreis.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
+
+// Realitaetscheck fuer die selbst geschaetzte Vergleichsmiete (Backlog B.3),
+// dasselbe Ampel-Muster wie RegionalpreisHinweis im Renditerechner - nur
+// diesmal Miete statt Kaufpreis, und ohne Umrechnung (d.vergleichsmiete ist
+// bereits €/m²).
+function RegionalmieteHinweis({ regGeladen, d, t }) {
+  if (!regGeladen) return null;
+  const vgl = +d.vergleichsmiete || 0;
+  if (!(vgl > 0)) return null;
+  const ref = regionalPreis(d.bundesland, d.ort);
+  if (!ref || !(ref.mieteWohnung > 0)) return null;
+
+  const abweichung = (vgl / ref.mieteWohnung - 1) * 100;
+  const absAbw = Math.abs(abweichung);
+  const stufe = absAbw <= 10 ? "ok" : absAbw <= 25 ? "warn" : "bad";
+  const richtung = abweichung > 0 ? t.regDrueber : t.regDrunter;
+
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        padding: "6px 10px",
+        background: `var(--${stufe}-bg)`,
+        borderRadius: 6,
+        marginTop: -6,
+        marginBottom: 10,
+        color: `var(--${stufe}-tx)`,
+      }}
+    >
+      {t.regRichtwert}: {fmt(ref.mieteWohnung, 2)} €/m² —{" "}
+      {absAbw <= 10 ? t.regImRahmen : `${fmtP(absAbw, 0)} ${richtung}`}
+    </div>
+  );
+}
 
 export default function Miete() {
   const { d, set, t, tip, lang, aktivesObjekt } = useApp();
@@ -38,6 +73,15 @@ export default function Miete() {
     return () => {
       lebt = false;
     };
+  }, []);
+  // Regionaler Mietrichtwert (2026-09-10, Backlog B.3): dieselbe Ampel-Idee
+  // wie der Kaufpreis-Realitaetscheck im Renditerechner, hier fuer die vom
+  // Nutzer selbst geschaetzte Vergleichsmiete.
+  const [regGeladen, setRegGeladen] = useState(false);
+  useEffect(() => {
+    ladeRegionalpreise()
+      .then(() => setRegGeladen(true))
+      .catch(() => {});
   }, []);
   const R = useMemo(() => {
     const mi = +d.kaltmiete || 0,
@@ -83,6 +127,7 @@ export default function Miete() {
               tip={tip("vglMiete")}
             />
           </Row>
+          <RegionalmieteHinweis regGeladen={regGeladen} d={d} t={t} />
           <Sec title={t.immLeerQ} icon="🏠" />
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             {[
@@ -364,7 +409,25 @@ export default function Miete() {
                 })()}
               </div>
               <SaveBtn tab="miete" />
-              {aktivesObjekt?.art === "rechnerErgebnis" && aktivesObjekt?.rechnerTyp === "miete" && (
+              {aktivesObjekt?.art === "rechnerErgebnis" && aktivesObjekt?.rechnerTyp === "miete" && (() => {
+                // Regionaler Mietrichtwert fuer die KI-Karte (Backlog
+                // B.3/C.8): dieselbe Ampel wie oben im Formular, diesmal als
+                // Zahlenzeile fuer den MIETE-Prompt.
+                const regRef = regGeladen ? regionalPreis(d.bundesland, d.ort) : null;
+                const regZeilen =
+                  regRef && regRef.mieteWohnung > 0 && +d.vergleichsmiete > 0
+                    ? [
+                        {
+                          label: "Regionaler Mietrichtwert",
+                          wert: `${fmt(regRef.mieteWohnung, 2)} €/m²`,
+                        },
+                        {
+                          label: "Abweichung vom Mietrichtwert",
+                          wert: `${(+d.vergleichsmiete / regRef.mieteWohnung - 1) * 100 > 0 ? "+" : "−"}${fmt(Math.abs((+d.vergleichsmiete / regRef.mieteWohnung - 1) * 100), 0)} %`,
+                        },
+                      ]
+                    : [];
+                return (
                 <RechnerAiKarte
                   produktId="miete"
                   titel="Mieterhöhung analysieren"
@@ -384,21 +447,23 @@ export default function Miete() {
                       : null,
                     naechsteErhoehungBetrag: R.rows?.[0]?.mE ?? null,
                   }}
-                  zahlen={
+                  zahlen={[
                     // Berlin/Hamburg gelten unabhaengig von der geladenen Liste
                     // (siehe R oben) - nur ausserhalb davon haengt der Wert an
                     // isK15(), das erst nach dem Laden zuverlaessig ist.
-                    !k15Geladen && !(d.bundesland === "BE" || d.bundesland === "HH") && !isK15(d.ort)
+                    ...(!k15Geladen && !(d.bundesland === "BE" || d.bundesland === "HH") && !isK15(d.ort)
                       ? [{ label: "Kappungsgrenze", wert: "wird geladen …" }]
                       : [
                           {
                             label: "Kappungsgrenze",
                             wert: R.k15 ? "15 % (angespannter Wohnungsmarkt)" : "20 % (Regelfall)",
                           },
-                        ]
-                  }
+                        ]),
+                    ...regZeilen,
+                  ]}
                 />
-              )}
+                );
+              })()}
               <ExportPDF title={t.mieteFull || t.miete} rechner="miete" />
               <Legal items={LEG.miete} />
             </>

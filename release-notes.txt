@@ -1,3 +1,48 @@
+## 2026-09-10 (1.80.0)
+
+### Regionale Marktdaten: Kaufpreis-/Mietrichtwerte je Kreis in Rechnern und KI-Auswertungen
+
+Neue Datengrundlage aus den quartalsweise manuell gepflegten ImmoScout24-
+Preisatlanten (16 Bundeslaender, 259 Kreise/Staedte): Kaufpreis und Mietpreis
+je m² fuer Wohnung/Haus, plus kurze, eigenstaendig formulierte Standort-Fakten
+je Bundesland (Wirtschaft, Bevoelkerung, Infrastruktur - nicht aus fremden
+Quellen uebernommen). Abgelegt unter src/immodata/2026/datenblatter/, als
+schlanke Ableitung public/regionalpreise.json fuer den Client (29-39 KB, kein
+Aufblaehen des JS-Bundles, siehe scripts/build_regionalpreise.mjs).
+
+Matching bewusst zweistufig: exakter Namensabgleich Ort/Kreis, sonst
+Landesdurchschnitt - keine Scheingenauigkeit ueber PLZ-Naehe.
+
+Eingebaut in:
+- Renditerechner: Live-Ampel Kaufpreis/m² gegen regionalen Richtwert
+- Mieterhoehungsrechner: Ampel Vergleichsmiete gegen regionalen Mietrichtwert
+- Sanierungsrechner: Gesamtaufwand nach Sanierung (Kaufpreis + Nettokosten je
+  m²) gegen den regionalen Richtwert
+- KI-Auswertungen (Preis-Einordnung, Hebel-Analyse, Analyse, Sanierung) und
+  Finn-Chat: Abweichung vom Richtwert als fertig gerechnete Kennzahl, dazu
+  optional 1-2 Standort-Fakten zur Begruendung (neuer Kanal "standortFakten",
+  analog zu den bestehenden zahlen-/befunde-Kanaelen: Anzahl und Laenge hart
+  begrenzt, keine Zeilenumbrueche)
+- Expose-Scan: Echtzeit-Ampel direkt nach dem Hochladen, bevor irgendwas
+  uebernommen wird
+- Objekt-Anlage: Kaufpreis-Snapshot wird einmalig eingefroren (nicht bei
+  jedem Speichern neu berechnet) - Grundlage fuer ein Wertentwicklungs-
+  Tracking, sobald ein zweites Quartal vorliegt
+- Landingpage: neue oeffentliche Sektion "Standorte" mit Bruttomietrendite-
+  Ranking der Top 10 Kreise ueber alle Bundeslaender
+
+Wichtig: Nirgendwo wird die Datenquelle genannt - weder in der UI noch in
+KI-Antworten, auch nicht auf direkte Nachfrage (neue Regel in
+worker/src/systemPrompt.ts und analysePrompt.ts). Dabei aufgefallen und
+behoben: eine bestehende "Grundlage & Quellen"-Anzeige an der Preis-
+Einordnung hat bislang die Zensus-2022-Quelle der Ortsmiete offengelegt -
+entfernt (AiEngine.jsx).
+
+Die rohen Quell-PDFs (ImmoScout24, ein Wettbewerber-Blogartikel) liegen nur
+lokal unter src/immodata/**/Q*/ und sind jetzt per .gitignore ausgeschlossen
+(Copyright, ~20 MB) - eingecheckt ist nur die daraus abgeleitete JSON-
+Datenbasis.
+
 ## 2026-09-09 (1.79.0)
 
 ### Geteilte Animations-Tokens (--ease-out, --ease-in-out, --ease-drawer)

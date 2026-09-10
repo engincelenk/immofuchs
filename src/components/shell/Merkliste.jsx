@@ -25,6 +25,7 @@ import {
   toResultData,
   berechneVollstaendigkeit,
 } from "../../utils/objektKennzahlen.js";
+import { ladeRegionalpreise, regionalSnapshot } from "../../utils/regionalpreis.js";
 
 // Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
 // Merkliste haengt auf jeder Rechner-Seite, CheckoutWizard aber nur bei
@@ -190,6 +191,17 @@ export function toServerPayload(local) {
   // A2: score/scoreLabel standen hier bis 2026-09 hart auf null - nur der
   // Exposé-Scan befuellte sie. Jetzt bekommt jedes Objekt seine Ampel.
   const kz = berechneObjektKennzahlen(local.data);
+  // Regionaler Snapshot (2026-09-10, B.5/D.12): EINMALIG bei Anlage
+  // eingefroren, dann bei jedem weiteren Speichern unveraendert
+  // uebernommen - lokale.kennzahlen ist der zuletzt vom Server gelesene
+  // resultData-Stand (siehe fromServerObject), enthaelt bei einem schon
+  // existierenden Objekt also den fruehesten je gesetzten Snapshot. Erst
+  // wenn dort noch keiner steht (echte Neuanlage, oder die Regionaldaten
+  // waren beim allerersten Speichern noch nicht geladen), wird neu
+  // berechnet. So bleibt der Vergleichspunkt "damals" stabil, auch wenn
+  // regionalpreise.json spaeter (naechstes Quartal) aktualisiert wird.
+  const bestehenderSnapshot = local.kennzahlen?.regionalSnapshot || null;
+  const snapshot = bestehenderSnapshot || regionalSnapshot(local.data);
   return {
     id: local.id,
     title: local.name,
@@ -200,7 +212,11 @@ export function toServerPayload(local) {
     score: kz.score,
     scoreLabel: kz.scoreLabel,
     inputData: { ...local.data },
-    resultData: { ...toResultData(kz), letzteAnsicht: local.letzteAnsicht || "haupt" },
+    resultData: {
+      ...toResultData(kz),
+      letzteAnsicht: local.letzteAnsicht || "haupt",
+      ...(snapshot ? { regionalSnapshot: snapshot } : {}),
+    },
     source: "manuell",
   };
 }
@@ -280,6 +296,16 @@ export function useSavedObjects(setData) {
     const handler = (e) => setIsPro(Boolean(e.detail));
     window.addEventListener("if:ispro-changed", handler);
     return () => window.removeEventListener("if:ispro-changed", handler);
+  }, []);
+
+  // Regionaldaten vorab laden (2026-09-10, B.5): dieser Hook laeuft in
+  // App.jsx quasi von Anfang an, lange bevor ein Speichern moeglich ist -
+  // damit ist der Modul-Cache in regionalpreis.js beim ersten
+  // toServerPayload()-Aufruf (SaveBtn) so gut wie immer schon befuellt.
+  // Fehlschlag bleibt still, wie beim gleichen Muster in ObjektDetail.jsx -
+  // ohne Daten faellt toServerPayload() nur auf "kein Snapshot" zurueck.
+  useEffect(() => {
+    ladeRegionalpreise().catch(() => {});
   }, []);
 
   const [savedList, setSavedList] = useState(() => (isPro ? [] : readLocalList()));

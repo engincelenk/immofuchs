@@ -23,7 +23,6 @@ import {
   veraltetText,
 } from "../../utils/aiEngine.js";
 import { HandoutFragen } from "./HandoutFragen.jsx";
-import { fortschreibungsMeta } from "../../utils/mietenFortschreibung.js";
 
 // Marineblau ist in der App die "Denk-Farbe" fuer KI. Sie markiert hier
 // ausschliesslich modellgenerierten Fliesstext - nie gerechnete Zahlen.
@@ -297,7 +296,7 @@ function ProduktZeile({
                 aria-expanded={aufgeklappt}
                 style={textLink}
               >
-                Grundlage & Quellen {aufgeklappt ? "▲" : "▼"}
+                Grundlage {aufgeklappt ? "▲" : "▼"}
               </button>
             )}
             <button type="button" onClick={onStarten} style={{ ...textLink, color: "var(--cl)" }}>
@@ -318,15 +317,11 @@ function ProduktZeile({
 // Veraltet-Erkennung haengt (istVeraltet()/veraltetText()). Nur der Rahmen
 // hat sich geaendert: Aufklapp-Sektion in der Karte statt eigenes Sheet.
 function GrundlageUndQuellen({ ergebnis }) {
-  const fortschreibung = fortschreibungsMeta();
-  const ortsMieteQuelle = fortschreibung
-    ? `Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022), hochgerechnet auf ${fortschreibung.stand} mit dem Destatis-Mietenindex (Tabelle 61111-0020). Neuvermietungen liegen darüber.`
-    : "Ortsübliche Miete: Zensus 2022, Statistisches Bundesamt (Bestandsmiete, Stichtag 15.05.2022). Neuvermietungen liegen darüber.";
   const basis = ergebnis?.basis;
   return (
     <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
       <VariantenBlock varianten={ergebnis?.varianten} titel="Durchgerechnete Varianten" />
-      <ZahlenBlock zahlen={ergebnis?.zahlen} titel="Gerechnete Werte" quelle={ortsMieteQuelle} />
+      <ZahlenBlock zahlen={ergebnis?.zahlen} titel="Gerechnete Werte" />
       {basis && Object.keys(basis).length > 0 && (
         <div
           style={{
@@ -497,10 +492,12 @@ export function VariantenBlock({ varianten, max, titel }) {
 //
 // Wie der VariantenBlock stehen sie VOR dem Modelltext: sie sind der
 // belastbare Teil (amtliche Ortsmiete plus Rendite-Engine), der Text ordnet
-// nur ein. Die Quellenzeile ist keine Höflichkeit, sondern Bedingung der
-// Open-Data-Lizenz des Zensus - und zugleich das, was die Zahl überhaupt
-// überprüfbar macht.
-export function ZahlenBlock({ zahlen, max, titel, quelle }) {
+// nur ein. Bewusst OHNE Quellenzeile (Nutzerentscheidung 2026-09-09): keine
+// Datenherkunft irgendwo in der App nennen, auch auf das Risiko hin, dass
+// das der Namensnennungspflicht der zugrundeliegenden Open-Data-Lizenz
+// widerspricht - siehe mietReferenz.js/build_miete_referenz.py fuer die
+// eigentliche Quelle.
+export function ZahlenBlock({ zahlen, max, titel }) {
   if (!Array.isArray(zahlen) || zahlen.length === 0) return null;
   const sichtbar = max ? zahlen.slice(0, max) : zahlen;
   return (
@@ -534,11 +531,6 @@ export function ZahlenBlock({ zahlen, max, titel, quelle }) {
           </span>
         </div>
       ))}
-      {!max && quelle && (
-        <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 8, lineHeight: 1.45 }}>
-          {quelle}
-        </div>
-      )}
     </div>
   );
 }

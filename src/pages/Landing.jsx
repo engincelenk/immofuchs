@@ -1,7 +1,8 @@
-import { useRef, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { lazyWithReload } from "../utils/lazyRetry.js";
 import { TL } from "../i18n/translations.js";
-import { MARKET_RATES } from "../data.js";
+import { MARKET_RATES, BL_N } from "../data.js";
+import { ladeRegionalpreise, bruttoRenditeRanking } from "../utils/regionalpreis.js";
 import { LANG_LOCALE } from "../utils/helpers.js";
 import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
@@ -77,6 +78,21 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   const { resolvedTheme } = useTheme();
   const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-dark.png" : "/logo-wordmark.png";
   const [openMode, setOpenMode] = useState(null); // null | "checkout" | "login" | "account"
+  // Standort-Ranking (2026-09-10, Backlog D.13): oeffentlich, kein Login
+  // noetig - genau wie die Bauzinsen-Sektion darueber laedt es eine eigene
+  // JSON-Datei nach und rechnet clientseitig, kein API-Call.
+  const [ranking, setRanking] = useState([]);
+  useEffect(() => {
+    let lebt = true;
+    ladeRegionalpreise()
+      .then((daten) => {
+        if (lebt) setRanking(bruttoRenditeRanking(daten, 10));
+      })
+      .catch(() => {});
+    return () => {
+      lebt = false;
+    };
+  }, []);
   // Laufzeit, die der Besucher in der Preis-Sektion gewaehlt hat
   // (Checkout-Neugestaltung 2026-08-17). Ohne diese Uebergabe muesste er die
   // Wahl im Assistenten sofort ein zweites Mal treffen.
@@ -271,6 +287,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
             <button onClick={() => scrollTo("zinsen")} style={navLink}>
               {l.navZinsen}
             </button>
+            <button onClick={() => scrollTo("ranking")} style={navLink}>
+              {l.navRanking}
+            </button>
           </nav>
 
           {/* Right side: Anmelden/Mein Konto + lang + CTA */}
@@ -352,6 +371,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 { key: "preise", label: l.navPreise, onSelect: () => scrollTo("preise") },
                 { key: "funktioniert", label: l.navHow, onSelect: () => scrollTo("funktioniert") },
                 { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
+                { key: "ranking", label: l.navRanking, onSelect: () => scrollTo("ranking") },
               ]}
               langSelector={<LangSel lang={lang} setLang={setLang} />}
               onLogin={() => {
@@ -1713,6 +1733,74 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           </div>
         </div>
       </section>
+
+      {/* Standort-Ranking (2026-09-10, Backlog D.13): eigene Sektion nach
+          demselben Muster wie "zinsen" oben - oeffentlich, keine Anmeldung
+          noetig. Absichtlich nur sichtbar, wenn Daten geladen sind (kein
+          Platzhalter mit Nullen), und mit explizitem rankingDisclaim statt
+          stillschweigend eine praezise Rendite vorzutaeuschen. */}
+      {ranking.length > 0 && (
+        <section id="ranking" style={{ padding: "clamp(30px,4vw,50px) 24px" }}>
+          <div style={{ maxWidth: 860, margin: "0 auto" }}>
+            <div style={{ borderLeft: "3px solid var(--ca)", paddingLeft: 18 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: "var(--ca)",
+                  fontWeight: 700,
+                  letterSpacing: 1.5,
+                  textTransform: "uppercase",
+                  marginBottom: 8,
+                }}
+              >
+                📍 {l.rankingTitle}
+              </div>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "var(--cl)", lineHeight: 1.7 }}>
+                {l.rankingIntro}
+              </p>
+              <div
+                style={{
+                  background: "var(--cc)",
+                  border: "1px solid var(--cb)",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                }}
+              >
+                {ranking.map((r, i) => (
+                  <div
+                    key={`${r.bundeslandCode}-${r.name}`}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "baseline",
+                      gap: 12,
+                      padding: "10px 14px",
+                      borderTop: i === 0 ? "none" : "1px solid var(--cb)",
+                      fontSize: 13,
+                    }}
+                  >
+                    <span style={{ color: "var(--ct)", minWidth: 0 }}>
+                      <span style={{ color: "var(--ch)", marginRight: 8 }}>{i + 1}.</span>
+                      {r.name}
+                      <span style={{ color: "var(--ch)" }}> · {BL_N[r.bundeslandCode] || r.bundeslandCode}</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: "var(--ca)", flexShrink: 0 }}>
+                      {r.renditeProzent.toLocaleString(LANG_LOCALE[lang] || "de-DE", {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      })}{" "}
+                      %
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p style={{ margin: "10px 0 0", fontSize: 11, color: "var(--ch)", lineHeight: 1.5 }}>
+                {l.rankingDisclaim}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ═══════════ FOOTER ═══════════ */}
       <footer

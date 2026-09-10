@@ -5,7 +5,7 @@
 // abweichenden Wert haben, sind standardmaessig NICHT angehakt - der alte Wert
 // bleibt stehen, bis der Nutzer aktiv uebernimmt.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { ExposeFieldRow } from "./ExposeFieldRow.jsx";
 import {
@@ -16,6 +16,9 @@ import {
   GRUPPEN,
 } from "../../utils/exposeMapping.js";
 import { fuelle } from "../../i18n/expose.js";
+import { PLZ_DB } from "../../data/plzData.js";
+import { ladeRegionalpreise, regionalPreis } from "../../utils/regionalpreis.js";
+import { fmt, fmtP } from "../../utils/helpers.js";
 
 const GRUPPEN_LABEL = {
   objekt: "gruppeObjekt",
@@ -28,6 +31,37 @@ const GRUPPEN_LABEL = {
 export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebernommen }) {
   const { mietQuelleRef } = useApp() || {};
   const zeilen = useMemo(() => baueZeilen(ergebnis, d, t), [ergebnis, d, t]);
+
+  // Echtzeit-Plausibilitätscheck (2026-09-10, C.10 - staerkster Wow-Effekt
+  // laut Analyse): der extrahierte Kaufpreis/m² wird SOFORT gegen den
+  // regionalen Richtwert gespiegelt, bevor der Nutzer ueberhaupt etwas
+  // uebernommen hat. PLZ -> Bundesland ueber PLZ_DB (dasselbe Nachschlagen
+  // wie in PLZSearch.jsx/uebernehmeZeilen), Ort direkt aus dem Expose.
+  const [regGeladen, setRegGeladen] = useState(false);
+  useEffect(() => {
+    ladeRegionalpreise()
+      .then(() => setRegGeladen(true))
+      .catch(() => {});
+  }, []);
+  const regionalCheck = useMemo(() => {
+    if (!regGeladen) return null;
+    const kaufpreisQm =
+      +ergebnis?.kaufpreis_pro_qm ||
+      (+ergebnis?.kaufpreis > 0 && +ergebnis?.wohnflaeche > 0
+        ? +ergebnis.kaufpreis / +ergebnis.wohnflaeche
+        : 0);
+    if (!(kaufpreisQm > 0)) return null;
+    const bl = ergebnis?.plz ? PLZ_DB.byPlz[String(ergebnis.plz)]?.bl : null;
+    if (!bl) return null;
+    const ref = regionalPreis(bl, ergebnis?.ort);
+    if (!ref || !(ref.kaufWohnung > 0)) return null;
+
+    const abweichung = (kaufpreisQm / ref.kaufWohnung - 1) * 100;
+    const absAbw = Math.abs(abweichung);
+    const stufe = absAbw <= 10 ? "ok" : absAbw <= 25 ? "warn" : "bad";
+    const richtung = abweichung > 0 ? t.regDrueber : t.regDrunter;
+    return { stufe, absAbw, richtung, richtwert: ref.kaufWohnung };
+  }, [regGeladen, ergebnis, t]);
 
   const [auswahl, setAuswahl] = useState(
     () => new Set(zeilen.filter((z) => z.uebernehmbar && !z.konflikt).map((z) => z.key)),
@@ -88,6 +122,24 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
           pruefen: zahlen.zuPruefen,
         })}
       </div>
+
+      {regionalCheck && (
+        <div
+          style={{
+            fontSize: 11,
+            padding: "6px 10px",
+            background: `var(--${regionalCheck.stufe}-bg)`,
+            borderRadius: 6,
+            marginBottom: 10,
+            color: `var(--${regionalCheck.stufe}-tx)`,
+          }}
+        >
+          {t.regRichtwert}: {fmt(regionalCheck.richtwert)} €/m² —{" "}
+          {regionalCheck.absAbw <= 10
+            ? t.regImRahmen
+            : `${fmtP(regionalCheck.absAbw, 0)} ${regionalCheck.richtung}`}
+        </div>
+      )}
 
       {uebernehmbareKeys.length > 0 && (
         <button

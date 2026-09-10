@@ -382,6 +382,24 @@ export function leseBefunde(roh: unknown): Befund[] | undefined {
   return sauber.length > 0 ? sauber : undefined;
 }
 
+// Standort-Fakten (Backlog C.8): kurze, quellenfreie Saetze zum Bundesland
+// des Objekts (siehe regionalFakten() im Client). Gleicher Injection-Kanal
+// wie Befunde/Varianten, deshalb dieselbe Disziplin: Anzahl und Laenge hart
+// begrenzt, keine Zeilenumbrueche.
+const STANDORTFAKTEN_MAX = 3;
+const STANDORTFAKTEN_TEXT_MAX = 200;
+
+export function leseStandortFakten(roh: unknown): string[] | undefined {
+  if (!Array.isArray(roh)) return undefined;
+  const sauber: string[] = [];
+  for (const eintrag of roh.slice(0, STANDORTFAKTEN_MAX)) {
+    if (typeof eintrag !== "string") continue;
+    const text = eintrag.trim().slice(0, STANDORTFAKTEN_TEXT_MAX).replace(/[\r\n]+/g, " ").trim();
+    if (text) sauber.push(text);
+  }
+  return sauber.length > 0 ? sauber : undefined;
+}
+
 export function leseVarianten(roh: unknown): HebelVariante[] | undefined {
   if (!Array.isArray(roh)) return undefined;
 
@@ -442,6 +460,12 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   // Nur das Handout setzt auf frueheren Auswertungen auf - fuer die anderen
   // Produkte waere ein fremder Modelltext im Prompt reines Risiko ohne Nutzen.
   const befunde = produkt === "handout" ? leseBefunde(b.befunde) : undefined;
+  // Standort-Fakten (Backlog C.8) nur dort, wo der Prompt sie auch nutzt
+  // (siehe HALTUNG-Regel in analysePrompt.ts) - fuer die uebrigen Produkte
+  // waeren sie nur ungenutzter Prompt-Ballast.
+  const standortRelevant =
+    produkt === "analyse" || produkt === "hebel" || produkt === "preis" || produkt === "sanier";
+  const standortFakten = standortRelevant ? leseStandortFakten(b.standortFakten) : undefined;
 
   const zugriff = await resolveZugriff(c.req.raw, env);
   if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
@@ -465,7 +489,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
       env,
       "de",
       systemPromptFuer(produkt as AnalyseProdukt),
-      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis, varianten, zahlen, befunde),
+      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis, varianten, zahlen, befunde, standortFakten),
       ANALYSE_MAX_TOKENS,
     );
   } catch (err) {

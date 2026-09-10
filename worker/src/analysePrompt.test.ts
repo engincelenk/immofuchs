@@ -95,6 +95,32 @@ describe("nutzerPayload - gerechnete Werte (Produkt preis)", () => {
   });
 });
 
+describe("nutzerPayload - Standort-Kontext (Backlog C.8)", () => {
+  const FAKTEN = [
+    "Baden-Württemberg ist stark exportorientiert, Schwerpunkt Automobilbau.",
+    "Im Bundesländervergleich niedrige Arbeitslosenquote.",
+  ];
+
+  it("rendert den Standort-Kontext als Liste, wenn vorhanden", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, FAKTEN);
+    expect(p).toContain("Standort-Kontext");
+    expect(p).toContain("- " + FAKTEN[0]);
+    expect(p).toContain("- " + FAKTEN[1]);
+  });
+
+  it("markiert den Block ausdruecklich als keine Kennzahl", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, FAKTEN);
+    expect(p).toContain("keine Kennzahl");
+  });
+
+  it("nennt ohne Fakten keinen Standort-Kontext-Block", () => {
+    expect(nutzerPayload(KENNZAHLEN)).not.toContain("Standort-Kontext");
+    expect(nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, [])).not.toContain(
+      "Standort-Kontext",
+    );
+  });
+});
+
 // Das Handout hat seit 2026-09-08 eine eigene Form: eine Fragenliste, die der
 // Nutzer einzeln abwaehlt und ausdruckt. Diese Tests halten die Trennung fest -
 // eine versehentlich zurueckgebaute Abschnittsform waere im Client sofort eine

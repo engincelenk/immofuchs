@@ -64,3 +64,10 @@ e2e/test-results/
 # von der bisherigen Regel erfasst.
 e2e/.env.local*
 .tmp_screenshots/
+
+# Rohquellen der Immobiliendaten (2026-09-10): ImmoScout24-PDFs und der
+# Immoheld-Blogartikel sind Kopien fremder, nicht zur Weiterverbreitung
+# freigegebener Inhalte (Copyright) und 20 MB gross. Die daraus abgeleitete
+# Datenbasis (src/immodata/*/datenblatter/*.json) ist kein PDF und bleibt
+# daher getrackt. Quell-PDFs liegen lokal weiter, fuer die jaehrliche Pflege.
+src/immodata/**/*.pdf
