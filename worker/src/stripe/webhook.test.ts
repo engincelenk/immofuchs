@@ -323,6 +323,43 @@ describe("handleStripeWebhook — Status-/Plan-Mapping und Mail-Trigger", () => 
     );
   });
 
+  // Regressionstest fuer den Live-Befund 2026-09-10: Stripe hat mit der
+  // API-Version "Basil" (2025-03-31) current_period_end vom Subscription-
+  // Objekt entfernt und auf die einzelnen Items verschoben (siehe Kommentar
+  // in webhook.ts). Alle uebrigen Tests in dieser Datei setzen
+  // current_period_end noch auf dem alten, obersten Feld - genau deshalb ist
+  // der Bug durch die bestehende Suite nie aufgefallen. Dieser Test bildet
+  // ein REALISTISCHES Basil-Event nach: current_period_end fehlt oben
+  // komplett, steht nur unter items.data[0].
+  it("liest current_period_end aus items.data[0], wenn es am Subscription-Objekt fehlt (Stripe Basil)", async () => {
+    const { db, subscriptions } = createFakeBillingD1({
+      users: [{ id: "user_1", email: "kunde@example.com", trial_used_at: null }],
+    });
+    const echtesBasilAblaufdatum = Math.floor(new Date("2027-09-10T07:16:06.000Z").getTime() / 1000);
+    const event = subscriptionEvent("evt_1", "customer.subscription.created", {
+      id: "sub_1",
+      customer: "cus_1",
+      status: "active",
+      // Bewusst KEIN current_period_end auf dieser Ebene - das ist der
+      // Basil-Zustand, nicht ein Testversehen.
+      items: {
+        data: [{ price: { id: "price_yearly_1" }, current_period_end: echtesBasilAblaufdatum }],
+      },
+      cancel_at_period_end: false,
+      metadata: { user_id: "user_1" },
+    });
+
+    await handleStripeWebhook({ ...billingEnv, DB: db }, event);
+
+    const row = [...subscriptions.values()][0];
+    expect(row.status).toBe("active");
+    expect(row.current_period_end).toBe(echtesBasilAblaufdatum * 1000);
+    // Der eigentliche Live-Bug: ohne den Fix landete hier ein current_period_end
+    // von ~Date.now() statt eines Jahres in der Zukunft - das Abo war dadurch
+    // fuer computeIsPro() sofort "abgelaufen".
+    expect(row.current_period_end).toBeGreaterThan(Date.now() + 300 * 24 * 60 * 60 * 1000);
+  });
+
   // Regressionstest fuer den Live-Befund 2026-08-27 (Rechnungsuebersicht
   // blieb nach dem allerersten Kauf dauerhaft leer): Stripe garantiert die
   // Zustellreihenfolge von Webhook-Events NICHT - invoice.payment_succeeded

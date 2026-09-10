@@ -119,7 +119,25 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
   const status = statusFromStripe(sub.status);
   const priceId = sub.items.data[0]?.price?.id;
   const plan = planFromPriceId(env, priceId);
-  const periodEnd = sub.current_period_end ? sub.current_period_end * 1000 : Date.now();
+  // Stripe hat mit der API-Version "Basil" (2025-03-31) current_period_end
+  // vom Subscription-Objekt entfernt und auf die einzelnen Items verschoben
+  // (https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-subscription-current-period-start-and-end).
+  // Live-Befund 2026-09-10: sub.current_period_end kam bei echten Webhook-
+  // Events bereits als undefined an, der bisherige Fallback auf Date.now()
+  // schrieb dadurch ein bereits "abgelaufenes" Ablaufdatum in derselben
+  // Millisekunde wie der Kauf - das Abo war fuer den Zugangs-Check (current_
+  // period_end > now, siehe entitlement.ts computeIsPro) sofort ungueltig,
+  // obwohl status korrekt "active" war. sub.items.data[0].current_period_end
+  // existiert im aktuellen Schema, fehlt aber noch in den mitgelieferten
+  // stripe-node-Typen (Paket ist aelter als Basil) - deshalb der Cast, analog
+  // zum bestehenden Cast in storeLatestInvoiceId() fuer denselben Grund.
+  // Fallback auf das alte Feld bleibt bestehen, falls Stripe je auf ein
+  // Konto mit vor-Basil-API-Version zurueckfaellt.
+  const itemPeriodEnd = (
+    sub.items.data[0] as unknown as { current_period_end?: number } | undefined
+  )?.current_period_end;
+  const rawPeriodEnd = itemPeriodEnd ?? sub.current_period_end;
+  const periodEnd = rawPeriodEnd ? rawPeriodEnd * 1000 : Date.now();
   const cancelAtPeriodEnd = sub.cancel_at_period_end ? 1 : 0;
 
   // Kein Fehler, sondern erwartetes Vor-Zahlung-Rauschen ('incomplete'/

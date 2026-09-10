@@ -1,4 +1,24 @@
-## 2026-09-10 (1.80.0)
+## 2026-09-10 (1.81.0)
+
+### Bezahlte Test-Abos wurden als "Free" angezeigt, Rechner blieben gesperrt
+
+Live-Befund: Testnutzer mit gekauftem Monats-/Jahres-Abo sahen unter Profil >
+Abo ihr aktives Abonnement, die Rechner blieben trotzdem hinter der Kauf-Seite
+gesperrt. Ursache in worker/src/stripe/webhook.ts: Stripe hat mit der
+API-Version "Basil" (2025-03-31) das Feld current_period_end vom
+Subscription-Objekt entfernt und auf die einzelnen Abo-Positionen
+(items.data[]) verschoben. Der Webhook-Handler las weiterhin nur das alte,
+jetzt leere Feld und fiel auf Date.now() zurueck - das gespeicherte
+Ablaufdatum lag dadurch faktisch in derselben Sekunde wie der Kauf, der
+Zugangs-Check (current_period_end > jetzt) schlug sofort fehl, obwohl
+status korrekt "active" war.
+
+Behoben: current_period_end wird jetzt aus items.data[0] gelesen (Fallback
+aufs alte Feld bleibt fuer den Fall einer aelteren API-Version). Die
+bestehende Testsuite deckte das nicht ab, weil alle Mocks noch das
+Vor-Basil-Schema nachbilden - ein neuer Regressionstest bildet ein
+realistisches Basil-Event nach und waere ohne den Fix fehlgeschlagen
+(verifiziert).
 
 ### Regionale Marktdaten: Kaufpreis-/Mietrichtwerte je Kreis in Rechnern und KI-Auswertungen
 
