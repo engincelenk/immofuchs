@@ -17,8 +17,12 @@ import { LiveSlider } from "../ui/atoms.jsx";
 import { loeseMaximalenKaufpreis } from "../../utils/aiTools.js";
 import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
 
-function eur(v, locale = "de-DE") {
-  return Number.isFinite(v) ? `${Math.round(v).toLocaleString(locale)} €` : "–";
+// Euro-Betraege bewusst IMMER de-DE-formatiert, unabhaengig von der
+// UI-Sprache (Nutzer-Vorgabe 2026-09-10) - siehe ObjektVergleich.jsx. Der
+// zweite Parameter bleibt aus Kompatibilitaet zu den bestehenden Aufrufstellen
+// bestehen, wird aber nicht mehr verwendet.
+function eur(v) {
+  return Number.isFinite(v) ? `${Math.round(v).toLocaleString("de-DE")} €` : "–";
 }
 
 // Regler mit Schrittknoepfen. Der Slider allein ist am Telefon zu grob -

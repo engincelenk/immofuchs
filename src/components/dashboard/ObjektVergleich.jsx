@@ -16,16 +16,19 @@ const ZEILEN = [
   { key: "score", label: "Bewertung", einheit: "/100", besser: "gross" },
 ];
 
-function zeigeWert(wert, zeile, locale) {
+function zeigeWert(wert, zeile) {
   if (!Number.isFinite(wert)) return "–";
   if (zeile.nachkomma != null) {
     return `${wert.toFixed(zeile.nachkomma).replace(".", ",")} ${zeile.einheit}`;
   }
-  if (zeile.einheit === "€") return `${Math.round(wert).toLocaleString(locale)} €`;
+  // Euro-Betraege bewusst IMMER de-DE-formatiert (Punkt als Tausendertrenner),
+  // unabhaengig von der UI-Sprache (Nutzer-Vorgabe 2026-09-10) - "locale" kam
+  // vorher hier durch und lieferte bei z.B. Englisch ein Komma statt Punkt.
+  if (zeile.einheit === "€") return `${Math.round(wert).toLocaleString("de-DE")} €`;
   return `${Math.round(wert)}${zeile.einheit}`;
 }
 
-export function ObjektVergleich({ objekte, t, locale = "de-DE", onFinnFrage }) {
+export function ObjektVergleich({ objekte, t, onFinnFrage }) {
   if (!objekte || objekte.length < 2) return null;
 
   const spalten = objekte.map((o) => {
@@ -108,7 +111,7 @@ export function ObjektVergleich({ objekte, t, locale = "de-DE", onFinnFrage }) {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {zeigeWert(v, z, locale)}
+                    {zeigeWert(v, z)}
                   </span>
                 </div>
               );

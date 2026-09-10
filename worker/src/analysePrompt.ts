@@ -69,11 +69,27 @@ Regeln:
 // Die ortsuebliche Miete wird als "Gerechnete Werte" mitgeliefert, sobald sie
 // fuer die PLZ vorliegt (siehe ObjektDetail.starteProdukt) - damit hat auch
 // dieses Produkt einen Anker statt nur Sprachgefuehl.
+//
+// Inhaltlich neu gefasst (Backlog Punkt 9, 2026-09-10, Nutzer-Vorgabe): drei
+// feste Punkte statt freier Form, und der Ortsname (Stadt/Kreis, NIE
+// Strasse/Hausnummer - die geht laut ObjektDetail.jsx nie an das Modell)
+// gehoert jetzt genannt. Jedes der drei Objekt-Produkte (ANALYSE/HEBEL/PREIS)
+// hat einen eigenen, nicht ueberlappenden Fokus - das haelt die drei Texte
+// zu ein und demselben Objekt unterscheidbar.
 const ANALYSE = `${HALTUNG}
 
-Deine Aufgabe: Ordne dieses Objekt ein. Gehe auf Rendite, Cashflow-Tragfaehigkeit und das
-groesste Risiko ein. Die Abschnitte sollten typischerweise RENDITE, CASHFLOW und RISIKO
-heissen.
+Deine Aufgabe: Ordne dieses Objekt ein, in genau dieser Reihenfolge:
+1. Kaufpreis, Wohnflaeche, Kaltmiete, Bruttorendite und Cashflow in ein bis zwei Saetzen
+   zusammenfassen - keine Aufzaehlung, ein zusammenhaengendes Bild.
+2. Positive Punkte benennen, soweit die Daten sie hergeben: Baujahr, Energiewert
+   ("energiewertKwhQm" in den Kennzahlen, kWh/m²·a) und absehbare Sanierungen (kurz- wie
+   langfristig, z.B. aus Heizungsalter/-art). Fehlt eine dieser Angaben, erwaehne sie NICHT -
+   sage nicht "keine Angabe", sondern lass sie einfach weg.
+3. Eine zusammenfassende Einordnung, die auf Punkt 1 und 2 aufbaut.
+Die Abschnitte sollten entsprechend RENDITE & CASHFLOW, STAERKEN und FAZIT heissen.
+
+Nenne den Ort ("ort" in den Kennzahlen) mindestens einmal beim Namen - das Objekt liegt
+nicht irgendwo, sondern dort.
 
 Zum Preis: Du kennst weder Lage im Ort noch Zustand noch Vergleichsfaelle. Nenne deshalb
 KEINEN geschaetzten Verkehrswert, KEINEN Zielkaufpreis und KEINEN Quadratmeterpreis, den du
@@ -91,27 +107,42 @@ aufgerufenen Kaufpreis auch dagegen ein (z.B. "der Kaufpreis liegt X % ueber dem
 Richtwert"). Das ist keine Ausnahme von der Regel oben - die Zahl steht bereits fertig da,
 du bildest sie nicht selbst.
 
+Diese Auswertung ist eine von drei zu diesem Objekt (Analyse, Hebel, Kaufpreis-Analyse).
+Bleibe bei deinem eigenen Fokus oben - wiederhole nicht, was eher in die anderen beiden
+gehoert (Verhandlungshebel, Marktwert-Einordnung).
+
 ${FORM}`;
 
 const HEBEL = `${HALTUNG}
 
-Deine Aufgabe: Erklaere, was sich aendern muesste, damit dieses Objekt traegt.
+Deine Aufgabe: Zeige das Verbesserungspotential dieses Objekts, in genau dieser Reihenfolge:
+1. Potential bei der Miete - wie weit liegt die Mietannahme unter dem, was ortsueblich
+   erzielbar waere, und was wuerde eine Anhebung fuer Rendite/Cashflow bedeuten.
+2. Realistischer Kaufpreis, gemessen an den ortsueblichen Durchschnittspreisen - ist der
+   aufgerufene Preis dagegen verhandelbar, und in welcher Groessenordnung.
+3. Beurteilung von Standort und Standortpotential.
+Die Abschnitte sollten entsprechend MIETE, KAUFPREIS und STANDORT heissen.
+
+Nenne den Ort ("ort" in den Kennzahlen) mindestens einmal beim Namen.
 
 Wenn der Abschnitt "Durchgerechnete Varianten" mitgeliefert ist, sind das fertige
 Rechenergebnisse aus derselben Engine wie die Kennzahlen. Uebernimm ihre Zahlen woertlich und
-rechne sie NICHT nach. Deine Aufgabe ist die Einordnung: welcher Hebel ist realistisch
-verhandelbar, welcher nicht, und woran das jeweils haengt.
+rechne sie NICHT nach.
 
 Fehlt der Abschnitt, nenne die Hebel qualitativ und erfinde KEINE Zielwerte - eine
 ausgedachte Zahl waere in einem Dokument, das der Nutzer fuer eine Verhandlung benutzt,
 schaedlicher als eine fehlende.
 
 Ist unter "Gerechnete Werte" ein "Regionaler Kaufpreis-Richtwert" mitgeliefert, nutze die
-Abweichung davon fuer den Hebel KAUFPREIS: liegt der Kaufpreis darueber, ist er tendenziell
-eher verhandelbar, liegt er darunter, ist er es tendenziell eher nicht. Uebernimm die Zahl
-woertlich, du bildest sie nicht selbst.
+Abweichung davon fuer Punkt 2 (realistischer Kaufpreis): liegt der Kaufpreis darueber, ist er
+tendenziell eher verhandelbar, liegt er darunter, ist er es tendenziell eher nicht.
+Uebernimm die Zahl woertlich, du bildest sie nicht selbst. Ist zusaetzlich ein
+"Standort-Kontext" mitgeliefert, nutze ihn fuer Punkt 3 (Standortpotential) - keine eigenen
+Standort-Fakten erfinden, wenn er fehlt.
 
-Die Abschnitte sollten nach den Hebeln benannt sein, etwa KAUFPREIS, MIETE, SANIERUNG.
+Diese Auswertung ist eine von drei zu diesem Objekt (Analyse, Hebel, Kaufpreis-Analyse).
+Bleibe bei deinem eigenen Fokus oben - wiederhole nicht, was eher in die anderen beiden
+gehoert (Gesamteinordnung, Marktwert-Schaetzung).
 
 ${FORM}`;
 
@@ -122,10 +153,28 @@ ${FORM}`;
 //
 // Die harte Regel steht hier, weil genau sie den Unterschied zur
 // Vorlage-App ausmacht, die einen Punktwert auf den Euro genau raten laesst.
+//
+// "Vergleichsort <Name>"-Zeilen (Backlog Punkt 9, 2026-09-10) kommen von
+// regionalVergleichsorte()/vergleichsortZeilen() im Client: bis zu drei
+// andere Kreise desselben Bundeslands, nach Naehe im Kaufpreis-Niveau -
+// keine erfundene geografische Nachbarschaft, siehe Kommentar dort.
 const PREIS = `${HALTUNG}
 
 Deine Aufgabe: Ordne die Mietannahme dieses Objekts gegen das oertliche
-Mietniveau ein und sage, was das fuer den aufgerufenen Kaufpreis bedeutet.
+Mietniveau ein und sage, was das fuer den aufgerufenen Kaufpreis bedeutet, in
+genau dieser Reihenfolge:
+1. Schaetze den realistischen Marktwert AUSSCHLIESSLICH anhand der mitgelieferten Zahlen
+   (Regionaler Kaufpreis-Richtwert, Vergleichsort-Zeilen). Nenne dabei 2 bis 3 der
+   mitgelieferten Vergleichsorte beim Namen und ordne den aufgerufenen Kaufpreis gegen sie
+   ein - nicht als eigene Verkehrswert-Schaetzung, sondern als Einordnung anhand der
+   gegebenen Vergleichszahlen.
+2. Beurteile die Energieklasse/den Energiewert, WENN "energiewertKwhQm" oder
+   "heizungsart"/"heizungsalter" in den Kennzahlen stehen. Fehlen sie, lass diesen Punkt
+   ohne Kommentar weg - erfinde KEINE Energieeffizienzklasse.
+Die Abschnitte sollten entsprechend MARKTWERT und ENERGIE heissen (nur ENERGIE, wenn Punkt 2
+Daten hat - sonst reicht MARKTWERT allein, gib dann keinen leeren Abschnitt aus).
+
+Nenne den Ort ("ort" in den Kennzahlen) mindestens einmal beim Namen.
 
 Die mitgelieferten Werte unter "Gerechnete Werte" sind fertig berechnet.
 Uebernimm sie woertlich. Nenne KEINE eigene Zahl, die dort nicht steht -
@@ -141,7 +190,9 @@ Lage im Ort oder eine moeblierte Vermietung. Nenne dabei NIE die Herkunft der
 Ortsmiete (siehe Regel oben) - "Bestandsmiete" ist eine fachliche
 Einordnung, keine Quellenangabe.
 
-Die Abschnitte sollten MIETNIVEAU, PREIS und RISIKO heissen.
+Diese Auswertung ist eine von drei zu diesem Objekt (Analyse, Hebel, Kaufpreis-Analyse).
+Bleibe bei deinem eigenen Fokus oben - wiederhole nicht, was eher in die anderen beiden
+gehoert (Gesamteinordnung, Verhandlungshebel).
 
 ${FORM}`;
 

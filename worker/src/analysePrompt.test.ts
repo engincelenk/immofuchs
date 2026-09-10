@@ -167,6 +167,50 @@ describe("systemPromptFuer - preis", () => {
     expect(p).not.toBe(systemPromptFuer("analyse"));
     expect(p).not.toBe(systemPromptFuer("hebel"));
   });
+
+  it("verlangt 2-3 namentlich genannte Vergleichsorte fuer die Marktwert-Schaetzung", () => {
+    expect(systemPromptFuer("preis")).toContain("2 bis 3");
+  });
+
+  it("bindet die Energieklassen-Beurteilung an vorhandene Energiedaten, erfindet keine Klasse", () => {
+    const p = systemPromptFuer("preis");
+    expect(p).toContain("energiewertKwhQm");
+    expect(p).toContain("erfinde KEINE Energieeffizienzklasse");
+  });
+});
+
+// Backlog Punkt 9 (2026-09-10, Nutzer-Vorgabe): jedes der drei Objekt-Produkte
+// soll den Ort namentlich nennen und sich inhaltlich von den anderen beiden
+// abgrenzen - diese Tests halten die neuen Vorgaben inhaltlich fest.
+describe("systemPromptFuer - Ort-Nennung und Abgrenzung (analyse/hebel/preis)", () => {
+  it("weist alle drei Objekt-Produkte an, den Ort beim Namen zu nennen", () => {
+    for (const produkt of ["analyse", "hebel", "preis"] as const) {
+      expect(systemPromptFuer(produkt)).toContain('"ort"');
+    }
+  });
+
+  it("weist alle drei Objekt-Produkte an, sich von den anderen beiden nicht zu wiederholen", () => {
+    for (const produkt of ["analyse", "hebel", "preis"] as const) {
+      expect(systemPromptFuer(produkt)).toContain("eine von drei");
+    }
+  });
+
+  it("analyse verlangt Baujahr/Energiewert/Sanierungen nur, wenn die Daten es hergeben", () => {
+    const p = systemPromptFuer("analyse");
+    expect(p).toContain("Energiewert");
+    expect(p).toContain("energiewertKwhQm");
+    expect(p).toContain("lass sie einfach weg");
+  });
+
+  it("hebel verlangt Mietpotential, realistischen Kaufpreis und Standortbeurteilung in dieser Reihenfolge", () => {
+    const p = systemPromptFuer("hebel");
+    const iMiete = p.indexOf("Potential bei der Miete");
+    const iPreis = p.indexOf("Realistischer Kaufpreis");
+    const iStandort = p.indexOf("Standortpotential");
+    expect(iMiete).toBeGreaterThan(-1);
+    expect(iPreis).toBeGreaterThan(iMiete);
+    expect(iStandort).toBeGreaterThan(iPreis);
+  });
 });
 
 // Die fuenf Produkte der Nicht-Rendite-Rechner: kein Objekt, sondern die

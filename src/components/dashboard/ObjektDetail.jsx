@@ -19,11 +19,6 @@ import { apiFetch } from "../../utils/apiBase.js";
 import { hebelVarianten } from "../../utils/aiTools.js";
 import { getSessionId } from "../../utils/assistantSession.js";
 import { rufeAnalyseAuf, analyseFehlertext } from "../../utils/aiAnalyse.js";
-import { ladeMietReferenz, referenzMiete } from "../../utils/mietReferenz.js";
-import {
-  fortschreibungsfaktor,
-  ladeMietenFortschreibung,
-} from "../../utils/mietenFortschreibung.js";
 import { berechnePreisSchaetzung, preisZeilen } from "../../utils/preisSchaetzung.js";
 import {
   ladeRegionalpreise,
@@ -31,6 +26,8 @@ import {
   regionalPreis,
   regionalpreiseStand,
   regionalpreisZeilen,
+  regionalVergleichsorte,
+  vergleichsortZeilen,
 } from "../../utils/regionalpreis.js";
 import { fmt, fmtP } from "../../utils/helpers.js";
 import {
@@ -116,11 +113,7 @@ export function ObjektDetail({ objekt, onBack }) {
   // erst geladen, wenn eine PLZ vorliegt - sie soll das Haupt-Bundle nicht
   // belasten, genau wie plz-geo.txt. Bis 2026-09-07 erst beim Aufklappen der
   // (damals einklappbaren) AI-Sektion; die Sektion steht seither immer offen
-  // im Ueberblick (UX-Review), das Laden haengt deshalb nur noch an der PLZ.
-  // undefined = noch nicht geladen, null = fuer diese PLZ keine Referenz,
-  // Zahl = EUR/m2. Die drei Zustaende sind unterscheidbar, weil "laedt noch"
-  // und "gibt es nicht" dem Nutzer Verschiedenes sagen muessen.
-  const [ortsMiete, setOrtsMiete] = useState(undefined);
+  // im Ueberblick (UX-Review).
   const [regGeladen, setRegGeladen] = useState(false);
   // Sofort sichtbarer Stand nach "Fuer dieses Objekt uebernehmen"
   // (Stellschrauben, UX-Review 2026-09-06): updateObj() persistiert, aber der
@@ -158,36 +151,33 @@ export function ObjektDetail({ objekt, onBack }) {
   );
   const vollstaendigkeit = berechneVollstaendigkeit(basis);
 
-  // Erst beim Aufklappen laden, und nur einmal je Objekt. Ein Fehlschlag
-  // bleibt still: die Preiseinordnung zeigt dann "keine Mietreferenz", alle
-  // anderen Produkte laufen unveraendert weiter.
+  // Regionale Vergleichsmiete (Kreis, sonst Bundesland) - dieselbe Quelle wie
+  // Renditerechner/Mieterhoehungsrechner/Expose-Scan (regionalpreis.js).
+  // Bug-Fix 2026-09-10 (Nutzer-Befund): "Objekt analysieren" bezog die
+  // Vergleichsmiete bis dahin aus der ALTEN Zensus-PLZ-Referenz
+  // (mietReferenz.js, Bestandsmiete) waehrend jeder andere Rechner schon die
+  // neue Kreis-/Bundeslandreferenz (Angebotsmiete) zeigte - zwei
+  // unterschiedliche Zahlen fuer denselben Ort. Jetzt ueberall dieselbe
+  // Quelle, keine widerspruechlichen "Durchschnittsmieten" mehr.
+  // undefined = Regionaldaten laden noch, null = kein Wert fuer diesen Ort,
+  // Zahl = EUR/m2.
+  const regionalMieteQm = regGeladen
+    ? (regionalPreis(basis?.bundesland, basis?.ort)?.mieteWohnung ?? null)
+    : undefined;
+
+  // Einmalig laden, sobald ein Bundesland vorliegt.
   useEffect(() => {
-    if (!basis?.plz) return;
+    if (!basis?.bundesland) return;
     let lebt = true;
-    // Zwei unabhaengige Tabellen, parallel geladen: die Zensus-Ortsmiete
-    // (PLZ-genau) und der Destatis-Fortschreibungsfaktor (bundeslandweit),
-    // der sie auf das aktuelle Jahr hochrechnet. Faellt die Fortschreibung
-    // aus, bleibt der Faktor bei 1 (siehe mietenFortschreibung.js) - die
-    // Zensuszahl zeigt dann unveraendert weiter an, statt ganz zu fehlen.
-    Promise.all([
-      ladeMietReferenz().catch(() => null),
-      ladeMietenFortschreibung().catch(() => null),
-      ladeRegionalpreise().catch(() => null),
-    ]).then(() => {
-      if (!lebt) return;
-      setRegGeladen(true);
-      const basisMiete = referenzMiete(basis.plz);
-      if (basisMiete == null) {
-        setOrtsMiete(null);
-        return;
-      }
-      const faktor = fortschreibungsfaktor(basis.bundesland);
-      setOrtsMiete(Math.round(basisMiete * faktor * 100) / 100);
-    });
+    ladeRegionalpreise()
+      .catch(() => null)
+      .then(() => {
+        if (lebt) setRegGeladen(true);
+      });
     return () => {
       lebt = false;
     };
-  }, [basis?.plz, basis?.bundesland]);
+  }, [basis?.bundesland]);
 
   // Ruft den Worker und legt das Ergebnis AM OBJEKT ab. Der Kern der
   // Umstellung: was Kontingent kostet, muss beim naechsten Oeffnen wieder da
@@ -207,19 +197,28 @@ export function ObjektDetail({ objekt, onBack }) {
     // verlangte eine Einordnung des Preisniveaus, lieferte dem Modell aber
     // keine einzige Vergleichszahl - es hat daraufhin Verkehrswerte erfunden.
     // Der Anker gehoert zum Prompt-Fix (siehe worker/src/analysePrompt.ts).
-    const brauchtOrtsmiete = produktId === "preis" || produktId === "analyse";
-    const schaetzung = brauchtOrtsmiete ? berechnePreisSchaetzung(basis, t, ortsMiete) : null;
-    // Regionaler Kaufpreis-Richtwert (2026-09-10, KI-Wow-Feature C.6-C.8):
-    // dieselbe Idee wie die Ortsmiete oben, diesmal fuer den Kaufpreis statt
-    // die Miete. Auch fuer "hebel" - der Kaufpreis-Hebel laesst sich erst
-    // einordnen, wenn bekannt ist, ob er ueber oder unter dem regionalen
-    // Niveau liegt.
+    // Regionaler Kaufpreis-/Mietrichtwert (2026-09-10, KI-Wow-Feature C.6-C.8):
+    // eine Quelle fuer Kaufpreis UND Miete, auch fuer "hebel" - der
+    // Kaufpreis-Hebel laesst sich erst einordnen, wenn bekannt ist, ob er
+    // ueber oder unter dem regionalen Niveau liegt.
     const brauchtRegionalpreis =
       produktId === "preis" || produktId === "analyse" || produktId === "hebel";
     const regRef = brauchtRegionalpreis ? regionalPreis(basis.bundesland, basis.ort) : null;
+    const brauchtOrtsmiete = produktId === "preis" || produktId === "analyse";
+    const schaetzung = brauchtOrtsmiete
+      ? berechnePreisSchaetzung(basis, t, regRef?.mieteWohnung)
+      : null;
+    // Vergleichsorte (Backlog Punkt 9, 2026-09-10): fuer "Kaufpreis
+    // analysieren" 2-3 andere Kreise desselben Bundeslands, nach Naehe im
+    // Kaufpreis-Niveau - die aussagekraeftigsten Vergleichspunkte, ohne eine
+    // geografische Nachbarschaft zu behaupten, die diese Daten nicht
+    // hergeben (siehe regionalVergleichsorte()-Kommentar).
+    const vergleichsorte =
+      produktId === "preis" ? regionalVergleichsorte(basis.bundesland, basis.ort) : [];
     const zahlen = [
       ...(schaetzung?.verfuegbar ? preisZeilen(schaetzung, locale) : []),
       ...(regRef ? regionalpreisZeilen(basis, regRef, locale) : []),
+      ...(vergleichsorte.length ? vergleichsortZeilen(vergleichsorte, locale) : []),
     ];
     // Standort-Fakten (Backlog C.8): nur Bundesland-Ebene, siehe
     // regionalFakten()-Kommentar - keine zusaetzliche Preisgabe, da
@@ -241,8 +240,9 @@ export function ObjektDetail({ objekt, onBack }) {
             .filter(Boolean)
         : [];
     try {
-      // Nur Kennzahlen, keine Adresse und kein Name - das Modell braucht sie
-      // nicht, also gehen sie auch nicht raus.
+      // Ort (Stadt/Kreis) darf namentlich genannt werden (Nutzer-Vorgabe
+      // 2026-09-10) - nur Strasse und Hausnummer bleiben aussen vor, das
+      // Modell braucht die private Adresse nicht.
       const kennzahlen = {
         kaufpreis: basis.kaufpreis,
         wohnflaeche: basis.flaeche,
@@ -251,7 +251,15 @@ export function ObjektDetail({ objekt, onBack }) {
         zinssatz: basis.zinssatz,
         tilgung: basis.tilgung,
         bundesland: basis.bundesland,
+        ort: basis.ort,
         baujahr: basis.baujahr,
+        // Energiewert/Heizung (soweit bekannt - manuell erfasst oder aus dem
+        // Expose-Scan uebernommen, siehe exposeMapping.js). Keine erfundene
+        // Energieeffizienzklasse: die wird nicht auf den Rechner-Feldern
+        // gespeichert, also fehlt sie hier einfach, statt geraten zu werden.
+        energiewertKwhQm: basis.sanIstVerbrauch,
+        heizungsart: basis.sanHt,
+        heizungsalter: basis.sanHa,
         nettorendite: kennzahlenGespeichert?.nettoRendite,
         bruttorendite: kennzahlenGespeichert?.bruttoRendite,
         cashflowMonat: kennzahlenGespeichert?.cashflowMon,
@@ -408,6 +416,9 @@ export function ObjektDetail({ objekt, onBack }) {
         locale={locale}
         onRechnerLaden={() => inRechner("haupt")}
         onBearbeiten={() => setBearbeiten(true)}
+        regionalRichtwert={
+          regGeladen ? regionalPreis(basis?.bundesland, basis?.ort)?.kaufWohnung : null
+        }
       />
 
       <RegionalSnapshot objekt={objekt} basis={basis} regGeladen={regGeladen} />
@@ -441,7 +452,7 @@ export function ObjektDetail({ objekt, onBack }) {
           locale={locale}
           onStarten={starteProdukt}
           onExpose={oeffneExpose}
-          referenzMiete={ortsMiete}
+          referenzMiete={regionalMieteQm}
         />
       </AiSektion>
 

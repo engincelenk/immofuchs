@@ -1,3 +1,50 @@
+## 2026-09-10 (1.82.0)
+
+### Regionale Marktdaten konsequent nutzen, Kaufnebenkosten aufgedroeselt, KI-Auswertungen inhaltlich neu gefasst
+
+Konsolidierter Nutzer-Befund, zehn Punkte:
+
+- Euro-Betraege: Tausenderpunkt jetzt immer erzwungen (de-DE), unabhaengig
+  von der UI-Sprache - vier Dashboard-Komponenten reichten bislang die
+  UI-Locale an die Formatierung durch.
+- Renditerechner: Kaufpreis/m² UND Kaltmiete/m² werden aus den
+  Regionaldaten vorbelegt und zeigen darunter einen Hinweis mit beiden
+  Werten (eigener Wert vs. Richtwert) - vorher nur der Kaufpreis, und der
+  Ampeltext nannte nie den eigenen Wert ("Richtwert liegt ueber dem
+  Richtwert" - wiederspruechlich). Eine gemeinsame Funktion
+  (regionalAmpelText) ersetzt jetzt drei fast identische, leicht
+  abweichende Implementierungen in Renditerechner, Mieterhoehungsrechner
+  und Expose-Scan.
+- Vergleichsmiete und Wertsteigerung werden regional vorbelegt (Renditerechner
+  UND Mieterhoehungsrechner), inkl. Hinweiszeile.
+- "Standorte"-Menuepunkt und die zugehoerige Landingpage-Sektion sind
+  wieder entfernt (Ranking-Funktion und ihre i18n-Texte mit ausgebaut, da
+  ungenutzt).
+- DSCR (Kapitaldienst) und Leerstand-Puffer sind aus der Renditerechner-
+  Sektion "Traegt sich das monatlich?" entfernt - die Kennzahlen selbst
+  bleiben fuer Score/Radar erhalten, nur die Kachel-Anzeige ist weg.
+- Kaufnebenkosten werden jetzt einzeln aufgeschluesselt (Grunderwerbsteuer,
+  Notar & Grundbuch, Maklerprovision) statt nur als Summe; die
+  Steuerersparnis-Berechnung daneben ist unveraendert.
+- Mietpreis-Diskrepanz behoben ("Objekt analysieren" zeigte einen anderen
+  Mietdurchschnitt als der Renditerechner fuer denselben Ort): "Objekt
+  analysieren" und "Kaufpreis analysieren" bezogen ihre Vergleichsmiete
+  bislang aus der aelteren Zensus-2022-PLZ-Referenz (Bestandsmiete),
+  waehrend alle anderen Rechner schon die neue Kreis-/Bundesland-Referenz
+  (Angebotsmiete) nutzten. Jetzt ueberall dieselbe Quelle.
+- KI-Auswertungen (Analyse/Hebel/Kaufpreis-Analyse) inhaltlich neu gefasst:
+  feste Gliederung je Produkt statt freier Form (Analyse: Kennzahlen-Bild,
+  positive Punkte, Fazit; Hebel: Mietpotential, realistischer Kaufpreis,
+  Standortpotential; Kaufpreis-Analyse: Marktwert-Einordnung anhand von 2-3
+  namentlich genannten Vergleichsorten, Energieklasse falls bekannt). Der
+  Ortsname (Stadt/Kreis) wird jetzt genannt - die private Adresse
+  (Strasse/Hausnummer) bleibt weiterhin aussen vor und geht nie an das
+  Modell. Jede der drei Auswertungen hat einen eigenen, nicht
+  ueberlappenden Fokus, damit sie sich zum selben Objekt unterscheiden.
+- Sichtbarkeit der Regionaldaten erhoeht: eine "Regionaler Richtwert"-Kachel
+  mit "Live-Marktdaten"-Kennzeichnung erscheint jetzt direkt im Ueberblick
+  eines Objekts, nicht erst nach dem Aufklappen der KI-Sektion.
+
 ## 2026-09-10 (1.81.0)
 
 ### Bezahlte Test-Abos wurden als "Free" angezeigt, Rechner blieben gesperrt

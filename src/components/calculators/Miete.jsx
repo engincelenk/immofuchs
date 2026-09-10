@@ -1,14 +1,18 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { isK15 } from "../../data/plzData.js";
 import { apiV1 } from "../../utils/apiBase.js";
 import { LEG } from "../../i18n/legal.js";
-import { fmt, fmtE, fmtP, fmtDat } from "../../utils/helpers.js";
+import { fmt, fmtE, fmtDat } from "../../utils/helpers.js";
 import { buildMP } from "../../utils/mietprognose.js";
 import { F, Row, Sec, Ins, VT } from "../ui/atoms.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
-import { ladeRegionalpreise, regionalPreis } from "../../utils/regionalpreis.js";
+import {
+  ladeRegionalpreise,
+  regionalAmpelText,
+  regionalPreis,
+} from "../../utils/regionalpreis.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
@@ -26,26 +30,22 @@ function RegionalmieteHinweis({ regGeladen, d, t }) {
   if (!(vgl > 0)) return null;
   const ref = regionalPreis(d.bundesland, d.ort);
   if (!ref || !(ref.mieteWohnung > 0)) return null;
-
-  const abweichung = (vgl / ref.mieteWohnung - 1) * 100;
-  const absAbw = Math.abs(abweichung);
-  const stufe = absAbw <= 10 ? "ok" : absAbw <= 25 ? "warn" : "bad";
-  const richtung = abweichung > 0 ? t.regDrueber : t.regDrunter;
+  const ampel = regionalAmpelText(vgl, ref.mieteWohnung, t, 2);
+  if (!ampel) return null;
 
   return (
     <div
       style={{
         fontSize: 11,
         padding: "6px 10px",
-        background: `var(--${stufe}-bg)`,
+        background: `var(--${ampel.stufe}-bg)`,
         borderRadius: 6,
         marginTop: -6,
         marginBottom: 10,
-        color: `var(--${stufe}-tx)`,
+        color: `var(--${ampel.stufe}-tx)`,
       }}
     >
-      {t.regRichtwert}: {fmt(ref.mieteWohnung, 2)} €/m² —{" "}
-      {absAbw <= 10 ? t.regImRahmen : `${fmtP(absAbw, 0)} ${richtung}`}
+      {t.vgl}: {ampel.text}
     </div>
   );
 }
@@ -83,6 +83,22 @@ export default function Miete() {
       .then(() => setRegGeladen(true))
       .catch(() => {});
   }, []);
+  // Vergleichsmiete regional vorbelegen (Backlog Punkt 7 - "dieselben Felder
+  // bei Miete auch anpassen"): identisches Zwei-Werte-Muster wie im
+  // Renditerechner (RegionalWertHinweis-Kommentar dort) - eigener Ref hier,
+  // weil dieser Rechner unabhaengig vom Renditerechner gemountet wird, auch
+  // wenn beide dasselbe d.vergleichsmiete lesen/schreiben.
+  const vergleichsmieteAutoRef = useRef("14");
+  useEffect(() => {
+    if (!regGeladen) return;
+    const ref = regionalPreis(d.bundesland, d.ort);
+    if (!ref?.mieteWohnung) return;
+    const auto = String(ref.mieteWohnung);
+    if (d.vergleichsmiete === vergleichsmieteAutoRef.current || d.vergleichsmiete === "14") {
+      vergleichsmieteAutoRef.current = auto;
+      if (d.vergleichsmiete !== auto) set("vergleichsmiete", auto);
+    }
+  }, [regGeladen, d.bundesland, d.ort, d.vergleichsmiete]);
   const R = useMemo(() => {
     const mi = +d.kaltmiete || 0,
       qm = +d.flaeche || 1,

@@ -15,10 +15,12 @@ const RASTER = {
   gap: "10px 8px",
 };
 
-export function ObjektKPIs({ kennzahlen, t, locale = "de-DE" }) {
+export function ObjektKPIs({ kennzahlen, t }) {
   if (!kennzahlen?.verfuegbar) return null;
+  // Euro-Betraege bewusst IMMER de-DE-formatiert, unabhaengig von der
+  // UI-Sprache (Nutzer-Vorgabe 2026-09-10) - siehe ObjektVergleich.jsx.
   const eur = (v) =>
-    Number.isFinite(v) ? `${Math.round(v).toLocaleString(locale)} €` : "–";
+    Number.isFinite(v) ? `${Math.round(v).toLocaleString("de-DE")} €` : "–";
   const cf = kennzahlen.cashflowMon;
 
   const felder = [

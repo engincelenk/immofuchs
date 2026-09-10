@@ -12,6 +12,8 @@
 // (Nutzerentscheidung 2026-09-09) - nur die Werte selbst und eine grobe
 // Ebenen-Angabe ("kreis"/"bundesland") fuer die UI-Formulierung.
 
+import { fmt, fmtP } from "./helpers.js";
+
 const DATEI = "/regionalpreise.json";
 
 let daten = null;
@@ -99,6 +101,21 @@ export function regionalFakten(bundeslandCode, max = 2) {
   return Array.isArray(bl?.fakten) ? bl.fakten.slice(0, max) : [];
 }
 
+// Regionale Wertsteigerungs-Annahme (Backlog Punkt 5): die Kaufpreis-
+// Veraenderung ggue. Vorjahr auf Bundeslandebene (kein Kreis-Wert vorhanden,
+// siehe immodaten.json), als Vorbelegung fuer das Wertsteigerung-Feld im
+// Renditerechner statt der bisherigen bundesweiten Pauschalzahl. Fehlt der
+// Wert (Bayern/Berlin - siehe _hinweis in immodaten.json, PDF-Schnappschuss
+// zeigte beim Speichern den falschen Reiter), liefert diese Funktion null -
+// der Aufrufer faellt dann auf die bestehende WERTSTEIGERUNG-Konstante
+// zurueck statt eine Zahl zu erfinden.
+export function regionalWertsteigerung(bundeslandCode) {
+  if (!daten || !bundeslandCode) return null;
+  const bl = daten.bundeslaender.find((b) => b.code === bundeslandCode);
+  const wert = bl?.landeswerte?.kaufWohnungVeraenderung;
+  return typeof wert === "number" ? wert : null;
+}
+
 // Welcher Datenstand gerade geladen ist ("Q2 2026" etc.) - fuer den
 // eingefrorenen Snapshot unten, damit spaetere Vergleiche wissen, aus
 // welchem Quartal ein Snapshot stammt.
@@ -132,9 +149,10 @@ export function regionalSnapshot(data) {
 // Fuer die KI-Produkte preis/analyse/hebel (2026-09-10): dieselbe
 // "Gerechnete Werte"-Uebergabe wie preisZeilen() in preisSchaetzung.js -
 // das Modell bekommt fertige Zahlen, rechnet nichts selbst und nennt keine
-// Herkunft (Regel in systemPrompt.ts/analysePrompt.ts). Bewusst OHNE
-// Ort/Kreis-Namen in den Zeilen - die App schickt laut ObjektDetail.jsx
-// generell keine Adresse an das Modell, nur Kennzahlen.
+// Herkunft (Regel in systemPrompt.ts/analysePrompt.ts). Diese beiden Zeilen
+// bleiben ohne Ort-/Kreisnamen - der Name des eigenen Orts geht separat als
+// "ort" in den Kennzahlen mit (siehe ObjektDetail.starteProdukt), Namen
+// anderer Kreise nur ueber vergleichsortZeilen() unten.
 //
 // "ref" wird als Parameter uebergeben statt hier per regionalPreis()
 // nachgeschlagen - dasselbe Trennungsmuster wie berechnePreisSchaetzung(d,
@@ -160,28 +178,73 @@ export function regionalpreisZeilen(basis, ref, locale = "de-DE") {
   ];
 }
 
-// Standort-Ranking (Backlog D.13): Bruttomietrendite je Kreis/Stadt ueber
-// ALLE Bundeslaender, absteigend sortiert. Bewusst brutto und ohne
-// Nebenkosten/Steuern - eine echte Netto-Rendite braucht die individuellen
-// Zahlen aus dem Renditerechner, das leistet dieses Ranking nicht und gibt
-// auch nicht vor, es zu tun (siehe rankingDisclaim in translations.js).
+// Vergleichsorte fuer "Kaufpreis analysieren" (Backlog Punkt 9, 2026-09-10):
+// bis zu `max` ANDERE Kreise desselben Bundeslands, nach Naehe im
+// Kaufpreis-Niveau sortiert - die preislich naechstliegenden sind die
+// aussagekraeftigsten Vergleichspunkte, die sich aus diesen Daten ehrlich
+// belegen lassen. Bewusst KEINE geografische Nachbarschaft (das wuerde
+// echte Kreisgrenzen-Kenntnis brauchen, die diese Tabelle nicht hat - siehe
+// Matching-Strategie oben).
 //
-// "quellDaten" als Parameter statt Modul-State - dasselbe Testmuster wie
-// findRegionalPreis().
-export function bruttoRenditeRanking(quellDaten, top = 10) {
-  if (!quellDaten?.bundeslaender) return [];
-  const alle = [];
-  for (const bl of quellDaten.bundeslaender) {
-    for (const k of bl.kreise || []) {
-      if (!(k.kaufWohnung > 0) || !(k.mieteWohnung > 0)) continue;
-      const renditeProzent = ((k.mieteWohnung * 12) / k.kaufWohnung) * 100;
-      alle.push({
-        name: k.name,
-        bundeslandCode: bl.code,
-        renditeProzent: Math.round(renditeProzent * 10) / 10,
-      });
-    }
+// Reine Matching-Logik als eigene Funktion exportiert - dasselbe
+// Testmuster wie findRegionalPreis(): testbar ohne fetch/Modul-State.
+export function findVergleichsorte(quellDaten, bundeslandCode, ort, max = 3) {
+  if (!quellDaten || !bundeslandCode) return [];
+  const bl = quellDaten.bundeslaender.find((b) => b.code === bundeslandCode);
+  if (!Array.isArray(bl?.kreise)) return [];
+
+  const ortNorm = normalisiere(ort);
+  const eigenerPreis = bl.kreise.find((k) => normalisiere(k.name) === ortNorm)?.kaufWohnung;
+  const andere = bl.kreise.filter(
+    (k) => normalisiere(k.name) !== ortNorm && k.kaufWohnung > 0,
+  );
+
+  if (Number.isFinite(eigenerPreis)) {
+    andere.sort(
+      (a, b) => Math.abs(a.kaufWohnung - eigenerPreis) - Math.abs(b.kaufWohnung - eigenerPreis),
+    );
   }
-  alle.sort((a, b) => b.renditeProzent - a.renditeProzent);
-  return alle.slice(0, top);
+
+  return andere.slice(0, max).map((k) => ({ name: k.name, kaufWohnung: k.kaufWohnung }));
+}
+
+// Synchron, sobald ladeRegionalpreise() aufgeloest ist - gleiches Muster wie
+// regionalPreis().
+export function regionalVergleichsorte(bundeslandCode, ort, max = 3) {
+  return findVergleichsorte(daten, bundeslandCode, ort, max);
+}
+
+// Die Label-Wert-Zeilen zu regionalVergleichsorte(), im selben Format wie
+// regionalpreisZeilen() - der Ortsname steht bewusst im Label, damit das
+// Modell ihn woertlich uebernehmen kann, statt selbst einen zu erfinden.
+export function vergleichsortZeilen(vergleichsorte, locale = "de-DE") {
+  const qm = (n) =>
+    `${n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/m²`;
+  return vergleichsorte.map((o) => ({
+    label: `Vergleichsort ${o.name}`,
+    wert: qm(o.kaufWohnung),
+  }));
+}
+
+// UI-Ampel-Text fuer den Vergleich "eigener Wert vs. regionaler Richtwert"
+// (Renditerechner-Kaufpreis, Renditerechner-Kaltmiete, Mieterhoehungsrechner-
+// Vergleichsmiete, Expose-Scan). Bisheriger Fehler (Nutzer-Befund
+// 2026-09-10): drei fast identische, aber leicht verschiedene Implementierungen
+// zeigten nur den Richtwert und "X% ueber dem regionalen Richtwert" OHNE den
+// eigenen Wert zu nennen - las sich wie "Richtwert ist ueber dem Richtwert".
+// Diese eine Funktion ersetzt alle drei und nennt immer BEIDE Werte in einem
+// Satz.
+export function regionalAmpelText(eigenerWert, referenzWert, t, decimals = 0) {
+  if (!(eigenerWert > 0) || !(referenzWert > 0)) return null;
+  const abweichung = (eigenerWert / referenzWert - 1) * 100;
+  const absAbw = Math.abs(abweichung);
+  const stufe = absAbw <= 10 ? "ok" : absAbw <= 25 ? "warn" : "bad";
+  const richtwertText = `${fmt(referenzWert, decimals)} €/m²`;
+  const text =
+    absAbw <= 10
+      ? `${fmt(eigenerWert, decimals)} €/m² — ${t.regImRahmen} (${t.regRichtwert}: ${richtwertText})`
+      : `${fmt(eigenerWert, decimals)} €/m² — ${fmtP(absAbw, 0)} ${
+          abweichung > 0 ? t.regDrueber : t.regDrunter
+        } (${t.regRichtwert}: ${richtwertText})`;
+  return { stufe, text };
 }

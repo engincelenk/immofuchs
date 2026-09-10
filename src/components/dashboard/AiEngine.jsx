@@ -62,7 +62,7 @@ export function AiEngine({
     // Dieselbe Regel für die Preiseinordnung: ohne Ortsreferenz gäbe es nichts
     // zu vergleichen, und das Produkt würde zu genau der Schätzung aus dem
     // Nichts, die es vermeiden soll.
-    if (produkt.braucht === "plz" && !(referenzMiete > 0)) return "gesperrt";
+    if (produkt.braucht === "ort" && !(referenzMiete > 0)) return "gesperrt";
     return "offen";
   };
 
@@ -132,12 +132,12 @@ export function AiEngine({
 function gesperrtText(produkt, data, referenzMiete) {
   if (produkt.braucht === "grundlage")
     return "Braucht zuerst Objektdaten — trage sie ein oder lade ein Exposé hoch.";
-  if (produkt.braucht === "plz") {
-    if (!data?.plz) return "Trage die PLZ ein, dann lässt sich der Ort vergleichen.";
+  if (produkt.braucht === "ort") {
+    if (!data?.bundesland) return "Wähle ein Bundesland, dann lässt sich der Ort vergleichen.";
     // undefined heisst "laedt noch" - das ist etwas anderes als "gibt es
     // nicht" und darf nicht so aussehen.
     if (referenzMiete === undefined) return "Ortsdaten werden geladen …";
-    return "Für diese PLZ liegt keine Mietreferenz vor.";
+    return "Für diesen Ort liegt keine Mietreferenz vor.";
   }
   return "Noch nicht möglich.";
 }

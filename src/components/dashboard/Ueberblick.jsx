@@ -26,6 +26,8 @@ const ERKLAERUNG = {
     "Die ehrlichere Renditezahl: Sie zieht die Kosten ab, die du nicht auf den Mieter umlegen kannst.",
   faktor:
     "Kaufpreis geteilt durch Jahresmiete. Je niedriger, desto schneller hat sich der Kauf über die Miete bezahlt gemacht.",
+  regionalRichtwert:
+    "Der Kaufpreis je m², mit dem vergleichbare Objekte in dieser Region aktuell gehandelt werden.",
 };
 
 const TIER_FARBE = {
@@ -81,8 +83,10 @@ const primaerKnopfStil = {
   fontFamily: "inherit",
 };
 
-function eur(v, locale = "de-DE") {
-  return Number.isFinite(v) ? `${Math.round(v).toLocaleString(locale)} €` : "–";
+// Euro-Betraege bewusst IMMER de-DE-formatiert, unabhaengig von der
+// UI-Sprache (Nutzer-Vorgabe 2026-09-10) - siehe ObjektVergleich.jsx.
+function eur(v) {
+  return Number.isFinite(v) ? `${Math.round(v).toLocaleString("de-DE")} €` : "–";
 }
 
 // Ein Satz Klartext statt einer Zahlenkolonne. Formuliert das Ergebnis so,
@@ -143,6 +147,7 @@ export function Ueberblick({
   onRechnerLaden,
   onBearbeiten,
   locale = "de-DE",
+  regionalRichtwert,
 }) {
   if (!kennzahlen?.verfuegbar) {
     // Lehrender Empty-State (Konzept 3.6): nennt die fehlenden Felder, statt
@@ -254,6 +259,20 @@ export function Ueberblick({
                 ? `${kennzahlen.faktor.toFixed(1).replace(".", ",")} x`
                 : "–",
             },
+            // Regionaler Richtwert (Backlog Punkt 10, 2026-09-10): sofort
+            // sichtbar statt erst nach dem Aufklappen der AI-Sektion darunter
+            // (RegionalWertHinweis im Renditerechner) - nur wenn die
+            // Regionaldaten fuer diesen Ort geladen und vorhanden sind.
+            ...(Number.isFinite(regionalRichtwert) && regionalRichtwert > 0
+              ? [
+                  {
+                    l: "Regionaler Richtwert",
+                    tip: ERKLAERUNG.regionalRichtwert,
+                    v: `${Math.round(regionalRichtwert).toLocaleString("de-DE")} €/m²`,
+                    badge: "Live-Marktdaten",
+                  },
+                ]
+              : []),
           ].map((k) => (
             <div key={k.l}>
               <div
@@ -263,10 +282,27 @@ export function Ueberblick({
                   marginBottom: 4,
                   display: "inline-flex",
                   alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 4,
                 }}
               >
                 {k.l}
                 <Tip text={k.tip} label={k.l} />
+                {k.badge && (
+                  <span
+                    style={{
+                      fontSize: 9.5,
+                      fontWeight: 700,
+                      color: "var(--ca)",
+                      background: "var(--ca-bg)",
+                      borderRadius: 999,
+                      padding: "1px 6px",
+                      letterSpacing: 0.2,
+                    }}
+                  >
+                    {k.badge}
+                  </span>
+                )}
               </div>
               <div
                 style={{

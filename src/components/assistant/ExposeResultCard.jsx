@@ -17,8 +17,11 @@ import {
 } from "../../utils/exposeMapping.js";
 import { fuelle } from "../../i18n/expose.js";
 import { PLZ_DB } from "../../data/plzData.js";
-import { ladeRegionalpreise, regionalPreis } from "../../utils/regionalpreis.js";
-import { fmt, fmtP } from "../../utils/helpers.js";
+import {
+  ladeRegionalpreise,
+  regionalAmpelText,
+  regionalPreis,
+} from "../../utils/regionalpreis.js";
 
 const GRUPPEN_LABEL = {
   objekt: "gruppeObjekt",
@@ -55,12 +58,7 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
     if (!bl) return null;
     const ref = regionalPreis(bl, ergebnis?.ort);
     if (!ref || !(ref.kaufWohnung > 0)) return null;
-
-    const abweichung = (kaufpreisQm / ref.kaufWohnung - 1) * 100;
-    const absAbw = Math.abs(abweichung);
-    const stufe = absAbw <= 10 ? "ok" : absAbw <= 25 ? "warn" : "bad";
-    const richtung = abweichung > 0 ? t.regDrueber : t.regDrunter;
-    return { stufe, absAbw, richtung, richtwert: ref.kaufWohnung };
+    return regionalAmpelText(kaufpreisQm, ref.kaufWohnung, t);
   }, [regGeladen, ergebnis, t]);
 
   const [auswahl, setAuswahl] = useState(
@@ -134,10 +132,7 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
             color: `var(--${regionalCheck.stufe}-tx)`,
           }}
         >
-          {t.regRichtwert}: {fmt(regionalCheck.richtwert)} €/m² —{" "}
-          {regionalCheck.absAbw <= 10
-            ? t.regImRahmen
-            : `${fmtP(regionalCheck.absAbw, 0)} ${regionalCheck.richtung}`}
+          {t.kaufpreis}: {regionalCheck.text}
         </div>
       )}
 

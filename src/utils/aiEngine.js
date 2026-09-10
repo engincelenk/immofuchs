@@ -46,10 +46,10 @@ export const AI_PRODUKTE = [
     titel: "Kaufpreis analysieren",
     kurz: "Deine Mietannahme gegen die ortsübliche Miete am Ort",
     aktion: "Analysieren",
-    // Ohne PLZ gibt es keine Ortsreferenz - und ohne Ortsreferenz waere die
-    // Einordnung genau die Schaetzung aus dem Nichts, die dieses Produkt
+    // Ohne Bundesland gibt es keine Regionalreferenz - und ohne Referenz waere
+    // die Einordnung genau die Schaetzung aus dem Nichts, die dieses Produkt
     // vermeiden soll.
-    braucht: "plz",
+    braucht: "ort",
   },
   {
     id: "expose",
@@ -94,7 +94,7 @@ const RELEVANTE_FELDER = {
   hebel: ["kaufpreis", "kaltmiete", "renovierung", "zinssatz", "tilgung"],
   // Die Preiseinordnung haengt an Miete, Flaeche, Preis und Ort - nicht an
   // der Finanzierung. Ein geaenderter Zinssatz entwertet sie nicht.
-  preis: ["kaufpreis", "kaltmiete", "flaeche", "plz"],
+  preis: ["kaufpreis", "kaltmiete", "flaeche", "bundesland", "ort"],
   // Der Expose-Scan bezieht sich auf die hochgeladene Datei, nicht auf die
   // Eingabefelder - er veraltet nicht, wenn der Nutzer Zahlen anpasst.
   expose: [],

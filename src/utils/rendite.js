@@ -96,7 +96,10 @@ export function computeRendite(d, t) {
   // exakt - kaltmiete 0 wird zu 1 EUR/Monat, damit der Faktor endlich bleibt
   // und die Bewertung ueber rate("kpFaktor", ...) unveraendert ausfaellt.
   const kaufpreisFaktor = gesamtKaufpreis / Math.max((kaltmiete || 1) * 12, 1);
-  const nebenkosten = (gesamtKaufpreis * (grEstProz + notarProz + maklerProz)) / 100;
+  const nebenkostenGrest = (gesamtKaufpreis * grEstProz) / 100;
+  const nebenkostenNotar = (gesamtKaufpreis * notarProz) / 100;
+  const nebenkostenMakler = (gesamtKaufpreis * maklerProz) / 100;
+  const nebenkosten = nebenkostenGrest + nebenkostenNotar + nebenkostenMakler;
   // nkFinanzieren AN: Nebenkosten fliessen mit ins Darlehen (Bank-Modell, z.B.
   // "Finanzierungsbedarf = Kaufpreis + Nebenkosten - Eigenkapital" in einem
   // Bankangebot). AUS (Standard): Nebenkosten bleiben ausserhalb des
@@ -391,6 +394,9 @@ export function computeRendite(d, t) {
     cf2MitSt: cfMonMitSt,
     lz: laufzeitJahre,
     nbk: nebenkosten,
+    nbkGrest: nebenkostenGrest,
+    nbkNotar: nebenkostenNotar,
+    nbkMakler: nebenkostenMakler,
     da: darlehen,
     bel: beleihung,
     afJ: afaJahr,

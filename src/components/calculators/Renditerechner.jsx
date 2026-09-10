@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { BL_N, BL_O, AFA } from "../../data.js";
+import { BL_N, BL_O, AFA, WERTSTEIGERUNG } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP, tpl } from "../../utils/helpers.js";
 import { rate, vrd } from "../../utils/bands.js";
@@ -31,7 +31,12 @@ import { Detail } from "../tables/Detail.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { BreakEvenCards } from "./SelbsttraegerCheck.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
-import { ladeRegionalpreise, regionalPreis } from "../../utils/regionalpreis.js";
+import {
+  ladeRegionalpreise,
+  regionalAmpelText,
+  regionalPreis,
+  regionalWertsteigerung,
+} from "../../utils/regionalpreis.js";
 import { Legal } from "../ui/LangSel.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
@@ -46,32 +51,91 @@ import { buildAssistantContext } from "../../utils/assistantContext.js";
 // Referenzwert ist immer kaufWohnung: der Renditerechner richtet sich an
 // Kapitalanleger, die ganz ueberwiegend Eigentumswohnungen kaufen, nicht
 // Haeuser (die sind selten Kapitalanlage-Objekte).
-function RegionalpreisHinweis({ regGeladen, d, R, t }) {
-  if (!regGeladen) return null;
-  const preisQm = R?.pQm;
-  if (!(preisQm > 0)) return null;
-  const ref = regionalPreis(d.bundesland, d.ort);
-  if (!ref || !(ref.kaufWohnung > 0)) return null;
-
-  const abweichung = (preisQm / ref.kaufWohnung - 1) * 100;
-  const absAbw = Math.abs(abweichung);
-  const stufe = absAbw <= 10 ? "ok" : absAbw <= 25 ? "warn" : "bad";
-  const richtung = abweichung > 0 ? t.regDrueber : t.regDrunter;
+// Generisch fuer alle drei Vergleiche im Renditerechner (Kaufpreis/m²,
+// Kaltmiete/m², Vergleichsmiete) - dieselbe Ampel, nur anderes Feld/anderer
+// Referenzwert. "wert"/"refWert" statt hartcodiertem R.pQm/ref.kaufWohnung,
+// damit eine einzige Implementierung alle drei bedient.
+function RegionalWertHinweis({ label, wert, refWert, t, decimals = 0 }) {
+  if (!(wert > 0) || !(refWert > 0)) return null;
+  const ampel = regionalAmpelText(wert, refWert, t, decimals);
+  if (!ampel) return null;
 
   return (
     <div
       style={{
         fontSize: 11,
         padding: "6px 10px",
-        background: `var(--${stufe}-bg)`,
+        background: `var(--${ampel.stufe}-bg)`,
         borderRadius: 6,
         marginTop: -6,
         marginBottom: 10,
-        color: `var(--${stufe}-tx)`,
+        color: `var(--${ampel.stufe}-tx)`,
       }}
     >
-      {t.regRichtwert}: {fmt(ref.kaufWohnung)} €/m² —{" "}
-      {absAbw <= 10 ? t.regImRahmen : `${fmtP(absAbw, 0)} ${richtung}`}
+      {label}: {ampel.text}
+    </div>
+  );
+}
+
+// Kaufnebenkosten aufgedroeselt (Backlog Punkt 8): bisher nur die Summe als
+// NeutralKPI. Die drei Bestandteile stammen aus je einem eigenen Prozentsatz
+// (Grunderwerbsteuer je Bundesland, Notar/Grundbuch, Maklerprovision - siehe
+// rendite.js), eine einzelne Zeile "Kaufnebenkosten" hat das verschluckt.
+function NebenkostenAufschluesselung({ t, R }) {
+  const posten = [
+    { label: t.grEst, wert: R.nbkGrest },
+    { label: t.notar, wert: R.nbkNotar },
+    { label: t.makler, wert: R.nbkMakler },
+  ].filter((p) => p.wert > 0);
+
+  return (
+    <div
+      style={{
+        background: "var(--cc)",
+        borderRadius: 12,
+        border: "0.5px solid var(--cb)",
+        padding: "12px 14px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 600,
+          color: "var(--ch)",
+          textTransform: "uppercase",
+          letterSpacing: 0.7,
+          marginBottom: 4,
+        }}
+      >
+        {t.nbk}
+      </div>
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 700,
+          color: "var(--ct)",
+          fontVariantNumeric: "tabular-nums",
+          lineHeight: 1.1,
+          margin: "4px 0 8px",
+        }}
+      >
+        {fmtE(R.nbk)}
+      </div>
+      {posten.map((p) => (
+        <div
+          key={p.label}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: 11,
+            color: "var(--ch)",
+            padding: "2px 0",
+          }}
+        >
+          <span>{p.label}</span>
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmtE(p.wert)}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -123,6 +187,36 @@ export default function Haupt() {
       .then(() => setRegGeladen(true))
       .catch(() => {});
   }, []);
+  const regRef = useMemo(
+    () => (regGeladen ? regionalPreis(d.bundesland, d.ort) : null),
+    [regGeladen, d.bundesland, d.ort],
+  );
+  // Vergleichsmiete/Wertsteigerung regional vorbelegen (Backlog Punkt 5-6):
+  // gleiches Zwei-Werte-Muster wie nichtUmlAutoRef/nichtUmlTouchedRef in
+  // App.jsx - "AutoRef" haelt den zuletzt SELBST gesetzten Wert, nur wenn das
+  // Feld noch genau darauf (oder auf dem urspruenglichen Default) steht, gilt
+  // es als unberuehrt und darf beim naechsten Ort-/Datenwechsel erneut
+  // ueberschrieben werden. Eine echte Nutzereingabe stoppt die Automatik
+  // dauerhaft, ohne dass ein Ref explizit "touched" markieren muss.
+  const vergleichsmieteAutoRef = useRef("14");
+  useEffect(() => {
+    if (!regRef?.mieteWohnung) return;
+    const auto = String(regRef.mieteWohnung);
+    if (d.vergleichsmiete === vergleichsmieteAutoRef.current || d.vergleichsmiete === "14") {
+      vergleichsmieteAutoRef.current = auto;
+      if (d.vergleichsmiete !== auto) set("vergleichsmiete", auto);
+    }
+  }, [regRef, d.vergleichsmiete]);
+  const wertPAutoRef = useRef(String(WERTSTEIGERUNG.pA));
+  useEffect(() => {
+    const regional = regGeladen ? regionalWertsteigerung(d.bundesland) : null;
+    if (regional == null) return;
+    const auto = String(regional);
+    if (d.wertP === wertPAutoRef.current || d.wertP === String(WERTSTEIGERUNG.pA)) {
+      wertPAutoRef.current = auto;
+      if (d.wertP !== auto) set("wertP", auto);
+    }
+  }, [regGeladen, d.bundesland, d.wertP]);
   const R = useMemo(() => computeRendite(d, t), [d, t]);
   // Stufe 1 des Investment-Score-Umbaus (2026-08-27): zusaetzliche Kennzahlen
   // (DSCR, Break-even-Miete/-Leerstand, ...) ohne Aggregation zu einem Score -
@@ -233,7 +327,7 @@ export default function Haupt() {
               hint={t.flaeche}
             />
           </Row>
-          <RegionalpreisHinweis regGeladen={regGeladen} d={d} R={R} t={t} />
+          <RegionalWertHinweis label={t.kaufpreis} wert={R?.pQm} refWert={regRef?.kaufWohnung} t={t} />
           <F
             label={t.kaltmiete + " /m²"}
             unit="€/m²"
@@ -245,6 +339,13 @@ export default function Haupt() {
             step="0.5"
             tip={tip("mieteQm")}
             hint={d.vergleichsmiete ? `${t.vgl}: ${d.vergleichsmiete} €/m²` : ""}
+          />
+          <RegionalWertHinweis
+            label={t.kaltmiete + " /m²"}
+            wert={mieteQm}
+            refWert={regRef?.mieteWohnung}
+            t={t}
+            decimals={2}
           />
           <F
             label={t.kaltmiete}
@@ -592,6 +693,29 @@ export default function Haupt() {
               slider={{ min: 5, max: 30, step: 5 }}
             />
           </Row>
+          {(() => {
+            // Kein Ampel-Vergleich wie bei Kaufpreis/Miete: eine hoehere
+            // Wertsteigerungsannahme ist nicht per se "gut" oder "schlecht",
+            // nur eine Prognose - deshalb rein informativ (info-Farbe statt
+            // ok/warn/bad).
+            const regional = regGeladen ? regionalWertsteigerung(d.bundesland) : null;
+            if (regional == null) return null;
+            return (
+              <div
+                style={{
+                  fontSize: 11,
+                  padding: "6px 10px",
+                  background: "var(--info-bg)",
+                  borderRadius: 6,
+                  marginTop: -6,
+                  marginBottom: 10,
+                  color: "var(--info-tx)",
+                }}
+              >
+                {t.regRichtwert} ({BL_N[d.bundesland] || t.bundesland}): {fmtP(regional, 1)}
+              </div>
+            );
+          })()}
           <F
             label={t.sonderUml}
             unit="€"
@@ -701,6 +825,13 @@ export default function Haupt() {
             onChange={(v) => set("vergleichsmiete", v)}
             step="0.5"
             tip={tip("vglRendite")}
+          />
+          <RegionalWertHinweis
+            label={t.vgl}
+            wert={+d.vergleichsmiete || 0}
+            refWert={regRef?.mieteWohnung}
+            t={t}
+            decimals={2}
           />
           {d.immLeer === "nein" ? (
             <F
@@ -1046,18 +1177,9 @@ export default function Haupt() {
               {(() => {
                 const cfOCol = rate("cfOhne", R.cf2OhneSt).color;
                 const cfMCol = rate("cfMit", R.cf2MitSt).color;
-                // Stufe 1 Investment-Score (2026-08-27): DSCR und
-                // Break-even-Leerstand koennen null sein (kein Kapitaldienst
-                // bzw. keine Kaltmiete) - dann neutral, nicht rot werten,
-                // wie beim isFinite-Guard fuer die Laufzeit in Sektion 3.
-                const dscrCol = K.dscrIst == null ? "yellow" : rate("dscrIst", K.dscrIst).color;
-                const beLeerCol =
-                  K.breakEvenLeerstand == null
-                    ? "yellow"
-                    : rate("breakEvenLeerstand", K.breakEvenLeerstand).color;
-                const worstCol = [cfOCol, cfMCol, dscrCol, beLeerCol].includes("red")
+                const worstCol = [cfOCol, cfMCol].includes("red")
                   ? "red"
-                  : [cfOCol, cfMCol, dscrCol, beLeerCol].includes("yellow")
+                  : [cfOCol, cfMCol].includes("yellow")
                     ? "yellow"
                     : "green";
                 const ampelHex =
@@ -1133,64 +1255,6 @@ export default function Haupt() {
                             : R.cf2MitSt >= -150
                               ? t.cfMYellowTip
                               : t.cfMRedTip
-                        }
-                      />
-                      <AmpelKPI
-                        label={t.dscr}
-                        value={K.dscrIst != null ? `${fmt(K.dscrIst, 2)}×` : "–"}
-                        color={dscrCol}
-                        statusLabel={
-                          dscrCol === "green"
-                            ? t.badgeGut
-                            : dscrCol === "yellow"
-                              ? t.badgeOkay
-                              : t.badgeKrit
-                        }
-                        status={
-                          K.dscrIst == null
-                            ? undefined
-                            : dscrCol === "green"
-                              ? "✓ " + t.dscrGreen
-                              : dscrCol === "yellow"
-                                ? "~ " + t.dscrYellow
-                                : "⚠ " + t.dscrRed
-                        }
-                        tip={
-                          K.dscrIst == null
-                            ? t.dscrKeinKapitaldienst
-                            : dscrCol === "green"
-                              ? t.dscrGreenTip
-                              : dscrCol === "yellow"
-                                ? t.dscrYellowTip
-                                : t.dscrRedTip
-                        }
-                      />
-                      <AmpelKPI
-                        label={t.beLeer}
-                        value={K.breakEvenLeerstand != null ? fmtP(K.breakEvenLeerstand, 0) : "–"}
-                        color={beLeerCol}
-                        statusLabel={
-                          beLeerCol === "green"
-                            ? t.badgeGut
-                            : beLeerCol === "yellow"
-                              ? t.badgeOkay
-                              : t.badgeKrit
-                        }
-                        status={
-                          K.breakEvenLeerstand == null
-                            ? undefined
-                            : beLeerCol === "green"
-                              ? "✓ " + t.beLeerGreen
-                              : beLeerCol === "yellow"
-                                ? "~ " + t.beLeerYellow
-                                : "⚠ " + t.beLeerRed
-                        }
-                        tip={
-                          beLeerCol === "green"
-                            ? t.beLeerGreenTip
-                            : beLeerCol === "yellow"
-                              ? t.beLeerYellowTip
-                              : t.beLeerRedTip
                         }
                       />
                     </div>
@@ -1482,7 +1546,7 @@ export default function Haupt() {
                           gap: 10,
                         }}
                       >
-                        <NeutralKPI label={t.nbk} value={fmtE(R.nbk)} sub={t.nbkSub} />
+                        <NebenkostenAufschluesselung t={t} R={R} />
                         <AmpelKPI
                           label={t.steuerErs}
                           value={fmtE(Math.round(R.sSt / R.j))}

@@ -38,7 +38,7 @@ describe("Produktregistry", () => {
       // "grundlage" (2026-09-07): das Handout haengt nicht mehr zwingend am
       // Exposé-Scan, sondern an irgendeiner Datengrundlage - Scan ODER von
       // Hand eingepflegte Felder.
-      expect(["kennzahlen", "datei", "grundlage", "plz"]).toContain(p.braucht);
+      expect(["kennzahlen", "datei", "grundlage", "ort"]).toContain(p.braucht);
       expect(p.titel.length).toBeGreaterThan(0);
       // Das Aktionsverb ist Pflicht: ohne es faellt der Knopf auf den Titel
       // zurueck - genau die Verdopplung, die der UX-Review beseitigt hat.
