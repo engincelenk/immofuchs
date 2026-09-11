@@ -26,6 +26,7 @@ import {
   berechneVollstaendigkeit,
 } from "../../utils/objektKennzahlen.js";
 import { ladeRegionalpreise, regionalSnapshot } from "../../utils/regionalpreis.js";
+import { ladePlzKreis } from "../../utils/plzKreis.js";
 
 // Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
 // Merkliste haengt auf jeder Rechner-Seite, CheckoutWizard aber nur bei
@@ -306,6 +307,7 @@ export function useSavedObjects(setData) {
   // ohne Daten faellt toServerPayload() nur auf "kein Snapshot" zurueck.
   useEffect(() => {
     ladeRegionalpreise().catch(() => {});
+    ladePlzKreis().catch(() => {});
   }, []);
 
   const [savedList, setSavedList] = useState(() => (isPro ? [] : readLocalList()));
@@ -1081,28 +1083,24 @@ export function Merkliste() {
       </>
     );
 
-  // B3: legt das Objekt aus den Kerndaten an und oeffnet es direkt -
-  // "Objekt anlegen -> Urteil sehen" ohne Zwischenschritt.
-  //
-  // opts.imWizard (2026-09-07): der Anlege-Assistent legt das Objekt bereits
-  // nach Schritt 1 an und laeuft danach weiter (jeder folgende Schritt
-  // speichert per updateObj nach). Das Sheet darf dabei NICHT schliessen und
-  // die Detailansicht noch nicht aufgehen - beides passiert erst, wenn der
-  // Assistent ueber onFertig Bescheid gibt.
-  const objektAnlegen = async (name, daten, opts = {}) => {
+  // B3/2026-09-11: legt das Objekt aus den sechs Kernfeldern an und fuehrt
+  // direkt in den Renditerechner - annahmenFuer() (ueber ObjektAnlegen.jsx)
+  // hat den Entwurf `daten` bereits vollstaendig mit sinnvollen Startwerten
+  // ergaenzt, hier ist kein Feld mehr leer. `set()` uebernimmt jedes davon in
+  // den globalen Rechner-State, setTabExt() wechselt den Tab und traegt das
+  // Rundweg-Objekt (Ruecksprungleiste + "Speichern" aktualisiert dieses
+  // Objekt statt ein neues anzulegen) - dasselbe Muster wie
+  // ObjektDetail.inRechner(). Ersetzt den vormaligen mehrstufigen Assistenten
+  // (ObjektAnlegenWizard.jsx): dessen sieben Zusatzschritte fragten dieselben
+  // Felder ab, die der Renditerechner ohnehin automatisch vorbelegt.
+  const objektAnlegen = async (name, daten) => {
     const neu = await saveObj(name, daten, "haupt");
-    if (opts.imWizard) return neu;
     setAnlegenOffen(false);
-    // Der staerkste Moment des Produkts (Konzept 3.1) - bis 2026-09-06 landete
-    // der Nutzer stattdessen in der Liste und musste seine neue Karte selbst
-    // finden.
-    if (neu) openDetail(neu);
+    if (neu) {
+      Object.entries(daten).forEach(([k, v]) => set(k, v));
+      setTabExt("haupt", { id: neu.id, name: neu.name || name });
+    }
     return neu;
-  };
-
-  const objektAnlegenFertig = (neu) => {
-    setAnlegenOffen(false);
-    if (neu) openDetail(neu);
   };
 
   const anlegenSheet = (
@@ -1126,7 +1124,6 @@ export function Merkliste() {
       <ObjektAnlegen
         t={t}
         onAnlegen={objektAnlegen}
-        onFertig={objektAnlegenFertig}
         onAbbrechen={() => setAnlegenOffen(false)}
       />
     </Sheet>

@@ -302,6 +302,48 @@ export function Sheet({
             />
           </button>
         )}
+        {/* Sichtbarer Schliessen-Knopf (Nutzer-Befund 2026-09-11): auf dem
+            Handy fehlte ein Weg, ein Sheet ohne Wischgeste zu schliessen -
+            iOS/Android kennen "nach unten wischen" nicht automatisch, das ist
+            keine Browser-Geste. Ein Tap ausserhalb (Scrim) bleibt der zweite
+            Weg, dieser hier ist der sichtbare, unmissverstaendliche erste.
+            An EINER Stelle (Sheet.jsx), wirkt dadurch auf jedes Overlay der
+            App gleichzeitig - "anchored" (schlankes Popover ohne Backdrop,
+            schliesst schon per Fokuswechsel/Aussenklick) bleibt bewusst ohne. */}
+        {isModal && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Schließen"
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              width: 32,
+              height: 32,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "50%",
+              border: "none",
+              background: "var(--cb)",
+              color: "var(--ch)",
+              fontSize: 16,
+              lineHeight: 1,
+              cursor: "pointer",
+              zIndex: 1,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M1 1L13 13M13 1L1 13"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        )}
         {children}
       </div>
     </>,

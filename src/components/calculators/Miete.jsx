@@ -13,6 +13,7 @@ import {
   regionalAmpelText,
   regionalPreis,
 } from "../../utils/regionalpreis.js";
+import { ladePlzKreis } from "../../utils/plzKreis.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
@@ -28,7 +29,7 @@ function RegionalmieteHinweis({ regGeladen, d, t }) {
   if (!regGeladen) return null;
   const vgl = +d.vergleichsmiete || 0;
   if (!(vgl > 0)) return null;
-  const ref = regionalPreis(d.bundesland, d.ort);
+  const ref = regionalPreis(d.bundesland, d.ort, d.plz);
   if (!ref || !(ref.mieteWohnung > 0)) return null;
   const ampel = regionalAmpelText(vgl, ref.mieteWohnung, t, 2);
   if (!ampel) return null;
@@ -79,7 +80,7 @@ export default function Miete() {
   // Nutzer selbst geschaetzte Vergleichsmiete.
   const [regGeladen, setRegGeladen] = useState(false);
   useEffect(() => {
-    ladeRegionalpreise()
+    Promise.all([ladeRegionalpreise(), ladePlzKreis()])
       .then(() => setRegGeladen(true))
       .catch(() => {});
   }, []);
@@ -91,14 +92,14 @@ export default function Miete() {
   const vergleichsmieteAutoRef = useRef("14");
   useEffect(() => {
     if (!regGeladen) return;
-    const ref = regionalPreis(d.bundesland, d.ort);
+    const ref = regionalPreis(d.bundesland, d.ort, d.plz);
     if (!ref?.mieteWohnung) return;
     const auto = String(ref.mieteWohnung);
     if (d.vergleichsmiete === vergleichsmieteAutoRef.current || d.vergleichsmiete === "14") {
       vergleichsmieteAutoRef.current = auto;
       if (d.vergleichsmiete !== auto) set("vergleichsmiete", auto);
     }
-  }, [regGeladen, d.bundesland, d.ort, d.vergleichsmiete]);
+  }, [regGeladen, d.bundesland, d.ort, d.plz, d.vergleichsmiete]);
   const R = useMemo(() => {
     const mi = +d.kaltmiete || 0,
       qm = +d.flaeche || 1,
@@ -429,7 +430,7 @@ export default function Miete() {
                 // Regionaler Mietrichtwert fuer die KI-Karte (Backlog
                 // B.3/C.8): dieselbe Ampel wie oben im Formular, diesmal als
                 // Zahlenzeile fuer den MIETE-Prompt.
-                const regRef = regGeladen ? regionalPreis(d.bundesland, d.ort) : null;
+                const regRef = regGeladen ? regionalPreis(d.bundesland, d.ort, d.plz) : null;
                 const regZeilen =
                   regRef && regRef.mieteWohnung > 0 && +d.vergleichsmiete > 0
                     ? [

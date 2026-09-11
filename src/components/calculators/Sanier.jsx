@@ -25,6 +25,7 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 import { ladeRegionalpreise, regionalPreis, regionalFakten } from "../../utils/regionalpreis.js";
+import { ladePlzKreis } from "../../utils/plzKreis.js";
 
 const EC_O = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
 const EC_C = [
@@ -108,7 +109,7 @@ export default function Sanier() {
   // Renditerechner-Tab desselben Objekts bereits gesetzt).
   const [regGeladen, setRegGeladen] = useState(false);
   useEffect(() => {
-    ladeRegionalpreise()
+    Promise.all([ladeRegionalpreise(), ladePlzKreis()])
       .then(() => setRegGeladen(true))
       .catch(() => {});
   }, []);
@@ -1447,7 +1448,7 @@ export default function Sanier() {
                       const kaufpreis = +d.kaufpreis || 0;
                       const flaeche = +d.sanFl || +d.flaeche || 0;
                       if (kaufpreis > 0 && flaeche > 0) {
-                        const regRef = regionalPreis(d.bundesland, d.ort);
+                        const regRef = regionalPreis(d.bundesland, d.ort, d.plz);
                         if (regRef?.kaufWohnung > 0) {
                           const aufwandJeQm = (kaufpreis + R.ne) / flaeche;
                           const abweichung = (aufwandJeQm / regRef.kaufWohnung - 1) * 100;
@@ -1514,7 +1515,7 @@ export default function Sanier() {
               const flaeche = +d.sanFl || +d.flaeche || 0;
               const regRef =
                 regGeladen && kaufpreis > 0 && flaeche > 0
-                  ? regionalPreis(d.bundesland, d.ort)
+                  ? regionalPreis(d.bundesland, d.ort, d.plz)
                   : null;
               const regional =
                 regRef?.kaufWohnung > 0

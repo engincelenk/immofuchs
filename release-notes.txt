@@ -1,3 +1,36 @@
+## 2026-09-11 (1.83.0)
+
+### Objekt-Anlage entschlankt, PLZ-Kreis-Zuordnung fuer die Regionaldaten, Sheets per X schliessbar
+
+- Sheets/Schubladen (alle Overlays der App, ein gemeinsamer Baustein): auf
+  dem Handy fehlte ein Weg, ohne Wischgeste zu schliessen. Ein sichtbarer
+  X-Knopf oben rechts ergaenzt jetzt den bestehenden Aussenklick/Escape.
+- "Objekt anlegen" ist kein 8-Schritte-Assistent mehr, sondern ein einziges
+  kurzes Formular (Name, PLZ, Ort, Bundesland, Kaufpreis, Wohnflaeche,
+  Kaltmiete, optional Eigenkapital) - die Zusatzschritte fragten vor allem
+  Felder ab, die annahmenFuer() ohnehin automatisch aus Bundesland/Flaeche
+  ableitet (Zinssatz, Grunderwerbsteuer, AfA-Satz, nicht umlagefaehige
+  Kosten). Nach dem Anlegen fuehrt die App direkt in den Renditerechner mit
+  diesem Objekt geladen, statt in ein zweites, paralleles Formular.
+- Renditerechner: der Hinweis zum regionalen Wertsteigerungs-Richtwert
+  steht jetzt direkt unter dem Wertsteigerung-Feld (vorher nach Wertsteigerung
+  UND Analysezeitraum) - auf dem Handy ohne Layoutaenderung am Desktop
+  (Wertsteigerung/Jahre bleiben dort nebeneinander).
+- PLZ-Kreis-Zuordnung (neue zweite Matching-Stufe fuer alle regionalen
+  Vergleichswerte): eine kleine Gemeinde, die selbst kein Kreis ist (z.B.
+  PLZ 74385 -> Pleidelsheim), fiel bisher direkt auf den Landesdurchschnitt
+  zurueck, obwohl sie amtlich einem Landkreis angehoert, der in den
+  Datenblaettern steht (hier: Ludwigsburg). Eine neue, offline mitgelieferte
+  PLZ-Kreis-Tabelle (public/plz-kreis.txt, Quelle: OpenPLZ API/amtlicher
+  Gebietsstand) loest das auf - inklusive Sonderfall kreisfreie Stadt vs.
+  gleichnamiger separater Landkreis (z.B. Stadt Muenchen vs. Landkreis
+  Muenchen), die sonst denselben, falschen Richtwert getroffen haetten.
+- Landing-Page "So funktioniert's": neue Reihenfolge/Formulierung passend
+  zum tatsaechlichen Ablauf - Anmelden & Abo waehlen, Objekt anlegen, Sofort
+  Ergebnisse, Von der KI beraten lassen. Der Hero-Link "Renditerechner"
+  fuehrt jetzt zum Objekt-Tab ("Objekt anlegen" ist dort der Einstieg)
+  statt direkt in einen objektlosen Rechner.
+
 ## 2026-09-10 (1.82.0)
 
 ### Regionale Marktdaten konsequent nutzen, Kaufnebenkosten aufgedroeselt, KI-Auswertungen inhaltlich neu gefasst

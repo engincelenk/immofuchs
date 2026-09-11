@@ -37,6 +37,7 @@ import {
   regionalPreis,
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
+import { ladePlzKreis } from "../../utils/plzKreis.js";
 import { Legal } from "../ui/LangSel.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
@@ -183,13 +184,13 @@ export default function Haupt() {
   // ladeMietReferenz()/referenzMiete(). Kein Re-Fetch je Tastendruck.
   const [regGeladen, setRegGeladen] = useState(false);
   useEffect(() => {
-    ladeRegionalpreise()
+    Promise.all([ladeRegionalpreise(), ladePlzKreis()])
       .then(() => setRegGeladen(true))
       .catch(() => {});
   }, []);
   const regRef = useMemo(
-    () => (regGeladen ? regionalPreis(d.bundesland, d.ort) : null),
-    [regGeladen, d.bundesland, d.ort],
+    () => (regGeladen ? regionalPreis(d.bundesland, d.ort, d.plz) : null),
+    [regGeladen, d.bundesland, d.ort, d.plz],
   );
   // Vergleichsmiete/Wertsteigerung regional vorbelegen (Backlog Punkt 5-6):
   // gleiches Zwei-Werte-Muster wie nichtUmlAutoRef/nichtUmlTouchedRef in
@@ -675,47 +676,60 @@ export default function Haupt() {
             </>
           )}
           <Sec title={t.wZ} icon="📈" />
-          <Row>
-            <F
-              label={t.wertP}
-              unit="% p.a."
-              value={d.wertP}
-              onChange={(v) => set("wertP", v)}
-              step="0.1"
-              tip={tip("wertP")}
-              slider={{ min: 0, max: 6, step: 0.1 }}
-            />
-            <F
-              label={t.jahre}
-              unit="Jahre"
-              value={d.jahre}
-              onChange={(v) => set("jahre", String(Math.round(+v / 5) * 5))}
-              slider={{ min: 5, max: 30, step: 5 }}
-            />
+          {/* gridAutoFlow "dense" (Nutzer-Befund 2026-09-11): der Hinweis
+              soll auf dem Handy (einspaltig) direkt UNTER Wertsteigerung
+              stehen, vor Analysezeitraum - vorher stand er nach beiden
+              Feldern. "order" bestimmt die gewuenschte Reihenfolge
+              Wertsteigerung -> Hinweis -> Jahre; "dense" laesst das
+              Desktop-Grid (2 Spalten) die Luecke neben Wertsteigerung
+              trotzdem mit Jahre auffuellen, die Seite-an-Seite-Anordnung
+              dort bleibt also unveraendert. */}
+          <Row style={{ gridAutoFlow: "dense" }}>
+            <div style={{ order: 1 }}>
+              <F
+                label={t.wertP}
+                unit="% p.a."
+                value={d.wertP}
+                onChange={(v) => set("wertP", v)}
+                step="0.1"
+                tip={tip("wertP")}
+                slider={{ min: 0, max: 6, step: 0.1 }}
+              />
+            </div>
+            {(() => {
+              // Kein Ampel-Vergleich wie bei Kaufpreis/Miete: eine hoehere
+              // Wertsteigerungsannahme ist nicht per se "gut" oder "schlecht",
+              // nur eine Prognose - deshalb rein informativ (info-Farbe statt
+              // ok/warn/bad).
+              const regional = regGeladen ? regionalWertsteigerung(d.bundesland) : null;
+              if (regional == null) return null;
+              return (
+                <div
+                  style={{
+                    order: 2,
+                    gridColumn: "1 / -1",
+                    fontSize: 11,
+                    padding: "6px 10px",
+                    background: "var(--info-bg)",
+                    borderRadius: 6,
+                    marginTop: -6,
+                    color: "var(--info-tx)",
+                  }}
+                >
+                  {t.regRichtwert} ({BL_N[d.bundesland] || t.bundesland}): {fmtP(regional, 1)}
+                </div>
+              );
+            })()}
+            <div style={{ order: 3 }}>
+              <F
+                label={t.jahre}
+                unit="Jahre"
+                value={d.jahre}
+                onChange={(v) => set("jahre", String(Math.round(+v / 5) * 5))}
+                slider={{ min: 5, max: 30, step: 5 }}
+              />
+            </div>
           </Row>
-          {(() => {
-            // Kein Ampel-Vergleich wie bei Kaufpreis/Miete: eine hoehere
-            // Wertsteigerungsannahme ist nicht per se "gut" oder "schlecht",
-            // nur eine Prognose - deshalb rein informativ (info-Farbe statt
-            // ok/warn/bad).
-            const regional = regGeladen ? regionalWertsteigerung(d.bundesland) : null;
-            if (regional == null) return null;
-            return (
-              <div
-                style={{
-                  fontSize: 11,
-                  padding: "6px 10px",
-                  background: "var(--info-bg)",
-                  borderRadius: 6,
-                  marginTop: -6,
-                  marginBottom: 10,
-                  color: "var(--info-tx)",
-                }}
-              >
-                {t.regRichtwert} ({BL_N[d.bundesland] || t.bundesland}): {fmtP(regional, 1)}
-              </div>
-            );
-          })()}
           <F
             label={t.sonderUml}
             unit="€"
@@ -1952,7 +1966,7 @@ export default function Haupt() {
               // (buildAssistantContext schickt fuer diesen Rechner ohnehin
               // keine Adresse, siehe ASSISTANT_FIELDS.renditerechner), nur
               // die fertig gerechnete Abweichung.
-              const regRef = regGeladen ? regionalPreis(d.bundesland, d.ort) : null;
+              const regRef = regGeladen ? regionalPreis(d.bundesland, d.ort, d.plz) : null;
               const regional =
                 regRef && R?.pQm > 0 && regRef.kaufWohnung > 0
                   ? {

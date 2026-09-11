@@ -224,8 +224,16 @@ export function Sel({ label, value, onChange, options, tip }) {
     </F>
   );
 }
-export function Row({ children }) {
-  return <div className="if-row">{children}</div>;
+// `style` optional (2026-09-11): erlaubt einem einzelnen Aufrufer, das Grid
+// dieser Row punktuell zu ueberschreiben (z. B. gridAutoFlow:"dense" fuer
+// einen Hinweis zwischen zwei Feldern, siehe Renditerechner.jsx Wertsteigerung),
+// ohne die globale .if-row-Klasse fuer alle anderen Rows anzufassen.
+export function Row({ children, style }) {
+  return (
+    <div className="if-row" style={style}>
+      {children}
+    </div>
+  );
 }
 
 // Live-Regler fuer den Ergebnis-Bereich: auf Mobile/Tablet-Hochformat blendet

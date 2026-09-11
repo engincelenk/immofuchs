@@ -2,10 +2,15 @@
 // Renditerechner. Gleiches Lade-Muster wie mietReferenz.js (statische Datei,
 // einmalig per fetch geladen, kein Laufzeit-Request je Objekt).
 //
-// Matching-Strategie bewusst zweistufig statt einer erfundenen Genauigkeit:
+// Matching-Strategie bewusst dreistufig statt einer erfundenen Genauigkeit:
 // 1. Exakter Namensabgleich Ort <-> Kreis/Stadt (deckt kreisfreie Staedte
 //    und Faelle ab, in denen der Ort selbst der Kreissitz ist).
-// 2. Sonst Landesdurchschnitt - kein Rateversuch ueber Postleitzahlen-Naehe,
+// 2. Sonst PLZ -> amtlicher Kreisname (plzKreis.js, Backlog Punkt 4,
+//    2026-09-11) - deckt kleine Gemeinden ab, die selbst kein Kreis sind
+//    (z.B. PLZ 74385 -> Pleidelsheim -> Landkreis Ludwigsburg), OHNE eine
+//    geografische Naeherung zu erfinden: die Zuordnung kommt aus amtlichen
+//    Kreisgrenzen (siehe plzKreis.js), nicht aus PLZ-Naehe.
+// 3. Sonst Landesdurchschnitt - kein Rateversuch ueber Postleitzahlen-Naehe,
 //    das waere Scheingenauigkeit ohne echte Kreisgrenzen-Kenntnis.
 //
 // Die Quelle der Zahlen wird hier bewusst NICHT mitgefuehrt oder angezeigt
@@ -13,6 +18,7 @@
 // Ebenen-Angabe ("kreis"/"bundesland") fuer die UI-Formulierung.
 
 import { fmt, fmtP } from "./helpers.js";
+import { kreisFuerPlz } from "./plzKreis.js";
 
 const DATEI = "/regionalpreise.json";
 
@@ -49,15 +55,27 @@ function normalisiere(s) {
 
 // Reine Matching-Logik, getrennt vom Modul-State exportiert - dasselbe
 // Testmuster wie dekodiere() in mietReferenz.js: testbar ohne fetch/Laufzeit.
-export function findRegionalPreis(quellDaten, bundeslandCode, ort) {
+// `plzKreisName` ist bereits aufgeloest (PLZ -> Kreisname) statt hier selbst
+// per plzKreis.js nachzuschlagen - derselbe Trennungsgrund wie bei "ref" in
+// regionalpreisZeilen(): der Aufrufer laedt/matcht, diese Funktion rechnet
+// nur noch, dadurch ohne fetch/Modul-State testbar.
+export function findRegionalPreis(quellDaten, bundeslandCode, ort, plzKreisName) {
   if (!quellDaten || !bundeslandCode) return null;
   const bl = quellDaten.bundeslaender.find((b) => b.code === bundeslandCode);
   if (!bl) return null;
 
   const ortNorm = normalisiere(ort);
-  const kreis = ortNorm
+  let kreis = ortNorm
     ? bl.kreise.find((k) => normalisiere(k.name) === ortNorm) || null
     : null;
+
+  // Stufe 2: der getippte Ort ist oft eine kleine Gemeinde, die selbst kein
+  // Kreis ist - dann greift der amtliche Kreisname zur PLZ (siehe
+  // Datei-Kommentar oben).
+  if (!kreis && plzKreisName) {
+    const kreisNorm = normalisiere(plzKreisName);
+    kreis = bl.kreise.find((k) => normalisiere(k.name) === kreisNorm) || null;
+  }
 
   if (kreis) {
     return {
@@ -83,9 +101,11 @@ export function findRegionalPreis(quellDaten, bundeslandCode, ort) {
 }
 
 // Synchron, sobald ladeRegionalpreise() aufgeloest ist - null davor oder bei
-// unbekanntem Bundesland.
-export function regionalPreis(bundeslandCode, ort) {
-  return findRegionalPreis(daten, bundeslandCode, ort);
+// unbekanntem Bundesland. `plz` ist optional (Stufe 2, siehe oben) - ohne
+// PLZ oder bevor plzKreis.js geladen ist, verhaelt sich der Aufruf wie
+// zuvor (Ortsname, sonst Bundesland-Durchschnitt).
+export function regionalPreis(bundeslandCode, ort, plz) {
+  return findRegionalPreis(daten, bundeslandCode, ort, plz ? kreisFuerPlz(plz) : null);
 }
 
 // Qualitative Standort-Fakten auf Bundeslandebene (Backlog C.8) - eigene
@@ -136,7 +156,7 @@ export function regionalSnapshot(data) {
   const kaufpreis = +data?.kaufpreis || 0;
   const flaeche = +data?.flaeche || 0;
   if (!(kaufpreis > 0) || !(flaeche > 0)) return null;
-  const ref = regionalPreis(data?.bundesland, data?.ort);
+  const ref = regionalPreis(data?.bundesland, data?.ort, data?.plz);
   if (!ref || !(ref.kaufWohnung > 0)) return null;
   return {
     stand: regionalpreiseStand(),

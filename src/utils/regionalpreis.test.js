@@ -77,6 +77,36 @@ describe("findRegionalPreis", () => {
   });
 });
 
+// Backlog Punkt 4 (2026-09-11, Nutzer-Befund): eine kleine Gemeinde, die
+// selbst kein Kreis ist (z.B. "Pleidelsheim"), fand bisher nie einen
+// Kreistreffer und fiel direkt auf den Landesdurchschnitt zurueck - obwohl
+// die PLZ amtlich einem Landkreis angehoert, der in den Datenblaettern
+// steht. plzKreisName (4. Parameter, vom Aufrufer ueber plzKreis.js
+// aufgeloest) ist die zweite Matching-Stufe dafuer.
+describe("findRegionalPreis - PLZ-Kreis-Stufe (plzKreisName)", () => {
+  it("nutzt plzKreisName, wenn der Ortsname selbst nicht matcht", () => {
+    const r = findRegionalPreis(daten, "BW", "Pleidelsheim", "Böblingen");
+    expect(r?.ebene).toBe("kreis");
+    expect(r?.name).toBe("Böblingen (Kreis)");
+    expect(r?.kaufWohnung).toBe(3835);
+  });
+
+  it("bevorzugt den direkten Ortstreffer vor plzKreisName", () => {
+    const r = findRegionalPreis(daten, "BW", "Stuttgart", "Böblingen");
+    expect(r?.name).toBe("Stuttgart");
+  });
+
+  it("faellt auf den Landesdurchschnitt zurueck, wenn auch plzKreisName nicht matcht", () => {
+    const r = findRegionalPreis(daten, "BW", "Pleidelsheim", "Irgendein Kreis");
+    expect(r?.ebene).toBe("bundesland");
+  });
+
+  it("ignoriert ein fehlendes plzKreisName wie zuvor (kein 3. Argument)", () => {
+    const r = findRegionalPreis(daten, "BW", "Pleidelsheim");
+    expect(r?.ebene).toBe("bundesland");
+  });
+});
+
 describe("regionalpreisZeilen", () => {
   const ref = { ebene: "kreis", name: "Stuttgart", kaufWohnung: 4730, kaufHaus: 5635, mieteWohnung: 15, mieteHaus: 18.14 };
 

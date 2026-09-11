@@ -29,6 +29,7 @@ import {
   regionalVergleichsorte,
   vergleichsortZeilen,
 } from "../../utils/regionalpreis.js";
+import { ladePlzKreis } from "../../utils/plzKreis.js";
 import { fmt, fmtP } from "../../utils/helpers.js";
 import {
   berechneObjektKennzahlen,
@@ -50,12 +51,9 @@ import {
 // Ueberblick ("wie kommen die Zahlen zustande, was liegt vor") und stehen
 // jetzt als aufklappbare Sektionen direkt darunter - eine Seite statt vier
 // Reiter mit je einem Klick Umweg.
-// Hinweis 2026-09-08: ObjektAnlegenWizard.jsx (Schritt-fuer-Schritt-Anlage)
-// gruppiert dieselben Felder in eigene Schritte. Bewusst NICHT von hier
-// importiert - ObjektAnlegen.jsx wird auch von DIESER Datei importiert
-// (Bearbeiten-Sheet unten), ein Import in Gegenrichtung waere ein
-// Zirkelbezug. Dieses Raster hier zeigt nur an, was gespeichert IST; der
-// Wizard fragt ab, was gespeichert WERDEN soll. Beide duerfen deshalb
+// Hinweis 2026-09-11: ObjektAnlegen.jsx (Bearbeiten-Formular unten) fragt nur
+// die sechs Kernfelder ab. Dieses Raster hier zeigt zusaetzlich an, was der
+// Renditerechner an dem Objekt sonst noch gesetzt hat - beide duerfen
 // auseinanderlaufen, ohne dass etwas bricht.
 const FELD_GRUPPEN = [
   {
@@ -162,18 +160,20 @@ export function ObjektDetail({ objekt, onBack }) {
   // undefined = Regionaldaten laden noch, null = kein Wert fuer diesen Ort,
   // Zahl = EUR/m2.
   const regionalMieteQm = regGeladen
-    ? (regionalPreis(basis?.bundesland, basis?.ort)?.mieteWohnung ?? null)
+    ? (regionalPreis(basis?.bundesland, basis?.ort, basis?.plz)?.mieteWohnung ?? null)
     : undefined;
 
-  // Einmalig laden, sobald ein Bundesland vorliegt.
+  // Einmalig laden, sobald ein Bundesland vorliegt. plzKreis.js parallel
+  // dazu (Backlog Punkt 4, 2026-09-11) - beide muessen geladen sein, bevor
+  // regionalPreis() die PLZ-Kreis-Stufe nutzen kann.
   useEffect(() => {
     if (!basis?.bundesland) return;
     let lebt = true;
-    ladeRegionalpreise()
-      .catch(() => null)
-      .then(() => {
+    Promise.all([ladeRegionalpreise().catch(() => null), ladePlzKreis().catch(() => null)]).then(
+      () => {
         if (lebt) setRegGeladen(true);
-      });
+      },
+    );
     return () => {
       lebt = false;
     };
@@ -203,7 +203,9 @@ export function ObjektDetail({ objekt, onBack }) {
     // ueber oder unter dem regionalen Niveau liegt.
     const brauchtRegionalpreis =
       produktId === "preis" || produktId === "analyse" || produktId === "hebel";
-    const regRef = brauchtRegionalpreis ? regionalPreis(basis.bundesland, basis.ort) : null;
+    const regRef = brauchtRegionalpreis
+      ? regionalPreis(basis.bundesland, basis.ort, basis.plz)
+      : null;
     const brauchtOrtsmiete = produktId === "preis" || produktId === "analyse";
     const schaetzung = brauchtOrtsmiete
       ? berechnePreisSchaetzung(basis, t, regRef?.mieteWohnung)
@@ -417,7 +419,7 @@ export function ObjektDetail({ objekt, onBack }) {
         onRechnerLaden={() => inRechner("haupt")}
         onBearbeiten={() => setBearbeiten(true)}
         regionalRichtwert={
-          regGeladen ? regionalPreis(basis?.bundesland, basis?.ort)?.kaufWohnung : null
+          regGeladen ? regionalPreis(basis?.bundesland, basis?.ort, basis?.plz)?.kaufWohnung : null
         }
       />
 
@@ -498,7 +500,9 @@ function RegionalSnapshot({ objekt, basis, regGeladen }) {
   if (!snapshot) return null;
 
   const aktuellerStand = regGeladen ? regionalpreiseStand() : null;
-  const aktuellerRef = regGeladen ? regionalPreis(basis?.bundesland, basis?.ort) : null;
+  const aktuellerRef = regGeladen
+    ? regionalPreis(basis?.bundesland, basis?.ort, basis?.plz)
+    : null;
   const neuereDatenVorhanden =
     aktuellerStand && aktuellerStand !== snapshot.stand && aktuellerRef?.kaufWohnung > 0;
 

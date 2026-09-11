@@ -1,20 +1,26 @@
-// Einstieg fuer "Objekt anlegen" und "Objekt bearbeiten" - zwei Modi, eine
-// Komponente, damit die Aufrufer (Merkliste.jsx, ObjektDetail.jsx) nicht
-// zwischen zwei Importen unterscheiden muessen.
+// Einstieg fuer "Objekt anlegen" und "Objekt bearbeiten" - zwei Modi, EIN
+// Formular, damit dieselben sechs Felder nicht an zwei Stellen der App
+// unterschiedlich abgefragt werden.
 //
-//   bearbeiten=false → mehrstufiger Assistent (ObjektAnlegenWizard.jsx)
-//   bearbeiten=true  → einfaches Formular, genau wie bisher
+// Bis 2026-09-11 hatte die Anlage einen eigenen, achtstufigen Assistenten
+// (ObjektAnlegenWizard.jsx) mit sieben zusaetzlichen, optionalen Bildschirmen
+// fuer Finanzierung/Steuer/Sanierung. Nutzer-Befund: der Klick auf
+// "Anlegen & weiter" wirkte wie ein Fenster-Abbruch statt eines
+// Schrittwechsels - und die Zusatzbildschirme fragten fast ausschliesslich
+// Felder ab, die annahmenFuer() (utils/annahmen.js) ohnehin schon automatisch
+// aus Bundesland/Flaeche ableitet (Zinssatz, Grunderwerbsteuer, AfA-Satz,
+// nicht umlagefaehige Kosten, seit dieser Session zusaetzlich die regionale
+// Vergleichsmiete/Wertsteigerung). Der Assistent duplizierte damit genau die
+// Rechnerfelder, die der Renditerechner sowieso vorbelegt.
 //
-// Der Bearbeiten-Modus bleibt bewusst ein Formular: dort existiert das Objekt
-// laengst, der Nutzer kommt mit einem konkreten Aenderungswunsch und will
-// nicht durch acht Schritte laufen, um ein Feld zu korrigieren.
-//
-// Der Anlege-Weg ist seit 2026-09-07 der Wizard. Vorher fragte diese Datei
-// fuenf Felder ab und alles Weitere (Zins, Baujahr, Steuersatz, ...) war beim
-// Anlegen nicht erreichbar; ein Exposé-Scan mit vielen Treffern oeffnete
-// zusaetzlich einen eigenen Review-Stepper (ObjektAnlegenExposeReview.jsx).
-// Beide Wege sind in den Wizard aufgegangen - der Exposé-Scan fuellt jetzt
-// dieselben thematischen Schritte vor, statt einen zweiten Flow zu oeffnen.
+// Jetzt: EIN kurzes Formular (sechs Felder, wie vorher schon beim
+// Bearbeiten), danach fuehrt "Objekt anlegen" direkt in den Renditerechner
+// mit diesem Objekt geladen - der Nutzer ergaenzt dort, an derselben Stelle,
+// die er ohnehin kennt, statt in einem zweiten, parallelen Formular
+// (Merkliste.objektAnlegen erledigt das Laden+Umschalten, siehe dort).
+// "Objekt bearbeiten" bleibt beim selben Formular: dort existiert das Objekt
+// schon, "Änderungen speichern" fuehrt zurueck in die Detailansicht statt in
+// den Rechner.
 import { Fragment, useState } from "react";
 import { annahmenFuer, annahmenText } from "../../utils/annahmen.js";
 import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
@@ -27,7 +33,6 @@ import { baueZeilen, uebernehmeZeilen } from "../../utils/exposeMapping.js";
 import {
   AdressSuche,
   ExposePanel,
-  ObjektAnlegenWizard,
   PlzOrtFelder,
   beschriftungStil,
   eingabeStil,
@@ -35,9 +40,11 @@ import {
   knopfStil,
 } from "./ObjektAnlegenWizard.jsx";
 
-// Die Felder des Bearbeiten-Formulars. `maxBreite` deckelt die Feldbreite nach
-// dem erwarteten Inhalt - die Breite eines Eingabefelds ist eine Zusage
-// darueber, wie viel hineingehoert; ein 690 px breites Feld fuer "60"
+// Die sechs Kernfelder - decken genau ab, was istVollstaendig()/der
+// Renditerechner fuer eine erste vollstaendige Berechnung braucht. Alles
+// Weitere (Zins, Tilgung, AfA, ...) liefert annahmenFuer() als sinnvollen
+// Startwert, editierbar im Renditerechner. `maxBreite` deckelt die
+// Feldbreite nach dem erwarteten Inhalt - ein 690 px breites Feld fuer "60"
 // (Quadratmeter) verspricht etwas anderes, als es meint. Der Name bleibt
 // ungedeckelt, dort sind lange Adressen normal.
 const FELDER = [
@@ -59,27 +66,15 @@ export function ObjektAnlegen({
   onAnlegen,
   onExpose,
   onAbbrechen,
-  onFertig,
   t,
   startwerte = null,
   startName = "",
   bearbeiten = false,
 }) {
-  // Keine Hooks vor dieser Weiche - beide Zweige sind eigenstaendige
-  // Komponenten mit eigenem State.
-  if (!bearbeiten) {
-    return (
-      <ObjektAnlegenWizard
-        t={t}
-        onAnlegen={onAnlegen}
-        onFertig={onFertig}
-        onAbbrechen={onAbbrechen}
-      />
-    );
-  }
   return (
-    <BearbeitenFormular
+    <ObjektFormular
       t={t}
+      bearbeiten={bearbeiten}
       onAnlegen={onAnlegen}
       onExpose={onExpose}
       onAbbrechen={onAbbrechen}
@@ -89,7 +84,7 @@ export function ObjektAnlegen({
   );
 }
 
-function BearbeitenFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, startName }) {
+function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, startName, bearbeiten }) {
   const { lang } = useApp() || {};
   const [werte, setWerte] = useState(() => ({
     name: startName,
@@ -111,11 +106,15 @@ function BearbeitenFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, s
   // sichtbaren Felder zusammensetzt.
   const [exposeExtra, setExposeExtra] = useState({});
   const [exposeOffen, setExposeOffen] = useState(false);
+  // Verhindert ein doppelt angelegtes Objekt bei einem zweiten, schnellen
+  // Klick, waehrend onAnlegen (jetzt async: legt an UND laedt den
+  // Renditerechner) noch laeuft.
+  const [speichertLaeuft, setSpeichertLaeuft] = useState(false);
 
   const setzen = (k, v) => setWerte((p) => ({ ...p, [k]: v }));
 
-  // Direkte Uebernahme in die Felder - kein Stepper: wer ein bestehendes
-  // Objekt bearbeitet, will das Ergebnis sofort im Formular sehen.
+  // Direkte Uebernahme in die Felder - kein Stepper: der Nutzer will das
+  // Ergebnis sofort im Formular sehen.
   const exposeUebernehmen = (ergebnis) => {
     const xt = EXPOSE_T[lang] || EXPOSE_T.de;
     const zeilen = baueZeilen(ergebnis, {}, xt);
@@ -172,6 +171,16 @@ function BearbeitenFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, s
       }
     : null;
   const kz = entwurf ? berechneObjektKennzahlen(entwurf, t) : null;
+
+  const absenden = async () => {
+    if (!vollstaendig || speichertLaeuft) return;
+    setSpeichertLaeuft(true);
+    try {
+      await onAnlegen(werte.name?.trim() || "Neues Objekt", entwurf);
+    } finally {
+      setSpeichertLaeuft(false);
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -334,18 +343,22 @@ function BearbeitenFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, s
         </button>
         <button
           type="button"
-          disabled={!vollstaendig}
-          onClick={() => onAnlegen(werte.name?.trim() || "Neues Objekt", entwurf)}
+          disabled={!vollstaendig || speichertLaeuft}
+          onClick={absenden}
           style={{
             ...knopfStil,
             flex: 2,
-            background: vollstaendig ? "var(--ca)" : "var(--cb)",
-            color: vollstaendig ? "#fff" : "var(--ch)",
+            background: vollstaendig && !speichertLaeuft ? "var(--ca)" : "var(--cb)",
+            color: vollstaendig && !speichertLaeuft ? "#fff" : "var(--ch)",
             border: "none",
-            cursor: vollstaendig ? "pointer" : "not-allowed",
+            cursor: vollstaendig && !speichertLaeuft ? "pointer" : "not-allowed",
           }}
         >
-          Änderungen speichern
+          {speichertLaeuft
+            ? "Wird angelegt …"
+            : bearbeiten
+              ? "Änderungen speichern"
+              : "Objekt anlegen"}
         </button>
       </div>
       {!vollstaendig && (
@@ -353,6 +366,12 @@ function BearbeitenFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, s
           {fehlt.length > 0
             ? `Es fehlt noch: ${fehlt.join(", ")}.`
             : "Kaufpreis, Wohnfläche und Kaltmiete müssen größer als null sein."}
+        </div>
+      )}
+      {!bearbeiten && (
+        <div style={{ fontSize: 11.5, color: "var(--ch)", textAlign: "center", lineHeight: 1.5 }}>
+          Führt danach direkt in den Renditerechner - dort ergänzt du alles
+          Weitere.
         </div>
       )}
     </div>

@@ -1111,16 +1111,14 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           </div>
           <div className="how-steps-grid">
             {[
-              // Reihenfolge korrigiert (Nutzer-Feedback 2026-08-10): Anmelden
-              // & Abo waehlen ist chronologisch der ERSTE Schritt, nicht der
-              // letzte - Spec-v3.0 verlangt ein Konto vor jeder
-              // Rechner-Nutzung. Die i18n-Schluessel heissen weiterhin
-              // step1..4 in der urspruenglichen Reihenfolge, hier nur die
-              // Anzeigereihenfolge/-nummer (s.n) angepasst.
-              { n: "1", icon: "🦊", t: l.step4H, d: l.step4P },
-              { n: "2", icon: "📍", t: l.step1H, d: l.step1P },
-              { n: "3", icon: "📊", t: l.step2H, d: l.step2P },
-              { n: "4", icon: "💡", t: l.step3H, d: l.step3P },
+              // Ablauf neu gefasst (Nutzer-Vorgabe 2026-09-11): Anmelden,
+              // Objekt anlegen, Sofort-Ergebnis, KI-Beratung - die i18n-
+              // Schluessel step1..4 stehen jetzt selbst schon in dieser
+              // Reihenfolge, keine Anzeige-Umsortierung mehr noetig.
+              { n: "1", icon: "🦊", t: l.step1H, d: l.step1P },
+              { n: "2", icon: "🏠", t: l.step2H, d: l.step2P },
+              { n: "3", icon: "📊", t: l.step3H, d: l.step3P },
+              { n: "4", icon: "✦", t: l.step4H, d: l.step4P },
             ].map((s, i) => (
               <div
                 key={i}
@@ -1220,8 +1218,14 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           </div>
 
           {/* ── HERO: Renditerechner ── */}
+          {/* Fuehrt seit 2026-09-11 zum Objekt-Tab statt direkt in den
+              Rechner (Nutzer-Vorgabe): "Objekt anlegen" ist dort der
+              Einstieg, der Nutzer landet danach ohnehin im Renditerechner -
+              siehe Merkliste.objektAnlegen(). Der direkte Rechner-Link ohne
+              Objekt bleibt fuer die 5 Ergaenzungsrechner unten bestehen, die
+              erzeugen bewusst kein Objekt. */}
           <button
-            onClick={() => starteRechner("haupt")}
+            onClick={() => starteRechner("saved")}
             style={{
               display: "block",
               background: "transparent",

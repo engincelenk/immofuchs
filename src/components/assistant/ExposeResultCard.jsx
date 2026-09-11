@@ -22,6 +22,7 @@ import {
   regionalAmpelText,
   regionalPreis,
 } from "../../utils/regionalpreis.js";
+import { ladePlzKreis } from "../../utils/plzKreis.js";
 
 const GRUPPEN_LABEL = {
   objekt: "gruppeObjekt",
@@ -42,7 +43,7 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
   // wie in PLZSearch.jsx/uebernehmeZeilen), Ort direkt aus dem Expose.
   const [regGeladen, setRegGeladen] = useState(false);
   useEffect(() => {
-    ladeRegionalpreise()
+    Promise.all([ladeRegionalpreise(), ladePlzKreis()])
       .then(() => setRegGeladen(true))
       .catch(() => {});
   }, []);
@@ -56,7 +57,7 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
     if (!(kaufpreisQm > 0)) return null;
     const bl = ergebnis?.plz ? PLZ_DB.byPlz[String(ergebnis.plz)]?.bl : null;
     if (!bl) return null;
-    const ref = regionalPreis(bl, ergebnis?.ort);
+    const ref = regionalPreis(bl, ergebnis?.ort, ergebnis?.plz);
     if (!ref || !(ref.kaufWohnung > 0)) return null;
     return regionalAmpelText(kaufpreisQm, ref.kaufWohnung, t);
   }, [regGeladen, ergebnis, t]);
