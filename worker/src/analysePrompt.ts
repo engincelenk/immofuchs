@@ -233,47 +233,44 @@ ${FORM}`;
 // keine erfundene geografische Nachbarschaft, siehe Kommentar dort.
 const PREIS = `${HALTUNG}
 
-Deine Aufgabe: Beantworte "Welcher Kaufpreis passt zu meinen Annahmen?" - stelle den
-Angebotspreis dem berechneten Investment-Zielbereich gegenueber. Das ist AUSDRUECKLICH KEINE
-Verkehrswertermittlung, sondern eine Einordnung anhand mitgelieferter Vergleichs- und
-Zielzahlen. Gehe in genau dieser Reihenfolge vor:
-1. Schaetze den realistischen Marktwert AUSSCHLIESSLICH anhand der mitgelieferten Zahlen
-   (Regionaler Kaufpreis-Richtwert, Vergleichsort-Zeilen). Nenne dabei 2 bis 3 der
-   mitgelieferten Vergleichsorte beim Namen und ordne den aufgerufenen Kaufpreis gegen sie
-   ein - nicht als eigene Verkehrswert-Schaetzung, sondern als Einordnung anhand der
-   gegebenen Vergleichszahlen.
-2. Beurteile die Energieklasse/den Energiewert, WENN "energiewertKwhQm" oder
-   "heizungsart"/"heizungsalter" in den Kennzahlen stehen. Fehlen sie, lass diesen Punkt
-   ohne Kommentar weg - erfinde KEINE Energieeffizienzklasse.
+Deine Aufgabe: Objektbewertung anhand regionaler Vergleichsdaten - kurz, praegnant, faktenbasiert.
 
-Ist unter "Investment-Zielbereich" ein Block mitgeliefert (Angebotspreis, berechneter
-Ziel-Kaufpreisbereich, Zielkriterium), gehoert die Gegenueberstellung Angebotspreis vs.
-Investment-Zielbereich in summary/keyInsights. Trenne die Begriffe sprachlich sauber:
-"Angebotspreis" (was verlangt wird), "Investment-Zielbereich" (was die Berechnung fuer das
-angegebene Zielkriterium ergibt) - NIE "Verkehrswert" fuer diese berechnete Zahl, das ist
-etwas anderes und wuerde eine Ermittlung vortaeuschen, die hier nicht stattfindet.
+summary: Eine Aussage in hoechstens 200 Zeichen - ist der aufgerufene Kaufpreis fuer DIESES
+Objekt angemessen, gemessen an den mitgelieferten regionalen Vergleichszahlen.
 
-Ist unter "Kaufpreis-Simulation" ein Block mit mehreren Kaufpreispunkten mitgeliefert (je mit
-Cashflow, Rendite, DSCR, EK-Rendite, Kaufpreisfaktor), ERKLAERE in summary/keyInsights, WARUM
-der Kaufpreis das Investment so stark beeinflusst - z.B. wie DSCR oder EK-Rendite mit dem
-Kaufpreis kippen. Erzaehle NICHT nur die Tabelle nach; die einzelnen Kaufpreispunkte selbst
-gehoeren als Rohzahlen in calculations.
+keyInsights: Genau 2 bis 3 Erkenntnisse (NICHT mehr), jede maximal 300 Zeichen:
+1. Kaufpreis-Einordnung: Ordne den Angebotspreis gegen die mitgelieferten Vergleichsorte
+   ("Vergleichsort <Name>" unter "Gerechnete Werte") und den regionalen Kaufpreis-Richtwert ein.
+   Nenne 2 der Vergleichsorte namentlich. Keine eigene Verkehrswert-Schaetzung - nur Einordnung
+   anhand der gegebenen Zahlen.
+2. Investment-Zielbereich (falls mitgeliefert): Stelle Angebotspreis gegen den berechneten
+   Investment-Zielbereich - was bedeutet die Abweichung fuer Rendite/Cashflow? Trenne sprachlich:
+   "Angebotspreis" (was verlangt wird) vs. "Investment-Zielbereich" (was die Berechnung ergibt),
+   NIE "Verkehrswert".
+3. Energie/Zustand (nur falls "energiewertKwhQm" oder "heizungsart"/"heizungsalter" vorhanden):
+   Kurze Einordnung, was das fuer Sanierungsbedarf bedeutet. Fehlen die Daten, lass diesen Punkt
+   weg - erfinde KEINE Energieeffizienzklasse.
+
+calculations: Die Rohzahlen (Angebotspreis, Vergleichswerte, Investment-Zielbereich), auf denen
+summary und keyInsights beruhen - maximal 6 Eintraege.
+
+assumptions/scenarios: Nur befuellen, wenn wirklich relevant - sonst leer lassen.
+
+risks/opportunities: Nur befuellen, wenn klar aus den Zahlen ableitbar - sonst leer lassen.
 
 Nenne den Ort ("ort" in den Kennzahlen) mindestens einmal beim Namen.
 
-Die mitgelieferten Werte unter "Gerechnete Werte" sind fertig berechnet.
-Uebernimm sie woertlich. Nenne KEINE eigene Zahl, die dort nicht steht -
-insbesondere keinen geschaetzten Verkehrswert und keinen Quadratmeterpreis,
-den du selbst gebildet hast. Du bewertest die Immobilie NICHT.
+Die mitgelieferten Werte unter "Gerechnete Werte" sind fertig berechnet. Uebernimm sie
+woertlich. Nenne KEINE eigene Zahl, die dort nicht steht - insbesondere keinen geschaetzten
+Verkehrswert und keinen Quadratmeterpreis, den du selbst gebildet hast. Du bewertest die
+Immobilie NICHT.
 
-Die Ortsmiete ist eine BESTANDSMIETE ueber alle Vertragsalter, keine
-Neuvermietungsmiete. Neuvermietungen liegen darueber, in angespannten
-Maerkten deutlich. Sage das, wenn die Mietannahme darueber liegt: eine
-Abweichung nach oben ist nicht automatisch unrealistisch, sie ist
-begruendungsbeduerftig. Moegliche Gruende sind Sanierungsstand, Ausstattung,
-Lage im Ort oder eine moeblierte Vermietung. Nenne dabei NIE die Herkunft der
-Ortsmiete (siehe Regel oben) - "Bestandsmiete" ist eine fachliche
-Einordnung, keine Quellenangabe.
+Die Ortsmiete ist eine BESTANDSMIETE ueber alle Vertragsalter, keine Neuvermietungsmiete.
+Neuvermietungen liegen darueber, in angespannten Maerkten deutlich. Sage das, wenn die
+Mietannahme darueber liegt: eine Abweichung nach oben ist nicht automatisch unrealistisch,
+sie ist begruendungsbeduerftig. Moegliche Gruende sind Sanierungsstand, Ausstattung, Lage im
+Ort oder eine moeblierte Vermietung. Nenne dabei NIE die Herkunft der Ortsmiete (siehe Regel
+oben) - "Bestandsmiete" ist eine fachliche Einordnung, keine Quellenangabe.
 
 Ist unter "Vorherige Befunde" das Ergebnis einer bereits gelaufenen anderen Auswertung zu
 diesem Objekt mitgeliefert, darfst du kurz darauf aufbauen, aber NICHT den fremden Inhalt
@@ -511,20 +508,6 @@ export type GerechneteZahl = { label: string; wert: string };
 // zusaetzlich uebergebene Satz ist ein weiterer Injection-Traeger im Prompt.
 export type Befund = { produkt: string; kernaussage: string };
 
-// Ein einzelner Punkt der Kaufpreis-Simulation des Produkts "preis": bei
-// diesem Kaufpreis ergeben sich diese Kennzahlen. Stammt aus derselben
-// Rendite-Engine wie die uebrigen Kennzahlen, alle Werte bereits fertig
-// formatierte Strings - das Modell rechnet nichts nach (siehe HALTUNG).
-export type KaufpreisSimulationPunkt = {
-  kaufpreis: string;
-  cashflowMon: string;
-  nettoRendite: string;
-  bruttoRendite: string;
-  dscr: string;
-  ekRendite: string;
-  kaufpreisfaktor: string;
-};
-
 // Der berechnete Investment-Zielbereich des Produkts "preis": Angebotspreis
 // gegen einen aus dem Zielkriterium (z.B. "Nettorendite ≥ 4 %") berechneten
 // Kaufpreiskorridor. Bewusst NICHT "Verkehrswert" genannt (siehe PREIS-
@@ -543,7 +526,6 @@ export function nutzerPayload(
   zahlen?: GerechneteZahl[],
   befunde?: Befund[],
   standortFakten?: string[],
-  kaufpreisSimulation?: KaufpreisSimulationPunkt[],
   zielpreis?: Zielpreis,
   vorherigeBefunde?: Befund[],
 ): string {
@@ -567,21 +549,6 @@ export function nutzerPayload(
             if (v.dscr) zeile += `, DSCR ${v.dscr}`;
             return zeile;
           })
-          .join("\n")
-      : "";
-
-  // Kaufpreis-Simulation (Produkt "preis"): mehrere Kaufpreispunkte mit
-  // ihren jeweiligen Kennzahlen, bereits von derselben Engine berechnet wie
-  // die uebrigen Zahlen - das Modell soll erklaeren, nicht die Tabelle
-  // nacherzaehlen (siehe PREIS-Prompt).
-  const kaufpreisSimBlock =
-    kaufpreisSimulation && kaufpreisSimulation.length > 0
-      ? "\n\nKaufpreis-Simulation (bereits berechnet, NICHT neu rechnen):\n" +
-        kaufpreisSimulation
-          .map(
-            (k) =>
-              `- Kaufpreis ${k.kaufpreis}: Cashflow ${k.cashflowMon}/Monat, Nettorendite ${k.nettoRendite}, Bruttorendite ${k.bruttoRendite}, DSCR ${k.dscr}, EK-Rendite ${k.ekRendite}, Kaufpreisfaktor ${k.kaufpreisfaktor}`,
-          )
           .join("\n")
       : "";
 
@@ -624,5 +591,5 @@ export function nutzerPayload(
       : "";
 
   const extra = hinweis && hinweis.trim() ? `\n\nZusaetzliche Hinweise des Nutzers:\n${hinweis.trim()}` : "";
-  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${zahlenBlock}${variantenBlock}${kaufpreisSimBlock}${zielpreisBlock}${befundeBlock}${vorherigeBefundeBlock}${standortBlock}${extra}`;
+  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${zahlenBlock}${variantenBlock}${zielpreisBlock}${befundeBlock}${vorherigeBefundeBlock}${standortBlock}${extra}`;
 }

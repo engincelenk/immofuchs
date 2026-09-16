@@ -33,8 +33,6 @@ import {
   summaryVon,
   veraltetText,
 } from "../../utils/aiEngine.js";
-import { berechneKaufpreisSimulation } from "../../utils/kaufpreisSimulation.js";
-import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
 import { HandoutFragen } from "./HandoutFragen.jsx";
 
 // Marineblau ist in der App die "Denk-Farbe" fuer KI. Sie markiert hier
@@ -59,6 +57,13 @@ export function AiEngine({
   onExpose,
   referenzMiete,
   locale = "de-DE",
+  // `fehler` ist {produktId, text}, `consentFuer` eine produktId. Beide
+  // landen in der Karte, die den Klick ausgeloest hat - siehe Kommentar an
+  // der aiFehler-Deklaration in ObjektDetail.jsx.
+  fehler = null,
+  consentFuer = null,
+  onConsentJa,
+  onConsentAbbrechen,
 }) {
   const [bestaetigung, setBestaetigung] = useState(null);
 
@@ -126,6 +131,10 @@ export function AiEngine({
                     onStarten(id);
                   }}
                   onBestaetigenAbbrechen={() => setBestaetigung(null)}
+                  fehlerText={fehler?.produktId === id ? fehler.text : null}
+                  zeigtConsent={consentFuer === id}
+                  onConsentJa={onConsentJa}
+                  onConsentAbbrechen={onConsentAbbrechen}
                 />
               );
             })}
@@ -170,6 +179,10 @@ function ProduktZeile({
   bestaetigung,
   onBestaetigenJa,
   onBestaetigenAbbrechen,
+  fehlerText,
+  zeigtConsent,
+  onConsentJa,
+  onConsentAbbrechen,
 }) {
   const { t } = useApp();
   const gesperrt = zustand === "gesperrt";
@@ -206,6 +219,27 @@ function ProduktZeile({
           <span style={{ ...preisChip, opacity: gesperrt ? 0.5 : 1 }}>Pro</span>
         )}
       </div>
+
+      {/* Fehler und Einwilligung direkt unter der Kopfzeile DIESER Karte -
+          der Nutzer schaut nach einem Klick genau hierhin. */}
+      {fehlerText && <div style={fehlerBand}>{fehlerText}</div>}
+
+      {zeigtConsent && (
+        <div style={consentBand}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+            Für die Auswertung werden die Kennzahlen dieses Objekts an unseren KI-Dienstleister
+            übertragen — ohne Adresse und ohne Namen. Einverstanden?
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={onConsentJa} style={consentJa}>
+              Einverstanden, starten
+            </button>
+            <button type="button" onClick={onConsentAbbrechen} style={consentNein}>
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
 
       {zustand === "offen" && (
         <div style={aktionsZeile}>
@@ -337,7 +371,7 @@ function ProduktZeile({
 // Grundlage, auf der die Auswertung fusst - dieselbe Angabe, an der auch die
 // Veraltet-Erkennung haengt (istVeraltet()/veraltetText()). Nur der Rahmen
 // hat sich geaendert: Aufklapp-Sektion in der Karte statt eigenes Sheet.
-function GrundlageUndQuellen({ ergebnis, data, t, produkt }) {
+function GrundlageUndQuellen({ ergebnis, data: _data, t: _t, produkt: _produkt }) {
   const basis = ergebnis?.basis;
   const calculations = calculationsVon(ergebnis);
   const scenarios = scenariosVon(ergebnis);
@@ -398,8 +432,6 @@ function GrundlageUndQuellen({ ergebnis, data, t, produkt }) {
           ))}
         </div>
       )}
-
-      {produkt?.id === "preis" && <KaufpreisSimulationTabelle data={data} t={t} />}
 
       {(assumptions.length > 0 || recommendation) && (
         <div style={{ marginBottom: 16 }}>
@@ -534,70 +566,6 @@ function ErkenntnisseEbene2({ ergebnis }) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-// Ebene 3 (Sonderfall "preis"): deterministische Kaufpreis-Vergleichstabelle,
-// unabhaengig vom Modelltext direkt aus der Rendite-Engine gerechnet (wie
-// VariantenBlock/ZahlenBlock: der belastbare Teil braucht keine KI-
-// Bestaetigung). Aktueller Kaufpreis optisch hervorgehoben.
-function KaufpreisSimulationTabelle({ data, t }) {
-  if (!data || !t) return null;
-  const kaufpreisAktuell = Math.round(+data.kaufpreis || 0);
-  let punkte;
-  try {
-    punkte = berechneKaufpreisSimulation(data, t);
-  } catch {
-    return null;
-  }
-  if (!Array.isArray(punkte) || punkte.length === 0) return null;
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={gruppenTitel}>Kaufpreis-Simulation</div>
-      <div style={{ display: "flex", flexDirection: "column", fontSize: 11.5 }}>
-        <div style={{ display: "flex", gap: 8, padding: "4px 0", color: "var(--cl)", fontWeight: 600 }}>
-          <span style={{ flex: "1 1 70px" }}>Kaufpreis</span>
-          <span style={{ flex: "1 1 60px", textAlign: "right" }}>Cashflow</span>
-          <span style={{ flex: "1 1 50px", textAlign: "right" }}>Rendite</span>
-          <span style={{ flex: "1 1 40px", textAlign: "right" }}>DSCR</span>
-        </div>
-        {punkte.map((p) => {
-          const aktiv = Math.abs(p.kaufpreis - kaufpreisAktuell) < 1000;
-          return (
-            <div
-              key={p.kaufpreis}
-              style={{
-                display: "flex",
-                gap: 8,
-                padding: "5px 0",
-                borderTop: "1px solid var(--cb)",
-                fontVariantNumeric: "tabular-nums",
-                ...(aktiv
-                  ? { background: "var(--ca-bg)", borderRadius: 6, paddingLeft: 4, paddingRight: 4 }
-                  : {}),
-              }}
-            >
-              <span style={{ flex: "1 1 70px", fontWeight: aktiv ? 800 : 400, color: "var(--ct)" }}>
-                {fmtE(p.kaufpreis)}
-                {aktiv ? " ·" : ""}
-              </span>
-              <span style={{ flex: "1 1 60px", textAlign: "right", color: "var(--ct)" }}>
-                {fmtE(p.cashflowMon)}
-              </span>
-              <span style={{ flex: "1 1 50px", textAlign: "right", color: "var(--ct)" }}>
-                {fmtP(p.nettoRendite)}
-              </span>
-              <span style={{ flex: "1 1 40px", textAlign: "right", color: "var(--ct)" }}>
-                {p.dscr != null ? `${fmt(p.dscr, 2)}×` : "–"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 6, lineHeight: 1.45 }}>
-        Gerechnet, nicht geschätzt — aktueller Kaufpreis hervorgehoben.
-      </div>
     </div>
   );
 }
@@ -854,6 +822,53 @@ const preisChip = {
   borderRadius: 6,
   padding: "3px 7px",
   whiteSpace: "nowrap",
+};
+
+// Fehlerband und Einwilligung sind 2026-09-16 aus ObjektDetail.jsx hierher
+// gewandert, unveraendert - sie gehoeren jetzt in die Karte statt ueber die
+// gesamte Sektion.
+const fehlerBand = {
+  background: "var(--bad-bg)",
+  border: "1px solid var(--bad-bd)",
+  color: "var(--bad-tx)",
+  borderRadius: 10,
+  padding: "10px 12px",
+  fontSize: 13.5,
+  lineHeight: 1.5,
+  marginTop: 12,
+};
+
+// Die Einwilligung traegt bewusst NICHT die Fehlerfarbe: es ist kein Fehler,
+// sondern eine Frage, die der Nutzer im selben Zug beantworten kann.
+const consentBand = {
+  background: "var(--ci)",
+  border: "1px solid var(--cb)",
+  borderRadius: 12,
+  padding: "14px 16px",
+  marginTop: 12,
+};
+
+const consentJa = {
+  display: "inline-flex",
+  alignItems: "center",
+  height: 44,
+  padding: "0 16px",
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 13.5,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+const consentNein = {
+  ...consentJa,
+  background: "var(--cc)",
+  color: "var(--ct)",
+  border: "1.5px solid var(--cb)",
+  fontWeight: 600,
 };
 
 const veraltetBand = {

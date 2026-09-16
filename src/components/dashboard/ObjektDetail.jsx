@@ -18,7 +18,6 @@ import {
 } from "../../utils/aiEngine.js";
 import { apiFetch } from "../../utils/apiBase.js";
 import { hebelVarianten, loeseZielKaufpreis } from "../../utils/aiTools.js";
-import { berechneKaufpreisSimulation } from "../../utils/kaufpreisSimulation.js";
 import { computeRendite } from "../../utils/rendite.js";
 import { berechneKennzahlen } from "../../utils/kennzahlen.js";
 import { getSessionId } from "../../utils/assistantSession.js";
@@ -108,6 +107,15 @@ export function ObjektDetail({ objekt, onBack }) {
   // ist mit dem UX-Review 2026-09-09 entfallen - Grundlage & Quellen klappen
   // jetzt in der Karte selbst auf, siehe AiEngine.jsx/GrundlageUndQuellen.
   const [laufend, setLaufend] = useState(null);
+  // Fehler und Einwilligungs-Abfrage tragen seit 2026-09-16 die produktId
+  // ({produktId, text} bzw. produktId) und werden IN der ausloesenden Karte
+  // angezeigt, nicht mehr als gemeinsames Band ganz oben in der Sektion.
+  //
+  // Nutzer-Befund "Kaufpreis analysieren geht nicht" (dreimal gemeldet): der
+  // Aufruf scheiterte und die App meldete das auch - nur stand die Meldung
+  // ueber ALLEN Karten, auf dem Handy also ausserhalb des Bildes, waehrend
+  // der Nutzer auf die dritte Karte schaute. Ein Fehlschlag, den niemand
+  // sieht, ist von "es passiert nichts" nicht zu unterscheiden.
   const [aiFehler, setAiFehler] = useState(null);
   // Welches Produkt auf die KI-Einwilligung wartet (null = keines).
   const [aiConsent, setAiConsent] = useState(null);
@@ -262,13 +270,6 @@ export function ObjektDetail({ objekt, onBack }) {
             })
             .filter(Boolean)
         : [];
-    // Kaufpreis-Simulation (Backlog Investment-Briefing, 2026-09-16): eine
-    // kleine, durchgerechnete Preistabelle rund um den aktuellen Kaufpreis -
-    // nur fuer "Kaufpreis analysieren" (nicht auch fuer "analyse"), damit das
-    // Payload fuer die allgemeine Objekteinschaetzung schlank bleibt; dort
-    // liefert preisZeilen()/regionalpreisZeilen() bereits die Preiseinordnung.
-    const kaufpreisSimulation =
-      produktId === "preis" ? berechneKaufpreisSimulation(basis, t) : [];
     // Zielpreis-Spanne: unteres Ende ist der Preis, bei dem der Cashflow
     // gerade noch nicht negativ ist (loeseZielKaufpreis, cashflow-neutral),
     // oberes/alternatives Ende ist der Preis bei ortsueblicher Miete aus der
@@ -301,21 +302,6 @@ export function ObjektDetail({ objekt, onBack }) {
             zielKriterium: zielKandidaten.map((z) => z.kriterium).join(" & "),
           }
         : null;
-    // Payload fuer die KI verlangt fertig formatierte Strings (wie
-    // hebelVarianten() das fuer aenderung/neuerWert schon tut) - das Modell
-    // soll dieselben Zeichenfolgen sehen, die spaeter auch in der UI stehen,
-    // statt selbst zu runden/formatieren. berechneKaufpreisSimulation() liefert
-    // bewusst rohe Zahlen (fuer eine spaetere Tabellen-/Chart-Darstellung),
-    // die Formatierung passiert erst hier am Payload-Rand.
-    const kaufpreisSimulationFormatiert = kaufpreisSimulation.map((p) => ({
-      kaufpreis: fmtE(p.kaufpreis),
-      cashflowMon: `${fmtE(p.cashflowMon)}/Monat`,
-      nettoRendite: fmtP(p.nettoRendite),
-      bruttoRendite: fmtP(p.bruttoRendite),
-      dscr: p.dscr != null ? `${fmt(p.dscr, 2)}×` : "–",
-      ekRendite: fmtP(p.ekRendite),
-      kaufpreisfaktor: `${fmt(p.kaufpreisfaktor, 1)}×`,
-    }));
     try {
       // Vertiefende Kennzahlen aus berechneKennzahlen() (DSCR, Zinsdeckung,
       // Break-even-Leerstand, Anfangsrendite): berechneObjektKennzahlen() oben
@@ -370,7 +356,6 @@ export function ObjektDetail({ objekt, onBack }) {
         varianten,
         befunde,
         standortFakten,
-        kaufpreisSimulation: kaufpreisSimulationFormatiert,
         zielpreis,
         vorherigeBefunde,
       });
@@ -382,7 +367,7 @@ export function ObjektDetail({ objekt, onBack }) {
           setAiConsent(produktId);
           return;
         }
-        setAiFehler(analyseFehlertext(res.art));
+        setAiFehler({ produktId, text: analyseFehlertext(res.art) });
         return;
       }
       const neu = ergebnisAnlegen(produktId, res.ergebnis, basis, {
@@ -403,8 +388,12 @@ export function ObjektDetail({ objekt, onBack }) {
       // Kein Sheet mehr, das sich nach einem Lauf oeffnen muesste (UX-Review
       // 2026-09-09) - die Karte in AiEngine.jsx zeigt das frische Ergebnis
       // ueber lokaleAiErgebnisse sofort selbst an.
-    } catch {
-      setAiFehler("Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.");
+    } catch (err) {
+      console.error(`[AI-Produkt ${produktId}] Unerwarteter Fehler:`, err);
+      setAiFehler({
+        produktId,
+        text: "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.",
+      });
     } finally {
       setLaufend(null);
     }
@@ -422,7 +411,10 @@ export function ObjektDetail({ objekt, onBack }) {
         body: JSON.stringify({ sessionId: getSessionId() }),
       });
     } catch {
-      setAiFehler("Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.");
+      setAiFehler({
+        produktId,
+        text: "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.",
+      });
       return;
     }
     if (produktId) starteProdukt(produktId);
@@ -528,25 +520,9 @@ export function ObjektDetail({ objekt, onBack }) {
       />
 
       <AiSektion zusammenfassung={aiZusammenfassung(objektAnzeige, locale)}>
-        {/* Das Fehlerband gehoert IN die Sektion, direkt bei den Knoepfen,
-            auf die es sich bezieht. */}
-        {aiFehler && <div style={fehlerBand}>{aiFehler}</div>}
-        {aiConsent && (
-          <div style={consentBand}>
-            <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-              Für die Auswertung werden die Kennzahlen dieses Objekts an unseren
-              KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="button" onClick={einwilligenUndStarten} style={consentJa}>
-                Einverstanden, starten
-              </button>
-              <button type="button" onClick={() => setAiConsent(null)} style={consentNein}>
-                Abbrechen
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Fehler und Einwilligung standen bis 2026-09-16 HIER, ueber allen
+            Karten - siehe Kommentar an der aiFehler-Deklaration oben. Sie
+            werden jetzt an die ausloesende Karte durchgereicht. */}
         <AiEngine
           objekt={objektAnzeige}
           data={basis}
@@ -557,6 +533,10 @@ export function ObjektDetail({ objekt, onBack }) {
           onStarten={starteProdukt}
           onExpose={oeffneExpose}
           referenzMiete={regionalMieteQm}
+          fehler={aiFehler}
+          consentFuer={aiConsent}
+          onConsentJa={einwilligenUndStarten}
+          onConsentAbbrechen={() => setAiConsent(null)}
         />
       </AiSektion>
 
@@ -621,22 +601,21 @@ function RegionalSnapshot({ objekt, basis, regGeladen }) {
       <div style={{ fontWeight: 700, color: "var(--ct)", marginBottom: 4 }}>
         Regionaler Richtwert bei Aufnahme
       </div>
-      <div>
-        {fmt(snapshot.regionalerRichtwertQm)} €/m² ({snapshot.stand})
-      </div>
-      {neuereDatenVorhanden ? (
+      <div>{fmt(snapshot.regionalerRichtwertQm)} €/m²</div>
+      {/* Quartalskennung und der Wartehinweis "Vergleich folgt, sobald ein
+          neueres Quartal vorliegt" sind entfallen (Nutzerwunsch 2026-09-16):
+          ImmoFuchs arbeitet immer mit den aktuellen Daten - die interne
+          Datenstand-Buchhaltung gehoert nicht in die Objektansicht. Liegt kein
+          neuerer Wert vor, steht hier schlicht nichts weiter. */}
+      {neuereDatenVorhanden && (
         <div style={{ marginTop: 4 }}>
-          Aktuell: {fmt(aktuellerRef.kaufWohnung)} €/m² ({aktuellerStand}) —{" "}
+          Aktuell: {fmt(aktuellerRef.kaufWohnung)} €/m² —{" "}
           {fmtP(
             Math.abs((aktuellerRef.kaufWohnung / snapshot.regionalerRichtwertQm - 1) * 100),
             0,
           )}{" "}
           {aktuellerRef.kaufWohnung > snapshot.regionalerRichtwertQm ? "gestiegen" : "gesunken"}{" "}
           seit Aufnahme
-        </div>
-      ) : (
-        <div style={{ marginTop: 4, fontStyle: "italic" }}>
-          Vergleich folgt, sobald ein neueres Quartal vorliegt.
         </div>
       )}
     </div>
@@ -927,49 +906,8 @@ const feldWert = {
   marginTop: 2,
 };
 
-// Die Einwilligung traegt bewusst NICHT die Fehlerfarbe: es ist kein Fehler,
-// sondern eine Frage, die der Nutzer im selben Zug beantworten kann.
-const consentBand = {
-  background: "var(--ci)",
-  border: "1px solid var(--cb)",
-  borderRadius: 12,
-  padding: "14px 16px",
-  marginBottom: 12,
-};
-
-const consentJa = {
-  display: "inline-flex",
-  alignItems: "center",
-  height: 44,
-  padding: "0 16px",
-  borderRadius: 10,
-  border: "none",
-  background: "var(--ca)",
-  color: "#fff",
-  fontSize: 13.5,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "inherit",
-};
-
-const consentNein = {
-  ...consentJa,
-  background: "var(--cc)",
-  color: "var(--ct)",
-  border: "1.5px solid var(--cb)",
-  fontWeight: 600,
-};
-
-const fehlerBand = {
-  background: "var(--bad-bg)",
-  border: "1px solid var(--bad-bd)",
-  color: "var(--bad-tx)",
-  borderRadius: 10,
-  padding: "10px 12px",
-  fontSize: 13.5,
-  lineHeight: 1.5,
-  marginBottom: 12,
-};
+// Fehlerband, Einwilligungs-Band und dessen Knoepfe sind 2026-09-16 nach
+// AiEngine.jsx gewandert - sie gehoeren in die ausloesende Produktkarte.
 
 const backBtnStyle = {
   background: "none",

@@ -20,7 +20,6 @@ import {
   type Befund,
   type GerechneteZahl,
   type HebelVariante,
-  type KaufpreisSimulationPunkt,
   type Zielpreis,
 } from "../analysePrompt";
 import {
@@ -438,42 +437,9 @@ export function leseVarianten(roh: unknown): HebelVariante[] | undefined {
   return sauber.length > 0 ? sauber : undefined;
 }
 
-// Kaufpreis-Simulation und Investment-Zielbereich (Produkt "preis",
-// Investment-Briefing-Schema 2026-09): derselbe Injection-Kanal wie die
-// uebrigen Zahlenbloecke, deshalb dieselbe Disziplin - alle Felder ueber
-// promptText gekuerzt/getrimmt, unvollstaendige Eintraege verworfen statt
-// halb durchgereicht.
-const KAUFPREIS_SIM_MAX = 10;
-
-export function leseKaufpreisSimulation(roh: unknown): KaufpreisSimulationPunkt[] | undefined {
-  if (!Array.isArray(roh)) return undefined;
-  const sauber: KaufpreisSimulationPunkt[] = [];
-  for (const eintrag of roh.slice(0, KAUFPREIS_SIM_MAX)) {
-    if (typeof eintrag !== "object" || eintrag === null || Array.isArray(eintrag)) continue;
-    const e = eintrag as Record<string, unknown>;
-    const kaufpreis = promptText(e.kaufpreis);
-    const cashflowMon = promptText(e.cashflowMon);
-    const nettoRendite = promptText(e.nettoRendite);
-    const bruttoRendite = promptText(e.bruttoRendite);
-    const dscr = promptText(e.dscr);
-    const ekRendite = promptText(e.ekRendite);
-    const kaufpreisfaktor = promptText(e.kaufpreisfaktor);
-    if (
-      kaufpreis === null ||
-      cashflowMon === null ||
-      nettoRendite === null ||
-      bruttoRendite === null ||
-      dscr === null ||
-      ekRendite === null ||
-      kaufpreisfaktor === null
-    ) {
-      continue;
-    }
-    sauber.push({ kaufpreis, cashflowMon, nettoRendite, bruttoRendite, dscr, ekRendite, kaufpreisfaktor });
-  }
-  return sauber.length > 0 ? sauber : undefined;
-}
-
+// Investment-Zielbereich (Produkt "preis", Investment-Briefing-Schema 2026-09):
+// derselbe Injection-Kanal wie die uebrigen Zahlenbloecke, deshalb dieselbe
+// Disziplin - alle Felder ueber promptText gekuerzt/getrimmt.
 export function leseZielpreis(roh: unknown): Zielpreis | undefined {
   if (typeof roh !== "object" || roh === null || Array.isArray(roh)) return undefined;
   const e = roh as Record<string, unknown>;
@@ -537,10 +503,9 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   const standortRelevant =
     produkt === "analyse" || produkt === "hebel" || produkt === "preis" || produkt === "sanier";
   const standortFakten = standortRelevant ? leseStandortFakten(b.standortFakten) : undefined;
-  // Kaufpreis-Simulation und Investment-Zielbereich (Investment-Briefing-
-  // Schema 2026-09) sind nur fuer "preis" relevant - der Prompt nutzt sie
-  // nur dort (siehe PREIS-Prompt in analysePrompt.ts).
-  const kaufpreisSimulation = produkt === "preis" ? leseKaufpreisSimulation(b.kaufpreisSimulation) : undefined;
+  // Investment-Zielbereich (Investment-Briefing-Schema 2026-09) ist nur fuer
+  // "preis" relevant - der Prompt nutzt ihn nur dort (siehe PREIS-Prompt in
+  // analysePrompt.ts).
   const zielpreis = produkt === "preis" ? leseZielpreis(b.zielpreis) : undefined;
   // Vorherige Befunde (Investment-Briefing-Schema 2026-09): eigener Kanal
   // neben "befunde" (Handout), nur fuer hebel/preis - die dort auf einer
@@ -578,7 +543,6 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
         zahlen,
         befunde,
         standortFakten,
-        kaufpreisSimulation,
         zielpreis,
         vorherigeBefunde,
       ),

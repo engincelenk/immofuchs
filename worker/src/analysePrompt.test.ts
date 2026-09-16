@@ -119,46 +119,6 @@ describe("nutzerPayload - gerechnete Werte (Produkt preis)", () => {
   });
 });
 
-describe("nutzerPayload - Kaufpreis-Simulation (Produkt preis)", () => {
-  const SIM = [
-    {
-      kaufpreis: "270.000 €",
-      cashflowMon: "+45 €",
-      nettoRendite: "3,8 %",
-      bruttoRendite: "4,4 %",
-      dscr: "1,3",
-      ekRendite: "5,1 %",
-      kaufpreisfaktor: "22,5",
-    },
-    {
-      kaufpreis: "300.000 €",
-      cashflowMon: "−85 €",
-      nettoRendite: "3,1 %",
-      bruttoRendite: "3,7 %",
-      dscr: "1,0",
-      ekRendite: "3,9 %",
-      kaufpreisfaktor: "25,0",
-    },
-  ];
-
-  it("rendert die Kaufpreis-Simulation als Zeilen mit allen Kennzahlen", () => {
-    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, SIM);
-    expect(p).toContain("Kaufpreis-Simulation");
-    expect(p).toContain("Kaufpreis 270.000 €");
-    expect(p).toContain("Cashflow +45 €/Monat");
-    expect(p).toContain("DSCR 1,3");
-    expect(p).toContain("EK-Rendite 5,1 %");
-    expect(p).toContain("Kaufpreisfaktor 22,5");
-  });
-
-  it("nennt ohne Kaufpreis-Simulation keinen entsprechenden Block", () => {
-    expect(nutzerPayload(KENNZAHLEN)).not.toContain("Kaufpreis-Simulation");
-    expect(nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, [])).not.toContain(
-      "Kaufpreis-Simulation",
-    );
-  });
-});
-
 describe("nutzerPayload - Investment-Zielbereich (Produkt preis)", () => {
   const ZIELPREIS = {
     kaufpreisAktuell: "300.000 €",
@@ -168,7 +128,7 @@ describe("nutzerPayload - Investment-Zielbereich (Produkt preis)", () => {
   };
 
   it("rendert den Investment-Zielbereich, klar getrennt vom Angebotspreis", () => {
-    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, undefined, ZIELPREIS);
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, ZIELPREIS);
     expect(p).toContain("Investment-Zielbereich");
     expect(p).toContain("Angebotspreis: 300.000 €");
     expect(p).toContain("255.000 € bis 275.000 €");
@@ -176,7 +136,7 @@ describe("nutzerPayload - Investment-Zielbereich (Produkt preis)", () => {
   });
 
   it("markiert den Block ausdruecklich als keinen Verkehrswert", () => {
-    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, undefined, ZIELPREIS);
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, ZIELPREIS);
     expect(p).toContain("KEIN Verkehrswert");
   });
 
@@ -197,7 +157,6 @@ describe("nutzerPayload - Vorherige Befunde (Produkte hebel/preis)", () => {
       undefined,
       undefined,
       undefined,
-      undefined,
       VORHERIGE,
     );
     expect(p).toContain("Vorherige Befunde");
@@ -212,7 +171,6 @@ describe("nutzerPayload - Vorherige Befunde (Produkte hebel/preis)", () => {
       undefined,
       undefined,
       befunde,
-      undefined,
       undefined,
       undefined,
       VORHERIGE,
@@ -325,7 +283,7 @@ describe("systemPromptFuer - preis", () => {
   it("verbietet einen geschaetzten Verkehrswert", () => {
     const p = systemPromptFuer("preis");
     expect(p).toContain("KEINE eigene Zahl");
-    expect(p).toContain("bewertest die Immobilie NICHT");
+    expect(p).toContain("Immobilie NICHT");
   });
 
   it("benennt die Zensus-Zahl als Bestandsmiete", () => {
@@ -353,13 +311,6 @@ describe("systemPromptFuer - preis", () => {
     expect(p).toContain("Angebotspreis");
     expect(p).toContain("Investment-Zielbereich");
     expect(p).toContain('NIE "Verkehrswert"');
-  });
-
-  it("weist an, eine mitgelieferte Kaufpreis-Simulation zu erklaeren statt nur nachzuerzaehlen", () => {
-    const p = systemPromptFuer("preis");
-    expect(p).toContain("Kaufpreis-Simulation");
-    expect(p).toContain("ERKLAERE");
-    expect(p).toContain("Erzaehle NICHT nur die Tabelle nach");
   });
 });
 

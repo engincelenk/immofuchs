@@ -76,6 +76,12 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
   const [auswahl, setAuswahl] = useAuswahl(alleFragen, schluessel);
   const [zeigeUpgrade, setZeigeUpgrade] = useState(false);
   const [fehler, setFehler] = useState(null);
+  // Zuklappbar (Nutzerwunsch 2026-09-16): der volle Fragenkatalog sind
+  // schnell 30+ Zeilen und schiebt alles darunter aus dem Bild. Startet
+  // trotzdem OFFEN - die Fragen sind das bezahlte Produkt dieser Karte und
+  // sollen nicht hinter einem Klick liegen (siehe Kopfkommentar); wer sie
+  // weghaben will, klappt sie selbst zu.
+  const [offen, setOffen] = useState(true);
 
   // Vor-Ort-Fragen stehen unten als eigener Block: sie sind beim Termin selbst
   // anzuschauen, nicht dem Makler zu stellen. Dieselbe Trennung wie im
@@ -157,22 +163,44 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
   return (
     <div style={{ marginTop: 12 }}>
       <div style={kopfZeile}>
-        <span style={gruppenTitel}>
+        <button
+          type="button"
+          onClick={() => setOffen((o) => !o)}
+          aria-expanded={offen}
+          style={{
+            ...textLink,
+            ...gruppenTitel,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            marginBottom: 0,
+            color: "var(--cl)",
+          }}
+        >
+          <span aria-hidden="true">{offen ? "▴" : "▾"}</span>
           Fragen für den Termin · {auswahl.size} von {alleIds.length} gewählt
-        </span>
-        {alleIds.length > 0 && (
+        </button>
+        {offen && alleIds.length > 0 && (
           <button type="button" onClick={toggleAlle} style={textLink}>
             {alleGewaehlt ? "Auswahl aufheben" : "Alle wählen"}
           </button>
         )}
       </div>
 
-      <Block titel="An den Makler" fragen={anMakler} auswahl={auswahl} onToggle={toggle} />
-      <Block titel="Vor Ort prüfen" fragen={vorOrt} auswahl={auswahl} onToggle={toggle} />
+      {offen && (
+        <>
+          <Block titel="An den Makler" fragen={anMakler} auswahl={auswahl} onToggle={toggle} />
+          <Block titel="Vor Ort prüfen" fragen={vorOrt} auswahl={auswahl} onToggle={toggle} />
+        </>
+      )}
 
       {/* Kein gefuellter Knopf: in der Engine gibt es keinen (siehe AiEngine.jsx).
           Ein oranger Vollflaechen-Knopf mitten in fuenf gleichrangigen Produkten
-          lenkt nicht, er verwirrt. */}
+          lenkt nicht, er verwirrt.
+
+          Der PDF-Knopf bleibt AUCH im zugeklappten Zustand sichtbar: das
+          Handout zuzuklappen heisst "Liste wegraeumen", nicht "Produkt
+          wegraeumen" - der Weg zum Dokument darf dadurch nicht verschwinden. */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
         <button
           type="button"
