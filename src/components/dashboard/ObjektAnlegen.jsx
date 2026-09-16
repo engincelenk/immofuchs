@@ -48,7 +48,7 @@ import {
 // (Quadratmeter) verspricht etwas anderes, als es meint. Der Name bleibt
 // ungedeckelt, dort sind lange Adressen normal.
 const FELDER = [
-  { key: "name", label: "Name oder Adresse", typ: "text", pflicht: true },
+  { key: "name", label: "Name des Objekts", typ: "text", pflicht: true },
   { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", pflicht: true, maxBreite: 220 },
   { key: "flaeche", label: "Wohnfläche", typ: "zahl", einheit: "m²", pflicht: true, maxBreite: 160 },
   {
@@ -121,16 +121,27 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
     const auswahl = new Set(zeilen.filter((z) => z.uebernehmbar).map((z) => z.key));
     const sichtbar = new Set([...FELDER.map((f) => f.key), "plz", "ort", "strasse", "hausnummer"]);
     const extra = {};
+    let nameGesetzt = false;
+    let ortWert = "";
     uebernehmeZeilen(
       zeilen,
       auswahl,
       (k, v) => {
         if (k === "bundesland") setBundesland(v);
-        else if (sichtbar.has(k)) setzen(k, v);
-        else extra[k] = v;
+        else if (sichtbar.has(k)) {
+          setzen(k, v);
+          if (k === "name") nameGesetzt = true;
+          if (k === "ort") ortWert = v;
+        } else extra[k] = v;
       },
       ergebnis,
     );
+    // Fallback-Name, wenn das Exposé keinen Objektnamen liefert, aber einen
+    // Ort - sonst bleibt das Pflichtfeld leer, obwohl der Ort schon bekannt
+    // ist. Ueberschreibt nie einen bereits vorhandenen Namen.
+    if (!nameGesetzt && ortWert) {
+      setWerte((p) => (p.name?.trim() ? p : { ...p, name: `Objekt in ${ortWert}` }));
+    }
     setExposeExtra((p) => ({ ...p, ...extra }));
     setExposeOffen(false);
   };
@@ -199,7 +210,7 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
               Exposé hochladen
             </span>
             <span style={{ display: "block", fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>
-              PDF hinein, Felder automatisch gefüllt
+              PDF, Foto oder Screenshot hinein, Felder automatisch gefüllt
             </span>
           </span>
         </button>
@@ -222,6 +233,7 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
           onTreffer={(tr) => {
             const strasse = [tr.strasse, tr.hausnummer].filter(Boolean).join(" ");
             if (strasse) setzen("name", strasse);
+            else if (tr.ort) setzen("name", `Objekt in ${tr.ort}`);
             setzen("strasse", tr.strasse);
             setzen("hausnummer", tr.hausnummer);
             if (tr.plz) setzen("plz", tr.plz);

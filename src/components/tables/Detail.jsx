@@ -6,11 +6,16 @@ export function Detail({ R, d }) {
   const ek = +d.eigenkapital || 0,
     sonder = +d.sonder || 0,
     ren = +d.renovierung || 0,
-    nbk = R.nbk || 0;
+    nbk = R.nbk || 0,
+    // Nebenkosten nur als Barauslage abziehen, wenn sie nicht mitfinanziert
+    // wurden - sonst stecken sie schon in der (höheren) Restschuld und
+    // würden hier ein zweites Mal abgezogen. Gleiche Logik wie nkCash in
+    // rendite.js, damit diese Aufschlüsselung zu R.gOhne/R.g passt.
+    nkCash = d.nkFinanzieren ? 0 : nbk;
   const vw = R.vw;
   const rsEnd = R.rsEnd || 0;
   const nettoerloes = vw - rsEnd; // Verkaufserlös nach Tilgung der Restschuld
-  const sumInvestition = ek + nbk + sonder + ren; // reine Investition (ohne Restschuld)
+  const sumInvestition = ek + nkCash + sonder + ren; // reine Investition (ohne Restschuld)
   const zwischensumme = nettoerloes - sumInvestition; // Nettoerlös nach Investition
   const totalOhne = zwischensumme + (R.sCFOhne || 0); // = R.gOhne
   const totalMit = R.g; // zwischensumme + sCF (sCF=sCFOhne+sSt)
@@ -69,10 +74,12 @@ export function Detail({ R, d }) {
           <span style={{ color: "#ef4444" }}>− {t.eigenkapital}</span>
           <span style={{ fontWeight: 600, color: "#ef4444" }}>−{fmtE(ek)}</span>
         </div>
-        <div style={row}>
-          <span style={{ color: "#ef4444" }}>− {t.nbk}</span>
-          <span style={{ fontWeight: 600, color: "#ef4444" }}>−{fmtE(nbk)}</span>
-        </div>
+        {nkCash > 0 && (
+          <div style={row}>
+            <span style={{ color: "#ef4444" }}>− {t.nbk}</span>
+            <span style={{ fontWeight: 600, color: "#ef4444" }}>−{fmtE(nkCash)}</span>
+          </div>
+        )}
         <div style={row}>
           <span style={{ color: "#ef4444" }}>− {t.sonderUml}</span>
           <span style={{ fontWeight: 600, color: "#ef4444" }}>−{fmtE(sonder)}</span>

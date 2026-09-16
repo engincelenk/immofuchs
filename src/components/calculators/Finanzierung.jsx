@@ -200,7 +200,7 @@ export default function Kredit() {
             value={d.kaufpreis}
             onChange={(v) => set("kaufpreis", v)}
             tip={tip("kaufpreis")}
-            slider={{ min: 0, max: 10000000, step: 10000 }}
+            slider={{ min: 0, max: 3000000, step: 10000 }}
           />
           <Row>
             <F
@@ -209,7 +209,7 @@ export default function Kredit() {
               value={d.eigenkapital}
               onChange={(v) => set("eigenkapital", v)}
               tip={tip("eigenkapital")}
-              slider={{ min: 0, max: 10000000, step: 10000 }}
+              slider={{ min: 0, max: 3000000, step: 10000 }}
             />
             <F
               label={t.darlehen}

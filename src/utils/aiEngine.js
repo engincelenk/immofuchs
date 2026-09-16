@@ -195,6 +195,69 @@ export function mitErgebnis(bisherigeResultData, ergebnis) {
   };
 }
 
+// ── Investment-Briefing-Schema (2026-09-16) ─────────────────────────────────
+// Der Worker liefert seit dem Umbau {summary, keyInsights, risks,
+// opportunities, calculations, scenarios, assumptions, recommendation} statt
+// {kernaussage, kpis, abschnitte}. Diese Zugriffsfunktionen sind die EINE
+// Stelle, die dieses Schema kennt - AiEngine.jsx UND RechnerAiKarte.jsx lesen
+// darueber, damit es nicht zwei Kopien derselben Feldnamen gibt.
+//
+// altesSchema(): erkennt Ergebnisse, die VOR dem Umbau gespeichert wurden
+// (kein keyInsights-Array). Die Karte zeigt dafuer einen Hinweis statt eines
+// stillen Blanks - eine bezahlte Auswertung darf nach einem Schema-Wechsel
+// nicht kommentarlos leer wirken.
+export function altesSchema(ergebnis) {
+  const i = ergebnis?.inhalt;
+  if (!i || typeof i === "string") return false;
+  return !Array.isArray(i.keyInsights) && (i.kernaussage != null || Array.isArray(i.abschnitte));
+}
+
+export function summaryVon(ergebnis) {
+  const i = ergebnis?.inhalt;
+  if (!i) return "";
+  if (typeof i === "string") return i;
+  return i.summary || i.kernaussage || i.zusammenfassung || "";
+}
+
+function listeVon(ergebnis, feld) {
+  const arr = ergebnis?.inhalt?.[feld];
+  return Array.isArray(arr) ? arr.filter((x) => x?.title && x?.text) : [];
+}
+
+export const keyInsightsVon = (ergebnis) => listeVon(ergebnis, "keyInsights");
+export const risksVon = (ergebnis) => listeVon(ergebnis, "risks");
+export const opportunitiesVon = (ergebnis) => listeVon(ergebnis, "opportunities");
+
+export function calculationsVon(ergebnis) {
+  const arr = ergebnis?.inhalt?.calculations;
+  return Array.isArray(arr) ? arr.filter((x) => x?.label && x?.wert) : [];
+}
+
+export function scenariosVon(ergebnis) {
+  const arr = ergebnis?.inhalt?.scenarios;
+  return Array.isArray(arr) ? arr.filter((x) => x?.label && x?.vorher && x?.nachher) : [];
+}
+
+export function assumptionsVon(ergebnis) {
+  const arr = ergebnis?.inhalt?.assumptions;
+  return Array.isArray(arr) ? arr.filter((x) => typeof x === "string" && x.trim() !== "") : [];
+}
+
+export function recommendationVon(ergebnis) {
+  const r = ergebnis?.inhalt?.recommendation;
+  return typeof r === "string" && r.trim() !== "" ? r : "";
+}
+
+// Herkunfts-Kennzeichnung je Insight/Risk/Opportunity (Produktvision Punkt
+// 11: der Nutzer muss unterscheiden koennen, ob eine Aussage aus dem Exposé,
+// einer Berechnung, einer Annahme oder einer Einordnung der KI stammt).
+export const BASIS_LABEL = {
+  expose: "Aus dem Exposé",
+  berechnet: "Berechnet",
+  annahme: "Annahme",
+  ki: "KI-Einordnung",
+};
+
 export function alter(ergebnis, locale = "de-DE") {
   if (!ergebnis?.erstellt) return "";
   const d = new Date(ergebnis.erstellt);

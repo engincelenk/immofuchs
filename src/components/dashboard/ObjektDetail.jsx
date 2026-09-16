@@ -7,6 +7,7 @@ import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
 import { AiEngine } from "./AiEngine.jsx";
+import { InvestmentBriefing } from "./InvestmentBriefing.jsx";
 import {
   AI_PRODUKTE,
   ergebnisAnlegen,
@@ -16,7 +17,10 @@ import {
   produktFuer,
 } from "../../utils/aiEngine.js";
 import { apiFetch } from "../../utils/apiBase.js";
-import { hebelVarianten } from "../../utils/aiTools.js";
+import { hebelVarianten, loeseZielKaufpreis } from "../../utils/aiTools.js";
+import { berechneKaufpreisSimulation } from "../../utils/kaufpreisSimulation.js";
+import { computeRendite } from "../../utils/rendite.js";
+import { berechneKennzahlen } from "../../utils/kennzahlen.js";
 import { getSessionId } from "../../utils/assistantSession.js";
 import { rufeAnalyseAuf, analyseFehlertext } from "../../utils/aiAnalyse.js";
 import { berechnePreisSchaetzung, preisZeilen } from "../../utils/preisSchaetzung.js";
@@ -30,7 +34,7 @@ import {
   vergleichsortZeilen,
 } from "../../utils/regionalpreis.js";
 import { ladePlzKreis } from "../../utils/plzKreis.js";
-import { fmt, fmtP } from "../../utils/helpers.js";
+import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
 import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
@@ -241,7 +245,85 @@ export function ObjektDetail({ objekt, onBack }) {
             })
             .filter(Boolean)
         : [];
+    // Investment-Briefing-Umbau (2026-09-16): "Hebel" und "Preis" bekommen
+    // zusaetzlich die Kernaussagen der ANDEREN bereits gelaufenen Analysen
+    // desselben Objekts mit - gleiches Muster wie oben bei "befunde" fuers
+    // Handout, nur produktbezogen statt fix auf drei IDs. Feldname im neuen
+    // Antwortschema evtl. "summary" statt "kernaussage" - der Worker-Umbau
+    // laeuft parallel, deshalb hier defensiv beides lesen.
+    const vorherigeBefunde =
+      produktId === "hebel" || produktId === "preis"
+        ? ["analyse", "hebel", "preis"]
+            .filter((id) => id !== produktId)
+            .map((id) => {
+              const e = ergebnisFuer(objektAnzeige, id);
+              const kern = e?.inhalt?.summary || e?.inhalt?.kernaussage;
+              return kern ? { produkt: produktFuer(id)?.titel || id, kernaussage: kern } : null;
+            })
+            .filter(Boolean)
+        : [];
+    // Kaufpreis-Simulation (Backlog Investment-Briefing, 2026-09-16): eine
+    // kleine, durchgerechnete Preistabelle rund um den aktuellen Kaufpreis -
+    // nur fuer "Kaufpreis analysieren" (nicht auch fuer "analyse"), damit das
+    // Payload fuer die allgemeine Objekteinschaetzung schlank bleibt; dort
+    // liefert preisZeilen()/regionalpreisZeilen() bereits die Preiseinordnung.
+    const kaufpreisSimulation =
+      produktId === "preis" ? berechneKaufpreisSimulation(basis, t) : [];
+    // Zielpreis-Spanne: unteres Ende ist der Preis, bei dem der Cashflow
+    // gerade noch nicht negativ ist (loeseZielKaufpreis, cashflow-neutral),
+    // oberes/alternatives Ende ist der Preis bei ortsueblicher Miete aus der
+    // bereits berechneten Preiseinordnung (schaetzung.preisBeiReferenz, siehe
+    // oben). Beide sind Rechenergebnisse auf derselben Engine wie der Rest
+    // des Zahlenblocks - keine dritte, neu erfundene Formel. zielKriterium
+    // benennt, welche(s) der beiden Kriterien tatsaechlich in die Spanne
+    // eingegangen ist (eines der beiden kann fehlen, z.B. ohne Bankdarlehen).
+    const zielKaufpreisCashflowNull =
+      produktId === "preis" ? loeseZielKaufpreis(basis, t, { typ: "cashflowNull" }) : null;
+    const zielKandidaten =
+      produktId === "preis"
+        ? [
+            Number.isFinite(zielKaufpreisCashflowNull) && zielKaufpreisCashflowNull > 0
+              ? { wert: zielKaufpreisCashflowNull, kriterium: "cashflow-neutral" }
+              : null,
+            schaetzung?.verfuegbar &&
+            Number.isFinite(schaetzung.preisBeiReferenz) &&
+            schaetzung.preisBeiReferenz > 0
+              ? { wert: schaetzung.preisBeiReferenz, kriterium: "ortsübliche Miete" }
+              : null,
+          ].filter(Boolean)
+        : [];
+    const zielpreis =
+      zielKandidaten.length > 0
+        ? {
+            kaufpreisAktuell: fmtE(+basis.kaufpreis || 0),
+            zielKaufpreisMin: fmtE(Math.min(...zielKandidaten.map((z) => z.wert))),
+            zielKaufpreisMax: fmtE(Math.max(...zielKandidaten.map((z) => z.wert))),
+            zielKriterium: zielKandidaten.map((z) => z.kriterium).join(" & "),
+          }
+        : null;
+    // Payload fuer die KI verlangt fertig formatierte Strings (wie
+    // hebelVarianten() das fuer aenderung/neuerWert schon tut) - das Modell
+    // soll dieselben Zeichenfolgen sehen, die spaeter auch in der UI stehen,
+    // statt selbst zu runden/formatieren. berechneKaufpreisSimulation() liefert
+    // bewusst rohe Zahlen (fuer eine spaetere Tabellen-/Chart-Darstellung),
+    // die Formatierung passiert erst hier am Payload-Rand.
+    const kaufpreisSimulationFormatiert = kaufpreisSimulation.map((p) => ({
+      kaufpreis: fmtE(p.kaufpreis),
+      cashflowMon: `${fmtE(p.cashflowMon)}/Monat`,
+      nettoRendite: fmtP(p.nettoRendite),
+      bruttoRendite: fmtP(p.bruttoRendite),
+      dscr: p.dscr != null ? `${fmt(p.dscr, 2)}×` : "–",
+      ekRendite: fmtP(p.ekRendite),
+      kaufpreisfaktor: `${fmt(p.kaufpreisfaktor, 1)}×`,
+    }));
     try {
+      // Vertiefende Kennzahlen aus berechneKennzahlen() (DSCR, Zinsdeckung,
+      // Break-even-Leerstand, Anfangsrendite): berechneObjektKennzahlen() oben
+      // (kennzahlenGespeichert) reicht sie bisher nicht durch, obwohl sie
+      // laengst berechnet werden - siehe berechneScore()/berechneKennzahlen()
+      // Nur fuer den Payload gebraucht, deshalb hier statt in einem useMemo.
+      const R = computeRendite(basis, t);
+      const K = berechneKennzahlen(basis, R);
       // Ort (Stadt/Kreis) darf namentlich genannt werden (Nutzer-Vorgabe
       // 2026-09-10) - nur Strasse und Hausnummer bleiben aussen vor, das
       // Modell braucht die private Adresse nicht.
@@ -267,6 +349,16 @@ export function ObjektDetail({ objekt, onBack }) {
         cashflowMonat: kennzahlenGespeichert?.cashflowMon,
         kaufpreisfaktor: kennzahlenGespeichert?.faktor,
         score: kennzahlenGespeichert?.score,
+        // Investment-Briefing-Umbau (2026-09-16): bisher berechnet, aber nie
+        // an den Prompt durchgereicht (nur einfuegen, wenn vorhanden - sonst
+        // saehe der Worker ein explizites "null" statt "kein Wert").
+        ...(K.dscrIst != null ? { dscrIst: K.dscrIst } : {}),
+        ...(K.icr != null ? { icr: K.icr } : {}),
+        // Quelle bewusst R.ekQ (rendite.js), nicht K.ekQ - berechneKennzahlen()
+        // fuehrt keine eigene EK-Quote, das waere sonst ein Verwechslungsrisiko.
+        ...(R.ekQ != null ? { ekQuote: R.ekQ } : {}),
+        ...(K.breakEvenLeerstand != null ? { breakEvenLeerstand: K.breakEvenLeerstand } : {}),
+        ...(K.anfangsrendite != null ? { anfangsrendite: K.anfangsrendite } : {}),
       };
       // Fetch, Consent-/Pro-/Login-/Rate-Limit-Erkennung liegen seit dem
       // Umbau in aiAnalyse.js - derselbe Kern, den jetzt auch RechnerAiKarte.jsx
@@ -278,6 +370,9 @@ export function ObjektDetail({ objekt, onBack }) {
         varianten,
         befunde,
         standortFakten,
+        kaufpreisSimulation: kaufpreisSimulationFormatiert,
+        zielpreis,
+        vorherigeBefunde,
       });
       if (!res.ok) {
         // 412 ist kein Fehler, sondern eine offene Frage: die Einwilligung in
@@ -424,6 +519,13 @@ export function ObjektDetail({ objekt, onBack }) {
       />
 
       <RegionalSnapshot objekt={objekt} basis={basis} regGeladen={regGeladen} />
+
+      <InvestmentBriefing
+        objekt={objektAnzeige}
+        data={basis}
+        kennzahlen={kennzahlenGespeichert}
+        locale={locale}
+      />
 
       <AiSektion zusammenfassung={aiZusammenfassung(objektAnzeige, locale)}>
         {/* Das Fehlerband gehoert IN die Sektion, direkt bei den Knoepfen,

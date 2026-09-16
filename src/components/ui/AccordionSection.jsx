@@ -1,11 +1,24 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 
-export function AccordionSection({ question, hint, color, children, defaultOpen = false, sync }) {
+export function AccordionSection({
+  question,
+  hint,
+  color,
+  children,
+  defaultOpen = false,
+  sync,
+  hidden = false,
+}) {
   const [open, setOpen] = useState(defaultOpen);
   useEffect(() => {
     if (sync) setOpen(sync.open);
   }, [sync?.key]);
+  // `hidden`: der Aufrufer weiss bereits vorab (ohne den Inhalt zu rendern),
+  // dass die Sektion nichts zu zeigen haette (z.B. kein Darlehen -> kein
+  // Selbsttraeger-Check) - sonst bliebe eine Karte mit Farbe/Ueberschrift,
+  // aber leerem Inhalt stehen.
+  if (hidden) return null;
   const borderCol = color || "var(--cb)";
   return (
     <div

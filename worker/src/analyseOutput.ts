@@ -5,27 +5,65 @@
 // oder mehr Felder als verlangt - der Client darf davon nichts merken, sonst
 // bricht die Ansicht bei jeder Modellschwankung.
 
-export interface AnalyseKpi {
-  label: string;
-  wert: string;
-  ton: "gut" | "neutral" | "schwach";
+// Investment-Briefing-Schema (2026-09): loest das fruehere
+// {kernaussage, kpis, abschnitte} ab. Statt Fliesstext in benannten
+// Abschnitten liefert das Modell jetzt eine Erkenntnis-Hierarchie:
+// summary (Ebene 1, DIE eine Aussage) -> keyInsights (Ebene 2, das
+// Herzstueck, 3-5 Eintraege im Muster Erkenntnis->Zahl->Begruendung) ->
+// calculations/scenarios/assumptions (Ebene 3/4, die Rohzahlen und
+// Annahmen, auf denen die Erkenntnisse beruhen). risks/opportunities sind
+// derselben Form wie keyInsights, aber optional und nur befuellt, wenn die
+// Daten sie hergeben.
+//
+// "basis" macht fuer jede Aussage in keyInsights/risks/opportunities
+// sichtbar, worauf sie beruht (Exposé-Angabe, ImmoFuchs-Berechnung,
+// getroffene Annahme oder eigene KI-Einordnung) - das ist die
+// Herkunfts-Transparenz aus der Produktvision, nicht nur ein Anzeigefeld.
+export type AnalyseBasis = "expose" | "berechnet" | "annahme" | "ki";
+
+export interface AnalyseInsight {
+  title: string;
+  value?: string;
+  text: string;
+  basis: AnalyseBasis;
 }
 
-export interface AnalyseAbschnitt {
-  titel: string;
-  text: string;
+export interface AnalyseCalcRow {
+  label: string;
+  wert: string;
+}
+
+export interface AnalyseScenarioRow {
+  label: string;
+  vorher: string;
+  nachher: string;
 }
 
 export interface AnalyseErgebnis {
-  kernaussage: string;
-  kpis: AnalyseKpi[];
-  abschnitte: AnalyseAbschnitt[];
+  summary: string;
+  keyInsights: AnalyseInsight[];
+  risks: AnalyseInsight[];
+  opportunities: AnalyseInsight[];
+  calculations: AnalyseCalcRow[];
+  scenarios: AnalyseScenarioRow[];
+  assumptions: string[];
+  recommendation?: string;
 }
 
-const MAX_KERNAUSSAGE = 400;
-const MAX_KPIS = 3;
-const MAX_ABSCHNITTE = 4;
-const MAX_ABSCHNITT_TEXT = 1200;
+const MAX_SUMMARY = 300;
+const MAX_KEY_INSIGHTS = 5;
+const MAX_RISKS = 3;
+const MAX_OPPORTUNITIES = 3;
+const MAX_CALCULATIONS = 8;
+const MAX_SCENARIOS = 5;
+const MAX_ASSUMPTIONS = 6;
+const MAX_INSIGHT_TITLE = 60;
+const MAX_INSIGHT_VALUE = 40;
+const MAX_INSIGHT_TEXT = 400;
+const MAX_CALC_FIELD = 40;
+const MAX_SCENARIO_FIELD = 40;
+const MAX_ASSUMPTION_TEXT = 200;
+const MAX_RECOMMENDATION = 200;
 
 // Schneidet Markdown-Zaeune und Vorreden weg und liefert den JSON-Kern.
 function jsonKern(roh: string): string {
@@ -42,8 +80,65 @@ function text(wert: unknown, max: number): string {
   return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s;
 }
 
-function ton(wert: unknown): AnalyseKpi["ton"] {
-  return wert === "gut" || wert === "schwach" ? wert : "neutral";
+// Unbekannte oder fehlende Herkunftsangaben landen bewusst bei "ki" - das
+// ist die einzige der vier Kategorien, die keine externe Quelle behauptet,
+// also die sicherste Annahme, wenn das Modell die Form nicht einhaelt.
+function basis(wert: unknown): AnalyseBasis {
+  return wert === "expose" || wert === "berechnet" || wert === "annahme" || wert === "ki" ? wert : "ki";
+}
+
+function insight(roh: unknown, textMax: number): AnalyseInsight | null {
+  const o = (roh || {}) as Record<string, unknown>;
+  const title = text(o.title, MAX_INSIGHT_TITLE);
+  const insightText = text(o.text, textMax);
+  if (!title || !insightText) return null;
+  const value = text(o.value, MAX_INSIGHT_VALUE);
+  return { title, text: insightText, basis: basis(o.basis), ...(value ? { value } : {}) };
+}
+
+function insightListe(roh: unknown, max: number): AnalyseInsight[] {
+  if (!Array.isArray(roh)) return [];
+  const raus: AnalyseInsight[] = [];
+  for (const eintrag of roh.slice(0, max)) {
+    const i = insight(eintrag, MAX_INSIGHT_TEXT);
+    if (i) raus.push(i);
+  }
+  return raus;
+}
+
+function calcZeilen(roh: unknown): AnalyseCalcRow[] {
+  if (!Array.isArray(roh)) return [];
+  const raus: AnalyseCalcRow[] = [];
+  for (const eintrag of roh.slice(0, MAX_CALCULATIONS)) {
+    const o = (eintrag || {}) as Record<string, unknown>;
+    const label = text(o.label, MAX_CALC_FIELD);
+    const wert = text(o.wert, MAX_CALC_FIELD);
+    if (label && wert) raus.push({ label, wert });
+  }
+  return raus;
+}
+
+function scenarioZeilen(roh: unknown): AnalyseScenarioRow[] {
+  if (!Array.isArray(roh)) return [];
+  const raus: AnalyseScenarioRow[] = [];
+  for (const eintrag of roh.slice(0, MAX_SCENARIOS)) {
+    const o = (eintrag || {}) as Record<string, unknown>;
+    const label = text(o.label, MAX_SCENARIO_FIELD);
+    const vorher = text(o.vorher, MAX_SCENARIO_FIELD);
+    const nachher = text(o.nachher, MAX_SCENARIO_FIELD);
+    if (label && vorher && nachher) raus.push({ label, vorher, nachher });
+  }
+  return raus;
+}
+
+function assumptionZeilen(roh: unknown): string[] {
+  if (!Array.isArray(roh)) return [];
+  const raus: string[] = [];
+  for (const eintrag of roh.slice(0, MAX_ASSUMPTIONS)) {
+    const t = text(eintrag, MAX_ASSUMPTION_TEXT);
+    if (t) raus.push(t);
+  }
+  return raus;
 }
 
 /**
@@ -56,42 +151,36 @@ export function parseAnalyseOutput(roh: string): AnalyseErgebnis | null {
     daten = JSON.parse(jsonKern(roh));
   } catch {
     // Letzter Rettungsanker: das Modell hat reinen Fliesstext geliefert.
-    // Besser als nichts - der Text wird zur Kernaussage, Abschnitte bleiben leer.
-    const nur = text(roh, MAX_KERNAUSSAGE);
-    return nur ? { kernaussage: nur, kpis: [], abschnitte: [] } : null;
+    // Besser als nichts - der Text wird zur summary, der Rest bleibt leer.
+    const nur = text(roh, MAX_SUMMARY);
+    return nur
+      ? { summary: nur, keyInsights: [], risks: [], opportunities: [], calculations: [], scenarios: [], assumptions: [] }
+      : null;
   }
   if (typeof daten !== "object" || daten === null) return null;
   const d = daten as Record<string, unknown>;
 
-  const kernaussage = text(d.kernaussage, MAX_KERNAUSSAGE);
+  const summary = text(d.summary, MAX_SUMMARY);
+  const keyInsights = insightListe(d.keyInsights, MAX_KEY_INSIGHTS);
+  const risks = insightListe(d.risks, MAX_RISKS);
+  const opportunities = insightListe(d.opportunities, MAX_OPPORTUNITIES);
+  const calculations = calcZeilen(d.calculations);
+  const scenarios = scenarioZeilen(d.scenarios);
+  const assumptions = assumptionZeilen(d.assumptions);
+  const recommendation = text(d.recommendation, MAX_RECOMMENDATION);
 
-  const kpis: AnalyseKpi[] = Array.isArray(d.kpis)
-    ? d.kpis
-        .slice(0, MAX_KPIS)
-        .map((k) => {
-          const o = (k || {}) as Record<string, unknown>;
-          return { label: text(o.label, 40), wert: text(o.wert, 40), ton: ton(o.ton) };
-        })
-        .filter((k) => k.label && k.wert)
-    : [];
-
-  const abschnitte: AnalyseAbschnitt[] = Array.isArray(d.abschnitte)
-    ? d.abschnitte
-        .slice(0, MAX_ABSCHNITTE)
-        .map((a) => {
-          const o = (a || {}) as Record<string, unknown>;
-          return { titel: text(o.titel, 40).toUpperCase(), text: text(o.text, MAX_ABSCHNITT_TEXT) };
-        })
-        .filter((a) => a.titel && a.text)
-    : [];
-
-  // Ohne Kernaussage ist das Ergebnis wertlos - sie traegt die Ansicht im
-  // Reiter. Ein erster Abschnitt kann sie notfalls ersetzen.
-  if (!kernaussage && abschnitte.length === 0) return null;
+  // Ohne summary ist das Ergebnis wertlos - sie traegt die Ansicht im
+  // Reiter. Die erste Kernerkenntnis kann sie notfalls ersetzen.
+  if (!summary && keyInsights.length === 0) return null;
   return {
-    kernaussage: kernaussage || text(abschnitte[0]?.text, MAX_KERNAUSSAGE),
-    kpis,
-    abschnitte,
+    summary: summary || text(keyInsights[0]?.text, MAX_SUMMARY),
+    keyInsights,
+    risks,
+    opportunities,
+    calculations,
+    scenarios,
+    assumptions,
+    ...(recommendation ? { recommendation } : {}),
   };
 }
 
@@ -138,6 +227,10 @@ const MAX_FRAGEN = 12;
 // grosszuegig gemessen und schneiden nur ab, was ohnehin keine Frage mehr ist.
 const MAX_FRAGE_TEXT = 220;
 const MAX_KATEGORIE = 24;
+// Eigene Grenze fuer die kernaussage des Handouts (unveraendert bei 400 -
+// unabhaengig von MAX_SUMMARY des Investment-Briefing-Schemas oben, das ist
+// ein anderes Produkt mit eigener Form, siehe Kommentar am Dateianfang).
+const MAX_HANDOUT_KERNAUSSAGE = 400;
 
 // Modelle liefern Booleans gern als String ("true") - das darf nicht dazu
 // fuehren, dass alle Fragen als "nicht wichtig" durchgehen.
@@ -227,5 +320,5 @@ export function parseHandoutOutput(roh: string): HandoutErgebnis | null {
   // die Liste. Eine Kernaussage allein ergaebe eine Karte, an der man nichts
   // auswaehlen und nichts drucken kann.
   if (fragen.length === 0) return null;
-  return { kernaussage: text(d.kernaussage, MAX_KERNAUSSAGE), fragen };
+  return { kernaussage: text(d.kernaussage, MAX_HANDOUT_KERNAUSSAGE), fragen };
 }

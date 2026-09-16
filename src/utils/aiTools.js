@@ -4,6 +4,7 @@
 // LLM, kein Kontingent (TRIAL_UNBEGRENZT-Charakter wie der Rechner selbst).
 import { computeRendite } from "./rendite.js";
 import { berechneScore } from "./investmentScore.js";
+import { berechneKennzahlen } from "./kennzahlen.js";
 
 // ── Maximaler Kaufpreis (Tool #3) ───────────────────────────────────────────
 // Bisektion statt Formel-Umkehrung: computeRendite() ist zu verschachtelt
@@ -43,6 +44,69 @@ export function loeseMaximalenKaufpreis(d, t, zielNettoRendite) {
   return Math.round(lo / 500) * 500; // auf 500 € runden, keine Scheingenauigkeit
 }
 
+// ── Ziel-Kaufpreis (Tool #3b) ────────────────────────────────────────────────
+// Dieselbe Bisektion wie loeseMaximalenKaufpreis(), aber mit einem anderen
+// Zielkriterium: nicht "Nettorendite >= X", sondern entweder "Cashflow >= 0"
+// oder "Score >= X". Der Cashflow ist - wie die Nettorendite - streng
+// monoton fallend mit steigendem Kaufpreis (mehr Kaufpreis bei gleichem
+// Eigenkapital heisst mehr Fremdkapital heisst mehr Kapitaldienst).
+//
+// Der Score ist das NICHT global: er ist eine gewichtete Mischung mehrerer
+// Kennzahlen (Kaufpreisfaktor, Anfangsrendite, DSCR, EK-Quote, ...), von
+// denen manche bei einem sehr niedrigen Kaufpreis wieder schlechter statt
+// besser bewerten (z.B. eine EK-Quote weit ueber 100 %, weil das
+// Eigenkapital konstant bleibt, waehrend der Kaufpreis gegen 0 geht -
+// geprueft mit berechneScore() an dieser Datenbasis). Ein absoluter
+// Referenzpunkt bei 1 € waere deshalb fuer den Score-Fall die falsche
+// Annahme. Beide Kriterien werden stattdessen ausgehend vom AKTUELLEN
+// Kaufpreis geprueft: "wie weit darf der Preis von hier aus steigen,
+// bevor das Ziel reisst" - das ist ohnehin die praxisrelevante Frage.
+function zielErfuelltBei(d, t, ziel, kaufpreis) {
+  const dPunkt = { ...d, kaufpreis: String(Math.max(1, kaufpreis)) };
+  if (ziel.typ === "cashflowNull") {
+    return computeRendite(dPunkt, t).cf2MitSt >= 0;
+  }
+  if (ziel.typ === "score") {
+    const s = berechneScore(dPunkt, t);
+    return s.verfuegbar && s.score >= ziel.wert;
+  }
+  return false;
+}
+
+/**
+ * @param {object} d - Formular-State aus dem Renditerechner
+ * @param {object} t - Uebersetzungen, nur durchgereicht an computeRendite/berechneScore
+ * @param {{typ:"cashflowNull"}|{typ:"score",wert:number}} ziel
+ * @returns {number|null} maximaler Kaufpreis, auf 500 € gerundet, bei dem das
+ *   Ziel gerade noch erreicht wird (Suche startet beim aktuellen Kaufpreis
+ *   d.kaufpreis, siehe Kommentar oben zur Score-Nicht-Monotonie) - null, wenn
+ *   das Ziel schon beim aktuellen Kaufpreis nicht erreicht wird, oder wenn
+ *   eine unplausibel hohe Grenze nie unterschritten wird
+ */
+export function loeseZielKaufpreis(d, t, ziel) {
+  if (!ziel || (ziel.typ !== "cashflowNull" && ziel.typ !== "score")) return null;
+  if (ziel.typ === "score" && !(+ziel.wert > 0)) return null;
+
+  const anker = Math.max(1, +d.kaufpreis || 0);
+  if (!zielErfuelltBei(d, t, ziel, anker)) return null; // schon beim aktuellen Kaufpreis nicht erreicht
+
+  let lo = anker;
+  let hi = Math.max(50_000, anker * 3);
+  let expandGuard = 0;
+  while (zielErfuelltBei(d, t, ziel, hi) && hi < 50_000_000 && expandGuard < 20) {
+    hi *= 2;
+    expandGuard++;
+  }
+  if (zielErfuelltBei(d, t, ziel, hi)) return null; // unplausibel hohe Grenze
+
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (zielErfuelltBei(d, t, ziel, mid)) lo = mid;
+    else hi = mid;
+  }
+  return Math.round(lo / 500) * 500;
+}
+
 // ── Was müsste sich ändern? (Tool #6) ───────────────────────────────────────
 // Feste, nachvollziehbare Varianten statt einer generischen Optimierung -
 // die drei Stellschrauben aus der Nutzer-Vorgabe (Kaufpreis, Miete,
@@ -50,11 +114,17 @@ export function loeseMaximalenKaufpreis(d, t, zielNettoRendite) {
 // und rechnet nur EINE Grösse durch berechneScore() neu - so bleibt der
 // Effekt einzeln zurechenbar ("Der größte Hebel ist X"), statt mehrere
 // Stellschrauben gleichzeitig zu verändern.
-function scoreMitAenderung(d, t, feld, neuerWert) {
+// Rechnet EINE Variante komplett durch: Score (wie bisher) plus Cashflow und
+// DSCR fuer denselben veraenderten Formular-State - damit "Der groesste
+// Hebel ist X" nicht nur an einer Score-Zahl haengt, sondern auch zeigt, was
+// die Aenderung fuer Cashflow und Schuldentragfaehigkeit bedeutet.
+function rechneVariante(d, t, feld, neuerWert) {
   const dVar = { ...d, [feld]: String(Math.max(0, Math.round(neuerWert))) };
   const scoreVar = berechneScore(dVar, t);
   if (!scoreVar.verfuegbar) return null;
-  return scoreVar.score;
+  const R = computeRendite(dVar, t);
+  const K = berechneKennzahlen(dVar, R);
+  return { score: scoreVar.score, cashflowMon: R.cf2MitSt, dscr: K.dscrIst };
 }
 
 export function berechneHebelAnalyse(d, t, basisScore) {
@@ -67,19 +137,19 @@ export function berechneHebelAnalyse(d, t, basisScore) {
   if (kaufpreis > 0) {
     for (const quote of [0.05, 0.1]) {
       const delta = -Math.round((kaufpreis * quote) / 500) * 500;
-      const score = scoreMitAenderung(d, t, "kaufpreis", kaufpreis + delta);
-      if (score != null) kandidaten.push({ feld: "kaufpreis", delta, unit: "€", score });
+      const v = rechneVariante(d, t, "kaufpreis", kaufpreis + delta);
+      if (v != null) kandidaten.push({ feld: "kaufpreis", delta, unit: "€", ...v });
     }
   }
   if (kaltmiete > 0) {
     const delta = Math.round(kaltmiete * 0.05);
-    const score = scoreMitAenderung(d, t, "kaltmiete", kaltmiete + delta);
-    if (score != null) kandidaten.push({ feld: "kaltmiete", delta, unit: "€/Monat", score });
+    const v = rechneVariante(d, t, "kaltmiete", kaltmiete + delta);
+    if (v != null) kandidaten.push({ feld: "kaltmiete", delta, unit: "€/Monat", ...v });
   }
   if (renovierung > 0) {
     const delta = -Math.min(renovierung, Math.max(1000, Math.round((renovierung * 0.3) / 500) * 500));
-    const score = scoreMitAenderung(d, t, "renovierung", renovierung + delta);
-    if (score != null) kandidaten.push({ feld: "renovierung", delta, unit: "€", score });
+    const v = rechneVariante(d, t, "renovierung", renovierung + delta);
+    if (v != null) kandidaten.push({ feld: "renovierung", delta, unit: "€", ...v });
   }
 
   const varianten = kandidaten
@@ -121,6 +191,11 @@ export function hebelVarianten(d, t, locale = "de-DE") {
       neuerWert: `${eur((+d[v.feld] || 0) + v.delta)}${proMonat}`,
       score: v.score,
       deltaScore: v.deltaScore,
+      // Fertig formatiert wie aenderung/neuerWert (Kommentar oben): das
+      // Modell soll dieselbe Zeichenfolge sehen, die auch im Zahlenblock
+      // steht, nicht selbst runden/formatieren muessen.
+      ...(v.cashflowMon != null ? { cashflowMon: `${eur(v.cashflowMon)}/Monat` } : {}),
+      ...(v.dscr != null ? { dscr: `${v.dscr.toLocaleString(locale, { maximumFractionDigits: 2 })}\u00D7` } : {}),
     };
   });
 }

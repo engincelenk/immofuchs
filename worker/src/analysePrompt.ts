@@ -6,10 +6,13 @@
 //
 // Warum strukturiert statt Fliesstext: Am Telefon ist ein Prosablock
 // unlesbar - man kann dann nur zwischen Textwueste und Abschneiden waehlen.
-// Die Form unten erzwingt, dass das Modell das Fazit zuerst liefert
-// (umgekehrte Pyramide) und den Rest in benannte Abschnitte teilt. Nur so
-// kann der Client die Kernaussage in drei Zeilen zeigen und den Rest
-// nachladen.
+// Die Form unten erzwingt eine Erkenntnis-Hierarchie statt eines Aufsatzes:
+// summary liefert das Fazit zuerst (umgekehrte Pyramide), keyInsights tragen
+// die einzelnen, datenbasierten Erkenntnisse im Muster Erkenntnis->Zahl->
+// Begruendung, calculations/scenarios/assumptions liefern die Rohzahlen und
+// Annahmen darunter. Nur so kann der Client die eine wichtigste Aussage
+// sofort zeigen und den Rest nachladen, statt einen Fliesstextabschnitt zu
+// rendern.
 
 export type AnalyseProdukt =
   | "analyse"
@@ -32,14 +35,48 @@ export type AnalyseProdukt =
 // die Token-Grenze und liefert abgeschnittenes, unparsbares JSON - genau der
 // Fall, den parseAnalyseOutput als "unbrauchbare_antwort" verwerfen muesste,
 // nachdem das Kontingent schon verbraucht ist.
+// Investment-Briefing-Schema (2026-09, Ablösung von {kernaussage, kpis,
+// abschnitte}): statt Fliesstext in benannten Abschnitten liefert das Modell
+// eine Erkenntnis-Hierarchie. summary ist Ebene 1 (DIE eine Aussage),
+// keyInsights Ebene 2 (das Herzstueck: 3-5 datenbasierte Erkenntnisse im
+// Muster Erkenntnis->Zahl->Begruendung), calculations/scenarios/assumptions
+// Ebene 3/4 (die Rohzahlen und Annahmen darunter). Der Parser
+// (parseAnalyseOutput in analyseOutput.ts) erzwingt diese Form so, wie er
+// zuvor kernaussage/kpis/abschnitte erzwang - siehe Kommentar dort.
 const FORM = `Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Markdown-Zaun, ohne Vorrede:
 {
-  "kernaussage": "Ein Absatz, hoechstens 400 Zeichen. Das Fazit steht im ERSTEN Satz.",
-  "kpis": [{"label": "kurz", "wert": "z.B. 3,4 %", "ton": "gut|neutral|schwach"}],
-  "abschnitte": [{"titel": "GROSSBUCHSTABEN, ein bis zwei Woerter", "text": "hoechstens 160 Woerter"}]
+  "summary": "Ebene 1: die EINE wichtigste Erkenntnis, hoechstens 300 Zeichen. Muster: Erkenntnis -> Kurzbegruendung.",
+  "keyInsights": [
+    {
+      "title": "kurze Ueberschrift, z.B. 'Mietpotenzial vorhanden'",
+      "value": "optional: eine fertig formatierte Zahl, z.B. '+210 €/Monat' - nur wenn eine Zahl sinnvoll ausweisbar ist",
+      "text": "Muster Erkenntnis -> Zahl -> Begruendung, hoechstens 400 Zeichen",
+      "basis": "expose|berechnet|annahme|ki"
+    }
+  ],
+  "risks": [ "gleiche Form wie keyInsights, hoechstens 3 Eintraege, NUR wenn durch Daten gedeckt" ],
+  "opportunities": [ "gleiche Form wie keyInsights, hoechstens 3 Eintraege, NUR wenn durch Daten gedeckt" ],
+  "calculations": [{"label": "kurz", "wert": "z.B. 3,4 %"}],
+  "scenarios": [{"label": "kurz, z.B. Rendite", "vorher": "z.B. 3,1 %", "nachher": "z.B. 4,0 %"}],
+  "assumptions": ["verwendete Annahme/Szenario-Parameter, z.B. 'Ortsuebliche Vergleichsmiete: 10,50 €/m²'"],
+  "recommendation": "optional: ein sachlicher naechster Schritt, hoechstens 200 Zeichen, KEINE Kaufempfehlung"
 }
-Hoechstens 3 kpis und hoechstens 4 abschnitte. Schoepfe die Laenge aus, wenn es etwas zu sagen
-gibt - aber fuelle nicht mit Allgemeinplaetzen auf, wenn die Datenlage duenn ist.`;
+Ebenen-Logik: summary traegt die eine wichtigste Aussage. keyInsights sind 3 bis 5
+datenbasierte Kernaussagen im Muster Erkenntnis -> Zahl -> Begruendung, das Herzstueck der
+Auswertung. risks/opportunities sind 0 bis 3 Eintraege in derselben Form und bleiben leer,
+wenn die Daten sie nicht hergeben - keine Pflichtfelder. calculations sind die Rohzahlen
+(hoechstens 8), auf denen summary/keyInsights beruhen. scenarios zeigen Vorher/Nachher
+(hoechstens 5) fuer die wichtigsten Hebel. assumptions nennt verwendete Annahmen/
+Szenario-Parameter (hoechstens 6). recommendation ist ein optionaler naechster Schritt, keine
+Kauf- oder Anlageempfehlung - weglassen, wenn es nichts Konkretes zu nennen gibt.
+
+"basis" gibt fuer jede Aussage unter keyInsights/risks/opportunities ehrlich an, worauf sie
+beruht: "expose" (eine Angabe aus dem Exposé/den Objektdaten), "berechnet" (aus einer
+ImmoFuchs-Berechnung, also einem mitgelieferten "Gerechnete Werte"/"Kennzahlen"-Wert),
+"annahme" (eine getroffene Annahme bzw. ein Szenario-Parameter) oder "ki" (deine eigene
+Einordnung, die aus den anderen Werten folgt, aber selbst keine Zahl ist). Waehle je Aussage
+die passende Kategorie - sie ist keine Formalitaet, sondern macht fuer den Nutzer sichtbar,
+was Fakt und was Einordnung ist.`;
 
 const HALTUNG = `Du bewertest aus der Sicht eines erfahrenen, nuechternen Kapitalanlegers in Deutschland.
 
@@ -57,7 +94,17 @@ Regeln:
 - Ist ein Abschnitt "Standort-Kontext" mitgeliefert, darfst du ihn nutzen, um eine Einordnung
   zu BEGRUENDEN (z.B. warum eine Region wirtschaftlich staerker oder schwaecher ist). Das sind
   allgemeine Fakten zum Bundesland, keine Kennzahl und kein Beleg fuer einen konkreten Preis -
-  erfinde KEINE eigenen Standort-Fakten, wenn der Abschnitt fehlt.`;
+  erfinde KEINE eigenen Standort-Fakten, wenn der Abschnitt fehlt.
+- Jede Aussage unter keyInsights/risks/opportunities muss auf einer mitgelieferten Zahl oder
+  Berechnung beruhen - einem der unten mitgelieferten Bloecke, falls vorhanden. Erfinde KEINE
+  Markt- oder Vergleichspreise, Mietpotenziale, Sanierungskosten, Wertentwicklungen oder sonstige
+  Zahlen, die dort nicht stehen. Ist eine Erkenntnis nicht belegbar, LASS SIE WEG statt sie mit
+  einer erfundenen oder vagen Platzhalterzahl zu fuellen - eine fehlende Erkenntnis ist immer
+  besser als eine erfundene.
+- Kennzeichne jede Aussage ehrlich mit ihrer Herkunft im Feld "basis" (siehe Form unten): eine
+  Berechnung ist keine Annahme, eine Annahme ist keine Exposé-Angabe, und deine eigene
+  Einordnung ("ki") ist etwas anderes als beides. Diese Transparenz gilt fuer JEDES Feld des
+  Schemas, nicht nur fuer einzelne Werte.`;
 
 // Die Zahlen-Disziplin des PREIS-Prompts galt bis 2026-09-07 nur dort - hier
 // stand "Gehe auf Preisniveau ein" ohne jede Referenz und ohne Sperre. Das
@@ -78,15 +125,21 @@ Regeln:
 // zu ein und demselben Objekt unterscheidbar.
 const ANALYSE = `${HALTUNG}
 
-Deine Aufgabe: Ordne dieses Objekt ein, in genau dieser Reihenfolge:
-1. Kaufpreis, Wohnflaeche, Kaltmiete, Bruttorendite und Cashflow in ein bis zwei Saetzen
-   zusammenfassen - keine Aufzaehlung, ein zusammenhaengendes Bild.
-2. Positive Punkte benennen, soweit die Daten sie hergeben: Baujahr, Energiewert
-   ("energiewertKwhQm" in den Kennzahlen, kWh/m²·a) und absehbare Sanierungen (kurz- wie
-   langfristig, z.B. aus Heizungsalter/-art). Fehlt eine dieser Angaben, erwaehne sie NICHT -
-   sage nicht "keine Angabe", sondern lass sie einfach weg.
-3. Eine zusammenfassende Einordnung, die auf Punkt 1 und 2 aufbaut.
-Die Abschnitte sollten entsprechend RENDITE & CASHFLOW, STAERKEN und FAZIT heissen.
+Deine Aufgabe: Beantworte "Was habe ich hier vor mir?" - ordne dieses Objekt wirtschaftlich
+ein, indem du Daten und Berechnungen zueinander in Beziehung setzt statt sie nur aufzuzaehlen:
+1. summary: die wirtschaftliche Kerneinordnung in einem Satz - Kaufpreis, Rendite und Cashflow
+   zueinander in Beziehung gesetzt, nicht nur nebeneinander genannt.
+2. keyInsights: setze die laufende Rendite und den Cashflow in Beziehung zueinander (traegt
+   sich das Objekt, und warum) und, soweit die Daten es hergeben, Baujahr, Energiewert
+   ("energiewertKwhQm" in den Kennzahlen, kWh/m²·a) sowie absehbaren Sanierungsbedarf (kurz-
+   wie langfristig, z.B. aus Heizungsalter/-art) im Zusammenhang mit der Wirtschaftlichkeit.
+   Fehlt eine dieser Angaben, erwaehne sie NICHT - sage nicht "keine Angabe", sondern lass sie einfach weg.
+3. risks/opportunities: nur befuellen, wenn aus den Zahlen klar ableitbar (z.B. ein negativer
+   Cashflow als Risiko mit Groessenordnung, ein hoher Energiewert als Sanierungsrisiko).
+4. calculations: die Kernzahlen dieses Objekts (Kaufpreis, Miete, Bruttorendite, Cashflow etc.)
+   als Rohzahlen, auf denen summary und keyInsights beruhen.
+5. assumptions: nenne verwendete Annahmen (z.B. Zinssatz, Tilgung), sofern sie fuer die
+   Einordnung eine Rolle spielen - sonst leer lassen.
 
 Nenne den Ort ("ort" in den Kennzahlen) mindestens einmal beim Namen - das Objekt liegt
 nicht irgendwo, sondern dort.
@@ -109,29 +162,44 @@ du bildest sie nicht selbst.
 
 Diese Auswertung ist eine von drei zu diesem Objekt (Analyse, Hebel, Kaufpreis-Analyse).
 Bleibe bei deinem eigenen Fokus oben - wiederhole nicht, was eher in die anderen beiden
-gehoert (Verhandlungshebel, Marktwert-Einordnung).
+gehoert (Verhandlungshebel, Investment-Zielbereich).
 
 ${FORM}`;
 
 const HEBEL = `${HALTUNG}
 
-Deine Aufgabe: Zeige das Verbesserungspotential dieses Objekts, in genau dieser Reihenfolge:
+Deine Aufgabe: Beantworte "Wie verbessere ich das?" - zeige konkrete Optimierungshebel dieses
+Objekts mit ihrer wirtschaftlichen Wirkung, in genau dieser Reihenfolge:
 1. Potential bei der Miete - wie weit liegt die Mietannahme unter dem, was ortsueblich
    erzielbar waere, und was wuerde eine Anhebung fuer Rendite/Cashflow bedeuten.
 2. Realistischer Kaufpreis, gemessen an den ortsueblichen Durchschnittspreisen - ist der
    aufgerufene Preis dagegen verhandelbar, und in welcher Groessenordnung.
 3. Beurteilung von Standort und Standortpotential.
-Die Abschnitte sollten entsprechend MIETE, KAUFPREIS und STANDORT heissen.
 
 Nenne den Ort ("ort" in den Kennzahlen) mindestens einmal beim Namen.
 
-Wenn der Abschnitt "Durchgerechnete Varianten" mitgeliefert ist, sind das fertige
-Rechenergebnisse aus derselben Engine wie die Kennzahlen. Uebernimm ihre Zahlen woertlich und
-rechne sie NICHT nach.
+summary: Nenne eine konkrete wirtschaftliche Gesamtwirkung (z.B. "+385 €/Monat Potenzial"),
+aber NUR wenn diese Zahl tatsaechlich aus den "Durchgerechneten Varianten" hervorgeht - erfinde
+sie NIEMALS selbst durch eigenes Aufsummieren oder Schaetzen. Fehlen die Varianten oder laesst
+sich keine belastbare Summe bilden, bleib neutral: "Mehrere Optimierungshebel erkannt" (oder
+sinngemaess), ohne erfundene Zahl.
 
-Fehlt der Abschnitt, nenne die Hebel qualitativ und erfinde KEINE Zielwerte - eine
-ausgedachte Zahl waere in einem Dokument, das der Nutzer fuer eine Verhandlung benutzt,
-schaedlicher als eine fehlende.
+keyInsights: die einzelnen Hebel (Miete/Kaufpreis/Standort), aber NUR die mit Datenbasis -
+nenne je Hebel Ausgangswert, Szenario und Effekt im Text (Muster Erkenntnis -> Zahl ->
+Begruendung).
+
+Wenn der Abschnitt "Durchgerechnete Varianten" mitgeliefert ist, sind das fertige
+Rechenergebnisse aus derselben Engine wie die Kennzahlen - sie koennen je Variante neben
+Score auch cashflowMon (Cashflow/Monat) und dscr (Schuldendienstdeckungsgrad) enthalten.
+Uebernimm alle mitgelieferten Zahlen woertlich und rechne sie NICHT nach.
+
+scenarios: baue daraus Vorher/Nachher-Zeilen fuer die 1 bis 3 wichtigsten Hebel (z.B. Rendite,
+Cashflow oder DSCR jeweils "vorher" gegen "nachher") - NUR wenn die "Durchgerechneten
+Varianten" das hergeben. Ohne diese Daten bleibt scenarios leer statt geschaetzter Werte.
+
+Fehlt der Abschnitt "Durchgerechnete Varianten" ganz, nenne die Hebel nur qualitativ und
+erfinde KEINE Zielwerte - eine ausgedachte Zahl waere in einem Dokument, das der Nutzer fuer
+eine Verhandlung benutzt, schaedlicher als eine fehlende.
 
 Ist unter "Gerechnete Werte" ein "Regionaler Kaufpreis-Richtwert" mitgeliefert, nutze die
 Abweichung davon fuer Punkt 2 (realistischer Kaufpreis): liegt der Kaufpreis darueber, ist er
@@ -140,9 +208,14 @@ Uebernimm die Zahl woertlich, du bildest sie nicht selbst. Ist zusaetzlich ein
 "Standort-Kontext" mitgeliefert, nutze ihn fuer Punkt 3 (Standortpotential) - keine eigenen
 Standort-Fakten erfinden, wenn er fehlt.
 
+Ist unter "Vorherige Befunde" das Ergebnis einer bereits gelaufenen anderen Auswertung zu
+diesem Objekt mitgeliefert, darfst du kurz darauf aufbauen (z.B. "Die Objekt-Analyse hat X
+festgestellt - darauf baut diese Hebel-Analyse auf"), aber NICHT den fremden Inhalt
+wiederholen.
+
 Diese Auswertung ist eine von drei zu diesem Objekt (Analyse, Hebel, Kaufpreis-Analyse).
 Bleibe bei deinem eigenen Fokus oben - wiederhole nicht, was eher in die anderen beiden
-gehoert (Gesamteinordnung, Marktwert-Schaetzung).
+gehoert (Gesamteinordnung, Investment-Zielbereich).
 
 ${FORM}`;
 
@@ -160,9 +233,10 @@ ${FORM}`;
 // keine erfundene geografische Nachbarschaft, siehe Kommentar dort.
 const PREIS = `${HALTUNG}
 
-Deine Aufgabe: Ordne die Mietannahme dieses Objekts gegen das oertliche
-Mietniveau ein und sage, was das fuer den aufgerufenen Kaufpreis bedeutet, in
-genau dieser Reihenfolge:
+Deine Aufgabe: Beantworte "Welcher Kaufpreis passt zu meinen Annahmen?" - stelle den
+Angebotspreis dem berechneten Investment-Zielbereich gegenueber. Das ist AUSDRUECKLICH KEINE
+Verkehrswertermittlung, sondern eine Einordnung anhand mitgelieferter Vergleichs- und
+Zielzahlen. Gehe in genau dieser Reihenfolge vor:
 1. Schaetze den realistischen Marktwert AUSSCHLIESSLICH anhand der mitgelieferten Zahlen
    (Regionaler Kaufpreis-Richtwert, Vergleichsort-Zeilen). Nenne dabei 2 bis 3 der
    mitgelieferten Vergleichsorte beim Namen und ordne den aufgerufenen Kaufpreis gegen sie
@@ -171,8 +245,19 @@ genau dieser Reihenfolge:
 2. Beurteile die Energieklasse/den Energiewert, WENN "energiewertKwhQm" oder
    "heizungsart"/"heizungsalter" in den Kennzahlen stehen. Fehlen sie, lass diesen Punkt
    ohne Kommentar weg - erfinde KEINE Energieeffizienzklasse.
-Die Abschnitte sollten entsprechend MARKTWERT und ENERGIE heissen (nur ENERGIE, wenn Punkt 2
-Daten hat - sonst reicht MARKTWERT allein, gib dann keinen leeren Abschnitt aus).
+
+Ist unter "Investment-Zielbereich" ein Block mitgeliefert (Angebotspreis, berechneter
+Ziel-Kaufpreisbereich, Zielkriterium), gehoert die Gegenueberstellung Angebotspreis vs.
+Investment-Zielbereich in summary/keyInsights. Trenne die Begriffe sprachlich sauber:
+"Angebotspreis" (was verlangt wird), "Investment-Zielbereich" (was die Berechnung fuer das
+angegebene Zielkriterium ergibt) - NIE "Verkehrswert" fuer diese berechnete Zahl, das ist
+etwas anderes und wuerde eine Ermittlung vortaeuschen, die hier nicht stattfindet.
+
+Ist unter "Kaufpreis-Simulation" ein Block mit mehreren Kaufpreispunkten mitgeliefert (je mit
+Cashflow, Rendite, DSCR, EK-Rendite, Kaufpreisfaktor), ERKLAERE in summary/keyInsights, WARUM
+der Kaufpreis das Investment so stark beeinflusst - z.B. wie DSCR oder EK-Rendite mit dem
+Kaufpreis kippen. Erzaehle NICHT nur die Tabelle nach; die einzelnen Kaufpreispunkte selbst
+gehoeren als Rohzahlen in calculations.
 
 Nenne den Ort ("ort" in den Kennzahlen) mindestens einmal beim Namen.
 
@@ -189,6 +274,10 @@ begruendungsbeduerftig. Moegliche Gruende sind Sanierungsstand, Ausstattung,
 Lage im Ort oder eine moeblierte Vermietung. Nenne dabei NIE die Herkunft der
 Ortsmiete (siehe Regel oben) - "Bestandsmiete" ist eine fachliche
 Einordnung, keine Quellenangabe.
+
+Ist unter "Vorherige Befunde" das Ergebnis einer bereits gelaufenen anderen Auswertung zu
+diesem Objekt mitgeliefert, darfst du kurz darauf aufbauen, aber NICHT den fremden Inhalt
+wiederholen.
 
 Diese Auswertung ist eine von drei zu diesem Objekt (Analyse, Hebel, Kaufpreis-Analyse).
 Bleibe bei deinem eigenen Fokus oben - wiederhole nicht, was eher in die anderen beiden
@@ -271,7 +360,7 @@ stattdessen ein, wie der Zinssatz dieser Finanzierung im Vergleich dazu steht - 
 viele Prozentpunkte darueber oder darunter - und was das fuer Monatsrate und Zinsbindung
 bedeutet.
 
-Die Abschnitte sollten ZINSSATZ, RATE und ZINSBINDUNG heissen.
+Bilde dazu keyInsights zu ZINSSATZ, RATE und ZINSBINDUNG (als title jeder Erkenntnis).
 
 ${FORM}`;
 
@@ -297,7 +386,7 @@ viel erhoeht werden darf, der Regionalwert ordnet ein, wie realistisch die Vergl
 selbst ist, auf der die Erhoehung aufbaut. Uebernimm die Zahl woertlich, du bildest sie nicht
 selbst.
 
-Die Abschnitte sollten RECHTSLAGE, SPIELRAUM und FRIST heissen.
+Bilde dazu keyInsights zu RECHTSLAGE, SPIELRAUM und FRIST (als title jeder Erkenntnis).
 
 ${FORM}`;
 
@@ -319,7 +408,7 @@ zusammen noch im regionalen Rahmen liegen oder der Gesamtaufwand den Richtwert d
 uebersteigt - das ist eine Einordnung des Amortisationsrisikos, keine Wertermittlung der
 Immobilie. Uebernimm die Zahlen woertlich, du bildest sie nicht selbst.
 
-Die Abschnitte sollten FÖRDERUNG, AMORTISATION und PRIORITÄT heissen.
+Bilde dazu keyInsights zu FÖRDERUNG, AMORTISATION und PRIORITÄT (als title jeder Erkenntnis).
 
 ${FORM}`;
 
@@ -333,7 +422,7 @@ berechnet und massgeblich fuer die Hoehe der Entschaedigung. Uebernimm ihn woert
 KEINEN eigenen Zinssatz. Ordne ein, wie dieser Referenzzins die Hoehe der Entschaedigung
 beeinflusst, und ob ein Sondertilgungsrecht die Summe druecken wuerde.
 
-Die Abschnitte sollten HÖHE, ZEITPUNKT und ALTERNATIVE heissen.
+Bilde dazu keyInsights zu HÖHE, ZEITPUNKT und ALTERNATIVE (als title jeder Erkenntnis).
 
 ${FORM}`;
 
@@ -363,7 +452,7 @@ Alle uebrigen Zahlen (Sanierungskosten, Kaufpreis, noetige Betraege) bekommst du
 "Kennzahlen des Objekts" fertig berechnet mitgeliefert. Uebernimm sie woertlich, erfinde
 KEINE eigenen Betraege oder Steuersaetze ausserhalb der oben genannten Tarifwerte.
 
-Die Abschnitte sollten GRENZSTEUERSATZ, HEBEL und GRENZEN heissen.
+Bilde dazu keyInsights zu GRENZSTEUERSATZ, HEBEL und GRENZEN (als title jeder Erkenntnis).
 
 ${FORM}`;
 
@@ -383,12 +472,21 @@ export function systemPromptFuer(produkt: AnalyseProdukt): string {
 // ergibt Score 78 statt 72". Die Zahlen stammen aus berechneHebelAnalyse()
 // im Client, also aus derselben getesteten Rendite-/Score-Engine wie die
 // Kennzahlen - das Modell ordnet sie nur ein.
+//
+// cashflowMon/dscr (optional, seit dem Investment-Briefing-Schema 2026-09):
+// derselbe Client liefert seitdem zu jeder Variante auch den monatlichen
+// Cashflow und den Schuldendienstdeckungsgrad, nicht mehr nur den Score -
+// Grundlage fuer die scenarios-Zeilen (Vorher/Nachher) im HEBEL-Prompt.
+// Bereits fertig formatierte Strings, wie aenderung/neuerWert - das Modell
+// rechnet nichts nach, siehe HALTUNG.
 export type HebelVariante = {
   feld: string;
   aenderung: string;
   neuerWert: string;
   score: number;
   deltaScore: number;
+  cashflowMon?: string;
+  dscr?: string;
 };
 
 // Der Nutzerteil: nur Kennzahlen, keine personenbezogenen Daten. Bewusst als
@@ -405,11 +503,38 @@ export type HebelVariante = {
 export type GerechneteZahl = { label: string; wert: string };
 
 // Eine bereits erstellte Auswertung dieses Objekts, verdichtet auf Titel und
-// Kernaussage - Traeger des Produkts "handout". Bewusst NUR die Kernaussage
-// und nicht der ganze Text: das Handout soll Fragen ableiten, nicht die
-// Analysen nacherzaehlen, und jeder zusaetzlich uebergebene Satz ist ein
-// weiterer Injection-Traeger im Prompt.
+// Kernaussage - Traeger des Produkts "handout" (Parameter "befunde") UND,
+// seit dem Investment-Briefing-Schema 2026-09, der Produkte "hebel"/"preis"
+// (Parameter "vorherigeBefunde", siehe unten). Bewusst NUR die Kernaussage
+// und nicht der ganze Text: die Fragen bzw. die anschliessende Auswertung
+// sollen darauf AUFBAUEN, nicht den fremden Text nacherzaehlen - und jeder
+// zusaetzlich uebergebene Satz ist ein weiterer Injection-Traeger im Prompt.
 export type Befund = { produkt: string; kernaussage: string };
+
+// Ein einzelner Punkt der Kaufpreis-Simulation des Produkts "preis": bei
+// diesem Kaufpreis ergeben sich diese Kennzahlen. Stammt aus derselben
+// Rendite-Engine wie die uebrigen Kennzahlen, alle Werte bereits fertig
+// formatierte Strings - das Modell rechnet nichts nach (siehe HALTUNG).
+export type KaufpreisSimulationPunkt = {
+  kaufpreis: string;
+  cashflowMon: string;
+  nettoRendite: string;
+  bruttoRendite: string;
+  dscr: string;
+  ekRendite: string;
+  kaufpreisfaktor: string;
+};
+
+// Der berechnete Investment-Zielbereich des Produkts "preis": Angebotspreis
+// gegen einen aus dem Zielkriterium (z.B. "Nettorendite ≥ 4 %") berechneten
+// Kaufpreiskorridor. Bewusst NICHT "Verkehrswert" genannt (siehe PREIS-
+// Prompt) - das waere eine Ermittlung, die hier nicht stattfindet.
+export type Zielpreis = {
+  kaufpreisAktuell: string;
+  zielKaufpreisMin: string;
+  zielKaufpreisMax: string;
+  zielKriterium: string;
+};
 
 export function nutzerPayload(
   kennzahlen: Record<string, unknown>,
@@ -418,6 +543,9 @@ export function nutzerPayload(
   zahlen?: GerechneteZahl[],
   befunde?: Befund[],
   standortFakten?: string[],
+  kaufpreisSimulation?: KaufpreisSimulationPunkt[],
+  zielpreis?: Zielpreis,
+  vorherigeBefunde?: Befund[],
 ): string {
   const zeilen = Object.entries(kennzahlen)
     .filter(([, v]) => v !== null && v !== undefined && v !== "")
@@ -433,17 +561,55 @@ export function nutzerPayload(
     varianten && varianten.length > 0
       ? "\n\nDurchgerechnete Varianten (bereits berechnet, NICHT neu rechnen):\n" +
         varianten
+          .map((v) => {
+            let zeile = `- ${v.feld} ${v.aenderung} (neu ${v.neuerWert}): Score ${v.score} statt ${v.score - v.deltaScore}`;
+            if (v.cashflowMon) zeile += `, Cashflow ${v.cashflowMon}/Monat`;
+            if (v.dscr) zeile += `, DSCR ${v.dscr}`;
+            return zeile;
+          })
+          .join("\n")
+      : "";
+
+  // Kaufpreis-Simulation (Produkt "preis"): mehrere Kaufpreispunkte mit
+  // ihren jeweiligen Kennzahlen, bereits von derselben Engine berechnet wie
+  // die uebrigen Zahlen - das Modell soll erklaeren, nicht die Tabelle
+  // nacherzaehlen (siehe PREIS-Prompt).
+  const kaufpreisSimBlock =
+    kaufpreisSimulation && kaufpreisSimulation.length > 0
+      ? "\n\nKaufpreis-Simulation (bereits berechnet, NICHT neu rechnen):\n" +
+        kaufpreisSimulation
           .map(
-            (v) =>
-              `- ${v.feld} ${v.aenderung} (neu ${v.neuerWert}): Score ${v.score} statt ${v.score - v.deltaScore}`,
+            (k) =>
+              `- Kaufpreis ${k.kaufpreis}: Cashflow ${k.cashflowMon}/Monat, Nettorendite ${k.nettoRendite}, Bruttorendite ${k.bruttoRendite}, DSCR ${k.dscr}, EK-Rendite ${k.ekRendite}, Kaufpreisfaktor ${k.kaufpreisfaktor}`,
           )
           .join("\n")
       : "";
+
+  // Investment-Zielbereich (Produkt "preis"): Angebotspreis gegen den
+  // berechneten Zielkorridor - AUSDRUECKLICH kein Verkehrswert (siehe
+  // PREIS-Prompt und Zielpreis-Typkommentar oben).
+  const zielpreisBlock = zielpreis
+    ? "\n\nInvestment-Zielbereich (bereits berechnet, KEIN Verkehrswert, NICHT neu rechnen):\n" +
+      `- Angebotspreis: ${zielpreis.kaufpreisAktuell}\n` +
+      `- Investment-Zielbereich: ${zielpreis.zielKaufpreisMin} bis ${zielpreis.zielKaufpreisMax}\n` +
+      `- Zielkriterium: ${zielpreis.zielKriterium}`
+    : "";
 
   const befundeBlock =
     befunde && befunde.length > 0
       ? "\n\nBisherige Befunde zu diesem Objekt (Ergebnisse frueherer Auswertungen, NICHT wiederholen - daraus Fragen ableiten):\n" +
         befunde.map((b) => `- ${b.produkt}: ${b.kernaussage}`).join("\n")
+      : "";
+
+  // Vorherige Befunde (Produkte "hebel"/"preis", seit dem
+  // Investment-Briefing-Schema 2026-09): eigener Block statt des
+  // Handout-Kanals "befunde" oben, damit beide Mechanismen unabhaengig
+  // voneinander bleiben - die KI soll DARAUF AUFBAUEN, nicht den fremden
+  // Inhalt wiederholen (siehe HEBEL-/PREIS-Prompt).
+  const vorherigeBefundeBlock =
+    vorherigeBefunde && vorherigeBefunde.length > 0
+      ? "\n\nVorherige Befunde zu diesem Objekt (Ergebnisse frueherer Auswertungen - als Kontext nutzen, NICHT wiederholen, darauf aufbauen):\n" +
+        vorherigeBefunde.map((b) => `- ${b.produkt}: ${b.kernaussage}`).join("\n")
       : "";
 
   // Standort-Fakten (Backlog C.8): allgemein bekannte, qualitative Fakten
@@ -458,5 +624,5 @@ export function nutzerPayload(
       : "";
 
   const extra = hinweis && hinweis.trim() ? `\n\nZusaetzliche Hinweise des Nutzers:\n${hinweis.trim()}` : "";
-  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${zahlenBlock}${variantenBlock}${befundeBlock}${standortBlock}${extra}`;
+  return `Kennzahlen des Objekts:\n${zeilen.join("\n")}${zahlenBlock}${variantenBlock}${kaufpreisSimBlock}${zielpreisBlock}${befundeBlock}${vorherigeBefundeBlock}${standortBlock}${extra}`;
 }

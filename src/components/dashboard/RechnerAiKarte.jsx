@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { ergebnisAnlegen, mitErgebnis, alter } from "../../utils/aiEngine.js";
+import {
+  ergebnisAnlegen,
+  mitErgebnis,
+  alter,
+  altesSchema,
+  summaryVon,
+  keyInsightsVon,
+  BASIS_LABEL,
+} from "../../utils/aiEngine.js";
 import { ZahlenBlock } from "./AiEngine.jsx";
 import { rufeAnalyseAuf, analyseFehlertext, erteileConsent } from "../../utils/aiAnalyse.js";
 
@@ -189,25 +197,68 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
               }}
             />
             <span style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ct)" }}>
-              {kurzfassung(ergebnis)}
+              {summaryVon(ergebnis) || "Ergebnis liegt vor."}
             </span>
           </div>
 
-          {abschnitteVon(ergebnis).map((a) => (
-            <div key={a.titel} style={{ marginTop: 12 }}>
-              <div style={gruppenTitel}>{a.titel}</div>
-              <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--ct)" }}>{a.text}</div>
+          {altesSchema(ergebnis) ? (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "var(--info-bg)",
+                color: "var(--info-tx)",
+                fontSize: 12.5,
+                lineHeight: 1.5,
+              }}
+            >
+              Diese Auswertung wurde mit einer früheren Version erstellt.{" "}
+              <button
+                type="button"
+                onClick={klickStarten}
+                style={{ ...textLink, fontSize: 12.5, color: "var(--info-tx)", textDecoration: "underline" }}
+              >
+                Neu berechnen
+              </button>
             </div>
-          ))}
-
-          {kpisVon(ergebnis).length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-              {kpisVon(ergebnis).map((k) => (
-                <span key={k.label} style={kpiChip}>
-                  {k.label} {k.wert}
+          ) : (
+            keyInsightsVon(ergebnis).map((i, idx) => (
+              <div
+                key={i.title}
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  marginTop: idx === 0 ? 12 : 0,
+                  padding: "7px 0",
+                  borderTop: idx === 0 ? "none" : "1px solid var(--cb)",
+                }}
+              >
+                <span
+                  title={BASIS_LABEL[i.basis] || BASIS_LABEL.ki}
+                  aria-label={BASIS_LABEL[i.basis] || BASIS_LABEL.ki}
+                  style={{
+                    marginTop: 6,
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    background: i.basis === "berechnet" ? "var(--ok-tx)" : i.basis === "ki" ? KI : "var(--cl)",
+                  }}
+                />
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "baseline" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>{i.title}</span>
+                    {i.value && (
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ca)" }}>{i.value}</span>
+                    )}
+                  </span>
+                  <span style={{ display: "block", fontSize: 12.5, color: "var(--cl)", marginTop: 2, lineHeight: 1.5 }}>
+                    {i.text}
+                  </span>
                 </span>
-              ))}
-            </div>
+              </div>
+            ))
           )}
 
           <div
@@ -348,27 +399,6 @@ function Laeuft({ titel }) {
   );
 }
 
-// ── Inhalt lesen ────────────────────────────────────────────────────────────
-// Gleiche kleine Leseregeln wie in AiEngine.jsx (dort nicht exportiert) - der
-// Worker liefert {kernaussage, kpis, abschnitte}, aeltere/abweichende Formen
-// duerfen die Karte nicht brechen.
-function kurzfassung(ergebnis) {
-  const i = ergebnis?.inhalt;
-  if (!i) return "";
-  if (typeof i === "string") return i;
-  return i.kernaussage || i.zusammenfassung || "Ergebnis liegt vor.";
-}
-
-function kpisVon(ergebnis) {
-  const k = ergebnis?.inhalt?.kpis;
-  return Array.isArray(k) ? k.filter((x) => x?.label && x?.wert) : [];
-}
-
-function abschnitteVon(ergebnis) {
-  const a = ergebnis?.inhalt?.abschnitte;
-  return Array.isArray(a) ? a.filter((x) => x?.titel && x?.text) : [];
-}
-
 // ── Stile ───────────────────────────────────────────────────────────────────
 // Werte 1:1 aus AiEngine.jsx uebernommen (dort nicht exportiert), damit beide
 // Karten optisch nicht auseinanderlaufen.
@@ -377,15 +407,6 @@ const karte = {
   border: "1px solid var(--cb)",
   borderRadius: 12,
   padding: "14px 16px",
-};
-
-const gruppenTitel = {
-  fontSize: 11,
-  color: "var(--cl)",
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
-  fontWeight: 600,
-  marginBottom: 8,
 };
 
 const aktionsZeile = {
@@ -413,16 +434,6 @@ const preisChip = {
   background: "var(--cro)",
   borderRadius: 6,
   padding: "3px 7px",
-  whiteSpace: "nowrap",
-};
-
-const kpiChip = {
-  fontSize: 12.5,
-  fontWeight: 700,
-  color: "var(--ct)",
-  background: "var(--cro)",
-  borderRadius: 8,
-  padding: "6px 10px",
   whiteSpace: "nowrap",
 };
 

@@ -1,3 +1,84 @@
+## 2026-09-16 (1.85.0)
+
+### Investment Briefing: die drei KI-Analysen am Objekt grundlegend neu gebaut
+
+Umbau der drei KI-Analysen am Objekt ("Objekt analysieren", "Verbesserungshebel
+analysieren", "Kaufpreis analysieren") von Fliesstext-Abschnitten zu einem
+strukturierten Investment-Briefing, in drei Ebenen erarbeitet (Rechenkerne,
+Worker-Prompts/-Schema, UI):
+
+- Neues KI-Antwortschema: statt {kernaussage, kpis, abschnitte} liefert der
+  Worker jetzt {summary, keyInsights, risks, opportunities, calculations,
+  scenarios, assumptions, recommendation} - jede Kernaussage im Muster
+  "Erkenntnis -> Zahl -> Begruendung" und mit einer Herkunfts-Kennzeichnung
+  (Exposé / Berechnet / Annahme / KI-Einordnung), sichtbar als dezenter
+  Punkt mit Tooltip vor jeder Zeile. Betrifft auch die fuenf Nicht-Rendite-
+  Rechner (Kredit/Miete/Sanierung/Vorfaelligkeit/§6), die dasselbe Schema
+  teilen (RechnerAiKarte.jsx entsprechend nachgezogen).
+- Neue Kaufpreis-Simulation: fuer "Kaufpreis analysieren" errechnet die App
+  jetzt deterministisch (ohne KI) fuenf Kaufpreis-Punkte rund um den
+  aktuellen Preis mit Cashflow, Rendite, DSCR, EK-Rendite und
+  Kaufpreisfaktor je Punkt - als eigene Vergleichstabelle, aktueller
+  Kaufpreis hervorgehoben.
+- Neuer Investment-Zielbereich: "Angebotspreis" wird jetzt bewusst von einem
+  berechneten "Investment-Zielbereich" unterschieden (cashflow-neutraler
+  Preis kombiniert mit dem Preis bei ortsueblicher Miete) - ausdruecklich
+  KEINE Verkehrswertermittlung.
+- Verbesserungshebel liefern jetzt zusaetzlich zum Score auch Cashflow und
+  DSCR je durchgerechneter Variante, dargestellt als Vorher/Nachher.
+- Neue Kopf-Komponente "ImmoFuchs Investment Briefing" oberhalb der drei
+  Analysen: fasst bereits gespeicherte Ergebnisse (kein zusaetzlicher
+  KI-Aufruf) zu einer kompakten Uebersicht zusammen - Objekt, Kennzahlen,
+  Kernerkenntnisse, groesster Hebel, Kaufpreis-Einordnung, Risiken. Bleibt
+  unsichtbar, solange keine der drei Analysen gelaufen ist.
+- Aeltere, vor dem Umbau gespeicherte Analyse-Ergebnisse (ohne das neue
+  keyInsights-Feld) zeigen einen Hinweis "mit frueherer Version erstellt"
+  mit direktem Weg zur Neuberechnung, statt kommentarlos leer zu wirken.
+
+## 2026-09-16 (1.84.0)
+
+### Score-Nadel-Gauge, Saldo-Mismatch behoben, Slider-Grenzen gestrafft, Modal-Texte praezisiert
+
+Konsolidierter Nutzer-Befund zum Renditerechner, sieben Punkte:
+
+- Saldo-Mismatch behoben: "Was bleibt beim Verkauf" zeigte oben (KPI-Karte)
+  und unten (Detailtabelle) zwei verschiedene Werte fuer "ohne
+  Steuervorteil", sobald "Nebenkosten mitfinanzieren" aktiv war - die
+  Detailtabelle (Detail.jsx) rechnete unabhaengig von rendite.js neu und
+  zog dabei immer die vollen Nebenkosten als Barauslage ab, obwohl sie im
+  Darlehen steckten. Die Tabelle nutzt jetzt dieselbe nkCash-Logik wie
+  R.gOhne; die Nebenkosten-Zeile erscheint nur noch, wenn sie tatsaechlich
+  bar anfallen.
+- Hinweistext "Das Darlehen uebersteigt den Kaufpreis" (Score-Hardstop bei
+  Beleihungsauslauf > 100 %) praezisiert - der alte Wortlaut klang wie ein
+  Eingabefehler, meinte aber die mitfinanzierten Nebenkosten. Alle Sprachen
+  aktualisiert.
+- Finanz-Score-Begruendung ("Was spricht dafuer/dagegen?"): die Karte
+  "DSCR (Kapitaldienst)" entfernt - "DSCR (Objekt)" bleibt bestehen.
+- Objekt anlegen: Upload-Hinweistext nennt jetzt auch Fotos/Screenshots
+  (das Feld akzeptierte sie schon vorher, nur der Text sagte "PDF hinein").
+  Der Hinweistext unter "Adresse suchen" (OpenStreetMap-Erklaerung) entfaellt
+  im Ruhezustand. Feldlabel "Name oder Adresse" -> "Name des Objekts", mit
+  automatischem Vorschlag "Objekt in <Ort>", sobald der Ort bekannt ist und
+  der Name noch leer ist (ueberschreibt nie eine eigene Eingabe).
+- Slider-Grenzen an einen typischen Privatinvestor angepasst: Kaufpreis/
+  Eigenkapital 0-3 Mio. Euro (vorher 0-10 Mio.), Renovierungskosten 0-150.000
+  Euro/2.500-Euro-Schritte (vorher 0-1 Mio./5.000), Sonderumlage 0-20.000
+  Euro (vorher 0-50.000) - Renditerechner und Finanzierung/Kreditrechner
+  gleichermassen. Das Zahlenfeld daneben bleibt unbegrenzt eingebbar.
+- Kaufpreis = 0: der Rechner zeigte vorher trotzdem Kennzahlen (z.B. 0 %
+  Rendite als rot markiert "kritisch") und eine leere Selbsttraeger-Check-
+  Karte ohne Inhalt. Zeigt jetzt einen neutralen Hinweis statt Zahlen; die
+  AccordionSection-Komponente akzeptiert dafuer ein neues `hidden`-Flag, das
+  eine Sektion strukturell unterdrueckt, statt sie mit leerem Koerper stehen
+  zu lassen.
+- Finanz-Score-Gauge: der Fortschrittsbogen faerbte sich einfarbig in der
+  Score-Tier-Farbe und ueberdeckte dabei die statischen Rot/Gelb/Gruen-
+  Referenzzonen - wirkte, als gehoere "viel Rot" zu einem guten Ergebnis.
+  Ersetzt durch eine Nadel-Gauge: die Farbskala ist fix (Verlauf Rot ->
+  Orange -> Gelb -> Gruen), nur ein Zeiger bewegt sich auf die Score-Position
+  (Vorbild: Shelly-App-Verbrauchsanzeige).
+
 ## 2026-09-11 (1.83.0)
 
 ### Objekt-Anlage entschlankt, PLZ-Kreis-Zuordnung fuer die Regionaldaten, Sheets per X schliessbar

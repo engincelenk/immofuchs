@@ -57,7 +57,6 @@ export function ScoreBlock({ score }) {
       desc: t.findDscrObjektDesc,
       fmt: (v) => fmt(v, 2) + "×",
     },
-    dscrIst: { title: t.dscr, desc: t.findDscrIstDesc, fmt: (v) => fmt(v, 2) + "×" },
     icr: { title: t.findIcrTitle, desc: t.findIcrDesc, fmt: (v) => fmt(v, 2) + "×" },
     beLeer: { title: t.beLeer, desc: t.findBeLeerDesc, fmt: (v) => fmtP(v, 0) },
     bel: { title: t.bel, desc: t.findBelDesc, fmt: (v) => fmtP(v) },
@@ -126,10 +125,15 @@ export function ScoreBlock({ score }) {
         const Rg = 108,
           cgx = 140,
           cgy = 132,
-          sgw = 20;
-        const Cg = Math.PI * Rg;
-        const zLen = Cg / 3;
-        const gDash = animated ? Cg * (1 - Math.min(score.score, 100) / 100) : Cg;
+          sgw = 20,
+          needleLen = Rg - sgw / 2 - 6;
+        // Nadel-Gauge (Loest den sich selbst einfaerbenden Fortschrittsbogen
+        // ab, Bugreport 2026-09-16: der Bogen war einfarbig in der Score-
+        // Tier-Farbe und ueberdeckte dabei die statischen Rot/Gelb/Gruen-
+        // Referenzzonen - wirkte, als gehoere "viel Rot" zu einem guten
+        // Ergebnis. Jetzt wie im Referenzbeispiel: die Farbskala ist fix,
+        // nur die Nadel bewegt sich auf die Score-Position.
+        const needleAngle = animated ? -90 + (Math.min(score.score, 100) / 100) * 180 : -90;
         return (
           <div style={{ padding: "20px 16px 8px" }}>
             <svg
@@ -137,50 +141,40 @@ export function ScoreBlock({ score }) {
               viewBox="0 0 280 185"
               style={{ display: "block", maxWidth: 360, margin: "0 auto", overflow: "visible" }}
             >
+              <defs>
+                <linearGradient id="scoreGaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor={COLORS.red} />
+                  <stop offset="33%" stopColor={COLORS.orange} />
+                  <stop offset="66%" stopColor={COLORS.yellow} />
+                  <stop offset="100%" stopColor={COLORS.green} />
+                </linearGradient>
+              </defs>
               <path
                 d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
                 fill="none"
-                stroke="#ef4444"
-                strokeWidth={sgw}
-                strokeLinecap="butt"
-                opacity={0.22}
-                strokeDasharray={`${zLen} ${Cg - zLen}`}
-                strokeDashoffset={0}
-              />
-              <path
-                d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
-                fill="none"
-                stroke="#f59e0b"
-                strokeWidth={sgw}
-                strokeLinecap="butt"
-                opacity={0.22}
-                strokeDasharray={`${zLen} ${Cg - zLen}`}
-                strokeDashoffset={-zLen}
-              />
-              <path
-                d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
-                fill="none"
-                stroke="#22c55e"
-                strokeWidth={sgw}
-                strokeLinecap="butt"
-                opacity={0.22}
-                strokeDasharray={`${zLen} ${Cg - zLen}`}
-                strokeDashoffset={-2 * zLen}
-              />
-              <path
-                d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
-                fill="none"
-                stroke={col}
+                stroke="url(#scoreGaugeGrad)"
                 strokeWidth={sgw}
                 strokeLinecap="round"
-                strokeDasharray={Cg}
-                strokeDashoffset={gDash}
-                style={{
-                  transition: "stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)",
-                  transformOrigin: `${cgx}px ${cgy}px`,
-                  transform: "scaleX(-1)",
-                }}
               />
+              <g
+                style={{
+                  transition: "transform 1.2s cubic-bezier(.4,0,.2,1)",
+                  transformOrigin: `${cgx}px ${cgy}px`,
+                  transform: `rotate(${needleAngle}deg)`,
+                }}
+              >
+                <line
+                  x1={cgx}
+                  y1={cgy}
+                  x2={cgx}
+                  y2={cgy - needleLen}
+                  stroke="var(--ct)"
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                />
+              </g>
+              <circle cx={cgx} cy={cgy} r={8} fill="var(--ct)" />
+              <circle cx={cgx} cy={cgy} r={3} fill="var(--cc)" />
               <text
                 x={cgx - Rg - 2}
                 y={cgy + 20}

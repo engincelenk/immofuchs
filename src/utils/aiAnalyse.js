@@ -24,6 +24,14 @@ export async function rufeAnalyseAuf({
   varianten,
   befunde,
   standortFakten,
+  // Investment-Briefing-Umbau (2026-09-16): drei zusaetzliche, produktspezifische
+  // Nutzlasten. kaufpreisSimulation/zielpreis gehen bisher nur von "preis" mit,
+  // vorherigeBefunde von "hebel"/"preis" - siehe ObjektDetail.starteProdukt().
+  // Der Worker-Agent stimmt sein Prompt-/Schema-Handling auf genau diese drei
+  // Feldnamen ab, deshalb hier unveraendert durchreichen statt umzubenennen.
+  kaufpreisSimulation,
+  zielpreis,
+  vorherigeBefunde,
 }) {
   try {
     const res = await apiFetch("/analyse", {
@@ -35,6 +43,9 @@ export async function rufeAnalyseAuf({
         ...(zahlen && zahlen.length > 0 ? { zahlen } : {}),
         ...(befunde && befunde.length > 0 ? { befunde } : {}),
         ...(standortFakten && standortFakten.length > 0 ? { standortFakten } : {}),
+        ...(kaufpreisSimulation && kaufpreisSimulation.length > 0 ? { kaufpreisSimulation } : {}),
+        ...(zielpreis ? { zielpreis } : {}),
+        ...(vorherigeBefunde && vorherigeBefunde.length > 0 ? { vorherigeBefunde } : {}),
         kennzahlen,
         // Die KI-Session des Geraets, NICHT eine Objekt-ID - der Worker
         // prueft daran die Einwilligung (siehe assistantSession.js). Gilt

@@ -4,129 +4,235 @@ import { parseAnalyseOutput, parseHandoutOutput } from "./analyseOutput";
 // Der Parser ist die Stelle, an der Modellschwankungen aufschlagen. Der Prompt
 // BITTET um JSON, dieser Parser ERZWINGT es - die Ansicht darf bei keiner
 // Formulierungslaune des Modells brechen.
+//
+// Investment-Briefing-Schema (2026-09): loest {kernaussage, kpis, abschnitte}
+// ab. Statt Fliesstext-Abschnitten liefert das Modell eine Erkenntnis-
+// Hierarchie: summary (Ebene 1) -> keyInsights/risks/opportunities (Ebene 2,
+// je mit title/value?/text/basis) -> calculations/scenarios/assumptions
+// (Ebene 3/4, die Rohzahlen und Annahmen darunter) -> recommendation (optional).
 
 const gut = JSON.stringify({
-  kernaussage: "Solide Vermietung, aber der Cashflow trägt erst ab Jahr 4.",
-  kpis: [
-    { label: "Nettorendite", wert: "3,4 %", ton: "neutral" },
-    { label: "Cashflow", wert: "−85 €", ton: "schwach" },
+  summary: "Solide Vermietung, aber der Cashflow trägt erst ab Jahr 4.",
+  keyInsights: [
+    {
+      title: "Mietpotenzial vorhanden",
+      value: "+210 €/Monat",
+      text: "Die aktuelle Miete beträgt 9,10 €/m². Im Szenario werden 10,50 €/m² angenommen.",
+      basis: "berechnet",
+    },
+    {
+      title: "Cashflow knapp",
+      text: "Der Cashflow liegt bei −85 € im Monat.",
+      basis: "berechnet",
+    },
   ],
-  abschnitte: [
-    { titel: "RENDITE", text: "Die Nettorendite liegt bei 3,4 Prozent." },
-    { titel: "RISIKO", text: "Der Zinsbindungsablauf ist das Hauptrisiko." },
+  risks: [{ title: "Zinsbindungsablauf", text: "Nach Ablauf der Zinsbindung steigt die Rate voraussichtlich.", basis: "annahme" }],
+  opportunities: [],
+  calculations: [
+    { label: "Nettorendite", wert: "3,4 %" },
+    { label: "Cashflow", wert: "−85 €" },
   ],
+  scenarios: [{ label: "Rendite", vorher: "3,4 %", nachher: "4,0 %" }],
+  assumptions: ["Ortsübliche Vergleichsmiete: 10,50 €/m²"],
+  recommendation: "Mietpotenzial pruefen, bevor eine Entscheidung faellt.",
 });
 
 describe("parseAnalyseOutput", () => {
   it("liest die zugesagte Form", () => {
     const e = parseAnalyseOutput(gut);
-    expect(e?.kernaussage).toContain("Solide Vermietung");
-    expect(e?.kpis).toHaveLength(2);
-    expect(e?.abschnitte[0].titel).toBe("RENDITE");
+    expect(e?.summary).toContain("Solide Vermietung");
+    expect(e?.keyInsights).toHaveLength(2);
+    expect(e?.keyInsights[0].title).toBe("Mietpotenzial vorhanden");
+    expect(e?.keyInsights[0].value).toBe("+210 €/Monat");
+    expect(e?.keyInsights[0].basis).toBe("berechnet");
+    expect(e?.risks).toHaveLength(1);
+    expect(e?.opportunities).toHaveLength(0);
+    expect(e?.calculations).toHaveLength(2);
+    expect(e?.scenarios).toHaveLength(1);
+    expect(e?.assumptions).toHaveLength(1);
+    expect(e?.recommendation).toContain("Mietpotenzial pruefen");
+  });
+
+  it("laesst value weg, wenn keine Zahl mitgeliefert wurde", () => {
+    const e = parseAnalyseOutput(gut);
+    expect(e?.keyInsights[1]).not.toHaveProperty("value");
+  });
+
+  it("laesst recommendation weg, wenn keine mitgeliefert wurde", () => {
+    const ohne = JSON.stringify({ summary: "x", keyInsights: [{ title: "a", text: "b", basis: "ki" }] });
+    expect(parseAnalyseOutput(ohne)).not.toHaveProperty("recommendation");
   });
 
   it("entfernt Markdown-Zaeune", () => {
-    expect(parseAnalyseOutput("```json\n" + gut + "\n```")?.kpis).toHaveLength(2);
+    expect(parseAnalyseOutput("```json\n" + gut + "\n```")?.keyInsights).toHaveLength(2);
   });
 
   it("ueberliest eine Vorrede vor dem JSON", () => {
     const e = parseAnalyseOutput("Gerne! Hier ist die Analyse:\n" + gut);
-    expect(e?.kernaussage).toContain("Solide Vermietung");
+    expect(e?.summary).toContain("Solide Vermietung");
   });
 
-  // Abschnitte 2026-09-08 von 3 auf 4 angehoben (Nutzerwunsch "generierte
-  // Texte komplett ausgeben"), kpis bleiben bei 3.
-  it("begrenzt auf drei kpis und vier Abschnitte", () => {
+  it("begrenzt keyInsights auf 5, risks/opportunities auf 3, calculations auf 8, scenarios auf 5, assumptions auf 6", () => {
     const viele = JSON.stringify({
-      kernaussage: "Test",
-      kpis: Array.from({ length: 8 }, (_, i) => ({ label: `L${i}`, wert: `${i}`, ton: "gut" })),
-      abschnitte: Array.from({ length: 8 }, (_, i) => ({ titel: `T${i}`, text: `Text ${i}` })),
+      summary: "Test",
+      keyInsights: Array.from({ length: 9 }, (_, i) => ({ title: `T${i}`, text: `Text ${i}`, basis: "ki" })),
+      risks: Array.from({ length: 9 }, (_, i) => ({ title: `R${i}`, text: `Risiko ${i}`, basis: "ki" })),
+      opportunities: Array.from({ length: 9 }, (_, i) => ({ title: `O${i}`, text: `Chance ${i}`, basis: "ki" })),
+      calculations: Array.from({ length: 20 }, (_, i) => ({ label: `L${i}`, wert: `${i}` })),
+      scenarios: Array.from({ length: 20 }, (_, i) => ({ label: `S${i}`, vorher: `${i}`, nachher: `${i + 1}` })),
+      assumptions: Array.from({ length: 20 }, (_, i) => `Annahme ${i}`),
     });
     const e = parseAnalyseOutput(viele);
-    expect(e?.kpis).toHaveLength(3);
-    expect(e?.abschnitte).toHaveLength(4);
+    expect(e?.keyInsights).toHaveLength(5);
+    expect(e?.risks).toHaveLength(3);
+    expect(e?.opportunities).toHaveLength(3);
+    expect(e?.calculations).toHaveLength(8);
+    expect(e?.scenarios).toHaveLength(5);
+    expect(e?.assumptions).toHaveLength(6);
   });
 
-  it("normalisiert einen unbekannten Ton auf neutral", () => {
+  it("normalisiert eine unbekannte oder fehlende basis auf 'ki'", () => {
     const e = parseAnalyseOutput(
-      JSON.stringify({ kernaussage: "x", kpis: [{ label: "a", wert: "b", ton: "euphorisch" }] }),
+      JSON.stringify({
+        summary: "x",
+        keyInsights: [
+          { title: "a", text: "b", basis: "euphorisch" },
+          { title: "c", text: "d" },
+        ],
+      }),
     );
-    expect(e?.kpis[0].ton).toBe("neutral");
+    expect(e?.keyInsights[0].basis).toBe("ki");
+    expect(e?.keyInsights[1].basis).toBe("ki");
   });
 
-  it("wirft unvollstaendige kpis weg statt sie halb zu zeigen", () => {
+  it("akzeptiert alle vier gueltigen basis-Werte", () => {
     const e = parseAnalyseOutput(
-      JSON.stringify({ kernaussage: "x", kpis: [{ label: "nur Label" }, { wert: "nur Wert" }] }),
+      JSON.stringify({
+        summary: "x",
+        keyInsights: [
+          { title: "a", text: "b", basis: "expose" },
+          { title: "c", text: "d", basis: "berechnet" },
+          { title: "e", text: "f", basis: "annahme" },
+          { title: "g", text: "h", basis: "ki" },
+        ],
+      }),
     );
-    expect(e?.kpis).toHaveLength(0);
+    expect(e?.keyInsights.map((i) => i.basis)).toEqual(["expose", "berechnet", "annahme", "ki"]);
   });
 
-  it("setzt Abschnittstitel in Grossbuchstaben", () => {
+  it("wirft unvollstaendige keyInsights/risks/opportunities weg statt sie halb zu zeigen", () => {
     const e = parseAnalyseOutput(
-      JSON.stringify({ kernaussage: "x", abschnitte: [{ titel: "rendite", text: "y" }] }),
+      JSON.stringify({
+        summary: "x",
+        keyInsights: [{ title: "nur Titel" }, { text: "nur Text" }],
+        risks: [{ title: "nur Titel" }],
+        opportunities: [{ text: "nur Text" }],
+      }),
     );
-    expect(e?.abschnitte[0].titel).toBe("RENDITE");
+    expect(e?.keyInsights).toHaveLength(0);
+    expect(e?.risks).toHaveLength(0);
+    expect(e?.opportunities).toHaveLength(0);
   });
 
-  it("rettet reinen Fliesstext in die Kernaussage", () => {
+  it("wirft unvollstaendige calculations weg (label+wert Pflicht)", () => {
+    const e = parseAnalyseOutput(
+      JSON.stringify({ summary: "x", calculations: [{ label: "nur Label" }, { wert: "nur Wert" }] }),
+    );
+    expect(e?.calculations).toHaveLength(0);
+  });
+
+  it("wirft unvollstaendige scenarios weg (label+vorher+nachher Pflicht)", () => {
+    const e = parseAnalyseOutput(
+      JSON.stringify({
+        summary: "x",
+        scenarios: [
+          { label: "nur Label" },
+          { label: "Rendite", vorher: "3 %" },
+          { vorher: "3 %", nachher: "4 %" },
+        ],
+      }),
+    );
+    expect(e?.scenarios).toHaveLength(0);
+  });
+
+  it("verwirft leere Eintraege in assumptions", () => {
+    const e = parseAnalyseOutput(JSON.stringify({ summary: "x", assumptions: ["", "  ", "Zinssatz: 3,8 %"] }));
+    expect(e?.assumptions).toEqual(["Zinssatz: 3,8 %"]);
+  });
+
+  it("rettet reinen Fliesstext in die summary", () => {
     // Kein hartes Scheitern, wenn das Modell die Form ignoriert - der Text ist
     // immer noch besser als eine Fehlermeldung.
     const e = parseAnalyseOutput("Das Objekt trägt sich knapp, der Cashflow bleibt dünn.");
-    expect(e?.kernaussage).toContain("trägt sich knapp");
-    expect(e?.abschnitte).toHaveLength(0);
+    expect(e?.summary).toContain("trägt sich knapp");
+    expect(e?.keyInsights).toHaveLength(0);
+    expect(e?.risks).toHaveLength(0);
+    expect(e?.calculations).toHaveLength(0);
   });
 
-  it("faellt auf den ersten Abschnitt zurueck, wenn die Kernaussage fehlt", () => {
+  it("faellt auf die erste keyInsight zurueck, wenn summary fehlt", () => {
     const e = parseAnalyseOutput(
-      JSON.stringify({ abschnitte: [{ titel: "RENDITE", text: "Die Rendite ist schwach." }] }),
+      JSON.stringify({ keyInsights: [{ title: "Rendite schwach", text: "Die Rendite ist schwach.", basis: "berechnet" }] }),
     );
-    expect(e?.kernaussage).toContain("Rendite ist schwach");
+    expect(e?.summary).toContain("Rendite ist schwach");
   });
 
   it("liefert null, wenn nichts Brauchbares da ist", () => {
     expect(parseAnalyseOutput("")).toBeNull();
     expect(parseAnalyseOutput("{}")).toBeNull();
     expect(parseAnalyseOutput("   ")).toBeNull();
-    expect(parseAnalyseOutput(JSON.stringify({ kpis: [] }))).toBeNull();
+    expect(parseAnalyseOutput(JSON.stringify({ keyInsights: [] }))).toBeNull();
   });
 
-  it("kuerzt eine ausufernde Kernaussage statt sie durchzureichen", () => {
+  it("kuerzt eine ausufernde summary statt sie durchzureichen", () => {
     const lang = "a".repeat(900);
-    const e = parseAnalyseOutput(JSON.stringify({ kernaussage: lang }));
-    expect(e!.kernaussage.length).toBeLessThanOrEqual(400);
-    expect(e!.kernaussage.endsWith("…")).toBe(true);
+    const e = parseAnalyseOutput(JSON.stringify({ summary: lang }));
+    expect(e!.summary.length).toBeLessThanOrEqual(300);
+    expect(e!.summary.endsWith("…")).toBe(true);
+  });
+
+  it("kuerzt einen ausufernden Insight-Text und eine ausufernde recommendation", () => {
+    const e = parseAnalyseOutput(
+      JSON.stringify({
+        summary: "x",
+        keyInsights: [{ title: "a", text: "b".repeat(900), basis: "ki" }],
+        recommendation: "c".repeat(900),
+      }),
+    );
+    expect(e!.keyInsights[0].text.length).toBeLessThanOrEqual(400);
+    expect(e!.recommendation!.length).toBeLessThanOrEqual(200);
   });
 
   it("uebersteht kaputte Typen ohne zu werfen", () => {
-    expect(() => parseAnalyseOutput(JSON.stringify({ kernaussage: 42, kpis: "nein" }))).not.toThrow();
+    expect(() => parseAnalyseOutput(JSON.stringify({ summary: 42, keyInsights: "nein" }))).not.toThrow();
     expect(() => parseAnalyseOutput(JSON.stringify([1, 2, 3]))).not.toThrow();
-    expect(parseAnalyseOutput(JSON.stringify({ kernaussage: "x", abschnitte: [null] }))?.abschnitte).toEqual([]);
+    expect(parseAnalyseOutput(JSON.stringify({ summary: "x", keyInsights: [null] }))?.keyInsights).toEqual([]);
   });
 
-  // Regressionsschutz zur Umstellung des Handouts (2026-09-08): die drei
+  // Regressionsschutz zur Umstellung des Handouts (2026-09-08): die
   // anderen Produkte laufen weiterhin ueber DIESEN Parser. Ein "fragen"-Feld
-  // in ihrer Antwort ist ein Modellfehler und darf die Abschnitte nicht
-  // verdraengen.
+  // in ihrer Antwort ist ein Modellfehler und darf keyInsights nicht verdraengen.
   it("ignoriert ein fremdes fragen-Feld im generischen Schema", () => {
     const e = parseAnalyseOutput(
       JSON.stringify({
-        kernaussage: "x",
+        summary: "x",
         fragen: [{ frage: "Wie alt ist die Heizung?" }],
-        abschnitte: [{ titel: "RENDITE", text: "y" }],
+        keyInsights: [{ title: "a", text: "b", basis: "ki" }],
       }),
     );
-    expect(e?.abschnitte).toHaveLength(1);
+    expect(e?.keyInsights).toHaveLength(1);
     expect(e).not.toHaveProperty("fragen");
   });
 });
 
 // ── Besichtigungshandout ────────────────────────────────────────────────────
 //
-// Eigene Form (Fragenliste statt Abschnitte), eigener Parser. Er traegt mehr
-// Last als der generische: seine Ausgabe wird nicht nur angezeigt, sondern
-// BEDIENT - die IDs verbinden Auswahl im Browser und Fragen im gedruckten
-// Dokument. Eine fehlende oder doppelte ID waere ein Haken auf der falschen
-// Frage.
+// Eigene Form (Fragenliste statt Abschnitte), eigener Parser - unveraendert
+// durch die Umstellung des generischen Schemas auf das Investment-Briefing.
+// Er traegt mehr Last als der generische: seine Ausgabe wird nicht nur
+// angezeigt, sondern BEDIENT - die IDs verbinden Auswahl im Browser und
+// Fragen im gedruckten Dokument. Eine fehlende oder doppelte ID waere ein
+// Haken auf der falschen Frage.
 
 const HANDOUT_GUT = JSON.stringify({
   kernaussage: "Am Termin haengt alles an der Heizung und am Zustand der Fenster.",
@@ -259,8 +365,8 @@ describe("parseHandoutOutput", () => {
     expect(parseHandoutOutput("{}")).toBeNull();
     expect(parseHandoutOutput(JSON.stringify({ kernaussage: "Nur ein Satz ohne Fragen." }))).toBeNull();
     expect(parseHandoutOutput("Das Objekt ist solide, der Cashflow traegt.")).toBeNull();
-    // Das generische Schema ist hier kein gueltiges Ergebnis - das Handout
-    // braucht Fragen, keine Abschnitte.
+    // Das Investment-Briefing-Schema ist hier kein gueltiges Ergebnis - das
+    // Handout braucht Fragen, keine keyInsights.
     expect(parseHandoutOutput(gut)).toBeNull();
   });
 

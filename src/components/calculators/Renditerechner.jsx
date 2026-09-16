@@ -289,7 +289,7 @@ export default function Haupt() {
             value={d.kaufpreis}
             onChange={(v) => set("kaufpreis", v)}
             tip={tip("kaufpreis")}
-            slider={{ min: 0, max: 10000000, step: 10000 }}
+            slider={{ min: 0, max: 3000000, step: 10000 }}
           />
           <F
             label={t.garageKauf}
@@ -407,7 +407,7 @@ export default function Haupt() {
             value={d.eigenkapital}
             onChange={(v) => set("eigenkapital", v)}
             tip={tip("eigenkapital")}
-            slider={{ min: 0, max: 10000000, step: 10000 }}
+            slider={{ min: 0, max: 3000000, step: 10000 }}
           />
           <Toggle
             checked={!!d.nkFinanzieren}
@@ -736,14 +736,14 @@ export default function Haupt() {
             value={d.sonder}
             onChange={(v) => set("sonder", v)}
             tip={tip("sonder")}
-            slider={{ min: 0, max: 50000, step: 1000 }}
+            slider={{ min: 0, max: 20000, step: 1000 }}
           />
           <F
             label={t.renovierung}
             unit="€"
             value={d.renovierung}
             onChange={(v) => set("renovierung", v)}
-            slider={{ min: 0, max: 1000000, step: 5000 }}
+            slider={{ min: 0, max: 150000, step: 2500 }}
             tip={tip("renovierung")}
           />
           {(() => {
@@ -884,9 +884,14 @@ export default function Haupt() {
           </button>
         </div>
         <div className={`res-pane ${view === "result" ? "act" : ""}`}>
-          {!R ? (
+          {!R || (+d.kaufpreis || 0) <= 0 ? (
             <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ch)" }}>
-              <div style={{ fontSize: 40, opacity: 0.12 }}>🏠</div>
+              <div style={{ fontSize: 40, opacity: 0.12, marginBottom: 8 }}>🏠</div>
+              {(+d.kaufpreis || 0) <= 0 && (
+                <div style={{ fontSize: 13 }}>
+                  {t.kaufpreisFehlt || "Bitte Kaufpreis eingeben, um eine Bewertung zu sehen."}
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -981,7 +986,7 @@ export default function Haupt() {
                   value={d.kaufpreis}
                   onChange={(v) => set("kaufpreis", v)}
                   min={0}
-                  max={10000000}
+                  max={3000000}
                   step={10000}
                   tip={tip("kaufpreis")}
                 />
@@ -991,7 +996,7 @@ export default function Haupt() {
                   value={d.eigenkapital}
                   onChange={(v) => set("eigenkapital", v)}
                   min={0}
-                  max={10000000}
+                  max={3000000}
                   step={10000}
                   tip={tip("eigenkapital")}
                 />
@@ -1030,6 +1035,7 @@ export default function Haupt() {
                     hint={t.selfHint}
                     color={selfHex}
                     sync={{ key: secAllKey, open: secAllOpen }}
+                    hidden={!R.ann || R.ann === 0 || !R.da || R.da === 0}
                   >
                     <div style={{ marginTop: 10 }}>
                       <BreakEvenCards R={R} />

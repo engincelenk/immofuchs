@@ -20,6 +20,8 @@ import {
   type Befund,
   type GerechneteZahl,
   type HebelVariante,
+  type KaufpreisSimulationPunkt,
+  type Zielpreis,
 } from "../analysePrompt";
 import {
   parseAnalyseOutput,
@@ -418,9 +420,78 @@ export function leseVarianten(roh: unknown): HebelVariante[] | undefined {
     const deltaScore = zahl(e.deltaScore);
     if (feld === null || aenderung === null || neuerWert === null) continue;
     if (score === null || deltaScore === null) continue;
-    sauber.push({ feld, aenderung, neuerWert, score, deltaScore });
+    // cashflowMon/dscr sind optional (Investment-Briefing-Schema 2026-09,
+    // Traeger der scenarios-Zeilen im HEBEL-Prompt) - ein fehlendes oder
+    // ungueltiges Feld verwirft nicht die ganze Variante, es bleibt einfach weg.
+    const cashflowMon = text(e.cashflowMon);
+    const dscr = text(e.dscr);
+    sauber.push({
+      feld,
+      aenderung,
+      neuerWert,
+      score,
+      deltaScore,
+      ...(cashflowMon ? { cashflowMon } : {}),
+      ...(dscr ? { dscr } : {}),
+    });
   }
   return sauber.length > 0 ? sauber : undefined;
+}
+
+// Kaufpreis-Simulation und Investment-Zielbereich (Produkt "preis",
+// Investment-Briefing-Schema 2026-09): derselbe Injection-Kanal wie die
+// uebrigen Zahlenbloecke, deshalb dieselbe Disziplin - alle Felder ueber
+// promptText gekuerzt/getrimmt, unvollstaendige Eintraege verworfen statt
+// halb durchgereicht.
+const KAUFPREIS_SIM_MAX = 10;
+
+export function leseKaufpreisSimulation(roh: unknown): KaufpreisSimulationPunkt[] | undefined {
+  if (!Array.isArray(roh)) return undefined;
+  const sauber: KaufpreisSimulationPunkt[] = [];
+  for (const eintrag of roh.slice(0, KAUFPREIS_SIM_MAX)) {
+    if (typeof eintrag !== "object" || eintrag === null || Array.isArray(eintrag)) continue;
+    const e = eintrag as Record<string, unknown>;
+    const kaufpreis = promptText(e.kaufpreis);
+    const cashflowMon = promptText(e.cashflowMon);
+    const nettoRendite = promptText(e.nettoRendite);
+    const bruttoRendite = promptText(e.bruttoRendite);
+    const dscr = promptText(e.dscr);
+    const ekRendite = promptText(e.ekRendite);
+    const kaufpreisfaktor = promptText(e.kaufpreisfaktor);
+    if (
+      kaufpreis === null ||
+      cashflowMon === null ||
+      nettoRendite === null ||
+      bruttoRendite === null ||
+      dscr === null ||
+      ekRendite === null ||
+      kaufpreisfaktor === null
+    ) {
+      continue;
+    }
+    sauber.push({ kaufpreis, cashflowMon, nettoRendite, bruttoRendite, dscr, ekRendite, kaufpreisfaktor });
+  }
+  return sauber.length > 0 ? sauber : undefined;
+}
+
+export function leseZielpreis(roh: unknown): Zielpreis | undefined {
+  if (typeof roh !== "object" || roh === null || Array.isArray(roh)) return undefined;
+  const e = roh as Record<string, unknown>;
+  const kaufpreisAktuell = promptText(e.kaufpreisAktuell);
+  const zielKaufpreisMin = promptText(e.zielKaufpreisMin);
+  const zielKaufpreisMax = promptText(e.zielKaufpreisMax);
+  const zielKriterium = promptText(e.zielKriterium);
+  if (kaufpreisAktuell === null || zielKaufpreisMin === null || zielKaufpreisMax === null || zielKriterium === null) {
+    return undefined;
+  }
+  return { kaufpreisAktuell, zielKaufpreisMin, zielKaufpreisMax, zielKriterium };
+}
+
+// Vorherige Befunde (Produkte "hebel"/"preis", Investment-Briefing-Schema
+// 2026-09): eigener Kanal neben "befunde" (nur Handout), sonst dieselbe
+// Disziplin wie leseBefunde - gekuerzt, ohne Zeilenumbrueche, Anzahl begrenzt.
+export function leseVorherigeBefunde(roh: unknown): Befund[] | undefined {
+  return leseBefunde(roh);
 }
 
 export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promise<Response> {
@@ -466,6 +537,17 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   const standortRelevant =
     produkt === "analyse" || produkt === "hebel" || produkt === "preis" || produkt === "sanier";
   const standortFakten = standortRelevant ? leseStandortFakten(b.standortFakten) : undefined;
+  // Kaufpreis-Simulation und Investment-Zielbereich (Investment-Briefing-
+  // Schema 2026-09) sind nur fuer "preis" relevant - der Prompt nutzt sie
+  // nur dort (siehe PREIS-Prompt in analysePrompt.ts).
+  const kaufpreisSimulation = produkt === "preis" ? leseKaufpreisSimulation(b.kaufpreisSimulation) : undefined;
+  const zielpreis = produkt === "preis" ? leseZielpreis(b.zielpreis) : undefined;
+  // Vorherige Befunde (Investment-Briefing-Schema 2026-09): eigener Kanal
+  // neben "befunde" (Handout), nur fuer hebel/preis - die dort auf einer
+  // bereits gelaufenen Objekt-Analyse aufbauen duerfen (siehe HEBEL-/
+  // PREIS-Prompt).
+  const vorherigeBefunde =
+    produkt === "hebel" || produkt === "preis" ? leseVorherigeBefunde(b.vorherigeBefunde) : undefined;
 
   const zugriff = await resolveZugriff(c.req.raw, env);
   if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
@@ -489,7 +571,17 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
       env,
       "de",
       systemPromptFuer(produkt as AnalyseProdukt),
-      nutzerPayload(kennzahlen as Record<string, unknown>, hinweis, varianten, zahlen, befunde, standortFakten),
+      nutzerPayload(
+        kennzahlen as Record<string, unknown>,
+        hinweis,
+        varianten,
+        zahlen,
+        befunde,
+        standortFakten,
+        kaufpreisSimulation,
+        zielpreis,
+        vorherigeBefunde,
+      ),
       ANALYSE_MAX_TOKENS,
     );
   } catch (err) {
@@ -517,16 +609,25 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
 
   // filterOutput NACH dem Parsen, nicht davor: es ersetzt bei Verdacht den
   // gesamten Text durch einen Fallback-Satz. Auf das rohe JSON angewandt
-  // wuerde dieser Satz zur "Kernaussage" - der Nutzer bekaeme eine
+  // wuerde dieser Satz zur "summary" - der Nutzer bekaeme eine
   // Fehlermeldung als Analyseergebnis serviert. Stattdessen pruefen wir den
   // zusammengesetzten Text und verwerfen im Verdachtsfall das ganze Ergebnis.
-  // Beim Handout sind die Fragen dieser Text: sie sind das Ergebnis.
-  const gesamttext = [
-    ergebnis.kernaussage,
-    ...("fragen" in ergebnis
-      ? ergebnis.fragen.map((f) => f.frage)
-      : ergebnis.abschnitte.map((a) => a.text)),
-  ].join(" ");
+  // Beim Handout sind die Fragen dieser Text: sie sind das Ergebnis. Beim
+  // Investment-Briefing-Schema (analyse/hebel/preis/kredit/miete/sanier/vfe/
+  // steuer6) sind es summary, alle Insight-Texte (keyInsights/risks/
+  // opportunities), assumptions und die optionale recommendation.
+  const gesamttext = (
+    "fragen" in ergebnis
+      ? [ergebnis.kernaussage, ...ergebnis.fragen.map((f) => f.frage)]
+      : [
+          ergebnis.summary,
+          ...ergebnis.keyInsights.map((i) => `${i.title} ${i.text}`),
+          ...ergebnis.risks.map((i) => `${i.title} ${i.text}`),
+          ...ergebnis.opportunities.map((i) => `${i.title} ${i.text}`),
+          ...ergebnis.assumptions,
+          ergebnis.recommendation ?? "",
+        ]
+  ).join(" ");
   if (filterOutput(gesamttext, "de") !== gesamttext) {
     await limiter.decrement();
     return c.json({ error: "unbrauchbare_antwort" }, 502);

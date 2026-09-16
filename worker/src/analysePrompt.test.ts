@@ -46,6 +46,17 @@ describe("nutzerPayload", () => {
     expect(p).toContain("Score 65 statt 72");
   });
 
+  it("haengt cashflowMon und dscr an eine Variantenzeile an, wenn mitgeliefert", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", [VARIANTE({ cashflowMon: "+45 €", dscr: "1,3" })]);
+    expect(p).toContain("- Kaufpreis −15.000 € (neu 285.000 €): Score 78 statt 72, Cashflow +45 €/Monat, DSCR 1,3");
+  });
+
+  it("laesst cashflowMon/dscr in der Variantenzeile weg, wenn nicht mitgeliefert", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", [VARIANTE()]);
+    expect(p).not.toContain("Cashflow");
+    expect(p).not.toContain("DSCR");
+  });
+
   it("haelt Nutzerhinweis und Varianten getrennt", () => {
     const p = nutzerPayload(KENNZAHLEN, "Dach neu 2024", [VARIANTE()]);
     expect(p.indexOf("Durchgerechnete Varianten")).toBeLessThan(
@@ -64,6 +75,19 @@ describe("systemPromptFuer", () => {
 
   it("verbietet dem Hebel-Produkt erfundene Zielwerte, wenn nichts mitgeliefert wurde", () => {
     expect(systemPromptFuer("hebel")).toContain("erfinde KEINE Zielwerte");
+  });
+
+  it("verbietet dem Hebel-Produkt eine erfundene Gesamtwirkung in summary ohne Datengrundlage", () => {
+    const p = systemPromptFuer("hebel");
+    expect(p).toContain("Mehrere Optimierungshebel erkannt");
+    expect(p).toContain("NIEMALS selbst");
+  });
+
+  it("weist das Hebel-Produkt an, cashflowMon/dscr aus den Varianten fuer scenarios zu nutzen", () => {
+    const p = systemPromptFuer("hebel");
+    expect(p).toContain("cashflowMon");
+    expect(p).toContain("dscr");
+    expect(p).toContain("scenarios");
   });
 
   it("erwaehnt Varianten im Analyse-Prompt nicht - dort gibt es keine", () => {
@@ -92,6 +116,115 @@ describe("nutzerPayload - gerechnete Werte (Produkt preis)", () => {
   it("nennt ohne Zahlen keinen Zahlenblock", () => {
     expect(nutzerPayload(KENNZAHLEN)).not.toContain("Gerechnete Werte");
     expect(nutzerPayload(KENNZAHLEN, "", undefined, [])).not.toContain("Gerechnete Werte");
+  });
+});
+
+describe("nutzerPayload - Kaufpreis-Simulation (Produkt preis)", () => {
+  const SIM = [
+    {
+      kaufpreis: "270.000 €",
+      cashflowMon: "+45 €",
+      nettoRendite: "3,8 %",
+      bruttoRendite: "4,4 %",
+      dscr: "1,3",
+      ekRendite: "5,1 %",
+      kaufpreisfaktor: "22,5",
+    },
+    {
+      kaufpreis: "300.000 €",
+      cashflowMon: "−85 €",
+      nettoRendite: "3,1 %",
+      bruttoRendite: "3,7 %",
+      dscr: "1,0",
+      ekRendite: "3,9 %",
+      kaufpreisfaktor: "25,0",
+    },
+  ];
+
+  it("rendert die Kaufpreis-Simulation als Zeilen mit allen Kennzahlen", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, SIM);
+    expect(p).toContain("Kaufpreis-Simulation");
+    expect(p).toContain("Kaufpreis 270.000 €");
+    expect(p).toContain("Cashflow +45 €/Monat");
+    expect(p).toContain("DSCR 1,3");
+    expect(p).toContain("EK-Rendite 5,1 %");
+    expect(p).toContain("Kaufpreisfaktor 22,5");
+  });
+
+  it("nennt ohne Kaufpreis-Simulation keinen entsprechenden Block", () => {
+    expect(nutzerPayload(KENNZAHLEN)).not.toContain("Kaufpreis-Simulation");
+    expect(nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, [])).not.toContain(
+      "Kaufpreis-Simulation",
+    );
+  });
+});
+
+describe("nutzerPayload - Investment-Zielbereich (Produkt preis)", () => {
+  const ZIELPREIS = {
+    kaufpreisAktuell: "300.000 €",
+    zielKaufpreisMin: "255.000 €",
+    zielKaufpreisMax: "275.000 €",
+    zielKriterium: "Nettorendite ≥ 4 %",
+  };
+
+  it("rendert den Investment-Zielbereich, klar getrennt vom Angebotspreis", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, undefined, ZIELPREIS);
+    expect(p).toContain("Investment-Zielbereich");
+    expect(p).toContain("Angebotspreis: 300.000 €");
+    expect(p).toContain("255.000 € bis 275.000 €");
+    expect(p).toContain("Nettorendite ≥ 4 %");
+  });
+
+  it("markiert den Block ausdruecklich als keinen Verkehrswert", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, undefined, ZIELPREIS);
+    expect(p).toContain("KEIN Verkehrswert");
+  });
+
+  it("nennt ohne Zielpreis keinen Investment-Zielbereich-Block", () => {
+    expect(nutzerPayload(KENNZAHLEN)).not.toContain("Investment-Zielbereich");
+  });
+});
+
+describe("nutzerPayload - Vorherige Befunde (Produkte hebel/preis)", () => {
+  const VORHERIGE = [{ produkt: "Objekt analysieren", kernaussage: "Der Cashflow traegt knapp." }];
+
+  it("rendert vorherige Befunde als eigenen Block, unabhaengig vom Handout-Kanal befunde", () => {
+    const p = nutzerPayload(
+      KENNZAHLEN,
+      "",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      VORHERIGE,
+    );
+    expect(p).toContain("Vorherige Befunde");
+    expect(p).toContain("- Objekt analysieren: Der Cashflow traegt knapp.");
+  });
+
+  it("haelt befunde (Handout) und vorherigeBefunde (hebel/preis) unabhaengig voneinander", () => {
+    const befunde = [{ produkt: "Handout-Quelle", kernaussage: "Andere Aussage." }];
+    const p = nutzerPayload(
+      KENNZAHLEN,
+      "",
+      undefined,
+      undefined,
+      befunde,
+      undefined,
+      undefined,
+      undefined,
+      VORHERIGE,
+    );
+    expect(p).toContain("Bisherige Befunde");
+    expect(p).toContain("Handout-Quelle");
+    expect(p).toContain("Vorherige Befunde");
+    expect(p).toContain("Objekt analysieren");
+  });
+
+  it("nennt ohne vorherigeBefunde keinen entsprechenden Block", () => {
+    expect(nutzerPayload(KENNZAHLEN)).not.toContain("Vorherige Befunde");
   });
 });
 
@@ -126,13 +259,13 @@ describe("nutzerPayload - Standort-Kontext (Backlog C.8)", () => {
 // eine versehentlich zurueckgebaute Abschnittsform waere im Client sofort eine
 // leere Karte, weil parseHandoutOutput dann keine Fragen faende.
 describe("systemPromptFuer - handout", () => {
-  it("verlangt eine Fragenliste statt Abschnitten", () => {
+  it("verlangt eine Fragenliste statt des Investment-Briefing-Schemas", () => {
     const p = systemPromptFuer("handout");
     expect(p).toContain('"fragen"');
     expect(p).toContain('"vorOrt"');
     expect(p).toContain('"kern"');
-    expect(p).not.toContain('"abschnitte"');
-    expect(p).not.toContain('"kpis"');
+    expect(p).not.toContain('"keyInsights"');
+    expect(p).not.toContain('"summary"');
   });
 
   it("deckelt die Fragenzahl schon im Prompt", () => {
@@ -143,11 +276,48 @@ describe("systemPromptFuer - handout", () => {
     expect(systemPromptFuer("handout")).toContain("Bisherige Befunde");
   });
 
-  it("aendert die Form der drei anderen Produkte nicht", () => {
+  it("aendert das Investment-Briefing-Schema der drei anderen Produkte nicht", () => {
     for (const produkt of ["analyse", "hebel", "preis"] as const) {
-      expect(systemPromptFuer(produkt)).toContain('"abschnitte"');
+      expect(systemPromptFuer(produkt)).toContain('"keyInsights"');
+      expect(systemPromptFuer(produkt)).toContain('"summary"');
       expect(systemPromptFuer(produkt)).not.toContain('"fragen"');
     }
+  });
+});
+
+describe("systemPromptFuer - Investment-Briefing-Schema (FORM)", () => {
+  it("gibt fuer analyse/hebel/preis die volle Ebenen-Struktur vor", () => {
+    for (const produkt of ["analyse", "hebel", "preis"] as const) {
+      const p = systemPromptFuer(produkt);
+      expect(p).toContain('"summary"');
+      expect(p).toContain('"keyInsights"');
+      expect(p).toContain('"risks"');
+      expect(p).toContain('"opportunities"');
+      expect(p).toContain('"calculations"');
+      expect(p).toContain('"scenarios"');
+      expect(p).toContain('"assumptions"');
+      expect(p).toContain('"recommendation"');
+    }
+  });
+
+  it("erklaert die vier basis-Werte im Prompt", () => {
+    const p = systemPromptFuer("analyse");
+    expect(p).toContain('"basis"');
+    expect(p).toContain("expose");
+    expect(p).toContain("berechnet");
+    expect(p).toContain("annahme");
+    expect(p).toContain('"ki"');
+  });
+
+  it("verbietet erfundene Werte in keyInsights/risks/opportunities scharf und ergaenzt die Herkunfts-Pflicht", () => {
+    const p = systemPromptFuer("analyse");
+    expect(p).toContain("Erfinde KEINE");
+    expect(p).toContain("LASS SIE WEG");
+    expect(p).toContain("Herkunft");
+  });
+
+  it("verlangt keine Kauf- oder Anlageempfehlung fuer recommendation", () => {
+    expect(systemPromptFuer("analyse")).toContain("Kauf- oder Anlageempfehlung");
   });
 });
 
@@ -176,6 +346,20 @@ describe("systemPromptFuer - preis", () => {
     const p = systemPromptFuer("preis");
     expect(p).toContain("energiewertKwhQm");
     expect(p).toContain("erfinde KEINE Energieeffizienzklasse");
+  });
+
+  it("trennt Angebotspreis, Investment-Zielbereich und Verkehrswert sprachlich", () => {
+    const p = systemPromptFuer("preis");
+    expect(p).toContain("Angebotspreis");
+    expect(p).toContain("Investment-Zielbereich");
+    expect(p).toContain('NIE "Verkehrswert"');
+  });
+
+  it("weist an, eine mitgelieferte Kaufpreis-Simulation zu erklaeren statt nur nachzuerzaehlen", () => {
+    const p = systemPromptFuer("preis");
+    expect(p).toContain("Kaufpreis-Simulation");
+    expect(p).toContain("ERKLAERE");
+    expect(p).toContain("Erzaehle NICHT nur die Tabelle nach");
   });
 });
 
@@ -216,16 +400,19 @@ describe("systemPromptFuer - Ort-Nennung und Abgrenzung (analyse/hebel/preis)", 
 // Die fuenf Produkte der Nicht-Rendite-Rechner: kein Objekt, sondern die
 // Eingaben eines einzelnen Rechners. Dieselbe Zahlen-Disziplin wie preis - das
 // Modell darf nur mit mitgelieferten Zahlen arbeiten, nie eigene Markt-,
-// Foerder- oder Steuerzahlen erfinden.
+// Foerder- oder Steuerzahlen erfinden. Sie teilen sich FORM mit
+// analyse/hebel/preis und liefern seit der Umstellung auf das
+// Investment-Briefing-Schema ebenfalls summary/keyInsights statt
+// kernaussage/kpis/abschnitte.
 describe("systemPromptFuer - die fuenf Rechner-Produkte", () => {
   const rechnerProdukte = ["kredit", "miete", "sanier", "vfe", "steuer6"] as const;
 
-  it("liefert fuer jedes der fuenf Produkte einen nicht-leeren, eigenstaendigen Prompt", () => {
+  it("liefert fuer jedes der fuenf Produkte einen nicht-leeren, eigenstaendigen Prompt im Investment-Briefing-Schema", () => {
     const prompts = rechnerProdukte.map((p) => systemPromptFuer(p));
     for (const p of prompts) {
       expect(p.length).toBeGreaterThan(0);
-      expect(p).toContain('"kernaussage"');
-      expect(p).toContain('"abschnitte"');
+      expect(p).toContain('"summary"');
+      expect(p).toContain('"keyInsights"');
     }
     // Paarweise verschieden - kein Copy-Paste-Ueberrest.
     for (let i = 0; i < prompts.length; i++) {

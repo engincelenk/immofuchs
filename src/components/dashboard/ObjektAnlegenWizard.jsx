@@ -163,7 +163,7 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
             {titel || "Exposé hochladen"}
           </span>
           <span style={{ display: "block", fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>
-            {unterzeile || "PDF hinein, Felder automatisch gefüllt"}
+            {unterzeile || "PDF, Foto oder Screenshot hinein, Felder automatisch gefüllt"}
           </span>
         </span>
       </button>
@@ -324,13 +324,13 @@ export function AdressSuche({ onTreffer }) {
           style={eingabeStil}
         />
       </label>
-      <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 5, lineHeight: 1.45 }}>
-        {laedt
-          ? "Suche läuft …"
-          : fehler
-            ? "Die Adresssuche ist gerade nicht erreichbar — trage die Felder unten von Hand ein."
-            : "Sucht ab drei Zeichen bei OpenStreetMap. Nur der eingetippte Text wird übertragen, keine Objektdaten. Du kannst alles auch von Hand eintragen."}
-      </div>
+      {(laedt || fehler) && (
+        <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 5, lineHeight: 1.45 }}>
+          {laedt
+            ? "Suche läuft …"
+            : "Die Adresssuche ist gerade nicht erreichbar — trage die Felder unten von Hand ein."}
+        </div>
+      )}
       {offen && (
         <div
           style={{

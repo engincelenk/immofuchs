@@ -15,13 +15,26 @@
 // faellt damit durch WCAG AA (4,5:1). Genau hier stehen aber die
 // Informationen, die vor Fehlausgaben schuetzen - Kosten und Zeitstempel.
 import { useEffect, useState } from "react";
+import { useApp } from "../../context/AppContext.jsx";
 import {
   AI_PRODUKTE,
   alter,
+  altesSchema,
+  assumptionsVon,
+  BASIS_LABEL,
+  calculationsVon,
   ergebnisFuer,
   istVeraltet,
+  keyInsightsVon,
+  opportunitiesVon,
+  recommendationVon,
+  risksVon,
+  scenariosVon,
+  summaryVon,
   veraltetText,
 } from "../../utils/aiEngine.js";
+import { berechneKaufpreisSimulation } from "../../utils/kaufpreisSimulation.js";
+import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
 import { HandoutFragen } from "./HandoutFragen.jsx";
 
 // Marineblau ist in der App die "Denk-Farbe" fuer KI. Sie markiert hier
@@ -154,6 +167,7 @@ function ProduktZeile({
   onVoraussetzung,
   gesperrtText: grund,
 }) {
+  const { t } = useApp();
   const gesperrt = zustand === "gesperrt";
   // Das Handout liefert seit 2026-09-08 eine Fragenliste statt Abschnitten
   // (worker/src/analyseOutput.ts). Aeltere, vor der Umstellung gespeicherte
@@ -213,6 +227,10 @@ function ProduktZeile({
 
       {(zustand === "fertig" || zustand === "veraltet") && (
         <>
+          {/* Ebene 1 - Erkenntnis: die wichtigste Aussage, gross und zuerst.
+              summaryVon() liest sowohl das neue Schema (summary) als auch das
+              alte (kernaussage) - die Kopfzeile bleibt also auch fuer alte,
+              noch nicht neu berechnete Ergebnisse sinnvoll. */}
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <span
               style={{
@@ -223,22 +241,12 @@ function ProduktZeile({
               }}
             />
             <span style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ct)" }}>
-              {kurzfassung(ergebnis)}
+              {summaryVon(ergebnis) || "Ergebnis liegt vor."}
             </span>
           </div>
 
-          {/* Der volle Modelltext steht seit 2026-09-08 direkt hier, nicht
-              mehr nur im Sheet hinter "Ganzen Text lesen". Nutzerwunsch:
-              generierte Texte komplett ausgeben - dieselbe Begruendung wie
-              beim Aufklappen der AI-Sektion: was Kontingent gekostet hat,
-              darf nicht hinter einem weiteren Klick liegen. Das Sheet bleibt
-              fuer Grundlage/Varianten/Quellenangaben. */}
           {/* Das Handout ist kein Text zum Lesen, sondern eine Liste zum
-              Abhaken - deshalb hier eine eigene Renderstrecke statt der
-              Abschnitte. Alle anderen Produkte bleiben unveraendert.
-              kernaussage roh statt ueber kurzfassung(): dort steht ein
-              Platzhaltersatz, wenn das Modell keine geliefert hat - der
-              gehoert in die Karte, aber nicht in ein gedrucktes Dokument. */}
+              Abhaken - eigene Renderstrecke, eigenes Schema, unveraendert. */}
           {fragen.length > 0 ? (
             <HandoutFragen
               objekt={objekt}
@@ -247,25 +255,34 @@ function ProduktZeile({
               kernaussage={ergebnis?.inhalt?.kernaussage || ""}
               erstellt={ergebnis?.erstellt}
             />
+          ) : altesSchema(ergebnis) ? (
+            // Vor dem Investment-Briefing-Umbau (2026-09-16) gespeichertes
+            // Ergebnis: kein keyInsights-Array, die Ebenen 2-4 haetten nichts
+            // zu zeigen. Statt einer stillen Luecke ein klarer Hinweis mit
+            // direktem Weg zur Neuberechnung - eine bezahlte Auswertung darf
+            // nach einem Schema-Wechsel nicht kommentarlos leer wirken.
+            <div
+              style={{
+                marginTop: 10,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "var(--info-bg)",
+                color: "var(--info-tx)",
+                fontSize: 12.5,
+                lineHeight: 1.5,
+              }}
+            >
+              Diese Auswertung wurde mit einer früheren Version erstellt.{" "}
+              <button
+                type="button"
+                onClick={onStarten}
+                style={{ ...textLink, fontSize: 12.5, color: "var(--info-tx)", textDecoration: "underline" }}
+              >
+                Neu berechnen
+              </button>
+            </div>
           ) : (
-            <>
-              {abschnitteVon(ergebnis).map((a) => (
-                <div key={a.titel} style={{ marginTop: 12 }}>
-                  <div style={gruppenTitel}>{a.titel}</div>
-                  <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--ct)" }}>{a.text}</div>
-                </div>
-              ))}
-
-              {kpisVon(ergebnis).length > 0 && (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-                  {kpisVon(ergebnis).map((k) => (
-                    <span key={k.label} style={kpiChip}>
-                      {k.label} {k.wert}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </>
+            <ErkenntnisseEbene2 ergebnis={ergebnis} />
           )}
 
           <VariantenBlock varianten={ergebnis?.varianten} max={1} />
@@ -280,15 +297,6 @@ function ProduktZeile({
               marginTop: 12,
             }}
           >
-            {/* Aufklappen statt Sheet-Link (UX-Review 2026-09-09): derselbe
-                Inhalt wie vorher im Sheet (volle Varianten-/Zahlenliste samt
-                Quellenangabe, Grundlage der Auswertung), jetzt direkt in der
-                Karte statt hinter einer Navigation.
-
-                Beim Handout gibt es dieses Drumherum nicht: keine Varianten,
-                keine Ortsmiete, und die Veraltet-Basis ist bewusst leer
-                (RELEVANTE_FELDER.handout) - deshalb entfaellt der Umschalter
-                dort komplett, nicht nur der Link. */}
             {fragen.length === 0 && (
               <button
                 type="button"
@@ -304,7 +312,7 @@ function ProduktZeile({
             </button>
           </div>
 
-          {fragen.length === 0 && aufgeklappt && <GrundlageUndQuellen ergebnis={ergebnis} />}
+          {fragen.length === 0 && aufgeklappt && <GrundlageUndQuellen ergebnis={ergebnis} data={data} t={t} produkt={produkt} />}
         </>
       )}
     </div>
@@ -316,10 +324,88 @@ function ProduktZeile({
 // Grundlage, auf der die Auswertung fusst - dieselbe Angabe, an der auch die
 // Veraltet-Erkennung haengt (istVeraltet()/veraltetText()). Nur der Rahmen
 // hat sich geaendert: Aufklapp-Sektion in der Karte statt eigenes Sheet.
-function GrundlageUndQuellen({ ergebnis }) {
+function GrundlageUndQuellen({ ergebnis, data, t, produkt }) {
   const basis = ergebnis?.basis;
+  const calculations = calculationsVon(ergebnis);
+  const scenarios = scenariosVon(ergebnis);
+  const assumptions = assumptionsVon(ergebnis);
+  const recommendation = recommendationVon(ergebnis);
   return (
     <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
+      {/* Ebene 3 - Berechnung: die Rohzahlen, auf denen summary/keyInsights
+          beruhen (calculations), plus Vorher/Nachher (scenarios) bei
+          hebel/preis. Fuer "preis" zusaetzlich eine deterministische
+          Kaufpreis-Vergleichstabelle - nicht das, was das Modell geliefert
+          hat, sondern direkt aus der Rendite-Engine, live nachgerechnet. */}
+      {calculations.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={gruppenTitel}>Berechnung</div>
+          {calculations.map((c, i) => (
+            <div
+              key={c.label}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+                padding: "6px 0",
+                borderTop: i === 0 ? "none" : "1px solid var(--cb)",
+                fontSize: 12.5,
+              }}
+            >
+              <span style={{ color: "var(--cl)" }}>{c.label}</span>
+              <span style={{ color: "var(--ct)", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                {c.wert}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {scenarios.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={gruppenTitel}>Vorher / Nachher</div>
+          {scenarios.map((s) => (
+            <div
+              key={s.label}
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 8,
+                padding: "6px 0",
+                fontSize: 12.5,
+              }}
+            >
+              <span style={{ color: "var(--cl)", flex: "0 0 auto" }}>{s.label}</span>
+              <span style={{ color: "var(--ct)", fontVariantNumeric: "tabular-nums" }}>
+                {s.vorher} <span style={{ color: "var(--cl)" }}>→</span>{" "}
+                <strong style={{ color: "var(--ok-tx)" }}>{s.nachher}</strong>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {produkt?.id === "preis" && <KaufpreisSimulationTabelle data={data} t={t} />}
+
+      {(assumptions.length > 0 || recommendation) && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={gruppenTitel}>Annahmen</div>
+          {assumptions.length > 0 && (
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: "var(--cl)", lineHeight: 1.6 }}>
+              {assumptions.map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+          )}
+          {recommendation && (
+            <div style={{ marginTop: 8, fontSize: 12.5, color: "var(--ct)", lineHeight: 1.6 }}>
+              {recommendation}
+            </div>
+          )}
+        </div>
+      )}
+
       <VariantenBlock varianten={ergebnis?.varianten} titel="Durchgerechnete Varianten" />
       <ZahlenBlock zahlen={ergebnis?.zahlen} titel="Gerechnete Werte" />
       {basis && Object.keys(basis).length > 0 && (
@@ -337,6 +423,151 @@ function GrundlageUndQuellen({ ergebnis }) {
             .join(" · ")}
         </div>
       )}
+    </div>
+  );
+}
+
+// Herkunfts-Punkt vor jeder Insight/Risk/Opportunity-Zeile: dezent, mit
+// Tooltip + aria-label statt allein per Farbe unterscheidbar (WCAG).
+function BasisPunkt({ basis }) {
+  const FARBE = { expose: "var(--cl)", berechnet: "var(--ok-tx)", annahme: "var(--cl)", ki: KI };
+  const label = BASIS_LABEL[basis] || BASIS_LABEL.ki;
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      style={{
+        display: "inline-block",
+        width: 7,
+        height: 7,
+        borderRadius: "50%",
+        background: FARBE[basis] || FARBE.ki,
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+function InsightZeile({ insight }) {
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "7px 0" }}>
+      <span style={{ marginTop: 6 }}>
+        <BasisPunkt basis={insight.basis} />
+      </span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>{insight.title}</span>
+          {insight.value && (
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ca)", fontVariantNumeric: "tabular-nums" }}>
+              {insight.value}
+            </span>
+          )}
+        </span>
+        <span style={{ display: "block", fontSize: 12.5, lineHeight: 1.55, color: "var(--cl)", marginTop: 2 }}>
+          {insight.text}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+// Ebene 2 - Begruendung: 3-5 datenbasierte Kernerkenntnisse, dann Risiken/
+// Chancen in eigenem, dezent gefaerbtem Block (nicht grelle Ampel-Optik,
+// nur ein schmaler linker Rand in --bad-bd/--ok-bd).
+function ErkenntnisseEbene2({ ergebnis }) {
+  const insights = keyInsightsVon(ergebnis);
+  const risks = risksVon(ergebnis);
+  const opportunities = opportunitiesVon(ergebnis);
+  if (insights.length === 0 && risks.length === 0 && opportunities.length === 0) return null;
+  return (
+    <div style={{ marginTop: 4 }}>
+      {insights.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          {insights.map((i, idx) => (
+            <div key={i.title} style={idx === 0 ? {} : { borderTop: "1px solid var(--cb)" }}>
+              <InsightZeile insight={i} />
+            </div>
+          ))}
+        </div>
+      )}
+      {risks.length > 0 && (
+        <div style={{ marginTop: 10, paddingLeft: 10, borderLeft: "3px solid var(--bad-bd)" }}>
+          {risks.map((r) => (
+            <InsightZeile key={r.title} insight={r} />
+          ))}
+        </div>
+      )}
+      {opportunities.length > 0 && (
+        <div style={{ marginTop: 10, paddingLeft: 10, borderLeft: "3px solid var(--ok-bd)" }}>
+          {opportunities.map((o) => (
+            <InsightZeile key={o.title} insight={o} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Ebene 3 (Sonderfall "preis"): deterministische Kaufpreis-Vergleichstabelle,
+// unabhaengig vom Modelltext direkt aus der Rendite-Engine gerechnet (wie
+// VariantenBlock/ZahlenBlock: der belastbare Teil braucht keine KI-
+// Bestaetigung). Aktueller Kaufpreis optisch hervorgehoben.
+function KaufpreisSimulationTabelle({ data, t }) {
+  if (!data || !t) return null;
+  const kaufpreisAktuell = Math.round(+data.kaufpreis || 0);
+  let punkte;
+  try {
+    punkte = berechneKaufpreisSimulation(data, t);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(punkte) || punkte.length === 0) return null;
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={gruppenTitel}>Kaufpreis-Simulation</div>
+      <div style={{ display: "flex", flexDirection: "column", fontSize: 11.5 }}>
+        <div style={{ display: "flex", gap: 8, padding: "4px 0", color: "var(--cl)", fontWeight: 600 }}>
+          <span style={{ flex: "1 1 70px" }}>Kaufpreis</span>
+          <span style={{ flex: "1 1 60px", textAlign: "right" }}>Cashflow</span>
+          <span style={{ flex: "1 1 50px", textAlign: "right" }}>Rendite</span>
+          <span style={{ flex: "1 1 40px", textAlign: "right" }}>DSCR</span>
+        </div>
+        {punkte.map((p) => {
+          const aktiv = Math.abs(p.kaufpreis - kaufpreisAktuell) < 1000;
+          return (
+            <div
+              key={p.kaufpreis}
+              style={{
+                display: "flex",
+                gap: 8,
+                padding: "5px 0",
+                borderTop: "1px solid var(--cb)",
+                fontVariantNumeric: "tabular-nums",
+                ...(aktiv
+                  ? { background: "var(--ca-bg)", borderRadius: 6, paddingLeft: 4, paddingRight: 4 }
+                  : {}),
+              }}
+            >
+              <span style={{ flex: "1 1 70px", fontWeight: aktiv ? 800 : 400, color: "var(--ct)" }}>
+                {fmtE(p.kaufpreis)}
+                {aktiv ? " ·" : ""}
+              </span>
+              <span style={{ flex: "1 1 60px", textAlign: "right", color: "var(--ct)" }}>
+                {fmtE(p.cashflowMon)}
+              </span>
+              <span style={{ flex: "1 1 50px", textAlign: "right", color: "var(--ct)" }}>
+                {fmtP(p.nettoRendite)}
+              </span>
+              <span style={{ flex: "1 1 40px", textAlign: "right", color: "var(--ct)" }}>
+                {p.dscr != null ? `${fmt(p.dscr, 2)}×` : "–"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 6, lineHeight: 1.45 }}>
+        Gerechnet, nicht geschätzt — aktueller Kaufpreis hervorgehoben.
+      </div>
     </div>
   );
 }
@@ -536,24 +767,8 @@ export function ZahlenBlock({ zahlen, max, titel }) {
 }
 
 // ── Inhalt lesen ────────────────────────────────────────────────────────────
-// Der Worker liefert {kernaussage, kpis, abschnitte}. Aeltere oder
-// abweichende Formen (etwa der Expose-Scan) duerfen die Zeile nicht brechen.
-function kurzfassung(ergebnis) {
-  const i = ergebnis?.inhalt;
-  if (!i) return "";
-  if (typeof i === "string") return i;
-  return i.kernaussage || i.zusammenfassung || "Ergebnis liegt vor.";
-}
-
-function kpisVon(ergebnis) {
-  const k = ergebnis?.inhalt?.kpis;
-  return Array.isArray(k) ? k.filter((x) => x?.label && x?.wert) : [];
-}
-
-function abschnitteVon(ergebnis) {
-  const a = ergebnis?.inhalt?.abschnitte;
-  return Array.isArray(a) ? a.filter((x) => x?.titel && x?.text) : [];
-}
+// summaryVon()/keyInsightsVon()/... aus utils/aiEngine.js lesen das aktuelle
+// Investment-Briefing-Schema; hier bleibt nur, was AiEngine-spezifisch ist.
 
 // Die Fragenliste des Handouts. Nur dieses Produkt hat sie - und auch dort
 // nur, wenn das Ergebnis nach der Umstellung vom 2026-09-08 entstanden ist.
@@ -608,16 +823,6 @@ const preisChip = {
   background: "var(--cro)",
   borderRadius: 6,
   padding: "3px 7px",
-  whiteSpace: "nowrap",
-};
-
-const kpiChip = {
-  fontSize: 12.5,
-  fontWeight: 700,
-  color: "var(--ct)",
-  background: "var(--cro)",
-  borderRadius: 8,
-  padding: "6px 10px",
   whiteSpace: "nowrap",
 };
 
