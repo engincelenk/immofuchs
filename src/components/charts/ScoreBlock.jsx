@@ -10,9 +10,10 @@ import { fmt, fmtP } from "../../utils/helpers.js";
 // `score` erwartet das Rueckgabeobjekt von investmentScore.js/berechneScore().
 // Ist `score.verfuegbar` false (Datengrundlage unter 60 % des Stufe-2-
 // Gewichts), zeigt die Komponente einen Platzhalter statt einer Zahl.
-// Kubische Ease-out-Naeherung von cubic-bezier(.4,0,.2,1) (derselben Kurve,
-// die die Nadel per CSS-Transition faehrt) - die hochzaehlende Zahl soll
-// optisch mit der Nadelbewegung mithalten, nicht schneller fertig sein.
+// Kubische Ease-out-Naeherung von cubic-bezier(.4,0,.2,1) (derselben Kurve
+// und Dauer, die die Nadel per CSS-Transition faehrt) - die hochzaehlende
+// Zahl soll optisch mit der Nadelbewegung mithalten, nicht schneller fertig
+// sein.
 function easeOut(p) {
   return 1 - Math.pow(1 - p, 3);
 }
@@ -40,7 +41,7 @@ export function ScoreBlock({ score }) {
       return;
     }
     let frame;
-    const dauer = 1200;
+    const dauer = 800;
     const start = performance.now();
     const schritt = (jetzt) => {
       const p = Math.min((jetzt - start) / dauer, 1);
@@ -131,157 +132,130 @@ export function ScoreBlock({ score }) {
       </div>
 
       {(() => {
-        const Rg = 108,
-          cgx = 140,
-          cgy = 132,
-          sgw = 20,
-          needleLen = Rg - sgw / 2 - 6;
-        // Nadel-Gauge mit fuellendem Bogen (Vorlage vom Nutzer, 2026-09-16,
-        // an ein Shelly-Verbrauchs-Gauge angelehnt): die Farbskala selbst
-        // bleibt fix (Rot->Orange->Gelb->Gruen), aber der Bogen fuellt sich
-        // zusaetzlich von links bis zur Nadelposition - anders als der
-        // fruehere, IMMER voll eingefaerbte Bogen (der taeuschte vor, "viel
-        // Rot" gehoere zu einem guten Ergebnis) zeigt der gefuellte Teil hier
-        // exakt die Farben, die die Nadel bereits passiert hat.
+        // Geometrie 1:1 aus der Nutzer-Vorlage ("Power Gauge", 2026-09-16):
+        // 270-Grad-Farbring (unten offen), Drehpunkt in der KREISMITTE,
+        // Zeiger schwenkt -120..+120 Grad, Zahl steht UNTER dem Drehpunkt.
+        //
+        // Der vorherige 180-Grad-Halbkreis hatte den Drehpunkt auf der
+        // Grundlinie - die Zahl stand damit zwangslaeufig im Schwenkbereich
+        // des Zeigers und wurde von ihm durchschnitten. Mit dem mittigen
+        // Drehpunkt liegt die untere 120-Grad-Luecke frei, genau dort steht
+        // die Zahl. Der Ring ist wieder durchgehend farbig (kein grauer
+        // Rest): den Wert zeigt allein der Zeiger.
+        const C = 150,
+          R = 100;
         const percent = Math.min(score.score, 100) / 100;
-        const needleAngle = animated ? -90 + percent * 180 : -90;
-        const arcLen = Math.PI * Rg;
-        const arcOffset = animated ? arcLen * (1 - percent) : arcLen;
+        const needleAngle = animated ? -120 + percent * 240 : -120;
 
-        // Tickmarks: 20 Schritte ueber die 180 Grad, jeder 5. eine
-        // "Hauptmarke". Gleiche Winkel-Konvention wie die Nadel (-90..+90,
-        // 0 = Scheitel oben).
-        const TICKS = 20;
-        const tickInnerR = Rg - sgw / 2 - 10;
-        const tickOuterRMinor = tickInnerR + 5;
-        const tickOuterRMajor = tickInnerR + 9;
-        const tickPunkt = (grad, r) => {
+        // Ringpunkt bei Winkel `grad` (0 = Scheitel oben, positiv im
+        // Uhrzeigersinn) - dieselbe Konvention wie der Zeiger.
+        const ringPunkt = (grad, r = R) => {
           const rad = (grad * Math.PI) / 180;
-          return [cgx + r * Math.sin(rad), cgy - r * Math.cos(rad)];
+          return [C + r * Math.sin(rad), C - r * Math.cos(rad)];
         };
+        const [bx1, by1] = ringPunkt(-135);
+        const [bx2, by2] = ringPunkt(135);
+        // 270 Grad => large-arc-flag 1, im Uhrzeigersinn => sweep-flag 1.
+        const bogenPfad = `M${bx1},${by1} A${R},${R} 0 1 1 ${bx2},${by2}`;
 
         return (
-          <div style={{ padding: "20px 16px 8px" }}>
+          <div style={{ padding: "12px 16px 4px" }}>
             <svg
               width="100%"
-              viewBox="0 0 280 185"
-              style={{ display: "block", maxWidth: 360, margin: "0 auto", overflow: "visible" }}
+              viewBox="0 0 300 262"
+              style={{ display: "block", maxWidth: 300, margin: "0 auto", overflow: "visible" }}
             >
               <defs>
-                <linearGradient id="scoreGaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                {/* Farbrichtung gegenueber der Vorlage gedreht: bei uns ist
+                    ein HOHER Score gut, also links Rot (0), rechts Gruen (100).
+                    userSpaceOnUse statt Prozentwerten: die Vorlage rotiert den
+                    Ring per transform, was die Gradient-Achse MITDREHT - im
+                    Browser-Test kam der Verlauf dadurch spiegelverkehrt heraus
+                    (gruen links). Der Bogen wird deshalb unten als Pfad ohne
+                    Transform gezeichnet, der Verlauf bleibt waagerecht. */}
+                <linearGradient
+                  id="scoreGaugeGrad"
+                  gradientUnits="userSpaceOnUse"
+                  x1={C - R}
+                  y1={C}
+                  x2={C + R}
+                  y2={C}
+                >
                   <stop offset="0%" stopColor={COLORS.red} />
-                  <stop offset="33%" stopColor={COLORS.orange} />
-                  <stop offset="66%" stopColor={COLORS.yellow} />
+                  <stop offset="50%" stopColor={COLORS.yellow} />
                   <stop offset="100%" stopColor={COLORS.green} />
                 </linearGradient>
-                <filter id="scoreGaugeGlow" x="-60%" y="-60%" width="220%" height="220%">
-                  <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor={col} floodOpacity="0.55" />
-                </filter>
               </defs>
 
-              {/* Track (ungefuellter Rest) */}
               <path
-                d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
-                fill="none"
-                stroke="var(--cb)"
-                strokeWidth={sgw}
-                strokeLinecap="round"
-              />
-              {/* Gefuellter Bogen bis zur Nadelposition */}
-              <path
-                d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
+                d={bogenPfad}
                 fill="none"
                 stroke="url(#scoreGaugeGrad)"
-                strokeWidth={sgw}
+                strokeWidth={18}
                 strokeLinecap="round"
-                strokeDasharray={arcLen}
-                strokeDashoffset={arcOffset}
-                filter="url(#scoreGaugeGlow)"
-                style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)" }}
+                style={{ filter: `drop-shadow(0 0 8px ${col}59)` }}
               />
 
-              {/* Tickmarks */}
-              {Array.from({ length: TICKS + 1 }, (_, i) => {
-                const grad = -90 + (180 * i) / TICKS;
-                const major = i % 5 === 0;
-                const [x1, y1] = tickPunkt(grad, tickInnerR);
-                const [x2, y2] = tickPunkt(grad, major ? tickOuterRMajor : tickOuterRMinor);
-                return (
+              {/* 11 Skalenstriche ueber die 240 Grad des Zeigerwegs */}
+              <g stroke="var(--ch)" strokeWidth={2} strokeLinecap="round" opacity={0.5}>
+                {Array.from({ length: 11 }, (_, i) => (
                   <line
                     key={i}
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
-                    stroke="var(--ch)"
-                    strokeWidth={major ? 2 : 1.3}
-                    strokeLinecap="round"
-                    opacity={major ? 0.7 : 0.4}
+                    x1={C}
+                    y1={65}
+                    x2={C}
+                    y2={75}
+                    transform={`rotate(${-120 + i * 24} ${C} ${C})`}
                   />
-                );
-              })}
-
-              {/* Nadel: spitz zulaufendes Dreieck statt Strich (zweite
-                  Nutzer-Vorlage, 2026-09-16) - wirkt wie ein echter
-                  Messgeraete-Zeiger statt einer duennen Linie. Schlagschatten
-                  per CSS drop-shadow statt manueller Duplikat-Linie. */}
-              <g
-                style={{
-                  transition: "transform 1.2s cubic-bezier(.4,0,.2,1)",
-                  transformOrigin: `${cgx}px ${cgy}px`,
-                  transform: `rotate(${needleAngle}deg)`,
-                }}
-              >
-                <polygon
-                  points={`${cgx - 3},${cgy} ${cgx},${cgy - needleLen} ${cgx + 3},${cgy}`}
-                  fill="var(--ct)"
-                  style={{ filter: "drop-shadow(0px 2px 3px rgba(0,0,0,.35))" }}
-                />
+                ))}
               </g>
-              <circle cx={cgx} cy={cgy} r={8} fill="var(--cc)" stroke="var(--cb)" strokeWidth={2} />
-              <circle cx={cgx} cy={cgy} r={3} fill="var(--ct)" />
 
-              <text
-                x={cgx - Rg - 2}
-                y={cgy + 20}
-                textAnchor="middle"
-                fontSize={11}
-                fill="#ef4444"
-                fontWeight={700}
-              >
+              <text x={C} y={218} textAnchor="middle" fontSize={46} fontWeight={800} fill={col}>
+                {displayScore}
+              </text>
+              <text x={72} y={246} textAnchor="middle" fontSize={13} fontWeight={700} fill={COLORS.red}>
                 0
               </text>
               <text
-                x={cgx + Rg + 2}
-                y={cgy + 20}
+                x={228}
+                y={246}
                 textAnchor="middle"
-                fontSize={11}
-                fill="#22c55e"
+                fontSize={13}
                 fontWeight={700}
+                fill={COLORS.green}
               >
                 100
               </text>
-              <text
-                x={cgx}
-                y={cgy - 6}
-                textAnchor="middle"
-                fontSize={52}
-                fontWeight={900}
-                fill={col}
+
+              <g
+                style={{
+                  transition: "transform .8s cubic-bezier(.4,0,.2,1)",
+                  transformOrigin: `${C}px ${C}px`,
+                  transform: `rotate(${needleAngle}deg)`,
+                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,.45))",
+                }}
               >
-                {displayScore}
-              </text>
-              <text
-                x={cgx}
-                y={cgy + 36}
-                textAnchor="middle"
-                fontSize={16}
-                fontWeight={800}
-                fill={col}
-              >
-                {lbl}
-              </text>
+                <polygon points={`${C - 4},${C} ${C},60 ${C + 4},${C}`} fill="var(--ct)" />
+                <circle cx={C} cy={C} r={8} fill="var(--cc)" stroke="var(--ct)" strokeWidth={3} />
+              </g>
             </svg>
+
+            {/* Staffel-Label als HTML statt im SVG: deutsche Labels wie
+                "Schwachstellen erkennbar" sind zu breit fuer die Luecke
+                zwischen den 0/100-Marken und wuerden dort kollidieren -
+                hier umbricht der Text stattdessen sauber. */}
+            <div
+              style={{
+                textAlign: "center",
+                fontSize: 16,
+                fontWeight: 800,
+                color: col,
+                marginTop: 2,
+                lineHeight: 1.25,
+              }}
+            >
+              {lbl}
+            </div>
             <div style={{ textAlign: "center", fontSize: 10.5, color: "var(--ch)", marginTop: 4 }}>
               {t.financeScoreSub ||
                 "Wirtschaftlichkeit, Cashflow und Finanzierung — Objekt-, Vermietungs- und Exit-Bewertung folgen später"}
