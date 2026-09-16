@@ -10,14 +10,46 @@ import { fmt, fmtP } from "../../utils/helpers.js";
 // `score` erwartet das Rueckgabeobjekt von investmentScore.js/berechneScore().
 // Ist `score.verfuegbar` false (Datengrundlage unter 60 % des Stufe-2-
 // Gewichts), zeigt die Komponente einen Platzhalter statt einer Zahl.
+// Kubische Ease-out-Naeherung von cubic-bezier(.4,0,.2,1) (derselben Kurve,
+// die die Nadel per CSS-Transition faehrt) - die hochzaehlende Zahl soll
+// optisch mit der Nadelbewegung mithalten, nicht schneller fertig sein.
+function easeOut(p) {
+  return 1 - Math.pow(1 - p, 3);
+}
+
 export function ScoreBlock({ score }) {
   const { t } = useApp();
   const [ex, setEx] = useState(false);
   const [animated, setAnimated] = useState(false);
+  const [displayScore, setDisplayScore] = useState(0);
   useEffect(() => {
     const id = setTimeout(() => setAnimated(true), 80);
     return () => clearTimeout(id);
   }, [score?.score]);
+
+  // Zahl zaehlt von 0 auf den Zielwert hoch, synchron zur 1,2s-Nadel-
+  // Transition. prefers-reduced-motion: sofort auf den Endwert springen,
+  // wie es "kein Effekt" fuer die Nadel auch tut.
+  useEffect(() => {
+    const ziel = Math.min(score?.score ?? 0, 100);
+    const reduziert =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!animated || reduziert) {
+      setDisplayScore(ziel);
+      return;
+    }
+    let frame;
+    const dauer = 1200;
+    const start = performance.now();
+    const schritt = (jetzt) => {
+      const p = Math.min((jetzt - start) / dauer, 1);
+      setDisplayScore(Math.round(ziel * easeOut(p)));
+      if (p < 1) frame = requestAnimationFrame(schritt);
+    };
+    frame = requestAnimationFrame(schritt);
+    return () => cancelAnimationFrame(frame);
+  }, [animated, score?.score]);
 
   if (!score || !score.verfuegbar) {
     return (
@@ -81,23 +113,6 @@ export function ScoreBlock({ score }) {
         boxSizing: "border-box",
       }}
     >
-      {score.hardStops.length > 0 && (
-        <div
-          style={{
-            background: "#ef4444",
-            padding: "10px 16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
-        >
-          {score.hardStops.map((hs) => (
-            <span key={hs.key} style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>
-              🔴 {t[hs.key] || hs.key}
-            </span>
-          ))}
-        </div>
-      )}
       <div
         style={{
           background: col,
@@ -141,6 +156,11 @@ export function ScoreBlock({ score }) {
               viewBox="0 0 280 185"
               style={{ display: "block", maxWidth: 360, margin: "0 auto", overflow: "visible" }}
             >
+              <style>{`
+                @keyframes score-nadel-glow{0%,100%{opacity:.55;r:5}50%{opacity:.9;r:7}}
+                .score-nadel-glow{animation:score-nadel-glow 2.2s ease-in-out infinite}
+                @media(prefers-reduced-motion: reduce){.score-nadel-glow{animation:none;opacity:.7}}
+              `}</style>
               <defs>
                 <linearGradient id="scoreGaugeGrad" x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stopColor={COLORS.red} />
@@ -148,6 +168,9 @@ export function ScoreBlock({ score }) {
                   <stop offset="66%" stopColor={COLORS.yellow} />
                   <stop offset="100%" stopColor={COLORS.green} />
                 </linearGradient>
+                <filter id="scoreNadelBlur" x="-100%" y="-100%" width="300%" height="300%">
+                  <feGaussianBlur stdDeviation="4" />
+                </filter>
               </defs>
               <path
                 d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
@@ -163,6 +186,14 @@ export function ScoreBlock({ score }) {
                   transform: `rotate(${needleAngle}deg)`,
                 }}
               >
+                <circle
+                  className="score-nadel-glow"
+                  cx={cgx}
+                  cy={cgy - needleLen}
+                  r={6}
+                  fill={col}
+                  filter="url(#scoreNadelBlur)"
+                />
                 <line
                   x1={cgx}
                   y1={cgy}
@@ -197,23 +228,13 @@ export function ScoreBlock({ score }) {
               </text>
               <text
                 x={cgx}
-                y={cgy - 14}
+                y={cgy - 6}
                 textAnchor="middle"
                 fontSize={52}
                 fontWeight={900}
                 fill={col}
               >
-                {score.score}
-              </text>
-              <text
-                x={cgx}
-                y={cgy + 8}
-                textAnchor="middle"
-                fontSize={11}
-                fill="var(--ch)"
-                opacity={0.7}
-              >
-                /100
+                {displayScore}
               </text>
               <text
                 x={cgx}
@@ -233,6 +254,24 @@ export function ScoreBlock({ score }) {
           </div>
         );
       })()}
+
+      {/* Hard-Stops (Nutzerwunsch 2026-09-16): standen vorher als grosser
+          roter Banner UEBER dem Gauge - wirkte wie eine Fehlermeldung noch
+          vor der eigentlichen Bewertung. Jetzt eine schmale Zeile darunter,
+          gleiche Dringlichkeit (rot, Warnzeichen), aber nicht mehr die erste
+          Sache, die die Karte zeigt. */}
+      {score.hardStops.length > 0 && (
+        <div style={{ padding: "0 16px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
+          {score.hardStops.map((hs) => (
+            <span
+              key={hs.key}
+              style={{ fontSize: 11.5, fontWeight: 600, color: "var(--bad-tx)", lineHeight: 1.4 }}
+            >
+              ⚠ {t[hs.key] || hs.key}
+            </span>
+          ))}
+        </div>
+      )}
 
       {findings.length > 0 && (
         <div style={{ padding: "0 12px 12px", marginTop: 4 }}>

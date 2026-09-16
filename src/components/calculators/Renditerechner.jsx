@@ -1812,49 +1812,70 @@ export default function Haupt() {
                       >
                         {t.ekRTitle || "EK-Rendite p.a."}
                       </div>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(2,minmax(0,1fr))",
-                          gap: 10,
-                        }}
-                      >
-                        <AmpelKPI
-                          label={t.ekRMit || "EK-Rendite mit Steuer"}
-                          value={fmtP(ekRpa, 2)}
-                          color={ekRCol}
-                          statusLabel={
-                            ekRCol === "green"
-                              ? t.badgeGut || "Stark"
-                              : ekRCol === "yellow"
-                                ? t.badgeOkay || "Moderat"
-                                : t.badgeKrit || "Schwach"
-                          }
-                          status={tpl(t.ekRHorizon || "{j} Jahre Anlagehorizont", { j: R.j })}
-                          tip={tpl(
-                            t.ekRTip1 ||
-                              "Dein Eigenkapital ({ek}) wächst mit {p} p.a. — zum Vergleich: ETF historisch ~7%",
-                            { ek: fmtE(+d.eigenkapital || 0), p: fmtP(ekRpa, 2) },
-                          )}
-                        />
-                        <AmpelKPI
-                          label={t.ekROhne || "EK-Rendite ohne Steuer"}
-                          value={fmtP(ekRpaOhne, 2)}
-                          color={rate("ekRendite", ekRpaOhne).color}
-                          statusLabel={
-                            rate("ekRendite", ekRpaOhne).tier === "green"
-                              ? t.badgeGut || "Stark"
-                              : rate("ekRendite", ekRpaOhne).tier === "yellow"
-                                ? t.badgeOkay || "Moderat"
-                                : t.badgeKrit || "Schwach"
-                          }
-                          status={t.ekRConserv || "Konservative Betrachtung"}
-                          tip={
-                            t.ekRTip2 ||
-                            "Ohne Steuerbonus — für Geringverdiener oder Basis-Szenario"
-                          }
-                        />
-                      </div>
+                      {+d.eigenkapital > 0 ? (
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+                            gap: 10,
+                          }}
+                        >
+                          <AmpelKPI
+                            label={t.ekRMit || "EK-Rendite mit Steuer"}
+                            value={fmtP(ekRpa, 2)}
+                            color={ekRCol}
+                            statusLabel={
+                              ekRCol === "green"
+                                ? t.badgeGut || "Stark"
+                                : ekRCol === "yellow"
+                                  ? t.badgeOkay || "Moderat"
+                                  : t.badgeKrit || "Schwach"
+                            }
+                            status={tpl(t.ekRHorizon || "{j} Jahre Anlagehorizont", { j: R.j })}
+                            tip={tpl(
+                              t.ekRTip1 ||
+                                "Dein Eigenkapital ({ek}) wächst mit {p} p.a. — zum Vergleich: ETF historisch ~7%",
+                              { ek: fmtE(+d.eigenkapital || 0), p: fmtP(ekRpa, 2) },
+                            )}
+                          />
+                          <AmpelKPI
+                            label={t.ekROhne || "EK-Rendite ohne Steuer"}
+                            value={fmtP(ekRpaOhne, 2)}
+                            color={rate("ekRendite", ekRpaOhne).color}
+                            statusLabel={
+                              rate("ekRendite", ekRpaOhne).tier === "green"
+                                ? t.badgeGut || "Stark"
+                                : rate("ekRendite", ekRpaOhne).tier === "yellow"
+                                  ? t.badgeOkay || "Moderat"
+                                  : t.badgeKrit || "Schwach"
+                            }
+                            status={t.ekRConserv || "Konservative Betrachtung"}
+                            tip={
+                              t.ekRTip2 ||
+                              "Ohne Steuerbonus — für Geringverdiener oder Basis-Szenario"
+                            }
+                          />
+                        </div>
+                      ) : (
+                        // Ohne eingesetztes Eigenkapital ist "Rendite auf 0 €"
+                        // keine sinnvolle Aussage - vorher wurde das als 0,00 %
+                        // gerechnet und dann als "Kritisch" (rot) eingefaerbt,
+                        // obwohl gar kein Kapital gebunden ist, das schlecht
+                        // performen koennte. Gleiche Faustregel wie beim
+                        // Kaufpreis=0-Platzhalter weiter oben im Rechner.
+                        <div
+                          style={{
+                            padding: "10px 12px",
+                            borderRadius: 8,
+                            background: "var(--ci)",
+                            color: "var(--ch)",
+                            fontSize: 12,
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          Kein Eigenkapital eingesetzt — EK-Rendite ist hier nicht anwendbar.
+                        </div>
+                      )}
                     </div>
                     {lang === "de" && (
                       <SectionExplain
