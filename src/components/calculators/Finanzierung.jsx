@@ -672,10 +672,10 @@ export default function Kredit() {
               </div>
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>{t.advTitle}</div>
-                {R.restZB > 0 && R.da > 0 && R.restZB / R.da > 0.6 && (
+                {R.rZB > 0 && R.da > 0 && R.rZB / R.da > 0.6 && (
                   <Ins emoji="⚠️" text={t.adv7} type="bad" />
                 )}
-                {+d.zinsbindung < 10 && +d.zinssatz > 3.5 && (
+                {R.zbJ < 10 && +d.zinssatz > 3.5 && (
                   <Ins emoji="🛡️" text={t.adv8} type="warn" />
                 )}
                 {+d.tilgung < 2 && <Ins emoji="🐌" text={t.adv9} type="warn" />}
