@@ -41,9 +41,12 @@ import { HandoutFragen } from "./HandoutFragen.jsx";
 // ausschliesslich modellgenerierten Fliesstext - nie gerechnete Zahlen.
 const KI = "#1E3A5F";
 
+// "expose" (Exposé-Scan) stand hier zusaetzlich als eigene Karte, obwohl der
+// Upload bereits an anderer Stelle in der App existiert (Objekt anlegen/
+// bearbeiten) - reine Dopplung, entfernt auf Nutzerwunsch 2026-09-16.
 const GRUPPEN = [
   { id: "objekt", titel: "Für dieses Objekt", produkte: ["analyse", "hebel", "preis"] },
-  { id: "vorbereiten", titel: "Vorbereiten", produkte: ["handout", "expose"] },
+  { id: "vorbereiten", titel: "Vorbereiten", produkte: ["handout"] },
 ];
 
 export function AiEngine({
@@ -109,9 +112,20 @@ export function AiEngine({
                   data={data}
                   proAktiv={proAktiv}
                   locale={locale}
-                  onStarten={() => (id === "expose" ? onExpose() : starten(produkt))}
+                  onStarten={() => starten(produkt)}
                   onVoraussetzung={() => onExpose()}
                   gesperrtText={gesperrtText(produkt, data, referenzMiete)}
+                  // Bestaetigung erscheint jetzt INNERHALB genau der Karte,
+                  // deren "↻ Neu" sie ausgeloest hat (Nutzer-Befund
+                  // 2026-09-16: der frueher gemeinsame Dialog ganz unten in
+                  // der Liste wirkte wie eine eigene, unzusammenhaengende
+                  // Sektion - man sah nicht, zu welchem Produkt er gehoerte).
+                  bestaetigung={bestaetigung?.produkt.id === id ? bestaetigung : null}
+                  onBestaetigenJa={() => {
+                    setBestaetigung(null);
+                    onStarten(id);
+                  }}
+                  onBestaetigenAbbrechen={() => setBestaetigung(null)}
                 />
               );
             })}
@@ -122,19 +136,6 @@ export function AiEngine({
       <div style={{ fontSize: 11, color: "var(--cl)", lineHeight: 1.5 }}>
         Texte der AI-Engine sind KI-generiert und ersetzen keine Beratung.
       </div>
-
-      {bestaetigung && (
-        <Bestaetigung
-          produkt={bestaetigung.produkt}
-          ersetzt={bestaetigung.ersetzt}
-          onAbbrechen={() => setBestaetigung(null)}
-          onJa={() => {
-            const id = bestaetigung.produkt.id;
-            setBestaetigung(null);
-            onStarten(id);
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -166,6 +167,9 @@ function ProduktZeile({
   onStarten,
   onVoraussetzung,
   gesperrtText: grund,
+  bestaetigung,
+  onBestaetigenJa,
+  onBestaetigenAbbrechen,
 }) {
   const { t } = useApp();
   const gesperrt = zustand === "gesperrt";
@@ -313,6 +317,15 @@ function ProduktZeile({
           </div>
 
           {fragen.length === 0 && aufgeklappt && <GrundlageUndQuellen ergebnis={ergebnis} data={data} t={t} produkt={produkt} />}
+
+          {bestaetigung && (
+            <Bestaetigung
+              produkt={produkt}
+              ersetzt={bestaetigung.ersetzt}
+              onAbbrechen={onBestaetigenAbbrechen}
+              onJa={onBestaetigenJa}
+            />
+          )}
         </>
       )}
     </div>
@@ -920,4 +933,5 @@ const bestaetigungKarte = {
   border: "1px solid var(--cb)",
   borderRadius: 12,
   padding: "16px",
+  marginTop: 12,
 };

@@ -221,7 +221,10 @@ export function ScoreBlock({ score }) {
                 );
               })}
 
-              {/* Nadel mit weichem Schlagschatten */}
+              {/* Nadel: spitz zulaufendes Dreieck statt Strich (zweite
+                  Nutzer-Vorlage, 2026-09-16) - wirkt wie ein echter
+                  Messgeraete-Zeiger statt einer duennen Linie. Schlagschatten
+                  per CSS drop-shadow statt manueller Duplikat-Linie. */}
               <g
                 style={{
                   transition: "transform 1.2s cubic-bezier(.4,0,.2,1)",
@@ -229,25 +232,10 @@ export function ScoreBlock({ score }) {
                   transform: `rotate(${needleAngle}deg)`,
                 }}
               >
-                <line
-                  x1={cgx}
-                  y1={cgy + 2}
-                  x2={cgx}
-                  y2={cgy - needleLen + 2}
-                  stroke="#000"
-                  strokeWidth={5}
-                  strokeLinecap="round"
-                  opacity={0.2}
-                  style={{ filter: "blur(2px)" }}
-                />
-                <line
-                  x1={cgx}
-                  y1={cgy}
-                  x2={cgx}
-                  y2={cgy - needleLen}
-                  stroke="var(--ct)"
-                  strokeWidth={4}
-                  strokeLinecap="round"
+                <polygon
+                  points={`${cgx - 3},${cgy} ${cgx},${cgy - needleLen} ${cgx + 3},${cgy}`}
+                  fill="var(--ct)"
+                  style={{ filter: "drop-shadow(0px 2px 3px rgba(0,0,0,.35))" }}
                 />
               </g>
               <circle cx={cgx} cy={cgy} r={8} fill="var(--cc)" stroke="var(--cb)" strokeWidth={2} />
