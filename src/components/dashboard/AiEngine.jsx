@@ -448,7 +448,10 @@ function BasisPunkt({ basis }) {
   );
 }
 
-function InsightZeile({ insight }) {
+const TON_LABEL = { risk: "Risiko", opportunity: "Chance" };
+const TON_FARBE = { risk: "var(--bad-tx)", opportunity: "var(--ok-tx)" };
+
+function InsightZeile({ insight, ton }) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "7px 0" }}>
       <span style={{ marginTop: 6 }}>
@@ -456,6 +459,19 @@ function InsightZeile({ insight }) {
       </span>
       <span style={{ minWidth: 0 }}>
         <span style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+          {ton && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 0.4,
+                textTransform: "uppercase",
+                color: TON_FARBE[ton],
+              }}
+            >
+              {TON_LABEL[ton]}
+            </span>
+          )}
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>{insight.title}</span>
           {insight.value && (
             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ca)", fontVariantNumeric: "tabular-nums" }}>
@@ -472,8 +488,9 @@ function InsightZeile({ insight }) {
 }
 
 // Ebene 2 - Begruendung: 3-5 datenbasierte Kernerkenntnisse, dann Risiken/
-// Chancen in eigenem, dezent gefaerbtem Block (nicht grelle Ampel-Optik,
-// nur ein schmaler linker Rand in --bad-bd/--ok-bd).
+// Chancen in derselben Zeilenoptik, nur mit einem kleinen "Risiko"/"Chance"-
+// Label vor dem Titel statt eines eigenen Blocks - kein Seitenrand, keine
+// Extra-Flaeche fuer 1-3 Zeilen.
 function ErkenntnisseEbene2({ ergebnis }) {
   const insights = keyInsightsVon(ergebnis);
   const risks = risksVon(ergebnis);
@@ -491,16 +508,16 @@ function ErkenntnisseEbene2({ ergebnis }) {
         </div>
       )}
       {risks.length > 0 && (
-        <div style={{ marginTop: 10, paddingLeft: 10, borderLeft: "3px solid var(--bad-bd)" }}>
+        <div style={{ marginTop: 6, borderTop: "1px solid var(--cb)" }}>
           {risks.map((r) => (
-            <InsightZeile key={r.title} insight={r} />
+            <InsightZeile key={r.title} insight={r} ton="risk" />
           ))}
         </div>
       )}
       {opportunities.length > 0 && (
-        <div style={{ marginTop: 10, paddingLeft: 10, borderLeft: "3px solid var(--ok-bd)" }}>
+        <div style={{ marginTop: risks.length > 0 ? 0 : 6, borderTop: "1px solid var(--cb)" }}>
           {opportunities.map((o) => (
-            <InsightZeile key={o.title} insight={o} />
+            <InsightZeile key={o.title} insight={o} ton="opportunity" />
           ))}
         </div>
       )}
