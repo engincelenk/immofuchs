@@ -84,12 +84,6 @@ export function ScoreBlock({ score }) {
       desc: t.findAnfangsrenditeDesc,
       fmt: (v) => fmtP(v),
     },
-    dscrObjekt: {
-      title: t.findDscrObjektTitle,
-      desc: t.findDscrObjektDesc,
-      fmt: (v) => fmt(v, 2) + "×",
-    },
-    icr: { title: t.findIcrTitle, desc: t.findIcrDesc, fmt: (v) => fmt(v, 2) + "×" },
     beLeer: { title: t.beLeer, desc: t.findBeLeerDesc, fmt: (v) => fmtP(v, 0) },
     bel: { title: t.bel, desc: t.findBelDesc, fmt: (v) => fmtP(v) },
     ekQuote: { title: t.ekQuote, desc: t.findEkQuoteDesc, fmt: (v) => fmtP(v) },
@@ -142,13 +136,30 @@ export function ScoreBlock({ score }) {
           cgy = 132,
           sgw = 20,
           needleLen = Rg - sgw / 2 - 6;
-        // Nadel-Gauge (Loest den sich selbst einfaerbenden Fortschrittsbogen
-        // ab, Bugreport 2026-09-16: der Bogen war einfarbig in der Score-
-        // Tier-Farbe und ueberdeckte dabei die statischen Rot/Gelb/Gruen-
-        // Referenzzonen - wirkte, als gehoere "viel Rot" zu einem guten
-        // Ergebnis. Jetzt wie im Referenzbeispiel: die Farbskala ist fix,
-        // nur die Nadel bewegt sich auf die Score-Position.
-        const needleAngle = animated ? -90 + (Math.min(score.score, 100) / 100) * 180 : -90;
+        // Nadel-Gauge mit fuellendem Bogen (Vorlage vom Nutzer, 2026-09-16,
+        // an ein Shelly-Verbrauchs-Gauge angelehnt): die Farbskala selbst
+        // bleibt fix (Rot->Orange->Gelb->Gruen), aber der Bogen fuellt sich
+        // zusaetzlich von links bis zur Nadelposition - anders als der
+        // fruehere, IMMER voll eingefaerbte Bogen (der taeuschte vor, "viel
+        // Rot" gehoere zu einem guten Ergebnis) zeigt der gefuellte Teil hier
+        // exakt die Farben, die die Nadel bereits passiert hat.
+        const percent = Math.min(score.score, 100) / 100;
+        const needleAngle = animated ? -90 + percent * 180 : -90;
+        const arcLen = Math.PI * Rg;
+        const arcOffset = animated ? arcLen * (1 - percent) : arcLen;
+
+        // Tickmarks: 20 Schritte ueber die 180 Grad, jeder 5. eine
+        // "Hauptmarke". Gleiche Winkel-Konvention wie die Nadel (-90..+90,
+        // 0 = Scheitel oben).
+        const TICKS = 20;
+        const tickInnerR = Rg - sgw / 2 - 10;
+        const tickOuterRMinor = tickInnerR + 5;
+        const tickOuterRMajor = tickInnerR + 9;
+        const tickPunkt = (grad, r) => {
+          const rad = (grad * Math.PI) / 180;
+          return [cgx + r * Math.sin(rad), cgy - r * Math.cos(rad)];
+        };
+
         return (
           <div style={{ padding: "20px 16px 8px" }}>
             <svg
@@ -156,11 +167,6 @@ export function ScoreBlock({ score }) {
               viewBox="0 0 280 185"
               style={{ display: "block", maxWidth: 360, margin: "0 auto", overflow: "visible" }}
             >
-              <style>{`
-                @keyframes score-nadel-glow{0%,100%{opacity:.55;r:5}50%{opacity:.9;r:7}}
-                .score-nadel-glow{animation:score-nadel-glow 2.2s ease-in-out infinite}
-                @media(prefers-reduced-motion: reduce){.score-nadel-glow{animation:none;opacity:.7}}
-              `}</style>
               <defs>
                 <linearGradient id="scoreGaugeGrad" x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stopColor={COLORS.red} />
@@ -168,17 +174,54 @@ export function ScoreBlock({ score }) {
                   <stop offset="66%" stopColor={COLORS.yellow} />
                   <stop offset="100%" stopColor={COLORS.green} />
                 </linearGradient>
-                <filter id="scoreNadelBlur" x="-100%" y="-100%" width="300%" height="300%">
-                  <feGaussianBlur stdDeviation="4" />
+                <filter id="scoreGaugeGlow" x="-60%" y="-60%" width="220%" height="220%">
+                  <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor={col} floodOpacity="0.55" />
                 </filter>
               </defs>
+
+              {/* Track (ungefuellter Rest) */}
+              <path
+                d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
+                fill="none"
+                stroke="var(--cb)"
+                strokeWidth={sgw}
+                strokeLinecap="round"
+              />
+              {/* Gefuellter Bogen bis zur Nadelposition */}
               <path
                 d={`M${cgx - Rg},${cgy} A${Rg},${Rg} 0 0,1 ${cgx + Rg},${cgy}`}
                 fill="none"
                 stroke="url(#scoreGaugeGrad)"
                 strokeWidth={sgw}
                 strokeLinecap="round"
+                strokeDasharray={arcLen}
+                strokeDashoffset={arcOffset}
+                filter="url(#scoreGaugeGlow)"
+                style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)" }}
               />
+
+              {/* Tickmarks */}
+              {Array.from({ length: TICKS + 1 }, (_, i) => {
+                const grad = -90 + (180 * i) / TICKS;
+                const major = i % 5 === 0;
+                const [x1, y1] = tickPunkt(grad, tickInnerR);
+                const [x2, y2] = tickPunkt(grad, major ? tickOuterRMajor : tickOuterRMinor);
+                return (
+                  <line
+                    key={i}
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke="var(--ch)"
+                    strokeWidth={major ? 2 : 1.3}
+                    strokeLinecap="round"
+                    opacity={major ? 0.7 : 0.4}
+                  />
+                );
+              })}
+
+              {/* Nadel mit weichem Schlagschatten */}
               <g
                 style={{
                   transition: "transform 1.2s cubic-bezier(.4,0,.2,1)",
@@ -186,13 +229,16 @@ export function ScoreBlock({ score }) {
                   transform: `rotate(${needleAngle}deg)`,
                 }}
               >
-                <circle
-                  className="score-nadel-glow"
-                  cx={cgx}
-                  cy={cgy - needleLen}
-                  r={6}
-                  fill={col}
-                  filter="url(#scoreNadelBlur)"
+                <line
+                  x1={cgx}
+                  y1={cgy + 2}
+                  x2={cgx}
+                  y2={cgy - needleLen + 2}
+                  stroke="#000"
+                  strokeWidth={5}
+                  strokeLinecap="round"
+                  opacity={0.2}
+                  style={{ filter: "blur(2px)" }}
                 />
                 <line
                   x1={cgx}
@@ -204,8 +250,9 @@ export function ScoreBlock({ score }) {
                   strokeLinecap="round"
                 />
               </g>
-              <circle cx={cgx} cy={cgy} r={8} fill="var(--ct)" />
-              <circle cx={cgx} cy={cgy} r={3} fill="var(--cc)" />
+              <circle cx={cgx} cy={cgy} r={8} fill="var(--cc)" stroke="var(--cb)" strokeWidth={2} />
+              <circle cx={cgx} cy={cgy} r={3} fill="var(--ct)" />
+
               <text
                 x={cgx - Rg - 2}
                 y={cgy + 20}
@@ -254,24 +301,6 @@ export function ScoreBlock({ score }) {
           </div>
         );
       })()}
-
-      {/* Hard-Stops (Nutzerwunsch 2026-09-16): standen vorher als grosser
-          roter Banner UEBER dem Gauge - wirkte wie eine Fehlermeldung noch
-          vor der eigentlichen Bewertung. Jetzt eine schmale Zeile darunter,
-          gleiche Dringlichkeit (rot, Warnzeichen), aber nicht mehr die erste
-          Sache, die die Karte zeigt. */}
-      {score.hardStops.length > 0 && (
-        <div style={{ padding: "0 16px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
-          {score.hardStops.map((hs) => (
-            <span
-              key={hs.key}
-              style={{ fontSize: 11.5, fontWeight: 600, color: "var(--bad-tx)", lineHeight: 1.4 }}
-            >
-              ⚠ {t[hs.key] || hs.key}
-            </span>
-          ))}
-        </div>
-      )}
 
       {findings.length > 0 && (
         <div style={{ padding: "0 12px 12px", marginTop: 4 }}>
