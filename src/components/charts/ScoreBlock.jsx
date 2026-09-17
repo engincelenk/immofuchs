@@ -96,6 +96,21 @@ export function ScoreBlock({ score }) {
   };
   const findings = (score.findings || []).filter((f) => FINDING_MAP[f.code]);
 
+  // Hard-Stop-Transparenz (Tester-Feedback 2026-09-17): score.hardStops
+  // deckelt den Gesamtscore per Math.min() in investmentScore.js, war bis
+  // hierher aber nirgends sichtbar - ein Nutzer sah nur "55, gelb" und keinen
+  // Grund, warum ein gesenkter Kaufpreis daran nichts aenderte (z.B. Cashflow
+  // < -800 EUR/Monat kappt fest auf 55, unabhaengig von D1-D3).
+  const HARD_STOP_TEXT = {
+    hardStopTilgung0: "Kein Tilgungsanteil vereinbart — das begrenzt den Score unabhängig vom Kaufpreis.",
+    hardStopDscr: "Der Schuldendienst ist aktuell nicht ausreichend gedeckt — das begrenzt den Score unabhängig vom Kaufpreis.",
+    hardStopBel: "Die Belastungsquote liegt über 100 % des Einkommens — das begrenzt den Score unabhängig vom Kaufpreis.",
+    hardStopCf: "Der Cashflow ist deutlich negativ — das begrenzt den Score unabhängig vom Kaufpreis.",
+  };
+  const hardStopTexte = (score.hardStops || [])
+    .map((hs) => HARD_STOP_TEXT[hs.key])
+    .filter(Boolean);
+
   return (
     <div
       style={{
@@ -263,6 +278,28 @@ export function ScoreBlock({ score }) {
           </div>
         );
       })()}
+
+      {hardStopTexte.length > 0 && (
+        <div style={{ padding: "0 12px", marginTop: 4 }}>
+          {hardStopTexte.map((txt) => (
+            <div
+              key={txt}
+              style={{
+                background: "rgba(245,158,11,.1)",
+                border: "1px solid var(--warn-bd)",
+                borderRadius: 8,
+                padding: "7px 10px",
+                fontSize: 11.5,
+                color: "var(--ct)",
+                lineHeight: 1.5,
+                marginBottom: 6,
+              }}
+            >
+              ⚠ {txt}
+            </div>
+          ))}
+        </div>
+      )}
 
       {findings.length > 0 && (
         <div style={{ padding: "0 12px 12px", marginTop: 4 }}>

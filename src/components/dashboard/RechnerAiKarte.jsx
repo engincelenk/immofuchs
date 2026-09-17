@@ -7,6 +7,9 @@ import {
   altesSchema,
   summaryVon,
   keyInsightsVon,
+  risksVon,
+  opportunitiesVon,
+  recommendationVon,
   BASIS_LABEL,
 } from "../../utils/aiEngine.js";
 import { ZahlenBlock } from "./AiEngine.jsx";
@@ -223,42 +226,17 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
               </button>
             </div>
           ) : (
-            keyInsightsVon(ergebnis).map((i, idx) => (
-              <div
-                key={i.title}
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: idx === 0 ? 12 : 0,
-                  padding: "7px 0",
-                  borderTop: idx === 0 ? "none" : "1px solid var(--cb)",
-                }}
-              >
-                <span
-                  title={BASIS_LABEL[i.basis] || BASIS_LABEL.ki}
-                  aria-label={BASIS_LABEL[i.basis] || BASIS_LABEL.ki}
-                  style={{
-                    marginTop: 6,
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    flexShrink: 0,
-                    background: i.basis === "berechnet" ? "var(--ok-tx)" : i.basis === "ki" ? KI : "var(--cl)",
-                  }}
-                />
-                <span style={{ minWidth: 0 }}>
-                  <span style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "baseline" }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>{i.title}</span>
-                    {i.value && (
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ca)" }}>{i.value}</span>
-                    )}
-                  </span>
-                  <span style={{ display: "block", fontSize: 12.5, color: "var(--cl)", marginTop: 2, lineHeight: 1.5 }}>
-                    {i.text}
-                  </span>
-                </span>
-              </div>
-            ))
+            <>
+              {keyInsightsVon(ergebnis).map((i, idx) => (
+                <ErkenntnisZeile key={i.title} i={i} erste={idx === 0} />
+              ))}
+              {risksVon(ergebnis).map((r) => (
+                <ErkenntnisZeile key={r.title} i={r} ton="risk" />
+              ))}
+              {opportunitiesVon(ergebnis).map((o) => (
+                <ErkenntnisZeile key={o.title} i={o} ton="opportunity" />
+              ))}
+            </>
           )}
 
           <div
@@ -270,7 +248,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
               marginTop: 12,
             }}
           >
-            {ergebnis?.zahlen?.length > 0 ? (
+            {ergebnis?.zahlen?.length > 0 || recommendationVon(ergebnis) ? (
               <button
                 type="button"
                 onClick={() => setAufgeklappt((o) => !o)}
@@ -287,9 +265,16 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
             </button>
           </div>
 
-          {aufgeklappt && ergebnis?.zahlen?.length > 0 && (
+          {aufgeklappt && (ergebnis?.zahlen?.length > 0 || recommendationVon(ergebnis)) && (
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
-              <ZahlenBlock zahlen={ergebnis.zahlen} titel="Gerechnete Werte" />
+              {recommendationVon(ergebnis) && (
+                <div style={{ marginBottom: 16, fontSize: 12.5, color: "var(--ct)", lineHeight: 1.6 }}>
+                  {recommendationVon(ergebnis)}
+                </div>
+              )}
+              {ergebnis?.zahlen?.length > 0 && (
+                <ZahlenBlock zahlen={ergebnis.zahlen} titel="Gerechnete Werte" />
+              )}
             </div>
           )}
         </>
@@ -339,6 +324,67 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
 // AiEngine.jsx) - hier ausschliesslich fuer die Glyphe und den modellgenerierten
 // Text, nie fuer gerechnete Zahlen.
 const KI = "#1E3A5F";
+
+// "Risiko"/"Chance"-Label vor Risks/Opportunities - dieselben Farben wie
+// TON_FARBE in AiEngine.jsx (dort nicht exportiert, deshalb hier dupliziert,
+// siehe Kommentar am Dateianfang zu ProduktZeile/InsightZeile).
+const TON_LABEL = { risk: "Risiko", opportunity: "Chance" };
+const TON_FARBE = { risk: "var(--bad-tx)", opportunity: "var(--ok-tx)" };
+
+// Eine Zeile aus keyInsights/risks/opportunities - bislang inline nur fuer
+// keyInsights geschrieben, jetzt fuer alle drei Listen wiederverwendet (siehe
+// Formular oben), sonst fehlten risks/opportunities in dieser Karte komplett,
+// obwohl der Worker sie fuer alle acht Produkte liefert.
+function ErkenntnisZeile({ i, erste, ton }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        marginTop: erste ? 12 : 0,
+        padding: "7px 0",
+        borderTop: erste ? "none" : "1px solid var(--cb)",
+      }}
+    >
+      <span
+        title={BASIS_LABEL[i.basis] || BASIS_LABEL.ki}
+        aria-label={BASIS_LABEL[i.basis] || BASIS_LABEL.ki}
+        style={{
+          marginTop: 6,
+          width: 7,
+          height: 7,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: i.basis === "berechnet" ? "var(--ok-tx)" : i.basis === "ki" ? KI : "var(--cl)",
+        }}
+      />
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "baseline" }}>
+          {ton && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 0.4,
+                textTransform: "uppercase",
+                color: TON_FARBE[ton],
+              }}
+            >
+              {TON_LABEL[ton]}
+            </span>
+          )}
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>{i.title}</span>
+          {i.value && (
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ca)" }}>{i.value}</span>
+          )}
+        </span>
+        <span style={{ display: "block", fontSize: 12.5, color: "var(--cl)", marginTop: 2, lineHeight: 1.5 }}>
+          {i.text}
+        </span>
+      </span>
+    </div>
+  );
+}
 
 // Phasentext + KI-Sterne/Schimmer-Ladeeffekt, 1:1 im Design an
 // AiEngine.jsx/Laeuft() angelehnt. Nicht von dort importiert, weil AiEngine.jsx

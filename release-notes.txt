@@ -1,3 +1,20 @@
+## 2026-09-17 (1.86.0)
+
+### Finanz-Score: Hard-Stop-Grund sichtbar gemacht, KI-Rechnerkarten zeigen jetzt Chancen/Risiken
+
+Tester-Feedback aufgegriffen: der ImmoFuchs Finanz-Score blieb in bestimmten
+Faellen dauerhaft gelb, ohne dass der Nutzer den Grund sah.
+
+- ScoreBlock.jsx zeigt jetzt einen Hinweis, wenn einer der vier Hard-Stops aus
+  investmentScore.js den Score deckelt (z.B. "Cashflow deutlich negativ -
+  begrenzt den Score unabhaengig vom Kaufpreis"). Reine Anzeige-Ergaenzung,
+  keine Aenderung an der Berechnung selbst.
+- RechnerAiKarte.jsx (KI-Karten der fuenf Nicht-Rendite-Rechner: Kredit,
+  Miete, Sanierung, Vorfaelligkeit, §6) rendert jetzt zusaetzlich zu den
+  Kernerkenntnissen auch risks/opportunities und recommendation - diese
+  liefert der Worker fuer alle acht Produkte, bislang fehlten sie in dieser
+  Karte komplett (die Objekt-Ansicht AiEngine.jsx zeigte sie schon).
+
 ## 2026-09-16 (1.85.0)
 
 ### Investment Briefing: die drei KI-Analysen am Objekt grundlegend neu gebaut
