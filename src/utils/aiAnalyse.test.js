@@ -81,6 +81,22 @@ describe("rufeAnalyseAuf", () => {
     expect(res).toEqual({ ok: false, art: "fehler" });
   });
 
+  // 503 und 502 landeten bis 2026-09-17 beide im generischen "fehler" - damit
+  // war am Symptom nicht unterscheidbar, ob die Modell-Kette ausgefallen ist
+  // oder nur eine einzelne Antwort unbrauchbar war.
+  it("unterscheidet Modellausfall (503) von unbrauchbarer Antwort (502)", async () => {
+    apiFetch.mockResolvedValue(antwort(503, { error: "modell_nicht_erreichbar" }));
+    expect(await rufeAnalyseAuf({ produkt: "analyse", kennzahlen: {} })).toEqual({
+      ok: false,
+      art: "modellAus",
+    });
+    apiFetch.mockResolvedValue(antwort(502, { error: "unbrauchbare_antwort" }));
+    expect(await rufeAnalyseAuf({ produkt: "analyse", kennzahlen: {} })).toEqual({
+      ok: false,
+      art: "antwortUnbrauchbar",
+    });
+  });
+
   it("laesst leere zahlen/varianten/befunde/standortFakten weg statt leerer Arrays zu senden", async () => {
     apiFetch.mockResolvedValue(antwort(200, { ergebnis: {} }));
     await rufeAnalyseAuf({
@@ -121,6 +137,8 @@ describe("analyseFehlertext", () => {
     expect(analyseFehlertext("pro")).toMatch(/Pro/);
     expect(analyseFehlertext("login")).toMatch(/melde dich an/i);
     expect(analyseFehlertext("rateLimit")).toMatch(/Tageslimit/);
+    expect(analyseFehlertext("modellAus")).toMatch(/KI-Dienst antwortet gerade nicht/);
+    expect(analyseFehlertext("antwortUnbrauchbar")).toMatch(/unvollständig/);
     expect(analyseFehlertext("fehler")).toMatch(/nicht erreichbar/);
     expect(analyseFehlertext(undefined)).toMatch(/nicht erreichbar/);
   });

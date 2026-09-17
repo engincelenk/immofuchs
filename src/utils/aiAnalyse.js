@@ -61,6 +61,16 @@ export async function rufeAnalyseAuf({
       if (res.status === 402) return { ok: false, art: "pro" };
       if (res.status === 401) return { ok: false, art: "login" };
       if (daten.error === "rate_limit_exceeded") return { ok: false, art: "rateLimit" };
+      // 503 und 502 fielen bis 2026-09-17 in denselben generischen Fehlertext.
+      // Das hat die Ursachensuche blockiert: "nicht erreichbar" kann bedeuten,
+      // dass die Modell-Kette komplett ausgefallen ist (503, z.B. Gemini-Modell
+      // abgeschaltet UND Workers-AI-Fallback scheitert - schon zweimal
+      // passiert, siehe modelRouter.ts) ODER dass ein Modell geantwortet hat,
+      // die Antwort aber unbrauchbar war (502). Zwei verschiedene Ursachen mit
+      // zwei verschiedenen Konsequenzen fuer den Nutzer: bei 503 hilft nur
+      // warten, bei 502 hilft ein erneuter Versuch meist sofort.
+      if (res.status === 503) return { ok: false, art: "modellAus" };
+      if (res.status === 502) return { ok: false, art: "antwortUnbrauchbar" };
       return { ok: false, art: "fehler" };
     }
     const { ergebnis } = await res.json();
@@ -78,6 +88,10 @@ export function analyseFehlertext(art) {
   if (art === "pro") return "Diese Auswertung gehört zu ImmoFuchs Pro.";
   if (art === "login") return "Bitte melde dich an, um die Auswertung zu starten.";
   if (art === "rateLimit") return "Tageslimit erreicht — morgen wieder verfügbar.";
+  if (art === "modellAus")
+    return "Der KI-Dienst antwortet gerade nicht. Bitte in einigen Minuten noch einmal versuchen.";
+  if (art === "antwortUnbrauchbar")
+    return "Die KI-Antwort war unvollständig. Ein neuer Versuch führt meist sofort zum Ergebnis.";
   return "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.";
 }
 

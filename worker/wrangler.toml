@@ -152,6 +152,18 @@ pattern = "api-dev.immofuchs.info"
 custom_domain = true
 zone_name = "immofuchs.info"
 
+# Log-Retention (2026-09-17). Ohne sie ist `wrangler tail` die EINZIGE
+# Fehlerquelle - und der zeigt nur, was waehrend des Mitschnitts passiert.
+# Genau daran ist die Suche nach der Ursache von "Die Auswertung ist gerade
+# nicht erreichbar" gescheitert: Der Fehler tritt beim Nutzer auf, der Log
+# laeuft hier, und beides zur selben Zeit hinzubekommen ist Glueckssache.
+# Mit Retention steht der Grund (analyse_model_call_failed bzw.
+# [FALLBACK_ALERT] mit Googles Originaltext) nachtraeglich im Dashboard.
+# Bewusst nur fuer dev - qa/prod bleiben unangetastet (Nutzer-Vorgabe).
+[env.dev.observability]
+enabled = true
+head_sampling_rate = 1
+
 [env.dev.vars]
 ASSISTANT_ENABLED = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://dev.immofuchs.info,https://admin-dev.immofuchs.info"

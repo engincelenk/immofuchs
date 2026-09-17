@@ -1,3 +1,29 @@
+## 2026-09-17 (1.87.0)
+
+### KI-Fehlermeldungen diagnostizierbar gemacht, Log-Retention auf dev aktiviert
+
+Nacharbeit zum Tester-Befund "Die Auswertung ist gerade nicht erreichbar".
+Die Ursache selbst ist noch offen - diese Runde beseitigt die Gruende, WARUM
+sie sich nicht finden liess:
+
+- Der Client warf bisher jeden unbekannten Serverfehler in denselben Satz.
+  503 (Modell-Kette komplett ausgefallen - Gemini abgeschaltet UND
+  Workers-AI-Fallback scheitert, seit 2026 schon zweimal passiert) und 502
+  (ein Modell hat geantwortet, die Antwort war unbrauchbar) haben jetzt eigene
+  Meldungen. Fuer den Nutzer relevant, weil bei 502 ein erneuter Versuch
+  meist sofort hilft, bei 503 nur Warten.
+- Tests fuer beide Zweige ergaenzt (bisher war nur 500 abgedeckt).
+- Log-Retention fuer den dev-Worker eingeschaltet ([env.dev.observability]).
+  Vorher war `wrangler tail` die einzige Fehlerquelle - der zeigt aber nur,
+  was waehrend des Mitschnitts passiert. Der Fehler tritt beim Nutzer auf,
+  der Mitschnitt laeuft beim Entwickler, und beides gleichzeitig hinzubekommen
+  war Glueckssache. Jetzt steht der Grund nachtraeglich im Dashboard.
+  Nur dev - qa/prod unveraendert.
+
+Ausserdem: Konzept fuer die Worker-Anweisungen der drei Objekt-Auswertungen
+unter docs/technical_specs/ki-anweisungen-konzept.md abgelegt (noch nicht
+umgesetzt, enthaelt drei offene Entscheidungen).
+
 ## 2026-09-17 (1.86.0)
 
 ### Finanz-Score: Hard-Stop-Grund sichtbar gemacht, KI-Rechnerkarten zeigen jetzt Chancen/Risiken
