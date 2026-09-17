@@ -1,3 +1,27 @@
+## 2026-09-17 (1.88.0)
+
+### Gefunden: "nicht erreichbar" kam vom Speichern, nicht von der KI
+
+Live-Mitschnitt des dev-Workers waehrend eines reproduzierten Fehlerfalls
+("Kaufpreis analysieren", iPhone/Safari): Der Request auf /api/v1/analyse lief
+mit HTTP 200 durch, 3,5 s, ohne Exception und ohne Fehler-Log. Backend und
+Modell waren die ganze Zeit in Ordnung - die vermutete Gemini-Deprecation war
+es nicht.
+
+Die Ursache liegt im Client: starteProdukt() zeigt das Ergebnis an
+(setLokaleAiErgebnisse) und speichert es DANACH per updateObj am Objekt.
+Beides lag im selben try-Block. Scheiterte nur das Speichern - Funkloch,
+abgelaufene Session, Objekt-Limit - griff der Sammel-catch und meldete "Die
+Auswertung ist gerade nicht erreichbar", obwohl die Auswertung fertig vor dem
+Nutzer stand und sein Pro-Kontingent bereits verbraucht war. Das erklaert das
+sporadische, nicht reproduzierbare Auftreten bei gleichzeitig unauffaelligem
+Worker-Log.
+
+- updateObj liegt jetzt in ObjektDetail.jsx und RechnerAiKarte.jsx in einem
+  eigenen try/catch. Das Ergebnis bleibt sichtbar, die Meldung sagt was
+  zutrifft: "Auswertung erstellt, aber nicht gespeichert - sie ist bis zum
+  Neuladen der Seite sichtbar."
+
 ## 2026-09-17 (1.87.0)
 
 ### KI-Fehlermeldungen diagnostizierbar gemacht, Log-Retention auf dev aktiviert

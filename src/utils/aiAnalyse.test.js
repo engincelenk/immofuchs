@@ -139,6 +139,10 @@ describe("analyseFehlertext", () => {
     expect(analyseFehlertext("rateLimit")).toMatch(/Tageslimit/);
     expect(analyseFehlertext("modellAus")).toMatch(/KI-Dienst antwortet gerade nicht/);
     expect(analyseFehlertext("antwortUnbrauchbar")).toMatch(/unvollständig/);
+    // Muss die Auswertung als ERSTELLT ausweisen - der ganze Zweck der
+    // Trennung ist, dass hier nicht "nicht erreichbar" steht.
+    expect(analyseFehlertext("nichtGespeichert")).toMatch(/erstellt/);
+    expect(analyseFehlertext("nichtGespeichert")).not.toMatch(/nicht erreichbar/);
     expect(analyseFehlertext("fehler")).toMatch(/nicht erreichbar/);
     expect(analyseFehlertext(undefined)).toMatch(/nicht erreichbar/);
   });

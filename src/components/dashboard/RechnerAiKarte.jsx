@@ -95,12 +95,21 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
       // Rendite-Objekt aussehen. aktivesObjekt.art/.rechnerTyp sind an dieser
       // Stelle bereits durch die Sichtbarkeits-Bedingung des Aufrufers
       // garantiert gesetzt (siehe die 5 Rechner-Dateien).
-      await updateObj(aktivesObjekt.id, aktivesObjekt.name || "Objekt", data, {
-        resultData: mitErgebnis(
-          { art: aktivesObjekt.art, rechnerTyp: aktivesObjekt.rechnerTyp },
-          neu,
-        ),
-      });
+      // Eigener catch, gleiche Begruendung wie in ObjektDetail.starteProdukt:
+      // das Ergebnis steht oben schon im State und ist bezahlt. Ein
+      // fehlgeschlagenes Speichern ist kein Modellausfall und darf nicht als
+      // solcher gemeldet werden.
+      try {
+        await updateObj(aktivesObjekt.id, aktivesObjekt.name || "Objekt", data, {
+          resultData: mitErgebnis(
+            { art: aktivesObjekt.art, rechnerTyp: aktivesObjekt.rechnerTyp },
+            neu,
+          ),
+        });
+      } catch (speicherErr) {
+        console.error(`[KI ${produktId}] Speichern fehlgeschlagen:`, speicherErr);
+        setFehler(analyseFehlertext("nichtGespeichert"));
+      }
     } catch {
       setFehler(analyseFehlertext("fehler"));
     } finally {

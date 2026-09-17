@@ -382,9 +382,19 @@ export function ObjektDetail({ objekt, onBack }) {
         neu,
       );
       setLokaleAiErgebnisse(neuResultData);
-      await updateObj(objekt.id, objekt.title || "Objekt", basis, {
-        resultData: neuResultData,
-      });
+      // Eigener catch fuer das Speichern: an dieser Stelle ist die Auswertung
+      // fertig, angezeigt und bezahlt. Ein gescheitertes updateObj (Funkloch
+      // auf dem Handy, abgelaufene Session, Objekt-Limit) darf deshalb nicht
+      // im Sammel-catch unten landen und als "KI nicht erreichbar" erscheinen -
+      // das Ergebnis bleibt sichtbar, nur der Hinweis ist ein anderer.
+      try {
+        await updateObj(objekt.id, objekt.title || "Objekt", basis, {
+          resultData: neuResultData,
+        });
+      } catch (speicherErr) {
+        console.error(`[AI-Produkt ${produktId}] Speichern fehlgeschlagen:`, speicherErr);
+        setAiFehler({ produktId, text: analyseFehlertext("nichtGespeichert") });
+      }
       // Kein Sheet mehr, das sich nach einem Lauf oeffnen muesste (UX-Review
       // 2026-09-09) - die Karte in AiEngine.jsx zeigt das frische Ergebnis
       // ueber lokaleAiErgebnisse sofort selbst an.
