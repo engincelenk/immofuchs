@@ -258,6 +258,17 @@ export const T = {
       "Beleihungsauslauf über 100 % — das Darlehen übersteigt den reinen Kaufpreis (inkl. mitfinanzierter Nebenkosten).",
     hardStopCf: "Über 800 € Zuzahlung im Monat, auch nach Steuerwirkung.",
     scoreHardStopTitel: "Deckelt den Score — unabhängig vom Kaufpreis:",
+    // Fehlertexte der KI-Auswertungen (analyseFehlertext in aiAnalyse.js)
+    aiFehlerPro: "Diese Auswertung gehört zu ImmoFuchs Pro.",
+    aiFehlerLogin: "Bitte melde dich an, um die Auswertung zu starten.",
+    aiFehlerRateLimit: "Tageslimit erreicht — morgen wieder verfügbar.",
+    aiFehlerModellAus:
+      "Der KI-Dienst antwortet gerade nicht. Bitte in einigen Minuten noch einmal versuchen.",
+    aiFehlerAntwortUnbrauchbar:
+      "Die KI-Antwort war unvollständig. Ein neuer Versuch führt meist sofort zum Ergebnis.",
+    aiFehlerNichtGespeichert:
+      "Auswertung erstellt, aber nicht gespeichert — sie ist bis zum Neuladen der Seite sichtbar.",
+    aiFehlerAllgemein: "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.",
     stressTitle: "Stresstest",
     stressSub: "Wie robust ist das Ergebnis, wenn sich die Annahmen verschlechtern?",
     stressBasis: "Basis",
@@ -958,6 +969,16 @@ export const T = {
       "Loan-to-value above 100% — the loan exceeds the pure purchase price (including financed closing costs).",
     hardStopCf: "Over €800 top-up per month, even after tax effects.",
     scoreHardStopTitel: "Caps the score — regardless of the purchase price:",
+    aiFehlerPro: "This analysis is part of ImmoFuchs Pro.",
+    aiFehlerLogin: "Please sign in to start the analysis.",
+    aiFehlerRateLimit: "Daily limit reached — available again tomorrow.",
+    aiFehlerModellAus:
+      "The AI service isn't responding right now. Please try again in a few minutes.",
+    aiFehlerAntwortUnbrauchbar:
+      "The AI response was incomplete. Trying again usually works right away.",
+    aiFehlerNichtGespeichert:
+      "Analysis created but not saved — it stays visible until you reload the page.",
+    aiFehlerAllgemein: "The analysis isn't available right now. Please try again later.",
     stressTitle: "Stress test",
     stressSub: "How robust is the result if the assumptions get worse?",
     stressBasis: "Base",
@@ -1717,6 +1738,16 @@ export const T = {
       "Kredi/değer oranı %100'ün üzerinde — kredi, saf satış fiyatını aşıyor (finanse edilen yan giderler dahil).",
     hardStopCf: "Vergi etkisinden sonra bile ayda 800 €'dan fazla ek ödeme.",
     scoreHardStopTitel: "Puanı sınırlıyor — satın alma fiyatından bağımsız olarak:",
+    aiFehlerPro: "Bu değerlendirme ImmoFuchs Pro kapsamındadır.",
+    aiFehlerLogin: "Değerlendirmeyi başlatmak için lütfen giriş yapın.",
+    aiFehlerRateLimit: "Günlük limit doldu — yarın yeniden kullanılabilir.",
+    aiFehlerModellAus:
+      "Yapay zekâ hizmeti şu anda yanıt vermiyor. Lütfen birkaç dakika sonra tekrar deneyin.",
+    aiFehlerAntwortUnbrauchbar:
+      "Yapay zekâ yanıtı eksikti. Yeni bir deneme genellikle hemen sonuç verir.",
+    aiFehlerNichtGespeichert:
+      "Değerlendirme oluşturuldu ancak kaydedilmedi — sayfayı yenileyene kadar görünür kalır.",
+    aiFehlerAllgemein: "Değerlendirme şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.",
     stressTitle: "Stres testi",
     stressSub: "Varsayımlar kötüleşirse sonuç ne kadar dayanıklı?",
     stressBasis: "Temel",
@@ -2476,6 +2507,13 @@ export const T = {
     hardStopBel: "贷款价值比超过100%——贷款金额超过了纯购买价格（含一并贷款的附加费用）。",
     hardStopCf: "即使考虑税收影响，每月仍需补贴超过800欧元。",
     scoreHardStopTitel: "限制评分——与购买价格无关：",
+    aiFehlerPro: "此分析属于 ImmoFuchs Pro。",
+    aiFehlerLogin: "请登录后开始分析。",
+    aiFehlerRateLimit: "已达每日上限——明天可再次使用。",
+    aiFehlerModellAus: "AI 服务目前无响应。请几分钟后重试。",
+    aiFehlerAntwortUnbrauchbar: "AI 回复不完整。重试通常会立即成功。",
+    aiFehlerNichtGespeichert: "分析已生成但未保存——在重新加载页面前仍可查看。",
+    aiFehlerAllgemein: "分析目前不可用。请稍后重试。",
     stressTitle: "压力测试",
     stressSub: "如果假设条件变差，结果的稳健性如何？",
     stressBasis: "基准",
@@ -3202,6 +3240,15 @@ export const T = {
       "लोन-टू-वैल्यू 100% से अधिक — लोन शुद्ध खरीद मूल्य से अधिक है (वित्तपोषित अतिरिक्त लागतों सहित)।",
     hardStopCf: "कर प्रभाव के बाद भी प्रति माह 800 € से अधिक अतिरिक्त भुगतान।",
     scoreHardStopTitel: "स्कोर को सीमित करता है — खरीद मूल्य से स्वतंत्र:",
+    aiFehlerPro: "यह विश्लेषण ImmoFuchs Pro का हिस्सा है।",
+    aiFehlerLogin: "विश्लेषण शुरू करने के लिए कृपया साइन इन करें।",
+    aiFehlerRateLimit: "दैनिक सीमा पूरी — कल फिर उपलब्ध।",
+    aiFehlerModellAus: "AI सेवा इस समय जवाब नहीं दे रही है। कृपया कुछ मिनट बाद पुनः प्रयास करें।",
+    aiFehlerAntwortUnbrauchbar:
+      "AI का उत्तर अपूर्ण था। दोबारा प्रयास करने पर आमतौर पर तुरंत परिणाम मिलता है।",
+    aiFehlerNichtGespeichert:
+      "विश्लेषण बन गया लेकिन सहेजा नहीं गया — पेज दोबारा लोड करने तक दिखता रहेगा।",
+    aiFehlerAllgemein: "विश्लेषण इस समय उपलब्ध नहीं है। कृपया बाद में पुनः प्रयास करें।",
     stressTitle: "स्ट्रेस टेस्ट",
     stressSub: "यदि धारणाएं बिगड़ें तो परिणाम कितना मजबूत रहता है?",
     stressBasis: "आधार",

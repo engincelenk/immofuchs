@@ -39,7 +39,7 @@ import { rufeAnalyseAuf, analyseFehlertext, erteileConsent } from "../../utils/a
 // Datenverlust, das Ergebnis liegt weiterhin unter resultData.ai.<produktId>
 // am Server).
 export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahlen, standortFakten }) {
-  const { aktivesObjekt, updateObj, isProSavedObjects } = useApp();
+  const { aktivesObjekt, updateObj, isProSavedObjects, t } = useApp();
   const [ergebnis, setErgebnis] = useState(null);
   // Snapshot der `kennzahlen`, wie sie beim letzten Lauf ans Modell gingen -
   // fuer den Veraltet-Hinweis. Bewusst NICHT istVeraltet()/veraltetText()
@@ -73,7 +73,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
       const res = await rufeAnalyseAuf({ produkt: produktId, kennzahlen, zahlen, standortFakten });
       if (!res.ok) {
         if (res.art === "consent") setConsent(true);
-        else setFehler(analyseFehlertext(res.art));
+        else setFehler(analyseFehlertext(res.art, t));
         return;
       }
       const neu = ergebnisAnlegen(
@@ -108,10 +108,10 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
         });
       } catch (speicherErr) {
         console.error(`[KI ${produktId}] Speichern fehlgeschlagen:`, speicherErr);
-        setFehler(analyseFehlertext("nichtGespeichert"));
+        setFehler(analyseFehlertext("nichtGespeichert", t));
       }
     } catch {
-      setFehler(analyseFehlertext("fehler"));
+      setFehler(analyseFehlertext("fehler", t));
     } finally {
       setLaufend(false);
     }
@@ -121,7 +121,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
     setConsent(false);
     const ok = await erteileConsent();
     if (!ok) {
-      setFehler(analyseFehlertext("fehler"));
+      setFehler(analyseFehlertext("fehler", t));
       return;
     }
     starten();

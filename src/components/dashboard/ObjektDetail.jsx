@@ -367,7 +367,7 @@ export function ObjektDetail({ objekt, onBack }) {
           setAiConsent(produktId);
           return;
         }
-        setAiFehler({ produktId, text: analyseFehlertext(res.art) });
+        setAiFehler({ produktId, text: analyseFehlertext(res.art, t) });
         return;
       }
       const neu = ergebnisAnlegen(produktId, res.ergebnis, basis, {
@@ -393,7 +393,7 @@ export function ObjektDetail({ objekt, onBack }) {
         });
       } catch (speicherErr) {
         console.error(`[AI-Produkt ${produktId}] Speichern fehlgeschlagen:`, speicherErr);
-        setAiFehler({ produktId, text: analyseFehlertext("nichtGespeichert") });
+        setAiFehler({ produktId, text: analyseFehlertext("nichtGespeichert", t) });
       }
       // Kein Sheet mehr, das sich nach einem Lauf oeffnen muesste (UX-Review
       // 2026-09-09) - die Karte in AiEngine.jsx zeigt das frische Ergebnis
@@ -402,7 +402,7 @@ export function ObjektDetail({ objekt, onBack }) {
       console.error(`[AI-Produkt ${produktId}] Unerwarteter Fehler:`, err);
       setAiFehler({
         produktId,
-        text: "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.",
+        text: analyseFehlertext("fehler", t),
       });
     } finally {
       setLaufend(null);
@@ -423,7 +423,7 @@ export function ObjektDetail({ objekt, onBack }) {
     } catch {
       setAiFehler({
         produktId,
-        text: "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.",
+        text: analyseFehlertext("fehler", t),
       });
       return;
     }

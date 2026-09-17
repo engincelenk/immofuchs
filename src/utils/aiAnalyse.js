@@ -84,22 +84,41 @@ export async function rufeAnalyseAuf({
 // ObjektDetail.starteProdukt() standen - an einer Stelle, damit Objekt-KI
 // und Rechner-KI nie unterschiedliche Formulierungen fuer denselben Zustand
 // zeigen.
-export function analyseFehlertext(art) {
-  if (art === "pro") return "Diese Auswertung gehört zu ImmoFuchs Pro.";
-  if (art === "login") return "Bitte melde dich an, um die Auswertung zu starten.";
-  if (art === "rateLimit") return "Tageslimit erreicht — morgen wieder verfügbar.";
+// `t` ist optional: die Texte hatten bis 2026-09-17 keine i18n-Schluessel und
+// standen fest auf Deutsch - in einer App mit fuenf Sprachen las ein
+// englischer Nutzer im Fehlerfall deutschen Text. Der Parameter ist bewusst
+// optional mit deutschem Rueckfall, damit kein Aufrufer stillschweigend
+// "undefined" anzeigt, wenn er `t` (noch) nicht durchreicht.
+export function analyseFehlertext(art, t = {}) {
+  if (art === "pro") return t.aiFehlerPro || "Diese Auswertung gehört zu ImmoFuchs Pro.";
+  if (art === "login")
+    return t.aiFehlerLogin || "Bitte melde dich an, um die Auswertung zu starten.";
+  if (art === "rateLimit")
+    return t.aiFehlerRateLimit || "Tageslimit erreicht — morgen wieder verfügbar.";
   if (art === "modellAus")
-    return "Der KI-Dienst antwortet gerade nicht. Bitte in einigen Minuten noch einmal versuchen.";
+    return (
+      t.aiFehlerModellAus ||
+      "Der KI-Dienst antwortet gerade nicht. Bitte in einigen Minuten noch einmal versuchen."
+    );
   if (art === "antwortUnbrauchbar")
-    return "Die KI-Antwort war unvollständig. Ein neuer Versuch führt meist sofort zum Ergebnis.";
+    return (
+      t.aiFehlerAntwortUnbrauchbar ||
+      "Die KI-Antwort war unvollständig. Ein neuer Versuch führt meist sofort zum Ergebnis."
+    );
   // Die Auswertung IST gelaufen und liegt vor - nur das Speichern am Objekt
   // ist gescheitert. Bis 2026-09-17 fiel dieser Fall in denselben
   // Sammel-catch wie ein Modellausfall und wurde als "nicht erreichbar"
   // gemeldet: der Nutzer hatte sein Kontingent verbraucht, ein fertiges
   // Ergebnis vor sich und las trotzdem, die KI sei nicht erreichbar.
   if (art === "nichtGespeichert")
-    return "Auswertung erstellt, aber nicht gespeichert — sie ist bis zum Neuladen der Seite sichtbar.";
-  return "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal.";
+    return (
+      t.aiFehlerNichtGespeichert ||
+      "Auswertung erstellt, aber nicht gespeichert — sie ist bis zum Neuladen der Seite sichtbar."
+    );
+  return (
+    t.aiFehlerAllgemein ||
+    "Die Auswertung ist gerade nicht erreichbar. Versuch es später noch einmal."
+  );
 }
 
 // POST /consent - unveraendert aus ObjektDetail.einwilligenUndStarten()
