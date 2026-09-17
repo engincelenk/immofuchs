@@ -101,15 +101,11 @@ export function ScoreBlock({ score }) {
   // hierher aber nirgends sichtbar - ein Nutzer sah nur "55, gelb" und keinen
   // Grund, warum ein gesenkter Kaufpreis daran nichts aenderte (z.B. Cashflow
   // < -800 EUR/Monat kappt fest auf 55, unabhaengig von D1-D3).
-  const HARD_STOP_TEXT = {
-    hardStopTilgung0: "Kein Tilgungsanteil vereinbart — das begrenzt den Score unabhängig vom Kaufpreis.",
-    hardStopDscr: "Der Schuldendienst ist aktuell nicht ausreichend gedeckt — das begrenzt den Score unabhängig vom Kaufpreis.",
-    hardStopBel: "Die Belastungsquote liegt über 100 % des Einkommens — das begrenzt den Score unabhängig vom Kaufpreis.",
-    hardStopCf: "Der Cashflow ist deutlich negativ — das begrenzt den Score unabhängig vom Kaufpreis.",
-  };
-  const hardStopTexte = (score.hardStops || [])
-    .map((hs) => HARD_STOP_TEXT[hs.key])
-    .filter(Boolean);
+  //
+  // Die Texte liegen seit dem Stufe-2-Umbau in allen fuenf Sprachen unter
+  // exakt den Schluesseln, die hardStops() als `key` liefert - sie waren nur
+  // nie angezeigt worden. Deshalb hier t[hs.key] statt eigener Formulierungen.
+  const hardStopTexte = (score.hardStops || []).map((hs) => t[hs.key]).filter(Boolean);
 
   return (
     <div
@@ -281,6 +277,17 @@ export function ScoreBlock({ score }) {
 
       {hardStopTexte.length > 0 && (
         <div style={{ padding: "0 12px", marginTop: 4 }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "var(--ch)",
+              letterSpacing: 0.3,
+              marginBottom: 6,
+            }}
+          >
+            {t.scoreHardStopTitel}
+          </div>
           {hardStopTexte.map((txt) => (
             <div
               key={txt}

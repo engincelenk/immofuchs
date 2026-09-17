@@ -257,6 +257,7 @@ export const T = {
     hardStopBel:
       "Beleihungsauslauf über 100 % — das Darlehen übersteigt den reinen Kaufpreis (inkl. mitfinanzierter Nebenkosten).",
     hardStopCf: "Über 800 € Zuzahlung im Monat, auch nach Steuerwirkung.",
+    scoreHardStopTitel: "Deckelt den Score — unabhängig vom Kaufpreis:",
     stressTitle: "Stresstest",
     stressSub: "Wie robust ist das Ergebnis, wenn sich die Annahmen verschlechtern?",
     stressBasis: "Basis",
@@ -956,6 +957,7 @@ export const T = {
     hardStopBel:
       "Loan-to-value above 100% — the loan exceeds the pure purchase price (including financed closing costs).",
     hardStopCf: "Over €800 top-up per month, even after tax effects.",
+    scoreHardStopTitel: "Caps the score — regardless of the purchase price:",
     stressTitle: "Stress test",
     stressSub: "How robust is the result if the assumptions get worse?",
     stressBasis: "Base",
@@ -1714,6 +1716,7 @@ export const T = {
     hardStopBel:
       "Kredi/değer oranı %100'ün üzerinde — kredi, saf satış fiyatını aşıyor (finanse edilen yan giderler dahil).",
     hardStopCf: "Vergi etkisinden sonra bile ayda 800 €'dan fazla ek ödeme.",
+    scoreHardStopTitel: "Puanı sınırlıyor — satın alma fiyatından bağımsız olarak:",
     stressTitle: "Stres testi",
     stressSub: "Varsayımlar kötüleşirse sonuç ne kadar dayanıklı?",
     stressBasis: "Temel",
@@ -2472,6 +2475,7 @@ export const T = {
     hardStopDscr: "租金收入无法覆盖债务偿还。",
     hardStopBel: "贷款价值比超过100%——贷款金额超过了纯购买价格（含一并贷款的附加费用）。",
     hardStopCf: "即使考虑税收影响，每月仍需补贴超过800欧元。",
+    scoreHardStopTitel: "限制评分——与购买价格无关：",
     stressTitle: "压力测试",
     stressSub: "如果假设条件变差，结果的稳健性如何？",
     stressBasis: "基准",
@@ -3197,6 +3201,7 @@ export const T = {
     hardStopBel:
       "लोन-टू-वैल्यू 100% से अधिक — लोन शुद्ध खरीद मूल्य से अधिक है (वित्तपोषित अतिरिक्त लागतों सहित)।",
     hardStopCf: "कर प्रभाव के बाद भी प्रति माह 800 € से अधिक अतिरिक्त भुगतान।",
+    scoreHardStopTitel: "स्कोर को सीमित करता है — खरीद मूल्य से स्वतंत्र:",
     stressTitle: "स्ट्रेस टेस्ट",
     stressSub: "यदि धारणाएं बिगड़ें तो परिणाम कितना मजबूत रहता है?",
     stressBasis: "आधार",
