@@ -60,7 +60,8 @@ describe("leseVarianten", () => {
   });
 });
 
-// Der zweite Zahlenkanal (Produkt "preis"): flachere Form, gleiche Grenzen.
+// Der zweite Zahlenkanal (Briefing und Rechner-Produkte): flachere Form,
+// eigene Grenzen - das Briefing schickt rund zwanzig laengere Zeilen.
 describe("leseZahlen", () => {
   const Z = { label: "Ortsübliche Miete", wert: "9,30 €/m²" };
 
@@ -76,9 +77,20 @@ describe("leseZahlen", () => {
     expect(leseZahlen([{ label: 1, wert: 2 }])).toBeUndefined();
   });
 
-  it("deckelt bei 6 Zeilen und kuerzt auf 40 Zeichen", () => {
-    expect(leseZahlen(Array.from({ length: 20 }, () => Z))).toHaveLength(6);
-    expect(leseZahlen([{ ...Z, label: "x".repeat(200) }])?.[0].label).toHaveLength(40);
+  it("deckelt bei 24 Zeilen und kuerzt auf 120 Zeichen", () => {
+    expect(leseZahlen(Array.from({ length: 40 }, () => Z))).toHaveLength(24);
+    expect(leseZahlen([{ ...Z, label: "x".repeat(200) }])?.[0].label).toHaveLength(120);
+  });
+
+  // Regressionsschutz: bei den frueheren Grenzen (6 Zeilen a 40 Zeichen)
+  // waere die Haelfte der Briefing-Zahlen stumm verschwunden, und das Modell
+  // haette ueber Werte geschrieben, die es nie gesehen hat.
+  it("laesst eine vollstaendige Briefing-Vergleichszeile ungekuerzt durch", () => {
+    const zeile = {
+      label: "Angebotspreis gegen tragfaehigen Preis",
+      wert: "199.000 € gegen 92.500 € (nicht tragfaehig)",
+    };
+    expect(leseZahlen([zeile])).toEqual([zeile]);
   });
 
   it("verwirft Zeilenumbrueche - sie koennten eine eigene Prompt-Zeile vortaeuschen", () => {

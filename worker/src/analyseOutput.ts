@@ -184,12 +184,82 @@ export function parseAnalyseOutput(roh: string): AnalyseErgebnis | null {
   };
 }
 
+// ── Investment-Briefing ─────────────────────────────────────────────────────
+//
+// Eigene Form, eigener Parser (Spec docs/technical_specs/
+// investment-briefing.md, Abschnitt 7.4): Das Briefing liefert KEINE
+// calculations/scenarios/assumptions mehr - alle Zahlen der Karte rechnet der
+// Client selbst (briefing.js) und zeigt sie live an. Das Modell steuert
+// ausschliesslich Text bei, je Ebene genau ein Feld.
+//
+// Ohne "urteil" ist das Ergebnis wertlos: es ist der Satz unter der Ampel und
+// der einzige Teil, den es ohne KI-Aufruf nicht gibt. Anders als beim
+// generischen Parser gibt es hier deshalb KEINEN Fliesstext-Rettungsanker -
+// ein Absatz ohne Feldzuordnung liesse sich den sieben Ebenen nicht zuordnen
+// und stuende am Ende unter der falschen Ueberschrift.
+export interface BriefingErgebnis {
+  urteil: string;
+  staerken: AnalyseInsight[];
+  risiken: AnalyseInsight[];
+  hebel: AnalyseInsight[];
+  markt: string;
+  tragfaehigkeit: string;
+  zeitraum: string;
+  stresstest: string;
+}
+
+const MAX_URTEIL = 220;
+const MAX_BRIEFING_EINTRAEGE = 3;
+const MAX_BRIEFING_TEXT = 300;
+const MAX_MARKT = 250;
+const MAX_TRAGFAEHIGKEIT = 300;
+const MAX_ZEITRAUM = 250;
+const MAX_STRESSTEST = 250;
+
+function briefingListe(roh: unknown): AnalyseInsight[] {
+  if (!Array.isArray(roh)) return [];
+  const raus: AnalyseInsight[] = [];
+  for (const eintrag of roh.slice(0, MAX_BRIEFING_EINTRAEGE)) {
+    const i = insight(eintrag, MAX_BRIEFING_TEXT);
+    if (i) raus.push(i);
+  }
+  return raus;
+}
+
+/**
+ * @returns null, wenn kein "urteil" herauszuloesen ist - der Aufrufer
+ *   verwirft die Antwort dann und gibt das Kontingent zurueck.
+ */
+export function parseBriefingOutput(roh: string): BriefingErgebnis | null {
+  let daten: unknown;
+  try {
+    daten = JSON.parse(jsonKern(roh));
+  } catch {
+    return null;
+  }
+  if (typeof daten !== "object" || daten === null) return null;
+  const d = daten as Record<string, unknown>;
+
+  const urteil = text(d.urteil, MAX_URTEIL);
+  if (!urteil) return null;
+
+  return {
+    urteil,
+    staerken: briefingListe(d.staerken),
+    risiken: briefingListe(d.risiken),
+    hebel: briefingListe(d.hebel),
+    markt: text(d.markt, MAX_MARKT),
+    tragfaehigkeit: text(d.tragfaehigkeit, MAX_TRAGFAEHIGKEIT),
+    zeitraum: text(d.zeitraum, MAX_ZEITRAUM),
+    stresstest: text(d.stresstest, MAX_STRESSTEST),
+  };
+}
+
 // ── Besichtigungshandout ────────────────────────────────────────────────────
 //
-// Eigene Form, eigener Parser - und zwar NUR fuer dieses eine Produkt. Die
-// drei Auswertungen (analyse/hebel/preis) bleiben unveraendert bei
-// {kernaussage, kpis, abschnitte}; der Aufrufer waehlt den Parser nach
-// Produkt (siehe handleObjektAnalyse).
+// Eigene Form, eigener Parser - wie beim Briefing oben. Die fuenf
+// Rechner-Produkte bleiben beim generischen Schema (parseAnalyseOutput); der
+// Aufrufer waehlt den Parser nach Produkt (siehe handleObjektAnalyse).
 //
 // Warum ueberhaupt eine zweite Form: Das Handout ist das einzige Produkt, das
 // nicht gelesen, sondern BENUTZT wird. Der Nutzer haekelt einzelne Fragen ab

@@ -306,11 +306,28 @@ export function briefingTragfaehigkeit(d, t, R, opt = {}) {
 // Bewusst KEINE eigene Summenformel: alle Zeilen sind vorhandene Werte aus
 // computeRendite(), die Summe ist R.g selbst. Sonst koennte die angezeigte
 // Summe von der Kernzahl abweichen.
-export function briefingZeitraum(R) {
+//
+// Die Zeile "einsatz" steht nicht in der Spec-Tabelle (§5.5), ohne sie geht
+// die Spalte aber nicht auf: R.g zieht den Kapitaleinsatz ab, die vier
+// gelisteten Zeilen enthalten ihn nicht (Nutzerentscheidung 2026-09-18,
+// Einsatz-Zeile statt umbenannter Summe). Sie ist keine Restgroesse, sondern
+// exakt der nicht aus dem Darlehen gedeckte Teil der Investition:
+// (Gesamtkaufpreis - Darlehen) - Eigenkapital deckt den Fall ab, dass mehr
+// Eigenkapital eingesetzt wird als Finanzierungsbedarf besteht; dazu die bar
+// gezahlten Nebenkosten, Sonderumlage und Renovierung. Damit stimmt die
+// Summe in allen geprueften Konstellationen (nk finanziert/bar, Renovierung,
+// Sonderumlage, Eigenkapital ueber Kaufpreis, Verkauf in der Spekulations-
+// frist).
+export function briefingZeitraum(d, R) {
+  const nkCash = d.nkFinanzieren ? 0 : R.nbk;
+  const einsatz =
+    R.gKP - R.da - (+d.eigenkapital || 0) - nkCash - (+d.sonder || 0) - (+d.renovierung || 0);
+
   const zeilen = [
     { key: "zuzahlungen", wert: R.sCF },
     { key: "getilgt", wert: R.da - R.rsEnd },
     { key: "wertzuwachs", wert: R.w },
+    { key: "einsatz", wert: einsatz },
   ];
   if (R.st23 > 0) zeilen.push({ key: "steuer23", wert: -R.st23 });
   return { jahre: R.j, zeilen, summe: R.g };
@@ -384,7 +401,7 @@ export function berechneBriefing(d, t, opt = {}) {
       tragfaehigerKaufpreis: tragfaehigkeit?.kaufpreis ?? null,
     }),
     tragfaehigkeit,
-    zeitraum: briefingZeitraum(R),
+    zeitraum: briefingZeitraum(d, R),
     stresstest: briefingStresstest(d, t),
     energieklasse: energieKlasse(d.sanIstVerbrauch),
   };
@@ -436,6 +453,7 @@ const ZEITRAUM_LABEL = {
   zuzahlungen: "Summe Zuzahlungen/Ueberschuesse",
   getilgt: "Getilgt",
   wertzuwachs: "Wertzuwachs",
+  einsatz: "Eingesetztes Kapital (Nebenkosten, Renovierung, nicht finanzierter Anteil)",
   steuer23: "Steuer nach Paragraf 23",
 };
 

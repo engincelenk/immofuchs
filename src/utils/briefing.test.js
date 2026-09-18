@@ -73,17 +73,39 @@ describe("energieKlasse", () => {
 });
 
 describe("briefingZeitraum", () => {
-  const R = { sCF: -8000, da: 200000, rsEnd: 170000, w: 40000, st23: 0, g: 62000, j: 10 };
+  const d = { eigenkapital: "20000", renovierung: "0", sonder: "0" };
+  const R = {
+    sCF: -8000,
+    da: 180000,
+    rsEnd: 150000,
+    w: 40000,
+    st23: 0,
+    g: 52050,
+    j: 10,
+    gKP: 200000,
+    nbk: 9950,
+  };
 
   it("zeigt nur vorhandene Werte und uebernimmt R.g als Summe", () => {
-    const z = briefingZeitraum(R);
-    expect(z.zeilen.map((x) => x.key)).toEqual(["zuzahlungen", "getilgt", "wertzuwachs"]);
+    const z = briefingZeitraum(d, R);
+    expect(z.zeilen.map((x) => x.key)).toEqual([
+      "zuzahlungen",
+      "getilgt",
+      "wertzuwachs",
+      "einsatz",
+    ]);
     expect(z.zeilen[1].wert).toBe(30000);
-    expect(z.summe).toBe(62000);
+    expect(z.summe).toBe(52050);
+  });
+
+  it("die Zeilen addieren sich zur Summe (sonst liest sich die Spalte falsch)", () => {
+    const z = briefingZeitraum(d, R);
+    expect(z.zeilen.reduce((a, x) => a + x.wert, 0)).toBeCloseTo(z.summe, 6);
   });
 
   it("nimmt die Steuer nach Paragraf 23 nur auf, wenn sie anfaellt", () => {
-    const z = briefingZeitraum({ ...R, st23: 4000 });
+    const z = briefingZeitraum(d, { ...R, st23: 4000, g: 48050 });
     expect(z.zeilen.at(-1)).toEqual({ key: "steuer23", wert: -4000 });
+    expect(z.zeilen.reduce((a, x) => a + x.wert, 0)).toBeCloseTo(z.summe, 6);
   });
 });

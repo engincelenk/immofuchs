@@ -1,3 +1,34 @@
+## 2026-09-18 (1.91.0)
+
+### Investment-Briefing Stufe 2: Worker kennt nur noch das Briefing
+
+Zweite Stufe der Spec docs/technical_specs/investment-briefing.md. Der Worker
+liefert ab jetzt EINE Objekt-Auswertung statt drei. Achtung beim Ausrollen:
+Stufe 2 und 3 gehoeren zusammen - der Worker beantwortet Anfragen auf
+analyse/hebel/preis nicht mehr (400 unbekanntes_produkt), der Client stellt
+erst in Stufe 3 um.
+
+- analysePrompt.ts: Prompts ANALYSE, HEBEL und PREIS entfernt, neuer Prompt
+  BRIEFING mit eigener Antwortform. Das Modell bewertet nicht mehr - Ampel,
+  Vergleiche, Tragfaehigkeit, Jahres-Bild und Stresstest kommen fertig
+  gerechnet aus dem Client und werden nur noch in Worte gefasst. Die Ampel ist
+  gesetzt und darf im Urteil weder abgeschwaecht noch verschaerft werden,
+  jeder Befund steht genau einmal auf der Karte, "im Rahmen" ist kein Hebel,
+  kein Score, Mietpotenzial nur mit Kappungsgrenze, keine Fachbegriffe.
+- Pfeil-Fix in FORM (betrifft auch die fuenf Rechner-Produkte): das Muster
+  "Erkenntnis -> Zahl -> Begruendung" stand woertlich im Prompt und tauchte
+  genauso in den Texten wieder auf. Jetzt in ganzen Saetzen verlangt, Pfeile
+  ausdruecklich verboten.
+- analyseOutput.ts: parseBriefingOutput() mit harten Laengen- und
+  Anzahlgrenzen; ohne "urteil" gibt es kein Ergebnis (502, Kontingent zurueck).
+- routes/assistant.ts: Produkt "briefing" statt analyse/hebel/preis,
+  Token-Budget dafuer auf 2000, Zielpreis- und "vorherige Befunde"-Kanal
+  entfernt.
+- Gefunden und mitbehoben: der Zahlenkanal deckelte bei 6 Zeilen a 40 Zeichen.
+  Das Briefing schickt rund zwanzig, teils laengere Zeilen - die Haelfte waere
+  stumm verschwunden und das Modell haette ueber Werte geschrieben, die es nie
+  gesehen hat. Jetzt 24 Zeilen a 120 Zeichen.
+
 ## 2026-09-18 (1.90.0)
 
 ### Investment-Briefing Stufe 1: Daten + Rechenkern (noch ohne sichtbare Aenderung)

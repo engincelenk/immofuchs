@@ -66,36 +66,60 @@ describe("nutzerPayload", () => {
   });
 });
 
-describe("systemPromptFuer", () => {
-  it("weist das Hebel-Produkt an, mitgelieferte Zahlen zu uebernehmen statt zu rechnen", () => {
-    const p = systemPromptFuer("hebel");
-    expect(p).toContain("Durchgerechnete Varianten");
-    expect(p).toContain("NICHT nach");
+// Das Briefing loest analyse/hebel/preis ab (Spec docs/technical_specs/
+// investment-briefing.md). Die Tests halten die Regeln fest, an denen die
+// drei Vorgaenger gescheitert sind: widerspruechliche Urteile, dreifach
+// genannte Befunde, Rauschen als Hebel verkauft.
+describe("systemPromptFuer - briefing", () => {
+  it("bindet das Urteil an die gesetzte Ampel", () => {
+    const p = systemPromptFuer("briefing");
+    expect(p).toContain("ampel");
+    expect(p).toContain("weder abschwaechen noch verschaerfen");
   });
 
-  it("verbietet dem Hebel-Produkt erfundene Zielwerte, wenn nichts mitgeliefert wurde", () => {
-    expect(systemPromptFuer("hebel")).toContain("erfinde KEINE Zielwerte");
+  it("verlangt Klartext statt Ausweichformulierung", () => {
+    expect(systemPromptFuer("briefing")).toContain("traegt sich nicht");
   });
 
-  it("verbietet dem Hebel-Produkt eine erfundene Gesamtwirkung in summary ohne Datengrundlage", () => {
-    const p = systemPromptFuer("hebel");
-    expect(p).toContain("Mehrere Optimierungshebel erkannt");
-    expect(p).toContain("NIEMALS selbst");
+  it("verbietet, einen Befund zweimal auf die Karte zu schreiben", () => {
+    const p = systemPromptFuer("briefing");
+    expect(p).toContain("genau EINMAL");
   });
 
-  it("weist das Hebel-Produkt an, cashflowMon/dscr aus den Varianten fuer scenarios zu nutzen", () => {
-    const p = systemPromptFuer("hebel");
-    expect(p).toContain("cashflowMon");
-    expect(p).toContain("dscr");
-    expect(p).toContain("scenarios");
+  it("erklaert eine Abweichung im Rahmen ausdruecklich NICHT zum Hebel", () => {
+    expect(systemPromptFuer("briefing")).toContain('"im Rahmen"');
   });
 
-  it("erwaehnt Varianten im Analyse-Prompt nicht - dort gibt es keine", () => {
-    expect(systemPromptFuer("analyse")).not.toContain("Durchgerechnete Varianten");
+  it("verbietet Score und Pfeile im Text", () => {
+    const p = systemPromptFuer("briefing");
+    expect(p).toContain("KEINEN Score");
+    expect(p).toContain("Keine Pfeile");
+  });
+
+  it("bindet Mietpotenzial an die Kappungsgrenze", () => {
+    expect(systemPromptFuer("briefing")).toContain("Kappungsgrenze");
+  });
+
+  it("haelt Fachbegriffe aus dem Text - der Leser ist Einsteiger", () => {
+    const p = systemPromptFuer("briefing");
+    expect(p).toContain("DSCR");
+    expect(p).toContain("keine Fachbegriffe");
+  });
+
+  it("liefert das eigene Antwortschema statt des generischen", () => {
+    const p = systemPromptFuer("briefing");
+    expect(p).toContain('"urteil"');
+    expect(p).toContain('"tragfaehigkeit"');
+    expect(p).not.toContain('"calculations"');
+    expect(p).not.toContain('"keyInsights"');
+  });
+
+  it("erwaehnt keine Durchgerechneten Varianten - die gab es nur beim Hebel-Produkt", () => {
+    expect(systemPromptFuer("briefing")).not.toContain("Durchgerechnete Varianten");
   });
 });
 
-describe("nutzerPayload - gerechnete Werte (Produkt preis)", () => {
+describe("nutzerPayload - gerechnete Werte", () => {
   const ZAHLEN = [
     { label: "Ortsübliche Miete", wert: "9,30 €/m²" },
     { label: "Deine Mietannahme", wert: "14,40 €/m²" },
@@ -119,70 +143,27 @@ describe("nutzerPayload - gerechnete Werte (Produkt preis)", () => {
   });
 });
 
-describe("nutzerPayload - Investment-Zielbereich (Produkt preis)", () => {
-  const ZIELPREIS = {
-    kaufpreisAktuell: "300.000 €",
-    zielKaufpreisMin: "255.000 €",
-    zielKaufpreisMax: "275.000 €",
-    zielKriterium: "Nettorendite ≥ 4 %",
-  };
+// Der Zielpreis-Kanal und der Kanal "vorherige Befunde" sind mit
+// analyse/hebel/preis entfallen (Spec Abschnitt 11): das Briefing baut nicht
+// mehr auf fremden Modelltexten auf, und den zirkulaeren Zielbereich ersetzt
+// die gerechnete Kachel V4.
+describe("nutzerPayload - Befunde (Produkt handout)", () => {
+  const BEFUNDE = [{ produkt: "Investment-Briefing", kernaussage: "Der Cashflow traegt nicht." }];
 
-  it("rendert den Investment-Zielbereich, klar getrennt vom Angebotspreis", () => {
-    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, ZIELPREIS);
-    expect(p).toContain("Investment-Zielbereich");
-    expect(p).toContain("Angebotspreis: 300.000 €");
-    expect(p).toContain("255.000 € bis 275.000 €");
-    expect(p).toContain("Nettorendite ≥ 4 %");
-  });
-
-  it("markiert den Block ausdruecklich als keinen Verkehrswert", () => {
-    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, undefined, undefined, ZIELPREIS);
-    expect(p).toContain("KEIN Verkehrswert");
-  });
-
-  it("nennt ohne Zielpreis keinen Investment-Zielbereich-Block", () => {
-    expect(nutzerPayload(KENNZAHLEN)).not.toContain("Investment-Zielbereich");
-  });
-});
-
-describe("nutzerPayload - Vorherige Befunde (Produkte hebel/preis)", () => {
-  const VORHERIGE = [{ produkt: "Objekt analysieren", kernaussage: "Der Cashflow traegt knapp." }];
-
-  it("rendert vorherige Befunde als eigenen Block, unabhaengig vom Handout-Kanal befunde", () => {
-    const p = nutzerPayload(
-      KENNZAHLEN,
-      "",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      VORHERIGE,
-    );
-    expect(p).toContain("Vorherige Befunde");
-    expect(p).toContain("- Objekt analysieren: Der Cashflow traegt knapp.");
-  });
-
-  it("haelt befunde (Handout) und vorherigeBefunde (hebel/preis) unabhaengig voneinander", () => {
-    const befunde = [{ produkt: "Handout-Quelle", kernaussage: "Andere Aussage." }];
-    const p = nutzerPayload(
-      KENNZAHLEN,
-      "",
-      undefined,
-      undefined,
-      befunde,
-      undefined,
-      undefined,
-      VORHERIGE,
-    );
+  it("rendert die Befunde als eigenen Block", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, BEFUNDE);
     expect(p).toContain("Bisherige Befunde");
-    expect(p).toContain("Handout-Quelle");
-    expect(p).toContain("Vorherige Befunde");
-    expect(p).toContain("Objekt analysieren");
+    expect(p).toContain("- Investment-Briefing: Der Cashflow traegt nicht.");
   });
 
-  it("nennt ohne vorherigeBefunde keinen entsprechenden Block", () => {
-    expect(nutzerPayload(KENNZAHLEN)).not.toContain("Vorherige Befunde");
+  it("nennt ohne Befunde keinen entsprechenden Block", () => {
+    expect(nutzerPayload(KENNZAHLEN)).not.toContain("Bisherige Befunde");
+  });
+
+  it("kennt weder Zielbereich noch vorherige Befunde als eigene Bloecke mehr", () => {
+    const p = nutzerPayload(KENNZAHLEN, "", undefined, undefined, BEFUNDE);
+    expect(p).not.toContain("Investment-Zielbereich");
+    expect(p).not.toContain("Vorherige Befunde");
   });
 });
 
@@ -234,18 +215,19 @@ describe("systemPromptFuer - handout", () => {
     expect(systemPromptFuer("handout")).toContain("Bisherige Befunde");
   });
 
-  it("aendert das Investment-Briefing-Schema der drei anderen Produkte nicht", () => {
-    for (const produkt of ["analyse", "hebel", "preis"] as const) {
+  it("aendert das Schema der uebrigen Produkte nicht", () => {
+    for (const produkt of ["kredit", "miete", "sanier"] as const) {
       expect(systemPromptFuer(produkt)).toContain('"keyInsights"');
       expect(systemPromptFuer(produkt)).toContain('"summary"');
       expect(systemPromptFuer(produkt)).not.toContain('"fragen"');
     }
+    expect(systemPromptFuer("briefing")).not.toContain('"fragen"');
   });
 });
 
-describe("systemPromptFuer - Investment-Briefing-Schema (FORM)", () => {
-  it("gibt fuer analyse/hebel/preis die volle Ebenen-Struktur vor", () => {
-    for (const produkt of ["analyse", "hebel", "preis"] as const) {
+describe("systemPromptFuer - generisches Schema (FORM)", () => {
+  it("gibt fuer die Rechner-Produkte die volle Ebenen-Struktur vor", () => {
+    for (const produkt of ["kredit", "miete", "vfe"] as const) {
       const p = systemPromptFuer(produkt);
       expect(p).toContain('"summary"');
       expect(p).toContain('"keyInsights"');
@@ -259,7 +241,7 @@ describe("systemPromptFuer - Investment-Briefing-Schema (FORM)", () => {
   });
 
   it("erklaert die vier basis-Werte im Prompt", () => {
-    const p = systemPromptFuer("analyse");
+    const p = systemPromptFuer("kredit");
     expect(p).toContain('"basis"');
     expect(p).toContain("expose");
     expect(p).toContain("berechnet");
@@ -268,93 +250,42 @@ describe("systemPromptFuer - Investment-Briefing-Schema (FORM)", () => {
   });
 
   it("verbietet erfundene Werte in keyInsights/risks/opportunities scharf und ergaenzt die Herkunfts-Pflicht", () => {
-    const p = systemPromptFuer("analyse");
+    const p = systemPromptFuer("kredit");
     expect(p).toContain("Erfinde KEINE");
     expect(p).toContain("LASS SIE WEG");
     expect(p).toContain("Herkunft");
   });
 
   it("verlangt keine Kauf- oder Anlageempfehlung fuer recommendation", () => {
-    expect(systemPromptFuer("analyse")).toContain("Kauf- oder Anlageempfehlung");
+    expect(systemPromptFuer("kredit")).toContain("Kauf- oder Anlageempfehlung");
   });
 });
 
-describe("systemPromptFuer - preis", () => {
-  it("verbietet einen geschaetzten Verkehrswert", () => {
-    const p = systemPromptFuer("preis");
-    expect(p).toContain("KEINE eigene Zahl");
-    expect(p).toContain("Immobilie NICHT");
+// Ort-Nennung und Zahlen-Disziplin waren bisher auf drei Prompts verteilt und
+// dort jeweils leicht anders formuliert - genau daher kamen die
+// widerspruechlichen Karten. Jetzt gibt es nur noch einen Ort, an dem das steht.
+describe("systemPromptFuer - briefing: Ort und Zahlen-Disziplin", () => {
+  it("weist das Briefing an, den Ort genau einmal beim Namen zu nennen", () => {
+    const p = systemPromptFuer("briefing");
+    expect(p).toContain('"ort"');
+    expect(p).toContain("genau einmal");
   });
 
-  it("benennt die Zensus-Zahl als Bestandsmiete", () => {
-    expect(systemPromptFuer("preis")).toContain("BESTANDSMIETE");
+  it("sagt ausdruecklich, dass die Bewertung bereits getroffen ist", () => {
+    const p = systemPromptFuer("briefing");
+    expect(p).toContain("du faellst sie nicht");
   });
 
-  it("ist ein anderer Prompt als analyse und hebel", () => {
-    const p = systemPromptFuer("preis");
-    expect(p).not.toBe(systemPromptFuer("analyse"));
-    expect(p).not.toBe(systemPromptFuer("hebel"));
-  });
-
-  it("verlangt 2-3 namentlich genannte Vergleichsorte fuer die Marktwert-Schaetzung", () => {
-    expect(systemPromptFuer("preis")).toContain("2 bis 3");
-  });
-
-  it("bindet die Energieklassen-Beurteilung an vorhandene Energiedaten, erfindet keine Klasse", () => {
-    const p = systemPromptFuer("preis");
-    expect(p).toContain("energiewertKwhQm");
-    expect(p).toContain("erfinde KEINE Energieeffizienzklasse");
-  });
-
-  it("trennt Angebotspreis, Investment-Zielbereich und Verkehrswert sprachlich", () => {
-    const p = systemPromptFuer("preis");
-    expect(p).toContain("Angebotspreis");
-    expect(p).toContain("Investment-Zielbereich");
-    expect(p).toContain('NIE "Verkehrswert"');
-  });
-});
-
-// Backlog Punkt 9 (2026-09-10, Nutzer-Vorgabe): jedes der drei Objekt-Produkte
-// soll den Ort namentlich nennen und sich inhaltlich von den anderen beiden
-// abgrenzen - diese Tests halten die neuen Vorgaben inhaltlich fest.
-describe("systemPromptFuer - Ort-Nennung und Abgrenzung (analyse/hebel/preis)", () => {
-  it("weist alle drei Objekt-Produkte an, den Ort beim Namen zu nennen", () => {
-    for (const produkt of ["analyse", "hebel", "preis"] as const) {
-      expect(systemPromptFuer(produkt)).toContain('"ort"');
-    }
-  });
-
-  it("weist alle drei Objekt-Produkte an, sich von den anderen beiden nicht zu wiederholen", () => {
-    for (const produkt of ["analyse", "hebel", "preis"] as const) {
-      expect(systemPromptFuer(produkt)).toContain("eine von drei");
-    }
-  });
-
-  it("analyse verlangt Baujahr/Energiewert/Sanierungen nur, wenn die Daten es hergeben", () => {
-    const p = systemPromptFuer("analyse");
-    expect(p).toContain("Energiewert");
-    expect(p).toContain("energiewertKwhQm");
-    expect(p).toContain("lass sie einfach weg");
-  });
-
-  it("hebel verlangt Mietpotential, realistischen Kaufpreis und Standortbeurteilung in dieser Reihenfolge", () => {
-    const p = systemPromptFuer("hebel");
-    const iMiete = p.indexOf("Potential bei der Miete");
-    const iPreis = p.indexOf("Realistischer Kaufpreis");
-    const iStandort = p.indexOf("Standortpotential");
-    expect(iMiete).toBeGreaterThan(-1);
-    expect(iPreis).toBeGreaterThan(iMiete);
-    expect(iStandort).toBeGreaterThan(iPreis);
+  it("grenzt sich nicht mehr gegen zwei Schwesterprodukte ab - es gibt nur noch eins", () => {
+    expect(systemPromptFuer("briefing")).not.toContain("eine von drei");
   });
 });
 
 // Die fuenf Produkte der Nicht-Rendite-Rechner: kein Objekt, sondern die
-// Eingaben eines einzelnen Rechners. Dieselbe Zahlen-Disziplin wie preis - das
-// Modell darf nur mit mitgelieferten Zahlen arbeiten, nie eigene Markt-,
-// Foerder- oder Steuerzahlen erfinden. Sie teilen sich FORM mit
-// analyse/hebel/preis und liefern seit der Umstellung auf das
-// Investment-Briefing-Schema ebenfalls summary/keyInsights statt
-// kernaussage/kpis/abschnitte.
+// Eingaben eines einzelnen Rechners. Dieselbe Zahlen-Disziplin - das Modell
+// darf nur mit mitgelieferten Zahlen arbeiten, nie eigene Markt-, Foerder-
+// oder Steuerzahlen erfinden. Sie teilen sich FORM untereinander; das
+// Briefing hat seit 2026-09-18 eine eigene Form (BRIEFING_FORM).
 describe("systemPromptFuer - die fuenf Rechner-Produkte", () => {
   const rechnerProdukte = ["kredit", "miete", "sanier", "vfe", "steuer6"] as const;
 
@@ -420,8 +351,8 @@ describe("systemPromptFuer - die fuenf Rechner-Produkte", () => {
     expect(p).toContain("277.826");
   });
 
-  it("aendert die Form der vier bestehenden Objekt-Produkte nicht", () => {
-    for (const produkt of ["analyse", "hebel", "preis", "handout"] as const) {
+  it("aendert die Form der beiden Objekt-Produkte nicht", () => {
+    for (const produkt of ["briefing", "handout"] as const) {
       const vorher = systemPromptFuer(produkt);
       expect(vorher).toBe(systemPromptFuer(produkt));
     }

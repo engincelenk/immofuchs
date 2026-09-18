@@ -20,12 +20,13 @@ import {
   type Befund,
   type GerechneteZahl,
   type HebelVariante,
-  type Zielpreis,
 } from "../analysePrompt";
 import {
   parseAnalyseOutput,
+  parseBriefingOutput,
   parseHandoutOutput,
   type AnalyseErgebnis,
+  type BriefingErgebnis,
   type HandoutErgebnis,
 } from "../analyseOutput";
 import { parseExposeOutput } from "../exposeOutput";
@@ -324,6 +325,12 @@ function extractTier(kontext: Record<string, unknown>): Tier {
 // brach mitten im JSON ab, der Parser verwarf die Antwort, und das Kontingent
 // war fuer nichts verbraucht.
 const ANALYSE_MAX_TOKENS = 1500;
+// Das Briefing hat mehr Textfelder als die uebrigen Produkte (Urteil, drei
+// Listen, vier Einordnungssaetze - siehe BRIEFING_FORM in analysePrompt.ts).
+// 2000 ist eine Annahme, die an einer echten Antwort zu pruefen ist: zu knapp
+// heisst abgeschnittenes JSON, und das kostet Kontingent ohne Ergebnis (der
+// Aufrufer gibt es zurueck, der Nutzer hat trotzdem nichts).
+const BRIEFING_MAX_TOKENS = 2000;
 
 // Hoechstens sechs Varianten, jedes Textfeld hoechstens 40 Zeichen: der
 // Client schickt heute vier kurze Zeilen, alles darueber hinaus ist entweder
@@ -336,23 +343,33 @@ const VARIANTEN_TEXT_MAX = 40;
 
 // Gemeinsam fuer beide Zahlenkanaele: gekuerzt, getrimmt, ohne
 // Zeilenumbrueche. Ein Umbruch koennte eine eigene Prompt-Zeile vortaeuschen.
-function promptText(v: unknown): string | null {
+function promptText(v: unknown, max: number = VARIANTEN_TEXT_MAX): string | null {
   if (typeof v !== "string") return null;
-  const s = v.trim().slice(0, VARIANTEN_TEXT_MAX);
+  const s = v.trim().slice(0, max);
   return s && !/[\r\n]/.test(s) ? s : null;
 }
 
-// Die Label-Wert-Zeilen des Produkts "preis" (ortsuebliche Miete, eigene
-// Annahme, Abweichung, Preis bei Ortsmiete). Dieselben Grenzen wie bei den
-// Varianten - der Kanal ist derselbe, nur die Form ist flacher.
+// Die fertig gerechneten Label-Wert-Zeilen (beim Briefing die Vergleiche,
+// Tragfaehigkeits-, Zeitraum- und Stresstest-Zeilen; bei den Rechner-
+// Produkten deren eigene Werte).
+//
+// Eigene, groessere Grenzen als bei den Varianten (2026-09-18): das Briefing
+// schickt rund zwanzig Zeilen statt vier, und eine Vergleichszeile wie
+// "3.980,00 €/m² gegen 3.858,00 €/m² (im Rahmen)" passt nicht in 40 Zeichen.
+// Bei den alten Grenzen waere die Haelfte der Zahlen stumm verschwunden und
+// das Modell haette genau ueber die Werte geschrieben, die es nicht gesehen
+// hat. Die Disziplin bleibt dieselbe: gekuerzt, getrimmt, ohne Zeilenumbruch.
+const ZAHLEN_MAX = 24;
+const ZAHLEN_TEXT_MAX = 120;
+
 export function leseZahlen(roh: unknown): GerechneteZahl[] | undefined {
   if (!Array.isArray(roh)) return undefined;
   const sauber: GerechneteZahl[] = [];
-  for (const eintrag of roh.slice(0, VARIANTEN_MAX)) {
+  for (const eintrag of roh.slice(0, ZAHLEN_MAX)) {
     if (typeof eintrag !== "object" || eintrag === null || Array.isArray(eintrag)) continue;
     const e = eintrag as Record<string, unknown>;
-    const label = promptText(e.label);
-    const wert = promptText(e.wert);
+    const label = promptText(e.label, ZAHLEN_TEXT_MAX);
+    const wert = promptText(e.wert, ZAHLEN_TEXT_MAX);
     if (label === null || wert === null) continue;
     sauber.push({ label, wert });
   }
@@ -437,29 +454,6 @@ export function leseVarianten(roh: unknown): HebelVariante[] | undefined {
   return sauber.length > 0 ? sauber : undefined;
 }
 
-// Investment-Zielbereich (Produkt "preis", Investment-Briefing-Schema 2026-09):
-// derselbe Injection-Kanal wie die uebrigen Zahlenbloecke, deshalb dieselbe
-// Disziplin - alle Felder ueber promptText gekuerzt/getrimmt.
-export function leseZielpreis(roh: unknown): Zielpreis | undefined {
-  if (typeof roh !== "object" || roh === null || Array.isArray(roh)) return undefined;
-  const e = roh as Record<string, unknown>;
-  const kaufpreisAktuell = promptText(e.kaufpreisAktuell);
-  const zielKaufpreisMin = promptText(e.zielKaufpreisMin);
-  const zielKaufpreisMax = promptText(e.zielKaufpreisMax);
-  const zielKriterium = promptText(e.zielKriterium);
-  if (kaufpreisAktuell === null || zielKaufpreisMin === null || zielKaufpreisMax === null || zielKriterium === null) {
-    return undefined;
-  }
-  return { kaufpreisAktuell, zielKaufpreisMin, zielKaufpreisMax, zielKriterium };
-}
-
-// Vorherige Befunde (Produkte "hebel"/"preis", Investment-Briefing-Schema
-// 2026-09): eigener Kanal neben "befunde" (nur Handout), sonst dieselbe
-// Disziplin wie leseBefunde - gekuerzt, ohne Zeilenumbrueche, Anzahl begrenzt.
-export function leseVorherigeBefunde(roh: unknown): Befund[] | undefined {
-  return leseBefunde(roh);
-}
-
 export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promise<Response> {
   const env = c.env;
 
@@ -476,7 +470,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
 
   const produkt =
     (
-      ["analyse", "hebel", "preis", "handout", "kredit", "miete", "sanier", "vfe", "steuer6"] as const
+      ["briefing", "handout", "kredit", "miete", "sanier", "vfe", "steuer6"] as const
     ).find((p) => p === b.produkt) ?? null;
   if (!produkt) return c.json({ error: "unbekanntes_produkt" }, 400);
 
@@ -500,19 +494,8 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   // Standort-Fakten (Backlog C.8) nur dort, wo der Prompt sie auch nutzt
   // (siehe HALTUNG-Regel in analysePrompt.ts) - fuer die uebrigen Produkte
   // waeren sie nur ungenutzter Prompt-Ballast.
-  const standortRelevant =
-    produkt === "analyse" || produkt === "hebel" || produkt === "preis" || produkt === "sanier";
+  const standortRelevant = produkt === "briefing" || produkt === "sanier";
   const standortFakten = standortRelevant ? leseStandortFakten(b.standortFakten) : undefined;
-  // Investment-Zielbereich (Investment-Briefing-Schema 2026-09) ist nur fuer
-  // "preis" relevant - der Prompt nutzt ihn nur dort (siehe PREIS-Prompt in
-  // analysePrompt.ts).
-  const zielpreis = produkt === "preis" ? leseZielpreis(b.zielpreis) : undefined;
-  // Vorherige Befunde (Investment-Briefing-Schema 2026-09): eigener Kanal
-  // neben "befunde" (Handout), nur fuer hebel/preis - die dort auf einer
-  // bereits gelaufenen Objekt-Analyse aufbauen duerfen (siehe HEBEL-/
-  // PREIS-Prompt).
-  const vorherigeBefunde =
-    produkt === "hebel" || produkt === "preis" ? leseVorherigeBefunde(b.vorherigeBefunde) : undefined;
 
   const zugriff = await resolveZugriff(c.req.raw, env);
   if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
@@ -543,10 +526,8 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
         zahlen,
         befunde,
         standortFakten,
-        zielpreis,
-        vorherigeBefunde,
       ),
-      ANALYSE_MAX_TOKENS,
+      produkt === "briefing" ? BRIEFING_MAX_TOKENS : ANALYSE_MAX_TOKENS,
     );
   } catch (err) {
     // Kontingent zurueckgeben: der Nutzer hat kein Ergebnis bekommen.
@@ -560,12 +541,16 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
     return c.json({ error: "modell_nicht_erreichbar" }, 503);
   }
 
-  // Das Handout liefert eine Fragenliste statt Abschnitten und braucht
-  // deshalb seinen eigenen Parser (analyseOutput.ts). Die Verzweigung sitzt
-  // hier und nur hier - die drei anderen Produkte bleiben unveraendert beim
-  // generischen Schema.
-  const ergebnis: AnalyseErgebnis | HandoutErgebnis | null =
-    produkt === "handout" ? parseHandoutOutput(roh) : parseAnalyseOutput(roh);
+  // Drei Formen, drei Parser (analyseOutput.ts): das Handout liefert eine
+  // Fragenliste, das Briefing sieben Textfelder zu bereits gerechneten
+  // Zahlen, die fuenf Rechner-Produkte das generische Schema. Die
+  // Verzweigung sitzt hier und nur hier.
+  const ergebnis: AnalyseErgebnis | BriefingErgebnis | HandoutErgebnis | null =
+    produkt === "handout"
+      ? parseHandoutOutput(roh)
+      : produkt === "briefing"
+        ? parseBriefingOutput(roh)
+        : parseAnalyseOutput(roh);
   if (!ergebnis) {
     await limiter.decrement();
     return c.json({ error: "unbrauchbare_antwort" }, 502);
@@ -577,20 +562,33 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   // Fehlermeldung als Analyseergebnis serviert. Stattdessen pruefen wir den
   // zusammengesetzten Text und verwerfen im Verdachtsfall das ganze Ergebnis.
   // Beim Handout sind die Fragen dieser Text: sie sind das Ergebnis. Beim
-  // Investment-Briefing-Schema (analyse/hebel/preis/kredit/miete/sanier/vfe/
-  // steuer6) sind es summary, alle Insight-Texte (keyInsights/risks/
-  // opportunities), assumptions und die optionale recommendation.
+  // Briefing sind es Urteil, die drei Listen und die vier Einordnungssaetze.
+  // Bei den fuenf Rechner-Produkten summary, alle Insight-Texte
+  // (keyInsights/risks/opportunities), assumptions und die optionale
+  // recommendation. Jedes Feld, das der Nutzer zu sehen bekommt, muss durch
+  // den Filter - ein ungeprueftes Feld waere der Weg daran vorbei.
   const gesamttext = (
     "fragen" in ergebnis
       ? [ergebnis.kernaussage, ...ergebnis.fragen.map((f) => f.frage)]
-      : [
-          ergebnis.summary,
-          ...ergebnis.keyInsights.map((i) => `${i.title} ${i.text}`),
-          ...ergebnis.risks.map((i) => `${i.title} ${i.text}`),
-          ...ergebnis.opportunities.map((i) => `${i.title} ${i.text}`),
-          ...ergebnis.assumptions,
-          ergebnis.recommendation ?? "",
-        ]
+      : "urteil" in ergebnis
+        ? [
+            ergebnis.urteil,
+            ...ergebnis.staerken.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.risiken.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.hebel.map((i) => `${i.title} ${i.text}`),
+            ergebnis.markt,
+            ergebnis.tragfaehigkeit,
+            ergebnis.zeitraum,
+            ergebnis.stresstest,
+          ]
+        : [
+            ergebnis.summary,
+            ...ergebnis.keyInsights.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.risks.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.opportunities.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.assumptions,
+            ergebnis.recommendation ?? "",
+          ]
   ).join(" ");
   if (filterOutput(gesamttext, "de") !== gesamttext) {
     await limiter.decrement();

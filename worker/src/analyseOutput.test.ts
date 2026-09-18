@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseAnalyseOutput, parseHandoutOutput } from "./analyseOutput";
+import { parseAnalyseOutput, parseBriefingOutput, parseHandoutOutput } from "./analyseOutput";
 
 // Der Parser ist die Stelle, an der Modellschwankungen aufschlagen. Der Prompt
 // BITTET um JSON, dieser Parser ERZWINGT es - die Ansicht darf bei keiner
@@ -375,5 +375,80 @@ describe("parseHandoutOutput", () => {
     expect(() => parseHandoutOutput(JSON.stringify([1, 2, 3]))).not.toThrow();
     expect(() => parseHandoutOutput(JSON.stringify({ kernaussage: 42, fragen: [[]] }))).not.toThrow();
     expect(parseHandoutOutput(JSON.stringify({ fragen: [] }))).toBeNull();
+  });
+});
+
+// ── Investment-Briefing ─────────────────────────────────────────────────────
+//
+// Eigene Form, eigener Parser (Spec docs/technical_specs/
+// investment-briefing.md, Abschnitt 7.4). Anders als beim generischen Schema
+// gibt es hier keinen Fliesstext-Rettungsanker: ein Absatz ohne
+// Feldzuordnung liesse sich den sieben Ebenen der Karte nicht zuordnen und
+// stuende am Ende unter der falschen Ueberschrift.
+describe("parseBriefingOutput", () => {
+  const BRIEFING = JSON.stringify({
+    urteil: "Das Objekt traegt sich nicht: 515 Euro Zuzahlung im Monat bei 500 Euro Kaltmiete.",
+    staerken: [{ title: "Lage", text: "Der Kreis liegt ueber dem Landesschnitt.", basis: "berechnet" }],
+    risiken: [{ title: "Zuzahlung", value: "515 €/Monat", text: "Dauerhafte Belastung.", basis: "berechnet" }],
+    hebel: [{ title: "Miete", text: "Die Kappungsgrenze begrenzt die Anhebung.", basis: "berechnet" }],
+    markt: "Der Kaufpreis liegt im Rahmen, die Miete deutlich darunter.",
+    tragfaehigkeit: "Der noetige Nachlass ist am Markt nicht durchsetzbar.",
+    zeitraum: "Der Vermoegenszuwachs haengt an der Wertsteigerungs-Annahme.",
+    stresstest: "Im Stressfall kippt der Vermoegenszuwachs ins Minus.",
+  });
+
+  it("uebernimmt alle sieben Felder", () => {
+    const e = parseBriefingOutput(BRIEFING)!;
+    expect(e.urteil).toContain("traegt sich nicht");
+    expect(e.staerken).toHaveLength(1);
+    expect(e.risiken[0].value).toBe("515 €/Monat");
+    expect(e.hebel[0].basis).toBe("berechnet");
+    expect(e.markt).toContain("im Rahmen");
+    expect(e.tragfaehigkeit).toContain("Nachlass");
+    expect(e.zeitraum).toContain("Wertsteigerungs-Annahme");
+    expect(e.stresstest).toContain("Stressfall");
+  });
+
+  it("kommt mit Markdown-Zaun und Vorrede zurecht", () => {
+    expect(parseBriefingOutput("Gerne!\n```json\n" + BRIEFING + "\n```")?.urteil).toBeTruthy();
+  });
+
+  it("deckelt die drei Listen bei je drei Eintraegen", () => {
+    const viele = JSON.stringify({
+      urteil: "Ein Urteil.",
+      staerken: Array.from({ length: 6 }, (_, i) => ({ title: `T${i}`, text: "Text.", basis: "ki" })),
+      risiken: Array.from({ length: 6 }, (_, i) => ({ title: `R${i}`, text: "Text.", basis: "ki" })),
+      hebel: Array.from({ length: 6 }, (_, i) => ({ title: `H${i}`, text: "Text.", basis: "ki" })),
+    });
+    const e = parseBriefingOutput(viele)!;
+    expect(e.staerken).toHaveLength(3);
+    expect(e.risiken).toHaveLength(3);
+    expect(e.hebel).toHaveLength(3);
+  });
+
+  it("kuerzt zu lange Texte statt sie durchzureichen", () => {
+    const lang = JSON.stringify({ urteil: "x".repeat(500), markt: "y".repeat(500) });
+    const e = parseBriefingOutput(lang)!;
+    expect(e.urteil).toHaveLength(220);
+    expect(e.markt).toHaveLength(250);
+  });
+
+  it("laesst leere Listen und leere Einordnungssaetze zu", () => {
+    const e = parseBriefingOutput(JSON.stringify({ urteil: "Ein Urteil." }))!;
+    expect(e.staerken).toEqual([]);
+    expect(e.tragfaehigkeit).toBe("");
+  });
+
+  it("liefert null ohne urteil - es ist der Satz unter der Ampel", () => {
+    expect(parseBriefingOutput("")).toBeNull();
+    expect(parseBriefingOutput("{}")).toBeNull();
+    expect(parseBriefingOutput(JSON.stringify({ markt: "Nur Markt." }))).toBeNull();
+    expect(parseBriefingOutput("Das Objekt traegt sich nicht.")).toBeNull();
+  });
+
+  it("uebersteht kaputte Typen ohne zu werfen", () => {
+    expect(() => parseBriefingOutput(JSON.stringify({ urteil: 42 }))).not.toThrow();
+    expect(() => parseBriefingOutput(JSON.stringify({ urteil: "Ok.", staerken: "nein" }))).not.toThrow();
+    expect(() => parseBriefingOutput(JSON.stringify([1, 2, 3]))).not.toThrow();
   });
 });
