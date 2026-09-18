@@ -1,3 +1,51 @@
+## 2026-09-18 (1.92.0)
+
+### Investment-Briefing Stufe 3: Client-Karte ersetzt die drei alten Analysen
+
+Dritte Stufe der Spec docs/technical_specs/investment-briefing.md (Layout
+nach docs/technical_specs/briefing-ui-handover.md). Worker und Client sind
+jetzt konsistent - ACHTUNG beim Ausrollen: erst mit dieser Stufe zusammen
+deployen (Worker kennt analyse/hebel/preis seit Stufe 2 nicht mehr, der
+Client hat bis jetzt trotzdem noch danach gefragt).
+
+- InvestmentBriefing.jsx komplett neu geschrieben: 7 Ebenen linear
+  untereinander (Urteil, Kernzahlen, 6 Vergleichs-Kacheln, Stärken/Risiken/
+  Hebel, Tragfähigkeit, Jahres-Bild, Stresstest) + zugeklapptes Profi-Kacheln-
+  Panel + Handout-Link. Ebenen 2/3/5/6/7 sind IMMER live aus briefing.js
+  berechnet, unabhängig vom letzten KI-Aufruf - kostet kein Kontingent zum
+  Anzeigen. Nur Urteil/Stärken/Risiken/Hebel/die vier Einordnungssätze kommen
+  aus dem gespeicherten KI-Ergebnis; ohne Ergebnis steht dort ein Start-Knopf.
+  Eigener Bestätigen-Dialog vor dem Überschreiben eines vorhandenen Ergebnisses
+  (bisher nur in AiEngine.jsx vorhanden).
+- aiEngine.js: AI_PRODUKTE/RELEVANTE_FELDER auf ein Produkt "briefing"
+  zusammengeführt (Vereinigung der bisherigen Felder von analyse/hebel/preis),
+  neue Zugriffsfunktionen fürs Briefing-Antwortschema (urteilVon,
+  staerkenVon, risikenVon, hebelTexteVon, marktVon, tragfaehigkeitTextVon,
+  zeitraumTextVon, stresstestTextVon).
+- AiEngine.jsx: Gruppe "Für dieses Objekt" (analyse/hebel/preis) entfällt -
+  das Briefing hat sein eigenes Layout statt eines generischen Produkt-Cards.
+- ObjektDetail.jsx: starteProdukt() auf einen Zweig "briefing" konsolidiert.
+  Der bisherige Zielpreis-Rechenweg (loeseZielKaufpreis + preisSchaetzung.js)
+  entfällt ersatzlos - V4 der neuen Karte übernimmt das per
+  briefingTragfaehigkeit() aus Stufe 1. Handout-Befunde kommen jetzt aus dem
+  Briefing (Urteil + Titel der Risiken/Hebel, Spec §9) statt aus den drei
+  alten Produkten.
+- regionalpreis.js: neue Funktion regionalLandeswert() - liefert den
+  Landesdurchschnitt unabhängig davon, ob der Ort selbst einem Kreis
+  zugeordnet ist (V5 braucht beide Ebenen gleichzeitig).
+- aiAnalyse.js: rufeAnalyseAuf() verliert die Parameter zielpreis/
+  vorherigeBefunde (der Worker kennt sie seit Stufe 2 nicht mehr).
+- translations.js: 63 neue UI-Text-Schlüssel (brf*) in allen fünf Sprachen.
+  Die KI-Texte selbst bleiben deutsch wie alle Prompts.
+- Ebene 6 (Jahres-Bild) bekommt die in Stufe 2 freigegebene Einsatz-Zeile:
+  ohne sie ergaben die Zeilen nicht den ausgewiesenen Vermögenszuwachs.
+
+Nicht in dieser Sitzung verifizierbar: die Karte selbst im echten Browser
+mit einem angemeldeten Konto und laufendem Worker - diese Sandbox hat keinen
+erreichbaren Worker, der Login-Dialog blockiert vorher. Build (vite build)
+und Lint sind grün, briefing.js ist per Node-Smoke-Test gegen den
+Ingersheim-Fall geprüft (Stufe 1).
+
 ## 2026-09-18 (1.91.0)
 
 ### Investment-Briefing Stufe 2: Worker kennt nur noch das Briefing

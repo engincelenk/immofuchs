@@ -17,23 +17,23 @@ import {
   produktFuer,
 } from "../../utils/aiEngine.js";
 import { apiFetch } from "../../utils/apiBase.js";
-import { hebelVarianten, loeseZielKaufpreis } from "../../utils/aiTools.js";
+import { hebelVarianten } from "../../utils/aiTools.js";
 import { computeRendite } from "../../utils/rendite.js";
 import { berechneKennzahlen } from "../../utils/kennzahlen.js";
+import { berechneBriefing, briefingZahlen } from "../../utils/briefing.js";
 import { getSessionId } from "../../utils/assistantSession.js";
 import { rufeAnalyseAuf, analyseFehlertext } from "../../utils/aiAnalyse.js";
-import { berechnePreisSchaetzung, preisZeilen } from "../../utils/preisSchaetzung.js";
 import {
   ladeRegionalpreise,
   regionalFakten,
+  regionalLandeswert,
   regionalPreis,
   regionalpreiseStand,
-  regionalpreisZeilen,
-  regionalVergleichsorte,
-  vergleichsortZeilen,
+  regionalTrend,
+  regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
 import { ladePlzKreis } from "../../utils/plzKreis.js";
-import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
+import { fmt, fmtP } from "../../utils/helpers.js";
 import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
@@ -58,6 +58,17 @@ import {
 // die sechs Kernfelder ab. Dieses Raster hier zeigt zusaetzlich an, was der
 // Renditerechner an dem Objekt sonst noch gesetzt hat - beide duerfen
 // auseinanderlaufen, ohne dass etwas bricht.
+// Deutscher Klartext zu den Ampel-Schluesseln aus briefing.js - fuer die
+// Kennzahlenzeile "ampel" im Prompt (Spec §7.2). Dieselben vier Schluessel
+// stehen als Uebersetzungs-Keys in translations.js fuer die Anzeige in der
+// Karte selbst; hier reicht Deutsch, weil ausschliesslich das Modell liest.
+const AMPEL_TEXT = {
+  brfAmpelHartStop: "Finanzierung nicht tragfähig",
+  brfAmpelTraegtSich: "Trägt sich",
+  brfAmpelMitZuzahlung: "Trägt sich mit Zuzahlung",
+  brfAmpelTraegtSichNicht: "Trägt sich nicht",
+};
+
 const FELD_GRUPPEN = [
   {
     titel: "Eckdaten",
@@ -199,109 +210,59 @@ export function ObjektDetail({ objekt, onBack }) {
     if (!produkt || laufend) return;
     setAiFehler(null);
     setLaufend(produktId);
-    // Nur "hebel" braucht Varianten - fuer die Einordnung eines Objekts
-    // ("analyse") sind Was-waere-wenn-Rechnungen kein Eingangswert.
-    const varianten = produktId === "hebel" ? hebelVarianten(basis, t, locale) : [];
-    // Die Preiseinordnung wird VOR dem Modellaufruf gerechnet und mitgesendet.
-    // Das Modell schaetzt hier nichts - es ordnet fertige Zahlen ein.
-    //
-    // Seit 2026-09-07 bekommt auch "analyse" diese Zahlen: Der Prompt dort
-    // verlangte eine Einordnung des Preisniveaus, lieferte dem Modell aber
-    // keine einzige Vergleichszahl - es hat daraufhin Verkehrswerte erfunden.
-    // Der Anker gehoert zum Prompt-Fix (siehe worker/src/analysePrompt.ts).
+    // Das Briefing ersetzt analyse/hebel/preis (Spec docs/technical_specs/
+    // investment-briefing.md) und braucht deshalb alles, was die drei frueher
+    // einzeln brauchten: Varianten, Regionalreferenz und Standort-Fakten sind
+    // jetzt unbedingt, nicht mehr produktbedingt.
+    const brauchtBriefingGrundlage = produktId === "briefing";
+    const varianten = brauchtBriefingGrundlage ? hebelVarianten(basis, t, locale) : [];
     // Regionaler Kaufpreis-/Mietrichtwert (2026-09-10, KI-Wow-Feature C.6-C.8):
-    // eine Quelle fuer Kaufpreis UND Miete, auch fuer "hebel" - der
-    // Kaufpreis-Hebel laesst sich erst einordnen, wenn bekannt ist, ob er
-    // ueber oder unter dem regionalen Niveau liegt.
-    const brauchtRegionalpreis =
-      produktId === "preis" || produktId === "analyse" || produktId === "hebel";
-    const regRef = brauchtRegionalpreis
+    // Grundlage der Vergleichs-Kacheln V1-V3 (briefing.js).
+    const regRef = brauchtBriefingGrundlage
       ? regionalPreis(basis.bundesland, basis.ort, basis.plz)
       : null;
-    const brauchtOrtsmiete = produktId === "preis" || produktId === "analyse";
-    const schaetzung = brauchtOrtsmiete
-      ? berechnePreisSchaetzung(basis, t, regRef?.mieteWohnung)
-      : null;
-    // Vergleichsorte (Backlog Punkt 9, 2026-09-10): fuer "Kaufpreis
-    // analysieren" 2-3 andere Kreise desselben Bundeslands, nach Naehe im
-    // Kaufpreis-Niveau - die aussagekraeftigsten Vergleichspunkte, ohne eine
-    // geografische Nachbarschaft zu behaupten, die diese Daten nicht
-    // hergeben (siehe regionalVergleichsorte()-Kommentar).
-    const vergleichsorte =
-      produktId === "preis" ? regionalVergleichsorte(basis.bundesland, basis.ort) : [];
-    const zahlen = [
-      ...(schaetzung?.verfuegbar ? preisZeilen(schaetzung, locale) : []),
-      ...(regRef ? regionalpreisZeilen(basis, regRef, locale) : []),
-      ...(vergleichsorte.length ? vergleichsortZeilen(vergleichsorte, locale) : []),
-    ];
     // Standort-Fakten (Backlog C.8): nur Bundesland-Ebene, siehe
     // regionalFakten()-Kommentar - keine zusaetzliche Preisgabe, da
     // "bundesland" ohnehin schon Teil der Kennzahlen unten ist.
-    const standortFakten = brauchtRegionalpreis ? regionalFakten(basis.bundesland) : [];
-    // Das Handout ist das einzige Produkt, das auf den anderen aufsetzt: es
-    // bekommt die Kernaussagen der bereits erstellten Auswertungen mit und
-    // leitet daraus die Fragen fuer den Termin ab (Nutzer-Vorgabe 2026-09-07).
-    // Nur die Kernaussage, nicht der ganze Text - das Handout soll Fragen
-    // stellen, nicht die Analysen nacherzaehlen.
+    const standortFakten = brauchtBriefingGrundlage ? regionalFakten(basis.bundesland) : [];
+    // Rechenkern des Briefings (Stufe 1, src/utils/briefing.js): Ampel,
+    // Kernzahlen, sechs Vergleiche, Tragfaehigkeit, Jahres-Bild, Stresstest -
+    // alles deterministisch, das Modell bekommt nur noch das Ergebnis als
+    // fertigen Zahlenblock (briefingZahlen) und liefert Text dazu.
+    const briefing = brauchtBriefingGrundlage
+      ? berechneBriefing(basis, t, {
+          ref: regRef,
+          landesKaufWohnungAvg: regionalLandeswert(basis.bundesland),
+          trendVorjahr: regionalWertsteigerung(basis.bundesland),
+          trend4J: regionalTrend(basis.bundesland),
+        })
+      : null;
+    const zahlen = briefing ? briefingZahlen(briefing) : [];
+    // Das Handout ist das einzige Produkt, das auf dem Briefing aufsetzt: es
+    // bekommt dessen Urteil sowie die TITEL der Risiken und Hebel mit (Spec
+    // §9) und leitet daraus die Fragen fuer den Termin ab (Nutzer-Vorgabe
+    // 2026-09-07, umgestellt auf das Briefing in Stufe 3). Nur Urteil und
+    // Titel, nicht der volle Text - das Handout soll Fragen stellen, nicht
+    // die Auswertung nacherzaehlen.
     const befunde =
       produktId === "handout"
-        ? ["analyse", "hebel", "preis"]
-            .map((id) => {
-              const e = ergebnisFuer(objektAnzeige, id);
-              const kern = e?.inhalt?.kernaussage;
-              return kern ? { produkt: produktFuer(id)?.titel || id, kernaussage: kern } : null;
-            })
-            .filter(Boolean)
+        ? (() => {
+            const e = ergebnisFuer(objektAnzeige, "briefing");
+            const briefingTitel = produktFuer("briefing")?.titel || "Investment-Briefing";
+            const urteil = e?.inhalt?.urteil;
+            const risiken = Array.isArray(e?.inhalt?.risiken) ? e.inhalt.risiken : [];
+            const hebelListe = Array.isArray(e?.inhalt?.hebel) ? e.inhalt.hebel : [];
+            return [
+              ...(urteil ? [{ produkt: briefingTitel, kernaussage: urteil }] : []),
+              ...risiken
+                .filter((r) => r?.title)
+                .map((r) => ({ produkt: "Risiko", kernaussage: r.title })),
+              ...hebelListe
+                .filter((h) => h?.title)
+                .map((h) => ({ produkt: "Hebel", kernaussage: h.title })),
+            ];
+          })()
         : [];
-    // Investment-Briefing-Umbau (2026-09-16): "Hebel" und "Preis" bekommen
-    // zusaetzlich die Kernaussagen der ANDEREN bereits gelaufenen Analysen
-    // desselben Objekts mit - gleiches Muster wie oben bei "befunde" fuers
-    // Handout, nur produktbezogen statt fix auf drei IDs. Feldname im neuen
-    // Antwortschema evtl. "summary" statt "kernaussage" - der Worker-Umbau
-    // laeuft parallel, deshalb hier defensiv beides lesen.
-    const vorherigeBefunde =
-      produktId === "hebel" || produktId === "preis"
-        ? ["analyse", "hebel", "preis"]
-            .filter((id) => id !== produktId)
-            .map((id) => {
-              const e = ergebnisFuer(objektAnzeige, id);
-              const kern = e?.inhalt?.summary || e?.inhalt?.kernaussage;
-              return kern ? { produkt: produktFuer(id)?.titel || id, kernaussage: kern } : null;
-            })
-            .filter(Boolean)
-        : [];
-    // Zielpreis-Spanne: unteres Ende ist der Preis, bei dem der Cashflow
-    // gerade noch nicht negativ ist (loeseZielKaufpreis, cashflow-neutral),
-    // oberes/alternatives Ende ist der Preis bei ortsueblicher Miete aus der
-    // bereits berechneten Preiseinordnung (schaetzung.preisBeiReferenz, siehe
-    // oben). Beide sind Rechenergebnisse auf derselben Engine wie der Rest
-    // des Zahlenblocks - keine dritte, neu erfundene Formel. zielKriterium
-    // benennt, welche(s) der beiden Kriterien tatsaechlich in die Spanne
-    // eingegangen ist (eines der beiden kann fehlen, z.B. ohne Bankdarlehen).
-    const zielKaufpreisCashflowNull =
-      produktId === "preis" ? loeseZielKaufpreis(basis, t, { typ: "cashflowNull" }) : null;
-    const zielKandidaten =
-      produktId === "preis"
-        ? [
-            Number.isFinite(zielKaufpreisCashflowNull) && zielKaufpreisCashflowNull > 0
-              ? { wert: zielKaufpreisCashflowNull, kriterium: "cashflow-neutral" }
-              : null,
-            schaetzung?.verfuegbar &&
-            Number.isFinite(schaetzung.preisBeiReferenz) &&
-            schaetzung.preisBeiReferenz > 0
-              ? { wert: schaetzung.preisBeiReferenz, kriterium: "ortsübliche Miete" }
-              : null,
-          ].filter(Boolean)
-        : [];
-    const zielpreis =
-      zielKandidaten.length > 0
-        ? {
-            kaufpreisAktuell: fmtE(+basis.kaufpreis || 0),
-            zielKaufpreisMin: fmtE(Math.min(...zielKandidaten.map((z) => z.wert))),
-            zielKaufpreisMax: fmtE(Math.max(...zielKandidaten.map((z) => z.wert))),
-            zielKriterium: zielKandidaten.map((z) => z.kriterium).join(" & "),
-          }
-        : null;
     try {
       // Vertiefende Kennzahlen aus berechneKennzahlen() (DSCR, Zinsdeckung,
       // Break-even-Leerstand, Anfangsrendite): berechneObjektKennzahlen() oben
@@ -334,10 +295,9 @@ export function ObjektDetail({ objekt, onBack }) {
         bruttorendite: kennzahlenGespeichert?.bruttoRendite,
         cashflowMonat: kennzahlenGespeichert?.cashflowMon,
         kaufpreisfaktor: kennzahlenGespeichert?.faktor,
-        score: kennzahlenGespeichert?.score,
-        // Investment-Briefing-Umbau (2026-09-16): bisher berechnet, aber nie
-        // an den Prompt durchgereicht (nur einfuegen, wenn vorhanden - sonst
-        // saehe der Worker ein explizites "null" statt "kein Wert").
+        // Kein Score mehr im Prompt (Spec §7.2, Regel E3): die Ampel ist
+        // regelbasiert ohne Score, und das Briefing-Schema verbietet dem
+        // Modell, einen Score zu nennen (worker/src/analysePrompt.ts).
         ...(K.dscrIst != null ? { dscrIst: K.dscrIst } : {}),
         ...(K.icr != null ? { icr: K.icr } : {}),
         // Quelle bewusst R.ekQ (rendite.js), nicht K.ekQ - berechneKennzahlen()
@@ -345,6 +305,19 @@ export function ObjektDetail({ objekt, onBack }) {
         ...(R.ekQ != null ? { ekQuote: R.ekQ } : {}),
         ...(K.breakEvenLeerstand != null ? { breakEvenLeerstand: K.breakEvenLeerstand } : {}),
         ...(K.anfangsrendite != null ? { anfangsrendite: K.anfangsrendite } : {}),
+        // Die vom Briefing bereits getroffene Ampel-Bewertung (Spec §7.2):
+        // das Modell darf sie im Urteil weder abschwaechen noch verschaerfen
+        // (worker/src/analysePrompt.ts, Prompt BRIEFING).
+        ...(briefing
+          ? {
+              ampel: `${briefing.ampel.stufe} – ${AMPEL_TEXT[briefing.ampel.key] || briefing.ampel.key}`,
+              jahre: briefing.zeitraum.jahre,
+              vermoegenszuwachs: briefing.zeitraum.summe,
+              zuzahlungenSumme: R.sCF,
+              wertzuwachs: R.w,
+              kappungsgrenzeProzent: R.kP,
+            }
+          : {}),
       };
       // Fetch, Consent-/Pro-/Login-/Rate-Limit-Erkennung liegen seit dem
       // Umbau in aiAnalyse.js - derselbe Kern, den jetzt auch RechnerAiKarte.jsx
@@ -356,8 +329,6 @@ export function ObjektDetail({ objekt, onBack }) {
         varianten,
         befunde,
         standortFakten,
-        zielpreis,
-        vorherigeBefunde,
       });
       if (!res.ok) {
         // 412 ist kein Fehler, sondern eine offene Frage: die Einwilligung in
@@ -527,6 +498,14 @@ export function ObjektDetail({ objekt, onBack }) {
         data={basis}
         kennzahlen={kennzahlenGespeichert}
         locale={locale}
+        t={t}
+        regGeladen={regGeladen}
+        laufend={laufend === "briefing"}
+        fehlerText={aiFehler?.produktId === "briefing" ? aiFehler.text : null}
+        zeigtConsent={aiConsent === "briefing"}
+        onStarten={() => starteProdukt("briefing")}
+        onConsentJa={einwilligenUndStarten}
+        onConsentAbbrechen={() => setAiConsent(null)}
       />
 
       <AiSektion zusammenfassung={aiZusammenfassung(objektAnzeige, locale)}>
@@ -649,7 +628,10 @@ const KI_FARBE = "#1E3A5F";
 // des Kerngeschehens sind.
 function AiSektion({ zusammenfassung, children }) {
   return (
-    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
+    // id als Sprungziel fuer den Handout-Link in InvestmentBriefing.jsx
+    // ("Fragen für die Besichtigung erstellen", Spec §2) - das Handout bleibt
+    // ein eigenes Produkt (E5), der Link fuehrt nur dorthin.
+    <div id="ai-sektion-vorbereiten" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
       <div
         style={{
           display: "flex",

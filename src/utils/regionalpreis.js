@@ -136,6 +136,19 @@ export function regionalWertsteigerung(bundeslandCode) {
   return typeof wert === "number" ? wert : null;
 }
 
+// Landesdurchschnitt Kaufpreis/m² (Investment-Briefing, V5 Preisniveau Kreis
+// vs. Land): anders als regionalPreis() liefert diese Funktion IMMER den
+// Landeswert, auch wenn der Ort selbst einem Kreis zugeordnet ist - V5
+// vergleicht ja genau die Kreis- gegen die Landesebene, braucht also beide
+// unabhaengig voneinander statt der einen, die regionalPreis() je nach
+// Treffer zurueckgibt.
+export function regionalLandeswert(bundeslandCode) {
+  if (!daten || !bundeslandCode) return null;
+  const bl = daten.bundeslaender.find((b) => b.code === bundeslandCode);
+  const wert = bl?.landeswerte?.kaufWohnungAvg;
+  return typeof wert === "number" ? wert : null;
+}
+
 // Landestrend seit Q2 2022 (Investment-Briefing, V6 Preistrend): analog zu
 // regionalWertsteigerung(), aber auf dem laengeren Zeitraum. Nur Bundesland-
 // Ebene, kein Kreis-Wert vorhanden (siehe immodaten.json). Fehlt der Wert,

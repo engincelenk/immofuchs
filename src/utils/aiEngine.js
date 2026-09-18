@@ -27,29 +27,14 @@ export const AI_ENGINE_NAME = "AI-Engine";
 // Gruppe erkennbar. Jetzt einheitlich "<Gegenstand> analysieren".
 export const AI_PRODUKTE = [
   {
-    id: "analyse",
-    titel: "Objekt analysieren",
-    kurz: "Einschätzung zu Preis, Rendite und Tragfähigkeit",
-    aktion: "Analysieren",
-    // Braucht ein gerechnetes Objekt, kein Exposé.
+    id: "briefing",
+    titel: "Investment-Briefing",
+    kurz: "Ampel, Vergleiche, Tragfähigkeit und Stresstest in einer Auswertung",
+    aktion: "Erstellen",
+    // Braucht ein gerechnetes Objekt, kein Exposé - wie das fruehere
+    // "analyse" (Spec docs/technical_specs/investment-briefing.md, das dieses
+    // eine Produkt an die Stelle von analyse/hebel/preis setzt).
     braucht: "kennzahlen",
-  },
-  {
-    id: "hebel",
-    titel: "Verbesserungshebel analysieren",
-    kurz: "Welcher Kaufpreis oder welche Miete das Objekt trägt",
-    aktion: "Analysieren",
-    braucht: "kennzahlen",
-  },
-  {
-    id: "preis",
-    titel: "Kaufpreis analysieren",
-    kurz: "Deine Mietannahme gegen die ortsübliche Miete am Ort",
-    aktion: "Analysieren",
-    // Ohne Bundesland gibt es keine Regionalreferenz - und ohne Referenz waere
-    // die Einordnung genau die Schaetzung aus dem Nichts, die dieses Produkt
-    // vermeiden soll.
-    braucht: "ort",
   },
   {
     id: "expose",
@@ -90,11 +75,23 @@ export function produktFuer(id) {
 // Besichtigungshandout als veraltet markieren - dort spielt er keine Rolle.
 // Ein Ergebnis grundlos zu entwerten kostet den Nutzer Kontingent.
 const RELEVANTE_FELDER = {
-  analyse: ["kaufpreis", "kaltmiete", "eigenkapital", "zinssatz", "tilgung", "flaeche"],
-  hebel: ["kaufpreis", "kaltmiete", "renovierung", "zinssatz", "tilgung"],
-  // Die Preiseinordnung haengt an Miete, Flaeche, Preis und Ort - nicht an
-  // der Finanzierung. Ein geaenderter Zinssatz entwertet sie nicht.
-  preis: ["kaufpreis", "kaltmiete", "flaeche", "bundesland", "ort"],
+  // Vereinigung der fruehen Felder von analyse/hebel/preis (Spec §8.1):
+  // das Briefing zeigt Ampel, Vergleiche UND Tragfaehigkeit gleichzeitig,
+  // haengt also an allem, was fuer eine dieser drei frueher galt.
+  briefing: [
+    "kaufpreis",
+    "kaltmiete",
+    "eigenkapital",
+    "zinssatz",
+    "tilgung",
+    "flaeche",
+    "renovierung",
+    "bundesland",
+    "ort",
+    "plz",
+    "jahre",
+    "wertP",
+  ],
   // Der Expose-Scan bezieht sich auf die hochgeladene Datei, nicht auf die
   // Eingabefelder - er veraltet nicht, wenn der Nutzer Zahlen anpasst.
   expose: [],
@@ -102,7 +99,7 @@ const RELEVANTE_FELDER = {
 };
 
 export function relevanteFelder(produktId) {
-  return RELEVANTE_FELDER[produktId] || RELEVANTE_FELDER.analyse;
+  return RELEVANTE_FELDER[produktId] || RELEVANTE_FELDER.briefing;
 }
 
 export function zahlenSnapshot(data, produktId = "analyse") {
@@ -159,6 +156,10 @@ const FELD_NAME = {
   tilgung: "Tilgung",
   flaeche: "Wohnfläche",
   plz: "PLZ",
+  bundesland: "Bundesland",
+  ort: "Ort",
+  jahre: "Betrachtungszeitraum",
+  wertP: "Wertsteigerung",
 };
 
 export function geaenderteFelder(ergebnis, data) {
@@ -257,6 +258,37 @@ export const BASIS_LABEL = {
   annahme: "Annahme",
   ki: "KI-Einordnung",
 };
+
+// ── Investment-Briefing-Antwortschema (Spec §7.4) ───────────────────────────
+// Eigenes, schlankeres Schema nur fuer das Produkt "briefing": urteil statt
+// summary, staerken/risiken/hebel statt keyInsights/risks/opportunities,
+// dazu vier feste Einordnungssaetze (markt/tragfaehigkeit/zeitraum/
+// stresstest) statt calculations/scenarios/assumptions - die Zahlen zeigt
+// hier ausschliesslich die Engine (briefing.js), das Modell liefert nur noch
+// Text dazu (Grundprinzip der Spec, Abschnitt 3).
+export function urteilVon(ergebnis) {
+  const i = ergebnis?.inhalt;
+  return i && typeof i !== "string" ? i.urteil || "" : "";
+}
+
+function briefingListeVon(ergebnis, feld) {
+  const arr = ergebnis?.inhalt?.[feld];
+  return Array.isArray(arr) ? arr.filter((x) => x?.title && x?.text) : [];
+}
+
+export const staerkenVon = (ergebnis) => briefingListeVon(ergebnis, "staerken");
+export const risikenVon = (ergebnis) => briefingListeVon(ergebnis, "risiken");
+export const hebelTexteVon = (ergebnis) => briefingListeVon(ergebnis, "hebel");
+
+function briefingTextVon(ergebnis, feld) {
+  const v = ergebnis?.inhalt?.[feld];
+  return typeof v === "string" ? v : "";
+}
+
+export const marktVon = (ergebnis) => briefingTextVon(ergebnis, "markt");
+export const tragfaehigkeitTextVon = (ergebnis) => briefingTextVon(ergebnis, "tragfaehigkeit");
+export const zeitraumTextVon = (ergebnis) => briefingTextVon(ergebnis, "zeitraum");
+export const stresstestTextVon = (ergebnis) => briefingTextVon(ergebnis, "stresstest");
 
 export function alter(ergebnis, locale = "de-DE") {
   if (!ergebnis?.erstellt) return "";

@@ -42,10 +42,13 @@ const KI = "#1E3A5F";
 // "expose" (Exposé-Scan) stand hier zusaetzlich als eigene Karte, obwohl der
 // Upload bereits an anderer Stelle in der App existiert (Objekt anlegen/
 // bearbeiten) - reine Dopplung, entfernt auf Nutzerwunsch 2026-09-16.
-const GRUPPEN = [
-  { id: "objekt", titel: "Für dieses Objekt", produkte: ["analyse", "hebel", "preis"] },
-  { id: "vorbereiten", titel: "Vorbereiten", produkte: ["handout"] },
-];
+//
+// Die Gruppe "objekt" (analyse/hebel/preis) ist mit dem Investment-Briefing
+// entfallen (Spec docs/technical_specs/investment-briefing.md §8.2): das
+// Briefing bekommt kein generisches ProduktZeile-Card mehr, sondern sein
+// eigenes 7-Ebenen-Layout in InvestmentBriefing.jsx (siehe
+// briefing-ui-handover.md) - es ersetzt diese Gruppe, statt in ihr zu stehen.
+const GRUPPEN = [{ id: "vorbereiten", titel: "Vorbereiten", produkte: ["handout"] }];
 
 export function AiEngine({
   objekt,
