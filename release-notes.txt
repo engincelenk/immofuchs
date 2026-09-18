@@ -1,3 +1,35 @@
+## 2026-09-18 (1.93.0)
+
+### Investment-Briefing Stufe 4: Aufräumen
+
+Letzte Stufe der Spec docs/technical_specs/investment-briefing.md. Deploy
+dieses Standes läuft zusammen mit Stufe 2/3 (Worker kennt analyse/hebel/preis
+seit Stufe 2 nicht mehr, der Client fragt seit Stufe 3 nicht mehr danach).
+
+- Client-Tests umgeschrieben (nicht nur umbenannt): aiEngine.test.js prüft
+  jetzt AI_PRODUKTE mit nur noch "briefing"/"expose"/"handout" und die
+  zusammengeführte Feldliste RELEVANTE_FELDER.briefing - inklusive einer
+  bewussten Verhaltensänderung, die die Tests jetzt auch belegen: "briefing"
+  veraltet (anders als früher "analyse") bereits bei einem geänderten Ort,
+  weil die Vergleichs-Kacheln direkt an regionalPreis(bundesland, ort, plz)
+  hängen. aiAnalyse.test.js: Produkt-Strings in den Beispielen auf "briefing"
+  umgestellt.
+- aiEngine.js: ergebnisseLesen() ignoriert jetzt ai.analyse/ai.hebel/ai.preis,
+  mitErgebnis() entfernt sie beim nächsten Speichern eines Objekts - auch für
+  Objekte, die die D1-Migration unten noch nicht erreicht hat.
+- Neue D1-Migration worker/migrations/0033_drop_alte_ki_ergebnisse.sql:
+  entfernt ai.analyse/ai.hebel/ai.preis aus result_data aller Objekte.
+  Rollout-Reihenfolge dev → qa → prod, kein Export nötig (keine aktiven
+  Nutzer, Stand 2026-09-18) - noch NICHT ausgeführt, folgt mit dem Deploy.
+- docs/technical_specs/ki-anweisungen-konzept.md: Hinweis "Abgelöst" ergänzt,
+  verweist auf die neue Spec.
+- Kein weiterer Code-Rest zu entfernen: Prompts/Typen/Route-Zweige der drei
+  alten Produkte sind bereits mit Stufe 2 weg, rufeAnalyseAuf()/
+  InvestmentBriefing.jsx bereits mit Stufe 3.
+
+Verifiziert: vollständiger Testlauf (705 Client- + 246 Worker-Tests) grün,
+vite build und eslint sauber.
+
 ## 2026-09-18 (1.92.0)
 
 ### Investment-Briefing Stufe 3: Client-Karte ersetzt die drei alten Analysen

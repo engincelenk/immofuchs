@@ -102,7 +102,7 @@ export function relevanteFelder(produktId) {
   return RELEVANTE_FELDER[produktId] || RELEVANTE_FELDER.briefing;
 }
 
-export function zahlenSnapshot(data, produktId = "analyse") {
+export function zahlenSnapshot(data, produktId = "briefing") {
   const s = {};
   for (const f of relevanteFelder(produktId)) {
     const v = data?.[f];
@@ -126,8 +126,19 @@ export function ergebnisAnlegen(produktId, inhalt, data, extra = null) {
   };
 }
 
+// Entfernte Produkte (Investment-Briefing-Umbau, Spec §10.1): alte
+// Objekte koennen noch ai.analyse/ai.hebel/ai.preis tragen (lokal ungesehene
+// Aenderungen, oder die D1-Migration 0033 hat dieses Objekt noch nicht
+// erreicht). Sie werden beim Lesen ignoriert, statt sie an Komponenten
+// weiterzureichen, die AI_PRODUKTE nicht mehr kennt.
+const ENTFERNTE_PRODUKTE = ["analyse", "hebel", "preis"];
+
 export function ergebnisseLesen(objekt) {
-  return objekt?.kennzahlen?.ai || objekt?.resultData?.ai || {};
+  const roh = objekt?.kennzahlen?.ai || objekt?.resultData?.ai || {};
+  if (!ENTFERNTE_PRODUKTE.some((p) => p in roh)) return roh;
+  const bereinigt = { ...roh };
+  for (const p of ENTFERNTE_PRODUKTE) delete bereinigt[p];
+  return bereinigt;
 }
 
 export function ergebnisFuer(objekt, produktId) {
@@ -189,10 +200,15 @@ export function veraltetText(ergebnis, data, locale = "de-DE") {
 }
 
 // Schreibt ein Ergebnis in die resultData-Form, die toServerPayload erwartet.
+// Entfernt dabei ai.analyse/ai.hebel/ai.preis, falls noch vorhanden (Spec
+// §10.1) - beim naechsten Speichern eines Objekts verschwinden sie endgueltig
+// aus resultData, unabhaengig davon, ob die D1-Migration 0033 schon lief.
 export function mitErgebnis(bisherigeResultData, ergebnis) {
+  const bisherigesAi = { ...(bisherigeResultData?.ai || {}) };
+  for (const p of ENTFERNTE_PRODUKTE) delete bisherigesAi[p];
   return {
     ...(bisherigeResultData || {}),
-    ai: { ...(bisherigeResultData?.ai || {}), [ergebnis.produktId]: ergebnis },
+    ai: { ...bisherigesAi, [ergebnis.produktId]: ergebnis },
   };
 }
 

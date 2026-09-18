@@ -86,12 +86,12 @@ describe("rufeAnalyseAuf", () => {
   // oder nur eine einzelne Antwort unbrauchbar war.
   it("unterscheidet Modellausfall (503) von unbrauchbarer Antwort (502)", async () => {
     apiFetch.mockResolvedValue(antwort(503, { error: "modell_nicht_erreichbar" }));
-    expect(await rufeAnalyseAuf({ produkt: "analyse", kennzahlen: {} })).toEqual({
+    expect(await rufeAnalyseAuf({ produkt: "briefing", kennzahlen: {} })).toEqual({
       ok: false,
       art: "modellAus",
     });
     apiFetch.mockResolvedValue(antwort(502, { error: "unbrauchbare_antwort" }));
-    expect(await rufeAnalyseAuf({ produkt: "analyse", kennzahlen: {} })).toEqual({
+    expect(await rufeAnalyseAuf({ produkt: "briefing", kennzahlen: {} })).toEqual({
       ok: false,
       art: "antwortUnbrauchbar",
     });
@@ -121,13 +121,13 @@ describe("rufeAnalyseAuf", () => {
       kennzahlen: {},
       zahlen: [{ label: "x", wert: "y" }],
       varianten: [{ feld: "a" }],
-      befunde: [{ produkt: "analyse", kernaussage: "k" }],
+      befunde: [{ produkt: "briefing", kernaussage: "k" }],
       standortFakten: ["Starke Exportwirtschaft."],
     });
     const body = JSON.parse(apiFetch.mock.calls[0][1].body);
     expect(body.zahlen).toEqual([{ label: "x", wert: "y" }]);
     expect(body.varianten).toEqual([{ feld: "a" }]);
-    expect(body.befunde).toEqual([{ produkt: "analyse", kernaussage: "k" }]);
+    expect(body.befunde).toEqual([{ produkt: "briefing", kernaussage: "k" }]);
     expect(body.standortFakten).toEqual(["Starke Exportwirtschaft."]);
   });
 });
