@@ -1,3 +1,30 @@
+## 2026-09-18 (1.90.0)
+
+### Investment-Briefing Stufe 1: Daten + Rechenkern (noch ohne sichtbare Aenderung)
+
+Erste Stufe der Spec docs/technical_specs/investment-briefing.md: die Zahlen-
+grundlage fuer die neue, EINE Objekt-Auswertung, die spaeter die drei Karten
+Analyse/Hebel/Kaufpreis ersetzt. In dieser Stufe aendert sich fuer den Nutzer
+noch nichts - es entsteht nur der Rechenkern, auf dem Worker (Stufe 2) und
+Karte (Stufe 3) aufsetzen.
+
+- immodaten.json: neues Feld kaufWohnungVeraenderung4J je Bundesland
+  (Preisentwicklung seit Q2 2022, alle 16 Laender), public/regionalpreise.json
+  daraus neu erzeugt.
+- regionalpreis.js: regionalTrend(bundeslandCode) liest den neuen Wert, nach
+  demselben Muster wie regionalWertsteigerung().
+- aiTools.js: loeseFuerCashflowNull(d, t, feld) - bei welchem Kaufpreis,
+  Eigenkapital oder welcher Kaltmiete der Cashflow nach Steuer auf 0 kippt.
+  Anders als loeseZielKaufpreis() (sucht aufwaerts) sucht der neue Loeser je
+  Feld in die Richtung, die den Cashflow verbessert - deshalb liefert er auch
+  bei negativem Cashflow eine Zahl statt null.
+- Neu briefing.js: Ampel (regelbasiert, ohne DSCR und ohne Score), drei
+  Kernzahlen, sechs Vergleichs-Kacheln, Tragfaehigkeits-Wege mit Realismus-
+  Flags, Jahres-Bild, Stresstest, GEG-Energieklasse sowie der fertig
+  formatierte Zahlenblock fuer die KI. Alle Schwellen als benannte Konstanten
+  an einer Stelle.
+- briefing.test.js angelegt (Ausfuehrung erst auf Anweisung, Spec Abschnitt 12).
+
 ## 2026-09-18 (1.89.0)
 
 ### KI-Ladeeffekt: Glow-Balken statt Glanzband, RechnerAiKarte mit 4 Phasentexten

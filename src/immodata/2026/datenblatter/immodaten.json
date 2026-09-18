@@ -7,7 +7,7 @@
       "name": "Baden-Württemberg",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 3297, "kaufWohnungVeraenderung": 1.8,
+        "kaufWohnungAvg": 3297, "kaufWohnungVeraenderung": 1.8, "kaufWohnungVeraenderung4J": -5.3,
         "kaufHausAvg": 3724, "kaufHausVeraenderung": 0.3,
         "mieteWohnungAvg": 10.87, "mieteHausAvg": 11.59,
         "kaufSpanneMin": 1568, "kaufSpanneMax": 14784
@@ -57,7 +57,7 @@
       "name": "Bayern",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 3541, "kaufWohnungVeraenderung": null,
+        "kaufWohnungAvg": 3541, "kaufWohnungVeraenderung": null, "kaufWohnungVeraenderung4J": -7.5,
         "kaufHausAvg": 3943, "kaufHausVeraenderung": null,
         "mieteWohnungAvg": 10.64, "mieteHausAvg": 11.54,
         "kaufSpanneMin": 1003, "kaufSpanneMax": 19134
@@ -145,7 +145,7 @@
       "name": "Berlin",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 4189, "kaufWohnungVeraenderung": null,
+        "kaufWohnungAvg": 4189, "kaufWohnungVeraenderung": null, "kaufWohnungVeraenderung4J": -2.8,
         "kaufHausAvg": 4395, "kaufHausVeraenderung": null,
         "mieteWohnungAvg": 12.72, "mieteHausAvg": 16.51,
         "kaufSpanneMin": 2142, "kaufSpanneMax": 11760
@@ -178,7 +178,7 @@
       "name": "Brandenburg",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 2437, "kaufWohnungVeraenderung": 2.5,
+        "kaufWohnungAvg": 2437, "kaufWohnungVeraenderung": 2.5, "kaufWohnungVeraenderung4J": -0.5,
         "kaufHausAvg": 2791, "kaufHausVeraenderung": 0.8,
         "mieteWohnungAvg": 9.09, "mieteHausAvg": 10.98,
         "kaufSpanneMin": 727, "kaufSpanneMax": 11704
@@ -205,7 +205,7 @@
       "name": "Bremen",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 2639, "kaufWohnungVeraenderung": 3.5,
+        "kaufWohnungAvg": 2639, "kaufWohnungVeraenderung": 3.5, "kaufWohnungVeraenderung4J": -7.7,
         "kaufHausAvg": 3017, "kaufHausVeraenderung": 3.0,
         "mieteWohnungAvg": 9.52, "mieteHausAvg": 10.77,
         "kaufSpanneMin": 1304, "kaufSpanneMax": 7819
@@ -227,7 +227,7 @@
       "name": "Hamburg",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 4855, "kaufWohnungVeraenderung": 2.1,
+        "kaufWohnungAvg": 4855, "kaufWohnungVeraenderung": 2.1, "kaufWohnungVeraenderung4J": -7.6,
         "kaufHausAvg": 4978, "kaufHausVeraenderung": 0.3,
         "mieteWohnungAvg": 13.00, "mieteHausAvg": 17.22,
         "kaufSpanneMin": 2066, "kaufSpanneMax": 15520
@@ -254,7 +254,7 @@
       "name": "Hessen",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 2857, "kaufWohnungVeraenderung": 2.3,
+        "kaufWohnungAvg": 2857, "kaufWohnungVeraenderung": 2.3, "kaufWohnungVeraenderung4J": -2.7,
         "kaufHausAvg": 3298, "kaufHausVeraenderung": 3.8,
         "mieteWohnungAvg": 9.81, "mieteHausAvg": 11.01,
         "kaufSpanneMin": 817, "kaufSpanneMax": 17163
@@ -285,7 +285,7 @@
       "name": "Mecklenburg-Vorpommern",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 2170, "kaufWohnungVeraenderung": 1.4,
+        "kaufWohnungAvg": 2170, "kaufWohnungVeraenderung": 1.4, "kaufWohnungVeraenderung4J": -3.1,
         "kaufHausAvg": 2572, "kaufHausVeraenderung": -1.3,
         "mieteWohnungAvg": 8.04, "mieteHausAvg": 10.10,
         "kaufSpanneMin": 766, "kaufSpanneMax": 9265
@@ -310,7 +310,7 @@
       "name": "Niedersachsen",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 2300, "kaufWohnungVeraenderung": 2.2,
+        "kaufWohnungAvg": 2300, "kaufWohnungVeraenderung": 2.2, "kaufWohnungVeraenderung4J": -4.2,
         "kaufHausAvg": 2760, "kaufHausVeraenderung": 4.3,
         "mieteWohnungAvg": 8.51, "mieteHausAvg": 9.36,
         "kaufSpanneMin": 526, "kaufSpanneMax": 16378
@@ -361,7 +361,7 @@
       "name": "Nordrhein-Westfalen",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 2588, "kaufWohnungVeraenderung": 1.9,
+        "kaufWohnungAvg": 2588, "kaufWohnungVeraenderung": 1.9, "kaufWohnungVeraenderung4J": -0.6,
         "kaufHausAvg": 3239, "kaufHausVeraenderung": 1.8,
         "mieteWohnungAvg": 8.89, "mieteHausAvg": 10.91,
         "kaufSpanneMin": 853, "kaufSpanneMax": 13874
@@ -413,7 +413,7 @@
       "name": "Rheinland-Pfalz",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 2425, "kaufWohnungVeraenderung": 1.4,
+        "kaufWohnungAvg": 2425, "kaufWohnungVeraenderung": 1.4, "kaufWohnungVeraenderung4J": -1.4,
         "kaufHausAvg": 2922, "kaufHausVeraenderung": 1.8,
         "mieteWohnungAvg": 8.93, "mieteHausAvg": 9.76,
         "kaufSpanneMin": 731, "kaufSpanneMax": 11428
@@ -453,7 +453,7 @@
       "name": "Saarland",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 1893, "kaufWohnungVeraenderung": 4.9,
+        "kaufWohnungAvg": 1893, "kaufWohnungVeraenderung": 4.9, "kaufWohnungVeraenderung4J": 4.9,
         "kaufHausAvg": 2657, "kaufHausVeraenderung": 6.5,
         "mieteWohnungAvg": 8.14, "mieteHausAvg": 9.13,
         "kaufSpanneMin": 1040, "kaufSpanneMax": 6125
@@ -477,7 +477,7 @@
       "name": "Sachsen",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 1528, "kaufWohnungVeraenderung": 1.5,
+        "kaufWohnungAvg": 1528, "kaufWohnungVeraenderung": 1.5, "kaufWohnungVeraenderung4J": -4.1,
         "kaufHausAvg": 2574, "kaufHausVeraenderung": 3.7,
         "mieteWohnungAvg": 6.85, "mieteHausAvg": 10.06,
         "kaufSpanneMin": 436, "kaufSpanneMax": 8061
@@ -506,7 +506,7 @@
       "name": "Sachsen-Anhalt",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 1345, "kaufWohnungVeraenderung": 0.6,
+        "kaufWohnungAvg": 1345, "kaufWohnungVeraenderung": 0.6, "kaufWohnungVeraenderung4J": -0.3,
         "kaufHausAvg": 2156, "kaufHausVeraenderung": -1.0,
         "mieteWohnungAvg": 6.58, "mieteHausAvg": 8.48,
         "kaufSpanneMin": 333, "kaufSpanneMax": 7905
@@ -533,7 +533,7 @@
       "name": "Schleswig-Holstein",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 2965, "kaufWohnungVeraenderung": 3.2,
+        "kaufWohnungAvg": 2965, "kaufWohnungVeraenderung": 3.2, "kaufWohnungVeraenderung4J": -6.9,
         "kaufHausAvg": 3267, "kaufHausVeraenderung": 3.4,
         "mieteWohnungAvg": 10.25, "mieteHausAvg": 11.47,
         "kaufSpanneMin": 558, "kaufSpanneMax": 21158
@@ -562,7 +562,7 @@
       "name": "Thüringen",
       "stand": "Q2 2026",
       "landeswerte": {
-        "kaufWohnungAvg": 1455, "kaufWohnungVeraenderung": 1.6,
+        "kaufWohnungAvg": 1455, "kaufWohnungVeraenderung": 1.6, "kaufWohnungVeraenderung4J": 0.1,
         "kaufHausAvg": 2149, "kaufHausVeraenderung": 3.4,
         "mieteWohnungAvg": 6.89, "mieteHausAvg": 8.51,
         "kaufSpanneMin": 407, "kaufSpanneMax": 7993

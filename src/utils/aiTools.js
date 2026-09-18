@@ -107,6 +107,70 @@ export function loeseZielKaufpreis(d, t, ziel) {
   return Math.round(lo / 500) * 500;
 }
 
+// ── Cashflow-Null-Loeser (Investment-Briefing, Ebene 5 "So wird es
+// tragfaehig") ────────────────────────────────────────────────────────────
+// Bei welchem Kaufpreis/Eigenkapital/Kaltmiete kippt der Cashflow NACH
+// Steuer gerade auf 0, unter sonst gleichen Bedingungen (Spec Abschnitt 5.4).
+// Anders als loeseZielKaufpreis() (das vom AKTUELLEN Kaufpreis aus nach OBEN
+// sucht, "wie weit darf der Preis steigen") sucht diese Funktion je Feld in
+// die Richtung, die den Cashflow VERBESSERT: Kaufpreis abwaerts (weniger
+// Fremdkapital), Eigenkapital aufwaerts (weniger Fremdkapital), Kaltmiete
+// aufwaerts (mehr Einnahmen). Alle drei Richtungen sind monoton, weil
+// cf2MitSt strikt in genau diese Richtung steigt (gleiche Begruendung wie bei
+// loeseMaximalenKaufpreis oben).
+function grenzsuche(cf, lo, hi) {
+  // Sucht das kleinste x in [lo,hi], bei dem cf(x) >= 0 wird (cf monoton
+  // steigend in x). null, wenn selbst am guenstigen Rand (hi) nicht
+  // erreichbar - keine falsche Zahl erfinden.
+  if (cf(hi) < 0) return null;
+  if (cf(lo) >= 0) return lo;
+  let a = lo;
+  let b = hi;
+  for (let i = 0; i < 40; i++) {
+    const mid = (a + b) / 2;
+    if (cf(mid) >= 0) b = mid;
+    else a = mid;
+  }
+  return b;
+}
+
+/**
+ * @param {object} d - Formular-State aus dem Renditerechner
+ * @param {object} t - Uebersetzungen, nur durchgereicht an computeRendite/berechneKennzahlen
+ * @param {"kaufpreis"|"eigenkapital"|"kaltmiete"} feld
+ * @returns {number|null} Wert des Feldes, bei dem cf2MitSt gerade 0 erreicht -
+ *   Kaufpreis/Eigenkapital auf 500 €, Kaltmiete auf 5 € gerundet. null, wenn
+ *   im Suchbereich nicht erreichbar (Kaufpreis bis 0, Eigenkapital bis zur
+ *   Gesamtinvestition, Kaltmiete bis 3x aktuell).
+ */
+export function loeseFuerCashflowNull(d, t, feld) {
+  const cf = (wert) => computeRendite({ ...d, [feld]: String(Math.max(0, wert)) }, t).cf2MitSt;
+
+  if (feld === "kaufpreis") {
+    const aktuell = Math.max(0, +d.kaufpreis || 0);
+    const cfBeiReduktion = (r) => cf(aktuell - r);
+    const r = grenzsuche(cfBeiReduktion, 0, aktuell);
+    return r == null ? null : Math.round((aktuell - r) / 500) * 500;
+  }
+
+  if (feld === "eigenkapital") {
+    const R0 = computeRendite(d, t);
+    const K0 = berechneKennzahlen(d, R0);
+    const aktuell = Math.max(0, +d.eigenkapital || 0);
+    const obergrenze = Math.max(aktuell, K0.gesamtinvestition);
+    const wert = grenzsuche(cf, aktuell, obergrenze);
+    return wert == null ? null : Math.round(wert / 500) * 500;
+  }
+
+  if (feld === "kaltmiete") {
+    const aktuell = Math.max(0, +d.kaltmiete || 0);
+    const wert = grenzsuche(cf, aktuell, aktuell * 3);
+    return wert == null ? null : Math.round(wert / 5) * 5;
+  }
+
+  return null;
+}
+
 // ── Was müsste sich ändern? (Tool #6) ───────────────────────────────────────
 // Feste, nachvollziehbare Varianten statt einer generischen Optimierung -
 // die drei Stellschrauben aus der Nutzer-Vorgabe (Kaufpreis, Miete,

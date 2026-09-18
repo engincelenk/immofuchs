@@ -136,6 +136,18 @@ export function regionalWertsteigerung(bundeslandCode) {
   return typeof wert === "number" ? wert : null;
 }
 
+// Landestrend seit Q2 2022 (Investment-Briefing, V6 Preistrend): analog zu
+// regionalWertsteigerung(), aber auf dem laengeren Zeitraum. Nur Bundesland-
+// Ebene, kein Kreis-Wert vorhanden (siehe immodaten.json). Fehlt der Wert,
+// liefert diese Funktion null statt eine Zahl zu erfinden - der Aufrufer
+// (V6-Kachel) blendet die betroffene Zeile dann aus.
+export function regionalTrend(bundeslandCode) {
+  if (!daten || !bundeslandCode) return null;
+  const bl = daten.bundeslaender.find((b) => b.code === bundeslandCode);
+  const wert = bl?.landeswerte?.kaufWohnungVeraenderung4J;
+  return typeof wert === "number" ? wert : null;
+}
+
 // Welcher Datenstand gerade geladen ist ("Q2 2026" etc.) - fuer den
 // eingefrorenen Snapshot unten, damit spaetere Vergleiche wissen, aus
 // welchem Quartal ein Snapshot stammt.
