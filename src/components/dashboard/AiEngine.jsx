@@ -582,15 +582,18 @@ const PHASEN = ["Kennzahlen lesen …", "Mit Marktwerten vergleichen …", "Eins
 // modellgeneriertem FLIESSTEXT vorbehalten, ein Ladeeffekt ist keiner.
 // prefers-reduced-motion friert beides ein statt es abzuschalten: ein
 // stehendes Muster sagt weiterhin "hier laedt etwas", nur ohne Bewegung.
+// Glow-Balken statt durchlaufendem Glanzband, Sterne pulsieren einzeln statt
+// synchron (Nutzer-Entscheidung 2026-09-18, siehe Loader-Vergleich-Artifact) -
+// kraeftigere Wirkung als das vorherige, zurueckhaltendere Muster.
 const KI_LADEEFFEKT_CSS = `
-@keyframes ai-stern-glitzern{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
-@keyframes ai-balken-schimmer{0%{background-position:160% 0}100%{background-position:-60% 0}}
-.ai-stern{display:inline-block;animation:ai-stern-glitzern 1.6s ease-in-out infinite}
-.ai-balken{background-color:var(--cro);background-image:linear-gradient(90deg,var(--cro) 0%,var(--cro) 35%,var(--ca) 50%,var(--cro) 65%,var(--cro) 100%);
-  background-size:300% 100%;animation:ai-balken-schimmer 1.8s linear infinite}
+@keyframes ai-stern-puls{0%{opacity:.4;transform:scale(.8);filter:drop-shadow(0 0 2px rgba(232,96,10,.2))}100%{opacity:1;transform:scale(1.15);filter:drop-shadow(0 0 8px rgba(232,96,10,.7))}}
+@keyframes ai-balken-schimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.ai-stern{display:inline-block;animation:ai-stern-puls 1.8s ease-in-out infinite alternate}
+.ai-balken{background-image:linear-gradient(90deg,var(--ci) 0%,var(--ca) 35%,#ffb27a 50%,var(--ca) 65%,var(--ci) 100%);
+  background-size:200% 100%;animation:ai-balken-schimmer 2s linear infinite;box-shadow:0 0 12px rgba(232,96,10,.22)}
 @media(prefers-reduced-motion: reduce){
   .ai-stern{animation:none;opacity:.9}
-  .ai-balken{animation:none;background-image:none}
+  .ai-balken{animation:none;background-image:none;box-shadow:none}
 }
 `;
 
@@ -605,14 +608,14 @@ function Laeuft({ produkt }) {
     <div aria-busy="true" style={{ marginTop: 8 }}>
       <style>{KI_LADEEFFEKT_CSS}</style>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-        {[0, 180, 360].map((verzoegerung, i) => (
+        {[0, 300, 600].map((verzoegerung, i) => (
           <span
             key={verzoegerung}
             className="ai-stern"
             aria-hidden="true"
             style={{
               color: "var(--ca)",
-              fontSize: i === 1 ? 15 : 10,
+              fontSize: i === 1 ? 17 : 14,
               animationDelay: `${verzoegerung}ms`,
             }}
           >
@@ -621,15 +624,15 @@ function Laeuft({ produkt }) {
         ))}
         <span style={{ fontSize: 12.5, color: "var(--cl)" }}>{PHASEN[phase]}</span>
       </div>
-      {[100, 78, 46].map((breite) => (
+      {[100, 72, 42].map((breite) => (
         <div
           key={breite}
           className="ai-balken"
           style={{
-            height: 11,
+            height: 14,
             width: `${breite}%`,
-            borderRadius: 4,
-            marginBottom: 8,
+            borderRadius: 7,
+            marginBottom: 10,
           }}
         />
       ))}
