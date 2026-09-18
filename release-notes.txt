@@ -1,3 +1,24 @@
+## 2026-09-18 (1.89.0)
+
+### KI-Ladeeffekt: Glow-Balken statt Glanzband, RechnerAiKarte mit 4 Phasentexten
+
+Nutzerentscheidung nach visuellem Vergleich (drei Varianten nebeneinander,
+auf die echten ImmoFuchs-Tokens umgefaerbt): der Ladeeffekt der KI-Karten
+(Sterne + Balken waehrend eine Auswertung laeuft) wechselt von einem
+schmalen, durchlaufenden Glanzband auf einem dunklen Balken zu durchgehend
+orangenen Balken mit Leucht-Schatten - kraeftigere Wirkung. Die Sterne
+pulsieren jetzt einzeln statt synchron.
+
+- AiEngine.jsx (Objekt-Auswertungen: Analyse/Hebel/Kaufpreis/Handout) und
+  RechnerAiKarte.jsx (die 5 Rechner-KI-Karten) wurden beide umgestellt, damit
+  der Effekt an jeder Stelle gleich aussieht - er existierte vorher als zwei
+  fast identische Kopien (Grund siehe Kommentar in RechnerAiKarte.jsx).
+- RechnerAiKarte.jsx zusaetzlich: 4 statt 3 Phasentexte, 2,5 s- statt
+  4 s-Takt (Nutzer-Vorgabe). AiEngine.jsx behaelt die bisherigen 3 Texte im
+  4 s-Takt.
+- Reine CSS-/Text-Aenderung, keine Logik betroffen. prefers-reduced-motion
+  weiterhin respektiert.
+
 ## 2026-09-17 (1.88.0)
 
 ### Gefunden: "nicht erreichbar" kam vom Speichern, nicht von der KI

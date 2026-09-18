@@ -395,43 +395,50 @@ function ErkenntnisZeile({ i, erste, ton }) {
   );
 }
 
-// Phasentext + KI-Sterne/Schimmer-Ladeeffekt, 1:1 im Design an
-// AiEngine.jsx/Laeuft() angelehnt. Nicht von dort importiert, weil AiEngine.jsx
-// weder die Komponente noch ihr CSS exportiert und laut Auftrag unangetastet
-// bleibt - eigene Klassennamen (raik-*) verhindern eine zufaellige Kollision,
-// falls beide Karten irgendwann auf derselben Seite haengen.
-const PHASEN = ["Kennzahlen lesen …", "Mit Marktwerten vergleichen …", "Einschätzung formulieren …"];
+// Phasentext + KI-Sterne/Glow-Balken-Ladeeffekt (Nutzer-Entscheidung
+// 2026-09-18, siehe Loader-Vergleich-Artifact): durchgehend orangene Balken
+// mit Leucht-Schatten statt eines durchlaufenden Glanzbands, Sterne pulsieren
+// einzeln statt synchron. Vier statt drei Phasentexte im 2,5s- statt 4s-Takt -
+// mehr Bewegung ueber die typische 5-30s-Laufzeit. Eigene Klassennamen
+// (raik-*), aus demselben Grund wie zuvor nicht aus AiEngine.jsx importiert:
+// die Komponente ist dort nicht exportiert.
+const PHASEN = [
+  "Kennzahlen lesen …",
+  "Marktdaten abgleichen …",
+  "Mietpotenzial ermitteln …",
+  "KI-Analyse fertigstellen …",
+];
 
 const RAIK_LADEEFFEKT_CSS = `
-@keyframes raik-stern-glitzern{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
-@keyframes raik-balken-schimmer{0%{background-position:160% 0}100%{background-position:-60% 0}}
-.raik-stern{display:inline-block;animation:raik-stern-glitzern 1.6s ease-in-out infinite}
-.raik-balken{background-color:var(--cro);background-image:linear-gradient(90deg,var(--cro) 0%,var(--cro) 35%,var(--ca) 50%,var(--cro) 65%,var(--cro) 100%);
-  background-size:300% 100%;animation:raik-balken-schimmer 1.8s linear infinite}
+@keyframes raik-stern-puls{0%{opacity:.4;transform:scale(.8);filter:drop-shadow(0 0 2px rgba(232,96,10,.2))}100%{opacity:1;transform:scale(1.15);filter:drop-shadow(0 0 8px rgba(232,96,10,.7))}}
+@keyframes raik-balken-schimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.raik-stern{display:inline-block;animation:raik-stern-puls 1.8s ease-in-out infinite alternate}
+.raik-balken{background-image:linear-gradient(90deg,var(--ci) 0%,var(--ca) 35%,#ffb27a 50%,var(--ca) 65%,var(--ci) 100%);
+  background-size:200% 100%;animation:raik-balken-schimmer 2s linear infinite;box-shadow:0 0 12px rgba(232,96,10,.22)}
 @media(prefers-reduced-motion: reduce){
   .raik-stern{animation:none;opacity:.9}
-  .raik-balken{animation:none;background-image:none}
+  .raik-balken{animation:none;background-image:none;box-shadow:none}
 }
 `;
 
 function Laeuft({ titel }) {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setPhase((p) => Math.min(p + 1, PHASEN.length - 1)), 4000);
+    const t = setInterval(() => setPhase((p) => Math.min(p + 1, PHASEN.length - 1)), 2500);
     return () => clearInterval(t);
   }, []);
   return (
     <div aria-busy="true" style={{ marginTop: 8 }}>
       <style>{RAIK_LADEEFFEKT_CSS}</style>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-        {[0, 180, 360].map((verzoegerung, i) => (
+        {[0, 300, 600].map((verzoegerung, i) => (
           <span
             key={verzoegerung}
             className="raik-stern"
             aria-hidden="true"
             style={{
               color: "var(--ca)",
-              fontSize: i === 1 ? 15 : 10,
+              fontSize: i === 1 ? 17 : 14,
               animationDelay: `${verzoegerung}ms`,
             }}
           >
@@ -440,11 +447,11 @@ function Laeuft({ titel }) {
         ))}
         <span style={{ fontSize: 12.5, color: "var(--cl)" }}>{PHASEN[phase]}</span>
       </div>
-      {[100, 78, 46].map((breite) => (
+      {[100, 72, 42].map((breite) => (
         <div
           key={breite}
           className="raik-balken"
-          style={{ height: 11, width: `${breite}%`, borderRadius: 4, marginBottom: 8 }}
+          style={{ height: 14, width: `${breite}%`, borderRadius: 7, marginBottom: 10 }}
         />
       ))}
       <span style={{ position: "absolute", left: -9999 }} aria-live="polite">
