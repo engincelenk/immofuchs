@@ -31,6 +31,9 @@ const ausgabe = {
     landeswerte: b.landeswerte,
     kreise: b.kreise,
     fakten: b.fakten || [],
+    // Quartalsverlauf Kaufpreis Q2 2022..Q2 2026 (nur wo das Datenblatt ihn
+    // hergibt, siehe scripts/extract_datenblatt_zusatz.py)
+    ...(b.verlauf ? { verlauf: b.verlauf } : {}),
   })),
 };
 

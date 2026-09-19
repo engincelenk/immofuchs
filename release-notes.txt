@@ -1,3 +1,75 @@
+## 2026-09-19 (1.94.0)
+
+### Objektseite: Kernantwort als Bild, Rest zugeklappt
+
+Oben steht jetzt nur noch, was ein Investor sofort wissen will; die bisherigen
+Ebenen 2-7 und die Profi-Kennzahlen liegen unverändert unter "Alle Details".
+Keine Worker-Änderung, kein neuer KI-Aufruf.
+
+- Empfehlung (Regel, keine KI): "Investieren" / "Nur mit Nachverhandlung" /
+  "Nicht investieren", mit Unterzeile (Zuzahlung bzw. Überschuss pro Monat) und
+  Ziel-Pille. Regeln in briefing.js: briefingEmpfehlung(). Hard-Stop = nicht;
+  trägt sich + Preis höchstens 5 % über Markt = investieren; trägt sich nicht =
+  verhandeln, wenn Preisnachlass bis 15 % reicht, sonst wenn der Kombiweg
+  (Miete auf das in 3 Jahren Erreichbare + Preis) bis 15 % reicht, sonst wenn
+  die nötige Miete marktüblich ist; sonst nicht.
+- Kaufpreis und Miete immer gegen den Markt (Kreis, sonst Land) als Balken mit
+  wandernder Markierung, dazu Kaufpreisfaktor und das in 3 Jahren erreichbare
+  Mietniveau (Kappungsgrenze).
+- "Sollte sein": Angebot / Marktpreis / "Trägt sich ab" als Balken, Nachlass-
+  Plakette (rot ab 15 %), Alternativen "Oder Miete" und "Oder beides".
+- Ausblick: Preislinie des Landes Q2 2022 bis Q2 2026 (regionalVerlauf()),
+  seit Beginn, seit Tief, Wertannahme des Nutzers gegen den gemessenen Trend
+  ("optimistisch" ab 2 Prozentpunkten darüber), Hinweis bei Energieklasse F-H.
+  Ausdrücklich "Rückblick, keine Prognose".
+- Bayern und Berlin: Verlauf als gekennzeichnete NÄHERUNG. Die Form der Linie
+  kommt von Baden-Württemberg bzw. Brandenburg, Anfang und Ende sind die
+  echten Preise aus dem FAQ-Text (verlauf.naeherungNach im JSON). Die Karte
+  schreibt "Verlauf geschätzt · Form nach ..." und lässt Tiefpunkt und "seit
+  Tief" weg; "seit 2022" und "p. a." hängen nur an den echten Endpunkten.
+  scripts/extract_datenblatt_zusatz.py ist wiederholbar und ersetzt eine
+  Näherung automatisch, sobald neue PDFs (Reiter Kaufpreis) vorliegen.
+- KI: Urteilssatz und das erste Hebel-Argument stehen im Kopf (✦ in Marine-
+  blau); ohne Ergebnis bleibt der Start-Knopf. Konsent-, Fehler- und Neu-
+  berechnen-Abläufe unverändert. Die KI-Nutzlast ist unverändert (Grenze von
+  24 Zahlenzeilen im Worker), sie kennt das Empfehlungswort also nicht.
+- Vergleichskachel V1: bei negativem Cashflow und deutlich unter Markt steht
+  jetzt "Unter Markt" (grau) statt "Im Rahmen".
+- Bewegung nur beim ersten Erscheinen (transform/opacity/clip-path, 0,3-0,7 s,
+  --ease-out); prefers-reduced-motion blendet nur kurz ein.
+- Neue Übersetzungsschlüssel (brfEmpf*, brfZiel*, brfAusblick* u. a.) haben
+  vorerst nur deutsche Rückfalltexte im Code; die fünf Sprachdateien sind nicht
+  ergänzt.
+- Offen: Haus-Objekte werden weiter gegen die Wohnungswerte verglichen
+  (kaufWohnung/mieteWohnung); die Haus-Spalten liegen in den Kreisdaten vor.
+
+## 2026-09-19 (1.93.1)
+
+### Datenblätter: fehlende Werte in immodaten.json / regionalpreise.json
+
+Was in den 16 Bundesland-PDFs stand, aber nicht im JSON, ist jetzt drin.
+Neues Skript scripts/extract_datenblatt_zusatz.py (nur manuelle Pflege,
+braucht pymupdf, nicht in requirements.txt).
+
+- landeswerte je Land erweitert: kaufHausVeraenderung4J, kaufAlleAvg (nur
+  wo die Kopfkarte den Kaufpreis zeigt), Spannen kaufWohnung/kaufHaus und
+  mieteWohnung/mieteHaus je Min/Max. kaufSpanneMin/Max bleibt unverändert
+  (mischt Wohnung-Min mit Haus-Max, hängt daran regionalpreis.js).
+- Neu je Land "verlauf": 17 Quartalswerte Kaufpreis Q2 2022 bis Q2 2026 für
+  Wohnung und Haus, aus dem Liniendiagramm der PDFs rekonstruiert (Vektor,
+  ohne Achsenbeschriftung; Kalibrierung mit den Preisen aus dem FAQ-Text,
+  Gegenprobe Q2 2025 - alle 14 Länder unter 0,05 % Abweichung). Genauigkeit
+  im Bereich weniger Euro pro m², nicht Cent-genau.
+- Bayern und Berlin: kein echter Verlauf. In diesen beiden PDFs wurde das
+  Mietpreis- statt des Kaufpreis-Diagramms gerendert, die Kopfkarte zeigt
+  Werte von Q2 2024. Dort fehlt auch die Vorjahresveränderung (bleibt null).
+  PDFs müssen neu gezogen werden; bis dahin siehe Näherung in 1.94.0.
+- Keine Prognose: das Diagramm endet bei Q2 2026, die Prognose-Zone rechts
+  daneben ist im PDF leer.
+- build_regionalpreise.mjs übernimmt "verlauf" (public/regionalpreise.json
+  39,7 auf 47,1 KB). Noch kein Leser in src/utils/regionalpreis.js - die
+  Daten sind da, die Anzeige ist ein eigener Schritt.
+
 ## 2026-09-18 (1.93.0)
 
 ### Investment-Briefing Stufe 4: Aufräumen

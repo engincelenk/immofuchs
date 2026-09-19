@@ -161,6 +161,19 @@ export function regionalTrend(bundeslandCode) {
   return typeof wert === "number" ? wert : null;
 }
 
+// Kaufpreis-Quartalsverlauf des Landes Q2 2022..Q2 2026 (17 Werte je Wohnung
+// und Haus, aus den Datenblaettern rekonstruiert, siehe
+// scripts/extract_datenblatt_zusatz.py). Nicht fuer jedes Land vorhanden
+// (Bayern/Berlin: PDF zeigte den falschen Reiter) - dann null, der Aufrufer
+// blendet die Linie aus statt eine zu erfinden.
+export function regionalVerlauf(bundeslandCode) {
+  if (!daten || !bundeslandCode) return null;
+  const bl = daten.bundeslaender.find((b) => b.code === bundeslandCode);
+  const v = bl?.verlauf;
+  if (!Array.isArray(v?.wohnung) || !Array.isArray(v?.haus)) return null;
+  return v;
+}
+
 // Welcher Datenstand gerade geladen ist ("Q2 2026" etc.) - fuer den
 // eingefrorenen Snapshot unten, damit spaetere Vergleiche wissen, aus
 // welchem Quartal ein Snapshot stammt.

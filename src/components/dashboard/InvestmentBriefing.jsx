@@ -4,12 +4,13 @@
 // docs/technical_specs/briefing-ui-handover.md).
 //
 // Grundprinzip der Spec (Abschnitt 3): "Zahlen aus der Engine, Worte von der
-// KI". Ebenen 1-7 + Profi-Block stehen linear untereinander, nichts ist
-// zugeklappt ausser dem Profi-Block (Entscheidung, Handover-Datei Abschnitt
-// 1). Die Zahlen (Ebenen 2, 3, 5, 6, 7, Profi-Block) sind IMMER live aus
+// KI". Seit 2026-09-19 (1.94.0) steht oben nur die Kernantwort als Bild
+// (BriefingVisuals.jsx: Empfehlung, Kaufpreis/Miete gegen Markt, Sollte sein,
+// Ausblick); die Ebenen 2-7 und der Profi-Block der Handover-Datei liegen
+// unveraendert zugeklappt unter "Alle Details". Alle Zahlen sind IMMER live aus
 // briefing.js berechnet, unabhaengig davon, ob und wann zuletzt ein
-// KI-Aufruf lief - nur Urteil, Staerken/Risiken/Hebel und die vier
-// Einordnungssaetze kommen aus dem gespeicherten Ergebnis.
+// KI-Aufruf lief - nur der Urteilssatz, das erste Hebel-Argument und die
+// Einordnungssaetze in den Details kommen aus dem gespeicherten Ergebnis.
 import { useMemo, useState } from "react";
 import {
   alter,
@@ -32,22 +33,24 @@ import {
   regionalLandeswert,
   regionalPreis,
   regionalTrend,
+  regionalVerlauf,
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
 import { fmt, fmtE } from "../../utils/helpers.js";
 import { AccordionSection } from "../ui/AccordionSection.jsx";
 import { ZahlenBlock } from "./AiEngine.jsx";
+import {
+  AusblickKarte,
+  EmpfehlungsKopf,
+  MarktVergleich,
+  STATUS_FARBEN,
+  ZielKarte,
+} from "./BriefingVisuals.jsx";
 
 // Deutscher Rueckfall zu den brf*-Uebersetzungsschluesseln aus briefing.js -
 // dasselbe Muster wie t.aiFehlerX || "..." in aiAnalyse.js: kein Schluessel
 // darf als "undefined" auf der Karte landen, auch wenn eine Sprache (noch)
 // fehlt.
-const AMPEL_LABEL = {
-  brfAmpelHartStop: "Finanzierung nicht tragfähig",
-  brfAmpelTraegtSich: "Trägt sich",
-  brfAmpelMitZuzahlung: "Trägt sich mit Zuzahlung",
-  brfAmpelTraegtSichNicht: "Trägt sich nicht",
-};
 const STATUS_LABEL = {
   brfStatusImRahmen: "Im Rahmen",
   brfStatusUeberMarkt: "Über Markt",
@@ -86,16 +89,6 @@ const ZEITRAUM_LABEL = {
 };
 const STRESS_LABEL = { basis: "Basis", negativ: "Negativ", stress: "Stress" };
 
-// Farbpaare je Status - ausschliesslich bestehende Tokens (Spec Abschnitt 5):
-// keine neuen Tokens, keine Hex-Werte im JSX, sonst bricht der Dark Mode.
-const STATUS_FARBEN = {
-  rot: { tx: "var(--bad-tx)", bg: "var(--bad-bg)", bd: "var(--bad-bd)" },
-  gelb: { tx: "var(--warn-tx)", bg: "var(--warn-bg)", bd: "var(--warn-bd)" },
-  gruen: { tx: "var(--ok-tx)", bg: "var(--ok-bg)", bd: "var(--ok-bd)" },
-  orange: { tx: "var(--ca-dk)", bg: "var(--ca-bg)", bd: "var(--ca-bd)" },
-  neutral: { tx: "var(--ch)", bg: "var(--cro)", bd: "transparent" },
-};
-
 const eurQm = (n) => `${fmt(n, 2)} €/m²`;
 const proz = (n, d = 1) => `${fmt(n, d)} %`;
 const wertAnzeige = (v, einheit) =>
@@ -129,6 +122,7 @@ export function InvestmentBriefing({
         landesKaufWohnungAvg: regGeladen ? regionalLandeswert(data?.bundesland) : null,
         trendVorjahr: regGeladen ? regionalWertsteigerung(data?.bundesland) : null,
         trend4J: regGeladen ? regionalTrend(data?.bundesland) : null,
+        verlauf: regGeladen ? regionalVerlauf(data?.bundesland) : null,
       }),
     [data, t, regGeladen],
   );
@@ -144,6 +138,8 @@ export function InvestmentBriefing({
   }
 
   const ampelFarbe = STATUS_FARBEN[briefing.ampel.stufe] || STATUS_FARBEN.neutral;
+  const argument = ergebnis ? hebelTexteVon(ergebnis)[0] : null;
+  const kiSatz = ergebnis ? urteilVon(ergebnis) : "";
 
   return (
     <div style={{ marginTop: 12 }}>
@@ -153,23 +149,29 @@ export function InvestmentBriefing({
         </div>
       )}
 
-      {/* ── Ebene 1: Urteil ── */}
-      <div style={{ ...karte, borderLeft: `4px solid ${ampelFarbe.tx}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span
-            style={{ width: 8, height: 8, borderRadius: "50%", background: ampelFarbe.tx, flexShrink: 0 }}
-          />
-          <span style={{ fontSize: 13, fontWeight: 700, color: ampelFarbe.tx }}>
-            {label(briefing.ampel.key, AMPEL_LABEL)}
-          </span>
-        </div>
-        {ergebnis && (
-          <div style={{ marginTop: 6, fontSize: 15, lineHeight: 1.5, color: "var(--ct)" }}>
-            {urteilVon(ergebnis)}
+      {/* ── Kopf: Empfehlung + KI-Zeile ── */}
+      <EmpfehlungsKopf briefing={briefing} data={data} t={t}>
+        {kiSatz && (
+          <div style={kiZeile}>
+            <span aria-hidden="true" style={kiGlyphe}>
+              ✦
+            </span>
+            <span>{kiSatz}</span>
+          </div>
+        )}
+        {argument && (
+          <div style={argumentZeile}>
+            <span style={argumentLabel}>{t.brfArgument || "Argument"}</span>
+            <span style={{ minWidth: 0 }}>
+              {argument.title}
+              {argument.value && (
+                <span style={{ color: "var(--ca-dk)", fontWeight: 700 }}> · {argument.value}</span>
+              )}
+            </span>
           </div>
         )}
         {ergebnis && (
-          <div style={{ marginTop: 6, fontSize: 11, color: "var(--cl)" }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: "var(--cl)" }}>
             {t.brfKiGeneriert || "KI-generiert"} · {alter(ergebnis, locale)}
           </div>
         )}
@@ -222,9 +224,12 @@ export function InvestmentBriefing({
         {!ergebnis && !laufend && !zeigtConsent && (
           <div style={aktionsZeile}>
             <span style={nutzenZeile}>
-              {t.brfOhneKiHinweis || "Noch keine KI-Auswertung."}
+              {t.brfOhneKiHinweis || "Noch keine KI-Beratung zu diesem Objekt."}
             </span>
             <button type="button" onClick={handleStart} style={knopf}>
+              <span aria-hidden="true" style={{ marginRight: 6 }}>
+                ✦
+              </span>
               {t.brfStartKnopf || "Investment-Briefing erstellen"}
             </button>
           </div>
@@ -234,110 +239,12 @@ export function InvestmentBriefing({
             {t.brfLaeuft || "Wird berechnet …"}
           </div>
         )}
-      </div>
+      </EmpfehlungsKopf>
 
-      {/* ── Ebene 2: Kernzahlen ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginTop: 8 }}>
-        {briefing.kernzahlen.map((k) => (
-          <Kernzahl key={k.key} kz={k} ampelFarbe={ampelFarbe} t={t} />
-        ))}
-      </div>
-
-      {/* ── Ebene 3: Vergleiche ── */}
-      {briefing.vergleiche.length > 0 && (
-        <>
-          <div style={abschnittsUeberschrift}>{t.brfVergleicheTitel || "Vergleiche"}</div>
-          {briefing.vergleiche.map((v) => (
-            <VergleichKachel key={v.id} v={v} t={t} label={label} />
-          ))}
-          {ergebnis && marktVon(ergebnis) && (
-            <div style={einordnungssatz}>{marktVon(ergebnis)}</div>
-          )}
-        </>
-      )}
-
-      {/* ── Ebene 4: Stärken/Risiken/Hebel (nur mit KI-Ergebnis) ── */}
-      {ergebnis && (
-        <EbeneVierBlock ergebnis={ergebnis} t={t} />
-      )}
-
-      {/* ── Ebene 5: Tragfähigkeit (nur bei negativem Cashflow) ── */}
-      {briefing.tragfaehigkeit && briefing.tragfaehigkeit.wege.length > 0 && (
-        <div style={karte}>
-          <div style={abschnittsUeberschriftInKarte}>
-            {t.brfTragfaehigkeitTitel || "So wird es tragfähig"}
-          </div>
-          {briefing.tragfaehigkeit.wege.map((w) => (
-            <ZeileMitFlag
-              key={w.key}
-              label={t[`brfTrag${cap(w.key)}`] || TRAGF_LABEL[w.key]}
-              wert={
-                w.key === "kaltmiete"
-                  ? `${fmtE(w.wert)}/Monat (${eurQm(w.proQm)})`
-                  : w.key === "eigenkapital"
-                    ? `${fmtE(w.wert)} (${w.mehrbedarf > 0 ? "+" : "−"}${fmtE(Math.abs(w.mehrbedarf))})`
-                    : `${fmtE(w.wert)} (−${fmt(w.nachlassProzent, 0)} % zum Angebot)`
-              }
-              flag={w.flagKey ? label(w.flagKey, FLAG_LABEL) : null}
-            />
-          ))}
-          {ergebnis && tragfaehigkeitTextVon(ergebnis) && (
-            <div style={einordnungssatzInKarte}>{tragfaehigkeitTextVon(ergebnis)}</div>
-          )}
-        </div>
-      )}
-
-      {/* ── Ebene 6: {jahre}-Jahres-Bild ── */}
-      <div style={karte}>
-        <div style={abschnittsUeberschriftInKarte}>
-          {(t.brfJahresBildTitel || "Das {jahre}-Jahres-Bild").replace(
-            "{jahre}",
-            briefing.zeitraum.jahre,
-          )}
-        </div>
-        {briefing.zeitraum.zeilen.map((z) => (
-          <Zeile key={z.key} label={t[`brfZeitraum${cap(z.key)}`] || ZEITRAUM_LABEL[z.key]} labelFarbe="var(--ch)" wert={fmtE(z.wert)} />
-        ))}
-        <div style={{ ...zeileStil, borderTop: "1px solid var(--cb)", marginTop: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>
-            {t.brfZeitraumSumme || "Vermögenszuwachs"}
-          </span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>
-            {fmtE(briefing.zeitraum.summe)}
-          </span>
-        </div>
-        {ergebnis && zeitraumTextVon(ergebnis) && (
-          <div style={einordnungssatzInKarte}>{zeitraumTextVon(ergebnis)}</div>
-        )}
-      </div>
-
-      {/* ── Ebene 7: Stresstest ── */}
-      <div style={karte}>
-        <div style={abschnittsUeberschriftInKarte}>{t.brfStresstestTitel || "Stresstest"}</div>
-        {briefing.stresstest.map((s) => (
-          <div key={s.key} style={{ padding: "6px 0", borderTop: s.key === "basis" ? "none" : "1px solid var(--cb)" }}>
-            <div style={zeileStil}>
-              <span style={{ fontSize: 13, color: "var(--ch)" }}>
-                {t[`brfStress${cap(s.key)}`] || STRESS_LABEL[s.key]}
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ct)" }}>
-                {fmtE(s.cashflow)}/Mon. · {fmtE(s.vermoegen)}
-              </span>
-            </div>
-            {s.parameter && (
-              <div style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 2 }}>
-                {parameterText(s.parameter, t)}
-              </div>
-            )}
-          </div>
-        ))}
-        {ergebnis && stresstestTextVon(ergebnis) && (
-          <div style={einordnungssatzInKarte}>{stresstestTextVon(ergebnis)}</div>
-        )}
-      </div>
-
-      {/* ── Profi-Block ── */}
-      <ProfiBlock data={data} t={t} />
+      {/* ── Die drei Fragen als Bild: Preis/Miete gegen Markt, Ziel, Ausblick ── */}
+      <MarktVergleich briefing={briefing} t={t} />
+      <ZielKarte briefing={briefing} data={data} t={t} />
+      <AusblickKarte ausblick={briefing.ausblick} t={t} />
 
       <div style={{ textAlign: "center", marginTop: 12 }}>
         <button
@@ -349,6 +256,125 @@ export function InvestmentBriefing({
         >
           {t.brfHandoutLink || "Fragen für die Besichtigung erstellen"}
         </button>
+      </div>
+
+      {/* ── Details: alles, was vorher untereinander stand, zugeklappt ── */}
+      <div style={{ marginTop: 16 }}>
+        <AccordionSection
+          question={t.brfDetails || "Alle Details"}
+          hint={t.brfDetailsHint || "Vergleiche, Tragfähigkeit, Stresstest, Kennzahlen"}
+        >
+          {/* ── Ebene 2: Kernzahlen ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+            {briefing.kernzahlen.map((k) => (
+              <Kernzahl key={k.key} kz={k} ampelFarbe={ampelFarbe} t={t} />
+            ))}
+          </div>
+
+          {/* ── Ebene 3: Vergleiche ── */}
+          {briefing.vergleiche.length > 0 && (
+            <>
+              <div style={abschnittsUeberschrift}>{t.brfVergleicheTitel || "Vergleiche"}</div>
+              {briefing.vergleiche.map((v) => (
+                <VergleichKachel key={v.id} v={v} t={t} label={label} />
+              ))}
+              {ergebnis && marktVon(ergebnis) && (
+                <div style={einordnungssatz}>{marktVon(ergebnis)}</div>
+              )}
+            </>
+          )}
+
+          {/* ── Ebene 4: Stärken/Risiken/Hebel (nur mit KI-Ergebnis) ── */}
+          {ergebnis && <EbeneVierBlock ergebnis={ergebnis} t={t} />}
+
+          {/* ── Ebene 5: Tragfähigkeit (nur bei negativem Cashflow) ── */}
+          {briefing.tragfaehigkeit && briefing.tragfaehigkeit.wege.length > 0 && (
+            <div style={karte}>
+              <div style={abschnittsUeberschriftInKarte}>
+                {t.brfTragfaehigkeitTitel || "So wird es tragfähig"}
+              </div>
+              {briefing.tragfaehigkeit.wege.map((w) => (
+                <ZeileMitFlag
+                  key={w.key}
+                  label={t[`brfTrag${cap(w.key)}`] || TRAGF_LABEL[w.key]}
+                  wert={
+                    w.key === "kaltmiete"
+                      ? `${fmtE(w.wert)}/Monat (${eurQm(w.proQm)})`
+                      : w.key === "eigenkapital"
+                        ? `${fmtE(w.wert)} (${w.mehrbedarf > 0 ? "+" : "−"}${fmtE(Math.abs(w.mehrbedarf))})`
+                        : `${fmtE(w.wert)} (−${fmt(w.nachlassProzent, 0)} % zum Angebot)`
+                  }
+                  flag={w.flagKey ? label(w.flagKey, FLAG_LABEL) : null}
+                />
+              ))}
+              {ergebnis && tragfaehigkeitTextVon(ergebnis) && (
+                <div style={einordnungssatzInKarte}>{tragfaehigkeitTextVon(ergebnis)}</div>
+              )}
+            </div>
+          )}
+
+          {/* ── Ebene 6: {jahre}-Jahres-Bild ── */}
+          <div style={karte}>
+            <div style={abschnittsUeberschriftInKarte}>
+              {(t.brfJahresBildTitel || "Das {jahre}-Jahres-Bild").replace(
+                "{jahre}",
+                briefing.zeitraum.jahre,
+              )}
+            </div>
+            {briefing.zeitraum.zeilen.map((z) => (
+              <Zeile
+                key={z.key}
+                label={t[`brfZeitraum${cap(z.key)}`] || ZEITRAUM_LABEL[z.key]}
+                labelFarbe="var(--ch)"
+                wert={fmtE(z.wert)}
+              />
+            ))}
+            <div style={{ ...zeileStil, borderTop: "1px solid var(--cb)", marginTop: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>
+                {t.brfZeitraumSumme || "Vermögenszuwachs"}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>
+                {fmtE(briefing.zeitraum.summe)}
+              </span>
+            </div>
+            {ergebnis && zeitraumTextVon(ergebnis) && (
+              <div style={einordnungssatzInKarte}>{zeitraumTextVon(ergebnis)}</div>
+            )}
+          </div>
+
+          {/* ── Ebene 7: Stresstest ── */}
+          <div style={karte}>
+            <div style={abschnittsUeberschriftInKarte}>{t.brfStresstestTitel || "Stresstest"}</div>
+            {briefing.stresstest.map((s) => (
+              <div
+                key={s.key}
+                style={{ padding: "6px 0", borderTop: s.key === "basis" ? "none" : "1px solid var(--cb)" }}
+              >
+                <div style={zeileStil}>
+                  <span style={{ fontSize: 13, color: "var(--ch)" }}>
+                    {t[`brfStress${cap(s.key)}`] || STRESS_LABEL[s.key]}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ct)" }}>
+                    {fmtE(s.cashflow)}/Mon. · {fmtE(s.vermoegen)}
+                  </span>
+                </div>
+                {s.parameter && (
+                  <div style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 2 }}>
+                    {parameterText(s.parameter, t)}
+                  </div>
+                )}
+              </div>
+            ))}
+            {ergebnis && stresstestTextVon(ergebnis) && (
+              <div style={einordnungssatzInKarte}>{stresstestTextVon(ergebnis)}</div>
+            )}
+          </div>
+
+          {/* ── Profi-Block ── */}
+          <div style={{ marginTop: 16 }}>
+            <ProfiBlock data={data} t={t} />
+          </div>
+        </AccordionSection>
       </div>
     </div>
   );
@@ -676,6 +702,44 @@ const knopf = {
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "inherit",
+};
+
+const kiZeile = {
+  display: "flex",
+  gap: 8,
+  alignItems: "baseline",
+  marginTop: 12,
+  paddingTop: 10,
+  borderTop: "1px solid var(--cb)",
+  fontSize: 13,
+  lineHeight: 1.5,
+  color: "var(--ct)",
+};
+
+// Marineblau ist in der App die "Denk-Farbe" fuer KI (siehe ObjektDetail).
+const kiGlyphe = { color: "var(--primary-tx)", fontSize: 12, flexShrink: 0 };
+
+const argumentZeile = {
+  display: "flex",
+  gap: 8,
+  alignItems: "baseline",
+  marginTop: 8,
+  fontSize: 13,
+  lineHeight: 1.45,
+  color: "var(--ct)",
+};
+
+const argumentLabel = {
+  flexShrink: 0,
+  fontSize: 10.5,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: 0.4,
+  color: "var(--ca-dk)",
+  background: "var(--ca-bg)",
+  border: "1px solid var(--ca-bd)",
+  borderRadius: 999,
+  padding: "1px 8px",
 };
 
 const fehlerBand = {

@@ -10,7 +10,17 @@
         "kaufWohnungAvg": 3297, "kaufWohnungVeraenderung": 1.8, "kaufWohnungVeraenderung4J": -5.3,
         "kaufHausAvg": 3724, "kaufHausVeraenderung": 0.3,
         "mieteWohnungAvg": 10.87, "mieteHausAvg": 11.59,
-        "kaufSpanneMin": 1568, "kaufSpanneMax": 14784
+        "kaufSpanneMin": 1568, "kaufSpanneMax": 14784,
+        "kaufHausVeraenderung4J": -7.3, "kaufAlleAvg": 3510,
+        "kaufWohnungMin": 1568, "kaufWohnungMax": 11632,
+        "kaufHausMin": 2110, "kaufHausMax": 14784,
+        "mieteWohnungMin": 7.04, "mieteWohnungMax": 24.53,
+        "mieteHausMin": 7.68, "mieteHausMax": 30.89
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [3482, 3536, 3481, 3370, 3299, 3245, 3225, 3178, 3183, 3211, 3216, 3215, 3240, 3251, 3268, 3277, 3297],
+        "haus": [4019, 4036, 3943, 3864, 3818, 3832, 3798, 3747, 3709, 3741, 3746, 3709, 3712, 3725, 3689, 3666, 3724]
       },
       "fakten": [
         "Ca. 11 Millionen Einwohner, südwestlichstes Flächenland, grenzt an Bayern, Hessen und Rheinland-Pfalz sowie an Frankreich, Schweiz und Österreich.",
@@ -60,7 +70,17 @@
         "kaufWohnungAvg": 3541, "kaufWohnungVeraenderung": null, "kaufWohnungVeraenderung4J": -7.5,
         "kaufHausAvg": 3943, "kaufHausVeraenderung": null,
         "mieteWohnungAvg": 10.64, "mieteHausAvg": 11.54,
-        "kaufSpanneMin": 1003, "kaufSpanneMax": 19134
+        "kaufSpanneMin": 1003, "kaufSpanneMax": 19134,
+        "kaufHausVeraenderung4J": -8.6,
+        "kaufWohnungMin": 1003, "kaufWohnungMax": 18954,
+        "kaufHausMin": 1574, "kaufHausMax": 19134,
+        "mieteWohnungMin": 6.13, "mieteWohnungMax": 33.88,
+        "mieteHausMin": 5.9, "mieteHausMax": 39.91
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte", "naeherungNach": "BW",
+        "wohnung": [3827, 3881, 3816, 3688, 3605, 3541, 3514, 3457, 3457, 3483, 3483, 3477, 3499, 3506, 3519, 3524, 3541],
+        "haus": [4312, 4327, 4224, 4136, 4083, 4095, 4055, 3997, 3953, 3984, 3986, 3943, 3943, 3954, 3912, 3884, 3943]
       },
       "_hinweis": "kaufWohnungVeraenderung/kaufHausVeraenderung fehlen - im PDF war beim Speichern der Reiter 'Mietpreis' statt 'Kaufpreis' aktiv, die 1-Jahres-Kaufpreis-Veraenderung ggue. Q2 2025 steht dadurch nirgends im Dokument (nur die 5-Jahres-Veraenderung im FAQ-Text: Wohnung -7,5%, Haus -8,6% seit Q2 2022 - andere Kennzahl, nicht eingetragen). Beim naechsten Quartals-Download darauf achten, dass vor dem Speichern als PDF der Kaufpreis-Reiter aktiv ist.",
       "fakten": [
@@ -148,7 +168,17 @@
         "kaufWohnungAvg": 4189, "kaufWohnungVeraenderung": null, "kaufWohnungVeraenderung4J": -2.8,
         "kaufHausAvg": 4395, "kaufHausVeraenderung": null,
         "mieteWohnungAvg": 12.72, "mieteHausAvg": 16.51,
-        "kaufSpanneMin": 2142, "kaufSpanneMax": 11760
+        "kaufSpanneMin": 2142, "kaufSpanneMax": 11760,
+        "kaufHausVeraenderung4J": -15.5,
+        "kaufWohnungMin": 2482, "kaufWohnungMax": 11760,
+        "kaufHausMin": 2142, "kaufHausMax": 11548,
+        "mieteWohnungMin": 7.39, "mieteWohnungMax": 31.3,
+        "mieteHausMin": 12.48, "mieteHausMax": 27.27
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte", "naeherungNach": "BB",
+        "wohnung": [4310, 4342, 4350, 4252, 4181, 4151, 4108, 4028, 4018, 4054, 4021, 4052, 4111, 4145, 4137, 4185, 4189],
+        "haus": [5203, 5272, 5226, 4958, 4838, 4757, 4655, 4572, 4553, 4530, 4526, 4495, 4490, 4486, 4442, 4377, 4395]
       },
       "_hinweis": "kaufWohnungVeraenderung/kaufHausVeraenderung fehlen - gleicher Grund wie bei Bayern (Mietpreis-Reiter war beim Speichern aktiv). Beim naechsten Quartals-Download darauf achten, dass der Kaufpreis-Reiter aktiv ist.",
       "fakten": [
@@ -181,7 +211,17 @@
         "kaufWohnungAvg": 2437, "kaufWohnungVeraenderung": 2.5, "kaufWohnungVeraenderung4J": -0.5,
         "kaufHausAvg": 2791, "kaufHausVeraenderung": 0.8,
         "mieteWohnungAvg": 9.09, "mieteHausAvg": 10.98,
-        "kaufSpanneMin": 727, "kaufSpanneMax": 11704
+        "kaufSpanneMin": 727, "kaufSpanneMax": 11704,
+        "kaufHausVeraenderung4J": -5.3, "kaufAlleAvg": 2614,
+        "kaufWohnungMin": 727, "kaufWohnungMax": 11704,
+        "kaufHausMin": 1500, "kaufHausMax": 8677,
+        "mieteWohnungMin": 5.63, "mieteWohnungMax": 27.37,
+        "mieteHausMin": 5.82, "mieteHausMax": 23.82
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [2448, 2470, 2478, 2426, 2389, 2376, 2355, 2313, 2311, 2335, 2320, 2341, 2378, 2401, 2400, 2431, 2437],
+        "haus": [2946, 3004, 2997, 2864, 2815, 2788, 2749, 2721, 2729, 2735, 2752, 2753, 2769, 2786, 2780, 2762, 2791]
       },
       "_hinweis": "ImmoScout24-Tabelle listet fuer Brandenburg nur 6 Kreise/Staedte (kein 'Mehr anzeigen'-Ausklapper vorhanden) - keine Extraktionsluecke, sondern vollstaendige Quelltabelle.",
       "fakten": [
@@ -208,7 +248,17 @@
         "kaufWohnungAvg": 2639, "kaufWohnungVeraenderung": 3.5, "kaufWohnungVeraenderung4J": -7.7,
         "kaufHausAvg": 3017, "kaufHausVeraenderung": 3.0,
         "mieteWohnungAvg": 9.52, "mieteHausAvg": 10.77,
-        "kaufSpanneMin": 1304, "kaufSpanneMax": 7819
+        "kaufSpanneMin": 1304, "kaufSpanneMax": 7819,
+        "kaufHausVeraenderung4J": -8.7, "kaufAlleAvg": 2828,
+        "kaufWohnungMin": 1304, "kaufWohnungMax": 7819,
+        "kaufHausMin": 1952, "kaufHausMax": 7688,
+        "mieteWohnungMin": 6.37, "mieteWohnungMax": 19.75,
+        "mieteHausMin": 6.76, "mieteHausMax": 18.63
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [2859, 2880, 2763, 2652, 2534, 2548, 2486, 2438, 2423, 2503, 2544, 2551, 2549, 2560, 2608, 2633, 2639],
+        "haus": [3305, 3319, 3214, 3076, 2987, 2929, 2877, 2818, 2840, 2879, 2855, 2918, 2928, 2946, 2955, 2997, 3017]
       },
       "fakten": [
         "Der Stadtstaat Bremen besteht aus den beiden Städten Bremen und Bremerhaven und ist flächenmäßig eines der kleinsten Bundesländer.",
@@ -230,7 +280,17 @@
         "kaufWohnungAvg": 4855, "kaufWohnungVeraenderung": 2.1, "kaufWohnungVeraenderung4J": -7.6,
         "kaufHausAvg": 4978, "kaufHausVeraenderung": 0.3,
         "mieteWohnungAvg": 13.00, "mieteHausAvg": 17.22,
-        "kaufSpanneMin": 2066, "kaufSpanneMax": 15520
+        "kaufSpanneMin": 2066, "kaufSpanneMax": 15520,
+        "kaufHausVeraenderung4J": -14.9, "kaufAlleAvg": 4917,
+        "kaufWohnungMin": 2066, "kaufWohnungMax": 15400,
+        "kaufHausMin": 2652, "kaufHausMax": 15520,
+        "mieteWohnungMin": 7.57, "mieteWohnungMax": 30.8,
+        "mieteHausMin": 11.83, "mieteHausMax": 31.54
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [5254, 5283, 5129, 4916, 4765, 4736, 4703, 4664, 4656, 4648, 4675, 4726, 4755, 4756, 4788, 4812, 4855],
+        "haus": [5853, 5898, 5748, 5506, 5281, 5159, 5060, 4910, 4990, 5017, 4936, 4895, 4961, 4944, 4924, 4939, 4978]
       },
       "fakten": [
         "Hamburg ist mit rund 1,9 Millionen Einwohnern die zweitgrößte Stadt Deutschlands und zugleich ein eigenständiges Bundesland.",
@@ -257,7 +317,17 @@
         "kaufWohnungAvg": 2857, "kaufWohnungVeraenderung": 2.3, "kaufWohnungVeraenderung4J": -2.7,
         "kaufHausAvg": 3298, "kaufHausVeraenderung": 3.8,
         "mieteWohnungAvg": 9.81, "mieteHausAvg": 11.01,
-        "kaufSpanneMin": 817, "kaufSpanneMax": 17163
+        "kaufSpanneMin": 817, "kaufSpanneMax": 17163,
+        "kaufHausVeraenderung4J": -2.4, "kaufAlleAvg": 3077,
+        "kaufWohnungMin": 817, "kaufWohnungMax": 12949,
+        "kaufHausMin": 1688, "kaufHausMax": 17163,
+        "mieteWohnungMin": 5.55, "mieteWohnungMax": 28.11,
+        "mieteHausMin": 6.51, "mieteHausMax": 31.14
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [2936, 2960, 2926, 2847, 2787, 2749, 2718, 2695, 2717, 2738, 2752, 2759, 2792, 2800, 2821, 2830, 2857],
+        "haus": [3377, 3448, 3450, 3359, 3307, 3277, 3244, 3204, 3166, 3145, 3155, 3172, 3177, 3232, 3248, 3229, 3298]
       },
       "fakten": [
         "Rund 6,4 Millionen Einwohner, damit eines der bevölkerungsreichsten Bundesländer Deutschlands.",
@@ -288,7 +358,17 @@
         "kaufWohnungAvg": 2170, "kaufWohnungVeraenderung": 1.4, "kaufWohnungVeraenderung4J": -3.1,
         "kaufHausAvg": 2572, "kaufHausVeraenderung": -1.3,
         "mieteWohnungAvg": 8.04, "mieteHausAvg": 10.10,
-        "kaufSpanneMin": 766, "kaufSpanneMax": 9265
+        "kaufSpanneMin": 766, "kaufSpanneMax": 9265,
+        "kaufHausVeraenderung4J": -4.4, "kaufAlleAvg": 2371,
+        "kaufWohnungMin": 766, "kaufWohnungMax": 9101,
+        "kaufHausMin": 1517, "kaufHausMax": 9265,
+        "mieteWohnungMin": 4.73, "mieteWohnungMax": 21.89,
+        "mieteHausMin": 6.49, "mieteHausMax": 17.47
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [2239, 2318, 2322, 2214, 2207, 2206, 2217, 2192, 2153, 2131, 2178, 2165, 2140, 2118, 2135, 2152, 2170],
+        "haus": [2691, 2785, 2763, 2625, 2516, 2522, 2476, 2501, 2573, 2626, 2601, 2592, 2607, 2603, 2618, 2612, 2572]
       },
       "fakten": [
         "Bevölkerungsärmstes Flächenland Deutschlands mit rund 1,6 Millionen Einwohnern.",
@@ -313,7 +393,17 @@
         "kaufWohnungAvg": 2300, "kaufWohnungVeraenderung": 2.2, "kaufWohnungVeraenderung4J": -4.2,
         "kaufHausAvg": 2760, "kaufHausVeraenderung": 4.3,
         "mieteWohnungAvg": 8.51, "mieteHausAvg": 9.36,
-        "kaufSpanneMin": 526, "kaufSpanneMax": 16378
+        "kaufSpanneMin": 526, "kaufSpanneMax": 16378,
+        "kaufHausVeraenderung4J": -2.3, "kaufAlleAvg": 2530,
+        "kaufWohnungMin": 526, "kaufWohnungMax": 16378,
+        "kaufHausMin": 1227, "kaufHausMax": 8118,
+        "mieteWohnungMin": 5.44, "mieteWohnungMax": 19.5,
+        "mieteHausMin": 5.87, "mieteHausMax": 21.63
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [2401, 2436, 2395, 2315, 2254, 2236, 2234, 2205, 2185, 2200, 2212, 2239, 2251, 2258, 2264, 2285, 2300],
+        "haus": [2824, 2858, 2812, 2733, 2687, 2657, 2626, 2625, 2626, 2630, 2638, 2636, 2647, 2674, 2696, 2687, 2760]
       },
       "fakten": [
         "Mit rund 8 Millionen Einwohnern und großer Fläche zählt Niedersachsen zu den flächenmäßig größten Bundesländern.",
@@ -364,7 +454,17 @@
         "kaufWohnungAvg": 2588, "kaufWohnungVeraenderung": 1.9, "kaufWohnungVeraenderung4J": -0.6,
         "kaufHausAvg": 3239, "kaufHausVeraenderung": 1.8,
         "mieteWohnungAvg": 8.89, "mieteHausAvg": 10.91,
-        "kaufSpanneMin": 853, "kaufSpanneMax": 13874
+        "kaufSpanneMin": 853, "kaufSpanneMax": 13874,
+        "kaufHausVeraenderung4J": -3.2, "kaufAlleAvg": 2913,
+        "kaufWohnungMin": 853, "kaufWohnungMax": 12894,
+        "kaufHausMin": 1546, "kaufHausMax": 13874,
+        "mieteWohnungMin": 5.49, "mieteWohnungMax": 24.92,
+        "mieteHausMin": 6.13, "mieteHausMax": 31.44
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [2604, 2645, 2603, 2525, 2483, 2469, 2450, 2446, 2458, 2470, 2485, 2507, 2539, 2545, 2573, 2587, 2588],
+        "haus": [3345, 3382, 3360, 3253, 3218, 3172, 3123, 3137, 3123, 3119, 3136, 3161, 3182, 3207, 3233, 3219, 3239]
       },
       "fakten": [
         "Bevölkerungsreichstes Bundesland Deutschlands mit rund 18 Millionen Einwohnern.",
@@ -416,7 +516,17 @@
         "kaufWohnungAvg": 2425, "kaufWohnungVeraenderung": 1.4, "kaufWohnungVeraenderung4J": -1.4,
         "kaufHausAvg": 2922, "kaufHausVeraenderung": 1.8,
         "mieteWohnungAvg": 8.93, "mieteHausAvg": 9.76,
-        "kaufSpanneMin": 731, "kaufSpanneMax": 11428
+        "kaufSpanneMin": 731, "kaufSpanneMax": 11428,
+        "kaufHausVeraenderung4J": -1.9, "kaufAlleAvg": 2673,
+        "kaufWohnungMin": 731, "kaufWohnungMax": 8524,
+        "kaufHausMin": 1696, "kaufHausMax": 11428,
+        "mieteWohnungMin": 6.12, "mieteWohnungMax": 20.65,
+        "mieteHausMin": 6.58, "mieteHausMax": 21.75
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [2459, 2486, 2477, 2416, 2364, 2344, 2350, 2316, 2299, 2332, 2346, 2365, 2391, 2416, 2436, 2423, 2425],
+        "haus": [2977, 3083, 3078, 3008, 2965, 2953, 2923, 2890, 2879, 2879, 2896, 2878, 2870, 2921, 2914, 2880, 2922]
       },
       "fakten": [
         "Rund 4,1 Millionen Einwohner, geprägt von ländlichen Regionen sowie Ballungsräumen um Mainz und Ludwigshafen.",
@@ -456,7 +566,17 @@
         "kaufWohnungAvg": 1893, "kaufWohnungVeraenderung": 4.9, "kaufWohnungVeraenderung4J": 4.9,
         "kaufHausAvg": 2657, "kaufHausVeraenderung": 6.5,
         "mieteWohnungAvg": 8.14, "mieteHausAvg": 9.13,
-        "kaufSpanneMin": 1040, "kaufSpanneMax": 6125
+        "kaufSpanneMin": 1040, "kaufSpanneMax": 6125,
+        "kaufHausVeraenderung4J": 5.1, "kaufAlleAvg": 2275,
+        "kaufWohnungMin": 1040, "kaufWohnungMax": 5456,
+        "kaufHausMin": 1855, "kaufHausMax": 6125,
+        "mieteWohnungMin": 6.61, "mieteWohnungMax": 16.2,
+        "mieteHausMin": 7.56, "mieteHausMax": 13.51
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [1804, 1790, 1796, 1798, 1794, 1789, 1841, 1825, 1794, 1790, 1813, 1857, 1805, 1824, 1864, 1899, 1893],
+        "haus": [2528, 2585, 2633, 2601, 2464, 2466, 2498, 2426, 2458, 2450, 2497, 2452, 2495, 2533, 2562, 2543, 2657]
       },
       "_hinweis": "ImmoScout24-Tabelle listet fuer Saarland nur 3 Kreise - vollstaendige Quelltabelle, keine Extraktionsluecke.",
       "fakten": [
@@ -480,7 +600,17 @@
         "kaufWohnungAvg": 1528, "kaufWohnungVeraenderung": 1.5, "kaufWohnungVeraenderung4J": -4.1,
         "kaufHausAvg": 2574, "kaufHausVeraenderung": 3.7,
         "mieteWohnungAvg": 6.85, "mieteHausAvg": 10.06,
-        "kaufSpanneMin": 436, "kaufSpanneMax": 8061
+        "kaufSpanneMin": 436, "kaufSpanneMax": 8061,
+        "kaufHausVeraenderung4J": 6.2, "kaufAlleAvg": 2051,
+        "kaufWohnungMin": 436, "kaufWohnungMax": 7454,
+        "kaufHausMin": 1528, "kaufHausMax": 8061,
+        "mieteWohnungMin": 4.69, "mieteWohnungMax": 17.75,
+        "mieteHausMin": 5.36, "mieteHausMax": 21.43
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [1593, 1596, 1577, 1542, 1517, 1495, 1490, 1483, 1467, 1473, 1469, 1481, 1505, 1528, 1529, 1528, 1528],
+        "haus": [2423, 2458, 2515, 2559, 2411, 2356, 2411, 2455, 2444, 2454, 2457, 2466, 2482, 2576, 2627, 2559, 2574]
       },
       "fakten": [
         "Sachsen hat rund 4 Millionen Einwohner und zählt zu den bevölkerungsreichsten ostdeutschen Bundesländern.",
@@ -509,7 +639,17 @@
         "kaufWohnungAvg": 1345, "kaufWohnungVeraenderung": 0.6, "kaufWohnungVeraenderung4J": -0.3,
         "kaufHausAvg": 2156, "kaufHausVeraenderung": -1.0,
         "mieteWohnungAvg": 6.58, "mieteHausAvg": 8.48,
-        "kaufSpanneMin": 333, "kaufSpanneMax": 7905
+        "kaufSpanneMin": 333, "kaufSpanneMax": 7905,
+        "kaufHausVeraenderung4J": 1, "kaufAlleAvg": 1750,
+        "kaufWohnungMin": 333, "kaufWohnungMax": 7905,
+        "kaufHausMin": 1281, "kaufHausMax": 6015,
+        "mieteWohnungMin": 4.51, "mieteWohnungMax": 15.05,
+        "mieteHausMin": 6.5, "mieteHausMax": 16.37
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [1349, 1419, 1411, 1382, 1376, 1371, 1382, 1316, 1339, 1381, 1367, 1347, 1336, 1319, 1347, 1340, 1345],
+        "haus": [2134, 2223, 2236, 2183, 2133, 2119, 2117, 2098, 2121, 2136, 2152, 2158, 2177, 2192, 2188, 2175, 2156]
       },
       "fakten": [
         "Sachsen-Anhalt hat rund 2,1 Millionen Einwohner und zählt zu den bevölkerungsärmsten Flächenländern Deutschlands.",
@@ -536,7 +676,17 @@
         "kaufWohnungAvg": 2965, "kaufWohnungVeraenderung": 3.2, "kaufWohnungVeraenderung4J": -6.9,
         "kaufHausAvg": 3267, "kaufHausVeraenderung": 3.4,
         "mieteWohnungAvg": 10.25, "mieteHausAvg": 11.47,
-        "kaufSpanneMin": 558, "kaufSpanneMax": 21158
+        "kaufSpanneMin": 558, "kaufSpanneMax": 21158,
+        "kaufHausVeraenderung4J": -8.4, "kaufAlleAvg": 3116,
+        "kaufWohnungMin": 558, "kaufWohnungMax": 17995,
+        "kaufHausMin": 1991, "kaufHausMax": 21158,
+        "mieteWohnungMin": 7.02, "mieteWohnungMax": 37.14,
+        "mieteHausMin": 7.84, "mieteHausMax": 30.14
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [3185, 3269, 3219, 3077, 2943, 2896, 2889, 2844, 2811, 2836, 2850, 2857, 2874, 2867, 2910, 2924, 2965],
+        "haus": [3565, 3539, 3486, 3343, 3261, 3218, 3141, 3129, 3288, 3288, 3147, 3124, 3160, 3169, 3170, 3196, 3267]
       },
       "fakten": [
         "Schleswig-Holstein liegt zwischen Nord- und Ostsee und hat rund 2,9 Millionen Einwohner.",
@@ -565,7 +715,17 @@
         "kaufWohnungAvg": 1455, "kaufWohnungVeraenderung": 1.6, "kaufWohnungVeraenderung4J": 0.1,
         "kaufHausAvg": 2149, "kaufHausVeraenderung": 3.4,
         "mieteWohnungAvg": 6.89, "mieteHausAvg": 8.51,
-        "kaufSpanneMin": 407, "kaufSpanneMax": 7993
+        "kaufSpanneMin": 407, "kaufSpanneMax": 7993,
+        "kaufHausVeraenderung4J": 4.3, "kaufAlleAvg": 1802,
+        "kaufWohnungMin": 407, "kaufWohnungMax": 6459,
+        "kaufHausMin": 1213, "kaufHausMax": 7993,
+        "mieteWohnungMin": 5.18, "mieteWohnungMax": 17.09,
+        "mieteHausMin": 6.05, "mieteHausMax": 17.84
+      },
+      "verlauf": {
+        "basis": "Q2 2022", "ende": "Q2 2026", "einheit": "€/m² Kaufpreis, Quartalswerte",
+        "wohnung": [1454, 1497, 1494, 1467, 1423, 1395, 1388, 1393, 1421, 1439, 1426, 1422, 1433, 1432, 1465, 1426, 1455],
+        "haus": [2062, 2130, 2186, 2144, 2157, 2122, 2070, 2093, 2089, 2126, 2102, 2090, 2079, 2149, 2112, 2087, 2149]
       },
       "fakten": [
         "Thüringen liegt in der Mitte Deutschlands und hat rund 2,1 Millionen Einwohner.",

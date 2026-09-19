@@ -27,6 +27,9 @@ export const ZUZAHLUNG_GELB_QUOTE = 0.2;
 export const TOLERANZ_PROZENT = 5;
 // Ein noetiger Nachlass ueber 15 % ist am Markt praktisch nicht verhandelbar.
 export const NACHLASS_UNREALISTISCH_PROZENT = 15;
+// Wertannahme des Nutzers liegt mehr als 2 Prozentpunkte p. a. ueber dem, was
+// das Land in den letzten vier Jahren tatsaechlich gemacht hat = "optimistisch".
+export const ANNAHME_OPTIMISTISCH_PP = 2;
 
 // ── Ebene 1: Ampel (5.1) ────────────────────────────────────────────────────
 // Regelbasiert, ohne DSCR und ohne Score (Entscheidung E3). Die Hard-Stops
@@ -126,7 +129,7 @@ export function briefingVergleiche(d, R, opt = {}) {
       ebene: ref.ebene,
       ebeneName: ref.name,
       ...(cashflowNegativ && abw < -TOLERANZ_PROZENT
-        ? { status: "neutral", key: "brfStatusImRahmen" }
+        ? { status: "neutral", key: "brfStatusUnterMarkt" }
         : vergleichStatus(
             abw,
             { status: "rot", key: "brfStatusUeberMarkt" },
@@ -154,6 +157,8 @@ export function briefingVergleiche(d, R, opt = {}) {
       markt: ref.mieteWohnung,
       einheit: "eurQm",
       abw,
+      ebene: ref.ebene,
+      ebeneName: ref.name,
       ...status,
       ...(status?.status === "orange"
         ? {
@@ -384,6 +389,132 @@ export function energieKlasse(kennwert) {
   return GEG_SKALA.find((s) => v < s.bis)?.klasse ?? "H";
 }
 
+// ── Empfehlung ("Investieren?") ─────────────────────────────────────────────
+// Regelbasiert wie die Ampel, aber mit dem Preis im Blick: die Ampel sagt nur,
+// ob es sich TRAEGT. "Investieren" braucht zusaetzlich einen Preis, der nicht
+// ueber dem Markt liegt. Der Ausblick (Preisverlauf, Energie) aendert das Wort
+// bewusst NICHT - er erscheint als Hinweis, nicht als Scheingenauigkeit.
+
+// Marktpreis fuer die eigene Flaeche aus dem Kreis-/Landesrichtwert.
+export function briefingMarktpreis(d, ref) {
+  const flaeche = +d.flaeche || 0;
+  if (!(flaeche > 0) || !(ref?.kaufWohnung > 0)) return null;
+  return Math.round((flaeche * ref.kaufWohnung) / 500) * 500;
+}
+
+// Kombiweg: Miete auf das in drei Jahren Erreichbare (Kappungsgrenze) anheben
+// UND den Preis so weit senken, dass es sich traegt. Nur sinnvoll, wenn V2
+// ein Mietpotenzial zeigt.
+export function briefingKombiweg(d, t, R, v2) {
+  if (R.cf2MitSt >= 0) return null;
+  if (!(v2?.erreichbarQm > 0)) return null;
+  const flaeche = +d.flaeche || 0;
+  const kaufpreis = +d.kaufpreis || 0;
+  if (!(flaeche > 0) || !(kaufpreis > 0)) return null;
+  const miete = Math.round((v2.erreichbarQm * flaeche) / 5) * 5;
+  if (miete <= (+d.kaltmiete || 0)) return null;
+  const ziel = loeseFuerCashflowNull({ ...d, kaltmiete: String(miete) }, t, "kaufpreis");
+  if (ziel == null) return null;
+  return {
+    miete,
+    proQm: v2.erreichbarQm,
+    kaufpreis: ziel,
+    nachlassProzent: Math.max(0, (1 - ziel / kaufpreis) * 100),
+  };
+}
+
+export function briefingEmpfehlung(d, R, { ampel, vergleiche, tragfaehigkeit, kombiweg, marktpreis }) {
+  const kaufpreis = +d.kaufpreis || 0;
+  if (ampel.key === "brfAmpelHartStop") return { wort: "nicht", ziel: null };
+
+  if (R.cf2MitSt >= 0) {
+    const v1 = vergleiche.find((v) => v.id === "v1");
+    if (v1 && v1.abw > TOLERANZ_PROZENT && marktpreis > 0 && marktpreis < kaufpreis) {
+      return {
+        wort: "verhandeln",
+        ziel: {
+          art: "markt",
+          kaufpreis: marktpreis,
+          nachlassProzent: (1 - marktpreis / kaufpreis) * 100,
+        },
+      };
+    }
+    return { wort: "investieren", ziel: null };
+  }
+
+  const kp = tragfaehigkeit?.wege.find((w) => w.key === "kaufpreis");
+  if (kp && kp.nachlassProzent <= NACHLASS_UNREALISTISCH_PROZENT) {
+    return {
+      wort: "verhandeln",
+      ziel: { art: "kaufpreis", kaufpreis: kp.wert, nachlassProzent: kp.nachlassProzent },
+    };
+  }
+  if (kombiweg && kombiweg.nachlassProzent <= NACHLASS_UNREALISTISCH_PROZENT) {
+    return { wort: "verhandeln", ziel: { art: "kombi", ...kombiweg } };
+  }
+  const miete = tragfaehigkeit?.wege.find((w) => w.key === "kaltmiete");
+  if (miete && !miete.flagKey) {
+    return { wort: "verhandeln", ziel: { art: "miete", miete: miete.wert, proQm: miete.proQm } };
+  }
+  return { wort: "nicht", ziel: null };
+}
+
+// ── Ausblick ────────────────────────────────────────────────────────────────
+// Der Verlauf ist der Landes-Kaufpreis Q2 2022..Q2 2026 (17 Quartalswerte, aus
+// den Datenblaettern). Es gibt KEINE Prognose - der Ausblick zeigt nur, was
+// war, und stellt die Wertannahme des Nutzers daneben.
+const VERLAUF_START_QUARTAL = { jahr: 2022, quartal: 2 };
+
+export function quartalLabel(index) {
+  const gesamt = VERLAUF_START_QUARTAL.jahr * 4 + (VERLAUF_START_QUARTAL.quartal - 1) + index;
+  return `Q${(gesamt % 4) + 1} ${Math.floor(gesamt / 4)}`;
+}
+
+export function briefingAusblick({ verlauf, trend4J, wertP, energieklasse } = {}) {
+  const serie =
+    Array.isArray(verlauf?.wohnung) && verlauf.wohnung.length >= 2 ? verlauf.wohnung : null;
+  const seit2022 = serie
+    ? (serie[serie.length - 1] / serie[0] - 1) * 100
+    : typeof trend4J === "number"
+      ? trend4J
+      : null;
+  const schlecht = ["F", "G", "H"].includes(energieklasse) ? energieklasse : null;
+  if (!serie && seit2022 == null && !schlecht) return null;
+
+  // Naeherung (naeherungNach im Verlauf): Anfang und Ende sind echt, die Form
+  // dazwischen stammt vom Nachbarland - also nur die Werte, die an den
+  // Endpunkten haengen (seit Beginn, Prozent p. a.), sind belastbar. Tiefpunkt
+  // und "seit Tief" entfallen.
+  const naeherung = serie && verlauf?.naeherungNach ? verlauf.naeherungNach : null;
+  let tiefIdx = null;
+  let seitTief = null;
+  let proJahr = null;
+  if (serie) {
+    const letzter = serie.length - 1;
+    if (!naeherung) {
+      tiefIdx = serie.indexOf(Math.min(...serie));
+      if (tiefIdx < letzter) seitTief = (serie[letzter] / serie[tiefIdx] - 1) * 100;
+    }
+    proJahr = (Math.pow(serie[letzter] / serie[0], 4 / letzter) - 1) * 100;
+  }
+  const annahme = wertP !== "" && wertP != null && Number.isFinite(+wertP) ? +wertP : null;
+  return {
+    serie,
+    naeherung,
+    von: serie ? quartalLabel(0) : null,
+    bis: serie ? quartalLabel(serie.length - 1) : null,
+    tiefIdx,
+    tiefLabel: tiefIdx != null ? quartalLabel(tiefIdx) : null,
+    seit2022Prozent: seit2022,
+    seitTiefProzent: seitTief,
+    proJahrProzent: proJahr,
+    annahmeProzent: annahme,
+    annahmeOptimistisch:
+      annahme != null && proJahr != null && annahme > proJahr + ANNAHME_OPTIMISTISCH_PP,
+    energieklasseSchlecht: schlecht,
+  };
+}
+
 // ── Gesamt-Briefing ─────────────────────────────────────────────────────────
 // Ein Aufruf fuer die Karte: rechnet R/K einmal und reicht sie an alle Ebenen
 // weiter, statt computeRendite() je Ebene erneut laufen zu lassen.
@@ -391,19 +522,33 @@ export function berechneBriefing(d, t, opt = {}) {
   const R = computeRendite(d, t);
   const K = berechneKennzahlen(d, R);
   const tragfaehigkeit = briefingTragfaehigkeit(d, t, R, opt);
+  const ampel = briefingAmpel(d, R);
+  const vergleiche = briefingVergleiche(d, R, {
+    ...opt,
+    tragfaehigerKaufpreis: tragfaehigkeit?.kaufpreis ?? null,
+  });
+  const energieklasse = energieKlasse(d.sanIstVerbrauch);
+  const marktpreis = briefingMarktpreis(d, opt.ref);
+  const kombiweg = briefingKombiweg(d, t, R, vergleiche.find((v) => v.id === "v2"));
   return {
     R,
     K,
-    ampel: briefingAmpel(d, R),
+    ampel,
     kernzahlen: briefingKernzahlen(d, R, K),
-    vergleiche: briefingVergleiche(d, R, {
-      ...opt,
-      tragfaehigerKaufpreis: tragfaehigkeit?.kaufpreis ?? null,
-    }),
+    vergleiche,
     tragfaehigkeit,
     zeitraum: briefingZeitraum(d, R),
     stresstest: briefingStresstest(d, t),
-    energieklasse: energieKlasse(d.sanIstVerbrauch),
+    energieklasse,
+    marktpreis,
+    kombiweg,
+    empfehlung: briefingEmpfehlung(d, R, { ampel, vergleiche, tragfaehigkeit, kombiweg, marktpreis }),
+    ausblick: briefingAusblick({
+      verlauf: opt.verlauf,
+      trend4J: opt.trend4J,
+      wertP: d.wertP,
+      energieklasse,
+    }),
   };
 }
 
