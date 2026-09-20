@@ -7,6 +7,7 @@ import { rate, vrd } from "../../utils/bands.js";
 import { computeRendite } from "../../utils/rendite.js";
 import { berechneKennzahlen } from "../../utils/kennzahlen.js";
 import { berechneScore } from "../../utils/investmentScore.js";
+import { ekRenditePa } from "../../utils/briefing.js";
 import {
   F,
   Sel,
@@ -1768,9 +1769,14 @@ export default function Haupt() {
               {/* ═══ SECTION 7: Verkaufsszenario & Ergebnis ═══ */}
               {(() => {
                 const ampelHex = R.g >= 0 ? "#22c55e" : "#ef4444";
-                const ekRpa = +d.eigenkapital > 0 ? (R.g / +d.eigenkapital / R.j) * 100 : 0;
-                const ekRpaOhne =
-                  +d.eigenkapital > 0 ? ((R.gOhne || 0) / +d.eigenkapital / R.j) * 100 : 0;
+                // Formel seit dem Objektseiten-Umbau nur noch in briefing.js
+                // (objektseite-neu.md §6.1): Block 3 der Objektseite und
+                // diese Zeile zeigen dieselbe Zahl, also darf es auch nur
+                // eine Formel geben. ekRenditePa() liefert null ohne
+                // Eigenkapital - hier bleibt die bisherige 0, weil die
+                // Anzeige darunter mit einer Zahl rechnet.
+                const ekRpa = ekRenditePa(R, d) ?? 0;
+                const ekRpaOhne = ekRenditePa({ ...R, g: R.gOhne || 0 }, d) ?? 0;
                 const ekRCol = rate("ekRendite", ekRpa).color;
                 const sec7Sub = t.sec7Sub.replace(/\{j\}/g, String(R.j));
                 return (

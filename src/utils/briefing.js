@@ -31,6 +31,41 @@ export const NACHLASS_UNREALISTISCH_PROZENT = 15;
 // das Land in den letzten vier Jahren tatsaechlich gemacht hat = "optimistisch".
 export const ANNAHME_OPTIMISTISCH_PP = 2;
 
+// ── Schwellen der Objektseite (objektseite-neu.md §6.3, §6.5, §13) ──────────
+// Alles hier ist Fachurteil und ausdruecklich nachjustierbar, OHNE dass sich
+// die Struktur der Seite aendert. Herkunft sauber getrennt:
+//   - aus hardStops() in investmentScore.js uebernommen, damit Score und Seite
+//     dieselbe Grenze ziehen: Tilgung 0 %, Beleihung > 100 %, Cashflow < -800 €
+//   - aus dieser Datei: Miete ueber ortsueblich nutzt TOLERANZ_PROZENT
+//   - neu und unkalibriert: Faktor-Aufschlag und Restschuldquote
+
+// Referenzsaetze fuer den Alternativanlagen-Vergleich. KEINE Prognose und kein
+// Live-Kurs (Entscheidung E2) - historische Nominalwerte vor Steuer, die in
+// der Anzeige als Annahme auszuweisen sind.
+export const ALTERNATIV_ANLAGEN = [
+  { key: "tagesgeld", prozent: 3.0 },
+  { key: "staatsanleihe", prozent: 3.5 },
+  { key: "etf", prozent: 7.0 },
+];
+
+// Mindest-Instandhaltung je m2 und Monat nach Baujahr (nicht umlagefaehig).
+// Fachurteil, nicht kalibriert. Ohne Baujahr entfaellt die Flagge, statt eine
+// Schwelle zu raten.
+export const RUECKLAGE_MINDEST = [
+  { bisBaujahr: 1969, euroQmMonat: 1.1 },
+  { bisBaujahr: 1989, euroQmMonat: 0.9 },
+  { bisBaujahr: 2009, euroQmMonat: 0.7 },
+  { bisBaujahr: 9999, euroQmMonat: 0.5 },
+];
+
+// Ab diesem Aufschlag auf den Kreisfaktor ist der Kaufpreisfaktor eine rote
+// Flagge - nicht nur "ueber Markt" (das faengt TOLERANZ_PROZENT ab).
+export const FAKTOR_FLAGGE_PROZENT = 20;
+// Restschuld am Ende der Zinsbindung, gemessen am Gesamtkaufpreis.
+export const RESTSCHULD_FLAGGE_QUOTE = 60;
+// Deckt sich mit dem hardStopCf-Schwellenwert in investmentScore.js.
+export const CASHFLOW_FLAGGE_EUR = -800;
+
 // ── Ebene 1: Ampel (5.1) ────────────────────────────────────────────────────
 // Regelbasiert, ohne DSCR und ohne Score (Entscheidung E3). Die Hard-Stops
 // werden bewusst NICHT aus investmentScore.js importiert, sondern hier ueber
@@ -75,6 +110,80 @@ export function briefingKernzahlen(d, R, K) {
       ohnePuffer: !(puffer > 0),
     },
   ];
+}
+
+// ── Block 3: Kernkennzahlen (objektseite-neu.md §6.1) ───────────────────────
+// Die fuenf Zahlen, die oben auf der Objektseite stehen. Bewusst KEINE eigenen
+// Formeln: jede Zahl ist ein vorhandener Wert aus computeRendite() bzw.
+// berechneKennzahlen(), damit die Kachel nicht von der Detailebene abweichen
+// kann.
+
+// Eigenkapitalrendite p. a. nach Steuer. Stand bis zur Objektseiten-Spec nur
+// im Renditerechner (Renditerechner.jsx) - sie wandert hierher, weil Block 3
+// und der Rechner sonst zwei Formeln fuer dieselbe Zahl haetten.
+// Ohne Eigenkapital gibt es keine Eigenkapitalrendite: null statt "unendlich".
+export function ekRenditePa(R, d) {
+  const ek = +d.eigenkapital || 0;
+  if (!(ek > 0) || !(R.j > 0)) return null;
+  return (R.g / ek / R.j) * 100;
+}
+
+// Reihenfolge wie objektseite-neu.md §16. Die Gruppierung 3 + 2 aus §21 D1 ist
+// reine Anzeige und passiert in der Komponente - dieselbe Trennung wie bei der
+// Sensitivitaet (§24.4) und beim Stresstest.
+export function briefingKernkennzahlen(d, t, R, K, opt = {}) {
+  const flaeche = +d.flaeche || 0;
+  const kaltmiete = +d.kaltmiete || 0;
+  const eintraege = [];
+
+  const faktorBenchmark = opt.faktorBenchmark ?? null;
+  if (R.kpF > 0 && isFinite(R.kpF)) {
+    eintraege.push({
+      key: "faktor",
+      wert: R.kpF,
+      einheit: "faktor",
+      // Der Kreisvergleich ist nur ein Zusatz an dieser Kachel. Ohne PLZ
+      // (also ohne ref) steht die Zahl allein - sie ist auch ohne Markt
+      // aussagekraeftig, anders als die Vergleichskacheln in Block 4.
+      markt: faktorBenchmark?.markt ?? null,
+      ebeneName: faktorBenchmark?.ebeneName ?? null,
+      ueberMarkt: faktorBenchmark ? faktorBenchmark.abw > TOLERANZ_PROZENT : false,
+    });
+  }
+
+  if (K.anfangsrendite != null) {
+    eintraege.push({ key: "nettorendite", wert: K.anfangsrendite, einheit: "prozent" });
+  }
+
+  eintraege.push({
+    key: "cashflow",
+    wert: R.cf2MitSt,
+    einheit: "eurMonat",
+    art: R.cf2MitSt < 0 ? "zuzahlung" : "ueberschuss",
+  });
+
+  const ekR = ekRenditePa(R, d);
+  if (ekR != null) {
+    eintraege.push({ key: "ekRendite", wert: ekR, einheit: "prozent" });
+  }
+
+  // Break-even bewusst ueber loeseFuerCashflowNull() und nicht ueber
+  // K.breakEvenMiete: letzteres rechnet VOR Steuer, der Rest der Seite nach
+  // Steuer (gleiche Begruendung wie bei briefingTragfaehigkeit unten).
+  const breakEven = flaeche > 0 || kaltmiete > 0 ? loeseFuerCashflowNull(d, t, "kaltmiete") : null;
+  if (breakEven != null) {
+    eintraege.push({
+      key: "breakEvenMiete",
+      wert: breakEven,
+      einheit: "eurMonat",
+      heute: kaltmiete > 0 ? kaltmiete : null,
+      // Puffer nach unten in Prozent der heutigen Miete - nur sinnvoll, wenn
+      // das Objekt sich ueberhaupt traegt.
+      pufferProzent: kaltmiete > 0 && breakEven < kaltmiete ? (1 - breakEven / kaltmiete) * 100 : null,
+    });
+  }
+
+  return eintraege;
 }
 
 // ── Ebene 3: Vergleiche (5.3) ───────────────────────────────────────────────
@@ -243,6 +352,52 @@ export function briefingVergleiche(d, R, opt = {}) {
   return kacheln;
 }
 
+// ── Block 4a: Faktor-Benchmark (objektseite-neu.md §6.2) ────────────────────
+// Beantwortet "Kaufpreisfaktor 35x - ueber oder unter Schnitt?" ohne neue
+// Daten: der Kreisfaktor steckt bereits im ref-Objekt aus regionalpreis.js.
+// Bewusst dieselbe Statusfunktion wie V1-V3, damit die Farblogik nicht ein
+// zweites Mal erfunden wird.
+export function briefingFaktorBenchmark(d, R, ref) {
+  if (!(ref?.kaufWohnung > 0) || !(ref?.mieteWohnung > 0)) return null;
+  const eigen = R.kpF;
+  if (!(eigen > 0) || !isFinite(eigen)) return null;
+  const markt = ref.kaufWohnung / (ref.mieteWohnung * 12);
+  const abw = abweichung(eigen, markt);
+  return {
+    eigen,
+    markt,
+    abw,
+    ebene: ref.ebene,
+    ebeneName: ref.name,
+    // Hoher Faktor = teuer eingekauft, also aus Kaeufersicht schlecht -
+    // gleiche Richtung wie V1 (Kaufpreis/m2), gegenlaeufig zu V3 (Rendite).
+    ...vergleichStatus(
+      abw,
+      { status: "rot", key: "brfStatusUeberMarkt" },
+      { status: "gruen", key: "brfStatusUnterMarkt" },
+    ),
+  };
+}
+
+// ── Block 4b: Alternativanlage (objektseite-neu.md §6.3) ────────────────────
+// Verglichen wird die EIGENKAPITALRENDITE, nicht die Mietrendite: nur sie
+// misst, was das eingesetzte Kapital erwirtschaftet, und ist damit gegen eine
+// Kapitalanlage stellbar. Mietrendite gegen ETF waere ein Aepfel-Birnen-
+// Vergleich.
+//
+// Die drei Hinweise sind Pflicht und stehen in der Anzeige SICHTBAR (§16),
+// nicht in einem Tooltip: ohne sie ist der Vergleich unredlich. Sie werden
+// hier als Schluessel geliefert, der Text steht in translations.js.
+export function briefingAlternativanlage(R, d) {
+  const eigen = ekRenditePa(R, d);
+  if (eigen == null) return null;
+  return {
+    eigen,
+    referenzen: ALTERNATIV_ANLAGEN.map((a) => ({ ...a, geschlagen: eigen >= a.prozent })),
+    hinweisKeys: ["brfAltHinweisAnnahme", "brfAltHinweisHebel", "brfAltHinweisLiquiditaet"],
+  };
+}
+
 // ── Ebene 5: Tragfaehigkeit (5.4) ───────────────────────────────────────────
 // Nur bei negativem Cashflow sinnvoll - bei positivem gibt es nichts
 // "tragfaehig zu machen". K.breakEvenMiete wird bewusst NICHT verwendet: es
@@ -345,13 +500,27 @@ export function briefingZeitraum(d, R) {
 // Der Zinsaufschlag greift erst ab Zinsbindungsende - das gehoert in die
 // Anzeige, sonst wirkt der Effekt zu klein.
 export const STRESS_PARAMETER = {
+  // "best" gespiegeltes "negativ", beim Zins halbiert (objektseite-neu.md
+  // §6.4) - ein Zinsrueckgang um einen vollen Punkt bis zum Anschluss waere
+  // keine serioese Basisannahme.
+  best: { miete: 5, leerstand: 0, kosten: -5, zins: -0.5 },
   negativ: { miete: -5, leerstand: 3, kosten: 10, zins: 1 },
   stress: { miete: -10, leerstand: 8, kosten: 20, zins: 2 },
 };
 
+// Reihenfolge best · basis · negativ · stress wie objektseite-neu.md §6.4. Die
+// Anzeige dreht sie auf Stress · Negativ · Basis · Best (§21 D2) - gleiche
+// Trennung wie bei der Sensitivitaet (§24.4): die Engine liefert die
+// fachliche Reihenfolge, die Komponente die visuelle.
 export function briefingStresstest(d, t) {
-  const { basis, negativ, stress } = berechneSzenarien(d, t);
+  const { best, basis, negativ, stress } = berechneSzenarien(d, t);
   return [
+    {
+      key: "best",
+      cashflow: best.R.cf2MitSt,
+      vermoegen: best.R.g,
+      parameter: STRESS_PARAMETER.best,
+    },
     { key: "basis", cashflow: basis.R.cf2MitSt, vermoegen: basis.R.g, parameter: null },
     {
       key: "negativ",
@@ -366,6 +535,93 @@ export function briefingStresstest(d, t) {
       parameter: STRESS_PARAMETER.stress,
     },
   ];
+}
+
+// ── Block 5 unten: Sensitivitaet (objektseite-neu.md §6.6) ──────────────────
+// Der Stresstest sagt "alles zusammen", die Sensitivitaet sagt "woran es
+// liegt": je Zeile bewegt sich GENAU EIN Parameter, alles andere bleibt Basis.
+//
+// Bewusst NICHT ueber szenario() aus investmentScore.js (Entscheidung K1 zur
+// Umsetzung): das ist modul-privat, kennt `sonder` fuer den Sanierungsstau
+// nicht und nimmt Leerstand als Anteil der Analysemonate - §6.6 verlangt aber
+// Monate. Der Helfer hier setzt Felder direkt und laesst die kalibrierte
+// Score-Engine unberuehrt.
+function variante(d, t, overrides) {
+  const R = computeRendite({ ...d, ...overrides }, t);
+  return { cashflow: R.cf2MitSt, saldo: R.g };
+}
+
+export const SENSITIVITAET_STUFEN = {
+  zins: { mild: 1, hart: 2 },
+  leerstand: { mild: 3, hart: 6 },
+  mietausfall: { mild: -5, hart: -10 },
+  sanierungsstau: { mild: 300, hart: 600 },
+};
+
+export function briefingSensitivitaet(d, t) {
+  const R0 = computeRendite(d, t);
+  const basis = { cashflow: R0.cf2MitSt, saldo: R0.g };
+  const zinssatz = +d.zinssatz || 0;
+  const leerstand = +d.leerstand || 0;
+  const kaltmiete = +d.kaltmiete || 0;
+  const flaeche = +d.flaeche || 0;
+  const sonder = +d.sonder || 0;
+
+  const zeile = (key, feldMild, feldHart) => {
+    const mild = variante(d, t, feldMild);
+    const hart = variante(d, t, feldHart);
+    const mitDelta = (v) => ({
+      ...v,
+      deltaCashflow: v.cashflow - basis.cashflow,
+      deltaSaldo: v.saldo - basis.saldo,
+    });
+    return { key, stufen: SENSITIVITAET_STUFEN[key], mild: mitDelta(mild), hart: mitDelta(hart) };
+  };
+
+  const zeilen = [];
+
+  // Zinsanstieg wirkt erst ab Zinsbindungsende - dasselbe Feld, das auch die
+  // Stresstest-Szenarien setzen.
+  zeilen.push(
+    zeile(
+      "zins",
+      { anschlussZins: String(zinssatz + SENSITIVITAET_STUFEN.zins.mild) },
+      { anschlussZins: String(zinssatz + SENSITIVITAET_STUFEN.zins.hart) },
+    ),
+  );
+
+  // Leerstand in MONATEN ueber die gesamte Haltedauer, nicht in Prozent.
+  zeilen.push(
+    zeile(
+      "leerstand",
+      { leerstand: String(leerstand + SENSITIVITAET_STUFEN.leerstand.mild) },
+      { leerstand: String(leerstand + SENSITIVITAET_STUFEN.leerstand.hart) },
+    ),
+  );
+
+  if (kaltmiete > 0) {
+    zeilen.push(
+      zeile(
+        "mietausfall",
+        { kaltmiete: String(kaltmiete * 0.95) },
+        { kaltmiete: String(kaltmiete * 0.9) },
+      ),
+    );
+  }
+
+  // Sanierungsstau als EINMALIGER Betrag auf die Sonderumlage - je m2, damit
+  // die Zahl mit der Objektgroesse skaliert. Ohne Flaeche keine Zeile.
+  if (flaeche > 0) {
+    zeilen.push(
+      zeile(
+        "sanierungsstau",
+        { sonder: String(sonder + SENSITIVITAET_STUFEN.sanierungsstau.mild * flaeche) },
+        { sonder: String(sonder + SENSITIVITAET_STUFEN.sanierungsstau.hart * flaeche) },
+      ),
+    );
+  }
+
+  return { basis, zeilen };
 }
 
 // ── Energie-Einordnung (5.8) ────────────────────────────────────────────────
@@ -387,6 +643,117 @@ export function energieKlasse(kennwert) {
   const v = +kennwert;
   if (!(v > 0)) return null;
   return GEG_SKALA.find((s) => v < s.bis)?.klasse ?? "H";
+}
+
+// ── Block 6: Rote Flaggen (objektseite-neu.md §6.5) ─────────────────────────
+// Bis zur Objektseiten-Spec lagen Warnungen als `flagKey` verstreut in
+// einzelnen Vergleichskacheln. Sie stehen jetzt ausschliesslich hier, und
+// zwar MIT Schwelle: eine Warnung ohne ihre Regel ist genau das
+// Vertrauensproblem, das die Seite loesen soll (§3).
+//
+// Die Reihenfolge der Pruefungen ist zugleich die Anzeigereihenfolge: erst
+// alle roten, dann alle orangen (§21 D4).
+//
+// `_t` wird nicht gebraucht - keine Regel rechnet neu, alle lesen R/K. Der
+// Parameter bleibt trotzdem an der in §6.5 festgelegten Position stehen,
+// damit der Aufruf zu den uebrigen briefing*-Funktionen passt.
+export function briefingFlaggen(d, _t, R, K, opt = {}) {
+  const { faktorBenchmark = null, ref = null, energieklasse = null } = opt;
+  const flaeche = +d.flaeche || 0;
+  const kaltmiete = +d.kaltmiete || 0;
+  const baujahr = +d.baujahr || 0;
+  const nichtUml = +d.nichtUml || 0;
+  const jahre = +d.jahre || 10;
+  const zinsbindung = +d.zinsbindung || 0;
+  const flaggen = [];
+
+  // ── rot ──
+  if ((+d.tilgung || 0) === 0 && R.bankDa > 0) {
+    flaggen.push({ key: "flgTilgungNull", stufe: "rot", wert: 0, schwelle: 0 });
+  }
+  if (R.bel > 100) {
+    flaggen.push({ key: "flgBeleihung", stufe: "rot", wert: R.bel, schwelle: 100 });
+  }
+  if (R.cf2MitSt < CASHFLOW_FLAGGE_EUR) {
+    flaggen.push({
+      key: "flgCashflowTief",
+      stufe: "rot",
+      wert: R.cf2MitSt,
+      schwelle: CASHFLOW_FLAGGE_EUR,
+    });
+  }
+  if (faktorBenchmark && faktorBenchmark.abw > FAKTOR_FLAGGE_PROZENT) {
+    flaggen.push({
+      key: "flgFaktorUeberMarkt",
+      stufe: "rot",
+      wert: faktorBenchmark.eigen,
+      markt: faktorBenchmark.markt,
+      abw: faktorBenchmark.abw,
+      schwelle: FAKTOR_FLAGGE_PROZENT,
+      ebeneName: faktorBenchmark.ebeneName,
+    });
+  }
+  // breakEvenLeerstand <= 0 heisst: traegt sich schon voll vermietet nicht.
+  if (K.breakEvenLeerstand != null && K.breakEvenLeerstand <= 0) {
+    flaggen.push({ key: "flgKeinPuffer", stufe: "rot", wert: K.breakEvenLeerstand, schwelle: 0 });
+  }
+
+  // ── orange ──
+  // Anschlussrisiko nur, wenn die Zinsbindung VOR dem Betrachtungsende laeuft
+  // und dann noch viel Restschuld offen ist. restschuldZBQuote ist null, wenn
+  // die Zinsbindung ausserhalb des Zeitraums liegt - dann gibt es die Frage
+  // nicht.
+  if (
+    zinsbindung > 0 &&
+    zinsbindung < jahre &&
+    K.restschuldZBQuote != null &&
+    K.restschuldZBQuote > RESTSCHULD_FLAGGE_QUOTE
+  ) {
+    flaggen.push({
+      key: "flgAnschlussrisiko",
+      stufe: "orange",
+      wert: K.restschuldZBQuote,
+      schwelle: RESTSCHULD_FLAGGE_QUOTE,
+      zinsbindung,
+      restschuld: K.restschuldZB,
+    });
+  }
+  // Ohne Baujahr KEINE Flagge - lieber keine Aussage als eine geratene
+  // Schwelle (§6.5).
+  if (baujahr > 0 && flaeche > 0) {
+    const mindest = RUECKLAGE_MINDEST.find((s) => baujahr <= s.bisBaujahr)?.euroQmMonat ?? null;
+    const istQm = nichtUml / flaeche;
+    if (mindest != null && istQm < mindest) {
+      flaggen.push({
+        key: "flgRuecklageNiedrig",
+        stufe: "orange",
+        wert: istQm,
+        schwelle: mindest,
+        baujahr,
+      });
+    }
+  }
+  // Gleiche Grenze wie Vergleichskachel V2, damit nicht zwei Stellen
+  // unterschiedlich definieren, was "ueber Markt" heisst.
+  if (ref?.mieteWohnung > 0 && flaeche > 0 && kaltmiete > 0) {
+    const eigenQm = kaltmiete / flaeche;
+    const grenze = ref.mieteWohnung * (1 + TOLERANZ_PROZENT / 100);
+    if (eigenQm > grenze) {
+      flaggen.push({
+        key: "flgMieteUeberMarkt",
+        stufe: "orange",
+        wert: eigenQm,
+        schwelle: grenze,
+        markt: ref.mieteWohnung,
+        ebeneName: ref.name,
+      });
+    }
+  }
+  if (["F", "G", "H"].includes(energieklasse)) {
+    flaggen.push({ key: "flgEnergie", stufe: "orange", wert: energieklasse, schwelle: "E" });
+  }
+
+  return flaggen;
 }
 
 // ── Empfehlung ("Investieren?") ─────────────────────────────────────────────
@@ -457,6 +824,78 @@ export function briefingEmpfehlung(d, R, { ampel, vergleiche, tragfaehigkeit, ko
     return { wort: "verhandeln", ziel: { art: "miete", miete: miete.wert, proQm: miete.proQm } };
   }
   return { wort: "nicht", ziel: null };
+}
+
+// ── Block 2 und 7: Regel-Begruendung (objektseite-neu.md §6.7) ──────────────
+// Warum steht die Ampel so, und warum dieses Empfehlungswort? Regelbasiert,
+// damit Block 7 auch OHNE KI-Aufruf nie leer ist und der Nutzer die Logik
+// gegenpruefen kann, statt ihr zu vertrauen (§3).
+//
+// Rueckgabe sind Schluessel plus Zahlen, keine fertigen Saetze - die Texte
+// stehen in translations.js. Der KI-Urteilssatz ERSETZT den Ampelsatz in
+// Block 2, sobald ein Ergebnis vorliegt; in Block 7 stehen dann beide (§22).
+const BEGR_VERHANDELN_KEY = {
+  markt: "brfBegrVerhandelnMarkt",
+  kaufpreis: "brfBegrVerhandelnKaufpreis",
+  kombi: "brfBegrVerhandelnKombi",
+  miete: "brfBegrVerhandelnMiete",
+};
+
+export function briefingBegruendung(d, R, { ampel, empfehlung } = {}) {
+  const kaltmiete = +d.kaltmiete || 0;
+  const zuzahlungsgrenze = kaltmiete * ZUZAHLUNG_GELB_QUOTE;
+
+  let ampelTeil;
+  if (ampel?.key === "brfAmpelHartStop") {
+    // Zwei verschiedene Hard-Stops, zwei verschiedene Saetze - "Hard-Stop"
+    // allein sagt dem Nutzer nichts.
+    ampelTeil =
+      (+d.tilgung || 0) === 0 && R.bankDa > 0
+        ? { key: "brfBegrHartStopTilgung", werte: {} }
+        : { key: "brfBegrHartStopBeleihung", werte: { beleihung: R.bel } };
+  } else if (ampel?.key === "brfAmpelTraegtSich") {
+    ampelTeil = { key: "brfBegrTraegtSich", werte: { ueberschuss: R.cf2MitSt } };
+  } else if (ampel?.key === "brfAmpelMitZuzahlung") {
+    ampelTeil = {
+      key: "brfBegrMitZuzahlung",
+      werte: {
+        zuzahlung: Math.abs(R.cf2MitSt),
+        grenze: zuzahlungsgrenze,
+        quote: ZUZAHLUNG_GELB_QUOTE * 100,
+      },
+    };
+  } else {
+    ampelTeil = {
+      key: "brfBegrTraegtSichNicht",
+      werte: { zuzahlung: Math.abs(R.cf2MitSt), grenze: zuzahlungsgrenze },
+    };
+  }
+
+  let empfehlungTeil = null;
+  if (empfehlung?.wort === "investieren") {
+    empfehlungTeil = { key: "brfBegrInvestieren", werte: { toleranz: TOLERANZ_PROZENT } };
+  } else if (empfehlung?.wort === "verhandeln" && empfehlung.ziel) {
+    const z = empfehlung.ziel;
+    empfehlungTeil = {
+      key: BEGR_VERHANDELN_KEY[z.art] ?? "brfBegrVerhandelnKaufpreis",
+      werte: {
+        kaufpreis: z.kaufpreis ?? null,
+        nachlassProzent: z.nachlassProzent ?? null,
+        miete: z.miete ?? null,
+        proQm: z.proQm ?? null,
+        grenze: NACHLASS_UNREALISTISCH_PROZENT,
+      },
+    };
+  } else if (empfehlung?.wort === "nicht") {
+    // "Nicht" hat zwei Ursachen: harter Ausschluss oder kein Weg unter 15 %
+    // Nachlass. Der Unterschied ist fuer den Nutzer erheblich.
+    empfehlungTeil =
+      ampel?.key === "brfAmpelHartStop"
+        ? { key: "brfBegrNichtHartStop", werte: {} }
+        : { key: "brfBegrNichtUnerreichbar", werte: { grenze: NACHLASS_UNREALISTISCH_PROZENT } };
+  }
+
+  return { ampel: ampelTeil, empfehlung: empfehlungTeil };
 }
 
 // ── Ausblick ────────────────────────────────────────────────────────────────
@@ -530,19 +969,35 @@ export function berechneBriefing(d, t, opt = {}) {
   const energieklasse = energieKlasse(d.sanIstVerbrauch);
   const marktpreis = briefingMarktpreis(d, opt.ref);
   const kombiweg = briefingKombiweg(d, t, R, vergleiche.find((v) => v.id === "v2"));
+  // Der Faktor-Benchmark wird zweimal gebraucht (Kernkennzahl-Zusatz und
+  // Flagge) und deshalb einmal oben gerechnet, nicht je Verbraucher neu.
+  const faktorBenchmark = briefingFaktorBenchmark(d, R, opt.ref);
+  const empfehlung = briefingEmpfehlung(d, R, {
+    ampel,
+    vergleiche,
+    tragfaehigkeit,
+    kombiweg,
+    marktpreis,
+  });
   return {
     R,
     K,
     ampel,
     kernzahlen: briefingKernzahlen(d, R, K),
+    kernkennzahlen: briefingKernkennzahlen(d, t, R, K, { faktorBenchmark }),
+    faktorBenchmark,
+    alternativanlage: briefingAlternativanlage(R, d),
     vergleiche,
     tragfaehigkeit,
     zeitraum: briefingZeitraum(d, R),
     stresstest: briefingStresstest(d, t),
+    sensitivitaet: briefingSensitivitaet(d, t),
+    flaggen: briefingFlaggen(d, t, R, K, { faktorBenchmark, ref: opt.ref, energieklasse }),
     energieklasse,
     marktpreis,
     kombiweg,
-    empfehlung: briefingEmpfehlung(d, R, { ampel, vergleiche, tragfaehigkeit, kombiweg, marktpreis }),
+    empfehlung,
+    begruendung: briefingBegruendung(d, R, { ampel, empfehlung }),
     ausblick: briefingAusblick({
       verlauf: opt.verlauf,
       trend4J: opt.trend4J,
@@ -659,6 +1114,12 @@ export function briefingZahlen(briefing) {
   });
 
   for (const s of briefing.stresstest) {
+    // Der Best-Case (seit objektseite-neu.md §6.4) bleibt AUSSEN VOR: §9 legt
+    // fest, dass diese Spec Prompt und Nutzlast nicht anfasst. Er ist reine
+    // Anzeige in Block 5 und wird vom Modell nicht kommentiert. Ohne diese
+    // Zeile stuende hier "Szenario undefined" im Prompt, weil SZENARIO_LABEL
+    // bewusst nur basis/negativ/stress kennt.
+    if (s.key === "best") continue;
     const p = s.parameter;
     const params = p
       ? ` [Miete ${PROZ(p.miete)}, +${fmt(p.leerstand, 0)} % Leerstand, Kosten ${PROZ(p.kosten)}, Anschlusszins ${PROZ(p.zins)} ab Zinsbindungsende]`

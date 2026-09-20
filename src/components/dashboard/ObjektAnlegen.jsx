@@ -22,7 +22,7 @@
 // schon, "Änderungen speichern" fuehrt zurueck in die Detailansicht statt in
 // den Rechner.
 import { Fragment, useState } from "react";
-import { annahmenFuer, annahmenText } from "../../utils/annahmen.js";
+import { annahmenFuer, annahmenText, HERKUNFT } from "../../utils/annahmen.js";
 import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
 import { BL_O, BL_N } from "../../data.js";
 import { PLZ_DB } from "../../data/plzData.js";
@@ -40,15 +40,26 @@ import {
   knopfStil,
 } from "./ObjektAnlegenWizard.jsx";
 
-// Die sechs Kernfelder - decken genau ab, was istVollstaendig()/der
-// Renditerechner fuer eine erste vollstaendige Berechnung braucht. Alles
-// Weitere (Zins, Tilgung, AfA, ...) liefert annahmenFuer() als sinnvollen
-// Startwert, editierbar im Renditerechner. `maxBreite` deckelt die
-// Feldbreite nach dem erwarteten Inhalt - ein 690 px breites Feld fuer "60"
-// (Quadratmeter) verspricht etwas anderes, als es meint. Der Name bleibt
-// ungedeckelt, dort sind lange Adressen normal.
+// Vier Pflichtfelder: Kaufpreis, Wohnflaeche, Kaltmiete, PLZ (letztere kommt
+// aus PlzOrtFelder und wird unten in `fehlt` geprueft). Entscheidung E4 der
+// Objektseiten-Spec (objektseite-neu.md §7.1). Alles Weitere - Zins, Tilgung,
+// AfA, Eigenkapital, ... - liefert annahmenFuer() als sinnvollen Startwert,
+// sichtbar markiert und einzeln ueberschreibbar im Annahmen-Block der
+// Objektseite.
+//
+// Zwei Aenderungen gegenueber dem Stand bis 2026-09-19:
+//   - Der NAME ist kein Pflichtfeld mehr. Er wird vorbelegt (Strasse, sonst
+//     "{Ort} · {Kaufpreis}") - ein fuenftes Textfeld haette die Entscheidung
+//     "vier Pflichtfelder" unterlaufen.
+//   - EIGENKAPITAL ist raus. Es steht jetzt im Annahmen-Block mit 20 % des
+//     Kaufpreises als Vorbelegung (annahmen.js/EIGENKAPITAL_QUOTE); vorher
+//     lief jedes nicht ausgefuellte Objekt auf 100 % Fremdfinanzierung.
+//
+// `maxBreite` deckelt die Feldbreite nach dem erwarteten Inhalt - ein 690 px
+// breites Feld fuer "60" (Quadratmeter) verspricht etwas anderes, als es
+// meint. Der Name bleibt ungedeckelt, dort sind lange Adressen normal.
 const FELDER = [
-  { key: "name", label: "Name des Objekts", typ: "text", pflicht: true },
+  { key: "name", label: "Name des Objekts", typ: "text" },
   { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", pflicht: true, maxBreite: 220 },
   { key: "flaeche", label: "Wohnfläche", typ: "zahl", einheit: "m²", pflicht: true, maxBreite: 160 },
   {
@@ -59,7 +70,6 @@ const FELDER = [
     pflicht: true,
     maxBreite: 220,
   },
-  { key: "eigenkapital", label: "Eigenkapital", typ: "zahl", einheit: "€", maxBreite: 220 },
 ];
 
 export function ObjektAnlegen({
@@ -69,6 +79,7 @@ export function ObjektAnlegen({
   t,
   startwerte = null,
   startName = "",
+  startHerkunft = null,
   bearbeiten = false,
 }) {
   return (
@@ -80,11 +91,21 @@ export function ObjektAnlegen({
       onAbbrechen={onAbbrechen}
       startwerte={startwerte}
       startName={startName}
+      startHerkunft={startHerkunft}
     />
   );
 }
 
-function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, startName, bearbeiten }) {
+function ObjektFormular({
+  onAnlegen,
+  onExpose,
+  onAbbrechen,
+  t,
+  startwerte,
+  startName,
+  startHerkunft,
+  bearbeiten,
+}) {
   const { lang } = useApp() || {};
   const [werte, setWerte] = useState(() => ({
     name: startName,
@@ -93,12 +114,15 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
     kaufpreis: startwerte?.kaufpreis || "",
     flaeche: startwerte?.flaeche || "",
     kaltmiete: startwerte?.kaltmiete || "",
-    eigenkapital: startwerte?.eigenkapital || "",
     strasse: startwerte?.strasse || "",
     hausnummer: startwerte?.hausnummer || "",
     lat: startwerte?.lat,
     lon: startwerte?.lon,
   }));
+  // Welcher Wert in DIESER Sitzung woher kam (objektseite-neu.md §7.2).
+  // Getrennt vom Wert selbst, damit der Annahmen-Block spaeter anzeigen kann,
+  // was gesetzt und was geraten ist.
+  const [quellen, setQuellen] = useState({});
   const [bundesland, setBundesland] = useState(startwerte?.bundesland || "");
   // Exposé-Werte, fuer die es hier kein Eingabefeld gibt (Baujahr,
   // Renovierungskosten, Energiekennwerte, ...). Ohne diesen Zwischenspeicher
@@ -111,7 +135,15 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
   // Renditerechner) noch laeuft.
   const [speichertLaeuft, setSpeichertLaeuft] = useState(false);
 
-  const setzen = (k, v) => setWerte((p) => ({ ...p, [k]: v }));
+  // setzenMit haelt Wert und Herkunft zusammen - sonst laufen beide
+  // auseinander, sobald ein Feld auf zwei Wegen befuellt werden kann
+  // (Adresssuche, Exposé, Tippen).
+  const setzenMit = (k, v, quelle) => {
+    setWerte((p) => ({ ...p, [k]: v }));
+    if (quelle) setQuellen((p) => ({ ...p, [k]: quelle }));
+  };
+  // Tippen im Formular ist immer eine Nutzerentscheidung.
+  const setzen = (k, v) => setzenMit(k, v, HERKUNFT.NUTZER);
 
   // Direkte Uebernahme in die Felder - kein Stepper: der Nutzer will das
   // Ergebnis sofort im Formular sehen.
@@ -121,27 +153,26 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
     const auswahl = new Set(zeilen.filter((z) => z.uebernehmbar).map((z) => z.key));
     const sichtbar = new Set([...FELDER.map((f) => f.key), "plz", "ort", "strasse", "hausnummer"]);
     const extra = {};
-    let nameGesetzt = false;
-    let ortWert = "";
+    const exposeKeys = [];
     uebernehmeZeilen(
       zeilen,
       auswahl,
       (k, v) => {
+        exposeKeys.push(k);
         if (k === "bundesland") setBundesland(v);
-        else if (sichtbar.has(k)) {
-          setzen(k, v);
-          if (k === "name") nameGesetzt = true;
-          if (k === "ort") ortWert = v;
-        } else extra[k] = v;
+        else if (sichtbar.has(k)) setzenMit(k, v, HERKUNFT.EXPOSE);
+        else extra[k] = v;
       },
       ergebnis,
     );
-    // Fallback-Name, wenn das Exposé keinen Objektnamen liefert, aber einen
-    // Ort - sonst bleibt das Pflichtfeld leer, obwohl der Ort schon bekannt
-    // ist. Ueberschreibt nie einen bereits vorhandenen Namen.
-    if (!nameGesetzt && ortWert) {
-      setWerte((p) => (p.name?.trim() ? p : { ...p, name: `Objekt in ${ortWert}` }));
-    }
+    // Ein Fallback-Name ist hier nicht mehr noetig: der Name ist seit
+    // objektseite-neu.md §7.1 kein Pflichtfeld mehr, und namensVorschlag()
+    // unten faellt ohnehin auf "{Ort} · {Kaufpreis}" zurueck.
+    setQuellen((p) => {
+      const n = { ...p };
+      for (const k of exposeKeys) n[k] = HERKUNFT.EXPOSE;
+      return n;
+    });
     setExposeExtra((p) => ({ ...p, ...extra }));
     setExposeOffen(false);
   };
@@ -161,12 +192,22 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
 
   // Live-Vorschau: das Ergebnis erscheint, sobald die drei tragenden Felder
   // stehen - nicht erst nach dem Absenden.
+  // Einmal gerechnet, zweimal gebraucht: fuer den Entwurf selbst und fuer die
+  // Herkunftsvermerke darunter.
+  const annahmen = annahmenFuer({
+    bundesland,
+    flaeche: werte.flaeche,
+    kaufpreis: werte.kaufpreis,
+  });
+
   const entwurf = vollstaendig
     ? {
         // Die uebrigen Felder des Objekts erhalten - sonst gingen Zinsbindung,
         // AfA-Einstellungen und alles andere verloren, was nur im Rechner
-        // gesetzt wurde.
-        ...annahmenFuer({ bundesland, flaeche: werte.flaeche }),
+        // gesetzt wurde. Beim Bearbeiten schlagen die gespeicherten Werte
+        // (startwerte) die Annahmen - sonst uberschriebe ein erneutes Oeffnen
+        // des Formulars das Eigenkapital mit den 20 % aus annahmenFuer().
+        ...annahmen,
         ...(startwerte || {}),
         ...exposeExtra,
         bundesland,
@@ -178,16 +219,42 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
         kaufpreis: String(werte.kaufpreis || ""),
         flaeche: String(werte.flaeche || ""),
         kaltmiete: String(werte.kaltmiete || ""),
-        eigenkapital: String(werte.eigenkapital || "0"),
       }
     : null;
   const kz = entwurf ? berechneObjektKennzahlen(entwurf, t) : null;
+
+  // Herkunft in Schichten, spaetere gewinnen: Annahme < bestehender Vermerk
+  // < was in dieser Sitzung gesetzt wurde < Exposé-Zusatzfelder.
+  const herkunft = (() => {
+    const h = {};
+    for (const key of Object.keys(annahmen)) h[key] = HERKUNFT.ANNAHME;
+    // Die Grunderwerbsteuer folgt aus dem Bundesland, das aus der PLZ kommt -
+    // eine Ableitung, keine Annahme, sobald das Bundesland bekannt ist.
+    if (bundesland) h.grEst = HERKUNFT.PLZ;
+    Object.assign(h, startHerkunft || {});
+    Object.assign(h, quellen);
+    for (const key of Object.keys(exposeExtra)) h[key] = HERKUNFT.EXPOSE;
+    return h;
+  })();
+
+  // §7.1: Strasse, sonst "{Ort} · {Kaufpreis}". Der Name ist kein Pflichtfeld
+  // mehr, darf aber auch nicht leer bleiben - in der Merkliste waeren zwei
+  // namenlose Objekte nicht auseinanderzuhalten.
+  const namensVorschlag = (() => {
+    const strasse = [werte.strasse, werte.hausnummer].filter(Boolean).join(" ").trim();
+    if (strasse) return strasse;
+    const ort = String(werte.ort || "").trim();
+    const kp = +werte.kaufpreis || 0;
+    if (ort && kp > 0) return `${ort} · ${Math.round(kp).toLocaleString("de-DE")} €`;
+    if (ort) return `Objekt in ${ort}`;
+    return "Neues Objekt";
+  })();
 
   const absenden = async () => {
     if (!vollstaendig || speichertLaeuft) return;
     setSpeichertLaeuft(true);
     try {
-      await onAnlegen(werte.name?.trim() || "Neues Objekt", entwurf);
+      await onAnlegen(werte.name?.trim() || namensVorschlag, entwurf, herkunft);
     } finally {
       setSpeichertLaeuft(false);
     }
@@ -231,17 +298,20 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <AdressSuche
           onTreffer={(tr) => {
+            // Die Strasse bleibt der beste Name: sie unterscheidet zwei
+            // Wohnungen in derselben Stadt, "{Ort} · {Kaufpreis}" nicht.
+            // Ohne Strasse wird hier bewusst KEIN Name gesetzt - dann greift
+            // namensVorschlag() mit dem Ort-und-Preis-Muster aus §7.1.
             const strasse = [tr.strasse, tr.hausnummer].filter(Boolean).join(" ");
-            if (strasse) setzen("name", strasse);
-            else if (tr.ort) setzen("name", `Objekt in ${tr.ort}`);
-            setzen("strasse", tr.strasse);
-            setzen("hausnummer", tr.hausnummer);
-            if (tr.plz) setzen("plz", tr.plz);
-            if (tr.ort) setzen("ort", tr.ort);
+            if (strasse) setzenMit("name", strasse, HERKUNFT.PLZ);
+            setzenMit("strasse", tr.strasse, HERKUNFT.PLZ);
+            setzenMit("hausnummer", tr.hausnummer, HERKUNFT.PLZ);
+            if (tr.plz) setzenMit("plz", tr.plz, HERKUNFT.PLZ);
+            if (tr.ort) setzenMit("ort", tr.ort, HERKUNFT.PLZ);
             // Hausnummerngenaue Koordinaten - die Karte am Objekt nutzt sie
             // statt der PLZ-Mitte.
-            setzen("lat", tr.lat);
-            setzen("lon", tr.lon);
+            setzenMit("lat", tr.lat, HERKUNFT.PLZ);
+            setzenMit("lon", tr.lon, HERKUNFT.PLZ);
             const kuerzel =
               kuerzelFuerBundesland(tr.bundeslandName, BL_N) ||
               (tr.plz && PLZ_DB.byPlz[tr.plz]?.bl) ||
@@ -264,6 +334,9 @@ function ObjektFormular({ onAnlegen, onExpose, onAbbrechen, t, startwerte, start
                 inputMode={f.typ === "zahl" ? "decimal" : undefined}
                 value={werte[f.key] || ""}
                 onChange={(e) => setzen(f.key, e.target.value)}
+                // Beim Namen steht der Vorschlag als Platzhalter: der Nutzer
+                // sieht, was das Objekt heissen wird, wenn er nichts eingibt.
+                placeholder={f.key === "name" ? namensVorschlag : undefined}
                 style={f.maxBreite ? { ...eingabeStil, maxWidth: f.maxBreite } : eingabeStil}
               />
             </label>

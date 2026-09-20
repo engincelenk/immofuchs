@@ -4,7 +4,7 @@
 // Mobile-Randbedingung 2 (Konzept 3.11): Zwei Spalten sind auf 375 px
 // unlesbar, deshalb ein ZEILEN-DIFF - pro Kennzahl eine Zeile mit allen
 // Werten und hervorgehobenem Besten.
-import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
+import { berechneObjektKennzahlen, rangiereObjekte } from "../../utils/objektKennzahlen.js";
 
 const ZEILEN = [
   { key: "kaufpreis", label: "Kaufpreis", einheit: "€", besser: "klein" },
@@ -15,6 +15,14 @@ const ZEILEN = [
   { key: "cashflowMon", label: "Cashflow / Monat", einheit: "€", besser: "gross" },
   { key: "score", label: "Bewertung", einheit: "/100", besser: "gross" },
 ];
+
+// Klartext zur Ampelstufe aus briefing.js - in der Rangfolge-Kopfzeile steht
+// das Urteil, nicht der Score (Entscheidung E1).
+const AMPEL_WORT = {
+  gruen: "trägt sich",
+  gelb: "mit Zuzahlung",
+  rot: "trägt sich nicht",
+};
 
 function zeigeWert(wert, zeile) {
   if (!Number.isFinite(wert)) return "–";
@@ -36,8 +44,57 @@ export function ObjektVergleich({ objekte, t, onFinnFrage }) {
     return { name: o.name || o.title || "Objekt", kz: berechneObjektKennzahlen(daten, t) };
   });
 
+  // Rangfolge aus derselben Funktion wie die Merkliste (objektseite-neu.md
+  // §8) - zwei Ansichten duerfen nicht zwei Reihenfolgen zeigen.
+  const rangliste = rangiereObjekte(objekte, t, "ampel");
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div
+        style={{
+          background: "var(--cc)",
+          border: "1px solid var(--cb)",
+          borderRadius: 12,
+          padding: "12px 14px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: "var(--ch)",
+            textTransform: "uppercase",
+            letterSpacing: 0.6,
+            fontWeight: 600,
+            marginBottom: 8,
+          }}
+        >
+          Rangfolge
+        </div>
+        {rangliste.map((e) => (
+          <div
+            key={e.objekt.id || e.objekt.name}
+            style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "3px 0" }}
+          >
+            <span
+              style={{
+                width: 18,
+                fontSize: 14,
+                fontWeight: 800,
+                color: e.rang ? "var(--ct)" : "var(--ch)",
+              }}
+            >
+              {e.rang ?? "–"}
+            </span>
+            <span style={{ fontSize: 13, color: "var(--ct)", minWidth: 0, flex: 1 }}>
+              {e.objekt.name || e.objekt.title || "Objekt"}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--ch)", whiteSpace: "nowrap" }}>
+              {e.rangierbar ? AMPEL_WORT[e.ampel?.stufe] || "" : "Daten unvollständig"}
+            </span>
+          </div>
+        ))}
+      </div>
+
       <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5 }}>
         Der jeweils günstigere Wert ist hervorgehoben. Bei Kaufpreis, Faktor und Rate ist
         weniger besser, bei Miete, Rendite und Cashflow mehr.

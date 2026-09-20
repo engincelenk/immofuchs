@@ -1,18 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { scoreBadgeColor, scoreBadgeText } from "./dashboardUtils.js";
 import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
-import { Ueberblick } from "./Ueberblick.jsx";
 import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
-import { AiEngine } from "./AiEngine.jsx";
 import { InvestmentBriefing } from "./InvestmentBriefing.jsx";
 import {
-  AI_PRODUKTE,
   ergebnisAnlegen,
   ergebnisFuer,
-  ergebnisseLesen,
   mitErgebnis,
   produktFuer,
 } from "../../utils/aiEngine.js";
@@ -28,12 +24,10 @@ import {
   regionalFakten,
   regionalLandeswert,
   regionalPreis,
-  regionalpreiseStand,
   regionalTrend,
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
 import { ladePlzKreis } from "../../utils/plzKreis.js";
-import { fmt, fmtP } from "../../utils/helpers.js";
 import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
@@ -109,8 +103,7 @@ const FELD_GRUPPEN = [
 ];
 
 export function ObjektDetail({ objekt, onBack }) {
-  const { d, set, setTabExt, t, lang, updateObj, isProSavedObjects } = useApp();
-  const istPro = Boolean(isProSavedObjects);
+  const { d, set, setTabExt, t, lang, updateObj } = useApp();
   const locale = lang === "de" ? "de-DE" : "de-DE";
   const [bearbeiten, setBearbeiten] = useState(false);
   // AI-Engine: welches Produkt gerade laeuft, und ob der letzte Aufruf
@@ -172,19 +165,21 @@ export function ObjektDetail({ objekt, onBack }) {
   );
   const vollstaendigkeit = berechneVollstaendigkeit(basis);
 
-  // Regionale Vergleichsmiete (Kreis, sonst Bundesland) - dieselbe Quelle wie
-  // Renditerechner/Mieterhoehungsrechner/Expose-Scan (regionalpreis.js).
-  // Bug-Fix 2026-09-10 (Nutzer-Befund): "Objekt analysieren" bezog die
-  // Vergleichsmiete bis dahin aus der ALTEN Zensus-PLZ-Referenz
-  // (mietReferenz.js, Bestandsmiete) waehrend jeder andere Rechner schon die
-  // neue Kreis-/Bundeslandreferenz (Angebotsmiete) zeigte - zwei
-  // unterschiedliche Zahlen fuer denselben Ort. Jetzt ueberall dieselbe
-  // Quelle, keine widerspruechlichen "Durchschnittsmieten" mehr.
-  // undefined = Regionaldaten laden noch, null = kein Wert fuer diesen Ort,
-  // Zahl = EUR/m2.
-  const regionalMieteQm = regGeladen
-    ? (regionalPreis(basis?.bundesland, basis?.ort, basis?.plz)?.mieteWohnung ?? null)
-    : undefined;
+  // Block 10 (objektseite-neu.md §7.3): eine Aenderung im Annahmen-Block macht
+  // den Wert sofort zu "von dir" und rechnet die Seite neu. Kein
+  // "Neu berechnen"-Knopf, kein KI-Aufruf - die Bloecke 2-8 haengen
+  // ausschliesslich an den Zahlen.
+  const annahmeAendern = useCallback(
+    (key, wert) => {
+      const daten = { ...basis, [key]: String(wert) };
+      const herkunft = { ...(objekt.kennzahlen?.herkunft || {}), [key]: "nutzer" };
+      // Der Renditerechner-State wird mitgezogen, solange dieses Objekt dort
+      // geladen ist - sonst zeigte ein Wechsel in den Rechner den alten Wert.
+      if (!hasFullInput) set(key, String(wert));
+      updateObj(objekt.id, objekt.title || "Objekt", daten, { herkunft });
+    },
+    [basis, objekt, hasFullInput, set, updateObj],
+  );
 
   // Einmalig laden, sobald ein Bundesland vorliegt. plzKreis.js parallel
   // dazu (Backlog Punkt 4, 2026-09-11) - beide muessen geladen sein, bevor
@@ -468,9 +463,12 @@ export function ObjektDetail({ objekt, onBack }) {
           bearbeiten
           startwerte={basis}
           startName={objekt.title || ""}
+          // Bestehende Herkunftsvermerke mitgeben, sonst gaelte nach jedem
+          // Bearbeiten alles wieder als Annahme (objektseite-neu.md §7.2).
+          startHerkunft={objekt.kennzahlen?.herkunft || null}
           onAbbrechen={() => setBearbeiten(false)}
-          onAnlegen={async (name, daten) => {
-            await updateObj(objekt.id, name, daten);
+          onAnlegen={async (name, daten, herkunft) => {
+            await updateObj(objekt.id, name, daten, { herkunft });
             setBearbeiten(false);
             // Zurueck zur Liste: das Objekt wird dort frisch aus dem
             // aktualisierten Stand gerendert. Ohne das zeigte die
@@ -480,19 +478,17 @@ export function ObjektDetail({ objekt, onBack }) {
         />
       </Sheet>
 
-      <Ueberblick
-        kennzahlen={kennzahlenGespeichert}
-        data={basis}
-        locale={locale}
-        onRechnerLaden={() => inRechner("haupt")}
-        onBearbeiten={() => setBearbeiten(true)}
-        regionalRichtwert={
-          regGeladen ? regionalPreis(basis?.bundesland, basis?.ort, basis?.plz)?.kaufWohnung : null
-        }
-      />
-
-      <RegionalSnapshot objekt={objekt} basis={basis} regGeladen={regGeladen} />
-
+      {/* Seitenaufbau nach docs/technical_specs/objektseite-neu.md §22.
+          Entfallen sind mit diesem Umbau:
+            - `Ueberblick` als eigener Block: seine Kennzahlen stecken jetzt in
+              Block 3, der Score 0-100 entfaellt am Objekt ganz (Entscheidung
+              E1 - ein Urteil, keine zweite Skala; im Renditerechner bleibt er).
+            - `RegionalSnapshot` als eigener Block: geht in Block 4a auf.
+            - Die Sammelsektion `AiSektion`/`AiEngine`: aus der Karten-Etage
+              werden zwei Knoepfe am Seitenende.
+            - Die Klappsektion "Belege" und die Lage als eigene Ebenen: beide
+              liegen jetzt unter "Alle Details" (Block 9).
+          Die Dateien bleiben bestehen, nur ihre Einbindung hier aendert sich. */}
       <InvestmentBriefing
         objekt={objektAnzeige}
         data={basis}
@@ -506,225 +502,73 @@ export function ObjektDetail({ objekt, onBack }) {
         onStarten={() => starteProdukt("briefing")}
         onConsentJa={einwilligenUndStarten}
         onConsentAbbrechen={() => setAiConsent(null)}
+        onBearbeiten={() => setBearbeiten(true)}
+        herkunft={objekt.kennzahlen?.herkunft || null}
+        onAnnahmeAendern={annahmeAendern}
+        detailsExtra={
+          <>
+            <div style={{ marginTop: 16 }}>
+              <AlleDaten data={basis} objekt={objekt} locale={locale} />
+            </div>
+            {/* Die Sektion "Unterlagen" (lokale Dateiablage) ist am 2026-09-08
+                entfallen. ObjektUnterlagen.jsx bleibt im Code, gerendert wird
+                daraus nur noch ObjektLage. */}
+            <div style={{ marginTop: 16 }}>
+              <ObjektLage data={basis} titel={objekt.title} />
+            </div>
+          </>
+        }
       />
 
-      <AiSektion zusammenfassung={aiZusammenfassung(objektAnzeige, locale)}>
-        {/* Fehler und Einwilligung standen bis 2026-09-16 HIER, ueber allen
-            Karten - siehe Kommentar an der aiFehler-Deklaration oben. Sie
-            werden jetzt an die ausloesende Karte durchgereicht. */}
-        <AiEngine
-          objekt={objektAnzeige}
-          data={basis}
-          hasFullInput={hasFullInput}
-          proAktiv={istPro}
-          laufend={laufend}
-          locale={locale}
-          onStarten={starteProdukt}
-          onExpose={oeffneExpose}
-          referenzMiete={regionalMieteQm}
-          fehler={aiFehler}
-          consentFuer={aiConsent}
-          onConsentJa={einwilligenUndStarten}
-          onConsentAbbrechen={() => setAiConsent(null)}
-        />
-      </AiSektion>
+      {/* Die beiden verbliebenen KI-Produkte neben dem Briefing (§22). */}
+      <div id="ai-sektion-vorbereiten" style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+        <button type="button" onClick={oeffneExpose} style={knopfPrimaer}>
+          {t.objExposeEinlesen || "Exposé einlesen"}
+        </button>
+        <button type="button" onClick={() => starteProdukt("handout")} style={knopfSekundaer}>
+          {t.objHandout || "Fragen für die Besichtigung erstellen"}
+        </button>
+      </div>
 
-      {/* Ehemals eigene Reiter "Belege"/"Unterlagen" (UX-Review 2026-09-07):
-          beide beantworten dieselbe Frage wie der Ueberblick ("wie kommen die
-          Zahlen zustande, was liegt vor") und stehen deshalb als aufklappbare
-          Sektionen direkt darunter, aufgeklappt untereinander statt in einem
-          eigenen Reiter. Direkte Rechner-Verlinkungen (ehem. RechnerListe)
-          sind entfallen - der einzige Weg zu den Rechnern ist jetzt der
-          "Laden"-Knopf im Ueberblick oben, der in den Renditerechner fuehrt. */}
-      <Klappsektion titel="Belege" untertitel="Wie kommen die Zahlen zustande?">
-        <AlleDaten data={basis} objekt={objekt} locale={locale} />
-      </Klappsektion>
-
-      {/* Die Sektion "Unterlagen" (lokale Dateiablage) ist am 2026-09-08
-          entfallen. Sie lag rein im Browser des jeweiligen Geraets, war damit
-          auf keinem zweiten Geraet sichtbar und hat als Ablage mehr
-          versprochen, als sie halten konnte. ObjektUnterlagen.jsx bleibt
-          vorerst im Code, wird aber nirgends mehr gerendert. */}
-
-      {/* Lage ganz unten, nicht mehr in einem eigenen Reiter, ohne
-          eingebettete Karte (UX-Review 2026-09-07) - siehe ObjektLage. */}
-      <div style={{ marginTop: 16 }}>
-        <ObjektLage data={basis} titel={objekt.title} />
+      {/* Zurueck in den Renditerechner - der einzige verbliebene Weg dorthin,
+          frueher der "Laden"-Knopf im Ueberblick. */}
+      <div style={{ marginTop: 10 }}>
+        <button type="button" onClick={() => inRechner("haupt")} style={knopfSekundaer}>
+          {t.objImRechner || "Im Renditerechner öffnen"}
+        </button>
       </div>
     </div>
   );
 }
 
-// Portfolio-Tracking ueber Zeit (2026-09-10, Backlog D.12). Zeigt den bei
-// Anlage eingefrorenen regionalen Richtwert (siehe regionalSnapshot() in
-// Merkliste.jsx/toServerPayload). Ohne Snapshot (Objekt vor dieser
-// Funktion angelegt, oder Regionaldaten waren beim Speichern nicht
-// geladen) wird nichts angezeigt - kein nachtraeglich erfundener Wert.
-//
-// Ein echter Zeitvergleich ("seit Kauf um X% gestiegen") ist erst moeglich,
-// sobald ein SPAETERES Quartal geladen ist als das des Snapshots - bei nur
-// einem Datenstand (aktuell Q2 2026) gibt es nichts zu vergleichen. Dieser
-// Zustand wird ehrlich benannt statt einen Trend aus einem einzigen Punkt
-// vorzutaeuschen.
-function RegionalSnapshot({ objekt, basis, regGeladen }) {
-  const snapshot = objekt?.kennzahlen?.regionalSnapshot;
-  if (!snapshot) return null;
+const knopfPrimaer = {
+  flex: "1 1 180px",
+  minHeight: 44,
+  padding: "12px 16px",
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 13.5,
+  fontWeight: 700,
+  fontFamily: "inherit",
+  cursor: "pointer",
+};
 
-  const aktuellerStand = regGeladen ? regionalpreiseStand() : null;
-  const aktuellerRef = regGeladen
-    ? regionalPreis(basis?.bundesland, basis?.ort, basis?.plz)
-    : null;
-  const neuereDatenVorhanden =
-    aktuellerStand && aktuellerStand !== snapshot.stand && aktuellerRef?.kaufWohnung > 0;
-
-  return (
-    <div
-      style={{
-        marginTop: 12,
-        paddingTop: 12,
-        borderTop: "1px solid var(--cb)",
-        fontSize: 12.5,
-        color: "var(--cl)",
-      }}
-    >
-      <div style={{ fontWeight: 700, color: "var(--ct)", marginBottom: 4 }}>
-        Regionaler Richtwert bei Aufnahme
-      </div>
-      <div>{fmt(snapshot.regionalerRichtwertQm)} €/m²</div>
-      {/* Quartalskennung und der Wartehinweis "Vergleich folgt, sobald ein
-          neueres Quartal vorliegt" sind entfallen (Nutzerwunsch 2026-09-16):
-          ImmoFuchs arbeitet immer mit den aktuellen Daten - die interne
-          Datenstand-Buchhaltung gehoert nicht in die Objektansicht. Liegt kein
-          neuerer Wert vor, steht hier schlicht nichts weiter. */}
-      {neuereDatenVorhanden && (
-        <div style={{ marginTop: 4 }}>
-          Aktuell: {fmt(aktuellerRef.kaufWohnung)} €/m² —{" "}
-          {fmtP(
-            Math.abs((aktuellerRef.kaufWohnung / snapshot.regionalerRichtwertQm - 1) * 100),
-            0,
-          )}{" "}
-          {aktuellerRef.kaufWohnung > snapshot.regionalerRichtwertQm ? "gestiegen" : "gesunken"}{" "}
-          seit Aufnahme
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Marineblau ist in der App die "Denk-Farbe" fuer KI. Sie steht hier an genau
-// einer Stelle: der Glyphe der Sektion. Das Urteil im Ueberblick darueber ist
-// Regelwerk, kein Modell - und traegt deshalb bewusst kein Sparkle.
-const KI_FARBE = "#1E3A5F";
-
-// Die AI-Engine als Sektion am Ende des Ueberblicks (UX-Review 2026-09-05).
-// Vorher ein eigener Chip - dort lag sie aber getrennt von den Kennzahlen,
-// auf die sie sich bezieht.
-//
-// Bis 2026-09-07 aufklappbar und standardmaessig zu: Nutzer, fuer die genau
-// diese drei Auswertungen der Kern des Objekt-Screens sind, mussten dafuer
-// erst einen Pfeil treffen, und ein bereits fertiges Ergebnis blieb hinter
-// dem Klapptext verborgen. Die Sektion steht deshalb jetzt immer offen -
-// anders als Belege/Unterlagen (Klappsektion unten), die Zusatzbelege statt
-// des Kerngeschehens sind.
-function AiSektion({ zusammenfassung, children }) {
-  return (
-    // id als Sprungziel fuer den Handout-Link in InvestmentBriefing.jsx
-    // ("Fragen für die Besichtigung erstellen", Spec §2) - das Handout bleibt
-    // ein eigenes Produkt (E5), der Link fuehrt nur dorthin.
-    <div id="ai-sektion-vorbereiten" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          minHeight: 44,
-          padding: "8px 2px",
-        }}
-      >
-        <span aria-hidden="true" style={{ flexShrink: 0, color: KI_FARBE, fontSize: 13.5 }}>
-          ✦
-        </span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>
-            KI-Auswertung
-          </span>
-          <span style={{ display: "block", fontSize: 11, color: "var(--cl)", marginTop: 4 }}>
-            {zusammenfassung}
-          </span>
-        </span>
-      </div>
-      <div style={{ marginTop: 12 }}>{children}</div>
-    </div>
-  );
-}
-
-// Generische aufklappbare Sektion fuer Belege/Unterlagen (UX-Review
-// 2026-09-07): beide waren eigene Reiter, beantworten aber dieselbe Frage wie
-// der Ueberblick darueber - deshalb hier als Sektion statt als Wechsel der
-// ganzen Seite. Standardmaessig zu, anders als die AI-Sektion: das sind
-// Zusatzbelege, die man bei Bedarf nachschlaegt, nicht der Kern des Screens.
-function Klappsektion({ titel, untertitel, children }) {
-  const [offen, setOffen] = useState(false);
-  return (
-    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
-      <button
-        type="button"
-        onClick={() => setOffen((o) => !o)}
-        aria-expanded={offen}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          width: "100%",
-          minHeight: 44,
-          padding: "8px 2px",
-          background: "none",
-          border: "none",
-          textAlign: "left",
-          cursor: "pointer",
-          fontFamily: "inherit",
-        }}
-      >
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>
-            {titel}
-          </span>
-          {untertitel && (
-            <span style={{ display: "block", fontSize: 11, color: "var(--cl)", marginTop: 4 }}>
-              {untertitel}
-            </span>
-          )}
-        </span>
-        <span aria-hidden="true" style={{ flexShrink: 0, fontSize: 13.5, color: "var(--ch)" }}>
-          {offen ? "▲" : "▼"}
-        </span>
-      </button>
-      {offen && <div style={{ marginTop: 12 }}>{children}</div>}
-    </div>
-  );
-}
-
-// Zustand statt Werbung in der Kopfzeile: "2 von 4 erstellt" beantwortet die
-// Frage, wegen der man aufklappt. Ein Nutzenversprechen an dieser Stelle
-// waere eine Anzeige, die bei jedem Objektaufruf mitscrollt.
-function aiZusammenfassung(objekt, locale) {
-  const ergebnisse = ergebnisseLesen(objekt);
-  const vorhanden = AI_PRODUKTE.filter((p) => ergebnisse[p.id]);
-  if (vorhanden.length === 0) return "Noch keine Auswertung";
-
-  const neuestes = vorhanden
-    .map((p) => ergebnisse[p.id]?.erstellt)
-    .filter(Boolean)
-    .sort()
-    .pop();
-  const d = neuestes ? new Date(neuestes) : null;
-  const datum =
-    d && !Number.isNaN(d.getTime())
-      ? d.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })
-      : null;
-
-  return `${vorhanden.length} von ${AI_PRODUKTE.length} erstellt${datum ? ` · zuletzt ${datum}` : ""}`;
-}
+const knopfSekundaer = {
+  flex: "1 1 180px",
+  width: "100%",
+  minHeight: 44,
+  padding: "12px 16px",
+  borderRadius: 10,
+  border: "1px solid var(--cb)",
+  background: "var(--cc)",
+  color: "var(--ct)",
+  fontSize: 13.5,
+  fontWeight: 600,
+  fontFamily: "inherit",
+  cursor: "pointer",
+};
 
 // Tiefenstufe 3: alle Felder, gruppiert. Seit dem UX-Review 2026-09-05 in EINER
 // Karte mit Haarlinien statt in vier Karten, und zweispaltig statt als

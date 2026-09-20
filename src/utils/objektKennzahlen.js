@@ -10,6 +10,7 @@
 // und das beim Speichern abgelegte resultData - damit die Liste rendern kann,
 // ohne jedes Objekt neu durchzurechnen.
 import { computeRendite } from "./rendite.js";
+import { briefingAmpel } from "./briefing.js";
 import { berechneScore } from "./investmentScore.js";
 
 // Der Score liefert vier Stufen (investmentScore.js/staffel): green/yellow/
@@ -92,6 +93,57 @@ export function toResultData(kennzahlen) {
     rateMon: kennzahlen.rateMon,
     kostenMon: kennzahlen.kostenMon,
   };
+}
+
+// ── Rangfolge mehrerer Objekte (objektseite-neu.md §8, §21 D7) ─────────────
+// "Gut im Vergleich wozu" ist eine Frage ueber MEHRERE Objekte und gehoert
+// deshalb ueber die Einzelobjektseite, nicht hinein (Entscheidung E3).
+//
+// Die Sortierung liegt bewusst nur hier: Merkliste und ObjektVergleich teilen
+// sie sich, sonst koennten zwei Ansichten zwei Rangfolgen zeigen.
+//
+// Sortiert wird nach der AMPEL aus briefing.js, nicht nach dem Score-tier:
+// der Score ist am Objekt abgeschafft (E1) und darf nicht ueber die Rangfolge
+// zurueckkommen.
+export const SORTIERUNGEN = ["ampel", "cashflow", "faktor"];
+const AMPEL_RANG = { gruen: 0, gelb: 1, rot: 2 };
+
+export function rangiereObjekte(objekte, t, sortierung = "ampel") {
+  const eintraege = (objekte || []).map((o) => {
+    const data = o.inputData || o.data || {};
+    const kz = berechneObjektKennzahlen(data, t);
+    // Ohne PLZ gibt es keinen Marktvergleich und damit keine vergleichbare
+    // Grundlage - solche Objekte werden nicht schlecht bewertet, sondern gar
+    // nicht rangiert (§8).
+    const rangierbar = Boolean(String(data.plz || "").trim()) && kz.verfuegbar;
+    const ampel = kz.verfuegbar ? briefingAmpel(data, computeRendite(data, t)) : null;
+    return { objekt: o, data, kz, ampel, rangierbar };
+  });
+
+  const wert = (e) => {
+    if (sortierung === "cashflow") {
+      return Number.isFinite(e.kz.cashflowMon) ? -e.kz.cashflowMon : Infinity;
+    }
+    if (sortierung === "faktor") {
+      return Number.isFinite(e.kz.faktor) ? e.kz.faktor : Infinity;
+    }
+    return AMPEL_RANG[e.ampel?.stufe] ?? 3;
+  };
+
+  const sortiert = [...eintraege].sort((a, b) => {
+    if (a.rangierbar !== b.rangierbar) return a.rangierbar ? -1 : 1;
+    const diff = wert(a) - wert(b);
+    if (diff !== 0) return diff;
+    // Stabiler Zweitschluessel: ohne ihn tauschen zwei gleich bewertete
+    // Objekte bei jedem Rendern die Plaetze.
+    const ca = Number.isFinite(a.kz.cashflowMon) ? a.kz.cashflowMon : -Infinity;
+    const cb = Number.isFinite(b.kz.cashflowMon) ? b.kz.cashflowMon : -Infinity;
+    return cb - ca;
+  });
+
+  const gesamt = sortiert.filter((e) => e.rangierbar).length;
+  let n = 0;
+  return sortiert.map((e) => ({ ...e, rang: e.rangierbar ? ++n : null, gesamt }));
 }
 
 // Vollstaendigkeitsring (A3/D): gewichtet nach Ergebnisrelevanz, nicht nach

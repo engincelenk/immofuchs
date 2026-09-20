@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { hebelVarianten, berechneHebelAnalyse, loeseZielKaufpreis } from "./aiTools.js";
+import {
+  hebelVarianten,
+  berechneHebelAnalyse,
+  loeseZielKaufpreis,
+  loeseFuerCashflowNull,
+} from "./aiTools.js";
 import { berechneScore } from "./investmentScore.js";
 import { computeRendite } from "./rendite.js";
 
@@ -154,5 +159,45 @@ describe("loeseZielKaufpreis", () => {
     const dSchlecht = { ...baseD, kaltmiete: "300" };
     expect(computeRendite(dSchlecht, {}).cf2MitSt).toBeLessThan(0);
     expect(loeseZielKaufpreis(dSchlecht, {}, { typ: "cashflowNull" })).toBeNull();
+  });
+});
+
+// ── Kaltmiete-Suchbereich (docs/technical_specs/objektseite-neu.md §6.1, K4) ─
+// Die Untergrenze der Suche wurde von "aktuelle Miete" auf 0 gesenkt, damit
+// die Kernkennzahl "Break-even-Miete" auch bei tragfaehigen Objekten eine
+// Aussage hat. Diese Tests nageln beide Richtungen fest - insbesondere, dass
+// sich fuer den bestehenden Aufrufer (briefingTragfaehigkeit, nur bei
+// negativem Cashflow) nichts geaendert hat.
+describe("loeseFuerCashflowNull — Kaltmiete", () => {
+  it("bei negativem Cashflow liegt die Grenze ueber der heutigen Miete", () => {
+    expect(computeRendite(baseD, {}).cf2MitSt).toBeLessThan(0);
+    const grenze = loeseFuerCashflowNull(baseD, {}, "kaltmiete");
+    expect(grenze).toBeGreaterThan(+baseD.kaltmiete);
+  });
+
+  it("an der gefundenen Grenze ist der Cashflow nach Steuer praktisch null", () => {
+    const grenze = loeseFuerCashflowNull(baseD, {}, "kaltmiete");
+    const cfDort = computeRendite({ ...baseD, kaltmiete: String(grenze) }, {}).cf2MitSt;
+    expect(Math.abs(cfDort)).toBeLessThan(30); // Miete ist auf 5 € gerundet
+  });
+
+  it("die gesenkte Untergrenze verschiebt das Ergebnis bei negativem Cashflow nicht", () => {
+    // Nachweis statt Behauptung: cf ist monoton in der Miete, cf(0) ist hier
+    // erst recht negativ, und knapp unterhalb der Grenze ist er es auch -
+    // die Bisektion findet also denselben Punkt wie mit der alten Untergrenze.
+    const grenze = loeseFuerCashflowNull(baseD, {}, "kaltmiete");
+    expect(computeRendite({ ...baseD, kaltmiete: "0" }, {}).cf2MitSt).toBeLessThan(0);
+    expect(
+      computeRendite({ ...baseD, kaltmiete: String(grenze - 10) }, {}).cf2MitSt,
+    ).toBeLessThan(0);
+  });
+
+  it("bei positivem Cashflow liefert sie die echte Grenze unterhalb der Miete", () => {
+    const d = { ...baseD, kaltmiete: "2500" };
+    expect(computeRendite(d, {}).cf2MitSt).toBeGreaterThan(0);
+    const grenze = loeseFuerCashflowNull(d, {}, "kaltmiete");
+    expect(grenze).toBeLessThan(2500);
+    const cfDort = computeRendite({ ...d, kaltmiete: String(grenze) }, {}).cf2MitSt;
+    expect(Math.abs(cfDort)).toBeLessThan(30);
   });
 });

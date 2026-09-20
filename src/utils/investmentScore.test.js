@@ -108,3 +108,62 @@ describe("berechneSzenarien — Stress verschlechtert sich gegenueber Basis", ()
     expect(stress.d.anschlussZins).toBe("6"); // 4 + 2.0
   });
 });
+
+// ── Best-Case (objektseite-neu.md §6.4) ─────────────────────────────────────
+describe("berechneSzenarien — Best-Case", () => {
+  it("liefert vier Szenarien", () => {
+    const s = berechneSzenarien(baseD, {});
+    expect(Object.keys(s).sort()).toEqual(["basis", "best", "negativ", "stress"]);
+  });
+
+  it("Best ist nie schlechter als Basis", () => {
+    const { best, basis } = berechneSzenarien(baseD, {});
+    expect(best.R.cf2MitSt).toBeGreaterThanOrEqual(basis.R.cf2MitSt);
+    expect(best.R.g).toBeGreaterThanOrEqual(basis.R.g);
+  });
+
+  it("senkt den Anschlusszins — das war mit der alten Bedingung (> 0) nicht moeglich", () => {
+    // Kernpunkt der Aenderung in szenario(): mit `zinsAufschlag > 0` fiel der
+    // negative Aufschlag stillschweigend auf d.anschlussZins zurueck.
+    const { best } = berechneSzenarien({ ...baseD, anschlussZins: "9" }, {});
+    expect(best.d.anschlussZins).toBe("3.5"); // 4 - 0.5
+  });
+
+  it("spiegelt die Negativ-Parameter nach oben", () => {
+    const { best } = berechneSzenarien(baseD, {});
+    expect(+best.d.kaltmiete).toBeCloseTo(945, 6); // 900 * 1.05
+    expect(+best.d.nichtUml).toBeCloseTo(95, 6); // 100 * 0.95
+    expect(+best.d.leerstand).toBe(0);
+    expect(+best.d.wertP).toBeCloseTo(2.5, 6); // 2 + 0.5
+  });
+});
+
+// ── Regression zur Best-Case-Ergaenzung (objektseite-neu.md §11) ────────────
+// berechneScore() liest aus berechneSzenarien() ausschliesslich negativ und
+// stress (Dimension D7). Bleiben deren Eingaben unveraendert, kann der neue
+// vierte Zweig den Score nicht bewegen. Genau das nagelt dieser Test fest —
+// er schlaegt an, sobald jemand szenario() erneut anfasst.
+describe("berechneScore — unveraendert durch den Best-Case", () => {
+  it("die Szenario-Eingaben von negativ und stress sind exakt die alten", () => {
+    const { negativ, stress } = berechneSzenarien(baseD, {});
+
+    expect(+negativ.d.kaltmiete).toBeCloseTo(855, 6); // 900 * 0.95
+    expect(+negativ.d.nichtUml).toBeCloseTo(110, 6); // 100 * 1.1
+    expect(+negativ.d.leerstand).toBe(4); // round(120 * 0.03)
+    expect(+negativ.d.wertP).toBeCloseTo(1.5, 6); // 2 - 0.5
+    expect(negativ.d.anschlussZins).toBe("5");
+
+    expect(+stress.d.kaltmiete).toBeCloseTo(810, 6); // 900 * 0.9
+    expect(+stress.d.nichtUml).toBeCloseTo(120, 6); // 100 * 1.2
+    expect(+stress.d.leerstand).toBe(10); // round(120 * 0.08)
+    expect(+stress.d.wertP).toBeCloseTo(1, 6); // 2 - 1.0
+    expect(stress.d.anschlussZins).toBe("6");
+  });
+
+  it("der Score bleibt verfuegbar und im gueltigen Bereich", () => {
+    const S = berechneScore(baseD, {});
+    expect(S.verfuegbar).toBe(true);
+    expect(S.score).toBeGreaterThanOrEqual(0);
+    expect(S.score).toBeLessThanOrEqual(100);
+  });
+});

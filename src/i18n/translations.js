@@ -1,3 +1,5 @@
+import { OBJ_T } from "./objektseite.js";
+
 export const T = {
   de: {
     haupt: "Rendite",
@@ -4069,6 +4071,19 @@ export const T = {
     bank: "बैंक",
   },
 };
+
+// Objektseite neu (docs/technical_specs/objektseite-neu.md §26.6): rund 85
+// neue Schluessel je Sprache liegen in einem eigenen Modul, sonst waere diese
+// Datei um 450 Zeilen gewachsen. Anders als expose.js/vorfaelligkeit.js
+// werden sie HIER in T gemischt - die Objektseiten-Komponenten bekommen das
+// gemeinsame `t` und keinen zweiten Uebersetzungs-Prop.
+//
+// Object.assign statt Spread im Literal: so bleibt die Reihenfolge der
+// Sprachbloecke oben unveraendert, und ein fehlender Sprachblock in OBJ_T
+// wuerde hier auffallen statt still eine Sprache zu leeren.
+for (const sprache of Object.keys(OBJ_T)) {
+  if (T[sprache]) Object.assign(T[sprache], OBJ_T[sprache]);
+}
 
 export const TL = {
   de: {

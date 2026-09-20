@@ -141,7 +141,7 @@ function grenzsuche(cf, lo, hi) {
  * @returns {number|null} Wert des Feldes, bei dem cf2MitSt gerade 0 erreicht -
  *   Kaufpreis/Eigenkapital auf 500 €, Kaltmiete auf 5 € gerundet. null, wenn
  *   im Suchbereich nicht erreichbar (Kaufpreis bis 0, Eigenkapital bis zur
- *   Gesamtinvestition, Kaltmiete bis 3x aktuell).
+ *   Gesamtinvestition, Kaltmiete von 0 bis 3x aktuell).
  */
 export function loeseFuerCashflowNull(d, t, feld) {
   const cf = (wert) => computeRendite({ ...d, [feld]: String(Math.max(0, wert)) }, t).cf2MitSt;
@@ -164,7 +164,17 @@ export function loeseFuerCashflowNull(d, t, feld) {
 
   if (feld === "kaltmiete") {
     const aktuell = Math.max(0, +d.kaltmiete || 0);
-    const wert = grenzsuche(cf, aktuell, aktuell * 3);
+    // Untergrenze 0 statt "aktuell" seit objektseite-neu.md §6.1 (K4): die
+    // Kernkennzahl "Break-even-Miete" fragt auch bei TRAGFAEHIGEN Objekten,
+    // ab welcher Miete es kippt. Mit aktuell als Untergrenze lieferte
+    // grenzsuche() dort sofort `lo` zurueck (cf(lo) >= 0, siehe dort) - also
+    // die heutige Miete als angeblichen Break-even.
+    //
+    // Fuer negativen Cashflow aendert sich nichts: cf(0) ist dann erst recht
+    // negativ, der gesuchte Punkt liegt weiterhin ueber der aktuellen Miete,
+    // und die Bisektion konvergiert im breiteren Intervall auf denselben
+    // Wert (40 Schritte auf 3x Kaltmiete bleiben weit unter der 5-€-Rundung).
+    const wert = grenzsuche(cf, 0, aktuell * 3);
     return wert == null ? null : Math.round(wert / 5) * 5;
   }
 

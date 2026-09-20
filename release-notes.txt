@@ -1,3 +1,64 @@
+## 2026-09-20 (1.95.0)
+
+### Objektseite neu: eine Seite, eine Antwort
+
+Umsetzung von docs/technical_specs/objektseite-neu.md (Teil I-III) am Stueck.
+Die Objektseite gab bisher drei Urteile hintereinander ab - Score 0-100 im
+Ueberblick, Ampel im Briefing, dazu die KI-Karten. Jetzt steht oben genau eine
+Antwort, darunter zehn Bloecke in fester Reihenfolge. Kein Worker-Umbau, kein
+zusaetzlicher KI-Aufruf, keine Prompt-Aenderung.
+
+Rechenkern (briefing.js):
+- Kernkennzahlen: Kaufpreisfaktor, Nettomietrendite nach Bewirtschaftung,
+  Cashflow, EK-Rendite p. a., Break-even-Miete. Die EK-Rendite-Formel liegt
+  jetzt nur noch hier; der Renditerechner importiert sie.
+- Faktor-Benchmark gegen den Kreisfaktor (aus vorhandenen Regionaldaten, keine
+  neue Quelle) und Alternativanlagen-Vergleich (Tagesgeld 3,0 /
+  Staatsanleihe 3,5 / ETF 7,0 % als dokumentierte Annahme, nie als Prognose).
+- Stresstest um einen Best-Case erweitert (vier Szenarien), dazu eine
+  Sensitivitaet mit vier isolierten Zeilen: Zins, Leerstand, Mietausfall,
+  Sanierungsstau - je zwei Stufen.
+- Neun rote Flaggen als Liste, jede MIT ihrer Schwelle.
+- Regel-Begruendung: warum die Ampel so steht, ohne KI-Aufruf.
+
+Eingabe:
+- Vier Pflichtfelder (Kaufpreis, Wohnflaeche, Kaltmiete, PLZ). Der Name ist
+  kein Pflichtfeld mehr und wird vorbelegt: Strasse, sonst "Ort · Kaufpreis".
+- Eigenkapital ist aus dem Formular in den Annahmen-Block gewandert und steht
+  auf 20 % des Kaufpreises. ACHTUNG: neue Objekte rechnen dadurch anders als
+  bisher - vorher lief jedes nicht ausgefuellte Objekt auf 100 %
+  Fremdfinanzierung. Bestehende Objekte bleiben unveraendert.
+- Jeder Wert traegt einen Herkunftsvermerk (von dir / aus Expose / aus PLZ /
+  Annahme), sichtbar als Chip im Annahmen-Block und dort einzeln
+  ueberschreibbar. Was einmal "von dir" ist, bleibt es.
+
+Seite:
+- Reihenfolge: Kopf, Die Antwort, Kernkennzahlen, Markt + Ausblick + Benchmark,
+  Szenarien, Rote Flaggen, Warum diese Ampel, Was jetzt zu tun ist,
+  Alle Details, Annahmen.
+- Schmale Sticky-Leiste mit Ampelpunkt, Empfehlungswort und Zuzahlung, sobald
+  die Antwort aus dem Bild scrollt.
+- Entfallen: der Score 0-100 am Objekt (bleibt im Renditerechner), der
+  Ueberblick-Block, der RegionalSnapshot-Block, die AI-Sammelsektion (jetzt
+  zwei Knoepfe am Seitenende), Belege und Lage als eigene Ebenen (jetzt unter
+  "Alle Details").
+
+Merkliste:
+- Rangfolge nach Ampel (Voreinstellung), Cashflow oder Faktor, mit Rangziffer
+  je Karte. Objekte ohne PLZ stehen am Ende, gekennzeichnet als "Daten
+  unvollstaendig" - nicht als schlechtestes Objekt.
+- ObjektVergleich bekommt eine Rangfolge-Kopfzeile. Beide Ansichten teilen
+  sich eine Sortierfunktion.
+
+Nebenbei zwei Altfehler behoben:
+- "Am Objekt speichern" ersetzte bisher das komplette resultData, sobald ein
+  KI-Ergebnis mitkam - der einmalig eingefrorene regionalSnapshot ging dabei
+  verloren. Jetzt wird gemergt.
+- Im Free-Pfad (localStorage) ueberschrieb jede Bearbeitung die gespeicherten
+  Kennzahlen komplett, ebenfalls samt regionalSnapshot.
+- Die Break-even-Suche (aiTools.js) suchte nur nach oben und lieferte bei
+  tragfaehigen Objekten die heutige Miete als angeblichen Break-even.
+
 ## 2026-09-19 (1.94.0)
 
 ### Objektseite: Kernantwort als Bild, Rest zugeklappt

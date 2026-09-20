@@ -83,7 +83,13 @@ function szenario(
     leerstand: String((+d.leerstand || 0) + Math.round(analyseMonate * leerstandZusatzProz)),
     nichtUml: String((+d.nichtUml || 0) * kostenFaktor),
     wertP: String((+d.wertP || 0) + wertPDelta),
-    anschlussZins: zinsAufschlag > 0 ? String((+d.zinssatz || 0) + zinsAufschlag) : d.anschlussZins,
+    // !== 0 statt > 0 seit der Objektseiten-Spec (objektseite-neu.md §6.4):
+    // der Best-Case arbeitet mit einem NEGATIVEN Aufschlag (-0,5 pp). Mit der
+    // alten Bedingung fiel er stillschweigend auf d.anschlussZins zurueck und
+    // waere beim Zins gar kein Best-Case gewesen. Fuer die beiden
+    // vorhandenen Aufrufer (+1,0 / +2,0) aendert sich nichts.
+    anschlussZins:
+      zinsAufschlag !== 0 ? String((+d.zinssatz || 0) + zinsAufschlag) : d.anschlussZins,
   };
   const R = computeRendite(dS, t);
   const K = berechneKennzahlen(dS, R);
@@ -107,7 +113,19 @@ export function berechneSzenarien(d, t) {
     zinsAufschlag: 2.0,
     wertPDelta: -1.0,
   });
-  return { basis, negativ, stress };
+  // "best" ergaenzt seit objektseite-neu.md §6.4 - gespiegeltes "negativ",
+  // beim Zins halbiert (-0,5 statt -1,0 pp): ein Zinsrueckgang um einen
+  // vollen Punkt bis zum Anschluss waere keine seriose Annahme. Der
+  // Schluessel ist rein additiv; berechneScore() unten nutzt weiterhin nur
+  // negativ und stress fuer D7, und alle Aufrufer destrukturieren.
+  const best = szenario(d, t, {
+    kaltmieteFaktor: 1.05,
+    leerstandZusatzProz: 0,
+    kostenFaktor: 0.95,
+    zinsAufschlag: -0.5,
+    wertPDelta: 0.5,
+  });
+  return { best, basis, negativ, stress };
 }
 
 // ── Hard Stops (Abschnitt 7) ─────────────────────────────────────────────────

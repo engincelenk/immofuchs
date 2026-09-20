@@ -11,7 +11,7 @@
 // briefing.js berechnet, unabhaengig davon, ob und wann zuletzt ein
 // KI-Aufruf lief - nur der Urteilssatz, das erste Hebel-Argument und die
 // Einordnungssaetze in den Details kommen aus dem gespeicherten Ergebnis.
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   alter,
   BASIS_LABEL,
@@ -40,12 +40,21 @@ import { fmt, fmtE } from "../../utils/helpers.js";
 import { AccordionSection } from "../ui/AccordionSection.jsx";
 import { ZahlenBlock } from "./AiEngine.jsx";
 import {
+  AnnahmenListe,
   AusblickKarte,
+  BegruendungsKarte,
+  BenchmarkKarte,
   EmpfehlungsKopf,
-  MarktVergleich,
+  FlaggenKarte,
+  Kernkennzahlen,
+  MarktKarte,
+  RegelZeile,
   STATUS_FARBEN,
+  StickyUrteil,
+  SzenarienKarte,
   ZielKarte,
 } from "./BriefingVisuals.jsx";
+import { ANNAHMEN_FELDER, annahmenFuer, herkunftAbleiten, herkunftZaehlung } from "../../utils/annahmen.js";
 
 // Deutscher Rueckfall zu den brf*-Uebersetzungsschluesseln aus briefing.js -
 // dasselbe Muster wie t.aiFehlerX || "..." in aiAnalyse.js: kein Schluessel
@@ -87,7 +96,6 @@ const ZEITRAUM_LABEL = {
   einsatz: "Eingesetztes Kapital",
   steuer23: "Steuer § 23",
 };
-const STRESS_LABEL = { basis: "Basis", negativ: "Negativ", stress: "Stress" };
 
 const eurQm = (n) => `${fmt(n, 2)} €/m²`;
 const proz = (n, d = 1) => `${fmt(n, d)} %`;
@@ -106,8 +114,17 @@ export function InvestmentBriefing({
   onStarten,
   onConsentJa,
   onConsentAbbrechen,
+  // Objektseite neu (objektseite-neu.md §22): Block 9 nimmt Belege und Lage
+  // von der Objektseite auf, Block 10 die Annahmen samt Herkunft.
+  detailsExtra = null,
+  herkunft = null,
+  onAnnahmeAendern = null,
+  onBearbeiten = null,
 }) {
   const [bestaetigen, setBestaetigen] = useState(false);
+  // Ziel der Sticky-Leiste (§23): sie erscheint, sobald diese Karte den
+  // Viewport nach oben verlassen hat.
+  const antwortRef = useRef(null);
   const ergebnis = ergebnisFuer(objekt, "briefing");
   const veraltet = ergebnis ? istVeraltet(ergebnis, data) : false;
 
@@ -141,6 +158,35 @@ export function InvestmentBriefing({
   const argument = ergebnis ? hebelTexteVon(ergebnis)[0] : null;
   const kiSatz = ergebnis ? urteilVon(ergebnis) : "";
 
+  // Ohne PLZ gibt es keinen Kreis und damit keinen einzigen Marktvergleich
+  // (§7.1). Block 4a, der Ausblick und die Faktor-Flagge entfallen dann ganz,
+  // statt als leere Huelle dazustehen (§25).
+  const ohnePlz = !String(data?.plz || "").trim();
+
+  // Herkunft: gespeicherte Vermerke, sonst aus den Annahmen abgeleitet
+  // (§7.2). Abgeleitet wird NUR beim Lesen, nie zurueckgeschrieben.
+  const herkunftEffektiv = useMemo(() => {
+    if (herkunft && Object.keys(herkunft).length) return herkunft;
+    return herkunftAbleiten(
+      data,
+      annahmenFuer({
+        bundesland: data?.bundesland,
+        flaeche: data?.flaeche,
+        kaufpreis: data?.kaufpreis,
+      }),
+    );
+  }, [herkunft, data]);
+
+  const zaehlung = herkunftZaehlung(herkunftEffektiv);
+  const zaehlungText = [
+    zaehlung.nutzer && `${zaehlung.nutzer} ${t.brfHerkunftnutzer || "von dir"}`,
+    zaehlung.expose && `${zaehlung.expose} ${t.brfHerkunftexpose || "aus Exposé"}`,
+    zaehlung.plz && `${zaehlung.plz} ${t.brfHerkunftplz || "aus PLZ"}`,
+    zaehlung.annahme && `${zaehlung.annahme} ${t.brfHerkunftannahme || "Annahme"}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div style={{ marginTop: 12 }}>
       {veraltet && (
@@ -149,8 +195,9 @@ export function InvestmentBriefing({
         </div>
       )}
 
-      {/* ── Kopf: Empfehlung + KI-Zeile ── */}
-      <EmpfehlungsKopf briefing={briefing} data={data} t={t}>
+      {/* ── Block 2: Die Antwort ── */}
+      <div ref={antwortRef}>
+        <EmpfehlungsKopf briefing={briefing} data={data} t={t}>
         {kiSatz && (
           <div style={kiZeile}>
             <span aria-hidden="true" style={kiGlyphe}>
@@ -176,6 +223,53 @@ export function InvestmentBriefing({
           </div>
         )}
 
+        {/* Ohne KI-Ergebnis traegt Block 2 den REGEL-Satz (§22, §6.7) - so
+            steht dort nie nur eine Ampel ohne Erklaerung. */}
+          {!kiSatz && <RegelZeile begruendung={briefing.begruendung} t={t} />}
+        </EmpfehlungsKopf>
+      </div>
+
+      <StickyUrteil zielRef={antwortRef} briefing={briefing} t={t} />
+
+      {/* Hinweis ohne PLZ (§22, §25): kein Marktvergleich moeglich, mit dem
+          direkten Weg zum Nachtragen. */}
+      {ohnePlz && (
+        <div style={ohnePlzBand}>
+          <span>{t.brfOhnePlz || "Ohne PLZ kein Vergleich mit dem Markt."}</span>
+          {onBearbeiten && (
+            <button type="button" onClick={onBearbeiten} style={ohnePlzKnopf}>
+              {t.brfOhnePlzLink || "PLZ ergänzen"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Block 3: Kernkennzahlen ── */}
+      <Kernkennzahlen kennzahlen={briefing.kernkennzahlen} t={t} />
+
+      {/* ── Block 4a: Markt · Ausblick · Block 4b: Benchmark ── */}
+      {!ohnePlz && <MarktKarte briefing={briefing} t={t} />}
+      {!ohnePlz && <AusblickKarte ausblick={briefing.ausblick} t={t} />}
+      <BenchmarkKarte alternativanlage={briefing.alternativanlage} t={t} />
+
+      {/* ── Block 5: Szenarien + Sensitivitaet ── */}
+      <SzenarienKarte
+        stresstest={briefing.stresstest}
+        sensitivitaet={briefing.sensitivitaet}
+        jahre={briefing.R.j}
+        t={t}
+      >
+        {ergebnis && stresstestTextVon(ergebnis) && (
+          <div style={einordnungssatzInKarte}>{stresstestTextVon(ergebnis)}</div>
+        )}
+      </SzenarienKarte>
+
+      {/* ── Block 6: Rote Flaggen (entfaellt ganz, wenn keine ausgeloest ist) ── */}
+      <FlaggenKarte flaggen={briefing.flaggen} t={t} />
+
+      {/* ── Block 7: Warum diese Ampel — Regel immer, KI darunter ── */}
+      <BegruendungsKarte begruendung={briefing.begruendung} t={t}>
+        {ergebnis && <EbeneVierBlock ergebnis={ergebnis} t={t} eingebettet />}
         {fehlerText && <div style={fehlerBand}>{fehlerText}</div>}
 
         {zeigtConsent && (
@@ -239,12 +333,10 @@ export function InvestmentBriefing({
             {t.brfLaeuft || "Wird berechnet …"}
           </div>
         )}
-      </EmpfehlungsKopf>
+      </BegruendungsKarte>
 
-      {/* ── Die drei Fragen als Bild: Preis/Miete gegen Markt, Ziel, Ausblick ── */}
-      <MarktVergleich briefing={briefing} t={t} />
+      {/* ── Block 8: Was jetzt zu tun ist ── */}
       <ZielKarte briefing={briefing} data={data} t={t} />
-      <AusblickKarte ausblick={briefing.ausblick} t={t} />
 
       <div style={{ textAlign: "center", marginTop: 12 }}>
         <button
@@ -284,8 +376,8 @@ export function InvestmentBriefing({
             </>
           )}
 
-          {/* ── Ebene 4: Stärken/Risiken/Hebel (nur mit KI-Ergebnis) ── */}
-          {ergebnis && <EbeneVierBlock ergebnis={ergebnis} t={t} />}
+          {/* Ebene 4 (Stärken/Risiken/Hebel) steht seit dem Objektseiten-Umbau
+              in Block 7 oben, nicht mehr hier unten (§22). */}
 
           {/* ── Ebene 5: Tragfähigkeit (nur bei negativem Cashflow) ── */}
           {briefing.tragfaehigkeit && briefing.tragfaehigkeit.wege.length > 0 && (
@@ -342,40 +434,36 @@ export function InvestmentBriefing({
             )}
           </div>
 
-          {/* ── Ebene 7: Stresstest ── */}
-          <div style={karte}>
-            <div style={abschnittsUeberschriftInKarte}>{t.brfStresstestTitel || "Stresstest"}</div>
-            {briefing.stresstest.map((s) => (
-              <div
-                key={s.key}
-                style={{ padding: "6px 0", borderTop: s.key === "basis" ? "none" : "1px solid var(--cb)" }}
-              >
-                <div style={zeileStil}>
-                  <span style={{ fontSize: 13, color: "var(--ch)" }}>
-                    {t[`brfStress${cap(s.key)}`] || STRESS_LABEL[s.key]}
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ct)" }}>
-                    {fmtE(s.cashflow)}/Mon. · {fmtE(s.vermoegen)}
-                  </span>
-                </div>
-                {s.parameter && (
-                  <div style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 2 }}>
-                    {parameterText(s.parameter, t)}
-                  </div>
-                )}
-              </div>
-            ))}
-            {ergebnis && stresstestTextVon(ergebnis) && (
-              <div style={einordnungssatzInKarte}>{stresstestTextVon(ergebnis)}</div>
-            )}
-          </div>
+          {/* Der Stresstest steht seit dem Objektseiten-Umbau als Block 5 oben
+              (Spannweite + Tabelle + Sensitivität), nicht mehr hier (§22). */}
 
           {/* ── Profi-Block ── */}
           <div style={{ marginTop: 16 }}>
             <ProfiBlock data={data} t={t} />
           </div>
+
+          {/* Belege und Lage von der Objektseite (§22, Block 9). */}
+          {detailsExtra}
         </AccordionSection>
       </div>
+
+      {/* ── Block 10: Annahmen ── */}
+      {onAnnahmeAendern && (
+        <div style={{ marginTop: 12 }}>
+          <AccordionSection
+            question={t.brfAnnahmen || "Annahmen"}
+            hint={zaehlungText || (t.brfAnnahmenHint || "Woher jeder Wert kommt")}
+          >
+            <AnnahmenListe
+              felder={ANNAHMEN_FELDER}
+              data={data}
+              herkunft={herkunftEffektiv}
+              onAendern={onAnnahmeAendern}
+              t={t}
+            />
+          </AccordionSection>
+        </div>
+      )}
     </div>
   );
 }
@@ -384,17 +472,9 @@ function cap(s) {
   return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
-function parameterText(p, t) {
-  const vz = (n) => `${n > 0 ? "+" : "−"}${fmt(Math.abs(n), 1)} %`;
-  const basis =
-    (t.brfStressParameter ||
-      "Miete {miete}, +{leerstand} % Leerstand, Kosten {kosten}, Anschlusszins {zins} ab Zinsbindungsende")
-      .replace("{miete}", vz(p.miete))
-      .replace("{leerstand}", fmt(p.leerstand, 0))
-      .replace("{kosten}", vz(p.kosten))
-      .replace("{zins}", vz(p.zins));
-  return basis;
-}
+// parameterText() und STRESS_LABEL sind mit dem Objektseiten-Umbau entfallen:
+// der Stresstest wird jetzt in BriefingVisuals/SzenarienKarte dargestellt
+// (Block 5), samt Parametern im Klartext.
 
 function Kernzahl({ kz, ampelFarbe, t }) {
   const titel = t[`brfKern${cap(kz.key)}`] || KERNZAHL_LABEL[kz.key];
@@ -524,7 +604,9 @@ function VergleichKachel({ v, t, label }) {
   );
 }
 
-function EbeneVierBlock({ ergebnis, t }) {
+// `eingebettet`: ohne eigene Kartenhuelle, seit die Staerken/Risiken/Hebel in
+// Block 7 unter der Regel-Begruendung stehen (§22) statt als eigene Karte.
+function EbeneVierBlock({ ergebnis, t, eingebettet = false }) {
   const bloecke = [
     { key: "staerken", titel: t.brfStaerken || "Stärken", farbe: "var(--primary)", einträge: staerkenVon(ergebnis) },
     { key: "risiken", titel: t.brfRisiken || "Risiken", farbe: "var(--bad-tx)", einträge: risikenVon(ergebnis) },
@@ -532,7 +614,7 @@ function EbeneVierBlock({ ergebnis, t }) {
   ].filter((b) => b.einträge.length > 0);
   if (bloecke.length === 0) return null;
   return (
-    <div style={karte}>
+    <div style={eingebettet ? { marginTop: 12 } : karte}>
       {bloecke.map((b, i) => (
         <div key={b.key} style={{ borderTop: i === 0 ? "none" : "1px solid var(--cb)", paddingTop: i === 0 ? 0 : 10, marginTop: i === 0 ? 0 : 10 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: b.farbe, textTransform: "uppercase", letterSpacing: 0.5 }}>
@@ -794,6 +876,37 @@ const veraltetBand = {
   fontWeight: 600,
   lineHeight: 1.4,
   marginBottom: 8,
+};
+
+// Hinweisband ohne PLZ (§22). Bewusst --info-*, nicht --warn-*: eine fehlende
+// PLZ ist kein Risiko des Objekts, sondern eine Luecke in den Eingaben.
+const ohnePlzBand = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap",
+  background: "var(--info-bg)",
+  border: "1px solid var(--info-bd)",
+  color: "var(--info-tx)",
+  borderRadius: 10,
+  padding: "10px 12px",
+  fontSize: 12.5,
+  lineHeight: 1.45,
+  marginTop: 12,
+};
+
+const ohnePlzKnopf = {
+  marginLeft: "auto",
+  minHeight: 40,
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: "1px solid var(--info-bd)",
+  background: "var(--cc)",
+  color: "var(--info-tx)",
+  fontSize: 12.5,
+  fontWeight: 700,
+  fontFamily: "inherit",
+  cursor: "pointer",
 };
 
 const handoutLink = {

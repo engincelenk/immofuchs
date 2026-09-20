@@ -24,6 +24,8 @@ import {
   berechneObjektKennzahlen,
   toResultData,
   berechneVollstaendigkeit,
+  rangiereObjekte,
+  SORTIERUNGEN,
 } from "../../utils/objektKennzahlen.js";
 import { ladeRegionalpreise, regionalSnapshot } from "../../utils/regionalpreis.js";
 import { ladePlzKreis } from "../../utils/plzKreis.js";
@@ -203,6 +205,12 @@ export function toServerPayload(local) {
   // regionalpreise.json spaeter (naechstes Quartal) aktualisiert wird.
   const bestehenderSnapshot = local.kennzahlen?.regionalSnapshot || null;
   const snapshot = bestehenderSnapshot || regionalSnapshot(local.data);
+  // Herkunft jedes Werts (objektseite-neu.md §7.2) - liegt als Parallelobjekt
+  // in resultData, nicht in inputData: inputData ist der Rechner-State und
+  // wird ueberall als flaches Feld-Objekt behandelt (u. a. die
+  // loadable-Heuristik weiter unten, die Schluessel zaehlt).
+  // Durchgereicht wie der regionalSnapshot darueber.
+  const herkunft = local.herkunft || local.kennzahlen?.herkunft || null;
   return {
     id: local.id,
     title: local.name,
@@ -217,6 +225,7 @@ export function toServerPayload(local) {
       ...toResultData(kz),
       letzteAnsicht: local.letzteAnsicht || "haupt",
       ...(snapshot ? { regionalSnapshot: snapshot } : {}),
+      ...(herkunft ? { herkunft } : {}),
     },
     source: "manuell",
   };
@@ -389,6 +398,12 @@ export function useSavedObjects(setData) {
               return { score: kz.score, scoreLabel: kz.scoreLabel, kennzahlen: kz };
             })()),
       };
+      // Herkunftsvermerke aus dem Anlegen-Formular (objektseite-neu.md §7.2).
+      // Sie liegen neben den Kennzahlen, weil sie zusammen mit ihnen in
+      // resultData gespeichert werden (siehe toServerPayload).
+      if (opts.herkunft) {
+        obj.kennzahlen = { ...(obj.kennzahlen || {}), herkunft: opts.herkunft };
+      }
       if (isPro) {
         try {
           await apiFetch("/objects", {
@@ -435,30 +450,33 @@ export function useSavedObjects(setData) {
       if (isPro) {
         try {
           const vorher = savedList.find((o) => o.id === id);
+          // 2026-09-08: vorher?.kennzahlen wird durchgereicht, damit
+          // toServerPayload() bei einem Rechner-Ergebnis in seinem
+          // eigenen Zweig bleibt - sonst wuerde "Am Objekt speichern"
+          // (SaveBtn, aktivesObjekt-Zweig) es hier stillschweigend zu
+          // einem Rendite-Objekt mit Unsinns-Score degradieren.
+          const basis = toServerPayload({
+            id,
+            name,
+            data,
+            letzteAnsicht: vorher?.letzteAnsicht || "haupt",
+            kennzahlen: vorher?.kennzahlen,
+            // Eine frisch uebergebene Herkunft (Bearbeiten-Formular) schlaegt
+            // die gespeicherte; ohne neue bleibt die bestehende erhalten.
+            herkunft: extra.herkunft || vorher?.kennzahlen?.herkunft || null,
+          });
           await apiFetch(`/objects/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              // 2026-09-08: vorher?.kennzahlen wird durchgereicht, damit
-              // toServerPayload() bei einem Rechner-Ergebnis in seinem
-              // eigenen Zweig bleibt - sonst wuerde "Am Objekt speichern"
-              // (SaveBtn, aktivesObjekt-Zweig) es hier stillschweigend zu
-              // einem Rendite-Objekt mit Unsinns-Score degradieren.
-              ...toServerPayload({
-                id,
-                name,
-                data,
-                letzteAnsicht: vorher?.letzteAnsicht || "haupt",
-                kennzahlen: vorher?.kennzahlen,
-              }),
+              ...basis,
+              // extra.resultData wird in die Basis GEMERGT, nicht an ihre
+              // Stelle gesetzt (2026-09-20, objektseite-neu.md §7.2): vorher
+              // ersetzte dieser Zweig das komplette resultData und warf damit
+              // regionalSnapshot weg - und haette jetzt auch die Herkunft
+              // verworfen, sobald ein KI-Ergebnis mitgespeichert wird.
               ...(extra.resultData
-                ? {
-                    resultData: {
-                      ...toResultData(kz),
-                      letzteAnsicht: vorher?.letzteAnsicht || "haupt",
-                      ...extra.resultData,
-                    },
-                  }
+                ? { resultData: { ...basis.resultData, ...extra.resultData } }
                 : {}),
             }),
           });
@@ -487,13 +505,24 @@ export function useSavedObjects(setData) {
             // RechnerAiKarte.jsx) bisher stillschweigend verworfen - o.kennzahlen
             // ging unveraendert durch. Jetzt wird gemergt (art/rechnerTyp bleiben
             // erhalten, da RechnerAiKarte sie in extra.resultData mitschickt).
-            kennzahlen: istRechnerErgebnis
-              ? extra.resultData
-                ? { ...o.kennzahlen, ...extra.resultData }
-                : o.kennzahlen
-              : extra.resultData
-                ? { ...kz, ...extra.resultData }
-                : { ...kz, ...(o.kennzahlen?.ai ? { ai: o.kennzahlen.ai } : {}) },
+            // Pendant zum Pro-Zweig oben: regionalSnapshot und herkunft
+            // haengen an o.kennzahlen und wuerden von `{ ...kz }` sonst
+            // stillschweigend abgeraeumt (objektseite-neu.md §7.2).
+            kennzahlen: {
+              ...(istRechnerErgebnis
+                ? extra.resultData
+                  ? { ...o.kennzahlen, ...extra.resultData }
+                  : o.kennzahlen
+                : extra.resultData
+                  ? { ...kz, ...extra.resultData }
+                  : { ...kz, ...(o.kennzahlen?.ai ? { ai: o.kennzahlen.ai } : {}) }),
+              ...(o.kennzahlen?.regionalSnapshot
+                ? { regionalSnapshot: o.kennzahlen.regionalSnapshot }
+                : {}),
+              ...(extra.herkunft || o.kennzahlen?.herkunft
+                ? { herkunft: extra.herkunft || o.kennzahlen.herkunft }
+                : {}),
+            },
           };
         });
         writeLocalList(next);
@@ -877,6 +906,9 @@ export function Merkliste() {
   };
   const [query, setQuery] = useState("");
   const [onlyGut, setOnlyGut] = useState(false);
+  // Voreinstellung Ampel (objektseite-neu.md §8): die Frage "welches zuerst
+  // ansehen" beantwortet das Urteil, nicht eine Einzelkennzahl.
+  const [sortierung, setSortierung] = useState("ampel");
   const [sortByScore, setSortByScore] = useState(false);
   // Filter nach Rechnertyp (Konzept-Dok 8.3, "Sortiermoeglichkeit nach
   // Rechner") - "alle" statt null, damit der Vergleich in filtered() ohne
@@ -983,6 +1015,35 @@ export function Merkliste() {
   // Die Orte-Ansicht bleibt als Wunsch gespeichert, greift aber nur auf dem
   // Objekte-Reiter - Rechner-Ergebnisse haben keinen Ort zum Gruppieren.
   const ansichtEffektiv = listArt === "rechner" ? "liste" : ansicht;
+
+  // ── Ranking (objektseite-neu.md §8, §21 D7) ───────────────────────────────
+  // "Gut im Vergleich wozu" beantwortet die LISTE, nicht die Objektseite
+  // (Entscheidung E3). Rechner-Ergebnisse sind keine Rendite-Objekte und
+  // werden nicht rangiert; sie haengen unveraendert hinten an.
+  const rangEintraege = useMemo(
+    () =>
+      rangiereObjekte(
+        filtered.filter((o) => o.kennzahlen?.art !== "rechnerErgebnis"),
+        t,
+        sortierung,
+      ),
+    [filtered, t, sortierung],
+  );
+  const rangVon = useMemo(() => {
+    const m = new Map();
+    for (const e of rangEintraege) m.set(e.objekt.id, e);
+    return m;
+  }, [rangEintraege]);
+  const sortiert = useMemo(
+    () => [
+      ...rangEintraege.map((e) => e.objekt),
+      ...filtered.filter((o) => o.kennzahlen?.art === "rechnerErgebnis"),
+    ],
+    [rangEintraege, filtered],
+  );
+  // Das Badge erscheint erst ab zwei rangierbaren Objekten - bei einem
+  // einzigen waere "1 von 1" eine Auszeichnung ohne Wettbewerb.
+  const zeigtRang = rangEintraege.filter((e) => e.rangierbar).length >= 2;
 
   // Detailansicht (ehemals eigener Pro-Tab "Objekte") - ObjektDetail erwartet
   // die rohe Server-Objektform; fuer Free-Objekte (kein Server-Datensatz)
@@ -1093,8 +1154,8 @@ export function Merkliste() {
   // ObjektDetail.inRechner(). Ersetzt den vormaligen mehrstufigen Assistenten
   // (ObjektAnlegenWizard.jsx): dessen sieben Zusatzschritte fragten dieselben
   // Felder ab, die der Renditerechner ohnehin automatisch vorbelegt.
-  const objektAnlegen = async (name, daten) => {
-    const neu = await saveObj(name, daten, "haupt");
+  const objektAnlegen = async (name, daten, herkunft) => {
+    const neu = await saveObj(name, daten, "haupt", { herkunft });
     setAnlegenOffen(false);
     if (neu) {
       Object.entries(daten).forEach(([k, v]) => set(k, v));
@@ -1416,9 +1477,45 @@ export function Merkliste() {
           }
         />
       )}
+      {/* Sortierung der Rangfolge (§8). Nur sinnvoll, wenn ueberhaupt
+          rangiert wird. */}
+      {ansichtEffektiv === "liste" && zeigtRang && (
+        <div
+          role="group"
+          aria-label={t.mlSortierung || "Sortierung"}
+          style={{ display: "flex", gap: 6, margin: "4px 0 10px", flexWrap: "wrap" }}
+        >
+          {SORTIERUNGEN.map((s) => {
+            const aktiv = sortierung === s;
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSortierung(s)}
+                aria-pressed={aktiv}
+                style={{
+                  minHeight: 40,
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  border: `1px solid ${aktiv ? "var(--ca-bd)" : "var(--cb)"}`,
+                  background: aktiv ? "var(--ca-bg)" : "var(--cc)",
+                  color: aktiv ? "var(--ca-dk)" : "var(--ch)",
+                  fontSize: 12.5,
+                  fontWeight: aktiv ? 700 : 600,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                {t[`mlSort${s}`] ||
+                  { ampel: "Ampel", cashflow: "Cashflow", faktor: "Faktor" }[s]}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {ansichtEffektiv === "liste" && (
         <div className="objekt-karten">
-          {filtered.map((obj) => {
+          {sortiert.map((obj) => {
         const inputData = obj.inputData || { ...obj.data };
         // Zwei-Produkte-Umbau (Auftrag 2026-09-08): ein Rechner-Ergebnis hat
         // keinen Kaufpreis/Score - die Karte zeigt statt der Ampel/KPIs nur
@@ -1444,6 +1541,11 @@ export function Merkliste() {
         // autoSaveExposeObject.js) - fuer diese gibt es nichts Sinnvolles zum
         // "Laden" in den Rechner, nur die Detailansicht (Tap auf die Karte).
         const loadable = Object.keys(inputData).length > 2;
+        // Rangfolge (§21 D7). `rang` ist null, wenn das Objekt mangels PLZ
+        // nicht rangierbar ist - dann steht ein "–" statt einer Ziffer und
+        // die Karte bekommt einen gestrichelten Rand.
+        const rangEintrag = zeigtRang ? rangVon.get(obj.id) : null;
+        const unvollstaendig = Boolean(rangEintrag) && !rangEintrag.rangierbar;
         return (
           <div
             key={obj.id}
@@ -1453,6 +1555,7 @@ export function Merkliste() {
               padding: "16px",
               marginBottom: 10,
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              border: unvollstaendig ? "1px dashed var(--cb)" : undefined,
             }}
           >
             <div
@@ -1471,6 +1574,25 @@ export function Merkliste() {
               }}
             >
               <div style={{ display: "flex", gap: 10, flex: 1, minWidth: 0 }}>
+                {rangEintrag && (
+                  <div style={{ flexShrink: 0, textAlign: "center", width: 30 }}>
+                    <div
+                      style={{
+                        fontSize: 22,
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        color: rangEintrag.rang ? "var(--ct)" : "var(--ch)",
+                      }}
+                    >
+                      {rangEintrag.rang ?? "–"}
+                    </div>
+                    {rangEintrag.rang && (
+                      <div style={{ fontSize: 9.5, color: "var(--ch)", marginTop: 2 }}>
+                        {t.mlVon || "von"} {rangEintrag.gesamt}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
@@ -1484,6 +1606,23 @@ export function Merkliste() {
                   >
                     {obj.name}
                   </div>
+                  {unvollstaendig && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        marginTop: 4,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: "var(--info-tx)",
+                        background: "var(--info-bg)",
+                        border: "1px solid var(--info-bd)",
+                        borderRadius: 999,
+                        padding: "2px 8px",
+                      }}
+                    >
+                      {t.mlUnvollstaendig || "Daten unvollständig"}
+                    </span>
+                  )}
                   <div style={{ fontSize: 12, color: "var(--ch)", marginTop: 2 }}>{obj.date}</div>
                 </div>
               </div>
