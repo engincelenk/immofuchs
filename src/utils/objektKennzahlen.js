@@ -10,7 +10,6 @@
 // und das beim Speichern abgelegte resultData - damit die Liste rendern kann,
 // ohne jedes Objekt neu durchzurechnen.
 import { computeRendite } from "./rendite.js";
-import { briefingAmpel } from "./briefing.js";
 import { berechneScore } from "./investmentScore.js";
 
 // Der Score liefert vier Stufen (investmentScore.js/staffel): green/yellow/
@@ -102,11 +101,12 @@ export function toResultData(kennzahlen) {
 // Die Sortierung liegt bewusst nur hier: Merkliste und ObjektVergleich teilen
 // sie sich, sonst koennten zwei Ansichten zwei Rangfolgen zeigen.
 //
-// Sortiert wird nach der AMPEL aus briefing.js, nicht nach dem Score-tier:
-// der Score ist am Objekt abgeschafft (E1) und darf nicht ueber die Rangfolge
-// zurueckkommen.
+// Ein Scoring statt zwei (Nutzer-Entscheidung 2026-09-22, hebt die aeltere
+// Entscheidung E1/E3 auf): sortiert wird jetzt nach dem Investment-Score-Tier
+// (investmentScore.js), nicht mehr nach der separaten, DSCR-losen Ampel aus
+// briefing.js - beide Systeme durften nicht laenger nebeneinander bestehen.
 export const SORTIERUNGEN = ["ampel", "cashflow", "faktor"];
-const AMPEL_RANG = { gruen: 0, gelb: 1, rot: 2 };
+const TIER_RANG = { green: 0, yellow: 1, orange: 2, red: 3 };
 
 export function rangiereObjekte(objekte, t, sortierung = "ampel") {
   const eintraege = (objekte || []).map((o) => {
@@ -116,8 +116,7 @@ export function rangiereObjekte(objekte, t, sortierung = "ampel") {
     // Grundlage - solche Objekte werden nicht schlecht bewertet, sondern gar
     // nicht rangiert (§8).
     const rangierbar = Boolean(String(data.plz || "").trim()) && kz.verfuegbar;
-    const ampel = kz.verfuegbar ? briefingAmpel(data, computeRendite(data, t)) : null;
-    return { objekt: o, data, kz, ampel, rangierbar };
+    return { objekt: o, data, kz, rangierbar };
   });
 
   const wert = (e) => {
@@ -127,7 +126,7 @@ export function rangiereObjekte(objekte, t, sortierung = "ampel") {
     if (sortierung === "faktor") {
       return Number.isFinite(e.kz.faktor) ? e.kz.faktor : Infinity;
     }
-    return AMPEL_RANG[e.ampel?.stufe] ?? 3;
+    return TIER_RANG[e.kz.tier] ?? 4;
   };
 
   const sortiert = [...eintraege].sort((a, b) => {

@@ -1,28 +1,32 @@
-// ImmoFuchs Finanz-Score (Investment-Score-Umbau, Stufe 2, 2026-08-27).
-// Reine Funktion ohne React, nach dem Muster von rendite.js/kennzahlen.js.
-// Loest den alten additiven Risiko-Score (R.rk/R.rF, bis 2026-08-27 in
-// rendite.js) ab. Deckt bewusst nur D1 (Wirtschaftlichkeit), D2 (Cashflow &
-// Schuldentragfaehigkeit), D3 (Finanzierung) und D7 (Robustheit) ab - D4-D6
-// (Objekt/Sanierung, Vermietung, Exit) folgen erst in Stufe 3, siehe
-// docs/technical_specs/investment-score.md Abschnitt 5.2. Bis dahin heisst
-// die Zahl deshalb "Finanz-Score", nicht "Investment Score".
+// ImmoFuchs Investment Score - alle 7 Dimensionen (Objektseiten-Neubau,
+// 2026-09-22). Reine Funktion ohne React, nach dem Muster von rendite.js/
+// kennzahlen.js. Loest den bisherigen "Finanz-Score" (nur D1/D2/D3/D7) ab -
+// jetzt sind D4 (Objekt & Sanierung), D5 (Vermietung) und D6 (Exit)
+// angeschlossen, deshalb heisst die Zahl ab hier "Investment Score".
 //
-// Spec: docs/technical_specs/investment-score.md Abschnitte 3, 5, 7, 8.
-// Kalibrierung: docs/technical_specs/kalibrierung-investment-score.md.
+// Eine Engine, zwei Abnehmer (Konzept-Baustein 1): Renditerechner (live,
+// opt bleibt dort leer, D5/D6 fallen ohne Regionaldaten aus der Gewichtung)
+// und Objektseite (mit opt.ref/opt.proJahrTrend aus regionalpreis.js).
+//
+// Spec: docs/technical_specs/objektseite-neubau-2026-09-22.md Abschnitt 2.
+// Historie/Kalibrierungs-Herkunft der D1-D3/D7-Baender:
+//   docs/technical_specs/investment-score.md,
+//   docs/technical_specs/kalibrierung-investment-score.md.
+// D4-D6 sind NEUES Fachurteil (siehe Abschnitt 2.5 der Neubau-Spec) - nicht
+// kalibriert, bewusst so dokumentiert statt eine Praezision vorzutaeuschen,
+// die es nicht gibt.
 
 import { computeRendite } from "./rendite.js";
 import { berechneKennzahlen } from "./kennzahlen.js";
 import { scoreKpi } from "./bands.js";
 
-// Gewichte aus Abschnitt 5. D4-D6 fehlen in Stufe 2 komplett (nicht "kein
-// Wert", sondern "existiert noch nicht") - das Ausgangsgewicht summiert sich
-// deshalb nur auf 65, nicht 100. Renormierung unten skaliert das verfuegbare
-// Gewicht der vier Dimensionen auf 0-100 hoch.
-const GEWICHTE = { d1: 20, d2: 20, d3: 15, d7: 10 };
-const GEWICHT_GESAMT = Object.values(GEWICHTE).reduce((a, b) => a + b, 0); // 65
+// Gewichte aus Abschnitt 2.1 der Neubau-Spec. Summe 100 bei voller
+// Datenlage - jede Dimension ohne jeden Sub-Score faellt aus der Gewichtung
+// (Renormierung unten), keine wird mit 50 "geraten".
+const GEWICHTE = { d1: 15, d2: 15, d3: 15, d4: 15, d5: 10, d6: 10, d7: 20 };
+const GEWICHT_GESAMT = Object.values(GEWICHTE).reduce((a, b) => a + b, 0); // 100
 
-// Unter dieser Quote des verfuegbaren Stufe-2-Gewichts (65) wird kein Score
-// gezeigt (Abschnitt 5.1, "60 % des Ausgangsgewichts").
+// Unter dieser Quote des Ausgangsgewichts wird kein Score gezeigt.
 const UNTERGRENZE_QUOTE = 0.6;
 
 function mittel(werte) {
@@ -33,15 +37,15 @@ function mittel(werte) {
 
 // Kaufpreisfaktor eigenstaendig berechnet (nicht aus R/K uebernommen): der
 // existierende Wert in Renditerechner.jsx ist an den Schluessel "kpFaktor"
-// gebunden (monoton fallende Ampelkarte). Der Score nutzt bewusst den neuen
-// Schluessel "kpFaktorScore" (Plateau-Band, siehe bands.js), damit die
-// bestehende Karte unveraendert bleibt.
+// gebunden (monoton fallende Ampelkarte). Der Score nutzt bewusst den
+// Schluessel "kpFaktorScore" (Plateau-Band), damit die bestehende Karte
+// unveraendert bleibt.
 function kpFaktorWert(d, R) {
   const kaltmieteJahr = (+d.kaltmiete || 0) * 12;
   return kaltmieteJahr > 0 ? R.gKP / kaltmieteJahr : null;
 }
 
-// ── Dimensionen D1-D3 ──────────────────────────────────────────────────────
+// ── D1-D3 (unveraendert aus dem bisherigen Score-Kern) ──────────────────────
 function dimensionD1(d, R, K) {
   return mittel([
     scoreKpi("kpFaktorScore", kpFaktorWert(d, R)),
@@ -64,7 +68,108 @@ function dimensionD3(R, K) {
   ]);
 }
 
-// ── Stress-Engine (Abschnitt 8) ─────────────────────────────────────────────
+// ── D4 Objekt & Sanierung (neu, Spec Abschnitt 2.2) ─────────────────────────
+// GEG-Skala auf den Verbrauchskennwert - uebernommen aus der bisherigen
+// briefing.js (dort jetzt entfernt, hier ist die neue fachliche Heimat,
+// damit investmentScore.js nicht von briefing.js abhaengen muss).
+const GEG_SKALA = [
+  { bis: 30, klasse: "A+" },
+  { bis: 50, klasse: "A" },
+  { bis: 75, klasse: "B" },
+  { bis: 100, klasse: "C" },
+  { bis: 130, klasse: "D" },
+  { bis: 160, klasse: "E" },
+  { bis: 200, klasse: "F" },
+  { bis: 250, klasse: "G" },
+];
+export function energieKlasse(kennwert) {
+  const v = +kennwert;
+  if (!(v > 0)) return null;
+  return GEG_SKALA.find((s) => v < s.bis)?.klasse ?? "H";
+}
+// A+/A=100 ... F/G/H=0, dazwischen fallend (Spec 2.2) - Fachurteil.
+const KLASSE_SCORE = { "A+": 100, A: 100, B: 80, C: 65, D: 45, E: 25, F: 0, G: 0, H: 0 };
+
+// Mindest-Instandhaltung je m2 und Monat nach Baujahr (nicht umlagefaehig).
+// Uebernommen aus der bisherigen briefing.js (RUECKLAGE_MINDEST) - selbe
+// Werte, neue fachliche Heimat. Exportiert, weil briefingFlaggen() in
+// briefing.js dieselbe Schwelle fuer die "Ruecklage niedrig"-Flagge braucht -
+// eine Tabelle statt zwei, die auseinanderlaufen koennten.
+export const RUECKLAGE_MINDEST = [
+  { bisBaujahr: 1969, euroQmMonat: 1.1 },
+  { bisBaujahr: 1989, euroQmMonat: 0.9 },
+  { bisBaujahr: 2009, euroQmMonat: 0.7 },
+  { bisBaujahr: 9999, euroQmMonat: 0.5 },
+];
+const HEIZUNG_ALTER_SCORE = { alt: 20, mittel: 60, neu: 100 };
+
+function dimensionD4(d) {
+  const heizungAlterScore = HEIZUNG_ALTER_SCORE[d.sanHa] ?? null;
+  const energieScore = KLASSE_SCORE[energieKlasse(d.sanIstVerbrauch)] ?? null;
+
+  const baujahr = +d.baujahr || 0;
+  const flaeche = +d.flaeche || 0;
+  let ruecklageScore = null;
+  if (baujahr > 0 && flaeche > 0) {
+    const mindest = RUECKLAGE_MINDEST.find((s) => baujahr <= s.bisBaujahr)?.euroQmMonat;
+    const istQm = (+d.nichtUml || 0) / flaeche;
+    if (mindest != null && mindest > 0) {
+      ruecklageScore = Math.max(0, Math.min(100, (istQm / mindest) * 100));
+    }
+  }
+
+  return mittel([heizungAlterScore, energieScore, ruecklageScore]);
+}
+
+// ── D5 Vermietung (neu, Spec Abschnitt 2.3) ─────────────────────────────────
+// Nur Mietabweichung zur Regionalreferenz - "Mietkonzentration" aus der
+// alten Spec entfaellt ersatzlos (d.wohneinheiten bedeutet "WE im Haus",
+// nicht "gekaufte Einheiten"; kein neues Pflichtfeld, keine Umdeutung).
+// opt.ref kommt aus regionalPreis() (regionalpreis.js) - ohne PLZ/Kreistreffer
+// gibt es keinen Sub-Score, D5 faellt aus der Gewichtung (Renormierung).
+function dimensionD5(d, opt) {
+  const flaeche = +d.flaeche || 0;
+  const kaltmiete = +d.kaltmiete || 0;
+  const ref = opt?.ref;
+  if (!(flaeche > 0) || !(kaltmiete > 0) || !(ref?.mieteWohnung > 0)) return null;
+  const eigenQm = kaltmiete / flaeche;
+  const abw = (eigenQm / ref.mieteWohnung - 1) * 100;
+  return mittel([scoreKpi("mietabweichung", abw)]);
+}
+
+// ── D6 Exit (neu, Spec Abschnitt 2.4) ───────────────────────────────────────
+// exitScore und spekulationsfristScore sind IMMER berechenbar (reine
+// R/K-Werte); wertsteigerungScore nur mit opt.proJahrTrend (annualisierte
+// Referenz-Wertsteigerung, derselbe Wert, den die Objektseite fuer den
+// Ausblick ohnehin schon berechnet - siehe briefingAusblick() proJahrProzent
+// in der bisherigen briefing.js). Ohne diesen Wert bleibt d.wertP unbewertet
+// statt gegen eine geratene Referenz zu laufen.
+function dimensionD6(d, R, K, opt) {
+  const gesamtinvestition = K.gesamtinvestition;
+  const exitScore =
+    gesamtinvestition > 0
+      ? Math.max(0, Math.min(100, 50 + (R.g / gesamtinvestition) * 100))
+      : null;
+
+  let wertsteigerungScore = null;
+  const wertP = d.wertP !== "" && d.wertP != null && Number.isFinite(+d.wertP) ? +d.wertP : null;
+  const proJahrTrend = opt?.proJahrTrend;
+  if (wertP != null && typeof proJahrTrend === "number" && isFinite(proJahrTrend)) {
+    const ueberschuss = wertP - proJahrTrend; // Prozentpunkte ueber der Referenz
+    wertsteigerungScore = Math.max(0, Math.min(100, 100 - (Math.max(0, ueberschuss) / 3) * 100));
+  }
+
+  const jahre = +d.jahre || 10;
+  let spekulationsfristScore = 100;
+  if (jahre < 10 && R.gKP > 0) {
+    const st23Quote = (R.st23 || 0) / (0.01 * R.gKP); // % des Kaufpreises
+    spekulationsfristScore = Math.max(0, Math.min(100, 100 - st23Quote));
+  }
+
+  return mittel([exitScore, wertsteigerungScore, spekulationsfristScore]);
+}
+
+// ── Stress-Engine (unveraendert) ────────────────────────────────────────────
 // Drei vollstaendige computeRendite-Laeufe mit modifiziertem Formular-State.
 // Der Anschlusszins der Stress-Engine ist unabhaengig vom optionalen Feld
 // d.anschlussZins des Nutzers - die Szenarien simulieren einen FESTEN
@@ -83,11 +188,9 @@ function szenario(
     leerstand: String((+d.leerstand || 0) + Math.round(analyseMonate * leerstandZusatzProz)),
     nichtUml: String((+d.nichtUml || 0) * kostenFaktor),
     wertP: String((+d.wertP || 0) + wertPDelta),
-    // !== 0 statt > 0 seit der Objektseiten-Spec (objektseite-neu.md §6.4):
-    // der Best-Case arbeitet mit einem NEGATIVEN Aufschlag (-0,5 pp). Mit der
-    // alten Bedingung fiel er stillschweigend auf d.anschlussZins zurueck und
-    // waere beim Zins gar kein Best-Case gewesen. Fuer die beiden
-    // vorhandenen Aufrufer (+1,0 / +2,0) aendert sich nichts.
+    // !== 0 statt > 0: der Best-Case arbeitet mit einem NEGATIVEN Aufschlag
+    // (-0,5 pp). Mit der alten Bedingung fiele er stillschweigend auf
+    // d.anschlussZins zurueck.
     anschlussZins:
       zinsAufschlag !== 0 ? String((+d.zinssatz || 0) + zinsAufschlag) : d.anschlussZins,
   };
@@ -113,11 +216,10 @@ export function berechneSzenarien(d, t) {
     zinsAufschlag: 2.0,
     wertPDelta: -1.0,
   });
-  // "best" ergaenzt seit objektseite-neu.md §6.4 - gespiegeltes "negativ",
-  // beim Zins halbiert (-0,5 statt -1,0 pp): ein Zinsrueckgang um einen
-  // vollen Punkt bis zum Anschluss waere keine seriose Annahme. Der
-  // Schluessel ist rein additiv; berechneScore() unten nutzt weiterhin nur
-  // negativ und stress fuer D7, und alle Aufrufer destrukturieren.
+  // "best" - gespiegeltes "negativ", beim Zins halbiert (-0,5 statt -1,0 pp):
+  // ein Zinsrueckgang um einen vollen Punkt bis zum Anschluss waere keine
+  // seriose Basisannahme. Rein additiv; berechneScore() nutzt weiterhin nur
+  // negativ und stress fuer D7.
   const best = szenario(d, t, {
     kaltmieteFaktor: 1.05,
     leerstandZusatzProz: 0,
@@ -128,10 +230,10 @@ export function berechneSzenarien(d, t) {
   return { best, basis, negativ, stress };
 }
 
-// ── Hard Stops (Abschnitt 7) ─────────────────────────────────────────────────
+// ── Hard Stops (unveraendert) ────────────────────────────────────────────────
 // Kappen den Gesamtscore (Math.min), ziehen nicht ab - eine gute Rendite darf
 // eine kaputte Finanzierung nicht ueberkompensieren. Der DSCR-Stress-Stop ist
-// separat (kappt nur D7, siehe unten), weil er vor der Gewichtung greift.
+// separat (kappt nur D7), weil er vor der Gewichtung greift.
 function hardStops(d, R, K) {
   const treffer = [];
   if ((+d.tilgung || 0) === 0 && R.bankDa > 0) {
@@ -150,29 +252,23 @@ function hardStops(d, R, K) {
 }
 
 // ── Findings ("Was spricht dafuer, was dagegen?") ───────────────────────────
-// Nur gruen (dafuer) / rot (dagegen) werden gemeldet - gelb ist Grenzbereich,
-// keine klare Aussage in die eine oder andere Richtung (vermeidet eine lange,
-// wenig aussagekraeftige Liste).
-const FINDING_KPIS = [
-  { code: "kpFaktor", key: "kpFaktorScore", getWert: (d, R) => kpFaktorWert(d, R) },
-  { code: "anfangsrendite", key: "anfangsrendite", getWert: (d, R, K) => K.anfangsrendite },
-  { code: "dscrObjekt", key: "dscrObjekt", getWert: (d, R, K) => K.dscrObjekt },
-  { code: "dscrIst", key: "dscrIst", getWert: (d, R, K) => K.dscrIst },
-  { code: "icr", key: "icr", getWert: (d, R, K) => K.icr },
-  { code: "beLeer", key: "breakEvenLeerstand", getWert: (d, R, K) => K.breakEvenLeerstand },
-  { code: "bel", key: "bel", getWert: (d, R) => R.bel },
-  { code: "ekQuote", key: "ekQuote", getWert: (d, R) => R.ekQ },
-  {
-    code: "restschuldZBQuote",
-    key: "restschuldZBQuote",
-    getWert: (d, R, K) => K.restschuldZBQuote,
-  },
-];
-
-function findFindings(d, R, K) {
+// Nur gruen (dafuer) / rot (dagegen) werden gemeldet - gelb ist Grenzbereich.
+// mietabweichung nur mit opt.ref (D5-Datenbasis).
+function findFindingsBasis(d, R, K) {
+  const FINDING_KPIS = [
+    { code: "kpFaktor", key: "kpFaktorScore", getWert: () => kpFaktorWert(d, R) },
+    { code: "anfangsrendite", key: "anfangsrendite", getWert: () => K.anfangsrendite },
+    { code: "dscrObjekt", key: "dscrObjekt", getWert: () => K.dscrObjekt },
+    { code: "dscrIst", key: "dscrIst", getWert: () => K.dscrIst },
+    { code: "icr", key: "icr", getWert: () => K.icr },
+    { code: "beLeer", key: "breakEvenLeerstand", getWert: () => K.breakEvenLeerstand },
+    { code: "bel", key: "bel", getWert: () => R.bel },
+    { code: "ekQuote", key: "ekQuote", getWert: () => R.ekQ },
+    { code: "restschuldZBQuote", key: "restschuldZBQuote", getWert: () => K.restschuldZBQuote },
+  ];
   const findings = [];
   for (const f of FINDING_KPIS) {
-    const wert = f.getWert(d, R, K);
+    const wert = f.getWert();
     if (wert == null || !isFinite(wert)) continue;
     const s = scoreKpi(f.key, wert);
     if (s >= 80) findings.push({ code: f.code, tier: "green", wert });
@@ -180,8 +276,19 @@ function findFindings(d, R, K) {
   }
   return findings;
 }
+function findFindingsMiete(d, opt) {
+  const flaeche = +d.flaeche || 0;
+  const kaltmiete = +d.kaltmiete || 0;
+  const ref = opt?.ref;
+  if (!(flaeche > 0) || !(kaltmiete > 0) || !(ref?.mieteWohnung > 0)) return [];
+  const abw = (kaltmiete / flaeche / ref.mieteWohnung - 1) * 100;
+  const s = scoreKpi("mietabweichung", abw);
+  if (s >= 80) return [{ code: "mietabweichung", tier: "green", wert: abw }];
+  if (s <= 20) return [{ code: "mietabweichung", tier: "red", wert: abw }];
+  return [];
+}
 
-// ── Staffel (offene Frage 5 der Spec, entschieden: neutrale Wortwahl) ───────
+// ── Staffel ──────────────────────────────────────────────────────────────────
 function staffel(score) {
   if (score >= 70) return { tier: "green", labelKey: "financeScoreLabelSolide" };
   if (score >= 50) return { tier: "yellow", labelKey: "financeScoreLabelGemischt" };
@@ -192,9 +299,13 @@ function staffel(score) {
 /**
  * @param {object} d - Formular-State aus dem Renditerechner
  * @param {object} t - Uebersetzungen (nur durchgereicht an computeRendite)
- * @returns {object} Finanz-Score-Ergebnis, siehe Feldkommentare
+ * @param {object} [opt]
+ * @param {object|null} [opt.ref] - regionalPreis(bundesland, ort, plz), fuer D5
+ * @param {number|null} [opt.proJahrTrend] - annualisierte Referenz-
+ *   Wertsteigerung in %, fuer D6 (siehe dimensionD6-Kommentar)
+ * @returns {object} Investment-Score-Ergebnis, siehe Feldkommentare
  */
-export function berechneScore(d, t) {
+export function berechneScore(d, t, opt = {}) {
   const R = computeRendite(d, t);
   const K = berechneKennzahlen(d, R);
   const { negativ, stress } = berechneSzenarien(d, t);
@@ -202,11 +313,13 @@ export function berechneScore(d, t) {
   const d1 = dimensionD1(d, R, K);
   const d2 = dimensionD2(K);
   const d3 = dimensionD3(R, K);
+  const d4 = dimensionD4(d);
+  const d5 = dimensionD5(d, opt);
+  const d6 = dimensionD6(d, R, K, opt);
 
-  // D7 Robustheit: gewichteter DSCR ueber die drei Szenarien (Abschnitt 8.2).
-  // Faellt ganz aus der Gewichtung, wenn keines der drei Szenarien ueberhaupt
-  // einen DSCR liefert (kein Bankdarlehen -> kein Kapitaldienst -> DSCR
-  // ueberall null - "Robustheit wogegen?" ist dann keine sinnvolle Frage).
+  // D7 Robustheit: gewichteter DSCR ueber die drei Szenarien. Faellt ganz aus
+  // der Gewichtung, wenn keines der drei Szenarien einen DSCR liefert (kein
+  // Bankdarlehen -> kein Kapitaldienst -> DSCR ueberall null).
   const dscrBasis = K.dscrIst;
   const dscrNegativ = negativ.K.dscrIst;
   const dscrStress = stress.K.dscrIst;
@@ -219,9 +332,8 @@ export function berechneScore(d, t) {
   if (d7Teile.length > 0) {
     const wSum = d7Teile.reduce((a, x) => a + x.w, 0);
     d7 = d7Teile.reduce((a, x) => a + x.s * x.w, 0) / wSum;
-    // Hard Stop "dscrStress < 0,70 -> D7 <= 40" (Abschnitt 7): kappt vor der
-    // Gewichtung, nicht den Gesamtscore - ein schwacher Stresswert soll die
-    // Robustheits-Dimension druecken, nicht automatisch das ganze Ergebnis.
+    // Hard Stop "dscrStress < 0,70 -> D7 <= 40": kappt vor der Gewichtung,
+    // nicht den Gesamtscore.
     if (dscrStress != null && dscrStress < 0.7) d7 = Math.min(d7, 40);
   }
 
@@ -229,6 +341,9 @@ export function berechneScore(d, t) {
     { key: "d1", gewicht: GEWICHTE.d1, score: d1 },
     { key: "d2", gewicht: GEWICHTE.d2, score: d2 },
     { key: "d3", gewicht: GEWICHTE.d3, score: d3 },
+    { key: "d4", gewicht: GEWICHTE.d4, score: d4 },
+    { key: "d5", gewicht: GEWICHTE.d5, score: d5 },
+    { key: "d6", gewicht: GEWICHTE.d6, score: d6 },
     { key: "d7", gewicht: GEWICHTE.d7, score: d7 },
   ];
   const verfuegbareDimensionen = dimensionenRoh.filter((x) => x.score != null);
@@ -245,7 +360,7 @@ export function berechneScore(d, t) {
     };
   }
 
-  // Renormierung: das verfuegbare Gewicht wird auf 100 hochskaliert (Abschnitt 5.1).
+  // Renormierung: das verfuegbare Gewicht wird auf 100 hochskaliert.
   const dimensionen = verfuegbareDimensionen.map((x) => ({
     ...x,
     gewichtNormiert: (x.gewicht / verfuegbaresGewicht) * 100,
@@ -258,9 +373,8 @@ export function berechneScore(d, t) {
   const score = Math.max(0, Math.min(100, Math.round(scoreRoh)));
   const { tier, labelKey } = staffel(score);
 
-  // Anschlusszins-Warnsatz (Abschnitt 10.3): nur wenn der Cashflow erst im
-  // Stress-Szenario kippt (Basis noch tragfaehig) - sonst gibt es fuer diesen
-  // konkreten Hinweis nichts Neues zu sagen, das der Score nicht schon zeigt.
+  // Anschlusszins-Warnsatz: nur wenn der Cashflow erst im Stress-Szenario
+  // kippt (Basis noch tragfaehig).
   let anschlussHinweis = null;
   if (R.cf2MitSt >= 0 && stress.R.cf2MitSt < 0) {
     anschlussHinweis = { zins: (+d.zinssatz || 0) + 2.0 };
@@ -273,7 +387,7 @@ export function berechneScore(d, t) {
     labelKey,
     dimensionen,
     hardStops: ausgeloesteHardStops,
-    findings: findFindings(d, R, K),
+    findings: [...findFindingsBasis(d, R, K), ...findFindingsMiete(d, opt)],
     stress: {
       basis: { cf: R.cf2MitSt, dscr: K.dscrIst, saldo: R.g },
       negativ: { cf: negativ.R.cf2MitSt, dscr: negativ.K.dscrIst, saldo: negativ.R.g },

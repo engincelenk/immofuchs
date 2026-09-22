@@ -1,24 +1,46 @@
-// Rechenkern des Investment-Briefings (Spec docs/technical_specs/
-// investment-briefing.md, Abschnitt 5). Reine Funktionen nach dem Muster von
-// kennzahlen.js/investmentScore.js - kein React, kein fetch, kein Modul-State.
+// Rechenkern der Objektseite (Objektseiten-Neubau, docs/technical_specs/
+// objektseite-neubau-2026-09-22.md, Bausteine 3/4/5/7). Reine Funktionen nach
+// dem Muster von kennzahlen.js/investmentScore.js - kein React, kein fetch,
+// kein Modul-State.
 //
-// Grundprinzip der Spec (Abschnitt 3): "Zahlen aus der Engine, Worte von der
-// KI". Jede Zahl der Karte entsteht hier deterministisch aus dem Formular-
-// State; die KI bekommt sie fertig formatiert und rechnet nichts nach. Die
+// Grundprinzip (Baustein 3/6): "Zahlen aus der Engine, Worte von der KI".
+// Jede Zahl der Karte entsteht hier deterministisch aus dem Formular-State;
+// die KI bekommt sie fertig formatiert und rechnet nichts nach. Die
 // Funktionen liefern deshalb Struktur + Uebersetzungs-SCHLUESSEL, keine
 // fertigen UI-Saetze - einzige Ausnahme ist briefingZahlen() am Dateiende,
 // das den deutschen KI-Block baut (die Prompts sind ebenfalls deutsch, siehe
 // hebelVarianten() in aiTools.js).
 //
+// Ein Scoring statt zwei (Nutzer-Entscheidung 2026-09-22): die EINE
+// Ampel-Quelle ist berechneScore() aus investmentScore.js (Baustein 1) - sie
+// wird hier importiert und unveraendert durchgereicht. Was frueher
+// "briefingAmpel()" hiess, ist eine reine CASHFLOW-Einordnung (traegt sich/
+// mit Zuzahlung/nicht/Hard-Stop) fuer die Begruendungs-Formulierung - sie
+// erscheint nirgends mehr als eigenstaendiger Badge und heisst deshalb jetzt
+// cashflowUrteil(), nicht mehr "Ampel". Das Feld `ampel` im Rueckgabewert von
+// berechneBriefing() bleibt aus Kompatibilitaetsgruenden bestehen (Baustein-
+// Umbau der Anzeige folgt in InvestmentBriefing.jsx/BriefingVisuals.jsx).
+//
 // Alle Schwellen stehen als benannte Konstanten hier oben, nicht in
-// Komponenten - sie sind Fachurteil, nicht kalibriert (Spec Abschnitt 14) und
-// muessen sich an einer Stelle nachjustieren lassen.
+// Komponenten - sie sind Fachurteil, nicht kalibriert und muessen sich an
+// einer Stelle nachjustieren lassen.
 
 import { computeRendite } from "./rendite.js";
 import { berechneKennzahlen } from "./kennzahlen.js";
-import { berechneSzenarien } from "./investmentScore.js";
+import {
+  berechneScore,
+  berechneSzenarien,
+  energieKlasse,
+  RUECKLAGE_MINDEST,
+} from "./investmentScore.js";
 import { loeseFuerCashflowNull } from "./aiTools.js";
 import { fmt } from "./helpers.js";
+
+// Re-Export: energieKlasse()/RUECKLAGE_MINDEST leben jetzt fachlich in
+// investmentScore.js (D4), briefingFlaggen() unten braucht dieselbe
+// Tabelle/Funktion wie der Score - bestehende Importe aus "./briefing.js"
+// (briefing.test.js, ggf. Komponenten) bleiben dadurch gueltig.
+export { energieKlasse, RUECKLAGE_MINDEST };
 
 // Zuzahlung bis 20 % der Kaltmiete gilt noch als "traegt sich mit Zuzahlung".
 export const ZUZAHLUNG_GELB_QUOTE = 0.2;
@@ -48,15 +70,9 @@ export const ALTERNATIV_ANLAGEN = [
   { key: "etf", prozent: 7.0 },
 ];
 
-// Mindest-Instandhaltung je m2 und Monat nach Baujahr (nicht umlagefaehig).
-// Fachurteil, nicht kalibriert. Ohne Baujahr entfaellt die Flagge, statt eine
-// Schwelle zu raten.
-export const RUECKLAGE_MINDEST = [
-  { bisBaujahr: 1969, euroQmMonat: 1.1 },
-  { bisBaujahr: 1989, euroQmMonat: 0.9 },
-  { bisBaujahr: 2009, euroQmMonat: 0.7 },
-  { bisBaujahr: 9999, euroQmMonat: 0.5 },
-];
+// RUECKLAGE_MINDEST: jetzt in investmentScore.js (D4, dortiger Sub-Score
+// "Ruecklagen-Deckung") - hier re-exportiert (siehe Import oben), damit
+// Flaggen-Schwelle und Score-Formel garantiert dieselbe Tabelle lesen.
 
 // Ab diesem Aufschlag auf den Kreisfaktor ist der Kaufpreisfaktor eine rote
 // Flagge - nicht nur "ueber Markt" (das faengt TOLERANZ_PROZENT ab).
@@ -66,12 +82,14 @@ export const RESTSCHULD_FLAGGE_QUOTE = 60;
 // Deckt sich mit dem hardStopCf-Schwellenwert in investmentScore.js.
 export const CASHFLOW_FLAGGE_EUR = -800;
 
-// ── Ebene 1: Ampel (5.1) ────────────────────────────────────────────────────
-// Regelbasiert, ohne DSCR und ohne Score (Entscheidung E3). Die Hard-Stops
-// werden bewusst NICHT aus investmentScore.js importiert, sondern hier ueber
+// ── Cashflow-Urteil (fuer die Begruendungs-Formulierung, nicht als Badge) ───
+// Regelbasiert, ohne DSCR und ohne Score - beantwortet ausschliesslich "traegt
+// sich der Cashflow", nicht "wie gut ist das Investment insgesamt" (das ist
+// berechneScore() aus investmentScore.js, Baustein 1). Die Hard-Stops werden
+// bewusst NICHT aus investmentScore.js importiert, sondern hier ueber
 // dieselben Groessen geprueft - sonst liefe der dortige DSCR-Stop mit, der
-// laut E3 ausschliesslich in den Profi-Block gehoert.
-export function briefingAmpel(d, R) {
+// hier nicht gebraucht wird (reine Cashflow-Frage, keine Finanzierungsfrage).
+export function cashflowUrteil(d, R) {
   const kaltmiete = +d.kaltmiete || 0;
   const tilgung = +d.tilgung || 0;
 
@@ -624,27 +642,6 @@ export function briefingSensitivitaet(d, t) {
   return { basis, zeilen };
 }
 
-// ── Energie-Einordnung (5.8) ────────────────────────────────────────────────
-// GEG-Skala auf den Verbrauchskennwert. Behebt den Widerspruch "unauffaellig"
-// vs. "Investitionsbedarf" (Problem 1 der Spec), indem die Klasse gerechnet
-// statt vom Modell geschaetzt wird. Anzeige nur im Profi-Block.
-const GEG_SKALA = [
-  { bis: 30, klasse: "A+" },
-  { bis: 50, klasse: "A" },
-  { bis: 75, klasse: "B" },
-  { bis: 100, klasse: "C" },
-  { bis: 130, klasse: "D" },
-  { bis: 160, klasse: "E" },
-  { bis: 200, klasse: "F" },
-  { bis: 250, klasse: "G" },
-];
-
-export function energieKlasse(kennwert) {
-  const v = +kennwert;
-  if (!(v > 0)) return null;
-  return GEG_SKALA.find((s) => v < s.bis)?.klasse ?? "H";
-}
-
 // ── Block 6: Rote Flaggen (objektseite-neu.md §6.5) ─────────────────────────
 // Bis zur Objektseiten-Spec lagen Warnungen als `flagKey` verstreut in
 // einzelnen Vergleichskacheln. Sie stehen jetzt ausschliesslich hier, und
@@ -960,13 +957,26 @@ export function briefingAusblick({ verlauf, trend4J, wertP, energieklasse } = {}
 export function berechneBriefing(d, t, opt = {}) {
   const R = computeRendite(d, t);
   const K = berechneKennzahlen(d, R);
+  const energieklasse = energieKlasse(d.sanIstVerbrauch);
+  // Ausblick VOR dem Score berechnet: liefert proJahrProzent (annualisierte
+  // Referenz-Wertsteigerung aus der Landes-Zeitreihe), das D6 im Score fuer
+  // die Wertsteigerungs-Plausibilitaet braucht (investmentScore.js
+  // dimensionD6). Eine Berechnung der Jahresrate statt zwei.
+  const ausblick = briefingAusblick({
+    verlauf: opt.verlauf,
+    trend4J: opt.trend4J,
+    wertP: d.wertP,
+    energieklasse,
+  });
+  // Baustein 1: die EINE Score-Quelle. opt.ref (D5) reicht direkt durch,
+  // proJahrTrend (D6) kommt aus dem Ausblick oben.
+  const score = berechneScore(d, t, { ...opt, proJahrTrend: ausblick?.proJahrProzent ?? null });
   const tragfaehigkeit = briefingTragfaehigkeit(d, t, R, opt);
-  const ampel = briefingAmpel(d, R);
+  const ampel = cashflowUrteil(d, R);
   const vergleiche = briefingVergleiche(d, R, {
     ...opt,
     tragfaehigerKaufpreis: tragfaehigkeit?.kaufpreis ?? null,
   });
-  const energieklasse = energieKlasse(d.sanIstVerbrauch);
   const marktpreis = briefingMarktpreis(d, opt.ref);
   const kombiweg = briefingKombiweg(d, t, R, vergleiche.find((v) => v.id === "v2"));
   // Der Faktor-Benchmark wird zweimal gebraucht (Kernkennzahl-Zusatz und
@@ -982,6 +992,7 @@ export function berechneBriefing(d, t, opt = {}) {
   return {
     R,
     K,
+    score,
     ampel,
     kernzahlen: briefingKernzahlen(d, R, K),
     kernkennzahlen: briefingKernkennzahlen(d, t, R, K, { faktorBenchmark }),
@@ -998,12 +1009,7 @@ export function berechneBriefing(d, t, opt = {}) {
     kombiweg,
     empfehlung,
     begruendung: briefingBegruendung(d, R, { ampel, empfehlung }),
-    ausblick: briefingAusblick({
-      verlauf: opt.verlauf,
-      trend4J: opt.trend4J,
-      wertP: d.wertP,
-      energieklasse,
-    }),
+    ausblick,
   };
 }
 
@@ -1059,11 +1065,36 @@ const ZEITRAUM_LABEL = {
 
 const SZENARIO_LABEL = { basis: "Basis", negativ: "Negativ", stress: "Stress" };
 
+// Baustein 6: alle sieben Dimensionen fliessen in die KI-Nutzlast, nicht mehr
+// nur D1-D3/D7 - das Modell soll dieselbe Grundlage sehen, die auch die
+// Ampel/den Score-Badge auf der Seite bestimmt (Neubau-Spec Abschnitt 7).
+const DIMENSION_LABEL = {
+  d1: "Wirtschaftlichkeit",
+  d2: "Cashflow & Schuldentragfaehigkeit",
+  d3: "Finanzierung",
+  d4: "Objekt & Sanierung",
+  d5: "Vermietung",
+  d6: "Exit",
+  d7: "Robustheit",
+};
+
 const wert = (v, einheit) =>
   einheit === "eurQm" ? QM(v) : einheit === "prozent" ? `${fmt(v, 1)} %` : EUR(v);
 
 export function briefingZahlen(briefing) {
   const zeilen = [];
+
+  // Investment Score zuerst - das Modell soll das Ergebnis kennen, das der
+  // Nutzer bereits als Badge sieht, bevor es Details liest (Baustein 6).
+  if (briefing.score?.verfuegbar) {
+    zeilen.push({ label: "Investment Score", wert: `${briefing.score.score}/100` });
+    for (const dim of briefing.score.dimensionen) {
+      zeilen.push({
+        label: `Dimension ${DIMENSION_LABEL[dim.key] || dim.key}`,
+        wert: `${fmt(dim.score, 0)}/100`,
+      });
+    }
+  }
 
   for (const k of briefing.vergleiche) {
     const label = VERGLEICH_LABEL[k.id];

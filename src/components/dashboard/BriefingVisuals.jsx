@@ -70,7 +70,119 @@ const kartenTitel = {
 };
 const klein = { fontSize: 11, color: "var(--cl)" };
 
-// ── Kopf: Empfehlung ────────────────────────────────────────────────────────
+// ── Kopf 1: Investment Score (Baustein 1) ───────────────────────────────────
+// Die PRIMAERE Antwort der Seite (Objektseiten-Neubau-Spec, Abschnitt 9,
+// Punkt 1): Ampel-Badge (0-100, 4 Stufen) + ein Satz, "Details anzeigen" fuer
+// alle sieben Dimensionen. Ein Scoring statt zwei - dieselbe
+// berechneScore()-Quelle wie der Renditerechner, kein zweites Urteil.
+const DIM_LABEL = {
+  d1: "Wirtschaftlichkeit",
+  d2: "Cashflow & Schuldentragfähigkeit",
+  d3: "Finanzierung",
+  d4: "Objekt & Sanierung",
+  d5: "Vermietung",
+  d6: "Exit",
+  d7: "Robustheit",
+};
+const TIER_FARBE = { green: "gruen", yellow: "gelb", orange: "orange", red: "rot" };
+
+export function ScoreKopf({ score, t }) {
+  const [offen, setOffen] = useState(false);
+
+  if (!score?.verfuegbar) {
+    return (
+      <div className="bv" style={{ ...karte, marginTop: 0 }}>
+        <style>{CSS}</style>
+        <div style={kartenTitel}>{L(t, "brfScoreTitel", "Investment Score")}</div>
+        <div style={{ marginTop: 6, fontSize: 14, color: "var(--ch)" }}>
+          {L(t, "brfScoreNichtVerfuegbar", "Noch zu wenige Angaben für eine Bewertung.")}
+        </div>
+      </div>
+    );
+  }
+
+  const f = STATUS_FARBEN[TIER_FARBE[score.tier]] || STATUS_FARBEN.neutral;
+
+  return (
+    <div
+      className="bv"
+      style={{
+        ...karte,
+        marginTop: 0,
+        background: `linear-gradient(180deg, ${f.bg} 0%, var(--cc) 75%)`,
+        borderColor: f.bd,
+      }}
+    >
+      <style>{CSS}</style>
+      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+        <div
+          className="bv-auf"
+          style={{ fontSize: 40, fontWeight: 800, color: f.tx, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}
+        >
+          {score.score}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={kartenTitel}>{L(t, "brfScoreTitel", "Investment Score")}</div>
+          <div
+            className="bv-auf"
+            style={{ "--bv-d": "40ms", fontSize: 16, fontWeight: 700, color: f.tx, marginTop: 2 }}
+          >
+            {L(t, score.labelKey, score.labelKey)}
+          </div>
+        </div>
+      </div>
+
+      {score.hardStops.length > 0 && (
+        <div
+          className="bv-auf"
+          style={{ "--bv-d": "70ms", marginTop: 10, fontSize: 13, fontWeight: 700, color: "var(--bad-tx)" }}
+        >
+          {score.hardStops.map((hs) => L(t, hs.key, hs.key)).join(" · ")}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setOffen((v) => !v)}
+        style={{
+          marginTop: 10,
+          background: "none",
+          border: "none",
+          padding: 0,
+          fontSize: 12.5,
+          fontWeight: 700,
+          color: "var(--ca)",
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
+      >
+        {offen
+          ? L(t, "brfScoreDetailsZu", "Details ausblenden")
+          : L(t, "brfScoreDetailsAuf", "Details anzeigen")}
+      </button>
+
+      {offen && (
+        <div className="bv-auf" style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+          {score.dimensionen.map((dim) => (
+            <div key={dim.key} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}>
+              <span style={{ color: "var(--ch)" }}>{DIM_LABEL[dim.key] || dim.key}</span>
+              <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                {fmt(dim.score, 0)}/100
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Kopf 2: Handlungsempfehlung (Baustein 7) ────────────────────────────────
+// War bis zum Objektseiten-Neubau die PRIMAERE Karte der Seite; das ist jetzt
+// ScoreKopf (Baustein 1, direkt darueber). EmpfehlungsKopf beantwortet eine
+// andere, konkretere Frage ("investieren/verhandeln/nicht, zu welchem
+// Preis") und bleibt deshalb als eigener Block bestehen - kein Score-Badge
+// mehr hier, das waere dieselbe Zahl zweimal auf der Seite.
 export function EmpfehlungsKopf({ briefing, data, t, children }) {
   const e = EMPFEHLUNG[briefing.empfehlung.wort];
   const f = STATUS_FARBEN[e.farbe];
@@ -96,7 +208,7 @@ export function EmpfehlungsKopf({ briefing, data, t, children }) {
       <style>{CSS}</style>
       <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
         <StatusIcon wort={briefing.empfehlung.wort} farbe={f.tx} />
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={kartenTitel}>{L(t, "brfEmpfTitel", "Empfehlung")}</div>
           <div
             className="bv-auf"

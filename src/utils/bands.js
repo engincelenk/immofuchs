@@ -38,6 +38,12 @@ export const BANDS = {
   icr: { dir: "up", green: 1.1, yellow: 0.9, unit: "x" },
   debtYield: { dir: "up", green: 4.4, yellow: 3.67, unit: "%" },
   restschuldZBQuote: { dir: "down", green: 50, yellow: 70, unit: "%" },
+
+  // ── Investment-Score D5 (objektseite-neubau-2026-09-22.md §2.3) ─────────
+  // Abweichung der eigenen Miete/m² von der Regionalreferenz. Plateau bei
+  // +-5% (im Rahmen der Datenstreuung), 0 Punkte ab +-25% - Fachurteil,
+  // nicht kalibriert.
+  mietabweichung: { typ: "trapez", von: -5, bis: 5, null0: -25, null1: 25 },
 };
 export function rate(kpi, wert) {
   const b = BANDS[kpi];

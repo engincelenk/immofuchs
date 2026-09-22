@@ -1,3 +1,58 @@
+## 2026-09-22 (1.97.0)
+
+### Investment Score: alle 7 Dimensionen, Objektseite neu strukturiert
+
+Umsetzung von docs/technical_specs/objektseite-neubau-2026-09-22.md. Der
+Score deckte bisher nur D1-D3/D7 ab ("Finanz-Score"); jetzt sind alle 7
+Dimensionen des Konzepts angeschlossen und die Zahl heisst "Investment
+Score". Deterministische Rechenkerne (rendite.js, afa.js, kfwDarlehen.js)
+bewusst unangetastet - nur Score-Engine und Objektseiten-Darstellung neu.
+
+- investmentScore.js: D4 (Objekt & Sanierung: Heizungsalter, Energieklasse,
+  Ruecklagen-Deckung), D5 (Vermietung: Mietabweichung zur Regionalreferenz)
+  und D6 (Exit: Gesamtsaldo, Wertsteigerungs-Plausibilitaet,
+  Spekulationsfrist) neu. Gewichte D1-D7 summieren jetzt auf 100 % (vorher
+  65 %, nur D1-D3/D7). Neue Bänder in bands.js (mietabweichung).
+- briefing.js: liest den Score jetzt selbst mit (berechneBriefing() liefert
+  briefing.score). Die alte briefingAmpel() ist keine eigenstaendige Ampel
+  mehr, sondern eine private Cashflow-Einordnung nur fuer die
+  Begruendungs-Formulierung (cashflowUrteil()). KI-Nutzlast
+  (briefingZahlen()) nennt jetzt den Score und alle sieben Dimensionen.
+- BriefingVisuals.jsx/InvestmentBriefing.jsx: neue Kopf-Karte "ScoreKopf" -
+  die primaere Antwort der Objektseite (0-100, 4 Stufen, "Details
+  anzeigen" fuer alle Dimensionen), direkt darueber. Die Handlungsempfehlung
+  (Investieren/Verhandeln/Nicht) bleibt als eigener Block direkt darunter,
+  zeigt aber keinen zweiten Score-Badge mehr.
+- 4 neue Uebersetzungs-Keys (brfScoreTitel u. a.) in allen 5 Sprachen.
+- Volle Testsuite (807 Tests), Lint und Produktions-Build geprüft, keine
+  Regressionen.
+
+## 2026-09-22 (1.96.0)
+
+### Ein Scoring statt zwei + Kreis-/Bezirkszuordnung erweitert
+
+Die Objektseite zeigte bisher zwei getrennte Bewertungen: den Investment-Score
+(mit DSCR, aus dem Renditerechner) und die separate, regelbasierte
+Briefing-Ampel (ohne DSCR). Jetzt ist der Score die einzige Quelle:
+
+- InvestmentBriefing.jsx/BriefingVisuals.jsx: Score-Badge (Zahl + Farbe) jetzt
+  sichtbar im Kopf der Objektseite, nicht mehr nur tief im zugeklappten
+  Profi-Block versteckt.
+- objektKennzahlen.js: Rangfolge (Merkliste, Objektvergleich) sortiert jetzt
+  nach dem Score-Tier statt nach der alten Briefing-Ampel.
+- ObjektVergleich.jsx: Klartext-Spalte zeigt jetzt die Score-Stufen (solide/
+  gemischt/schwach/kritisch) statt der alten Ampel-Worte.
+
+Regional-Benchmark (Baustein "Vergleich/Markt"): PLZ-zu-Kreis-Zuordnung
+(public/plz-kreis.txt) um Berlin (12 Bezirke) und Hamburg (7 Bezirke) erweitert
+- beide Staedte hatten bisher keinen Landkreis und fielen komplett auf den
+  Landesdurchschnitt zurueck. Zuordnung per raeumlichem Abgleich (PLZ-Flaechen-
+  schwerpunkt gegen Bezirksgrenzen, amtliche Geodaten Berlin/Hamburg) statt
+  Vermutung - siehe scripts/join_plz_bezirk_stadtstaaten.mjs. PLZ-Abdeckung
+  94,8 % -> 98,5 %. Verbleibende 120 PLZ sind laut Recherche zurueckgezogene,
+  nicht mehr existierende Postleitzahlen (Gemeindefusionen) - bewusst nicht
+  angefasst.
+
 ## 2026-09-20 (1.95.0)
 
 ### Objektseite neu: eine Seite, eine Antwort

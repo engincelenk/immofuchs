@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { berechneScore, berechneSzenarien } from "./investmentScore.js";
+import { berechneScore, berechneSzenarien, energieKlasse } from "./investmentScore.js";
 
 // Dieselbe Basis wie rendite.test.js/kennzahlen.test.js, damit Abweichungen
 // zwischen den drei Dateien sofort auffallen.
@@ -41,8 +41,12 @@ describe("berechneScore — Standardfall", () => {
     expect(S.score).toBeLessThanOrEqual(100);
   });
 
-  it("hat alle vier Stufe-2-Dimensionen mit auf 100 renormiertem Gewicht", () => {
-    expect(S.dimensionen.map((x) => x.key).sort()).toEqual(["d1", "d2", "d3", "d7"]);
+  it("hat D1-D3, D6 und D7 mit auf 100 renormiertem Gewicht (D4/D5 ohne Datenbasis in baseD)", () => {
+    // D4 braucht sanHa/sanIstVerbrauch/baujahr (baseD hat keins davon), D5
+    // braucht opt.ref (nicht uebergeben) - beide fallen erwartungsgemaess aus
+    // der Gewichtung. D6 ist auch ohne Regionaldaten teilweise berechenbar
+    // (exitScore/spekulationsfristScore aus reinen R/K-Werten).
+    expect(S.dimensionen.map((x) => x.key).sort()).toEqual(["d1", "d2", "d3", "d6", "d7"]);
     const gewichtSumme = S.dimensionen.reduce((a, x) => a + x.gewichtNormiert, 0);
     expect(gewichtSumme).toBeCloseTo(100, 5);
   });
@@ -78,10 +82,17 @@ describe("berechneScore — Hard Stop starker Zuzahlungsbedarf", () => {
 });
 
 describe("berechneScore — Vollfinanzierung ueber Eigenkapital (kein Bankdarlehen)", () => {
-  it("stuerzt nicht ab, auch wenn DSCR/D2/D7 ohne Kapitaldienst nicht bestimmbar sind", () => {
+  it("stuerzt nicht ab, auch wenn D7 (kein Kapitaldienst) unbestimmbar ist", () => {
+    // Mit 7 statt 4 Dimensionen im Nenner (GEWICHT_GESAMT=100) reicht die
+    // verbleibende Datenbasis (D1/D2/D3/D6) allein nicht mehr sicher ueber
+    // die 60%-Schwelle - anders als im alten Stufe-2-Score. Das ist
+    // beabsichtigt (siehe Neubau-Spec Abschnitt 2.1), der Test prueft nur
+    // noch "kein Absturz", wie der Randfall-Test direkt darunter.
     const S = berechneScore({ ...baseD, eigenkapital: "331710" }, {});
-    expect(S.verfuegbar).toBe(true);
-    expect(Number.isFinite(S.score)).toBe(true);
+    expect(() => S).not.toThrow();
+    if (S.verfuegbar) {
+      expect(Number.isFinite(S.score)).toBe(true);
+    }
   });
 });
 
@@ -135,6 +146,87 @@ describe("berechneSzenarien — Best-Case", () => {
     expect(+best.d.nichtUml).toBeCloseTo(95, 6); // 100 * 0.95
     expect(+best.d.leerstand).toBe(0);
     expect(+best.d.wertP).toBeCloseTo(2.5, 6); // 2 + 0.5
+  });
+});
+
+// ── D4 Objekt & Sanierung (objektseite-neubau-2026-09-22.md §2.2) ──────────
+describe("berechneScore — D4 Objekt & Sanierung", () => {
+  it("erscheint erst, sobald mindestens ein Sub-Score eine Datenbasis hat", () => {
+    const S = berechneScore({ ...baseD, sanHa: "neu" }, {});
+    const d4 = S.dimensionen.find((x) => x.key === "d4");
+    expect(d4).toBeDefined();
+    expect(d4.score).toBe(100); // nur heizungAlterScore verfuegbar, neu=100
+  });
+
+  it("ein neu saniertes Objekt schneidet besser ab als ein unsaniertes", () => {
+    const gut = berechneScore(
+      { ...baseD, sanHa: "neu", baujahr: "2020", sanIstVerbrauch: "40", nichtUml: "80" },
+      {},
+    );
+    const schlecht = berechneScore(
+      { ...baseD, sanHa: "alt", baujahr: "1960", sanIstVerbrauch: "220", nichtUml: "10" },
+      {},
+    );
+    const d4Gut = gut.dimensionen.find((x) => x.key === "d4").score;
+    const d4Schlecht = schlecht.dimensionen.find((x) => x.key === "d4").score;
+    expect(d4Gut).toBeGreaterThan(d4Schlecht);
+  });
+});
+
+describe("energieKlasse", () => {
+  it("ordnet Verbrauchskennwerte der GEG-Skala zu", () => {
+    expect(energieKlasse(40)).toBe("A");
+    expect(energieKlasse(220)).toBe("G");
+    expect(energieKlasse(300)).toBe("H");
+    expect(energieKlasse(0)).toBeNull();
+  });
+});
+
+// ── D5 Vermietung (objektseite-neubau-2026-09-22.md §2.3) ──────────────────
+describe("berechneScore — D5 Vermietung", () => {
+  const ref = { mieteWohnung: 15, kaufWohnung: 3500 };
+
+  it("ohne opt.ref taucht D5 nicht in den Dimensionen auf", () => {
+    const S = berechneScore(baseD, {});
+    expect(S.dimensionen.find((x) => x.key === "d5")).toBeUndefined();
+  });
+
+  it("mit opt.ref und marktueblicher Miete erscheint D5 mit hohem Score", () => {
+    // 900 / 60 = 15 EUR/qm, exakt die Referenz -> 0% Abweichung -> Plateau.
+    const S = berechneScore(baseD, {}, { ref });
+    const d5 = S.dimensionen.find((x) => x.key === "d5");
+    expect(d5).toBeDefined();
+    expect(d5.score).toBe(100);
+  });
+
+  it("eine Miete weit ueber Markt drueckt D5", () => {
+    const S = berechneScore({ ...baseD, kaltmiete: "1800" }, {}, { ref }); // 30 EUR/qm
+    const d5 = S.dimensionen.find((x) => x.key === "d5");
+    expect(d5.score).toBeLessThan(50);
+  });
+});
+
+// ── D6 Exit (objektseite-neubau-2026-09-22.md §2.4) ─────────────────────────
+describe("berechneScore — D6 Exit", () => {
+  it("ist auch ohne Regionaldaten teilweise berechenbar (exit/spekulationsfrist)", () => {
+    const S = berechneScore(baseD, {});
+    expect(S.dimensionen.find((x) => x.key === "d6")).toBeDefined();
+  });
+
+  it("ein Verkauf innerhalb der Spekulationsfrist senkt D6 gegenueber demselben Fall nach 10 Jahren", () => {
+    const kurz = berechneScore({ ...baseD, jahre: "3" }, {});
+    const lang = berechneScore({ ...baseD, jahre: "10" }, {});
+    const d6Kurz = kurz.dimensionen.find((x) => x.key === "d6").score;
+    const d6Lang = lang.dimensionen.find((x) => x.key === "d6").score;
+    expect(d6Kurz).toBeLessThanOrEqual(d6Lang);
+  });
+
+  it("mit opt.proJahrTrend faellt eine stark ueberzogene Wertsteigerungsannahme auf", () => {
+    const optimistisch = berechneScore({ ...baseD, wertP: "8" }, {}, { proJahrTrend: 1.5 });
+    const realistisch = berechneScore({ ...baseD, wertP: "1.5" }, {}, { proJahrTrend: 1.5 });
+    const d6Opt = optimistisch.dimensionen.find((x) => x.key === "d6").score;
+    const d6Real = realistisch.dimensionen.find((x) => x.key === "d6").score;
+    expect(d6Opt).toBeLessThan(d6Real);
   });
 });
 

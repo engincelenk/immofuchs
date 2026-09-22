@@ -16,12 +16,15 @@ const ZEILEN = [
   { key: "score", label: "Bewertung", einheit: "/100", besser: "gross" },
 ];
 
-// Klartext zur Ampelstufe aus briefing.js - in der Rangfolge-Kopfzeile steht
-// das Urteil, nicht der Score (Entscheidung E1).
-const AMPEL_WORT = {
-  gruen: "trägt sich",
-  gelb: "mit Zuzahlung",
-  rot: "trägt sich nicht",
+// Klartext zum Investment-Score-Tier (investmentScore.js) - ein Scoring statt
+// zwei (Nutzer-Entscheidung 2026-09-22, hebt Entscheidung E1 auf): die
+// Rangfolge-Kopfzeile zeigt jetzt dasselbe Urteil wie der Score-Badge auf der
+// Objektseite, nicht mehr die separate, DSCR-lose Ampel aus briefing.js.
+const TIER_WORT = {
+  green: "solide",
+  yellow: "gemischt",
+  orange: "schwach",
+  red: "kritisch",
 };
 
 function zeigeWert(wert, zeile) {
@@ -89,7 +92,7 @@ export function ObjektVergleich({ objekte, t, onFinnFrage }) {
               {e.objekt.name || e.objekt.title || "Objekt"}
             </span>
             <span style={{ fontSize: 11, color: "var(--ch)", whiteSpace: "nowrap" }}>
-              {e.rangierbar ? AMPEL_WORT[e.ampel?.stufe] || "" : "Daten unvollständig"}
+              {e.rangierbar ? TIER_WORT[e.kz.tier] || "" : "Daten unvollständig"}
             </span>
           </div>
         ))}

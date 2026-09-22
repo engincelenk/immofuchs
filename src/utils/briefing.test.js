@@ -4,7 +4,7 @@
 import { describe, it, expect } from "vitest";
 import {
   berechneBriefing,
-  briefingAmpel,
+  cashflowUrteil,
   briefingAusblick,
   briefingEmpfehlung,
   briefingMarktpreis,
@@ -33,31 +33,35 @@ import {
 import { computeRendite } from "./rendite.js";
 import { berechneKennzahlen } from "./kennzahlen.js";
 
-describe("briefingAmpel", () => {
+// cashflowUrteil() ersetzt das frueher hier getestete briefingAmpel() - selbe
+// Funktion, nur umbenannt und nicht mehr als Badge sichtbar (Baustein-1-Umbau,
+// "ein Scoring statt zwei"). Dient jetzt nur noch der Textauswahl in
+// briefingBegruendung().
+describe("cashflowUrteil", () => {
   const d = { kaltmiete: "500", tilgung: "2" };
 
   it("gruen bei nicht negativem Cashflow nach Steuer", () => {
-    expect(briefingAmpel(d, { cf2MitSt: 0, bankDa: 200000, bel: 80 }).stufe).toBe("gruen");
+    expect(cashflowUrteil(d, { cf2MitSt: 0, bankDa: 200000, bel: 80 }).stufe).toBe("gruen");
   });
 
   it("gelb, solange die Zuzahlung die Quote der Kaltmiete nicht ueberschreitet", () => {
     const grenze = -500 * ZUZAHLUNG_GELB_QUOTE;
-    expect(briefingAmpel(d, { cf2MitSt: grenze, bankDa: 200000, bel: 80 }).stufe).toBe("gelb");
-    expect(briefingAmpel(d, { cf2MitSt: grenze - 1, bankDa: 200000, bel: 80 }).stufe).toBe("rot");
+    expect(cashflowUrteil(d, { cf2MitSt: grenze, bankDa: 200000, bel: 80 }).stufe).toBe("gelb");
+    expect(cashflowUrteil(d, { cf2MitSt: grenze - 1, bankDa: 200000, bel: 80 }).stufe).toBe("rot");
   });
 
   it("Hard-Stop Tilgung 0 schlaegt den Cashflow", () => {
-    const a = briefingAmpel({ ...d, tilgung: "0" }, { cf2MitSt: 500, bankDa: 200000, bel: 80 });
+    const a = cashflowUrteil({ ...d, tilgung: "0" }, { cf2MitSt: 500, bankDa: 200000, bel: 80 });
     expect(a).toEqual({ stufe: "rot", key: "brfAmpelHartStop" });
   });
 
   it("Hard-Stop Beleihung ueber 100 Prozent", () => {
-    const a = briefingAmpel(d, { cf2MitSt: 500, bankDa: 200000, bel: 101 });
+    const a = cashflowUrteil(d, { cf2MitSt: 500, bankDa: 200000, bel: 101 });
     expect(a.key).toBe("brfAmpelHartStop");
   });
 
   it("kein Hard-Stop bei Tilgung 0 ohne Bankdarlehen", () => {
-    const a = briefingAmpel({ ...d, tilgung: "0" }, { cf2MitSt: 500, bankDa: 0, bel: 0 });
+    const a = cashflowUrteil({ ...d, tilgung: "0" }, { cf2MitSt: 500, bankDa: 0, bel: 0 });
     expect(a.stufe).toBe("gruen");
   });
 });
@@ -613,5 +617,22 @@ describe("berechneBriefing — die neuen Bloecke haengen mit dran (§26.1)", () 
     const szenarien = zeilen.filter((z) => z.label.startsWith("Szenario"));
     expect(szenarien).toHaveLength(3);
     expect(zeilen.some((z) => z.label.includes("undefined"))).toBe(false);
+  });
+
+  // Ein Scoring statt zwei (Objektseiten-Neubau, Baustein 1/6) ─────────────
+  it("liefert den Investment Score aus derselben Quelle wie der Renditerechner", () => {
+    expect(b.score.verfuegbar).toBe(true);
+    expect(b.score.score).toBeGreaterThanOrEqual(0);
+    expect(b.score.score).toBeLessThanOrEqual(100);
+    // D5 (Vermietung) ist nur MIT Regionalreferenz verfuegbar - dieser Test
+    // ruft berechneBriefing() mit { ref: kreisRef } auf.
+    expect(b.score.dimensionen.map((x) => x.key)).toContain("d5");
+  });
+
+  it("die KI-Nutzlast nennt den Score und alle verfuegbaren Dimensionen (Baustein 6)", () => {
+    const zeilen = briefingZahlen(b);
+    expect(zeilen[0]).toEqual({ label: "Investment Score", wert: `${b.score.score}/100` });
+    const dimensionsZeilen = zeilen.filter((z) => z.label.startsWith("Dimension "));
+    expect(dimensionsZeilen).toHaveLength(b.score.dimensionen.length);
   });
 });

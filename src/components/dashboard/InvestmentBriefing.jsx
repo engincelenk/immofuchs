@@ -49,6 +49,7 @@ import {
   Kernkennzahlen,
   MarktKarte,
   RegelZeile,
+  ScoreKopf,
   STATUS_FARBEN,
   StickyUrteil,
   SzenarienKarte,
@@ -155,6 +156,11 @@ export function InvestmentBriefing({
   }
 
   const ampelFarbe = STATUS_FARBEN[briefing.ampel.stufe] || STATUS_FARBEN.neutral;
+  // Ein Scoring statt zwei: berechneBriefing() berechnet den Investment Score
+  // jetzt selbst mit (briefing.js, Baustein 1) - inklusive Regionalreferenz
+  // (opt.ref/proJahrTrend) fuer D5/D6. Kein zweiter, weniger vollstaendiger
+  // berechneScore()-Aufruf mehr hier.
+  const score = briefing.score;
   const argument = ergebnis ? hebelTexteVon(ergebnis)[0] : null;
   const kiSatz = ergebnis ? urteilVon(ergebnis) : "";
 
@@ -195,8 +201,11 @@ export function InvestmentBriefing({
         </div>
       )}
 
-      {/* ── Block 2: Die Antwort ── */}
-      <div ref={antwortRef}>
+      {/* ── Baustein 1: Investment Score, die primaere Antwort ── */}
+      <ScoreKopf score={score} t={t} />
+
+      {/* ── Baustein 7: Handlungsempfehlung ── */}
+      <div ref={antwortRef} style={{ marginTop: 12 }}>
         <EmpfehlungsKopf briefing={briefing} data={data} t={t}>
         {kiSatz && (
           <div style={kiZeile}>
