@@ -1,3 +1,32 @@
+## 2026-09-22 (1.98.0)
+
+### Objektseite: nur noch die 7 Bausteine, plus Lage und Besichtigungs-Handout
+
+Nach dem Score-Umbau (1.97.0) stand auf der Objektseite noch einiges an
+Altbestand neben den 7 Bausteinen - Duplikate derselben Zahlen in
+unterschiedlicher Form, dazu Inhalte, die zu keinem der Bausteine gehoerten.
+Auf Nutzer-Entscheidung entfernt, Lage und Besichtigungs-Handout bleiben:
+
+- ZielKarte ("Sollte sein") entfernt - duplizierte die Handlungsempfehlung
+  aus EmpfehlungsKopf (Baustein 7).
+- "Alle Details"-Akkordeon entfernt: die doppelten Kernzahlen (Ebene 2) und
+  Vergleichs-Kacheln (Ebene 3) darin duplizierten Baustein 3/4, die jetzt
+  oben stehen. Tragfaehigkeit und Jahres-Bild (Ebene 5/6) waren keinem der
+  7 Bausteine zugeordnet.
+- Profi-Block entfernt (zeigte u. a. den veralteten Namen "Finanz-Score" -
+  redundant mit dem neuen Score-Kopf).
+- Annahmen-Akkordeon (Herkunfts-Chips je Feld) entfernt - kein eigener
+  Baustein.
+- Rohdaten-Raster (AlleDaten) entfernt.
+- Lage (ObjektLage) und der Besichtigungs-Handout-Link bleiben unveraendert
+  bestehen.
+
+Aufgeraeumt in BriefingVisuals.jsx (ZielKarte, Weg, HerkunftChip,
+AnnahmenListe), InvestmentBriefing.jsx (Kernzahl, VergleichKachel,
+ProfiBlock, Zeile, ZeileMitFlag) und ObjektDetail.jsx (AlleDaten,
+annahmeAendern). Volle Testsuite (807 Tests), Lint und Produktions-Build
+geprueft, keine Regressionen.
+
 ## 2026-09-22 (1.97.0)
 
 ### Investment Score: alle 7 Dimensionen, Objektseite neu strukturiert

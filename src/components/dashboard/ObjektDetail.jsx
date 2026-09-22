@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { scoreBadgeColor, scoreBadgeText } from "./dashboardUtils.js";
 import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
 import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
@@ -62,45 +61,6 @@ const AMPEL_TEXT = {
   brfAmpelMitZuzahlung: "Trägt sich mit Zuzahlung",
   brfAmpelTraegtSichNicht: "Trägt sich nicht",
 };
-
-const FELD_GRUPPEN = [
-  {
-    titel: "Eckdaten",
-    felder: [
-      ["plz", "PLZ"],
-      ["ort", "Ort"],
-      ["bundesland", "Bundesland"],
-      ["kaufpreis", "Kaufpreis", "€"],
-      ["flaeche", "Wohnfläche", "m²"],
-      ["baujahr", "Baujahr"],
-    ],
-  },
-  {
-    titel: "Einnahmen",
-    felder: [
-      ["kaltmiete", "Kaltmiete", "€/Monat"],
-      ["mieteQm", "Miete je m²", "€/m²"],
-      ["leerstand", "Leerstand", "Monate"],
-    ],
-  },
-  {
-    titel: "Finanzierung",
-    felder: [
-      ["eigenkapital", "Eigenkapital", "€"],
-      ["zinssatz", "Zinssatz", "%"],
-      ["tilgung", "Tilgung", "%"],
-      ["zinsbindung", "Zinsbindung", "Jahre"],
-    ],
-  },
-  {
-    titel: "Laufende Kosten",
-    felder: [
-      ["nichtUml", "Nicht umlagefähige Kosten", "€/Monat"],
-      ["sonder", "Sonderumlage", "€"],
-      ["renovierung", "Renovierungskosten", "€"],
-    ],
-  },
-];
 
 export function ObjektDetail({ objekt, onBack }) {
   const { d, set, setTabExt, t, lang, updateObj } = useApp();
@@ -164,22 +124,6 @@ export function ObjektDetail({ objekt, onBack }) {
     [basis, t],
   );
   const vollstaendigkeit = berechneVollstaendigkeit(basis);
-
-  // Block 10 (objektseite-neu.md §7.3): eine Aenderung im Annahmen-Block macht
-  // den Wert sofort zu "von dir" und rechnet die Seite neu. Kein
-  // "Neu berechnen"-Knopf, kein KI-Aufruf - die Bloecke 2-8 haengen
-  // ausschliesslich an den Zahlen.
-  const annahmeAendern = useCallback(
-    (key, wert) => {
-      const daten = { ...basis, [key]: String(wert) };
-      const herkunft = { ...(objekt.kennzahlen?.herkunft || {}), [key]: "nutzer" };
-      // Der Renditerechner-State wird mitgezogen, solange dieses Objekt dort
-      // geladen ist - sonst zeigte ein Wechsel in den Rechner den alten Wert.
-      if (!hasFullInput) set(key, String(wert));
-      updateObj(objekt.id, objekt.title || "Objekt", daten, { herkunft });
-    },
-    [basis, objekt, hasFullInput, set, updateObj],
-  );
 
   // Einmalig laden, sobald ein Bundesland vorliegt. plzKreis.js parallel
   // dazu (Backlog Punkt 4, 2026-09-11) - beide muessen geladen sein, bevor
@@ -503,20 +447,10 @@ export function ObjektDetail({ objekt, onBack }) {
         onConsentJa={einwilligenUndStarten}
         onConsentAbbrechen={() => setAiConsent(null)}
         onBearbeiten={() => setBearbeiten(true)}
-        herkunft={objekt.kennzahlen?.herkunft || null}
-        onAnnahmeAendern={annahmeAendern}
         detailsExtra={
-          <>
-            <div style={{ marginTop: 16 }}>
-              <AlleDaten data={basis} objekt={objekt} locale={locale} />
-            </div>
-            {/* Die Sektion "Unterlagen" (lokale Dateiablage) ist am 2026-09-08
-                entfallen. ObjektUnterlagen.jsx bleibt im Code, gerendert wird
-                daraus nur noch ObjektLage. */}
-            <div style={{ marginTop: 16 }}>
-              <ObjektLage data={basis} titel={objekt.title} />
-            </div>
-          </>
+          <div style={{ marginTop: 16 }}>
+            <ObjektLage data={basis} titel={objekt.title} />
+          </div>
         }
       />
 
@@ -568,178 +502,6 @@ const knopfSekundaer = {
   fontWeight: 600,
   fontFamily: "inherit",
   cursor: "pointer",
-};
-
-// Tiefenstufe 3: alle Felder, gruppiert. Seit dem UX-Review 2026-09-05 in EINER
-// Karte mit Haarlinien statt in vier Karten, und zweispaltig statt als
-// Label-links/Wert-rechts-Zeilen.
-//
-// Der Grund: "PLZ ......... 70190" verbrauchte 347 px fuer neun Zeichen. Vier
-// Karten kosteten zusaetzlich viermal Innenabstand und acht Rahmenlinien fuer
-// dieselbe Informationsart. Der Reiter war mit 828 px der laengste der App.
-//
-// Die Einheit ist vom Label an den Wert gewandert ("Kaufpreis (€) / 285.000"
-// wurde zu "Kaufpreis / 285.000 €"). Das verkuerzt genau die Labels, die in
-// einer 151-px-Spalte kurz sein muessen, und macht die Werte selbsterklaerend.
-//
-// auto-fit minmax() statt fester Spaltenzahl: bei 319 px Inhaltsbreite ergeben
-// sich zwei Spalten, auf sehr schmalen Geraeten faellt das Raster von selbst
-// auf eine zurueck. Dasselbe Muster wie in ObjektKPIs.jsx - kein neues.
-// Der Reiter "Belege" (bis 2026-09-06 zwei getrennte Reiter "Rechner" und
-// "Daten") beantwortet "wie kommen die Zahlen zustande?" - dieses Feldraster
-// zeigt die Rohwerte, RechnerListe darunter die Wege zu den vollen
-// Berechnungen. Der fruehere Trittstein-Knopf "Im Rechner oeffnen" ist
-// entfallen: Rendite steht jetzt als erste Zeile in RechnerListe, ein
-// zweiter Weg zum selben Ziel waere Redundanz.
-function AlleDaten({ data, objekt, locale }) {
-  const gesetzt = (v) => v != null && String(v).trim() !== "" && String(v) !== "0";
-  const gruppen = FELD_GRUPPEN.map((g) => ({
-    titel: g.titel,
-    zeilen: g.felder.filter(([k]) => gesetzt(data[k])),
-  })).filter((g) => g.zeilen.length > 0);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <style>{felderRasterCss}</style>
-      {gruppen.length > 0 && (
-        <div style={datenKarte}>
-          {gruppen.map((g, i) => (
-            <div key={g.titel} style={i === 0 ? undefined : gruppenTrenner}>
-              <div style={gruppenTitel}>{g.titel}</div>
-              <div className="objekt-felder">
-                {g.zeilen.map(([k, label, einheit]) => (
-                  <div key={k}>
-                    <div style={feldLabel}>{label}</div>
-                    <div style={feldWert}>{formatWert(data[k], einheit, locale)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Metadaten - Orientierung bei mehreren Objekten */}
-      <div style={{ fontSize: 12.5, color: "var(--cl)", padding: "2px 4px", lineHeight: 1.6 }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Quelle</span>
-          <span>{objekt.source === "expose-scan" ? "Exposé-Scan" : "Manuell"}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Zuletzt bearbeitet</span>
-          <span>
-            {objekt.updatedAt
-              ? new Date(objekt.updatedAt).toLocaleDateString(locale)
-              : objekt.date || "—"}
-          </span>
-        </div>
-        {/* Die Bewertung ist eine Metazeile wie die beiden darueber, keine
-            eigene Sektion: als alleinstehender Chip belegte sie eine ganze
-            Zeile von 347 px fuer rund 110 px Inhalt. */}
-        {objekt.score != null && (
-          <div
-            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-          >
-            <span>Bewertung</span>
-            <span
-              style={{
-                background: scoreBadgeColor(objekt.scoreLabel),
-                color: "#fff",
-                fontSize: 11,
-                fontWeight: 700,
-                padding: "3px 9px",
-                borderRadius: 20,
-              }}
-            >
-              {scoreBadgeText(objekt.scoreLabel)} ({objekt.score})
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Rohwerte lesbar machen: Tausenderpunkte bei Betraegen, Komma statt Punkt
-// bei Prozentsaetzen - der Formular-State haelt sie als englische Strings.
-//
-// Die Einheit haengt seit 2026-09-05 am Wert statt am Label (siehe AlleDaten).
-// Einheitenlose Zahlen bleiben unformatiert: ein Tausenderpunkt im Baujahr
-// ("1.996") oder in der PLZ waere schlicht falsch.
-// Zaehlbare Einheiten brauchen einen Singular, sobald die Einheit am Wert
-// haengt: "1 Monate" las sich vorher nie, weil die Einheit im Label stand
-// ("Leerstand (Monate) ... 1").
-const SINGULAR = { Monate: "Monat", Jahre: "Jahr" };
-
-function formatWert(wert, einheit, locale) {
-  const s = String(wert ?? "");
-  const n = Number(s.replace(",", "."));
-  if (!Number.isFinite(n)) return s;
-  if (!einheit) return s;
-  const zahl =
-    einheit === "€" || einheit === "€/Monat" ? n.toLocaleString(locale) : s.replace(".", ",");
-  const wortform = n === 1 && SINGULAR[einheit] ? SINGULAR[einheit] : einheit;
-  return `${zahl} ${wortform}`;
-}
-
-const datenKarte = {
-  background: "var(--cc)",
-  border: "1px solid var(--cb)",
-  borderRadius: 12,
-  padding: "12px 14px",
-};
-
-const gruppenTrenner = {
-  marginTop: 12,
-  paddingTop: 12,
-  borderTop: "1px solid var(--cb)",
-};
-
-const gruppenTitel = {
-  fontSize: 11,
-  color: "var(--cl)",
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
-  fontWeight: 600,
-  marginBottom: 8,
-};
-
-// Raster der Feldpaare (Bugreport 2026-09-08: "sieht aus als ob random Text
-// irgendwo steht").
-//
-// Vorher: repeat(auto-fit, minmax(148px, 1fr)). Auf Mobil ergab das die
-// gewollten zwei Spalten - auf einer 1116px breiten Desktop-Karte aber
-// SIEBEN. Eine Gruppe mit drei Feldern verteilte sich dann ueber die ganze
-// Breite, mit vier leeren Spalten dahinter: Label und Wert standen weit
-// voneinander entfernt im Nichts, ohne erkennbare Zeilenstruktur.
-//
-// auto-fit ist genau dafuer das falsche Werkzeug - es fuellt die Breite, statt
-// eine Lesestruktur zu halten. Feste Spaltenzahl je Stufe, gedeckelt bei vier:
-// darueber wird die Zuordnung Label->Wert ueber die Distanz unlesbar, egal wie
-// viel Platz da ist. Der Rest der Breite bleibt bewusst leer.
-// Die Spaltenzahl steht KOMPLETT im Stylesheet, nicht teilweise inline:
-// ein Inline-Style gewinnt gegen jede Klassenregel (ausser !important), die
-// Media Queries unten waeren sonst wirkungslos.
-const felderRasterCss = `
-.objekt-felder{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-  column-gap:24px;row-gap:14px;max-width:900px}
-@media(min-width:700px){ .objekt-felder{grid-template-columns:repeat(3,minmax(0,1fr))} }
-@media(min-width:1000px){ .objekt-felder{grid-template-columns:repeat(4,minmax(0,1fr))} }
-`;
-
-const feldLabel = {
-  fontSize: 11,
-  color: "var(--cl)",
-  lineHeight: 1.3,
-};
-
-// Wert direkt unter dem Label, gleiche Spalte, enger Abstand: das Paar muss
-// als EINE Einheit lesbar sein, sonst sucht das Auge bei jedem Feld neu.
-const feldWert = {
-  fontSize: 13.5,
-  fontWeight: 700,
-  fontVariantNumeric: "tabular-nums",
-  marginTop: 2,
 };
 
 // Fehlerband, Einwilligungs-Band und dessen Knoepfe sind 2026-09-16 nach

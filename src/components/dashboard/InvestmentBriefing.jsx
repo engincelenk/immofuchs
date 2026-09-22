@@ -1,16 +1,17 @@
-// Investment-Briefing - ersetzt die drei fruehere KI-Karten "Objekt
-// analysieren"/"Verbesserungshebel analysieren"/"Kaufpreis analysieren"
-// (Spec docs/technical_specs/investment-briefing.md, Layout siehe
-// docs/technical_specs/briefing-ui-handover.md).
+// Investment-Briefing - die Objektseite (docs/technical_specs/
+// objektseite-neubau-2026-09-22.md). Zeigt genau die 7 Bausteine des
+// Investment-Schnellcheck-Konzepts, plus Lage (ausserhalb der Bausteine,
+// bleibt auf Nutzerwunsch) und den Besichtigungs-Handout-Link. Fruehere
+// Zusatzinhalte (doppelte Kernzahlen/Vergleiche in "Alle Details",
+// Profi-Block, ZielKarte, Annahmen-Akkordeon, Rohdaten-Raster) sind mit
+// diesem Umbau entfernt - sie duplizierten, was die 7 Bausteine bereits
+// zeigen, oder gehoerten zu keinem der Bausteine (Nutzer-Entscheidung
+// 2026-09-22).
 //
-// Grundprinzip der Spec (Abschnitt 3): "Zahlen aus der Engine, Worte von der
-// KI". Seit 2026-09-19 (1.94.0) steht oben nur die Kernantwort als Bild
-// (BriefingVisuals.jsx: Empfehlung, Kaufpreis/Miete gegen Markt, Sollte sein,
-// Ausblick); die Ebenen 2-7 und der Profi-Block der Handover-Datei liegen
-// unveraendert zugeklappt unter "Alle Details". Alle Zahlen sind IMMER live aus
-// briefing.js berechnet, unabhaengig davon, ob und wann zuletzt ein
-// KI-Aufruf lief - nur der Urteilssatz, das erste Hebel-Argument und die
-// Einordnungssaetze in den Details kommen aus dem gespeicherten Ergebnis.
+// Grundprinzip: "Zahlen aus der Engine, Worte von der KI". Alle Zahlen sind
+// IMMER live aus briefing.js berechnet, unabhaengig davon, ob und wann
+// zuletzt ein KI-Aufruf lief - nur der Urteilssatz und das erste
+// Hebel-Argument kommen aus dem gespeicherten Ergebnis.
 import { useMemo, useRef, useState } from "react";
 import {
   alter,
@@ -18,17 +19,13 @@ import {
   ergebnisFuer,
   hebelTexteVon,
   istVeraltet,
-  marktVon,
   risikenVon,
   staerkenVon,
   stresstestTextVon,
-  tragfaehigkeitTextVon,
   urteilVon,
   veraltetText,
-  zeitraumTextVon,
 } from "../../utils/aiEngine.js";
 import { berechneBriefing } from "../../utils/briefing.js";
-import { berechneScore } from "../../utils/investmentScore.js";
 import {
   regionalLandeswert,
   regionalPreis,
@@ -36,11 +33,7 @@ import {
   regionalVerlauf,
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
-import { fmt, fmtE } from "../../utils/helpers.js";
-import { AccordionSection } from "../ui/AccordionSection.jsx";
-import { ZahlenBlock } from "./AiEngine.jsx";
 import {
-  AnnahmenListe,
   AusblickKarte,
   BegruendungsKarte,
   BenchmarkKarte,
@@ -50,58 +43,9 @@ import {
   MarktKarte,
   RegelZeile,
   ScoreKopf,
-  STATUS_FARBEN,
   StickyUrteil,
   SzenarienKarte,
-  ZielKarte,
 } from "./BriefingVisuals.jsx";
-import { ANNAHMEN_FELDER, annahmenFuer, herkunftAbleiten, herkunftZaehlung } from "../../utils/annahmen.js";
-
-// Deutscher Rueckfall zu den brf*-Uebersetzungsschluesseln aus briefing.js -
-// dasselbe Muster wie t.aiFehlerX || "..." in aiAnalyse.js: kein Schluessel
-// darf als "undefined" auf der Karte landen, auch wenn eine Sprache (noch)
-// fehlt.
-const STATUS_LABEL = {
-  brfStatusImRahmen: "Im Rahmen",
-  brfStatusUeberMarkt: "Über Markt",
-  brfStatusUnterMarkt: "Unter Markt",
-  brfStatusUeberMarktMiete: "Über Markt – begründungsbedürftig",
-  brfStatusPotenzial: "Potenzial",
-  brfStatusNichtTragfaehig: "Nicht tragfähig",
-  brfStatusTraegtSichBereits: "Trägt sich bereits",
-  brfStatusInformation: "Information",
-};
-const V_TITEL = {
-  brfV1Titel: "Kaufpreis/m² vs. Richtwert",
-  brfV2Titel: "Miete vs. ortsüblich",
-  brfV3Titel: "Mietrendite vs. Markt",
-  brfV4Titel: "Angebotspreis vs. tragfähiger Preis",
-  brfV5Titel: "Preisniveau Kreis vs. Land",
-  brfV6Titel: "Preistrend",
-};
-const FLAG_LABEL = {
-  brfFlagNachlassUnrealistisch: "Unrealistischer Nachlass",
-  brfFlagUeberMarktniveau: "Über Marktniveau",
-  brfFlagNichtKurzfristig: "Nicht kurzfristig erreichbar",
-};
-const KERNZAHL_LABEL = {
-  monatlich: "Monatlich",
-  vermoegenszuwachs: "Vermögenszuwachs",
-  leerstandspuffer: "Leerstandspuffer",
-};
-const TRAGF_LABEL = { kaufpreis: "Kaufpreis", eigenkapital: "Eigenkapital", kaltmiete: "Kaltmiete" };
-const ZEITRAUM_LABEL = {
-  zuzahlungen: "Summe Zuzahlungen/Überschüsse",
-  getilgt: "Getilgt",
-  wertzuwachs: "Wertzuwachs",
-  einsatz: "Eingesetztes Kapital",
-  steuer23: "Steuer § 23",
-};
-
-const eurQm = (n) => `${fmt(n, 2)} €/m²`;
-const proz = (n, d = 1) => `${fmt(n, d)} %`;
-const wertAnzeige = (v, einheit) =>
-  einheit === "eurQm" ? eurQm(v) : einheit === "prozent" ? proz(v) : fmtE(v);
 
 export function InvestmentBriefing({
   objekt,
@@ -115,11 +59,9 @@ export function InvestmentBriefing({
   onStarten,
   onConsentJa,
   onConsentAbbrechen,
-  // Objektseite neu (objektseite-neu.md §22): Block 9 nimmt Belege und Lage
-  // von der Objektseite auf, Block 10 die Annahmen samt Herkunft.
+  // Lage von der Objektseite (bleibt, kein Baustein - Nutzer-Entscheidung
+  // 2026-09-22).
   detailsExtra = null,
-  herkunft = null,
-  onAnnahmeAendern = null,
   onBearbeiten = null,
 }) {
   const [bestaetigen, setBestaetigen] = useState(false);
@@ -145,8 +87,6 @@ export function InvestmentBriefing({
     [data, t, regGeladen],
   );
 
-  const label = (schluessel, fallbackMap) => t[schluessel] || fallbackMap[schluessel] || schluessel;
-
   function handleStart() {
     if (ergebnis) {
       setBestaetigen(true);
@@ -155,11 +95,9 @@ export function InvestmentBriefing({
     onStarten();
   }
 
-  const ampelFarbe = STATUS_FARBEN[briefing.ampel.stufe] || STATUS_FARBEN.neutral;
   // Ein Scoring statt zwei: berechneBriefing() berechnet den Investment Score
   // jetzt selbst mit (briefing.js, Baustein 1) - inklusive Regionalreferenz
-  // (opt.ref/proJahrTrend) fuer D5/D6. Kein zweiter, weniger vollstaendiger
-  // berechneScore()-Aufruf mehr hier.
+  // (opt.ref/proJahrTrend) fuer D5/D6.
   const score = briefing.score;
   const argument = ergebnis ? hebelTexteVon(ergebnis)[0] : null;
   const kiSatz = ergebnis ? urteilVon(ergebnis) : "";
@@ -168,30 +106,6 @@ export function InvestmentBriefing({
   // (§7.1). Block 4a, der Ausblick und die Faktor-Flagge entfallen dann ganz,
   // statt als leere Huelle dazustehen (§25).
   const ohnePlz = !String(data?.plz || "").trim();
-
-  // Herkunft: gespeicherte Vermerke, sonst aus den Annahmen abgeleitet
-  // (§7.2). Abgeleitet wird NUR beim Lesen, nie zurueckgeschrieben.
-  const herkunftEffektiv = useMemo(() => {
-    if (herkunft && Object.keys(herkunft).length) return herkunft;
-    return herkunftAbleiten(
-      data,
-      annahmenFuer({
-        bundesland: data?.bundesland,
-        flaeche: data?.flaeche,
-        kaufpreis: data?.kaufpreis,
-      }),
-    );
-  }, [herkunft, data]);
-
-  const zaehlung = herkunftZaehlung(herkunftEffektiv);
-  const zaehlungText = [
-    zaehlung.nutzer && `${zaehlung.nutzer} ${t.brfHerkunftnutzer || "von dir"}`,
-    zaehlung.expose && `${zaehlung.expose} ${t.brfHerkunftexpose || "aus Exposé"}`,
-    zaehlung.plz && `${zaehlung.plz} ${t.brfHerkunftplz || "aus PLZ"}`,
-    zaehlung.annahme && `${zaehlung.annahme} ${t.brfHerkunftannahme || "Annahme"}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
   return (
     <div style={{ marginTop: 12 }}>
@@ -344,9 +258,7 @@ export function InvestmentBriefing({
         )}
       </BegruendungsKarte>
 
-      {/* ── Block 8: Was jetzt zu tun ist ── */}
-      <ZielKarte briefing={briefing} data={data} t={t} />
-
+      {/* ── Besichtigungs-Handout (bleibt, kein Baustein) ── */}
       <div style={{ textAlign: "center", marginTop: 12 }}>
         <button
           type="button"
@@ -359,256 +271,8 @@ export function InvestmentBriefing({
         </button>
       </div>
 
-      {/* ── Details: alles, was vorher untereinander stand, zugeklappt ── */}
-      <div style={{ marginTop: 16 }}>
-        <AccordionSection
-          question={t.brfDetails || "Alle Details"}
-          hint={t.brfDetailsHint || "Vergleiche, Tragfähigkeit, Stresstest, Kennzahlen"}
-        >
-          {/* ── Ebene 2: Kernzahlen ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-            {briefing.kernzahlen.map((k) => (
-              <Kernzahl key={k.key} kz={k} ampelFarbe={ampelFarbe} t={t} />
-            ))}
-          </div>
-
-          {/* ── Ebene 3: Vergleiche ── */}
-          {briefing.vergleiche.length > 0 && (
-            <>
-              <div style={abschnittsUeberschrift}>{t.brfVergleicheTitel || "Vergleiche"}</div>
-              {briefing.vergleiche.map((v) => (
-                <VergleichKachel key={v.id} v={v} t={t} label={label} />
-              ))}
-              {ergebnis && marktVon(ergebnis) && (
-                <div style={einordnungssatz}>{marktVon(ergebnis)}</div>
-              )}
-            </>
-          )}
-
-          {/* Ebene 4 (Stärken/Risiken/Hebel) steht seit dem Objektseiten-Umbau
-              in Block 7 oben, nicht mehr hier unten (§22). */}
-
-          {/* ── Ebene 5: Tragfähigkeit (nur bei negativem Cashflow) ── */}
-          {briefing.tragfaehigkeit && briefing.tragfaehigkeit.wege.length > 0 && (
-            <div style={karte}>
-              <div style={abschnittsUeberschriftInKarte}>
-                {t.brfTragfaehigkeitTitel || "So wird es tragfähig"}
-              </div>
-              {briefing.tragfaehigkeit.wege.map((w) => (
-                <ZeileMitFlag
-                  key={w.key}
-                  label={t[`brfTrag${cap(w.key)}`] || TRAGF_LABEL[w.key]}
-                  wert={
-                    w.key === "kaltmiete"
-                      ? `${fmtE(w.wert)}/Monat (${eurQm(w.proQm)})`
-                      : w.key === "eigenkapital"
-                        ? `${fmtE(w.wert)} (${w.mehrbedarf > 0 ? "+" : "−"}${fmtE(Math.abs(w.mehrbedarf))})`
-                        : `${fmtE(w.wert)} (−${fmt(w.nachlassProzent, 0)} % zum Angebot)`
-                  }
-                  flag={w.flagKey ? label(w.flagKey, FLAG_LABEL) : null}
-                />
-              ))}
-              {ergebnis && tragfaehigkeitTextVon(ergebnis) && (
-                <div style={einordnungssatzInKarte}>{tragfaehigkeitTextVon(ergebnis)}</div>
-              )}
-            </div>
-          )}
-
-          {/* ── Ebene 6: {jahre}-Jahres-Bild ── */}
-          <div style={karte}>
-            <div style={abschnittsUeberschriftInKarte}>
-              {(t.brfJahresBildTitel || "Das {jahre}-Jahres-Bild").replace(
-                "{jahre}",
-                briefing.zeitraum.jahre,
-              )}
-            </div>
-            {briefing.zeitraum.zeilen.map((z) => (
-              <Zeile
-                key={z.key}
-                label={t[`brfZeitraum${cap(z.key)}`] || ZEITRAUM_LABEL[z.key]}
-                labelFarbe="var(--ch)"
-                wert={fmtE(z.wert)}
-              />
-            ))}
-            <div style={{ ...zeileStil, borderTop: "1px solid var(--cb)", marginTop: 4 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>
-                {t.brfZeitraumSumme || "Vermögenszuwachs"}
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>
-                {fmtE(briefing.zeitraum.summe)}
-              </span>
-            </div>
-            {ergebnis && zeitraumTextVon(ergebnis) && (
-              <div style={einordnungssatzInKarte}>{zeitraumTextVon(ergebnis)}</div>
-            )}
-          </div>
-
-          {/* Der Stresstest steht seit dem Objektseiten-Umbau als Block 5 oben
-              (Spannweite + Tabelle + Sensitivität), nicht mehr hier (§22). */}
-
-          {/* ── Profi-Block ── */}
-          <div style={{ marginTop: 16 }}>
-            <ProfiBlock data={data} t={t} />
-          </div>
-
-          {/* Belege und Lage von der Objektseite (§22, Block 9). */}
-          {detailsExtra}
-        </AccordionSection>
-      </div>
-
-      {/* ── Block 10: Annahmen ── */}
-      {onAnnahmeAendern && (
-        <div style={{ marginTop: 12 }}>
-          <AccordionSection
-            question={t.brfAnnahmen || "Annahmen"}
-            hint={zaehlungText || (t.brfAnnahmenHint || "Woher jeder Wert kommt")}
-          >
-            <AnnahmenListe
-              felder={ANNAHMEN_FELDER}
-              data={data}
-              herkunft={herkunftEffektiv}
-              onAendern={onAnnahmeAendern}
-              t={t}
-            />
-          </AccordionSection>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function cap(s) {
-  return s ? s[0].toUpperCase() + s.slice(1) : s;
-}
-
-// parameterText() und STRESS_LABEL sind mit dem Objektseiten-Umbau entfallen:
-// der Stresstest wird jetzt in BriefingVisuals/SzenarienKarte dargestellt
-// (Block 5), samt Parametern im Klartext.
-
-function Kernzahl({ kz, ampelFarbe, t }) {
-  const titel = t[`brfKern${cap(kz.key)}`] || KERNZAHL_LABEL[kz.key];
-  let wertText;
-  let unterzeile = "";
-  let farbe = "var(--ct)";
-  if (kz.key === "monatlich") {
-    wertText = fmtE(kz.wert) + "/Mon.";
-    unterzeile = `${t.brfKernVorSteuer || "vor Steuer"} ${fmtE(kz.vorSteuer)}`;
-    farbe = ampelFarbe.tx;
-  } else if (kz.key === "vermoegenszuwachs") {
-    wertText = fmtE(kz.wert);
-    unterzeile = (t.brfKernVermoegenUnterzeile || "bei {prozent} % Wertsteigerung p. a. (Annahme)").replace(
-      "{prozent}",
-      fmt(kz.wertsteigerungProzent, 1),
-    );
-    farbe = "var(--primary)";
-  } else {
-    wertText = kz.ohnePuffer ? t.brfKernLeerstandKeiner || "keiner" : `${fmt(kz.wert, 0)} %`;
-    unterzeile = kz.ohnePuffer
-      ? t.brfKernLeerstandText || "Trägt sich schon voll vermietet nicht"
-      : "";
-    farbe = kz.ohnePuffer ? "var(--bad-tx)" : "var(--ok-tx)";
-  }
-  return (
-    <div style={kachel}>
-      <div style={{ fontSize: 18, fontWeight: 700, color: farbe, fontVariantNumeric: "tabular-nums" }}>
-        {wertText}
-      </div>
-      <div style={{ fontSize: 10, color: "var(--ct)", marginTop: 2 }}>{titel}</div>
-      {unterzeile && <div style={{ fontSize: 9.5, color: "var(--ch)", marginTop: 1 }}>{unterzeile}</div>}
-    </div>
-  );
-}
-
-function VergleichKachel({ v, t, label }) {
-  const farbe = STATUS_FARBEN[v.status] || STATUS_FARBEN.neutral;
-  const titel =
-    v.id === "v6"
-      ? (t.brfV6Titel || "Preistrend {ort}").replace("{ort}", v.ebeneName || "")
-      : t[v.titelKey] || V_TITEL[v.titelKey];
-
-  return (
-    <div style={{ ...karte, marginTop: 8, padding: "12px 14px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ct)" }}>{titel}</span>
-        <span
-          style={{
-            flexShrink: 0,
-            fontSize: 10.5,
-            fontWeight: 700,
-            color: farbe.tx,
-            background: farbe.bg,
-            border: farbe.bd !== "transparent" ? `1px solid ${farbe.bd}` : "none",
-            borderRadius: 999,
-            padding: "3px 8px",
-          }}
-        >
-          {label(v.key, STATUS_LABEL)}
-        </span>
-      </div>
-
-      {v.id === "v6" ? (
-        <div style={{ display: "flex", gap: 20, marginTop: 8, flexWrap: "wrap" }}>
-          {v.trendVorjahr != null && (
-            <div>
-              <span style={{ fontSize: 11, color: "var(--ct)" }}>{t.brfV6Vorjahr || "Vorjahr"} </span>
-              <strong style={{ fontSize: 13 }}>{proz(v.trendVorjahr)}</strong>
-            </div>
-          )}
-          {v.trend4J != null && (
-            <div>
-              <span style={{ fontSize: 11, color: "var(--ct)" }}>
-                {t.brfV6SeitQ22022 || "seit Q2 2022"}{" "}
-              </span>
-              <strong style={{ fontSize: 13 }}>{proz(v.trend4J)}</strong>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "var(--ct)" }}>
-            {wertAnzeige(v.eigen, v.einheit)}
-          </span>
-          {v.markt != null && (
-            <>
-              <span
-                style={{
-                  width: 24,
-                  height: 24,
-                  flexShrink: 0,
-                  borderRadius: "50%",
-                  background: "var(--bg)",
-                  border: "1px solid var(--cb)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 9,
-                  fontWeight: 700,
-                  color: "var(--ch)",
-                }}
-              >
-                vs
-              </span>
-              <span style={{ fontSize: 16, fontWeight: 700, color: "var(--ch)" }}>
-                {wertAnzeige(v.markt, v.einheit)}
-              </span>
-            </>
-          )}
-        </div>
-      )}
-
-      {v.erreichbarQm != null && (
-        <div style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 6 }}>
-          {(
-            t.brfV2Erreichbar ||
-            "Bei bestehendem Mietvertrag in 3 Jahren erreichbar: {wert} (Kappungsgrenze {prozent} %)"
-          )
-            .replace("{wert}", eurQm(v.erreichbarQm))
-            .replace("{prozent}", fmt(v.kappungsgrenzeProzent, 0))}
-        </div>
-      )}
-      {v.differenz != null && (
-        <div style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 6 }}>{fmtE(v.differenz)}</div>
-      )}
+      {/* ── Lage (bleibt, kein Baustein) ── */}
+      {detailsExtra}
     </div>
   );
 }
@@ -651,102 +315,12 @@ function EbeneVierBlock({ ergebnis, t, eingebettet = false }) {
   );
 }
 
-function Zeile({ label, labelFarbe = "var(--ct)", wert }) {
-  return (
-    <div style={zeileStil}>
-      <span style={{ fontSize: 13, color: labelFarbe }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ct)" }}>{wert}</span>
-    </div>
-  );
-}
-
-function ZeileMitFlag({ label, wert, flag }) {
-  return (
-    <div>
-      <Zeile label={label} wert={wert} />
-      {flag && <div style={{ fontSize: 10.5, color: "var(--warn-tx)", marginTop: -2, marginBottom: 6 }}>{flag}</div>}
-    </div>
-  );
-}
-
-// Profi-Block: Anfangsrendite, Brutto-/Nettorendite, Kaufpreisfaktor, DSCR
-// (Ist/Objekt), ICR, Beleihung, EK-Quote, Restschuld bei Zinsbindungsende,
-// Mischzins, Finanz-Score (Spec Abschnitt 5.7). Zugeklappt per Default -
-// einzige Ausnahme vom linearen Layout (Handover-Datei Abschnitt 1).
-function ProfiBlock({ data, t }) {
-  const briefing = useMemo(() => berechneBriefing(data, t, {}), [data, t]);
-  const score = useMemo(() => berechneScore(data, t), [data, t]);
-  const { R, K, energieklasse } = briefing;
-  const eur = (n) => fmtE(n);
-  const zeilen = [
-    { label: "Anfangsrendite", wert: K.anfangsrendite != null ? proz(K.anfangsrendite) : null },
-    { label: "Bruttorendite", wert: proz(R.bR) },
-    { label: "Nettorendite", wert: proz(R.nR) },
-    { label: "Kaufpreisfaktor", wert: `${fmt(R.kpF, 1)}×` },
-    { label: "DSCR (Ist)", wert: K.dscrIst != null ? `${fmt(K.dscrIst, 2)}×` : null },
-    { label: "DSCR (Objekt)", wert: K.dscrObjekt != null ? `${fmt(K.dscrObjekt, 2)}×` : null },
-    { label: "Zinsdeckungsgrad (ICR)", wert: K.icr != null ? `${fmt(K.icr, 2)}×` : null },
-    { label: "Beleihung", wert: proz(R.bel, 0) },
-    { label: "EK-Quote", wert: proz(R.ekQ, 0) },
-    {
-      label: "Restschuld bei Zinsbindungsende",
-      wert: K.restschuldZB != null ? eur(K.restschuldZB) : null,
-    },
-    { label: "Mischzins", wert: proz(R.mzins, 2) },
-    { label: "Finanz-Score", wert: score.verfuegbar ? `${score.score}/100` : null },
-    { label: "Energieklasse (GEG)", wert: energieklasse },
-  ]
-    .filter((z) => z.wert != null)
-    .map((z) => ({ label: z.label, wert: z.wert }));
-
-  return (
-    <AccordionSection question={t.brfProfiBlock || "Profi-Kennzahlen"} color="var(--primary)">
-      <ZahlenBlock zahlen={zeilen} />
-    </AccordionSection>
-  );
-}
-
 const karte = {
   background: "var(--cc)",
   border: "1px solid var(--cb)",
   borderRadius: 12,
   padding: "16px 18px",
   marginTop: 16,
-};
-
-const kachel = {
-  background: "var(--cc)",
-  border: "1px solid var(--cb)",
-  borderRadius: 12,
-  padding: "10px 12px",
-  minWidth: 0,
-};
-
-const abschnittsUeberschrift = {
-  fontSize: 11,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.4,
-  color: "var(--ch)",
-  marginTop: 16,
-  marginBottom: 4,
-};
-
-const abschnittsUeberschriftInKarte = {
-  fontSize: 11,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.4,
-  color: "var(--ch)",
-  marginBottom: 6,
-};
-
-const zeileStil = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "baseline",
-  gap: 12,
-  padding: "5px 0",
 };
 
 const einordnungssatz = {
