@@ -40,12 +40,20 @@ import {
   knopfStil,
 } from "./ObjektAnlegenWizard.jsx";
 
-// Vier Pflichtfelder: Kaufpreis, Wohnflaeche, Kaltmiete, PLZ (letztere kommt
-// aus PlzOrtFelder und wird unten in `fehlt` geprueft). Entscheidung E4 der
-// Objektseiten-Spec (objektseite-neu.md §7.1). Alles Weitere - Zins, Tilgung,
-// AfA, Eigenkapital, ... - liefert annahmenFuer() als sinnvollen Startwert,
-// sichtbar markiert und einzeln ueberschreibbar im Annahmen-Block der
-// Objektseite.
+// Fuenf Pflichtfelder: Kaufpreis, Wohnflaeche, Kaltmiete, Baujahr, PLZ
+// (letztere kommt aus PlzOrtFelder und wird unten in `fehlt` geprueft).
+// Baujahr kam mit der Vereinfachung fuer unerfahrene Investoren dazu
+// (objektseite-vereinfachung-2026-09-23.md §6.3): ohne Baujahr laesst sich
+// der Modernisierungsbedarf (Baustein 4) nicht einschaetzen, und diese
+// Einschaetzung soll fuer JEDES Objekt moeglich sein, nicht nur fuer per
+// Exposé angelegte. Heizungsart/-alter/Energieeffizienzklasse bleiben
+// optional - sie verbessern die Einschaetzung, sind aber schon einzeln
+// nuetzlich (Baujahr allein reicht fuer eine grobe Stufe). Urspruenglich
+// (Entscheidung E4 der Objektseiten-Spec, objektseite-neu.md §7.1) waren es
+// vier Pflichtfelder ohne Baujahr - siehe dortige Historie. Alles Weitere -
+// Zins, Tilgung, AfA, Eigenkapital, ... - liefert annahmenFuer() als
+// sinnvollen Startwert, sichtbar markiert und einzeln ueberschreibbar im
+// Annahmen-Block der Objektseite.
 //
 // Zwei Aenderungen gegenueber dem Stand bis 2026-09-19:
 //   - Der NAME ist kein Pflichtfeld mehr. Er wird vorbelegt (Strasse, sonst
@@ -58,6 +66,31 @@ import {
 // `maxBreite` deckelt die Feldbreite nach dem erwarteten Inhalt - ein 690 px
 // breites Feld fuer "60" (Quadratmeter) verspricht etwas anderes, als es
 // meint. Der Name bleibt ungedeckelt, dort sind lange Adressen normal.
+// Dropdown-Kategorien identisch zu Sanier.jsx (sanHt/sanHa) - dieselben
+// Feldnamen und Werte, damit Renditerechner/Sanierungsrechner/Score dieselben
+// Daten lesen, egal ob sie hier oder dort gesetzt wurden. energieeffizienz-
+// klasse ist derselbe Feldname wie im Exposé-Scan (exposeMapping.js) - ein
+// von Hand gepflegtes und ein aus dem Exposé extrahiertes Objekt landen so
+// auf demselben Feld.
+const HEIZUNGSART_OPTIONEN = [
+  { wert: "gas", label: "Gas" },
+  { wert: "heizoel", label: "Heizöl" },
+  { wert: "wp", label: "Wärmepumpe" },
+  { wert: "pellets", label: "Pellets" },
+  { wert: "fernw-std", label: "Fernwärme" },
+  { wert: "kohle", label: "Kohle" },
+  { wert: "strom", label: "Strom" },
+];
+const HEIZUNGSALTER_OPTIONEN = [
+  { wert: "alt", label: "Alt" },
+  { wert: "mittel", label: "Mittel" },
+  { wert: "neu", label: "Neu" },
+];
+const ENERGIEKLASSE_OPTIONEN = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"].map((k) => ({
+  wert: k,
+  label: k,
+}));
+
 const FELDER = [
   { key: "name", label: "Name des Objekts", typ: "text" },
   { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", pflicht: true, maxBreite: 220 },
@@ -69,6 +102,28 @@ const FELDER = [
     einheit: "€/Monat",
     pflicht: true,
     maxBreite: 220,
+  },
+  { key: "baujahr", label: "Baujahr", typ: "zahl", pflicht: true, maxBreite: 140 },
+  {
+    key: "sanHt",
+    label: "Heizungsart",
+    typ: "auswahl",
+    optionen: HEIZUNGSART_OPTIONEN,
+    maxBreite: 220,
+  },
+  {
+    key: "sanHa",
+    label: "Heizungsalter",
+    typ: "auswahl",
+    optionen: HEIZUNGSALTER_OPTIONEN,
+    maxBreite: 180,
+  },
+  {
+    key: "energieeffizienzklasse",
+    label: "Energieeffizienzklasse",
+    typ: "auswahl",
+    optionen: ENERGIEKLASSE_OPTIONEN,
+    maxBreite: 140,
   },
 ];
 
@@ -114,6 +169,10 @@ function ObjektFormular({
     kaufpreis: startwerte?.kaufpreis || "",
     flaeche: startwerte?.flaeche || "",
     kaltmiete: startwerte?.kaltmiete || "",
+    baujahr: startwerte?.baujahr || "",
+    sanHt: startwerte?.sanHt || "",
+    sanHa: startwerte?.sanHa || "",
+    energieeffizienzklasse: startwerte?.energieeffizienzklasse || "",
     strasse: startwerte?.strasse || "",
     hausnummer: startwerte?.hausnummer || "",
     lat: startwerte?.lat,
@@ -124,10 +183,12 @@ function ObjektFormular({
   // was gesetzt und was geraten ist.
   const [quellen, setQuellen] = useState({});
   const [bundesland, setBundesland] = useState(startwerte?.bundesland || "");
-  // Exposé-Werte, fuer die es hier kein Eingabefeld gibt (Baujahr,
-  // Renovierungskosten, Energiekennwerte, ...). Ohne diesen Zwischenspeicher
-  // gingen sie beim Speichern verloren, weil der Entwurf unten nur die
-  // sichtbaren Felder zusammensetzt.
+  // Exposé-Werte, fuer die es hier kein Eingabefeld gibt (Renovierungskosten,
+  // Wohneinheiten, ...) - Baujahr/Heizungsart/-alter/Energieeffizienzklasse
+  // sind seit 2026-09-23 eigene FELDER-Eintraege und landen deshalb direkt in
+  // `werte`, nicht mehr hier. Ohne diesen Zwischenspeicher gingen die
+  // restlichen Exposé-Werte beim Speichern verloren, weil der Entwurf unten
+  // nur die sichtbaren Felder zusammensetzt.
   const [exposeExtra, setExposeExtra] = useState({});
   const [exposeOffen, setExposeOffen] = useState(false);
   // Verhindert ein doppelt angelegtes Objekt bei einem zweiten, schnellen
@@ -219,6 +280,12 @@ function ObjektFormular({
         kaufpreis: String(werte.kaufpreis || ""),
         flaeche: String(werte.flaeche || ""),
         kaltmiete: String(werte.kaltmiete || ""),
+        ...(werte.baujahr ? { baujahr: String(werte.baujahr) } : {}),
+        ...(werte.sanHt ? { sanHt: werte.sanHt } : {}),
+        ...(werte.sanHa ? { sanHa: werte.sanHa } : {}),
+        ...(werte.energieeffizienzklasse
+          ? { energieeffizienzklasse: werte.energieeffizienzklasse }
+          : {}),
       }
     : null;
   const kz = entwurf ? berechneObjektKennzahlen(entwurf, t) : null;
@@ -329,16 +396,31 @@ function ObjektFormular({
                   <span style={{ color: "var(--ch)", fontWeight: 400 }}> · optional</span>
                 )}
               </span>
-              <input
-                type={f.typ === "zahl" ? "number" : "text"}
-                inputMode={f.typ === "zahl" ? "decimal" : undefined}
-                value={werte[f.key] || ""}
-                onChange={(e) => setzen(f.key, e.target.value)}
-                // Beim Namen steht der Vorschlag als Platzhalter: der Nutzer
-                // sieht, was das Objekt heissen wird, wenn er nichts eingibt.
-                placeholder={f.key === "name" ? namensVorschlag : undefined}
-                style={f.maxBreite ? { ...eingabeStil, maxWidth: f.maxBreite } : eingabeStil}
-              />
+              {f.typ === "auswahl" ? (
+                <select
+                  value={werte[f.key] || ""}
+                  onChange={(e) => setzen(f.key, e.target.value)}
+                  style={f.maxBreite ? { ...eingabeStil, maxWidth: f.maxBreite } : eingabeStil}
+                >
+                  <option value="">–</option>
+                  {f.optionen.map((o) => (
+                    <option key={o.wert} value={o.wert}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={f.typ === "zahl" ? "number" : "text"}
+                  inputMode={f.typ === "zahl" ? "decimal" : undefined}
+                  value={werte[f.key] || ""}
+                  onChange={(e) => setzen(f.key, e.target.value)}
+                  // Beim Namen steht der Vorschlag als Platzhalter: der Nutzer
+                  // sieht, was das Objekt heissen wird, wenn er nichts eingibt.
+                  placeholder={f.key === "name" ? namensVorschlag : undefined}
+                  style={f.maxBreite ? { ...eingabeStil, maxWidth: f.maxBreite } : eingabeStil}
+                />
+              )}
             </label>
             {f.key === "name" && (
               <PlzOrtFelder

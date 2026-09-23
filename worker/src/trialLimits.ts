@@ -28,6 +28,11 @@ export const TRIAL_LIMITS = {
   expose: 3,
   // Handouts pro Tag (rechneruebergreifend).
   handout: 3,
+  // Lage-Analysen pro Tag (rechneruebergreifend, objektseite-vereinfachung-
+  // 2026-09-23.md §8). Grounding-Aufrufe sind vermutlich teurer als reine
+  // Text-Calls, deshalb dasselbe knappe Kontingent wie beim Handout statt
+  // des hoeheren Finn-Kontingents.
+  lage: 3,
 } as const;
 
 // Features ohne jedes Kontingent in der Testphase.
@@ -51,4 +56,4 @@ export function trialTag(jetzt: number = Date.now()): string {
 // Welche Features taeglich zaehlen. Wer hier fehlt, zaehlt ueber die ganze
 // Phase (tag='') - heute niemand mehr, das Feld bleibt aber bestehen, damit
 // ein kuenftiges Gesamtkontingent ohne Schema-Aenderung moeglich ist.
-export const TAGESKONTINGENT: ReadonlySet<string> = new Set(["finn", "expose", "handout"]);
+export const TAGESKONTINGENT: ReadonlySet<string> = new Set(["finn", "expose", "handout", "lage"]);

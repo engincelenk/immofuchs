@@ -766,6 +766,92 @@ export function briefingMarktpreis(d, ref) {
   return Math.round((flaeche * ref.kaufWohnung) / 500) * 500;
 }
 
+// ── Spannen: realistisch/optimal fuer Kaufpreis/Kaltmiete/Eigenkapital ──────
+// Baustein 4 (Vergleich), Nutzer-Entscheidung 2026-09-23. Definition:
+//   realistisch = was der regionale Markt hergibt (regionalpreis.js), bzw.
+//                 bei Eigenkapital die marktuebliche Bankvorgabe (Faustregel).
+//   optimal     = der Wert, ab dem sich das Objekt traegt (Cashflow = 0) -
+//                 loeseFuerCashflowNull() rechnet das UNABHAENGIG vom
+//                 heutigen Cashflow-Vorzeichen (anders als
+//                 briefingTragfaehigkeit(), die nur bei negativem Cashflow
+//                 rechnet - hier soll auch ein bereits tragfaehiges Objekt
+//                 zeigen, "wie viel Luft nach oben/unten" besteht).
+//
+// Bewusst OHNE Kappungsgrenze bei der realistischen Miete (anders als
+// Vergleichskachel V2): dieser Block soll einfach bleiben, die Kappungsgrenze
+// ist Fachdetail fuer den Fall eines bestehenden Mietvertrags.
+export const EK_FAUSTREGEL_QUOTE = 0.2; // 20 % des Kaufpreises, marktuebliche Bankvorgabe
+
+export function briefingSpannen(d, t, ref) {
+  const flaeche = +d.flaeche || 0;
+  const kaufpreis = +d.kaufpreis || 0;
+  const kaltmiete = +d.kaltmiete || 0;
+  const eigenkapital = +d.eigenkapital || 0;
+
+  return {
+    kaufpreis: {
+      aktuell: kaufpreis > 0 ? kaufpreis : null,
+      realistisch: briefingMarktpreis(d, ref),
+      optimal: loeseFuerCashflowNull(d, t, "kaufpreis"),
+    },
+    kaltmiete: {
+      aktuell: kaltmiete > 0 ? kaltmiete : null,
+      realistisch:
+        flaeche > 0 && ref?.mieteWohnung > 0
+          ? Math.round((ref.mieteWohnung * flaeche) / 5) * 5
+          : null,
+      optimal: loeseFuerCashflowNull(d, t, "kaltmiete"),
+    },
+    eigenkapital: {
+      aktuell: eigenkapital > 0 ? eigenkapital : null,
+      realistisch: kaufpreis > 0 ? Math.round((kaufpreis * EK_FAUSTREGEL_QUOTE) / 500) * 500 : null,
+      optimal: loeseFuerCashflowNull(d, t, "eigenkapital"),
+    },
+  };
+}
+
+// ── Modernisierungsbedarf ────────────────────────────────────────────────────
+// Regelbasiert, keine KI (Baustein 4, Nutzer-Entscheidung 2026-09-23) -
+// dieselbe Fachlogik wie D4 in investmentScore.js (Heizungsalter,
+// Energieklasse), hier als Text-Stufe statt als Zahl. Drei Eingaben, alle
+// optional: fehlt eine, zaehlt sie nicht mit; fehlen alle drei, gibt es keine
+// Einschaetzung statt einer geratenen (§4, gleiches Prinzip wie ueberall
+// sonst in dieser Datei).
+const MODBEDARF_PUNKTE = {
+  baujahr: (bj) => (bj > 0 && bj < 1979 ? 2 : bj > 0 && bj < 1995 ? 1 : 0),
+  heizungsalter: (ha) => (ha === "alt" ? 2 : ha === "mittel" ? 1 : 0),
+  energieklasse: (k) => (["F", "G", "H"].includes(k) ? 2 : ["D", "E"].includes(k) ? 1 : 0),
+};
+
+export function modernisierungsbedarf(d) {
+  const baujahr = +d.baujahr || 0;
+  const heizungsalter = d.sanHa || null;
+  const klasse = d.energieeffizienzklasse || energieKlasse(d.sanIstVerbrauch);
+
+  const teile = [];
+  if (baujahr > 0) teile.push({ key: "baujahr", punkte: MODBEDARF_PUNKTE.baujahr(baujahr) });
+  if (heizungsalter)
+    teile.push({ key: "heizungsalter", punkte: MODBEDARF_PUNKTE.heizungsalter(heizungsalter) });
+  if (klasse) teile.push({ key: "energieklasse", punkte: MODBEDARF_PUNKTE.energieklasse(klasse) });
+
+  if (teile.length === 0) {
+    return { verfuegbar: false, stufe: null, gruende: [] };
+  }
+
+  const quote = teile.reduce((a, x) => a + x.punkte, 0) / (teile.length * 2);
+  const stufe = quote >= 0.66 ? "hoch" : quote >= 0.33 ? "mittel" : "gering";
+  const gruende = teile.filter((x) => x.punkte > 0).map((x) => x.key);
+
+  return {
+    verfuegbar: true,
+    stufe,
+    gruende,
+    baujahr: baujahr > 0 ? baujahr : null,
+    heizungsalter,
+    energieklasse: klasse || null,
+  };
+}
+
 // Kombiweg: Miete auf das in drei Jahren Erreichbare (Kappungsgrenze) anheben
 // UND den Preis so weit senken, dass es sich traegt. Nur sinnvoll, wenn V2
 // ein Mietpotenzial zeigt.
@@ -999,6 +1085,10 @@ export function berechneBriefing(d, t, opt = {}) {
     faktorBenchmark,
     alternativanlage: briefingAlternativanlage(R, d),
     vergleiche,
+    // Baustein 4 (Vergleich, Nutzer-Entscheidung 2026-09-23): realistisch/
+    // optimal-Spannen und regelbasierte Modernisierungsbedarf-Einschaetzung.
+    spannen: briefingSpannen(d, t, opt.ref),
+    modernisierungsbedarf: modernisierungsbedarf(d),
     tragfaehigkeit,
     zeitraum: briefingZeitraum(d, R),
     stresstest: briefingStresstest(d, t),

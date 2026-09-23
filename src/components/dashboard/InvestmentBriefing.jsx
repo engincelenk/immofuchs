@@ -1,27 +1,22 @@
 // Investment-Briefing - die Objektseite (docs/technical_specs/
-// objektseite-neubau-2026-09-22.md). Zeigt genau die 7 Bausteine des
-// Investment-Schnellcheck-Konzepts, plus Lage (ausserhalb der Bausteine,
-// bleibt auf Nutzerwunsch) und den Besichtigungs-Handout-Link. Fruehere
-// Zusatzinhalte (doppelte Kernzahlen/Vergleiche in "Alle Details",
-// Profi-Block, ZielKarte, Annahmen-Akkordeon, Rohdaten-Raster) sind mit
-// diesem Umbau entfernt - sie duplizierten, was die 7 Bausteine bereits
-// zeigen, oder gehoerten zu keinem der Bausteine (Nutzer-Entscheidung
-// 2026-09-22).
+// objektseite-vereinfachung-2026-09-23.md). Vereinfacht fuer unerfahrene
+// Investoren: KEIN Urteils-Kopf mehr (weder Score-Ampel noch
+// Handlungsempfehlung, Nutzer-Entscheidungen 2026-09-23) - die Seite startet
+// direkt mit den Kernzahlen. Risiko-Szenarien (Stresstest/Flaggen) sind
+// ebenfalls entfernt. Die Rechenkerne (investmentScore.js,
+// briefingEmpfehlung(), briefingStresstest() etc.) bleiben unangetastet
+// bestehen, nur ihre Anzeige auf dieser Seite entfaellt.
 //
 // Grundprinzip: "Zahlen aus der Engine, Worte von der KI". Alle Zahlen sind
 // IMMER live aus briefing.js berechnet, unabhaengig davon, ob und wann
 // zuletzt ein KI-Aufruf lief - nur der Urteilssatz und das erste
 // Hebel-Argument kommen aus dem gespeicherten Ergebnis.
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   alter,
-  BASIS_LABEL,
   ergebnisFuer,
   hebelTexteVon,
   istVeraltet,
-  risikenVon,
-  staerkenVon,
-  stresstestTextVon,
   urteilVon,
   veraltetText,
 } from "../../utils/aiEngine.js";
@@ -34,17 +29,17 @@ import {
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
 import {
+  AnalyseKarte,
   AusblickKarte,
   BegruendungsKarte,
   BenchmarkKarte,
-  EmpfehlungsKopf,
-  FlaggenKarte,
+  EingabeHinweis,
   Kernkennzahlen,
+  LageKarte,
   MarktKarte,
+  ModernisierungsbedarfKarte,
   RegelZeile,
-  ScoreKopf,
-  StickyUrteil,
-  SzenarienKarte,
+  SpannenKarte,
 } from "./BriefingVisuals.jsx";
 
 export function InvestmentBriefing({
@@ -59,15 +54,23 @@ export function InvestmentBriefing({
   onStarten,
   onConsentJa,
   onConsentAbbrechen,
-  // Lage von der Objektseite (bleibt, kein Baustein - Nutzer-Entscheidung
-  // 2026-09-22).
+  // Baustein "Lage" (KI mit Web-Grounding, §8) - eigener kleiner Ablauf,
+  // Zustand und Aufrufe kommen aus ObjektDetail.jsx (starteLage() /
+  // einwilligenUndStartenLage()).
+  lageErgebnis = null,
+  lageLaufend = false,
+  lageFehler = null,
+  lageConsent = false,
+  onLageStarten,
+  onLageConsentJa,
+  onLageConsentAbbrechen,
+  // Lage-Adresskarte von der Objektseite (bleibt, kein eigener Baustein -
+  // Nutzer-Entscheidung 2026-09-22; nicht zu verwechseln mit der KI-Lage-
+  // Karte oben, die dieselbe Fachdomaene, aber eine andere Komponente ist).
   detailsExtra = null,
   onBearbeiten = null,
 }) {
   const [bestaetigen, setBestaetigen] = useState(false);
-  // Ziel der Sticky-Leiste (§23): sie erscheint, sobald diese Karte den
-  // Viewport nach oben verlassen hat.
-  const antwortRef = useRef(null);
   const ergebnis = ergebnisFuer(objekt, "briefing");
   const veraltet = ergebnis ? istVeraltet(ergebnis, data) : false;
 
@@ -95,16 +98,12 @@ export function InvestmentBriefing({
     onStarten();
   }
 
-  // Ein Scoring statt zwei: berechneBriefing() berechnet den Investment Score
-  // jetzt selbst mit (briefing.js, Baustein 1) - inklusive Regionalreferenz
-  // (opt.ref/proJahrTrend) fuer D5/D6.
-  const score = briefing.score;
   const argument = ergebnis ? hebelTexteVon(ergebnis)[0] : null;
   const kiSatz = ergebnis ? urteilVon(ergebnis) : "";
 
   // Ohne PLZ gibt es keinen Kreis und damit keinen einzigen Marktvergleich
-  // (§7.1). Block 4a, der Ausblick und die Faktor-Flagge entfallen dann ganz,
-  // statt als leere Huelle dazustehen (§25).
+  // (§7.1). Der Vergleich-Block, der Ausblick und die Faktor-Flagge
+  // entfallen dann ganz, statt als leere Huelle dazustehen (§25).
   const ohnePlz = !String(data?.plz || "").trim();
 
   return (
@@ -115,12 +114,52 @@ export function InvestmentBriefing({
         </div>
       )}
 
-      {/* ── Baustein 1: Investment Score, die primaere Antwort ── */}
-      <ScoreKopf score={score} t={t} />
+      {/* Baustein 2: Hinweis zur Datengrundlage - nur bei duenner
+          Datenlage sichtbar (siehe EingabeHinweis in BriefingVisuals.jsx). */}
+      <EingabeHinweis data={data} t={t} />
 
-      {/* ── Baustein 7: Handlungsempfehlung ── */}
-      <div ref={antwortRef} style={{ marginTop: 12 }}>
-        <EmpfehlungsKopf briefing={briefing} data={data} t={t}>
+      {/* Hinweis ohne PLZ: kein Marktvergleich moeglich, mit dem direkten
+          Weg zum Nachtragen. */}
+      {ohnePlz && (
+        <div style={ohnePlzBand}>
+          <span>{t.brfOhnePlz || "Ohne PLZ kein Vergleich mit dem Markt."}</span>
+          {onBearbeiten && (
+            <button type="button" onClick={onBearbeiten} style={ohnePlzKnopf}>
+              {t.brfOhnePlzLink || "PLZ ergänzen"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Baustein 3: Kernzahlen (unveraendert) ── */}
+      <Kernkennzahlen kennzahlen={briefing.kernkennzahlen} t={t} />
+
+      {/* ── Analyse: Staerken/Risiken/Hebel, eigener Baustein (nur mit
+          KI-Ergebnis - der Ausloeser dafuer steht im Begruendung-Block
+          weiter unten) ── */}
+      {ergebnis && <AnalyseKarte ergebnis={ergebnis} t={t} />}
+
+      {/* ── Baustein 4: Vergleich ── */}
+      {!ohnePlz && <MarktKarte briefing={briefing} t={t} />}
+      {!ohnePlz && <AusblickKarte ausblick={briefing.ausblick} t={t} />}
+      <BenchmarkKarte alternativanlage={briefing.alternativanlage} t={t} />
+      <SpannenKarte spannen={briefing.spannen} t={t} />
+      <ModernisierungsbedarfKarte modernisierungsbedarf={briefing.modernisierungsbedarf} t={t} />
+
+      {/* ── Baustein: Lage (KI mit Web-Grounding, §8) ── */}
+      <LageKarte
+        ergebnis={lageErgebnis}
+        laufend={lageLaufend}
+        fehler={lageFehler}
+        consent={lageConsent}
+        onStarten={onLageStarten}
+        onConsentJa={onLageConsentJa}
+        onConsentAbbrechen={onLageConsentAbbrechen}
+        t={t}
+      />
+
+      {/* ── Begruendung: KI-Text (Regel-Satz, solange keine KI gelaufen ist) ── */}
+      <BegruendungsKarte begruendung={briefing.begruendung} t={t}>
         {kiSatz && (
           <div style={kiZeile}>
             <span aria-hidden="true" style={kiGlyphe}>
@@ -145,54 +184,7 @@ export function InvestmentBriefing({
             {t.brfKiGeneriert || "KI-generiert"} · {alter(ergebnis, locale)}
           </div>
         )}
-
-        {/* Ohne KI-Ergebnis traegt Block 2 den REGEL-Satz (§22, §6.7) - so
-            steht dort nie nur eine Ampel ohne Erklaerung. */}
-          {!kiSatz && <RegelZeile begruendung={briefing.begruendung} t={t} />}
-        </EmpfehlungsKopf>
-      </div>
-
-      <StickyUrteil zielRef={antwortRef} briefing={briefing} t={t} />
-
-      {/* Hinweis ohne PLZ (§22, §25): kein Marktvergleich moeglich, mit dem
-          direkten Weg zum Nachtragen. */}
-      {ohnePlz && (
-        <div style={ohnePlzBand}>
-          <span>{t.brfOhnePlz || "Ohne PLZ kein Vergleich mit dem Markt."}</span>
-          {onBearbeiten && (
-            <button type="button" onClick={onBearbeiten} style={ohnePlzKnopf}>
-              {t.brfOhnePlzLink || "PLZ ergänzen"}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* ── Block 3: Kernkennzahlen ── */}
-      <Kernkennzahlen kennzahlen={briefing.kernkennzahlen} t={t} />
-
-      {/* ── Block 4a: Markt · Ausblick · Block 4b: Benchmark ── */}
-      {!ohnePlz && <MarktKarte briefing={briefing} t={t} />}
-      {!ohnePlz && <AusblickKarte ausblick={briefing.ausblick} t={t} />}
-      <BenchmarkKarte alternativanlage={briefing.alternativanlage} t={t} />
-
-      {/* ── Block 5: Szenarien + Sensitivitaet ── */}
-      <SzenarienKarte
-        stresstest={briefing.stresstest}
-        sensitivitaet={briefing.sensitivitaet}
-        jahre={briefing.R.j}
-        t={t}
-      >
-        {ergebnis && stresstestTextVon(ergebnis) && (
-          <div style={einordnungssatzInKarte}>{stresstestTextVon(ergebnis)}</div>
-        )}
-      </SzenarienKarte>
-
-      {/* ── Block 6: Rote Flaggen (entfaellt ganz, wenn keine ausgeloest ist) ── */}
-      <FlaggenKarte flaggen={briefing.flaggen} t={t} />
-
-      {/* ── Block 7: Warum diese Ampel — Regel immer, KI darunter ── */}
-      <BegruendungsKarte begruendung={briefing.begruendung} t={t}>
-        {ergebnis && <EbeneVierBlock ergebnis={ergebnis} t={t} eingebettet />}
+        {!kiSatz && <RegelZeile begruendung={briefing.begruendung} t={t} />}
         {fehlerText && <div style={fehlerBand}>{fehlerText}</div>}
 
         {zeigtConsent && (
@@ -277,64 +269,9 @@ export function InvestmentBriefing({
   );
 }
 
-// `eingebettet`: ohne eigene Kartenhuelle, seit die Staerken/Risiken/Hebel in
-// Block 7 unter der Regel-Begruendung stehen (§22) statt als eigene Karte.
-function EbeneVierBlock({ ergebnis, t, eingebettet = false }) {
-  const bloecke = [
-    { key: "staerken", titel: t.brfStaerken || "Stärken", farbe: "var(--primary)", einträge: staerkenVon(ergebnis) },
-    { key: "risiken", titel: t.brfRisiken || "Risiken", farbe: "var(--bad-tx)", einträge: risikenVon(ergebnis) },
-    { key: "hebel", titel: t.brfHebel || "Hebel", farbe: "var(--ca-dk)", einträge: hebelTexteVon(ergebnis) },
-  ].filter((b) => b.einträge.length > 0);
-  if (bloecke.length === 0) return null;
-  return (
-    <div style={eingebettet ? { marginTop: 12 } : karte}>
-      {bloecke.map((b, i) => (
-        <div key={b.key} style={{ borderTop: i === 0 ? "none" : "1px solid var(--cb)", paddingTop: i === 0 ? 0 : 10, marginTop: i === 0 ? 0 : 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: b.farbe, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            {b.titel}
-          </div>
-          {b.einträge.map((e) => (
-            <div key={e.title} style={{ marginTop: 6 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>
-                {e.title}
-                {e.value && <span style={{ color: "var(--ca)" }}> · {e.value}</span>}
-              </div>
-              <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--ct)", marginTop: 2 }}>
-                {e.text}
-              </div>
-              {e.basis && (
-                <div style={{ fontSize: 10, color: "var(--cl)", marginTop: 2 }}>
-                  {BASIS_LABEL[e.basis] || e.basis}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-const karte = {
-  background: "var(--cc)",
-  border: "1px solid var(--cb)",
-  borderRadius: 12,
-  padding: "16px 18px",
-  marginTop: 16,
-};
-
-const einordnungssatz = {
-  marginTop: 8,
-  fontSize: 13,
-  lineHeight: 1.5,
-  color: "var(--ct)",
-};
-
-const einordnungssatzInKarte = {
-  ...einordnungssatz,
-  paddingTop: 8,
-  borderTop: "1px solid var(--cb)",
-};
+// EbeneVierBlock (Staerken/Risiken/Hebel) ist nach BriefingVisuals.jsx
+// umgezogen und heisst dort AnalyseKarte - eigener Baustein statt
+// eingebettet in die Begruendung (Nutzer-Entscheidung 2026-09-23).
 
 const aktionsZeile = {
   display: "flex",

@@ -19,6 +19,7 @@ import { kappungsgrenzeRoutes } from "./routes/kappungsgrenze";
 import { devicesRoutes } from "./routes/devices";
 import { exportRoutes } from "./routes/export";
 import { adminRoutes } from "./routes/admin";
+import { lageRoutes } from "./routes/lage";
 import { handleScheduled } from "./scheduled";
 
 export { SessionRateLimiter } from "./sessionRateLimiter";
@@ -63,6 +64,7 @@ app.route("/api/v1/kappungsgrenze", kappungsgrenzeRoutes);
 app.route("/api/v1/devices", devicesRoutes);
 app.route("/api/v1/export", exportRoutes);
 app.route("/api/v1/admin", adminRoutes);
+app.route("/api/v1/lage", lageRoutes);
 
 export default {
   fetch: app.fetch,

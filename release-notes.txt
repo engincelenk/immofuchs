@@ -1,3 +1,41 @@
+## 2026-09-23 (1.100.0)
+
+### Objektseite-Vereinfachung: für unerfahrene Investoren gedacht
+
+Nutzer-Entscheidung (docs/technical_specs/objektseite-vereinfachung-2026-09-23.md):
+die Objektseite sollte weniger urteilen und mehr erklären. Score/Ampel,
+Handlungsempfehlung und Risiko-Szenarien fallen weg; im Gegenzug werden
+Vergleich und Analyse ausgebaut und zwei neue Bausteine kommen dazu.
+
+- Baustein 1 (Score-Kopf/Ampel) und Baustein 7 (Handlungsempfehlung) von der
+  Objektseite entfernt - die Score-Engine (investmentScore.js) bleibt fuer
+  den Renditerechner unveraendert bestehen, wird auf der Objektseite nur
+  nicht mehr angezeigt.
+- Risiko-Szenarien (Stresstest/Flaggen) von der Objektseite entfernt -
+  briefingStresstest()/briefingSensitivitaet()/briefingFlaggen() bleiben in
+  briefing.js bestehen, werden aber nicht mehr gerendert.
+- Baustein 3 (Kernzahlen) auf die urspruenglichen 4 Werte reduziert
+  (Faktor, Nettorendite, Cashflow, EK-Rendite) - keine weiteren Kennzahlen,
+  kein Break-Even.
+- Neu, Baustein "Analyse": positive/negative Punkte des Objekts mit
+  Begruendung, aus den bestehenden Staerken/Risiken/Hebeln - eigene, immer
+  sichtbare Karte statt Akkordeon.
+- Baustein 4 (Vergleich) deutlich erweitert: realistischer und optimaler
+  Kaufpreis/Kaltmiete/Eigenkapital als Spannen-Grafik (SpannenKarte), dazu
+  eine Modernisierungsbedarf-Einschaetzung (gering/mittel/hoch) aus
+  Baujahr, Heizungsalter und Energieeffizienzklasse. Dafuer vier neue Felder
+  bei Objekt anlegen: Baujahr (Pflicht), Heizungsart, Heizungsalter,
+  Energieeffizienzklasse.
+- Neu, Baustein "Lage": KI-generierte Standort-Einordnung mit Websuche
+  (Wirtschaftsstruktur, grosse Bauprojekte, aktuelle Nachrichten zum Ort) -
+  eigener Worker-Endpunkt /api/v1/lage, eigenes Trial-Kontingent (3/Tag,
+  Pro-Feature). Deutlich hervorgehobener Disclaimer, da hier reale Fakten
+  behauptet werden, nicht nur Zahlen eingeordnet.
+  ACHTUNG: die Google-Search-Grounding-Syntax (tools: [{google_search:{}}])
+  in modelRouter.ts ist nicht live gegen die aktuelle Gemini-API verifiziert
+  (widerspruechliche Doku-Lage) - vor Prod-Einsatz einmal echt testen.
+- Besichtigungshandout unveraendert (bereits vollstaendig, siehe 1.99.0).
+
 ## 2026-09-22 (1.99.0)
 
 ### Bug-Fix: Besichtigungshandout zeigte nie ein Ergebnis

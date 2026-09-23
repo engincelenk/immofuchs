@@ -29,6 +29,9 @@ import {
   FAKTOR_FLAGGE_PROZENT,
   RESTSCHULD_FLAGGE_QUOTE,
   CASHFLOW_FLAGGE_EUR,
+  briefingSpannen,
+  modernisierungsbedarf,
+  EK_FAUSTREGEL_QUOTE,
 } from "./briefing.js";
 import { computeRendite } from "./rendite.js";
 import { berechneKennzahlen } from "./kennzahlen.js";
@@ -634,5 +637,71 @@ describe("berechneBriefing — die neuen Bloecke haengen mit dran (§26.1)", () 
     expect(zeilen[0]).toEqual({ label: "Investment Score", wert: `${b.score.score}/100` });
     const dimensionsZeilen = zeilen.filter((z) => z.label.startsWith("Dimension "));
     expect(dimensionsZeilen).toHaveLength(b.score.dimensionen.length);
+  });
+});
+
+// ── Baustein 4: Spannen (objektseite-vereinfachung-2026-09-23.md §6.2) ─────
+describe("briefingSpannen", () => {
+  it("kaufpreis: aktuell aus d, realistisch aus dem Kreisrichtwert, optimal unabhaengig vom Cashflow-Vorzeichen", () => {
+    const s = briefingSpannen(basisD, {}, kreisRef);
+    expect(s.kaufpreis.aktuell).toBe(300000);
+    expect(s.kaufpreis.realistisch).toBe(60 * kreisRef.kaufWohnung); // Flaeche x Kreisrichtwert
+    expect(typeof s.kaufpreis.optimal === "number" || s.kaufpreis.optimal === null).toBe(true);
+  });
+
+  it("kaltmiete: realistisch aus Flaeche x ortsueblicher Miete, auf 5 EUR gerundet", () => {
+    const s = briefingSpannen(basisD, {}, kreisRef);
+    expect(s.kaltmiete.aktuell).toBe(900);
+    expect(s.kaltmiete.realistisch).toBe(Math.round((kreisRef.mieteWohnung * 60) / 5) * 5);
+  });
+
+  it("eigenkapital: realistisch ist die 20%-Faustregel auf den Kaufpreis", () => {
+    const s = briefingSpannen(basisD, {}, kreisRef);
+    expect(s.eigenkapital.aktuell).toBe(60000);
+    expect(s.eigenkapital.realistisch).toBe(
+      Math.round((300000 * EK_FAUSTREGEL_QUOTE) / 500) * 500,
+    );
+  });
+
+  it("ohne Regionalreferenz keine realistischen Werte, aber optimal bleibt berechenbar", () => {
+    const s = briefingSpannen(basisD, {}, null);
+    expect(s.kaufpreis.realistisch).toBe(null);
+    expect(s.kaltmiete.realistisch).toBe(null);
+    expect(s.kaufpreis.optimal).not.toBe(undefined);
+  });
+});
+
+describe("modernisierungsbedarf", () => {
+  it("ohne jede Angabe nicht verfuegbar", () => {
+    expect(modernisierungsbedarf({}).verfuegbar).toBe(false);
+  });
+
+  it("altes Baujahr allein ergibt bereits die Stufe hoch", () => {
+    const m = modernisierungsbedarf({ baujahr: "1960" });
+    expect(m.verfuegbar).toBe(true);
+    expect(m.stufe).toBe("hoch");
+    expect(m.gruende).toContain("baujahr");
+  });
+
+  it("junges Baujahr allein ergibt die Stufe gering", () => {
+    const m = modernisierungsbedarf({ baujahr: "2015" });
+    expect(m.stufe).toBe("gering");
+    expect(m.gruende).not.toContain("baujahr");
+  });
+
+  it("mehrere Faktoren zusammen: schlechte Energieklasse und alte Heizung heben die Stufe", () => {
+    const gut = modernisierungsbedarf({ baujahr: "2015", sanHa: "neu", energieeffizienzklasse: "A" });
+    const schlecht = modernisierungsbedarf({
+      baujahr: "2015",
+      sanHa: "alt",
+      energieeffizienzklasse: "G",
+    });
+    expect(gut.stufe).toBe("gering");
+    expect(schlecht.stufe).toBe("hoch");
+  });
+
+  it("liest die Energieklasse auch aus sanIstVerbrauch, wenn kein Klassenfeld gesetzt ist", () => {
+    const m = modernisierungsbedarf({ baujahr: "2015", sanIstVerbrauch: "220" });
+    expect(m.energieklasse).toBe("G");
   });
 });

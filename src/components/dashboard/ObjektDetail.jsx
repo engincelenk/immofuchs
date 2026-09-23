@@ -19,7 +19,8 @@ import { computeRendite } from "../../utils/rendite.js";
 import { berechneKennzahlen } from "../../utils/kennzahlen.js";
 import { berechneBriefing, briefingZahlen } from "../../utils/briefing.js";
 import { getSessionId } from "../../utils/assistantSession.js";
-import { rufeAnalyseAuf, analyseFehlertext } from "../../utils/aiAnalyse.js";
+import { rufeAnalyseAuf, analyseFehlertext, erteileConsent } from "../../utils/aiAnalyse.js";
+import { rufeLageAnalyseAuf } from "../../utils/lageAnalyse.js";
 import {
   ladeRegionalpreise,
   regionalFakten,
@@ -28,7 +29,7 @@ import {
   regionalTrend,
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
-import { ladePlzKreis } from "../../utils/plzKreis.js";
+import { ladePlzKreis, kreisFuerPlz } from "../../utils/plzKreis.js";
 import {
   berechneObjektKennzahlen,
   berechneVollstaendigkeit,
@@ -92,6 +93,15 @@ export function ObjektDetail({ objekt, onBack }) {
   // (damals einklappbaren) AI-Sektion; die Sektion steht seither immer offen
   // im Ueberblick (UX-Review).
   const [regGeladen, setRegGeladen] = useState(false);
+  // Baustein "Lage" (objektseite-vereinfachung-2026-09-23.md Abschnitt 8) -
+  // eigener State statt Wiederverwendung von laufend/aiFehler/aiConsent:
+  // die dortigen drei sind an eine produktId aus AI_PRODUKTE (aiEngine.js)
+  // gekoppelt, Lage ist bewusst kein Eintrag dieser Registry (eigene Route,
+  // eigenes Antwortschema - Fliesstext statt Erkenntnis-Struktur).
+  const [lageErgebnis, setLageErgebnis] = useState(null);
+  const [lageLaufend, setLageLaufend] = useState(false);
+  const [lageFehler, setLageFehler] = useState(null);
+  const [lageConsent, setLageConsent] = useState(false);
   // Sofort sichtbarer Stand nach "Fuer dieses Objekt uebernehmen"
   // (Stellschrauben, UX-Review 2026-09-06): updateObj() persistiert, aber der
   // Prop `objekt` selbst aendert sich dadurch nicht - Merkliste haelt
@@ -343,6 +353,46 @@ export function ObjektDetail({ objekt, onBack }) {
     if (produktId) starteProdukt(produktId);
   }
 
+  // Baustein "Lage": eigener, kleiner Ablauf statt starteProdukt() - andere
+  // Route (/api/v1/lage), andere Nutzlast (ort/bundesland/kreis statt
+  // kennzahlen), keine produktId aus der AI_PRODUKTE-Registry.
+  async function starteLage() {
+    if (lageLaufend || !basis?.ort || !basis?.bundesland) return;
+    setLageFehler(null);
+    setLageLaufend(true);
+    try {
+      const res = await rufeLageAnalyseAuf({
+        ort: basis.ort,
+        bundesland: basis.bundesland,
+        kreis: kreisFuerPlz(basis.plz),
+      });
+      if (!res.ok) {
+        if (res.art === "consent") {
+          setLageConsent(true);
+          return;
+        }
+        setLageFehler(analyseFehlertext(res.art, t));
+        return;
+      }
+      setLageErgebnis({ text: res.text, grounded: res.grounded, erstellt: Date.now() });
+    } catch (err) {
+      console.error("[Lage] Unerwarteter Fehler:", err);
+      setLageFehler(analyseFehlertext("fehler", t));
+    } finally {
+      setLageLaufend(false);
+    }
+  }
+
+  async function einwilligenUndStartenLage() {
+    setLageConsent(false);
+    const ok = await erteileConsent();
+    if (!ok) {
+      setLageFehler(analyseFehlertext("fehler", t));
+      return;
+    }
+    starteLage();
+  }
+
   // Der Exposé-Scan lebt weiterhin im Assistenten-Sheet (dort haengen Upload,
   // Feld-Uebernahme und Handout). Von hier fuehrt der Weg dorthin.
   function oeffneExpose() {
@@ -450,6 +500,13 @@ export function ObjektDetail({ objekt, onBack }) {
         onConsentJa={einwilligenUndStarten}
         onConsentAbbrechen={() => setAiConsent(null)}
         onBearbeiten={() => setBearbeiten(true)}
+        lageErgebnis={lageErgebnis}
+        lageLaufend={lageLaufend}
+        lageFehler={lageFehler}
+        lageConsent={lageConsent}
+        onLageStarten={starteLage}
+        onLageConsentJa={einwilligenUndStartenLage}
+        onLageConsentAbbrechen={() => setLageConsent(false)}
         detailsExtra={
           <div style={{ marginTop: 16 }}>
             <ObjektLage data={basis} titel={objekt.title} />

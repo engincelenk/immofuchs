@@ -349,3 +349,84 @@ async function callGemini(
   }
   return text;
 }
+
+// ═══ Grounded Call fuer /api/v1/lage (Lage-Analyse mit Live-Web) ═══
+// Spec: docs/technical_specs/objektseite-vereinfachung-2026-09-23.md
+// Abschnitt 8. Nutzer-Entscheidung: "muss absolut auf KI setzen", Live-Web
+// ausdruecklich gewuenscht (aktuelle Nachrichten zum Ort, die eine
+// Kaufentscheidung beeinflussen koennten - Grossprojekte etc.).
+//
+// ACHTUNG - vor dem ersten produktiven Einsatz zu pruefen: das Tool-Feld
+// "google_search" (leeres Objekt) ist der Stand fuer Gemini-2.0+-Modelle auf
+// dem generateContent-Endpunkt; aeltere Modelle brauchten stattdessen
+// "google_search_retrieval". Die Doku war beim Bauen dieser Funktion nicht
+// zweifelsfrei gegen den generateContent-Endpunkt zu verifizieren (Google
+// dokumentiert Grounding primaer ueber die neuere Interactions-API unter
+// einem anderen Endpunkt). Ein 400 mit "tools"/"google_search" im Fehlertext
+// ist das Signal, hier nachzubessern - deshalb wird der Fehlertext wie bei
+// callGemini() NICHT verschluckt.
+//
+// Bewusst OHNE Workers-AI-Fallback: ein ungegroundeter Ausweichpfad wuerde
+// wie eine belegte Aussage aussehen, waere aber geraten - schlimmer als ein
+// sichtbarer Fehler, gerade weil hier reale Fakten behauptet werden (nicht
+// nur Zahlen eingeordnet wie beim Chat/Briefing).
+const GROUNDED_MAX_TOKENS = 600;
+const GROUNDED_TEMPERATURE = 0.2; // niedrig: Fakten statt Kreativitaet
+
+export async function callGroundedModel(
+  env: Env,
+  systemPrompt: string,
+  userPayload: string,
+): Promise<{ text: string; grounded: boolean }> {
+  if (!env.GEMINI_API_KEY) {
+    throw new Error("gemini_api_key_missing");
+  }
+  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": env.GEMINI_API_KEY,
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPayload }] }],
+          generationConfig: {
+            maxOutputTokens: GROUNDED_MAX_TOKENS,
+            temperature: GROUNDED_TEMPERATURE,
+          },
+          tools: [{ google_search: {} }],
+        }),
+        signal: controller.signal,
+      },
+    );
+  } finally {
+    clearTimeout(abortTimer);
+  }
+
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => "")).slice(0, 300).replace(/\s+/g, " ");
+    throw new Error(`gemini_grounded_request_failed_${res.status}:${detail}`);
+  }
+
+  const json = (await res.json()) as {
+    candidates?: {
+      content?: { parts?: { text?: string }[] };
+      groundingMetadata?: unknown;
+    }[];
+  };
+  const kandidat = json.candidates?.[0];
+  const text = kandidat?.content?.parts?.map((p) => p.text || "").join("") || "";
+  if (!text.trim()) {
+    throw new Error("gemini_grounded_unexpected_response");
+  }
+  return { text, grounded: kandidat?.groundingMetadata != null };
+}
