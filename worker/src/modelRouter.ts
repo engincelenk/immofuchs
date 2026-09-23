@@ -350,34 +350,32 @@ async function callGemini(
   return text;
 }
 
-// ═══ Grounded Call fuer /api/v1/lage (Lage-Analyse mit Live-Web) ═══
+// ═══ Call fuer /api/v1/lage (Lage-Analyse) ═══
 // Spec: docs/technical_specs/objektseite-vereinfachung-2026-09-23.md
-// Abschnitt 8. Nutzer-Entscheidung: "muss absolut auf KI setzen", Live-Web
-// ausdruecklich gewuenscht (aktuelle Nachrichten zum Ort, die eine
-// Kaufentscheidung beeinflussen koennten - Grossprojekte etc.).
+// Abschnitt 8. Urspruenglich mit Google-Search-Grounding (tools:
+// [{google_search:{}}]) gebaut - Nutzer-Vorgabe 2026-09-10 war live
+// recherchierte, aktuelle Standort-Fakten. Live-Test 2026-09-23 zeigte einen
+// 429 von Google ("exceeded your current quota, please check your plan and
+// billing details") - Grounding braucht fuer dieses Google-Projekt einen
+// bezahlten Plan, den es (noch) nicht gibt. Nutzer-Entscheidung 2026-09-23:
+// dauerhaft OHNE Websuche, ganz normaler Gemini-Call wie bei den uebrigen
+// KI-Produkten dieser App (kein Billing-Zwang). Der Prompt (lagePrompt.ts)
+// ist entsprechend angepasst: kein Verweis mehr auf "deine Suche", keine
+// Erwartung an aktuelle/brandneue Ereignisse, nur stabiles Allgemeinwissen.
 //
-// ACHTUNG - vor dem ersten produktiven Einsatz zu pruefen: das Tool-Feld
-// "google_search" (leeres Objekt) ist der Stand fuer Gemini-2.0+-Modelle auf
-// dem generateContent-Endpunkt; aeltere Modelle brauchten stattdessen
-// "google_search_retrieval". Die Doku war beim Bauen dieser Funktion nicht
-// zweifelsfrei gegen den generateContent-Endpunkt zu verifizieren (Google
-// dokumentiert Grounding primaer ueber die neuere Interactions-API unter
-// einem anderen Endpunkt). Ein 400 mit "tools"/"google_search" im Fehlertext
-// ist das Signal, hier nachzubessern - deshalb wird der Fehlertext wie bei
-// callGemini() NICHT verschluckt.
-//
-// Bewusst OHNE Workers-AI-Fallback: ein ungegroundeter Ausweichpfad wuerde
-// wie eine belegte Aussage aussehen, waere aber geraten - schlimmer als ein
-// sichtbarer Fehler, gerade weil hier reale Fakten behauptet werden (nicht
-// nur Zahlen eingeordnet wie beim Chat/Briefing).
-const GROUNDED_MAX_TOKENS = 600;
-const GROUNDED_TEMPERATURE = 0.2; // niedrig: Fakten statt Kreativitaet
+// Bewusst weiterhin OHNE Workers-AI-Fallback: dieser Aufruf behauptet reale
+// Fakten (Wirtschaftsstruktur, Grossprojekte), nicht nur eine Einordnung
+// bereits berechneter Zahlen wie beim Chat/Briefing - ein zweites, noch
+// schwaecheres Modell wuerde das Erfindungsrisiko nur erhoehen, nicht
+// absichern.
+const LAGE_MAX_TOKENS = 600;
+const LAGE_TEMPERATURE = 0.2; // niedrig: Fakten statt Kreativitaet
 
-export async function callGroundedModel(
+export async function callLageModel(
   env: Env,
   systemPrompt: string,
   userPayload: string,
-): Promise<{ text: string; grounded: boolean }> {
+): Promise<string> {
   if (!env.GEMINI_API_KEY) {
     throw new Error("gemini_api_key_missing");
   }
@@ -400,10 +398,9 @@ export async function callGroundedModel(
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: userPayload }] }],
           generationConfig: {
-            maxOutputTokens: GROUNDED_MAX_TOKENS,
-            temperature: GROUNDED_TEMPERATURE,
+            maxOutputTokens: LAGE_MAX_TOKENS,
+            temperature: LAGE_TEMPERATURE,
           },
-          tools: [{ google_search: {} }],
         }),
         signal: controller.signal,
       },
@@ -414,19 +411,15 @@ export async function callGroundedModel(
 
   if (!res.ok) {
     const detail = (await res.text().catch(() => "")).slice(0, 300).replace(/\s+/g, " ");
-    throw new Error(`gemini_grounded_request_failed_${res.status}:${detail}`);
+    throw new Error(`gemini_lage_request_failed_${res.status}:${detail}`);
   }
 
   const json = (await res.json()) as {
-    candidates?: {
-      content?: { parts?: { text?: string }[] };
-      groundingMetadata?: unknown;
-    }[];
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
   };
-  const kandidat = json.candidates?.[0];
-  const text = kandidat?.content?.parts?.map((p) => p.text || "").join("") || "";
+  const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
   if (!text.trim()) {
-    throw new Error("gemini_grounded_unexpected_response");
+    throw new Error("gemini_lage_unexpected_response");
   }
-  return { text, grounded: kandidat?.groundingMetadata != null };
+  return text;
 }

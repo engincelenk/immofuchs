@@ -34,8 +34,8 @@ export async function rufeLageAnalyseAuf({ ort, bundesland, kreis }) {
       if (res.status === 503) return { ok: false, art: "modellAus" };
       return { ok: false, art: "fehler" };
     }
-    const { text, grounded } = await res.json();
-    return { ok: true, text, grounded };
+    const { text } = await res.json();
+    return { ok: true, text };
   } catch {
     return { ok: false, art: "fehler" };
   }

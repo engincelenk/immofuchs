@@ -374,7 +374,7 @@ export function ObjektDetail({ objekt, onBack }) {
         setLageFehler(analyseFehlertext(res.art, t));
         return;
       }
-      setLageErgebnis({ text: res.text, grounded: res.grounded, erstellt: Date.now() });
+      setLageErgebnis({ text: res.text, erstellt: Date.now() });
     } catch (err) {
       console.error("[Lage] Unerwarteter Fehler:", err);
       setLageFehler(analyseFehlertext("fehler", t));

@@ -931,7 +931,7 @@ export function ModernisierungsbedarfKarte({ modernisierungsbedarf: m, t }) {
   );
 }
 
-// ── Baustein: Lage (KI mit Web-Grounding, §8) ───────────────────────────────
+// ── Baustein: Lage (KI-Einschaetzung, §8, ohne Websuche) ────────────────────
 // Eigener Baustein zwischen Vergleich und Begruendung. Eigener kleiner
 // Start-/Consent-/Fehler-Ablauf (siehe ObjektDetail.jsx starteLage() /
 // einwilligenUndStartenLage()) nach demselben Muster wie die Begruendungs-
@@ -941,7 +941,7 @@ export function LageKarte({ ergebnis, laufend, fehler, consent, onStarten, onCon
     <div className="bv" style={karte}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
         <div style={kartenTitel}>{L(t, "brfLageTitel", "Lage: was du sonst nicht siehst")}</div>
-        <div style={klein}>{L(t, "brfLageUntertitel", "KI mit Websuche")}</div>
+        <div style={klein}>{L(t, "brfLageUntertitel", "KI-Einschätzung")}</div>
       </div>
 
       {ergebnis ? (
@@ -951,22 +951,21 @@ export function LageKarte({ ergebnis, laufend, fehler, consent, onStarten, onCon
           </div>
           {/* Deutlicherer Hinweis als bei den uebrigen KI-Texten (§8): hier
               werden reale Fakten behauptet, nicht nur Zahlen eingeordnet -
-              das Risiko einer falschen Aussage ist hoeher. */}
+              das Risiko einer falschen Aussage ist hoeher. Ohne Websuche
+              (Nutzer-Entscheidung 2026-09-23, Grounding brauchte Billing, das
+              es fuer dieses Google-Projekt nicht gibt) gilt das umso mehr -
+              das Modell kennt nur seinen Trainingsstand, keine aktuellen
+              Ereignisse. */}
           <div style={lageDisclaimer}>
             <span aria-hidden="true" style={{ fontSize: 14, flexShrink: 0 }}>⚠</span>
             <span>
               {L(
                 t,
                 "brfLageDisclaimer",
-                "KI-generiert, ohne Gewähr — auch mit Websuche können einzelne Angaben falsch oder veraltet sein. Prüfe wichtige Fakten selbst nach.",
+                "KI-generiert aus Trainingswissen, ohne Websuche und ohne Gewähr — Angaben können veraltet oder falsch sein. Prüfe wichtige Fakten selbst nach.",
               )}
             </span>
           </div>
-          {ergebnis.grounded === false && (
-            <div style={{ ...klein, marginTop: 8 }}>
-              {L(t, "brfLageNichtGrounded", "Antwort ohne Websuche erstellt, nicht web-geprüft.")}
-            </div>
-          )}
         </>
       ) : consent ? (
         <div style={lageConsentBand}>
@@ -1003,7 +1002,7 @@ export function LageKarte({ ergebnis, laufend, fehler, consent, onStarten, onCon
             {L(
               t,
               "brfLageErklaerung",
-              "Standort-Insiderwissen, das eine Kaufentscheidung beeinflussen könnte — z. B. große Bauprojekte, die Wirtschaftsstruktur der Region oder aktuelle Nachrichten zum Ort.",
+              "Standort-Insiderwissen, das eine Kaufentscheidung beeinflussen könnte — z. B. bekannte Großprojekte oder die Wirtschaftsstruktur der Region.",
             )}
           </div>
           <button type="button" onClick={onStarten} style={lageKnopf}>

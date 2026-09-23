@@ -53,7 +53,8 @@ export function InvestmentBriefing({
   onStarten,
   onConsentJa,
   onConsentAbbrechen,
-  // Baustein "Lage" (KI mit Web-Grounding, §8) - eigener kleiner Ablauf,
+  // Baustein "Lage" (KI-Einschaetzung, §8, ohne Websuche - siehe
+  // modelRouter.ts callLageModel()) - eigener kleiner Ablauf,
   // Zustand und Aufrufe kommen aus ObjektDetail.jsx (starteLage() /
   // einwilligenUndStartenLage()).
   lageErgebnis = null,
@@ -144,7 +145,7 @@ export function InvestmentBriefing({
       <SpannenKarte spannen={briefing.spannen} t={t} />
       <ModernisierungsbedarfKarte modernisierungsbedarf={briefing.modernisierungsbedarf} t={t} />
 
-      {/* ── Baustein: Lage (KI mit Web-Grounding, §8) ── */}
+      {/* ── Baustein: Lage (KI-Einschaetzung, §8, ohne Websuche) ── */}
       <LageKarte
         ergebnis={lageErgebnis}
         laufend={lageLaufend}

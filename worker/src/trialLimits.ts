@@ -29,8 +29,7 @@ export const TRIAL_LIMITS = {
   // Handouts pro Tag (rechneruebergreifend).
   handout: 3,
   // Lage-Analysen pro Tag (rechneruebergreifend, objektseite-vereinfachung-
-  // 2026-09-23.md §8). Grounding-Aufrufe sind vermutlich teurer als reine
-  // Text-Calls, deshalb dasselbe knappe Kontingent wie beim Handout statt
+  // 2026-09-23.md §8) - dasselbe knappe Kontingent wie beim Handout statt
   // des hoeheren Finn-Kontingents.
   lage: 3,
 } as const;

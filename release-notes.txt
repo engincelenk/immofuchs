@@ -1,3 +1,24 @@
+## 2026-09-23 (1.100.4)
+
+### Lage-Analyse dauerhaft ohne Websuche (Grounding brauchte Billing)
+
+Nach dem Consent-Fix (1.100.3) kam ein 429 von Google zurueck: "You exceeded
+your current quota, please check your plan and billing details." -
+Google-Search-Grounding ist fuer das hinterlegte Google-Projekt nicht
+freigeschaltet (eigenes, von normalen Gemini-Anfragen getrenntes Kontingent/
+Billing). Nutzer-Entscheidung: dauerhaft ohne Websuche umstellen statt auf
+Billing zu warten.
+
+- worker/src/modelRouter.ts: callGroundedModel() -> callLageModel(), tools-
+  Feld (google_search) entfernt, liefert nur noch Text (kein grounded-Flag
+  mehr).
+- worker/src/lagePrompt.ts: Prompt verweist nicht mehr auf "deine Suche",
+  erwartet keine brandaktuellen Ereignisse mehr - nur stabiles, etabliertes
+  Trainingswissen. Anti-Halluzinations-Regel entsprechend verschaerft.
+- LageKarte (BriefingVisuals.jsx): Untertitel/Disclaimer/Erklaerungstext
+  angepasst, kein "mit Websuche" mehr, kein separater "nicht web-geprüft"-
+  Hinweis (war ohnehin immer der Fall).
+
 ## 2026-09-23 (1.100.3)
 
 ### Bug-Fix: Lage-Analyse akzeptierte die eigene Einwilligung nie

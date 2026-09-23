@@ -2,18 +2,22 @@
 // 2026-09-23.md Abschnitt 8). Eigene, kleine Route statt eines weiteren
 // Zweigs in /api/v1/analyse (routes/assistant.ts): der dortige Aufruf ist auf
 // das gemeinsame Erkenntnis-Schema (summary/keyInsights/...) zugeschnitten,
-// das zu einer web-gestuetzten Standort-Einordnung nicht passt - Fliesstext
-// statt strukturierter KPI-Bewertung, siehe lagePrompt.ts. Middleware-Kette
+// das zu einer Standort-Einordnung nicht passt - Fliesstext statt
+// strukturierter KPI-Bewertung, siehe lagePrompt.ts. Middleware-Kette
 // (requireAuth/requirePro/requireCsrfOrigin) und Consent-/Trial-Pruefung
 // folgen trotzdem exakt demselben Muster wie export.ts/assistant.ts, damit
 // dieselben Schutzmechanismen gelten.
+//
+// Kein Google-Search-Grounding (mehr) - Nutzer-Entscheidung 2026-09-23 nach
+// einem 429 von Google ("Billing/Plan fuer Grounding nicht eingerichtet"),
+// siehe modelRouter.ts callLageModel().
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requirePro, requireCsrfOrigin, type EntitlementVars } from "../middleware";
 import { hasConsent } from "../consent";
 import { getTrialCount, incrementTrialUsage } from "../db";
 import { TRIAL_LIMITS, trialTag } from "../trialLimits";
-import { callGroundedModel } from "../modelRouter";
+import { callLageModel } from "../modelRouter";
 import { lageSystemPrompt, lageUserPayload } from "../lagePrompt";
 import { ermittleZugang } from "../entitlement";
 
@@ -63,12 +67,12 @@ lageRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c) => {
   }
 
   try {
-    const { text: antwort, grounded } = await callGroundedModel(
+    const antwort = await callLageModel(
       c.env,
       lageSystemPrompt(),
       lageUserPayload(ort, kreis, bundesland),
     );
-    return c.json({ text: antwort, grounded });
+    return c.json({ text: antwort });
   } catch (err) {
     const grund = err instanceof Error ? err.message : "unknown_error";
     console.error("lage_model_call_failed", JSON.stringify({ ort, bundesland, grund }));
