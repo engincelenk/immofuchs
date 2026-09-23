@@ -338,6 +338,41 @@ export function MarktVergleich({ briefing, t, eingebettet = false }) {
           <div style={klein}>{marktName}</div>
         </div>
       )}
+      {/* Direktvergleich Kaufpreis/m² gegen Miete/m² (Nutzer-Entscheidung
+          2026-09-22): die beiden Balken darunter vergleichen jeweils gegen
+          den Markt, aber nicht gegeneinander - diese Zeile stellt die zwei
+          eigenen Werte direkt nebeneinander, ohne Umweg ueber die Bar. */}
+      {v1 && v2 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            marginTop: eingebettet ? 0 : 12,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "var(--ci)",
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, color: "var(--ch)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+              {L(t, "brfKaufpreis", "Kaufpreis")}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--ct)", fontVariantNumeric: "tabular-nums" }}>
+              {fmt(v1.eigen, v1.eigen < 100 ? 2 : 0)} €/m²
+            </div>
+          </div>
+          <div style={{ fontSize: 16, color: "var(--cl)", alignSelf: "center" }}>vs</div>
+          <div style={{ flex: 1, minWidth: 0, textAlign: "right" }}>
+            <div style={{ fontSize: 10.5, color: "var(--ch)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+              {L(t, "brfMiete", "Miete")}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--ct)", fontVariantNumeric: "tabular-nums" }}>
+              {fmt(v2.eigen, v2.eigen < 100 ? 2 : 0)} €/m²
+            </div>
+          </div>
+        </div>
+      )}
+
       {v1 && (
         <Balken
           titel={L(t, "brfKaufpreis", "Kaufpreis")}

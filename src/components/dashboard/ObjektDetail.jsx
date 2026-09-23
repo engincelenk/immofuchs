@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
+import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
 import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
 import { InvestmentBriefing } from "./InvestmentBriefing.jsx";
+import { AiEngine } from "./AiEngine.jsx";
 import {
   ergebnisAnlegen,
   ergebnisFuer,
@@ -64,6 +66,7 @@ const AMPEL_TEXT = {
 
 export function ObjektDetail({ objekt, onBack }) {
   const { d, set, setTabExt, t, lang, updateObj } = useApp();
+  const account = useAccountCtx();
   const locale = lang === "de" ? "de-DE" : "de-DE";
   const [bearbeiten, setBearbeiten] = useState(false);
   // AI-Engine: welches Produkt gerade laeuft, und ob der letzte Aufruf
@@ -454,14 +457,30 @@ export function ObjektDetail({ objekt, onBack }) {
         }
       />
 
-      {/* Die beiden verbliebenen KI-Produkte neben dem Briefing (§22). */}
-      <div id="ai-sektion-vorbereiten" style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
-        <button type="button" onClick={oeffneExpose} style={knopfPrimaer}>
-          {t.objExposeEinlesen || "Exposé einlesen"}
-        </button>
-        <button type="button" onClick={() => starteProdukt("handout")} style={knopfSekundaer}>
-          {t.objHandout || "Fragen für die Besichtigung erstellen"}
-        </button>
+      {/* Besichtigungshandout (Bug-Fix 2026-09-22: die Karte war seit dem
+          UX-Review 2026-09-05 durch zwei bare Knoepfe ersetzt, die weder
+          Laden/Fehler/Einwilligung noch das fertige Ergebnis anzeigten - ein
+          Klick loeste den KI-Aufruf zwar korrekt aus, aber nichts davon war
+          je sichtbar. AiEngine.jsx hatte das alles bereits fertig gebaut,
+          war nur nirgends mehr eingebunden. "Exposé einlesen" steht hier
+          nicht mehr: der Upload ist bereits bei Objekt anlegen/bearbeiten
+          vorhanden, AiEngine fuehrt ohnehin nur "handout" (expose ist dort
+          bewusst nicht mehr gelistet, siehe GRUPPEN in AiEngine.jsx). */}
+      <div id="ai-sektion-vorbereiten" style={{ marginTop: 16 }}>
+        <AiEngine
+          objekt={objektAnzeige}
+          data={basis}
+          hasFullInput={hasFullInput}
+          proAktiv={account?.zugang !== "keiner"}
+          laufend={laufend}
+          onStarten={starteProdukt}
+          onExpose={oeffneExpose}
+          locale={locale}
+          fehler={aiFehler}
+          consentFuer={aiConsent}
+          onConsentJa={einwilligenUndStarten}
+          onConsentAbbrechen={() => setAiConsent(null)}
+        />
       </div>
 
       {/* Zurueck in den Renditerechner - der einzige verbliebene Weg dorthin,
@@ -474,20 +493,6 @@ export function ObjektDetail({ objekt, onBack }) {
     </div>
   );
 }
-
-const knopfPrimaer = {
-  flex: "1 1 180px",
-  minHeight: 44,
-  padding: "12px 16px",
-  borderRadius: 10,
-  border: "none",
-  background: "var(--ca)",
-  color: "#fff",
-  fontSize: 13.5,
-  fontWeight: 700,
-  fontFamily: "inherit",
-  cursor: "pointer",
-};
 
 const knopfSekundaer = {
   flex: "1 1 180px",

@@ -1,3 +1,23 @@
+## 2026-09-22 (1.99.0)
+
+### Bug-Fix: Besichtigungshandout zeigte nie ein Ergebnis
+
+Befund: Der Knopf "Fragen für die Besichtigung erstellen" loeste den
+KI-Aufruf korrekt aus, aber weder Laden noch Fehler noch Einwilligung noch
+das fertige Ergebnis waren je sichtbar - AiEngine.jsx (mit HandoutFragen.jsx)
+hatte das alles bereits fertig gebaut, war seit dem UX-Review 2026-09-05 aber
+durch zwei bare Knoepfe ersetzt und nirgends mehr eingebunden.
+
+- AiEngine wieder in ObjektDetail.jsx eingebunden (statt der beiden bare
+  Knoepfe). Zeigt jetzt korrekt Laden/Fehler/Einwilligung/Ergebnis. Titel
+  kommt jetzt aus der Produkt-Registry ("Besichtigungshandout" statt
+  "Fragen für die Besichtigung erstellen").
+- "Exposé einlesen" auf der Objektseite entfernt - der Upload ist bereits
+  bei Objekt anlegen/bearbeiten vorhanden (AiEngine listet "expose"
+  ohnehin schon lange nicht mehr, siehe dortiger Kommentar).
+- Baustein 4 (Vergleich): Kaufpreis/m² und Miete/m² stehen jetzt zusaetzlich
+  direkt nebeneinander (vorher nur je einzeln gegen den Markt verglichen).
+
 ## 2026-09-22 (1.98.0)
 
 ### Objektseite: nur noch die 7 Bausteine, plus Lage und Besichtigungs-Handout
