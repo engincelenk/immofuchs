@@ -384,9 +384,21 @@ export function ObjektDetail({ objekt, onBack }) {
   }
 
   async function einwilligenUndStartenLage() {
+    // Bug-Fix (Nutzer-Befund 2026-09-23): zwischen setLageConsent(false) und
+    // dem Start von starteLage() lag ein await auf erteileConsent() (ein
+    // eigener Netzwerk-Request), waehrend dessen KEIN Zustand einen
+    // Ladehinweis zeigte - die Karte fiel fuer diese Zeitspanne auf den
+    // Leerlauf-Knopf zurueck. Ohne sichtbare Reaktion auf den ersten Klick
+    // hat der Nutzer mehrfach geklickt, das hat parallele Consent+Lage-Laeufe
+    // ausgeloest und im Log wiederholte Aufrufe erzeugt. lageLaufend jetzt
+    // SOFORT gesetzt, noch vor dem await - die Karte zeigt ab dem ersten
+    // Klick durchgehend "Wird berechnet ...", kein Leerlauf-Fenster mehr.
+    if (lageLaufend) return;
     setLageConsent(false);
+    setLageLaufend(true);
     const ok = await erteileConsent();
     if (!ok) {
+      setLageLaufend(false);
       setLageFehler(analyseFehlertext("fehler", t));
       return;
     }
