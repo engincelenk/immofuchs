@@ -7,13 +7,19 @@
 // wiederverwendet, damit die Karte denselben Hinweistext-Mechanismus
 // (analyseFehlertext() in aiAnalyse.js) nutzen kann.
 import { apiFetch } from "./apiBase.js";
+import { getSessionId } from "./assistantSession.js";
 
 export async function rufeLageAnalyseAuf({ ort, bundesland, kreis }) {
   try {
     const res = await apiFetch("/lage", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ort, bundesland, kreis: kreis || undefined }),
+      // sessionId ist die geraetegebundene KI-Session (wie bei allen anderen
+      // KI-Produkten, siehe aiAnalyse.js) - der Worker prueft daran die
+      // Einwilligung, NICHT an der angemeldeten Server-Session. Bug-Fix
+      // 2026-09-23: fehlte hier, /api/v1/lage bekam die Einwilligung dadurch
+      // nie zu Gesicht.
+      body: JSON.stringify({ ort, bundesland, kreis: kreis || undefined, sessionId: getSessionId() }),
     });
     if (!res.ok) {
       const daten = await res.json().catch(() => ({}));

@@ -1,3 +1,25 @@
+## 2026-09-23 (1.100.3)
+
+### Bug-Fix: Lage-Analyse akzeptierte die eigene Einwilligung nie
+
+Eigentlicher Befund hinter 1.100.2 (per wrangler-tail-Mitschnitt mit
+Statuscodes bestaetigt): /api/v1/lage bekam die Einwilligung nie zu Gesicht,
+egal wie oft "Einverstanden, starten" gedrueckt wurde - jeder Aufruf kam mit
+412 zurueck, auch direkt nach einem erfolgreichen /consent 200.
+
+Ursache: hasConsent() wurde in lage.ts gegen c.var.sessionId geprueft - die
+angemeldete SERVER-Session aus requireAuth. Gespeichert wird die Einwilligung
+aber unter der geraetegebundenen KI-Session (getSessionId(), client-seitig),
+exakt wie bei allen anderen KI-Produkten (routes/assistant.ts). Zwei
+unterschiedliche ID-Raeume, die praktisch nie uebereinstimmen.
+
+- worker/src/routes/lage.ts: sessionId kommt jetzt aus dem Request-Body,
+  gleiches Muster wie /api/v1/analyse.
+- src/utils/lageAnalyse.js: sendet jetzt sessionId: getSessionId() mit.
+
+1.100.2 (Ladezustand sofort beim Klick) bleibt sinnvoll, war aber nicht die
+eigentliche Ursache des gemeldeten Verhaltens.
+
 ## 2026-09-23 (1.100.2)
 
 ### Bug-Fix: Lage-Analyse verschwand nach kurzem Aufblitzen

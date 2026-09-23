@@ -36,7 +36,17 @@ lageRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c) => {
     return c.json({ error: "ort_oder_bundesland_fehlt" }, 400);
   }
 
-  if (!(await hasConsent(c.env, c.var.sessionId))) {
+  // Bug-Fix (Nutzer-Befund 2026-09-23, per wrangler-tail-Mitschnitt bestaetigt):
+  // hasConsent() prueft hier bisher c.var.sessionId - die AUTHENTIFIZIERTE
+  // Server-Session aus requireAuth. Gespeichert wird die Einwilligung aber
+  // unter der geraetegebundenen KI-Session (getSessionId() im Client,
+  // assistantSession.js), genau wie bei allen anderen KI-Produkten (siehe
+  // hasConsent(env, req.sessionId) in routes/assistant.ts). Beide IDs stammen
+  // aus unterschiedlichen Raeumen und stimmen so gut wie nie ueberein -
+  // jede Lage-Analyse bekam deshalb selbst direkt nach erteilter Einwilligung
+  // wieder 412 zurueck. Jetzt wie ueberall sonst: sessionId kommt aus dem Body.
+  const sessionId = text(body?.sessionId, 64) || "";
+  if (!(await hasConsent(c.env, sessionId))) {
     return c.json({ error: "consent_required" }, 412);
   }
 
