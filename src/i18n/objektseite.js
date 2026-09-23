@@ -79,7 +79,7 @@ export const OBJ_T = {
     flgMieteRegel: "{wert} €/m² gegen ortsüblich {markt} €/m² — Toleranz 5 %.",
     flgEnergieRegel: "Energieklasse {wert} — ab Klasse F ist Sanierungsbedarf üblich.",
     // Block 7
-    brfBegrTitel: "Warum diese Ampel",
+    brfBegrTitel: "Warum diese Einschätzung",
     brfRegel: "Regel",
     brfBegrHartStopTilgung: "Bankdarlehen ohne Tilgung: die Finanzierung baut keine Schuld ab.",
     brfBegrHartStopBeleihung: "Die Beleihung liegt bei {beleihung} % — über dem Wert der Immobilie.",

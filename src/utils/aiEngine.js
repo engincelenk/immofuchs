@@ -47,7 +47,11 @@ export const AI_PRODUKTE = [
     id: "handout",
     titel: "Besichtigungshandout",
     kurz: "Fragen für den Termin, abgeleitet aus deinen Auswertungen",
-    aktion: "Erstellen",
+    // Eigener, ausgeschriebener Knopftext statt des generischen "Erstellen"
+    // (Nutzer-Befund 2026-09-23): in der Zeilen-Grammatik der Engine steht
+    // der Titel ueber dem Knopf, aber bei mehreren Produkten in Folge war
+    // "Erstellen" allein nicht eindeutig genug zugeordnet.
+    aktion: "Besichtigungshandout erstellen",
     // Braucht eine Grundlage ueber das Objekt: entweder einen Exposé-Scan
     // oder von Hand eingepflegte Daten (Nutzer-Vorgabe 2026-09-07, vorher
     // zwingend Exposé). Die drei Auswertungen oben gehen zusaetzlich als

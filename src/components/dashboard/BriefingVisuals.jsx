@@ -158,8 +158,6 @@ export function MarktVergleich({ briefing, t, eingebettet = false }) {
   );
 }
 
-const NACHBAR_NAME = { BW: "Baden-Württemberg", BB: "Brandenburg" };
-
 const STATUS_WORT = {
   brfStatusImRahmen: "im Rahmen",
   brfStatusUeberMarkt: "zu teuer",
@@ -334,216 +332,6 @@ function Balken({ titel, v, linkes, rechtes, faktor, verzoegerung, t }) {
 // ZielKarte()/Weg() ("Sollte sein") sind mit dem Objektseiten-Neubau
 // entfallen (Nutzer-Entscheidung 2026-09-22) - duplizierten die
 // Handlungsempfehlung aus EmpfehlungsKopf (Baustein 7).
-
-// ── Ausblick: Rueckblick des Landes, keine Prognose ─────────────────────────
-export function AusblickKarte({ ausblick, t }) {
-  if (!ausblick) return null;
-  const a = ausblick;
-  return (
-    <div className="bv" style={karte}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-        <div style={kartenTitel}>{L(t, "brfAusblickTitel", "Ausblick")}</div>
-        <div style={klein}>
-          {a.serie ? L(t, "brfAusblickSub", "Preisverlauf im Land") : L(t, "brfAusblickSubTrend", "Trend im Land")}
-        </div>
-      </div>
-
-      {a.serie && <Linie ausblick={a} />}
-      {a.naeherung && (
-        <div style={{ ...klein, marginTop: 6 }}>
-          {L(t, "brfVerlaufGeschaetzt", "Verlauf geschätzt")}
-          {" · "}
-          {L(t, "brfFormNach", "Form nach")} {NACHBAR_NAME[a.naeherung] || a.naeherung},{" "}
-          {L(t, "brfEndpunkteEcht", "Anfang und Ende echt")}
-        </div>
-      )}
-
-      <div
-        style={{
-          marginTop: a.serie ? 12 : 10,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))",
-          gap: 8,
-        }}
-      >
-        {a.seit2022Prozent != null && (
-          <Kachel
-            wert={prozent(a.seit2022Prozent, 1)}
-            label={`${L(t, "brfSeit", "seit")} ${a.von || "Q2 2022"}`}
-          />
-        )}
-        {a.seitTiefProzent != null && (
-          <Kachel
-            wert={prozent(a.seitTiefProzent, 1)}
-            label={`${L(t, "brfSeitTief", "seit Tief")} ${a.tiefLabel}`}
-            farbe={a.seitTiefProzent > 0 ? "var(--ok-tx)" : "var(--bad-tx)"}
-          />
-        )}
-        {a.annahmeProzent != null && a.proJahrProzent != null && (
-          <Kachel
-            wert={prozent(a.annahmeProzent, 1)}
-            label={L(t, "brfDeineAnnahme", "deine Annahme")}
-            unter={`${L(t, "brfLandLetzte", "Land bisher")} ${prozent(a.proJahrProzent, 1)} p. a.`}
-            farbe={a.annahmeOptimistisch ? "var(--warn-tx)" : "var(--ct)"}
-            plakette={a.annahmeOptimistisch ? L(t, "brfOptimistisch", "optimistisch") : null}
-          />
-        )}
-      </div>
-
-      {a.energieklasseSchlecht && (
-        <div
-          style={{
-            marginTop: 10,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: 12.5,
-            fontWeight: 600,
-            padding: "6px 12px",
-            borderRadius: 10,
-            color: "var(--warn-tx)",
-            background: "var(--warn-bg)",
-            border: "1px solid var(--warn-bd)",
-          }}
-        >
-          <span style={{ fontWeight: 800 }}>{a.energieklasseSchlecht}</span>
-          {L(t, "brfEnergieHinweis", "Energieklasse — Sanierung einplanen")}
-        </div>
-      )}
-
-      <div style={{ ...klein, marginTop: 10 }}>
-        {L(t, "brfKeinePrognose", "Rückblick, keine Prognose.")}
-      </div>
-    </div>
-  );
-}
-
-function Kachel({ wert, label, unter, farbe = "var(--ct)", plakette }) {
-  return (
-    <div
-      className="bv-auf"
-      style={{
-        "--bv-d": "300ms",
-        minWidth: 0,
-        padding: "8px 10px",
-        borderRadius: 10,
-        background: "var(--ci)",
-        border: "1px solid var(--cb)",
-      }}
-    >
-      <div style={{ fontSize: 17, fontWeight: 800, color: farbe, fontVariantNumeric: "tabular-nums" }}>{wert}</div>
-      <div style={{ fontSize: 10.5, color: "var(--ct)", marginTop: 1 }}>{label}</div>
-      {unter && <div style={{ fontSize: 10, color: "var(--ch)", marginTop: 1 }}>{unter}</div>}
-      {plakette && (
-        <div
-          style={{
-            display: "inline-block",
-            marginTop: 4,
-            fontSize: 10,
-            fontWeight: 700,
-            padding: "1px 7px",
-            borderRadius: 999,
-            color: "var(--warn-tx)",
-            background: "var(--warn-bg)",
-            border: "1px solid var(--warn-bd)",
-          }}
-        >
-          {plakette}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Preislinie: SVG mit preserveAspectRatio none (Linie fuellt die Breite), die
-// Punkte sind HTML darueber, damit sie nicht mit verzerrt werden. Die Linie
-// "zeichnet sich" ueber clip-path.
-function Linie({ ausblick: a }) {
-  const serie = a.serie;
-  const min = Math.min(...serie);
-  const max = Math.max(...serie);
-  const spanne = max - min || 1;
-  const x = (i) => (i / (serie.length - 1)) * 100;
-  const y = (v) => 10 + (1 - (v - min) / spanne) * 80; // 10..90 % der Hoehe
-  const punkte = serie.map((v, i) => `${x(i)},${y(v)}`);
-  const linie = `M${punkte.join("L")}`;
-  const flaeche = `${linie}L100,100L0,100Z`;
-  const letzter = serie.length - 1;
-  const aufwaerts = serie[letzter] >= serie[0];
-  const farbe = "var(--primary-tx)";
-
-  return (
-    <div style={{ marginTop: 10 }}>
-      <div
-        role="img"
-        aria-label={`Preisverlauf ${a.von} bis ${a.bis}: von ${fmt(serie[0])} auf ${fmt(serie[letzter])} €/m²`}
-        style={{ position: "relative", height: 76 }}
-      >
-        <div className="bv-zeichnen" style={{ position: "absolute", inset: 0 }}>
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            width="100%"
-            height="100%"
-            style={{ display: "block", overflow: "visible" }}
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id="bv-flaeche" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor={farbe} stopOpacity="0.16" />
-                <stop offset="1" stopColor={farbe} stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <path d={flaeche} fill="url(#bv-flaeche)" />
-            <path
-              d={linie}
-              fill="none"
-              stroke={farbe}
-              strokeWidth="2.25"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-        </div>
-        {a.tiefIdx != null && a.tiefIdx > 0 && a.tiefIdx < letzter && (
-          <Punkt links={x(a.tiefIdx)} oben={y(serie[a.tiefIdx])} farbe="var(--ch)" klein />
-        )}
-        <Punkt links={x(letzter)} oben={y(serie[letzter])} farbe={aufwaerts ? "var(--ok-tx)" : "var(--primary-tx)"} />
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", ...klein, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-        <span>
-          {a.von} · {fmt(serie[0])} €/m²
-        </span>
-        <span>
-          {a.bis} · {fmt(serie[letzter])} €/m²
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function Punkt({ links, oben, farbe, klein: kleinerPunkt }) {
-  const d = kleinerPunkt ? 8 : 12;
-  return (
-    <span
-      className="bv-punkt"
-      style={{
-        position: "absolute",
-        left: `${links}%`,
-        top: `${oben}%`,
-        width: d,
-        height: d,
-        borderRadius: "50%",
-        background: farbe,
-        border: "2px solid var(--cc)",
-        boxShadow: "0 0 0 1px var(--cb)",
-        boxSizing: "border-box",
-        transform: "translate(-50%,-50%)",
-      }}
-    />
-  );
-}
 
 // ════════════════════════════════════════════════════════════════════════════
 // Objektseite neu — docs/technical_specs/objektseite-neu.md Teil III
@@ -1356,7 +1144,12 @@ export function AnalyseKarte({ ergebnis, t }) {
   );
 }
 
-// ── Block 7: Warum diese Ampel ──────────────────────────────────────────────
+// ── Block 7: Warum diese Einschaetzung ──────────────────────────────────────
+// Titel bewusst ohne "Ampel" (Nutzer-Befund 2026-09-23): die Score-/Ampel-
+// Anzeige ist von der Objektseite entfernt, ein Kartentitel, der sie noch
+// erwaehnt, waere auf der Seite nicht mehr einzuloesen. Die anderen Sprachen
+// (objektseite.js) hatten das bereits neutral formuliert ("Why this rating"
+// u.ae.) - nur die deutsche Zeile hinkte hinterher.
 // Die Regel-Begruendung steht IMMER da, auch ohne KI-Aufruf (§3) - sie ist
 // der Teil, an dem der Nutzer die Logik gegenpruefen kann.
 const BEGR_TEXT = {
@@ -1408,7 +1201,7 @@ export function BegruendungsKarte({ begruendung, t, children }) {
 
   return (
     <div className="bv" style={karte}>
-      <div style={kartenTitel}>{L(t, "brfBegrTitel", "Warum diese Ampel")}</div>
+      <div style={kartenTitel}>{L(t, "brfBegrTitel", "Warum diese Einschätzung")}</div>
       {(ampelSatz || empfSatz) && (
         <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "var(--ct)", marginTop: 8 }}>
           {[ampelSatz, empfSatz].filter(Boolean).join(" ")}

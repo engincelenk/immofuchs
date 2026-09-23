@@ -1,3 +1,16 @@
+## 2026-09-23 (1.100.1)
+
+### Nachbesserung nach Live-Test von 1.100.0
+
+- "Warum diese Ampel" (Begruendungs-Karte) hiess noch so, obwohl die Score-
+  Ampel selbst von der Objektseite entfernt ist - umbenannt zu "Warum diese
+  Einschätzung" (die anderen Sprachen hatten das schon neutral formuliert).
+- Baustein "Ausblick" (Preisverlauf/Trend im Land) von der Objektseite
+  entfernt - briefingAusblick() bleibt bestehen, sie liefert weiterhin den
+  Trend-Wert (D6) an die Score-Engine fuer den Renditerechner.
+- Besichtigungshandout-Knopf heisst jetzt "Besichtigungshandout erstellen"
+  statt nur "Erstellen".
+
 ## 2026-09-23 (1.100.0)
 
 ### Objektseite-Vereinfachung: für unerfahrene Investoren gedacht

@@ -30,7 +30,6 @@ import {
 } from "../../utils/regionalpreis.js";
 import {
   AnalyseKarte,
-  AusblickKarte,
   BegruendungsKarte,
   BenchmarkKarte,
   EingabeHinweis,
@@ -141,7 +140,6 @@ export function InvestmentBriefing({
 
       {/* ── Baustein 4: Vergleich ── */}
       {!ohnePlz && <MarktKarte briefing={briefing} t={t} />}
-      {!ohnePlz && <AusblickKarte ausblick={briefing.ausblick} t={t} />}
       <BenchmarkKarte alternativanlage={briefing.alternativanlage} t={t} />
       <SpannenKarte spannen={briefing.spannen} t={t} />
       <ModernisierungsbedarfKarte modernisierungsbedarf={briefing.modernisierungsbedarf} t={t} />
