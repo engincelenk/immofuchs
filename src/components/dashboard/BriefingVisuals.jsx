@@ -1084,18 +1084,43 @@ const lageDisclaimer = {
 // (staerkenVon/risikenVon/hebelTexteVon lesen aus dem gespeicherten
 // "briefing"-Ergebnis) - der Ausloeser dafuer ist die Begruendungs-Karte
 // weiter unten auf der Seite.
-export function AnalyseKarte({ ergebnis, t }) {
-  const bloecke = [
-    { key: "staerken", titel: L(t, "brfStaerken", "Stärken"), farbe: "gruen", einträge: staerkenVon(ergebnis) },
-    { key: "risiken", titel: L(t, "brfRisiken", "Risiken"), farbe: "rot", einträge: risikenVon(ergebnis) },
-    { key: "hebel", titel: L(t, "brfHebel", "Hebel"), farbe: "orange", einträge: hebelTexteVon(ergebnis) },
-  ].filter((b) => b.einträge.length > 0);
-  if (bloecke.length === 0) return null;
+// AnalyseKarte traegt seit dem Wegfall der Begruendungs-Karte (Nutzer-
+// Entscheidung 2026-09-23: "die ganze Karte inkl. Begruendungstext" weg, aber
+// "Knopf bleibt, wandert an anderen Platz") auch deren Ausloeser: Start-Knopf
+// fuer die KI-Analyse, Laden/Fehler/Einwilligung sowie "Neu berechnen" -
+// direkt an der Stelle, die dieser Knopf befuellt, statt in einer eigenen,
+// jetzt ueberfluessigen Karte darueber.
+export function AnalyseKarte({
+  ergebnis,
+  t,
+  laufend,
+  fehlerText,
+  zeigtConsent,
+  bestaetigen,
+  onStarten,
+  onConsentJa,
+  onConsentAbbrechen,
+  onBestaetigenJa,
+  onBestaetigenAbbrechen,
+  erstelltText,
+}) {
+  const bloecke = ergebnis
+    ? [
+        { key: "staerken", titel: L(t, "brfStaerken", "Stärken"), farbe: "gruen", einträge: staerkenVon(ergebnis) },
+        { key: "risiken", titel: L(t, "brfRisiken", "Risiken"), farbe: "rot", einträge: risikenVon(ergebnis) },
+        { key: "hebel", titel: L(t, "brfHebel", "Hebel"), farbe: "orange", einträge: hebelTexteVon(ergebnis) },
+      ].filter((b) => b.einträge.length > 0)
+    : [];
 
   return (
     <div className="bv" style={karte}>
       <style>{CSS}</style>
       <div style={kartenTitel}>{L(t, "brfAnalyseTitel", "Analyse: Was spricht dafür, was dagegen?")}</div>
+      {bloecke.length === 0 && !laufend && !zeigtConsent && !bestaetigen && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--ch)", marginTop: 10 }}>
+          {L(t, "brfAnalyseLeer", "Noch keine KI-Analyse zu diesem Objekt.")}
+        </div>
+      )}
       {bloecke.map((b, i) => (
         <div
           key={b.key}
@@ -1139,105 +1164,141 @@ export function AnalyseKarte({ ergebnis, t }) {
           ))}
         </div>
       ))}
-    </div>
-  );
-}
 
-// ── Block 7: Warum diese Einschaetzung ──────────────────────────────────────
-// Titel bewusst ohne "Ampel" (Nutzer-Befund 2026-09-23): die Score-/Ampel-
-// Anzeige ist von der Objektseite entfernt, ein Kartentitel, der sie noch
-// erwaehnt, waere auf der Seite nicht mehr einzuloesen. Die anderen Sprachen
-// (objektseite.js) hatten das bereits neutral formuliert ("Why this rating"
-// u.ae.) - nur die deutsche Zeile hinkte hinterher.
-// Die Regel-Begruendung steht IMMER da, auch ohne KI-Aufruf (§3) - sie ist
-// der Teil, an dem der Nutzer die Logik gegenpruefen kann.
-const BEGR_TEXT = {
-  brfBegrHartStopTilgung: "Bankdarlehen ohne Tilgung: die Finanzierung baut keine Schuld ab.",
-  brfBegrHartStopBeleihung: "Die Beleihung liegt bei {beleihung} % — über dem Wert der Immobilie.",
-  brfBegrTraegtSich: "Das Objekt trägt sich: {ueberschuss} Überschuss pro Monat nach Steuer.",
-  brfBegrMitZuzahlung:
-    "Die Zuzahlung von {zuzahlung} pro Monat liegt unter {quote} % der Kaltmiete ({grenze}).",
-  brfBegrTraegtSichNicht:
-    "Die Zuzahlung von {zuzahlung} pro Monat übersteigt die Grenze von {grenze}.",
-  brfBegrInvestieren: "Der Preis liegt höchstens {toleranz} % über dem Marktwert.",
-  brfBegrVerhandelnMarkt: "Zum Marktpreis von {kaufpreis} wären es {nachlassProzent} % weniger.",
-  brfBegrVerhandelnKaufpreis:
-    "Ab {kaufpreis} trägt es sich — {nachlassProzent} % Nachlass, bis {grenze} % gilt als verhandelbar.",
-  brfBegrVerhandelnKombi:
-    "Mit höherer Miete und {kaufpreis} trägt es sich — {nachlassProzent} % Nachlass.",
-  brfBegrVerhandelnMiete: "Ab einer Kaltmiete von {miete} trägt es sich, und das ist marktüblich.",
-  brfBegrNichtHartStop: "Daran ändert auch ein niedrigerer Preis nichts.",
-  brfBegrNichtUnerreichbar:
-    "Kein Weg führt unter {grenze} % Nachlass zum Ziel — das ist am Markt nicht verhandelbar.",
-};
+      {fehlerText && <div style={analyseFehlerBand}>{fehlerText}</div>}
 
-function begruendungsSatz(teil, t) {
-  if (!teil) return null;
-  const werte = {};
-  for (const [k, v] of Object.entries(teil.werte || {})) {
-    werte[k] =
-      v == null
-        ? "—"
-        : k === "kaufpreis" || k === "miete" || k === "grenze" || k === "zuzahlung" || k === "ueberschuss"
-          ? fmtE(Math.round(v))
-          : typeof v === "number"
-            ? fmt(v, k === "nachlassProzent" ? 1 : 0)
-            : String(v);
-  }
-  // "grenze" ist bei den Verhandlungs-Schluesseln eine Prozentzahl, kein Betrag.
-  if (teil.key?.startsWith("brfBegrVerhandeln") || teil.key === "brfBegrNichtUnerreichbar") {
-    werte.grenze = fmt(teil.werte?.grenze, 0);
-  }
-  return tpl(L(t, teil.key, BEGR_TEXT[teil.key] || ""), werte);
-}
-
-// Die Regel steht oben und immer; Staerken/Risiken/Hebel aus der KI kommen
-// als children darunter, ebenso die KI-Steuerung (Start, Laden, Fehler) -
-// der Start-Knopf sitzt seit §24.2 hier und nicht mehr in Block 2.
-export function BegruendungsKarte({ begruendung, t, children }) {
-  const ampelSatz = begruendungsSatz(begruendung?.ampel, t);
-  const empfSatz = begruendungsSatz(begruendung?.empfehlung, t);
-
-  return (
-    <div className="bv" style={karte}>
-      <div style={kartenTitel}>{L(t, "brfBegrTitel", "Warum diese Einschätzung")}</div>
-      {(ampelSatz || empfSatz) && (
-        <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "var(--ct)", marginTop: 8 }}>
-          {[ampelSatz, empfSatz].filter(Boolean).join(" ")}
+      {zeigtConsent && (
+        <div style={analyseConsentBand}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+            {L(
+              t,
+              "brfConsentText",
+              "Für die Auswertung werden die Kennzahlen dieses Objekts an unseren KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?",
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={onConsentJa} style={analyseConsentJa}>
+              {L(t, "brfConsentJa", "Einverstanden, starten")}
+            </button>
+            <button type="button" onClick={onConsentAbbrechen} style={analyseConsentNein}>
+              {L(t, "brfConsentNein", "Abbrechen")}
+            </button>
+          </div>
         </div>
       )}
-      {children}
+
+      {bestaetigen && !zeigtConsent && (
+        <div style={analyseConsentBand}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+            {(erstelltText
+              ? L(t, "brfNeuBerechnenFrage", "Zuletzt erstellt am {datum}. Neu berechnen und die bisherige Auswertung ersetzen?")
+              : ""
+            ).replace("{datum}", erstelltText || "")}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={onBestaetigenJa} style={analyseConsentJa}>
+              {L(t, "brfNeuBerechnenJa", "Ja, neu berechnen")}
+            </button>
+            <button type="button" onClick={onBestaetigenAbbrechen} style={analyseConsentNein}>
+              {L(t, "brfConsentNein", "Abbrechen")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {laufend ? (
+        <div aria-busy="true" style={{ marginTop: 10, fontSize: 12.5, color: "var(--cl)" }}>
+          {L(t, "brfLaeuft", "Wird berechnet …")}
+        </div>
+      ) : (
+        !zeigtConsent &&
+        !bestaetigen && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+            {erstelltText && (
+              <span style={{ ...klein, marginRight: "auto" }}>
+                {L(t, "brfKiGeneriert", "KI-generiert")} · {erstelltText}
+              </span>
+            )}
+            <button type="button" onClick={onStarten} style={bloecke.length === 0 ? analyseKnopf : textLink}>
+              {bloecke.length === 0 ? (
+                <>
+                  <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
+                  {L(t, "brfStartKnopf", "Investment-Briefing erstellen")}
+                </>
+              ) : (
+                L(t, "brfNeuBerechnen", "↻ Neu berechnen")
+              )}
+            </button>
+          </div>
+        )
+      )}
     </div>
   );
 }
 
-// Kleine Pille vor dem Regel-Satz in Block 2, wenn (noch) kein KI-Ergebnis
-// vorliegt (§22). Macht sichtbar, dass der Satz gerechnet und nicht
-// geschrieben wurde.
-export function RegelZeile({ begruendung, t }) {
-  const satz = begruendungsSatz(begruendung?.ampel, t);
-  if (!satz) return null;
-  return (
-    <div style={{ display: "flex", gap: 8, alignItems: "baseline", marginTop: 10 }}>
-      <span
-        style={{
-          flexShrink: 0,
-          fontSize: 10,
-          fontWeight: 700,
-          color: "var(--ch)",
-          background: "var(--cro)",
-          borderRadius: 999,
-          padding: "2px 7px",
-        }}
-      >
-        {L(t, "brfRegel", "Regel")}
-      </span>
-      <span style={{ fontSize: 13.5, lineHeight: 1.5, color: "var(--ct)", minWidth: 0 }}>
-        {satz}
-      </span>
-    </div>
-  );
-}
+const analyseKnopf = {
+  display: "inline-flex",
+  alignItems: "center",
+  height: 44,
+  padding: "0 16px",
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 13.5,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+const textLink = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  color: "var(--ca)",
+  fontSize: 13.5,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  minHeight: 44,
+};
+
+const analyseConsentBand = {
+  background: "var(--ci)",
+  border: "1px solid var(--cb)",
+  borderRadius: 12,
+  padding: "14px 16px",
+  marginTop: 12,
+};
+
+const analyseConsentJa = { ...analyseKnopf, marginTop: 0 };
+
+const analyseConsentNein = {
+  ...analyseConsentJa,
+  background: "var(--cc)",
+  color: "var(--ct)",
+  border: "1.5px solid var(--cb)",
+  fontWeight: 600,
+};
+
+const analyseFehlerBand = {
+  background: "var(--bad-bg)",
+  border: "1px solid var(--bad-bd)",
+  color: "var(--bad-tx)",
+  borderRadius: 10,
+  padding: "10px 12px",
+  fontSize: 13.5,
+  lineHeight: 1.5,
+  marginTop: 12,
+};
+
+// BegruendungsKarte()/RegelZeile()/begruendungsSatz()/BEGR_TEXT ("Block 7:
+// Warum diese Einschaetzung") sind mit dem Objektseiten-Umbau entfallen
+// (Nutzer-Entscheidung 2026-09-23: "die ganze Karte inkl. Begruendungstext"
+// weg) - der Start-Knopf fuer die KI-Analyse, den diese Karte trug, sitzt
+// jetzt direkt in AnalyseKarte oben. briefing.begruendung selbst bleibt in
+// briefing.js bestehen (wird fuer den KI-Prompt gebraucht, siehe
+// briefingZahlen()), nur die Anzeige des Regel-Satzes ist entfallen.
 
 // HerkunftChip()/AnnahmenListe() ("Block 10: Annahmen") sind mit dem
 // Objektseiten-Neubau entfallen (Nutzer-Entscheidung 2026-09-22) - kein

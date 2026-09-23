@@ -12,14 +12,7 @@
 // zuletzt ein KI-Aufruf lief - nur der Urteilssatz und das erste
 // Hebel-Argument kommen aus dem gespeicherten Ergebnis.
 import { useMemo, useState } from "react";
-import {
-  alter,
-  ergebnisFuer,
-  hebelTexteVon,
-  istVeraltet,
-  urteilVon,
-  veraltetText,
-} from "../../utils/aiEngine.js";
+import { alter, ergebnisFuer, istVeraltet, veraltetText } from "../../utils/aiEngine.js";
 import { berechneBriefing } from "../../utils/briefing.js";
 import {
   regionalLandeswert,
@@ -30,14 +23,12 @@ import {
 } from "../../utils/regionalpreis.js";
 import {
   AnalyseKarte,
-  BegruendungsKarte,
   BenchmarkKarte,
   EingabeHinweis,
   Kernkennzahlen,
   LageKarte,
   MarktKarte,
   ModernisierungsbedarfKarte,
-  RegelZeile,
   SpannenKarte,
 } from "./BriefingVisuals.jsx";
 
@@ -98,8 +89,7 @@ export function InvestmentBriefing({
     onStarten();
   }
 
-  const argument = ergebnis ? hebelTexteVon(ergebnis)[0] : null;
-  const kiSatz = ergebnis ? urteilVon(ergebnis) : "";
+  const erstelltText = ergebnis ? alter(ergebnis, locale) : null;
 
   // Ohne PLZ gibt es keinen Kreis und damit keinen einzigen Marktvergleich
   // (§7.1). Der Vergleich-Block, der Ausblick und die Faktor-Flagge
@@ -134,10 +124,27 @@ export function InvestmentBriefing({
       {/* ── Baustein 3: Kernzahlen (unveraendert) ── */}
       <Kernkennzahlen kennzahlen={briefing.kernkennzahlen} t={t} />
 
-      {/* ── Analyse: Staerken/Risiken/Hebel, eigener Baustein (nur mit
-          KI-Ergebnis - der Ausloeser dafuer steht im Begruendung-Block
-          weiter unten) ── */}
-      {ergebnis && <AnalyseKarte ergebnis={ergebnis} t={t} />}
+      {/* ── Analyse: Staerken/Risiken/Hebel, eigener Baustein. Traegt seit
+          2026-09-23 auch den Ausloeser (Start/Laden/Fehler/Einwilligung/
+          Neu berechnen) - die vormalige eigene Begruendungs-Karte darueber
+          ist entfallen, siehe AnalyseKarte in BriefingVisuals.jsx. ── */}
+      <AnalyseKarte
+        ergebnis={ergebnis}
+        t={t}
+        laufend={laufend}
+        fehlerText={fehlerText}
+        zeigtConsent={zeigtConsent}
+        bestaetigen={bestaetigen}
+        onStarten={handleStart}
+        onConsentJa={onConsentJa}
+        onConsentAbbrechen={onConsentAbbrechen}
+        onBestaetigenJa={() => {
+          setBestaetigen(false);
+          onStarten();
+        }}
+        onBestaetigenAbbrechen={() => setBestaetigen(false)}
+        erstelltText={erstelltText}
+      />
 
       {/* ── Baustein 4: Vergleich ── */}
       {!ohnePlz && <MarktKarte briefing={briefing} t={t} />}
@@ -156,98 +163,6 @@ export function InvestmentBriefing({
         onConsentAbbrechen={onLageConsentAbbrechen}
         t={t}
       />
-
-      {/* ── Begruendung: KI-Text (Regel-Satz, solange keine KI gelaufen ist) ── */}
-      <BegruendungsKarte begruendung={briefing.begruendung} t={t}>
-        {kiSatz && (
-          <div style={kiZeile}>
-            <span aria-hidden="true" style={kiGlyphe}>
-              ✦
-            </span>
-            <span>{kiSatz}</span>
-          </div>
-        )}
-        {argument && (
-          <div style={argumentZeile}>
-            <span style={argumentLabel}>{t.brfArgument || "Argument"}</span>
-            <span style={{ minWidth: 0 }}>
-              {argument.title}
-              {argument.value && (
-                <span style={{ color: "var(--ca-dk)", fontWeight: 700 }}> · {argument.value}</span>
-              )}
-            </span>
-          </div>
-        )}
-        {ergebnis && (
-          <div style={{ marginTop: 8, fontSize: 11, color: "var(--cl)" }}>
-            {t.brfKiGeneriert || "KI-generiert"} · {alter(ergebnis, locale)}
-          </div>
-        )}
-        {!kiSatz && <RegelZeile begruendung={briefing.begruendung} t={t} />}
-        {fehlerText && <div style={fehlerBand}>{fehlerText}</div>}
-
-        {zeigtConsent && (
-          <div style={consentBand}>
-            <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-              {t.brfConsentText ||
-                "Für die Auswertung werden die Kennzahlen dieses Objekts an unseren KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?"}
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="button" onClick={onConsentJa} style={consentJa}>
-                {t.brfConsentJa || "Einverstanden, starten"}
-              </button>
-              <button type="button" onClick={onConsentAbbrechen} style={consentNein}>
-                {t.brfConsentNein || "Abbrechen"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {bestaetigen && !zeigtConsent && (
-          <div style={consentBand}>
-            <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-              {(
-                t.brfNeuBerechnenFrage ||
-                "Zuletzt erstellt am {datum}. Neu berechnen und die bisherige Auswertung ersetzen?"
-              ).replace("{datum}", alter(ergebnis, locale))}
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setBestaetigen(false);
-                  onStarten();
-                }}
-                style={consentJa}
-              >
-                {t.brfNeuBerechnenJa || "Ja, neu berechnen"}
-              </button>
-              <button type="button" onClick={() => setBestaetigen(false)} style={consentNein}>
-                {t.brfConsentNein || "Abbrechen"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!ergebnis && !laufend && !zeigtConsent && (
-          <div style={aktionsZeile}>
-            <span style={nutzenZeile}>
-              {t.brfOhneKiHinweis || "Noch keine KI-Beratung zu diesem Objekt."}
-            </span>
-            <button type="button" onClick={handleStart} style={knopf}>
-              <span aria-hidden="true" style={{ marginRight: 6 }}>
-                ✦
-              </span>
-              {t.brfStartKnopf || "Investment-Briefing erstellen"}
-            </button>
-          </div>
-        )}
-        {laufend && (
-          <div aria-busy="true" style={{ marginTop: 8, fontSize: 12.5, color: "var(--cl)" }}>
-            {t.brfLaeuft || "Wird berechnet …"}
-          </div>
-        )}
-      </BegruendungsKarte>
 
       {/* ── Besichtigungs-Handout (bleibt, kein Baustein) ── */}
       <div style={{ textAlign: "center", marginTop: 12 }}>
@@ -271,119 +186,6 @@ export function InvestmentBriefing({
 // EbeneVierBlock (Staerken/Risiken/Hebel) ist nach BriefingVisuals.jsx
 // umgezogen und heisst dort AnalyseKarte - eigener Baustein statt
 // eingebettet in die Begruendung (Nutzer-Entscheidung 2026-09-23).
-
-const aktionsZeile = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  flexWrap: "wrap",
-  gap: 8,
-  marginTop: 10,
-};
-
-const nutzenZeile = {
-  flex: "1 1 140px",
-  minWidth: 140,
-  fontSize: 12.5,
-  lineHeight: 1.45,
-  color: "var(--cl)",
-};
-
-const knopf = {
-  display: "inline-flex",
-  alignItems: "center",
-  flexShrink: 0,
-  height: 44,
-  padding: "0 16px",
-  borderRadius: 10,
-  border: "none",
-  background: "var(--ca)",
-  color: "#fff",
-  fontSize: 13.5,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "inherit",
-};
-
-const kiZeile = {
-  display: "flex",
-  gap: 8,
-  alignItems: "baseline",
-  marginTop: 12,
-  paddingTop: 10,
-  borderTop: "1px solid var(--cb)",
-  fontSize: 13,
-  lineHeight: 1.5,
-  color: "var(--ct)",
-};
-
-// Marineblau ist in der App die "Denk-Farbe" fuer KI (siehe ObjektDetail).
-const kiGlyphe = { color: "var(--primary-tx)", fontSize: 12, flexShrink: 0 };
-
-const argumentZeile = {
-  display: "flex",
-  gap: 8,
-  alignItems: "baseline",
-  marginTop: 8,
-  fontSize: 13,
-  lineHeight: 1.45,
-  color: "var(--ct)",
-};
-
-const argumentLabel = {
-  flexShrink: 0,
-  fontSize: 10.5,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.4,
-  color: "var(--ca-dk)",
-  background: "var(--ca-bg)",
-  border: "1px solid var(--ca-bd)",
-  borderRadius: 999,
-  padding: "1px 8px",
-};
-
-const fehlerBand = {
-  background: "var(--bad-bg)",
-  border: "1px solid var(--bad-bd)",
-  color: "var(--bad-tx)",
-  borderRadius: 10,
-  padding: "10px 12px",
-  fontSize: 13.5,
-  lineHeight: 1.5,
-  marginTop: 12,
-};
-
-const consentBand = {
-  background: "var(--ci)",
-  border: "1px solid var(--cb)",
-  borderRadius: 12,
-  padding: "14px 16px",
-  marginTop: 12,
-};
-
-const consentJa = {
-  display: "inline-flex",
-  alignItems: "center",
-  height: 44,
-  padding: "0 16px",
-  borderRadius: 10,
-  border: "none",
-  background: "var(--ca)",
-  color: "#fff",
-  fontSize: 13.5,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "inherit",
-};
-
-const consentNein = {
-  ...consentJa,
-  background: "var(--cc)",
-  color: "var(--ct)",
-  border: "1.5px solid var(--cb)",
-  fontWeight: 600,
-};
 
 const veraltetBand = {
   background: "var(--warn-bg)",

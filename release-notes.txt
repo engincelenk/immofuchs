@@ -1,3 +1,21 @@
+## 2026-09-23 (1.100.5)
+
+### Begruendungs-Karte entfernt, Analyse-Baustein traegt jetzt den KI-Ausloeser
+
+Nutzer-Entscheidung nach Live-Test: die Karte "Warum diese Einschätzung"
+(Regel-Begruendung + KI-Ausloeser) faellt komplett weg. Sie enthielt aber
+auch den einzigen Start-Knopf fuer die KI-Analyse (Investment-Briefing), die
+den Analyse-Baustein (Stärken/Risiken/Hebel) fuellt - der Knopf ist deshalb
+nicht ersatzlos gestrichen, sondern in den Analyse-Baustein selbst gewandert.
+
+- BriefingVisuals.jsx: BegruendungsKarte()/RegelZeile()/begruendungsSatz()/
+  BEGR_TEXT entfernt. AnalyseKarte() traegt jetzt zusaetzlich Start/Laden/
+  Fehler/Einwilligung/"Neu berechnen" - direkt an der Stelle, die sie
+  befuellt. briefing.begruendung (briefing.js) bleibt fuer den KI-Prompt
+  bestehen, nur die Anzeige des Regel-Satzes ist entfallen.
+- InvestmentBriefing.jsx entsprechend aufgeraeumt (kiSatz/argument-Anzeige,
+  ungenutzte Stile entfernt).
+
 ## 2026-09-23 (1.100.4)
 
 ### Lage-Analyse dauerhaft ohne Websuche (Grounding brauchte Billing)
