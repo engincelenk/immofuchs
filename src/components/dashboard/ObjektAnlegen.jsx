@@ -55,13 +55,16 @@ import {
 // sinnvollen Startwert, sichtbar markiert und einzeln ueberschreibbar im
 // Annahmen-Block der Objektseite.
 //
-// Zwei Aenderungen gegenueber dem Stand bis 2026-09-19:
+// Aenderungen gegenueber dem Stand bis 2026-09-19:
 //   - Der NAME ist kein Pflichtfeld mehr. Er wird vorbelegt (Strasse, sonst
 //     "{Ort} · {Kaufpreis}") - ein fuenftes Textfeld haette die Entscheidung
 //     "vier Pflichtfelder" unterlaufen.
-//   - EIGENKAPITAL ist raus. Es steht jetzt im Annahmen-Block mit 20 % des
-//     Kaufpreises als Vorbelegung (annahmen.js/EIGENKAPITAL_QUOTE); vorher
-//     lief jedes nicht ausgefuellte Objekt auf 100 % Fremdfinanzierung.
+//   - EIGENKAPITAL war zunaechst raus (20 % des Kaufpreises als Vorbelegung
+//     aus annahmen.js/EIGENKAPITAL_QUOTE, vorher lief jedes nicht
+//     ausgefuellte Objekt auf 100 % Fremdfinanzierung), ist seit 2026-09-24
+//     als OPTIONALES Feld zurueck - wer den Betrag kennt, muss ihn nicht mehr
+//     ueber den Annahmen-Block oder den Renditerechner nachtragen. Bleibt es
+//     leer, greift weiterhin dieselbe 20-%-Annahme.
 //
 // `maxBreite` deckelt die Feldbreite nach dem erwarteten Inhalt - ein 690 px
 // breites Feld fuer "60" (Quadratmeter) verspricht etwas anderes, als es
@@ -103,6 +106,11 @@ const FELDER = [
     pflicht: true,
     maxBreite: 220,
   },
+  // Optional (Nutzer-Vorgabe 2026-09-24): wer den Betrag schon kennt, kann ihn
+  // direkt hier eintragen statt erst im Annahmen-Block der Objektseite oder im
+  // Renditerechner. Bleibt das Feld leer, greift weiterhin die 20-%-Annahme
+  // aus annahmenFuer() (siehe `entwurf` unten - nur gesetzt, wenn ausgefuellt).
+  { key: "eigenkapital", label: "Eigenkapital", typ: "zahl", einheit: "€", maxBreite: 220 },
   { key: "baujahr", label: "Baujahr", typ: "zahl", pflicht: true, maxBreite: 140 },
   {
     key: "sanHt",
@@ -169,6 +177,7 @@ function ObjektFormular({
     kaufpreis: startwerte?.kaufpreis || "",
     flaeche: startwerte?.flaeche || "",
     kaltmiete: startwerte?.kaltmiete || "",
+    eigenkapital: startwerte?.eigenkapital || "",
     baujahr: startwerte?.baujahr || "",
     sanHt: startwerte?.sanHt || "",
     sanHa: startwerte?.sanHa || "",
@@ -280,6 +289,7 @@ function ObjektFormular({
         kaufpreis: String(werte.kaufpreis || ""),
         flaeche: String(werte.flaeche || ""),
         kaltmiete: String(werte.kaltmiete || ""),
+        ...(werte.eigenkapital ? { eigenkapital: String(werte.eigenkapital) } : {}),
         ...(werte.baujahr ? { baujahr: String(werte.baujahr) } : {}),
         ...(werte.sanHt ? { sanHt: werte.sanHt } : {}),
         ...(werte.sanHa ? { sanHa: werte.sanHa } : {}),

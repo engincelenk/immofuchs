@@ -13,6 +13,7 @@
 import { useMemo, useState } from "react";
 import { alter, ergebnisFuer, istVeraltet, veraltetText } from "../../utils/aiEngine.js";
 import { berechneBriefing } from "../../utils/briefing.js";
+import { berechneScore } from "../../utils/investmentScore.js";
 import { cockpitGroessterHebel, cockpitUnterzeile } from "../../utils/objektCockpit.js";
 import {
   regionalLandeswert,
@@ -91,6 +92,14 @@ export function InvestmentBriefing({
     [data, t, regGeladen],
   );
 
+  // Derselbe Aufruf wie Renditerechner.jsx (score = useMemo(() =>
+  // berechneScore(d, t), [d, t])), bewusst OHNE die regionalen Zusatzdaten
+  // (ref/proJahrTrend), die berechneBriefing() intern an ihren eigenen
+  // Score-Aufruf uebergibt (Nutzer-Vorgabe 2026-09-24: "Score sollte der
+  // gleiche Wert wie beim Renditerechner sein") - briefing.score bliebe sonst
+  // ein zweiter, abweichender Score fuer dasselbe Objekt.
+  const score = useMemo(() => berechneScore(data, t), [data, t]);
+
   const cashflowHeute = briefing.R.cf2MitSt;
   const cashflowVorSteuer = briefing.kernzahlen.find((k) => k.key === "monatlich")?.vorSteuer ?? null;
   const groessterHebel = useMemo(
@@ -139,7 +148,7 @@ export function InvestmentBriefing({
       )}
 
       <AntwortsatzKopf cashflow={cashflowHeute} unterzeile={unterzeile} t={t} />
-      <KennzahlenLeiste score={briefing.score} kennzahlen={briefing.kernkennzahlen} t={t} />
+      <KennzahlenLeiste score={score} kennzahlen={briefing.kernkennzahlen} t={t} />
       <SchrittNav t={t} />
 
       <div className="cockpit-schritte">

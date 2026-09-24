@@ -1,3 +1,24 @@
+## 2026-09-24 (1.100.9)
+
+### Objektseite: vier Nutzer-Korrekturen
+
+- Besichtigungshandout: Fragenliste startet jetzt zugeklappt (vorher bewusst
+  offen, siehe Kommentar in HandoutFragen.jsx - Nutzer-Vorgabe kehrt das um).
+- "↻ Neu" jetzt einheitlich als reines Icon-Symbol auf allen drei KI-Karten
+  (Analyse/Risiken, Lage-Analyse, Besichtigung) - die Lage-Analyse-Karte
+  hatte noch "↻ Neu" als Text-Link.
+- ObjektAnlegen.jsx: neues optionales Feld "Eigenkapital" im Schnellformular
+  (war seit 2026-09-19 bewusst draussen, Vorbelegung lief ueber die
+  20-%-Annahme im Renditerechner) - wer den Betrag kennt, muss ihn nicht mehr
+  nachtragen; leer gelassen greift weiterhin dieselbe Annahme.
+- Score in der Kennzahlen-Leiste: kommt jetzt aus demselben Aufruf wie
+  Renditerechner.jsx (berechneScore(d, t) ohne Zusatzdaten) statt aus
+  briefing.score (das intern zusaetzlich Regionaldaten/proJahrTrend
+  uebergibt und dadurch einen abweichenden Wert lieferte).
+
+Dateien: src/components/dashboard/HandoutFragen.jsx, BriefingVisuals.jsx,
+InvestmentBriefing.jsx, ObjektAnlegen.jsx.
+
 ## 2026-09-24 (1.100.8)
 
 ### Objektseite: an Vorlage "Variante E" angeglichen

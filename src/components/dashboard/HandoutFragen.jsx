@@ -76,12 +76,14 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
   const [auswahl, setAuswahl] = useAuswahl(alleFragen, schluessel);
   const [zeigeUpgrade, setZeigeUpgrade] = useState(false);
   const [fehler, setFehler] = useState(null);
-  // Zuklappbar (Nutzerwunsch 2026-09-16): der volle Fragenkatalog sind
-  // schnell 30+ Zeilen und schiebt alles darunter aus dem Bild. Startet
-  // trotzdem OFFEN - die Fragen sind das bezahlte Produkt dieser Karte und
-  // sollen nicht hinter einem Klick liegen (siehe Kopfkommentar); wer sie
-  // weghaben will, klappt sie selbst zu.
-  const [offen, setOffen] = useState(true);
+  // Zuklappbar, Default seit 2026-09-24 ZU (Nutzer-Vorgabe): der volle
+  // Fragenkatalog sind schnell 30+ Zeilen und schiebt in der Schritt-5-Karte
+  // (objekt-detailseite-redesign.md) alles darunter aus dem Bild. Bis
+  // 2026-09-16 startete die Liste offen ("bezahltes Produkt soll nicht
+  // hinter einem Klick liegen") - die Fortschrittszeile (Meter + "X von Y
+  // gewählt") macht den Inhalt der Karte jetzt aber schon sichtbar, auch
+  // wenn die Liste selbst zu ist.
+  const [offen, setOffen] = useState(false);
 
   // Vor-Ort-Fragen stehen unten als eigener Block: sie sind beim Termin selbst
   // anzuschauen, nicht dem Makler zu stellen. Dieselbe Trennung wie im

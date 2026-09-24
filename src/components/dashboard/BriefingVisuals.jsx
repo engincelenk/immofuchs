@@ -1174,8 +1174,8 @@ export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <strong style={{ fontSize: 15, color: "var(--ct)" }}>{L(t, "brfLageTitel2", "Lage-Analyse")}</strong>
           {ergebnis && (
-            <button type="button" onClick={onStarten} aria-label="Lage-Analyse neu erstellen" style={neuIconLinkKnopf}>
-              ↻ {L(t, "cockNeu", "Neu")}
+            <button type="button" onClick={onStarten} aria-label="Lage-Analyse neu erstellen" style={neuBerechnenKnopf}>
+              ↻
             </button>
           )}
         </div>
@@ -1267,17 +1267,6 @@ export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent
   );
 }
 
-const neuIconLinkKnopf = {
-  background: "none",
-  border: "none",
-  padding: 0,
-  color: "var(--ca)",
-  fontSize: 13,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "inherit",
-  minHeight: 36,
-};
 
 const lageConsentBand = { background: "var(--ci)", border: "1px solid var(--cb)", borderRadius: 10, padding: "10px 12px" };
 const lageFehlerBand = {
