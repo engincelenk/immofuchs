@@ -1,3 +1,47 @@
+## 2026-09-24 (1.100.6)
+
+### Objektseite: Redesign "Geführtes Cockpit" (Variante D)
+
+Neue Darstellung der Objekt-Detailseite nach docs/technical_specs/
+objekt-detailseite-redesign.md. Antwortsatz ("Lohnt sich dieses Objekt?")
+und eine 4er-Kennzahlen-Leiste (Score, Cashflow, Nettomietrendite,
+Kaufpreisfaktor) stehen jetzt zuerst, danach fuehren 5 nummerierte Schritte
+(Kosten/Markt/Stellschrauben/Risiken/Nächste Schritte) mit Sprung-Navigation
+durch die Begruendung. Nur die Darstellung ist neu - alle Zahlen kommen
+unveraendert aus briefing.js/investmentScore.js, keine Aenderung an
+Berechnungen oder KI-Prompts. Der Score (zuvor am 2026-09-23 von der
+Objektseite entfernt) kommt als Teil der Kennzahlen-Leiste zurueck, dafuer
+entfaellt die bisherige eigenstaendige EK-Rendite-Kachel. Der Alternativ-
+anlagen-Vergleich ("Gegen andere Anlagen") ist in der neuen Spec nicht mehr
+vorgesehen und entfaellt.
+
+- src/utils/objektCockpit.js (neu): reine Anzeige-Ableitungen - Antwortsatz,
+  Jahres-Cashflow, Differenzen Stellschrauben, "Größter Hebel" (per
+  computeRendite-Vergleich der drei realistischen Zielwerte), Ueberschriften
+  der Abweichungsbalken, kompakte T€-Formatierung.
+- src/components/dashboard/BriefingVisuals.jsx: MarktVergleich/Balken/
+  MarktKarte/FaktorKachel, Kernkennzahlen/KernKachel, BenchmarkKarte,
+  SpannenKarte/SpannenZeile und AnalyseKarte/ModernisierungsbedarfKarte als
+  eigene Karten entfernt und durch die neuen Cockpit-Bausteine ersetzt
+  (KennzahlenLeiste, AntwortsatzKopf, SchrittNav, SchrittKosten, SchrittMarkt,
+  SchrittStellschrauben, SchrittRisiken, LageMiniKarte/LageInhalt,
+  WeiterKachel). Responsive per CSS-Klassen (Desktop-Grenze wie im Rest des
+  Projekts: min-width 1280px + min-height 600px), keine Scroll-Listener.
+- src/components/dashboard/InvestmentBriefing.jsx: komplett neu komponiert
+  (Kopf + 5-Schritte-Grid statt Einzelkarten).
+- src/components/dashboard/ObjektDetail.jsx: "Im Renditerechner öffnen" vom
+  Fuss in den Kopf verschoben (primaerer Knopf, keine eigene fixierte
+  Mobil-Leiste - die bestehende Tableiste (.tbar-wrap) belegt dort bereits
+  den unteren Rand). Der fruehere zweite CTA "Fragen für die Besichtigung
+  erstellen" (Scroll-Link) ist entfallen; die neue Schritt-5-Kachel
+  "Besichtigung vorbereiten" startet das Handout direkt, wenn noch keins
+  existiert, und springt sonst zur unveraendert bestehenden AiEngine-Karte.
+
+Nicht Teil dieser Aenderung, bewusst offen gelassen: die AiEngine-Karte
+("Vorbereiten") bleibt zusaetzlich zur neuen Schritt-5-Kachel sichtbar im
+DOM (haelt ihre volle Fragenliste/Fehler-/Consent-Logik unveraendert vor) -
+das erzeugt auf der Seite zwei Ansichtspunkte fuer dasselbe Produkt.
+
 ## 2026-09-23 (1.100.5)
 
 ### Begruendungs-Karte entfernt, Analyse-Baustein traegt jetzt den KI-Ausloeser

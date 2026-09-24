@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
-import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
 import { InvestmentBriefing } from "./InvestmentBriefing.jsx";
+import { primaerKnopfStyle } from "./BriefingVisuals.jsx";
 import { AiEngine } from "./AiEngine.jsx";
 import {
   ergebnisAnlegen,
@@ -405,6 +405,21 @@ export function ObjektDetail({ objekt, onBack }) {
     starteLage();
   }
 
+  // Schritt-5-Kachel "Besichtigung vorbereiten" (objekt-detailseite-
+  // redesign.md §4.8.3): ersetzt den fruehren zweiten Scroll-Link. Ohne
+  // Ergebnis startet sie das Handout direkt (dieselbe Aktion wie zuvor der
+  // Knopf in AiEngine.jsx); mit Ergebnis springt sie zu der unveraendert
+  // dort stehenden Karte - ein zweiter Klick auf "erneut erstellen" soll
+  // weiterhin ueber deren eigene Bestaetigung laufen, nicht ungefragt
+  // ueberschreiben.
+  function handleHandoutKlick() {
+    if (ergebnisFuer(objektAnzeige, "handout")) {
+      document.getElementById("ai-sektion-vorbereiten")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    starteProdukt("handout");
+  }
+
   // Der Exposé-Scan lebt weiterhin im Assistenten-Sheet (dort haengen Upload,
   // Feld-Uebernahme und Handout). Von hier fuehrt der Weg dorthin.
   function oeffneExpose() {
@@ -460,6 +475,18 @@ export function ObjektDetail({ objekt, onBack }) {
         <VollstaendigkeitsRing prozent={vollstaendigkeit} groesse={46} />
       </div>
 
+      {/* Primaerer Button "Im Renditerechner öffnen" im Kopf (objekt-
+          detailseite-redesign.md §4.1) statt ganz unten wie zuvor - auf
+          allen Breiten sichtbar, keine eigene "nur mobil fixiert"-Leiste:
+          die bestehende, immer sichtbare Tableiste (.tbar-wrap, App.jsx)
+          belegt auf dem Handy bereits den unteren Rand, eine zweite fixierte
+          Leiste würde sie überlagern. */}
+      <div style={{ margin: "0 2px 14px" }}>
+        <button type="button" onClick={() => inRechner("haupt")} style={primaerKnopfStyle(true)}>
+          {t.objImRechner || "Im Renditerechner öffnen"}
+        </button>
+      </div>
+
       <Sheet
         open={bearbeiten}
         onClose={() => setBearbeiten(false)}
@@ -487,17 +514,11 @@ export function ObjektDetail({ objekt, onBack }) {
         />
       </Sheet>
 
-      {/* Seitenaufbau nach docs/technical_specs/objektseite-neu.md §22.
-          Entfallen sind mit diesem Umbau:
-            - `Ueberblick` als eigener Block: seine Kennzahlen stecken jetzt in
-              Block 3, der Score 0-100 entfaellt am Objekt ganz (Entscheidung
-              E1 - ein Urteil, keine zweite Skala; im Renditerechner bleibt er).
-            - `RegionalSnapshot` als eigener Block: geht in Block 4a auf.
-            - Die Sammelsektion `AiSektion`/`AiEngine`: aus der Karten-Etage
-              werden zwei Knoepfe am Seitenende.
-            - Die Klappsektion "Belege" und die Lage als eigene Ebenen: beide
-              liegen jetzt unter "Alle Details" (Block 9).
-          Die Dateien bleiben bestehen, nur ihre Einbindung hier aendert sich. */}
+      {/* Seitenaufbau seit 2026-09-24 nach docs/technical_specs/
+          objekt-detailseite-redesign.md ("Geführtes Cockpit", Variante D):
+          Antwortsatz + Kennzahlen-Leiste (inkl. Score, siehe dortige
+          Nutzer-Entscheidung) und 5 nummerierte Schritte statt einzelner
+          Karten. Alle Zahlen kommen unveraendert aus briefing.js. */}
       <InvestmentBriefing
         objekt={objektAnzeige}
         data={basis}
@@ -519,11 +540,9 @@ export function ObjektDetail({ objekt, onBack }) {
         onLageStarten={starteLage}
         onLageConsentJa={einwilligenUndStartenLage}
         onLageConsentAbbrechen={() => setLageConsent(false)}
-        detailsExtra={
-          <div style={{ marginTop: 16 }}>
-            <ObjektLage data={basis} titel={objekt.title} />
-          </div>
-        }
+        handoutErgebnis={ergebnisFuer(objektAnzeige, "handout")}
+        onHandoutKlick={handleHandoutKlick}
+        onRenditerechner={() => inRechner("haupt")}
       />
 
       {/* Besichtigungshandout (Bug-Fix 2026-09-22: die Karte war seit dem
@@ -551,32 +570,9 @@ export function ObjektDetail({ objekt, onBack }) {
           onConsentAbbrechen={() => setAiConsent(null)}
         />
       </div>
-
-      {/* Zurueck in den Renditerechner - der einzige verbliebene Weg dorthin,
-          frueher der "Laden"-Knopf im Ueberblick. */}
-      <div style={{ marginTop: 10 }}>
-        <button type="button" onClick={() => inRechner("haupt")} style={knopfSekundaer}>
-          {t.objImRechner || "Im Renditerechner öffnen"}
-        </button>
-      </div>
     </div>
   );
 }
-
-const knopfSekundaer = {
-  flex: "1 1 180px",
-  width: "100%",
-  minHeight: 44,
-  padding: "12px 16px",
-  borderRadius: 10,
-  border: "1px solid var(--cb)",
-  background: "var(--cc)",
-  color: "var(--ct)",
-  fontSize: 13.5,
-  fontWeight: 600,
-  fontFamily: "inherit",
-  cursor: "pointer",
-};
 
 // Fehlerband, Einwilligungs-Band und dessen Knoepfe sind 2026-09-16 nach
 // AiEngine.jsx gewandert - sie gehoeren in die ausloesende Produktkarte.

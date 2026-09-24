@@ -1,20 +1,25 @@
-// Die sichtbare Kernantwort der Objektseite: Empfehlung, Markt-Vergleich von
-// Kaufpreis und Miete, "Sollte sein" und Ausblick - als Bilder statt Text
-// (Nutzer liest nicht gern). Alles Zahlen aus briefing.js, keine KI; nur der
-// Kopf nimmt die KI-Zeile als children entgegen.
+// Die sichtbare Kernantwort der Objektseite - "Geführtes Cockpit" (Variante
+// D, docs/technical_specs/objekt-detailseite-redesign.md). Alle Zahlen aus
+// briefing.js/investmentScore.js, keine KI; nur Schritt 4 (Analyse) nimmt ein
+// KI-Ergebnis entgegen. Reine Anzeige-Ableitungen (Antwortsatz, Differenzen,
+// Jahreswert, Ueberschriften der Abweichungsbalken, "Groesster Hebel") stehen
+// in utils/objektCockpit.js, hier nur Darstellung.
 //
 // Bewegung: nur beim ERSTEN Erscheinen der Karte (CSS-Animationen, kein
-// State), transform/opacity/clip-path, ease-out 0.23,1,0.32,1, unter 700 ms.
-// Zweck: die Groessenordnung eines Unterschieds sichtbar machen (Marker
-// wandert vom Markt zum eigenen Wert, Balken wachsen, die Preislinie zeichnet
-// sich) - keine Dauerschleifen, nichts, was Zahlen beim Lesen bewegt. Bei
-// prefers-reduced-motion bleibt nur ein kurzes Einblenden.
-//
+// State), unter 700 ms, bei prefers-reduced-motion nur ein kurzes Einblenden.
 // Farben ausschliesslich ueber bestehende Tokens (Dark Mode laeuft allein
 // darueber) - keine neuen Tokens, keine Hex-Werte.
-import { fmt, fmtE, tpl } from "../../utils/helpers.js";
+import { useState } from "react";
+import { fmt, fmtE } from "../../utils/helpers.js";
 import { berechneVollstaendigkeit } from "../../utils/objektKennzahlen.js";
 import { hebelTexteVon, risikenVon, staerkenVon } from "../../utils/aiEngine.js";
+import {
+  cockpitAntwortsatz,
+  cockpitCashflowJahr,
+  cockpitDiff,
+  cockpitMarktUeberschrift,
+  fmtKompakt,
+} from "../../utils/objektCockpit.js";
 
 export const STATUS_FARBEN = {
   rot: { tx: "var(--bad-tx)", bg: "var(--bad-bg)", bd: "var(--bad-bd)" },
@@ -28,26 +33,48 @@ export const STATUS_FARBEN = {
 const L = (t, key, fallback) => (t && t[key]) || fallback;
 const prozent = (n, d = 0) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${fmt(Math.abs(n), d)} %`;
 
-const CSS = `
+// Desktop-Grenze = die bestehende Grenze des Projekts fuer den Objektbereich
+// (siehe App.jsx, DESKTOP-SEITENNAVIGATION-Block: Sidebar/Split-Layout ab
+// 1280px, min-height:600px verhindert die Landscape-Handy-Kollision).
+const COCKPIT_CSS = `
 .bv{--bv-ease:var(--ease-out,cubic-bezier(0.23,1,0.32,1))}
 @keyframes bv-auf{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@keyframes bv-ring{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 @keyframes bv-wachsen{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-@keyframes bv-wandern{from{transform:translateX(var(--bv-von))}to{transform:none}}
-@keyframes bv-zeichnen{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 @keyframes bv-punkt{from{opacity:0;transform:translate(-50%,-50%) scale(.4)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 .bv-auf{animation:bv-auf .32s var(--bv-ease) both;animation-delay:var(--bv-d,0ms)}
-.bv-ring{stroke-dasharray:1;animation:bv-ring .55s var(--bv-ease) both}
 .bv-wachsen{animation:bv-wachsen .5s var(--bv-ease) both;animation-delay:var(--bv-d,0ms)}
-.bv-wandern{animation:bv-wandern .55s var(--bv-ease) both;animation-delay:var(--bv-d,0ms)}
-.bv-zeichnen{animation:bv-zeichnen .7s var(--bv-ease) both}
 .bv-punkt{animation:bv-punkt .3s var(--bv-ease) both;animation-delay:var(--bv-d,500ms)}
 @media (prefers-reduced-motion: reduce){
-  .bv-auf,.bv-wachsen,.bv-wandern,.bv-zeichnen,.bv-punkt{animation:bv-fade .2s ease both}
-  .bv-ring{animation:none;stroke-dashoffset:0}
+  .bv-auf,.bv-wachsen,.bv-punkt{animation:bv-fade .2s ease both}
   @keyframes bv-fade{from{opacity:0}to{opacity:1}}
 }
+.cockpit-kennzahlen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cockpit-nur-desktop{display:none}
+.cockpit-legende{display:none}
+.cockpit-stepnav{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 2px;margin:0 -2px;position:sticky;top:0;z-index:5;background:var(--bg)}
+.cockpit-stepnav::-webkit-scrollbar{display:none}
+.cockpit-schritte{display:flex;flex-direction:column;gap:14px}
+.cockpit-weiter-grid{display:flex;flex-direction:column;gap:14px}
+.cockpit-stellschrauben-desktop{display:none}
+.cockpit-stellschrauben-mobile{display:block}
+@media(min-width:1280px) and (min-height:600px){
+  .cockpit-kennzahlen{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .cockpit-nur-desktop{display:block}
+  .cockpit-legende{display:flex}
+  .cockpit-stepnav{position:static;overflow:visible;padding:14px 0;margin:0}
+  .cockpit-schritte{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+  .cockpit-s2{grid-column:span 2}
+  .cockpit-s3{grid-column:span 2}
+  .cockpit-s5{grid-column:1 / -1}
+  .cockpit-weiter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+  .cockpit-stellschrauben-desktop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .cockpit-stellschrauben-mobile{display:none}
+}
 `;
+
+export function CockpitStyle() {
+  return <style>{COCKPIT_CSS}</style>;
+}
 
 const karte = {
   background: "var(--cc)",
@@ -56,291 +83,9 @@ const karte = {
   padding: "16px 18px",
   marginTop: 12,
 };
-const kartenTitel = {
-  fontSize: 11,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.4,
-  color: "var(--ch)",
-};
 const klein = { fontSize: 11, color: "var(--cl)" };
 
-// ScoreKopf (Baustein 1, Investment-Score-Ampel) und EmpfehlungsKopf
-// (Baustein 7, Handlungsempfehlung) sind mit der Vereinfachung fuer
-// unerfahrene Investoren entfernt (Nutzer-Entscheidungen 2026-09-23) - die
-// Seite hat keinen Urteils-Kopf mehr, sie startet direkt mit den Kernzahlen.
-// investmentScore.js/briefingEmpfehlung() bleiben als Rechenkern bestehen
-// (Renditerechner nutzt den Score weiter), nur diese Anzeige entfaellt.
-// ── Vergleich mit dem Markt: Kaufpreis und Miete, immer beide ───────────────
-const SPANNE = 30; // Balken zeigt +/-30 % um den Markt
-
-// `eingebettet` (objektseite-neu.md §24.1): ohne eigene Kartenhuelle und ohne
-// Titelzeile, damit die Balken in der Markt-Karte unter der Faktor-Kachel
-// stehen koennen. Der Kaufpreis-Balken zeigt dort auch KEINEN Faktor mehr -
-// der steht eine Zeile hoeher in der Kachel. Ohne die Prop bleibt alles wie
-// bisher.
-export function MarktVergleich({ briefing, t, eingebettet = false }) {
-  const v1 = briefing.vergleiche.find((v) => v.id === "v1");
-  const v2 = briefing.vergleiche.find((v) => v.id === "v2");
-  if (!v1 && !v2) return null;
-  const ref = v1 || v2;
-  const marktName = ref.ebeneName
-    ? ref.ebeneName.replace(/\s*\((Kreis|Bezirk)\)\s*$/i, "")
-    : L(t, "brfMarktLand", "Landesschnitt");
-
-  return (
-    <div className="bv" style={eingebettet ? undefined : karte}>
-      {!eingebettet && (
-        <div
-          style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}
-        >
-          <div style={kartenTitel}>{L(t, "brfMarktTitel", "Im Vergleich zum Markt")}</div>
-          <div style={klein}>{marktName}</div>
-        </div>
-      )}
-      {/* Direktvergleich Kaufpreis/m² gegen Miete/m² (Nutzer-Entscheidung
-          2026-09-22): die beiden Balken darunter vergleichen jeweils gegen
-          den Markt, aber nicht gegeneinander - diese Zeile stellt die zwei
-          eigenen Werte direkt nebeneinander, ohne Umweg ueber die Bar. */}
-      {v1 && v2 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 16,
-            marginTop: eingebettet ? 0 : 12,
-            padding: "10px 12px",
-            borderRadius: 10,
-            background: "var(--ci)",
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10.5, color: "var(--ch)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-              {L(t, "brfKaufpreis", "Kaufpreis")}
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--ct)", fontVariantNumeric: "tabular-nums" }}>
-              {fmt(v1.eigen, v1.eigen < 100 ? 2 : 0)} €/m²
-            </div>
-          </div>
-          <div style={{ fontSize: 16, color: "var(--cl)", alignSelf: "center" }}>vs</div>
-          <div style={{ flex: 1, minWidth: 0, textAlign: "right" }}>
-            <div style={{ fontSize: 10.5, color: "var(--ch)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-              {L(t, "brfMiete", "Miete")}
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--ct)", fontVariantNumeric: "tabular-nums" }}>
-              {fmt(v2.eigen, v2.eigen < 100 ? 2 : 0)} €/m²
-            </div>
-          </div>
-        </div>
-      )}
-
-      {v1 && (
-        <Balken
-          titel={L(t, "brfKaufpreis", "Kaufpreis")}
-          v={v1}
-          linkes={L(t, "brfGuenstiger", "günstiger")}
-          rechtes={L(t, "brfTeurer", "teurer")}
-          faktor={eingebettet ? undefined : briefing.R.kpF}
-          verzoegerung={0}
-          t={t}
-        />
-      )}
-      {v2 && (
-        <Balken
-          titel={L(t, "brfMiete", "Miete")}
-          v={v2}
-          linkes={L(t, "brfUnterMarkt", "unter Markt")}
-          rechtes={L(t, "brfUeberMarkt", "über Markt")}
-          verzoegerung={90}
-          t={t}
-        />
-      )}
-    </div>
-  );
-}
-
-const STATUS_WORT = {
-  brfStatusImRahmen: "im Rahmen",
-  brfStatusUeberMarkt: "zu teuer",
-  brfStatusUnterMarkt: "günstig",
-  brfStatusUeberMarktMiete: "über Markt",
-  brfStatusPotenzial: "Potenzial",
-};
-
-function Balken({ titel, v, linkes, rechtes, faktor, verzoegerung, t }) {
-  const f = STATUS_FARBEN[v.status] || STATUS_FARBEN.neutral;
-  const pos = (abw) => 50 + (Math.max(-SPANNE, Math.min(SPANNE, abw)) / (2 * SPANNE)) * 100;
-  const p = pos(v.abw);
-  const ghost = v.erreichbarQm > 0 ? pos((v.erreichbarQm / v.markt - 1) * 100) : null;
-  const vonLinks = Math.min(50, p);
-  const breite = Math.abs(p - 50);
-  const einheit = "€/m²";
-  const wort = L(t, v.key, STATUS_WORT[v.key] || "");
-
-  return (
-    <div style={{ marginTop: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ct)" }}>{titel}</span>
-          {faktor > 0 && (
-            <span style={{ fontSize: 11, color: "var(--ch)" }}>
-              {L(t, "brfFaktor", "Faktor")} {fmt(faktor, 1)}
-            </span>
-          )}
-        </div>
-        <span
-          style={{
-            flexShrink: 0,
-            display: "inline-flex",
-            alignItems: "baseline",
-            gap: 6,
-            fontSize: 12,
-            fontWeight: 700,
-            color: f.tx,
-            background: f.bg,
-            border: f.bd !== "transparent" ? `1px solid ${f.bd}` : "none",
-            borderRadius: 999,
-            padding: "3px 10px",
-          }}
-        >
-          {v.abw != null ? prozent(v.abw) : ""}
-          {wort && <span style={{ fontWeight: 600, fontSize: 11 }}>{wort}</span>}
-        </span>
-      </div>
-
-      {/* Spur: Markt = Mittelstrich, eigener Wert = Marker, Strecke dazwischen gefaerbt */}
-      <div
-        style={{ position: "relative", height: 22, marginTop: 8 }}
-        role="img"
-        aria-label={`${titel}: ${fmt(v.eigen, 2)} ${einheit}, Markt ${fmt(v.markt, 2)} ${einheit}`}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: 9,
-            height: 4,
-            borderRadius: 2,
-            background: "var(--cro)",
-          }}
-        />
-        <div
-          className="bv-wachsen"
-          style={{
-            "--bv-d": `${verzoegerung + 120}ms`,
-            position: "absolute",
-            top: 9,
-            height: 4,
-            left: `${vonLinks}%`,
-            width: `${breite}%`,
-            borderRadius: 2,
-            background: f.tx,
-            transformOrigin: p >= 50 ? "left center" : "right center",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: 3,
-            width: 2,
-            height: 16,
-            marginLeft: -1,
-            borderRadius: 1,
-            background: "var(--ch)",
-          }}
-        />
-        {ghost != null && (
-          <span
-            title={L(t, "brfErreichbar", "In 3 Jahren erreichbar")}
-            style={{
-              position: "absolute",
-              left: `${ghost}%`,
-              top: 5,
-              width: 12,
-              height: 12,
-              marginLeft: -6,
-              borderRadius: "50%",
-              border: `2px dashed ${f.tx}`,
-              boxSizing: "border-box",
-              background: "var(--cc)",
-            }}
-          />
-        )}
-        {/* Wrapper so breit wie die Spur: translateX in % bezieht sich auf die Spur */}
-        <div
-          className="bv-wandern"
-          style={{
-            "--bv-von": `${50 - p}%`,
-            "--bv-d": `${verzoegerung}ms`,
-            position: "absolute",
-            inset: 0,
-          }}
-        >
-          <span
-            style={{
-              position: "absolute",
-              left: `${p}%`,
-              top: 3,
-              width: 16,
-              height: 16,
-              marginLeft: -8,
-              borderRadius: "50%",
-              background: f.tx,
-              border: "3px solid var(--cc)",
-              boxShadow: "0 0 0 1px var(--cb)",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "space-between", ...klein, marginTop: 2 }}>
-        <span>{linkes}</span>
-        <span>{rechtes}</span>
-      </div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 8,
-          marginTop: 6,
-          fontSize: 12.5,
-          fontVariantNumeric: "tabular-nums",
-        }}
-      >
-        <span style={{ color: "var(--ct)" }}>
-          <strong>{fmt(v.eigen, v.eigen < 100 ? 2 : 0)}</strong> {einheit}{" "}
-          <span style={{ color: "var(--ch)" }}>{L(t, "brfDu", "du")}</span>
-        </span>
-        <span style={{ color: "var(--ch)" }}>
-          {fmt(v.markt, v.markt < 100 ? 2 : 0)} {einheit} {L(t, "brfMarkt", "Markt")}
-        </span>
-      </div>
-      {ghost != null && (
-        <div style={{ ...klein, marginTop: 4 }}>
-          <span style={{ color: f.tx, fontWeight: 700 }}>◌</span>{" "}
-          {L(t, "brfErreichbar", "In 3 Jahren erreichbar")}: {fmt(v.erreichbarQm, 2)} {einheit}
-          {v.kappungsgrenzeProzent != null &&
-            ` (${L(t, "brfKappung", "Kappungsgrenze")} ${fmt(v.kappungsgrenzeProzent, 0)} %)`}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ZielKarte()/Weg() ("Sollte sein") sind mit dem Objektseiten-Neubau
-// entfallen (Nutzer-Entscheidung 2026-09-22) - duplizierten die
-// Handlungsempfehlung aus EmpfehlungsKopf (Baustein 7).
-
-// ════════════════════════════════════════════════════════════════════════════
-// Objektseite neu — docs/technical_specs/objektseite-neu.md Teil III
-// Alle Bausteine der Bloecke 3 bis 7 und 10. Zahlen kommen fertig aus
-// briefing.js; hier wird ausschliesslich dargestellt.
-// ════════════════════════════════════════════════════════════════════════════
-
-// Zahl je Einheit. `nowrap` ueberall: eine umbrechende Zahl ist unlesbar,
-// Labels duerfen dagegen zweizeilig werden (§21 D1).
+// Zahl je Einheit. `nowrap` ueberall: eine umbrechende Zahl ist unlesbar.
 function wertText(wert, einheit) {
   if (wert == null || !isFinite(wert)) return "—";
   if (einheit === "faktor") return `${fmt(wert, 1)}×`;
@@ -348,11 +93,9 @@ function wertText(wert, einheit) {
   return fmtE(Math.round(wert));
 }
 
-// ── Baustein 2: Hinweis zur Datengrundlage ──────────────────────────────────
-// Nur sichtbar bei duenner Datenlage (objektseite-vereinfachung-2026-09-23.md
-// Abschnitt 4) - dieselbe Vollstaendigkeits-Schwelle wie der Ring auf der
-// Objektseite (berechneVollstaendigkeit() in objektKennzahlen.js), damit es
-// nur EINE Definition von "genug Angaben" gibt.
+// ── Baustein 2: Hinweis zur Datengrundlage (bleibt, siehe redesign-Spec §0:
+// nur die Darstellung der 5 Schritte ist neu - dieser Hinweis ist Vorbedingung
+// fuer alle Schritte, deshalb bleibt er ganz oben stehen). ──────────────────
 const EINGABE_SCHWELLE = 60;
 
 export function EingabeHinweis({ data, t }) {
@@ -371,86 +114,151 @@ export function EingabeHinweis({ data, t }) {
   );
 }
 
-// ── Baustein 3: Kernkennzahlen ──────────────────────────────────────────────
-const KERN_LABEL = {
-  faktor: "Kaufpreisfaktor",
-  nettorendite: "Nettomietrendite",
-  cashflow: "Cashflow / Monat",
-  ekRendite: "EK-Rendite p. a.",
-  breakEvenMiete: "Break-even-Miete",
-};
-
-// Genau die vier Kernzahlen, sonst nichts (Nutzer-Entscheidung 2026-09-23):
-// Kaufpreisfaktor, Nettomietrendite, Cashflow, EK-Rendite. Break-even-Miete
-// wird bewusst NICHT mehr gezeigt (verwirrt unerfahrene Investoren mehr, als
-// es hilft) - die Kennzahl bleibt aber in briefing.js berechnet, sie wird in
-// Baustein 4 (Vergleich, "optimale Kaltmiete") weiterverwendet.
-export function Kernkennzahlen({ kennzahlen, t }) {
-  if (!kennzahlen?.length) return null;
-  const finde = (k) => kennzahlen.find((x) => x.key === k);
-  const werte = ["faktor", "nettorendite", "cashflow", "ekRendite"].map(finde).filter(Boolean);
-  if (werte.length === 0) return null;
-
+// ── Kopf: Antwortsatz + Kennzahlen-Leiste (Spec §3/§4.2/§4.3) ──────────────
+export function AntwortsatzKopf({ cashflow, unterzeile, t }) {
+  const antwort = cockpitAntwortsatz(cashflow, t);
+  if (!antwort) return null;
   return (
-    <div className="bv" style={karte}>
-      <style>{CSS}</style>
+    <div className="bv bv-auf">
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--ca)" }}>
+        {L(t, "cockAntwortEyebrow", "Lohnt sich dieses Objekt?")}
+      </div>
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${Math.min(werte.length, 2)}, minmax(0, 1fr))`,
-          gap: 10,
+          fontSize: 24,
+          lineHeight: 1.2,
+          fontWeight: 800,
+          letterSpacing: "-0.01em",
+          marginTop: 4,
+          color: "var(--ct)",
         }}
       >
-        {werte.map((k) => (
-          <KernKachel key={k.key} k={k} t={t} span={1} />
-        ))}
+        {antwort.negativ ? (
+          <>
+            {L(t, "cockAntwortNegativVorspann", "Aktuell nicht. Du zahlst jeden Monat")}{" "}
+            <span style={{ color: "var(--bad-tx)", fontVariantNumeric: "tabular-nums" }}>{antwort.betrag}</span>{" "}
+            {L(t, "cockAntwortNegativNachspann", "zu.")}
+          </>
+        ) : (
+          <>
+            {L(t, "cockAntwortPositivVorspann", "Ja, es trägt sich. Monatlich bleiben")}{" "}
+            <span style={{ color: "var(--ok-tx)", fontVariantNumeric: "tabular-nums" }}>{antwort.betrag}</span>{" "}
+            {L(t, "cockAntwortPositivNachspann", "übrig.")}
+          </>
+        )}
       </div>
+      {unterzeile && (
+        <div className="cockpit-nur-desktop" style={{ fontSize: 13, color: "var(--ch)", marginTop: 6, lineHeight: 1.4 }}>
+          {unterzeile}
+        </div>
+      )}
     </div>
   );
 }
 
-function KernKachel({ k, t, span }) {
+const KERN_LABEL = {
+  score: "Score",
+  faktor: "Kaufpreisfaktor",
+  nettorendite: "Nettomietrendite",
+  cashflow: "Cashflow / Monat",
+};
+
+export function KennzahlenLeiste({ score, kennzahlen, t }) {
+  const finde = (k) => kennzahlen?.find((x) => x.key === k);
+  const cashflow = finde("cashflow");
+  const nettorendite = finde("nettorendite");
+  const faktor = finde("faktor");
+
+  const kacheln = [];
+  if (score?.verfuegbar && score.score != null) {
+    kacheln.push({ key: "score", wert: score.score, einheit: "score" });
+  }
+  if (cashflow) kacheln.push(cashflow);
+  if (nettorendite) kacheln.push(nettorendite);
+  if (faktor) kacheln.push(faktor);
+  if (kacheln.length === 0) return null;
+
+  return (
+    <div className="cockpit-kennzahlen bv bv-auf" style={{ marginTop: 14 }}>
+      {kacheln.map((k) => (
+        <KennzahlKachel key={k.key} k={k} t={t} />
+      ))}
+    </div>
+  );
+}
+
+function KennzahlKachel({ k, t }) {
   const negativ = k.key === "cashflow" && k.wert < 0;
+  const istScore = k.key === "score";
+  // Kaufpreisfaktor-Kachel liefert nur `markt` (kein `abw`, siehe
+  // briefingKernkennzahlen() in briefing.js) - die Abweichung wird hier aus
+  // wert/markt nachgerechnet, dieselbe Formel wie briefing.js `abweichung()`.
+  const faktorAbw =
+    k.key === "faktor" && k.markt > 0 && k.wert > 0 ? (k.wert / k.markt - 1) * 100 : null;
   const zusatz =
     k.key === "faktor" && k.markt != null
-      ? `${k.ebeneName ? k.ebeneName.replace(/\s*\((Kreis|Bezirk)\)\s*$/i, "") : L(t, "brfMarktLand", "Land")} ${fmt(k.markt, 1)}×`
-      : k.key === "breakEvenMiete" && k.heute != null
-        ? `${L(t, "brfKernHeute", "heute")} ${fmtE(Math.round(k.heute))}`
-        : k.key === "cashflow" || k.key === "ekRendite"
+      ? `${faktorAbw != null ? prozent(faktorAbw, 0) : ""} ${L(t, "brfFaktorGegen", "vs.")} ${
+          k.ebeneName ? k.ebeneName.replace(/\s*\((Kreis|Bezirk)\)\s*$/i, "") : L(t, "brfMarktLand", "Land")
+        }`.trim()
+      : k.key === "cashflow" || k.key === "nettorendite"
+        ? k.key === "cashflow"
           ? L(t, "brfKernNachSteuer", "nach Steuer")
-          : null;
+          : L(t, "brfKernProJahr", "p. a.")
+        : null;
 
   return (
     <div
       style={{
-        gridColumn: `span ${span}`,
-        background: "var(--ci)",
-        border: "1px solid var(--cb)",
+        background: negativ ? "var(--bad-bg)" : "var(--ci)",
+        border: `1px solid ${negativ ? "var(--bad-bd)" : "var(--cb)"}`,
         borderRadius: 10,
-        padding: "10px 8px",
+        padding: "10px 10px",
         minWidth: 0,
       }}
     >
+      <div style={{ fontSize: 10.5, color: negativ ? "var(--bad-tx)" : "var(--ch)", fontWeight: 600 }}>
+        {L(t, `cockKern${k.key}`, KERN_LABEL[k.key] || k.key)}
+      </div>
       <div
         style={{
-          fontSize: 18,
+          fontSize: 19,
           fontWeight: 800,
           whiteSpace: "nowrap",
+          marginTop: 2,
+          fontVariantNumeric: "tabular-nums",
           color: negativ ? "var(--bad-tx)" : "var(--ct)",
         }}
       >
-        {wertText(k.wert, k.einheit)}
+        {istScore ? (
+          <>
+            {Math.round(k.wert)}
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ch)" }}> / 100</span>
+          </>
+        ) : (
+          wertText(k.wert, k.einheit)
+        )}
       </div>
-      <div style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 2, lineHeight: 1.25 }}>
-        {L(t, `brfKern${k.key}`, KERN_LABEL[k.key] || k.key)}
-      </div>
+      {istScore && (
+        <div style={{ height: 5, borderRadius: 3, background: "var(--cro)", marginTop: 6 }}>
+          <div
+            className="bv-wachsen"
+            style={{
+              width: `${Math.max(0, Math.min(100, k.wert))}%`,
+              height: 5,
+              borderRadius: 3,
+              background: "var(--ca)",
+              transformOrigin: "left center",
+            }}
+          />
+        </div>
+      )}
       {zusatz && (
         <div
           style={{
             fontSize: 10.5,
-            marginTop: 2,
+            marginTop: 3,
             whiteSpace: "nowrap",
-            color: k.ueberMarkt ? "var(--bad-tx)" : "var(--ch)",
+            color: negativ ? "var(--bad-tx)" : "var(--ch)",
           }}
         >
           {zusatz}
@@ -460,217 +268,348 @@ function KernKachel({ k, t, span }) {
   );
 }
 
-// ── Block 4a: Markt-Karte (§22) ─────────────────────────────────────────────
-// Faktor-Kachel oben, darunter die beiden bestehenden Balken. Ohne PLZ gibt es
-// weder Faktor-Benchmark noch Vergleichskacheln - dann entfaellt die ganze
-// Karte (§25), nicht nur ihr Inhalt.
-export function MarktKarte({ briefing, t }) {
-  const fb = briefing.faktorBenchmark;
-  const hatBalken = briefing.vergleiche.some((v) => v.id === "v1" || v.id === "v2");
-  if (!fb && !hatBalken) return null;
-  const ebene = fb?.ebeneName
-    ? fb.ebeneName.replace(/\s*\((Kreis|Bezirk)\)\s*$/i, "")
-    : L(t, "brfMarktLand", "Landesschnitt");
+// ── Schritt-Navigation (Spec §4.9) ──────────────────────────────────────────
+const SCHRITTE = [
+  { id: "s1", nr: 1, kurz: "Kosten" },
+  { id: "s2", nr: 2, kurz: "Markt" },
+  { id: "s3", nr: 3, kurz: "Stellschrauben" },
+  { id: "s4", nr: 4, kurz: "Risiken" },
+  { id: "s5", nr: 5, kurz: "Weiter" },
+];
 
+export function SchrittNav({ t }) {
+  function springen(e, id) {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (!el) return;
+    const reduziert = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduziert ? "auto" : "smooth", block: "start" });
+  }
   return (
-    <div className="bv" style={karte}>
-      <div
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}
-      >
-        <div style={kartenTitel}>{L(t, "brfMarktTitel", "Im Vergleich zum Markt")}</div>
-        <div style={klein}>{ebene}</div>
+    <nav aria-label={L(t, "cockSchritteLabel", "Schritte")} className="cockpit-stepnav">
+      {SCHRITTE.map((s) => (
+        <a
+          key={s.id}
+          href={`#${s.id}`}
+          onClick={(e) => springen(e, s.id)}
+          style={{
+            flex: "0 0 auto",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            minHeight: 40,
+            padding: "0 12px",
+            borderRadius: 999,
+            border: "1px solid var(--cb)",
+            background: "var(--cc)",
+            color: "var(--ch)",
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              border: "2px solid var(--ca)",
+              color: "var(--ca)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 11,
+              fontWeight: 800,
+              flexShrink: 0,
+            }}
+          >
+            {s.nr}
+          </span>
+          {L(t, `cockSchritt${s.nr}`, s.kurz)}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function SchrittKopf({ nr, titel, aktion }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span
+          aria-hidden="true"
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            border: `2px solid var(--ca)`,
+            background: nr === 5 ? "var(--ca)" : "transparent",
+            color: nr === 5 ? "#fff" : "var(--ca)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 13,
+            fontWeight: 800,
+            flexShrink: 0,
+          }}
+        >
+          {nr}
+        </span>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--ct)" }}>
+          {titel}
+        </h2>
       </div>
-      {fb && <FaktorKachel fb={fb} t={t} ebene={ebene} />}
-      {hatBalken && <MarktVergleich briefing={briefing} t={t} eingebettet />}
+      {aktion}
     </div>
   );
 }
 
-function FaktorKachel({ fb, t, ebene }) {
-  const f = STATUS_FARBEN[fb.status] || STATUS_FARBEN.neutral;
+function ZeilePaar({ label, wert, borderTop }) {
   return (
     <div
       style={{
         display: "flex",
-        alignItems: "center",
-        gap: 10,
-        flexWrap: "wrap",
-        marginTop: 10,
-        paddingBottom: 12,
-        borderBottom: "1px solid var(--cb)",
+        justifyContent: "space-between",
+        alignItems: "baseline",
+        fontSize: 13.5,
+        padding: "8px 0",
+        borderTop: borderTop ? "1px solid var(--cb)" : "none",
       }}
     >
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 10.5, color: "var(--ch)" }}>
-          {L(t, "brfKernfaktor", "Kaufpreisfaktor")}
-        </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ fontSize: 22, fontWeight: 800, whiteSpace: "nowrap" }}>
-            {fmt(fb.eigen, 1)}×
-          </span>
-          <span style={{ fontSize: 12, color: "var(--ch)", whiteSpace: "nowrap" }}>
-            {ebene} {fmt(fb.markt, 1)}×
-          </span>
-        </div>
-      </div>
-      <span
-        style={{
-          marginLeft: "auto",
-          fontSize: 11,
-          fontWeight: 700,
-          color: f.tx,
-          background: f.bg,
-          border: `1px solid ${f.bd}`,
-          borderRadius: 999,
-          padding: "3px 8px",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {prozent(fb.abw, 0)} {L(t, "brfFaktorGegen", "gegen")} {ebene}
-      </span>
+      <span style={{ color: "var(--ch)" }}>{label}</span>
+      <span style={{ fontWeight: 700, color: "var(--ct)", fontVariantNumeric: "tabular-nums" }}>{wert}</span>
     </div>
   );
 }
 
-// ── Block 4b: Benchmark gegen Alternativanlagen (§21 D5) ────────────────────
-// Durchgehend --info-*: das ist eine EINORDNUNG, kein Urteil. In Ampelfarben
-// stuende hier ein zweites Urteil neben der Ampel (§19).
-const ALT_LABEL = { tagesgeld: "Tagesgeld", staatsanleihe: "Staatsanleihe", etf: "ETF (historisch)" };
-const ALT_HINWEIS = {
-  brfAltHinweisAnnahme: "Die Vergleichssätze sind Annahmen, keine Prognose — historische Nominalwerte vor Steuer.",
-  brfAltHinweisHebel: "Deine Immobilie ist finanziert, die Alternativanlage nicht: mehr Rendite heißt hier auch mehr Risiko.",
-  brfAltHinweisLiquiditaet: "ETF-Anteile sind tagesgleich verkäuflich, eine Wohnung nicht.",
-};
-const ALT_SKALA_MAX = 8;
-
-export function BenchmarkKarte({ alternativanlage, t }) {
-  const a = alternativanlage;
-  if (!a) return null;
-  const pos = (v) => Math.max(0, Math.min(100, (v / ALT_SKALA_MAX) * 100));
+// ── Schritt 1: Was dich das Objekt kostet (Spec §4.4) ───────────────────────
+export function SchrittKosten({ briefing, cashflowVorSteuer, t }) {
+  const kennzahlen = briefing?.kernkennzahlen;
+  const cash = kennzahlen?.find((k) => k.key === "cashflow");
+  const netto = kennzahlen?.find((k) => k.key === "nettorendite");
+  if (!cash) return null;
+  const negativ = cash.wert < 0;
+  const jahr = cockpitCashflowJahr(cash.wert);
 
   return (
-    <div
-      className="bv"
-      style={{
-        ...karte,
-        background: "var(--info-bg)",
-        border: "1px solid var(--info-bd)",
-      }}
-    >
+    <section id="s1" className="bv bv-auf cockpit-s1" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+      <SchrittKopf nr={1} titel={L(t, "cockS1Titel", "Was dich das Objekt kostet")} />
       <div
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}
+        style={{
+          marginTop: 14,
+          padding: "14px 16px",
+          borderRadius: 12,
+          background: negativ ? "var(--bad-bg)" : "var(--ok-bg)",
+        }}
       >
-        <div style={{ ...kartenTitel, color: "var(--info-tx)" }}>
-          {L(t, "brfAltTitel", "Gegen andere Anlagen")}
+        <div
+          style={{
+            fontSize: 30,
+            fontWeight: 800,
+            letterSpacing: "-0.01em",
+            color: negativ ? "var(--bad-tx)" : "var(--ok-tx)",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {wertText(cash.wert, "eurMonat")}{" "}
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{L(t, "cockProMonat", "/ Monat")}</span>
         </div>
-        <div style={{ fontSize: 11, color: "var(--info-tx)" }}>
-          {L(t, "brfAltUntertitel", "Einordnung, kein Urteil")}
-        </div>
-      </div>
-
-      <div style={{ fontSize: 13.5, marginTop: 8, lineHeight: 1.5, color: "var(--ct)" }}>
-        {tpl(
-          L(
-            t,
-            "brfAltSatz",
-            "Dein Eigenkapital verdient hier {wert} p. a. nach Steuer.",
-          ),
-          { wert: `${fmt(a.eigen, 1)} %` },
+        {jahr != null && (
+          <div style={{ fontSize: 12.5, marginTop: 2, color: negativ ? "var(--bad-tx)" : "var(--ok-tx)" }}>
+            = {wertText(jahr, "eurMonat")}{" "}
+            {negativ
+              ? L(t, "cockProJahrZuzahlung", "pro Jahr aus eigener Tasche")
+              : L(t, "cockProJahrUeberschuss", "Überschuss pro Jahr")}
+          </div>
         )}
       </div>
+      {cashflowVorSteuer != null && (
+        <ZeilePaar label={L(t, "cockVorSteuer", "Vor Steuer / Monat")} wert={wertText(cashflowVorSteuer, "eurMonat")} borderTop />
+      )}
+      {netto && (
+        <div className="cockpit-nur-desktop">
+          <ZeilePaar label={L(t, "brfKernnettorendite", "Nettomietrendite")} wert={wertText(netto.wert, "prozent")} borderTop />
+        </div>
+      )}
+    </section>
+  );
+}
 
-      <div style={{ position: "relative", height: 46, marginTop: 14 }}>
+// ── Schritt 2: Wie es zum Markt passt (Spec §4.5) ───────────────────────────
+const MARKT_SPANNE = 40;
+
+function AbweichungsBalken({ titel, art, v, formatWert, einheitLabel, extra, t }) {
+  if (!v || v.abw == null || !isFinite(v.abw)) return null;
+  const f = STATUS_FARBEN[v.status] || STATUS_FARBEN.neutral;
+  const ueberschrift = cockpitMarktUeberschrift(v, art);
+  const pos = (abw) => 50 + (Math.max(-MARKT_SPANNE, Math.min(MARKT_SPANNE, abw)) / (2 * MARKT_SPANNE)) * 100;
+  const p = pos(v.abw);
+  const vonLinks = Math.min(50, p);
+  const breite = Math.abs(p - 50);
+
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ct)" }}>
+          {titel} {ueberschrift}
+        </span>
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: f.tx,
+            background: f.bg,
+            border: f.bd !== "transparent" ? `1px solid ${f.bd}` : "none",
+            borderRadius: 999,
+            padding: "3px 9px",
+          }}
+        >
+          {prozent(v.abw, 0)}
+        </span>
+      </div>
+      <div
+        style={{ position: "relative", height: 18, marginTop: 8 }}
+        role="img"
+        aria-label={`${titel}: ${formatWert(v.eigen)} du, ${formatWert(v.markt)} Markt`}
+      >
+        <div style={{ position: "absolute", left: 0, right: 0, top: 7, height: 4, borderRadius: 2, background: "var(--cro)" }} />
+        <div
+          className="bv-wachsen"
+          style={{
+            position: "absolute",
+            top: 7,
+            height: 4,
+            left: `${vonLinks}%`,
+            width: `${breite}%`,
+            borderRadius: 2,
+            background: f.tx,
+            transformOrigin: p >= 50 ? "left center" : "right center",
+          }}
+        />
         <div
           style={{
             position: "absolute",
-            left: 0,
-            right: 0,
-            top: 22,
-            height: 2,
-            background: "var(--info-bd)",
-          }}
-        />
-        {a.referenzen.map((r) => (
-          <span key={r.key} style={{ position: "absolute", left: `${pos(r.prozent)}%`, top: 0 }}>
-            <span
-              style={{
-                display: "block",
-                width: 1,
-                height: 22,
-                background: "var(--info-bd)",
-                margin: "0 auto",
-              }}
-            />
-            <span
-              style={{
-                display: "block",
-                fontSize: 9.5,
-                color: "var(--info-tx)",
-                whiteSpace: "nowrap",
-                transform: "translateX(-50%)",
-                marginTop: 3,
-              }}
-            >
-              {L(t, `brfAlt${r.key}`, ALT_LABEL[r.key] || r.key)} {fmt(r.prozent, 1)} %
-            </span>
-          </span>
-        ))}
-        <span
-          className="bv-punkt"
-          style={{
-            position: "absolute",
-            left: `${pos(a.eigen)}%`,
-            top: 23,
-            width: 12,
-            height: 12,
-            borderRadius: "50%",
-            background: "var(--info-tx)",
-            border: "2px solid var(--cc)",
-            boxSizing: "border-box",
-            transform: "translate(-50%,-50%)",
+            left: "50%",
+            top: 1,
+            width: 2,
+            height: 16,
+            marginLeft: -1,
+            borderRadius: 1,
+            background: "var(--ch)",
           }}
         />
       </div>
-
-      <ul
+      <div
         style={{
-          margin: "10px 0 0",
-          paddingLeft: 18,
-          fontSize: 11,
-          lineHeight: 1.5,
-          color: "var(--info-tx)",
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 8,
+          marginTop: 6,
+          fontSize: 12.5,
+          fontVariantNumeric: "tabular-nums",
         }}
       >
-        {a.hinweisKeys.map((k) => (
-          <li key={k}>{L(t, k, ALT_HINWEIS[k] || "")}</li>
-        ))}
-      </ul>
+        <span style={{ color: "var(--ct)" }}>
+          <strong>{formatWert(v.eigen)}</strong> {einheitLabel} <span style={{ color: "var(--ch)" }}>{L(t, "brfDu", "du")}</span>
+        </span>
+        <span style={{ color: "var(--ch)" }}>
+          {formatWert(v.markt)} {einheitLabel} {L(t, "brfMarkt", "Markt")}
+        </span>
+      </div>
+      {extra}
     </div>
   );
 }
 
+const fmtQm = (w) => fmt(w, w < 100 ? 2 : 0);
+const fmtFaktor = (w) => `${fmt(w, 1)}×`;
 
-// SzenarienKarte (Stresstest/Sensitivitaet) und FlaggenKarte (rote/orange
-// Warnungen) sind mit der Vereinfachung fuer unerfahrene Investoren entfernt
-// (Nutzer-Entscheidung 2026-09-23) - Risiko-Szenarien sollen auf dieser Seite
-// nicht mehr erscheinen. briefingStresstest()/briefingSensitivitaet()/
-// briefingFlaggen() bleiben in briefing.js bestehen.
+export function SchrittMarkt({ briefing, t }) {
+  const v1 = briefing?.vergleiche?.find((v) => v.id === "v1");
+  const v2 = briefing?.vergleiche?.find((v) => v.id === "v2");
+  const fb = briefing?.faktorBenchmark;
+  if (!v1 && !v2 && !fb) return null;
+  const marktName = (fb?.ebeneName || v1?.ebeneName || v2?.ebeneName || "").replace(
+    /\s*\((Kreis|Bezirk)\)\s*$/i,
+    "",
+  );
 
-// ── Block 4c: Realistisch/Optimal-Spannen (§6.2) ────────────────────────────
-// Drei benannte Punkte auf EINER Skala je Groesse (Kaufpreis, Kaltmiete,
-// Eigenkapital): realistisch (Markt), optimal (Cashflow-Nullpunkt), aktuell
-// (eigener Wert). Bewusst NICHT der bestehende Balken (ein Markt-Mittelpunkt,
-// ein Marker) - hier gibt es keine feste Reihenfolge der drei Punkte (optimal
-// kann ueber oder unter realistisch liegen, aktuell kann ueberall liegen),
-// die Grafik muss das ohne Annahme darstellen koennen.
-const SPANNEN_PUNKT_FARBE = { realistisch: "var(--ch)", optimal: "var(--ok-tx)", aktuell: "var(--ca)" };
+  const mieteExtra =
+    v2?.erreichbarQm > 0 ? (
+      <div style={{ ...klein, marginTop: 4 }}>
+        {L(t, "brfErreichbar", "In 3 Jahren erreichbar")}: {fmtQm(v2.erreichbarQm)} €/m²
+        {v2.kappungsgrenzeProzent != null &&
+          ` (${L(t, "brfKappung", "Kappungsgrenze")} ${fmt(v2.kappungsgrenzeProzent, 0)} %)`}
+      </div>
+    ) : null;
+
+  return (
+    <section id="s2" className="bv bv-auf cockpit-s2" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+      <SchrittKopf
+        nr={2}
+        titel={L(t, "cockS2Titel", "Wie es zum Markt passt")}
+        aktion={
+          marktName && (
+            <span style={klein}>
+              {L(t, "brfMarktTitel2", "Vergleich")}: {marktName}
+            </span>
+          )
+        }
+      />
+      {v1 && (
+        <AbweichungsBalken
+          titel={L(t, "cockMarktKaufpreis", "Kaufpreis / m²")}
+          art="kaufpreis"
+          v={v1}
+          formatWert={fmtQm}
+          einheitLabel="€/m²"
+          t={t}
+        />
+      )}
+      {v2 && (
+        <AbweichungsBalken
+          titel={L(t, "brfMiete", "Miete")}
+          art="miete"
+          v={v2}
+          formatWert={fmtQm}
+          einheitLabel="€/m²"
+          extra={mieteExtra}
+          t={t}
+        />
+      )}
+      {fb && (
+        <AbweichungsBalken
+          titel={L(t, "brfKernfaktor", "Kaufpreisfaktor")}
+          art="faktor"
+          v={fb}
+          formatWert={fmtFaktor}
+          einheitLabel=""
+          t={t}
+        />
+      )}
+      <div className="cockpit-legende" style={{ justifyContent: "space-between", fontSize: 11, color: "var(--ch)", borderTop: "1px solid var(--cb)", paddingTop: 10, marginTop: 16 }}>
+        <span>{L(t, "cockLegendeLinks", "← günstiger / unter Markt")}</span>
+        <span>{L(t, "cockLegendeRechts", "teurer / über Markt →")}</span>
+      </div>
+    </section>
+  );
+}
+
+// ── Schritt 3: Was sich ändern müsste (Spec §4.6) ───────────────────────────
 const SPANNEN_METRIK = [
-  { key: "kaufpreis", titel: "Kaufpreis" },
-  { key: "kaltmiete", titel: "Kaltmiete" },
-  { key: "eigenkapital", titel: "Eigenkapital" },
+  { key: "kaufpreis", titel: "Kaufpreis", monatlich: false },
+  { key: "kaltmiete", titel: "Kaltmiete / Monat", titelKompakt: "Kaltmiete", monatlich: true },
+  { key: "eigenkapital", titel: "Eigenkapital", monatlich: false },
 ];
 
-export function SpannenKarte({ spannen, t }) {
+function spannenWertText(wert, monatlich) {
+  if (wert == null || !isFinite(wert)) return "—";
+  return monatlich ? fmtE(Math.round(wert)) : fmtKompakt(wert);
+}
+
+export function SchrittStellschrauben({ spannen, groessterHebel, onEintragen, t }) {
   if (!spannen) return null;
   const zeilen = SPANNEN_METRIK.filter((m) => {
     const s = spannen[m.key];
@@ -679,419 +618,263 @@ export function SpannenKarte({ spannen, t }) {
   if (zeilen.length === 0) return null;
 
   return (
-    <div className="bv" style={karte}>
-      <style>{CSS}</style>
-      <div style={kartenTitel}>{L(t, "brfSpannenTitel", "Realistisch bis optimal")}</div>
-      <div style={{ ...klein, marginTop: 4, lineHeight: 1.4 }}>
-        {L(
-          t,
-          "brfSpannenUntertitel",
-          "Realistisch = was der Markt hergibt · optimal = ab hier trägt sich das Objekt",
-        )}
+    <section id="s3" className="bv bv-auf cockpit-s3" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+      <SchrittKopf nr={3} titel={L(t, "cockS3Titel", "Was sich ändern müsste")} />
+
+      {/* Desktop: 3 Mini-Karten */}
+      <div className="cockpit-stellschrauben-desktop" style={{ marginTop: 14 }}>
+        {zeilen.map((m) => (
+          <SpannenMiniKarte
+            key={m.key}
+            titel={L(t, `brfSpannen${m.key}`, m.titel)}
+            monatlich={m.monatlich}
+            werte={spannen[m.key]}
+            hebel={groessterHebel === m.key}
+            onEintragen={m.key === "eigenkapital" ? onEintragen : null}
+            t={t}
+          />
+        ))}
       </div>
-      {zeilen.map((m, i) => (
-        <SpannenZeile
-          key={m.key}
-          titel={L(t, `brfSpannen${m.key}`, m.titel)}
-          monatlich={m.key === "kaltmiete"}
-          werte={spannen[m.key]}
-          verzoegerung={i * 90}
-          t={t}
-        />
-      ))}
-    </div>
-  );
-}
 
-function SpannenZeile({ titel, monatlich, werte, verzoegerung, t }) {
-  const punkte = [
-    { key: "realistisch", wert: werte.realistisch, label: L(t, "brfSpannenRealistisch", "realistisch") },
-    { key: "optimal", wert: werte.optimal, label: L(t, "brfSpannenOptimal", "optimal") },
-    { key: "aktuell", wert: werte.aktuell, label: L(t, "brfSpannenAktuell", "dein Wert") },
-  ].filter((p) => p.wert != null && isFinite(p.wert));
-
-  if (punkte.length === 0) return null;
-
-  const wertLabel = (w) => (
-    <>
-      {fmtE(Math.round(w))}
-      {monatlich && <span style={{ fontWeight: 500, fontSize: 10, color: "var(--ch)" }}> /Monat</span>}
-    </>
-  );
-
-  // Nur ein Punkt bekannt: keine Skala noetig, einfache Zeile.
-  if (punkte.length === 1) {
-    const p = punkte[0];
-    return (
-      <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>{titel}</span>
-        <span style={{ fontSize: 13, color: "var(--ch)" }}>
-          {p.label} <strong style={{ color: "var(--ct)" }}>{wertLabel(p.wert)}</strong>
-        </span>
-      </div>
-    );
-  }
-
-  // Zwei/drei Punkte: nach Wert sortiert, der jeweils kleinste und groesste
-  // Punkt liegen dank Skalen-Puffer immer am Rand und damit weit genug
-  // auseinander, um Beschriftungen abwechselnd unter/ueber die Spur zu
-  // setzen, ohne dass sie sich ueberlappen koennen.
-  const sortiert = [...punkte].sort((a, b) => a.wert - b.wert);
-  const minWert = sortiert[0].wert;
-  const maxWert = sortiert[sortiert.length - 1].wert;
-  const spanne = maxWert - minWert;
-  const puffer = spanne > 0 ? spanne * 0.22 : Math.max(1, Math.abs(minWert) * 0.1);
-  const untenGrenze = minWert - puffer;
-  const gesamtSpanne = maxWert + puffer - untenGrenze || 1;
-  const pos = (w) => ((w - untenGrenze) / gesamtSpanne) * 100;
-
-  const realistisch = werte.realistisch != null ? pos(werte.realistisch) : null;
-  const optimal = werte.optimal != null ? pos(werte.optimal) : null;
-  const bandVon = realistisch != null && optimal != null ? Math.min(realistisch, optimal) : null;
-  const bandBis = realistisch != null && optimal != null ? Math.max(realistisch, optimal) : null;
-
-  const trackY = 46;
-  const ariaText = sortiert.map((p) => `${p.label} ${fmt(p.wert, 0)}`).join(", ");
-
-  return (
-    <div style={{ marginTop: 18 }}>
-      <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>{titel}</div>
-      <div
-        role="img"
-        aria-label={`${titel}: ${ariaText}`}
-        style={{ position: "relative", height: 92, marginTop: 4 }}
-      >
+      {/* Mobile: kompakte Tabelle */}
+      <div className="cockpit-stellschrauben-mobile" style={{ marginTop: 14 }}>
         <div
           style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: trackY - 1,
-            height: 2,
-            borderRadius: 1,
-            background: "var(--cro)",
+            display: "grid",
+            gridTemplateColumns: "1.2fr repeat(3, 1fr)",
+            gap: 6,
+            fontSize: 11,
+            color: "var(--ch)",
+            fontWeight: 600,
+            paddingBottom: 6,
+            borderBottom: "1px solid var(--cb)",
           }}
-        />
-        {bandVon != null && (
-          <div
-            className="bv-wachsen"
-            style={{
-              "--bv-d": `${verzoegerung}ms`,
-              position: "absolute",
-              top: trackY - 2,
-              height: 4,
-              left: `${bandVon}%`,
-              width: `${bandBis - bandVon}%`,
-              borderRadius: 2,
-              background: "var(--ok-tx)",
-              opacity: 0.35,
-              transformOrigin: "center",
-            }}
+        >
+          <span />
+          <span style={{ textAlign: "right" }}>{L(t, "brfSpannenAktuell", "Heute")}</span>
+          <span style={{ textAlign: "right" }}>{L(t, "brfSpannenRealistisch", "Realist.")}</span>
+          <span style={{ textAlign: "right" }}>{L(t, "cockTragfaehig", "Tragfähig")}</span>
+        </div>
+        {zeilen.map((m) => (
+          <SpannenZeileMobil
+            key={m.key}
+            titel={L(t, `brfSpannen${m.key}`, m.titelKompakt || m.titel)}
+            monatlich={m.monatlich}
+            werte={spannen[m.key]}
+            onEintragen={m.key === "eigenkapital" ? onEintragen : null}
           />
-        )}
-        {sortiert.map((p, i) => {
-          const links = pos(p.wert);
-          const unten = i % 2 === 0;
-          const istAktuell = p.key === "aktuell";
-          const farbe = SPANNEN_PUNKT_FARBE[p.key];
-          return (
-            <span key={p.key}>
-              <span
-                className="bv-punkt"
-                style={{
-                  "--bv-d": `${verzoegerung + 260}ms`,
-                  position: "absolute",
-                  left: `${links}%`,
-                  top: trackY,
-                  width: istAktuell ? 14 : 10,
-                  height: istAktuell ? 14 : 10,
-                  borderRadius: "50%",
-                  background: farbe,
-                  border: `${istAktuell ? 3 : 2}px solid var(--cc)`,
-                  boxShadow: "0 0 0 1px var(--cb)",
-                  boxSizing: "border-box",
-                  zIndex: 2,
-                  transform: "translate(-50%,-50%)",
-                }}
-              />
-              <span
-                style={{
-                  position: "absolute",
-                  left: `${links}%`,
-                  top: unten ? trackY + 12 : trackY - 12,
-                  transform: `translate(-50%, ${unten ? "0%" : "-100%"})`,
-                  textAlign: "center",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: 10,
-                    color: "var(--ch)",
-                    textTransform: "uppercase",
-                    letterSpacing: 0.3,
-                  }}
-                >
-                  {p.label}
-                </span>
-                <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: istAktuell ? farbe : "var(--ct)" }}>
-                  {wertLabel(p.wert)}
-                </span>
-              </span>
+        ))}
+        {groessterHebel && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginTop: 10,
+              padding: 12,
+              borderRadius: 12,
+              background: "var(--ca-bg)",
+              border: "1px solid var(--ca-bd)",
+            }}
+          >
+            <HebelChip t={t} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ct)" }}>
+              {L(
+                t,
+                `brfSpannen${groessterHebel}`,
+                SPANNEN_METRIK.find((m) => m.key === groessterHebel)?.titelKompakt ||
+                  SPANNEN_METRIK.find((m) => m.key === groessterHebel)?.titel ||
+                  groessterHebel,
+              )}
             </span>
-          );
-        })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ ...klein, marginTop: 14, lineHeight: 1.4 }}>
+        {L(
+          t,
+          "cockSpannenErklaerung",
+          "Realistisch = was der Markt hergibt · Tragfähig = ab hier trägt sich das Objekt",
+        )}
+      </div>
+    </section>
+  );
+}
+
+function HebelChip({ t }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        fontSize: 11,
+        fontWeight: 700,
+        color: "var(--ca-dk)",
+        background: "var(--ca-bg)",
+        border: "1px solid var(--ca-bd)",
+        borderRadius: 999,
+        padding: "3px 9px",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {L(t, "cockGroessterHebel", "Größter Hebel")}
+    </span>
+  );
+}
+
+function SpannenMiniKarte({ titel, monatlich, werte, hebel, onEintragen, t }) {
+  return (
+    <div
+      style={{
+        background: "var(--ci)",
+        border: hebel ? "1px solid var(--ca-bd)" : "1px solid var(--cb)",
+        borderRadius: 12,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ct)" }}>{titel}</span>
+        {hebel && <HebelChip t={t} />}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+        <span style={{ color: "var(--ch)" }}>{L(t, "brfSpannenAktuell", "Heute")}</span>
+        {werte.aktuell != null ? (
+          <span style={{ fontWeight: 800, color: "var(--ca)", fontVariantNumeric: "tabular-nums" }}>
+            {spannenWertText(werte.aktuell, monatlich)}
+          </span>
+        ) : onEintragen ? (
+          <button type="button" onClick={onEintragen} style={eintragenLink}>
+            {L(t, "cockEintragen", "Eintragen →")}
+          </button>
+        ) : (
+          <span style={{ color: "var(--ch)" }}>—</span>
+        )}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+        <span style={{ color: "var(--ch)" }}>{L(t, "brfSpannenRealistisch", "Realistisch")}</span>
+        <span style={{ fontVariantNumeric: "tabular-nums" }}>
+          {spannenWertText(werte.realistisch, monatlich)}
+          {cockpitDiff(werte.realistisch, werte.aktuell) && (
+            <span style={{ color: "var(--ch)" }}> ({cockpitDiff(werte.realistisch, werte.aktuell)})</span>
+          )}
+        </span>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+        <span style={{ color: "var(--ch)" }}>{L(t, "cockTragfaehig", "Tragfähig")}</span>
+        <span style={{ color: "var(--ok-tx)", fontVariantNumeric: "tabular-nums" }}>
+          {spannenWertText(werte.optimal, monatlich)}
+          {cockpitDiff(werte.optimal, werte.aktuell) && (
+            <span style={{ color: "var(--ch)" }}> ({cockpitDiff(werte.optimal, werte.aktuell)})</span>
+          )}
+        </span>
       </div>
     </div>
   );
 }
 
-// ── Block 4d: Modernisierungsbedarf (§6.3) ──────────────────────────────────
-// Regelbasiert (modernisierungsbedarf() in briefing.js), keine KI. Zeigt eine
-// Stufe (gering/mittel/hoch) ueber STATUS_FARBEN plus die Gruende in Klartext
-// - fehlen alle drei Eingaben, zeigt die Karte den Hinweis auf Baustein 2
-// statt einer geratenen Einschaetzung.
+function SpannenZeileMobil({ titel, monatlich, werte, onEintragen }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1.2fr repeat(3, 1fr)",
+        gap: 6,
+        fontSize: 13,
+        alignItems: "baseline",
+        padding: "6px 0",
+        borderBottom: "1px solid var(--cb)",
+      }}
+    >
+      <span style={{ fontWeight: 700, color: "var(--ct)" }}>{titel}</span>
+      {werte.aktuell != null ? (
+        <span style={{ textAlign: "right", fontWeight: 800, color: "var(--ca)", fontVariantNumeric: "tabular-nums" }}>
+          {spannenWertText(werte.aktuell, monatlich)}
+        </span>
+      ) : onEintragen ? (
+        <button type="button" onClick={onEintragen} style={{ ...eintragenLink, textAlign: "right" }}>
+          Eintragen
+        </button>
+      ) : (
+        <span style={{ textAlign: "right", color: "var(--ch)" }}>—</span>
+      )}
+      <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+        {spannenWertText(werte.realistisch, monatlich)}
+      </span>
+      <span style={{ textAlign: "right", color: "var(--ok-tx)", fontVariantNumeric: "tabular-nums" }}>
+        {spannenWertText(werte.optimal, monatlich)}
+      </span>
+    </div>
+  );
+}
+
+const eintragenLink = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  color: "var(--ca)",
+  fontWeight: 700,
+  fontSize: 13,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  minHeight: 32,
+};
+
+// ── Schritt 4: Worauf achten (Spec §4.7) ────────────────────────────────────
+// Chip + eine Zeile je Eintrag, Modernisierung als eigener Chip statt eigener
+// Karte. "Ausführliche Begründung ansehen" klappt die vollen Texte (Titel,
+// Wert, Beschreibung) an Ort und Stelle auf. Braucht ein KI-Ergebnis -
+// derselbe Start-/Laden-/Fehler-/Einwilligungs-Ablauf wie zuvor in
+// AnalyseKarte, nur kompakter dargestellt.
 const MODBEDARF_LABEL = { gering: "Gering", mittel: "Mittel", hoch: "Hoch" };
 const MODBEDARF_FARBE = { gering: "gruen", mittel: "gelb", hoch: "rot" };
 
-function modGrundText(key, m, t) {
+function modGrundText(key, m) {
   if (key === "baujahr") {
     return m.baujahr < 1979
-      ? tpl(L(t, "brfModGrundBaujahrAlt", "Baujahr {jahr} (vor 1979)"), { jahr: m.baujahr })
-      : tpl(L(t, "brfModGrundBaujahrMittel", "Baujahr {jahr} (1979–1994)"), { jahr: m.baujahr });
+      ? `Baujahr ${m.baujahr} (vor 1979)`
+      : `Baujahr ${m.baujahr} (1979–1994)`;
   }
   if (key === "heizungsalter") {
-    return m.heizungsalter === "alt"
-      ? L(t, "brfModGrundHeizungAlt", "Heizung ist alt")
-      : L(t, "brfModGrundHeizungMittel", "Heizung mittleren Alters");
+    return m.heizungsalter === "alt" ? "Heizung ist alt" : "Heizung mittleren Alters";
   }
   if (key === "energieklasse") {
     return ["F", "G", "H"].includes(m.energieklasse)
-      ? tpl(L(t, "brfModGrundEnergieSchlecht", "Energieeffizienzklasse {klasse} (niedrig)"), {
-          klasse: m.energieklasse,
-        })
-      : tpl(L(t, "brfModGrundEnergieMittel", "Energieeffizienzklasse {klasse}"), {
-          klasse: m.energieklasse,
-        });
+      ? `Energieeffizienzklasse ${m.energieklasse} (niedrig)`
+      : `Energieeffizienzklasse ${m.energieklasse}`;
   }
   return "";
 }
 
-export function ModernisierungsbedarfKarte({ modernisierungsbedarf: m, t }) {
-  if (!m) return null;
+function Chip({ farbe, text }) {
+  const f = STATUS_FARBEN[farbe] || STATUS_FARBEN.neutral;
   return (
-    <div className="bv" style={karte}>
-      <div style={kartenTitel}>{L(t, "brfModTitel", "Modernisierungsbedarf")}</div>
-      {!m.verfuegbar ? (
-        <div style={{ ...klein, marginTop: 10, lineHeight: 1.5, fontSize: 12.5 }}>
-          {L(
-            t,
-            "brfModKeineDaten",
-            "Für eine Einschätzung fehlen Angaben zu Baujahr, Heizung oder Energieklasse — ergänze sie beim Objekt (siehe Hinweis oben) oder im Renditerechner.",
-          )}
-        </div>
-      ) : (
-        <>
-          <div style={{ marginTop: 10 }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                fontSize: 13,
-                fontWeight: 700,
-                color: STATUS_FARBEN[MODBEDARF_FARBE[m.stufe]].tx,
-                background: STATUS_FARBEN[MODBEDARF_FARBE[m.stufe]].bg,
-                border: `1px solid ${STATUS_FARBEN[MODBEDARF_FARBE[m.stufe]].bd}`,
-                borderRadius: 999,
-                padding: "4px 12px",
-              }}
-            >
-              {L(t, `brfModStufe${m.stufe}`, MODBEDARF_LABEL[m.stufe] || m.stufe)}
-            </span>
-          </div>
-          {m.gruende.length > 0 ? (
-            <ul style={{ margin: "10px 0 0", paddingLeft: 18, fontSize: 13, lineHeight: 1.55, color: "var(--ct)" }}>
-              {m.gruende.map((g) => (
-                <li key={g}>{modGrundText(g, m, t)}</li>
-              ))}
-            </ul>
-          ) : (
-            <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--ct)", marginTop: 10 }}>
-              {L(
-                t,
-                "brfModKeineGruende",
-                "Baujahr, Heizung und Energieklasse geben keinen besonderen Anlass zur Sorge.",
-              )}
-            </div>
-          )}
-        </>
-      )}
-    </div>
+    <span
+      style={{
+        flexShrink: 0,
+        display: "inline-flex",
+        alignItems: "center",
+        fontSize: 11,
+        fontWeight: 700,
+        color: f.tx,
+        background: f.bg,
+        border: f.bd !== "transparent" ? `1px solid ${f.bd}` : "none",
+        borderRadius: 999,
+        padding: "3px 9px",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {text}
+    </span>
   );
 }
 
-// ── Baustein: Lage (KI-Einschaetzung, §8, ohne Websuche) ────────────────────
-// Eigener Baustein zwischen Vergleich und Begruendung. Eigener kleiner
-// Start-/Consent-/Fehler-Ablauf (siehe ObjektDetail.jsx starteLage() /
-// einwilligenUndStartenLage()) nach demselben Muster wie die Begruendungs-
-// Karte, aber unabhaengig davon - andere Route, anderes Caching.
-export function LageKarte({ ergebnis, laufend, fehler, consent, onStarten, onConsentJa, onConsentAbbrechen, t }) {
-  return (
-    <div className="bv" style={karte}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-        <div style={kartenTitel}>{L(t, "brfLageTitel", "Lage: was du sonst nicht siehst")}</div>
-        <div style={klein}>{L(t, "brfLageUntertitel", "KI-Einschätzung")}</div>
-      </div>
-
-      {ergebnis ? (
-        <>
-          <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--ct)", marginTop: 10, whiteSpace: "pre-line" }}>
-            {ergebnis.text}
-          </div>
-          {/* Deutlicherer Hinweis als bei den uebrigen KI-Texten (§8): hier
-              werden reale Fakten behauptet, nicht nur Zahlen eingeordnet -
-              das Risiko einer falschen Aussage ist hoeher. Ohne Websuche
-              (Nutzer-Entscheidung 2026-09-23, Grounding brauchte Billing, das
-              es fuer dieses Google-Projekt nicht gibt) gilt das umso mehr -
-              das Modell kennt nur seinen Trainingsstand, keine aktuellen
-              Ereignisse. */}
-          <div style={lageDisclaimer}>
-            <span aria-hidden="true" style={{ fontSize: 14, flexShrink: 0 }}>⚠</span>
-            <span>
-              {L(
-                t,
-                "brfLageDisclaimer",
-                "KI-generiert aus Trainingswissen, ohne Websuche und ohne Gewähr — Angaben können veraltet oder falsch sein. Prüfe wichtige Fakten selbst nach.",
-              )}
-            </span>
-          </div>
-        </>
-      ) : consent ? (
-        <div style={lageConsentBand}>
-          <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-            {L(
-              t,
-              "brfLageConsentText",
-              "Für die Auswertung werden Ort, PLZ-Gebiet und Bundesland dieses Objekts an unseren KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?",
-            )}
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" onClick={onConsentJa} style={lageConsentJa}>
-              {L(t, "brfConsentJa", "Einverstanden, starten")}
-            </button>
-            <button type="button" onClick={onConsentAbbrechen} style={lageConsentNein}>
-              {L(t, "brfConsentNein", "Abbrechen")}
-            </button>
-          </div>
-        </div>
-      ) : laufend ? (
-        <div aria-busy="true" style={{ marginTop: 10, fontSize: 12.5, color: "var(--cl)" }}>
-          {L(t, "brfLaeuft", "Wird berechnet …")}
-        </div>
-      ) : fehler ? (
-        <>
-          <div style={lageFehlerBand}>{fehler}</div>
-          <button type="button" onClick={onStarten} style={lageKnopf}>
-            {L(t, "brfLageWiederholen", "Erneut versuchen")}
-          </button>
-        </>
-      ) : (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ch)" }}>
-            {L(
-              t,
-              "brfLageErklaerung",
-              "Standort-Insiderwissen, das eine Kaufentscheidung beeinflussen könnte — z. B. bekannte Großprojekte oder die Wirtschaftsstruktur der Region.",
-            )}
-          </div>
-          <button type="button" onClick={onStarten} style={lageKnopf}>
-            <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
-            {L(t, "brfLageStarten", "Lage-Analyse erstellen")}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const lageKnopf = {
-  display: "inline-flex",
-  alignItems: "center",
-  height: 44,
-  padding: "0 16px",
-  marginTop: 10,
-  borderRadius: 10,
-  border: "none",
-  background: "var(--ca)",
-  color: "#fff",
-  fontSize: 13.5,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "inherit",
-};
-
-const lageConsentBand = {
-  background: "var(--ci)",
-  border: "1px solid var(--cb)",
-  borderRadius: 12,
-  padding: "14px 16px",
-  marginTop: 12,
-};
-
-const lageConsentJa = { ...lageKnopf, marginTop: 0 };
-
-const lageConsentNein = {
-  ...lageConsentJa,
-  background: "var(--cc)",
-  color: "var(--ct)",
-  border: "1.5px solid var(--cb)",
-  fontWeight: 600,
-};
-
-const lageFehlerBand = {
-  background: "var(--bad-bg)",
-  border: "1px solid var(--bad-bd)",
-  color: "var(--bad-tx)",
-  borderRadius: 10,
-  padding: "10px 12px",
-  fontSize: 13.5,
-  lineHeight: 1.5,
-  marginTop: 12,
-};
-
-// Deutlicher als die uebliche "KI-generiert"-Zeile (var(--cl), keine Kontur):
-// eigener Rahmen in Warnfarbe, weil dieser Block reale Fakten behauptet.
-const lageDisclaimer = {
-  display: "flex",
-  gap: 8,
-  alignItems: "flex-start",
-  marginTop: 12,
-  padding: "8px 10px",
-  borderRadius: 8,
-  background: "var(--warn-bg)",
-  border: "1px solid var(--warn-bd)",
-  color: "var(--warn-tx)",
-  fontSize: 11.5,
-  lineHeight: 1.45,
-};
-
-// ── Analyse: Staerken/Risiken/Hebel (eigener Baustein) ──────────────────────
-// War bis 2026-09-23 in die Begruendungs-Karte eingebettet (Kind-Element),
-// steht jetzt als eigener, betitelter Block - "Analyse: Was spricht dafuer,
-// was dagegen?" (Nutzer-Entscheidung 2026-09-23, Konzept-Punkt 4: "Positive
-// und negative Punkte des Objekts, und warum"). Braucht ein KI-Ergebnis
-// (staerkenVon/risikenVon/hebelTexteVon lesen aus dem gespeicherten
-// "briefing"-Ergebnis) - der Ausloeser dafuer ist die Begruendungs-Karte
-// weiter unten auf der Seite.
-// AnalyseKarte traegt seit dem Wegfall der Begruendungs-Karte (Nutzer-
-// Entscheidung 2026-09-23: "die ganze Karte inkl. Begruendungstext" weg, aber
-// "Knopf bleibt, wandert an anderen Platz") auch deren Ausloeser: Start-Knopf
-// fuer die KI-Analyse, Laden/Fehler/Einwilligung sowie "Neu berechnen" -
-// direkt an der Stelle, die dieser Knopf befuellt, statt in einer eigenen,
-// jetzt ueberfluessigen Karte darueber.
-export function AnalyseKarte({
+export function SchrittRisiken({
   ergebnis,
+  modernisierungsbedarf: m,
   t,
   laufend,
   fehlerText,
@@ -1104,71 +887,120 @@ export function AnalyseKarte({
   onBestaetigenAbbrechen,
   erstelltText,
 }) {
-  const bloecke = ergebnis
-    ? [
-        { key: "staerken", titel: L(t, "brfStaerken", "Stärken"), farbe: "gruen", einträge: staerkenVon(ergebnis) },
-        { key: "risiken", titel: L(t, "brfRisiken", "Risiken"), farbe: "rot", einträge: risikenVon(ergebnis) },
-        { key: "hebel", titel: L(t, "brfHebel", "Hebel"), farbe: "orange", einträge: hebelTexteVon(ergebnis) },
-      ].filter((b) => b.einträge.length > 0)
-    : [];
+  const [aufgeklappt, setAufgeklappt] = useState(false);
+  const risiken = ergebnis ? risikenVon(ergebnis) : [];
+  const staerken = ergebnis ? staerkenVon(ergebnis) : [];
+  const hebel = ergebnis ? hebelTexteVon(ergebnis) : [];
+  const hatAnalyse = risiken.length + staerken.length + hebel.length > 0;
+  const modText =
+    m?.verfuegbar && m.gruende.length > 0
+      ? m.gruende.map((g) => modGrundText(g, m)).join(", ")
+      : null;
 
   return (
-    <div className="bv" style={karte}>
-      <style>{CSS}</style>
-      <div style={kartenTitel}>{L(t, "brfAnalyseTitel", "Analyse: Was spricht dafür, was dagegen?")}</div>
-      {bloecke.length === 0 && !laufend && !zeigtConsent && !bestaetigen && (
-        <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--ch)", marginTop: 10 }}>
+    <section id="s4" className="bv bv-auf cockpit-s4" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+      <SchrittKopf
+        nr={4}
+        titel={L(t, "cockS4Titel", "Worauf achten")}
+        aktion={
+          hatAnalyse &&
+          !laufend && (
+            <button
+              type="button"
+              onClick={onStarten}
+              aria-label={L(t, "brfNeuBerechnenAria", "Analyse neu berechnen")}
+              style={neuBerechnenKnopf}
+            >
+              ↻
+            </button>
+          )
+        }
+      />
+
+      {!hatAnalyse && !modText && !laufend && !zeigtConsent && !bestaetigen && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--ch)", marginTop: 12 }}>
           {L(t, "brfAnalyseLeer", "Noch keine KI-Analyse zu diesem Objekt.")}
         </div>
       )}
-      {bloecke.map((b, i) => (
-        <div
-          key={b.key}
-          style={{
-            marginTop: i === 0 ? 12 : 14,
-            paddingTop: i === 0 ? 0 : 12,
-            borderTop: i === 0 ? "none" : "1px solid var(--cb)",
-          }}
-        >
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              color: STATUS_FARBEN[b.farbe].tx,
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-            }}
-          >
-            <span
-              aria-hidden="true"
-              style={{ width: 7, height: 7, borderRadius: "50%", background: STATUS_FARBEN[b.farbe].tx }}
-            />
-            {b.titel}
-          </div>
-          {b.einträge.map((e) => (
-            <div key={e.title} style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>
-                {e.title}
-                {e.value && <span style={{ color: "var(--ca)" }}> · {e.value}</span>}
-              </div>
-              {/* Die Begruendung ("und warum") ist der eigentliche Zweck
-                  dieses Bausteins (Konzept-Punkt 4) - immer sichtbar, kein
-                  Aufklapper. */}
-              <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ct)", marginTop: 2 }}>
-                {e.text}
-              </div>
-            </div>
-          ))}
-        </div>
-      ))}
 
-      {fehlerText && <div style={analyseFehlerBand}>{fehlerText}</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: hatAnalyse || modText ? 12 : 0 }}>
+        {risiken.map((r) => (
+          <div key={r.title} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <Chip farbe="rot" text={L(t, "brfRisikoChip", "Risiko")} />
+            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)" }}>{r.title}</span>
+          </div>
+        ))}
+        {staerken.map((s) => (
+          <div key={s.title} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <Chip farbe="gruen" text={L(t, "brfStaerkeChip", "Stärke")} />
+            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)" }}>
+              {s.title}
+              {s.value && <span style={{ color: "var(--ca)" }}> · {s.value}</span>}
+            </span>
+          </div>
+        ))}
+        {modText && (
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <Chip
+              farbe={m?.stufe ? MODBEDARF_FARBE[m.stufe] : "gelb"}
+              text={L(t, `brfModStufe${m?.stufe}`, MODBEDARF_LABEL[m?.stufe] || "Modernisierung")}
+            />
+            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)" }}>{modText}</span>
+          </div>
+        )}
+      </div>
+
+      {(risiken.length > 0 || staerken.length > 0 || hebel.length > 0) && (
+        <button type="button" onClick={() => setAufgeklappt((o) => !o)} aria-expanded={aufgeklappt} style={textLink}>
+          {aufgeklappt
+            ? L(t, "cockWenigerAnzeigen", "Weniger anzeigen")
+            : L(t, "cockAusfuehrlich", "Ausführliche Begründung ansehen")}
+        </button>
+      )}
+
+      {aufgeklappt && (
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 14 }}>
+          {[
+            { titel: L(t, "brfStaerken", "Stärken"), farbe: "gruen", eintraege: staerken },
+            { titel: L(t, "brfRisiken", "Risiken"), farbe: "rot", eintraege: risiken },
+            { titel: L(t, "brfHebel", "Hebel"), farbe: "orange", eintraege: hebel },
+          ]
+            .filter((b) => b.eintraege.length > 0)
+            .map((b) => (
+              <div key={b.titel}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: STATUS_FARBEN[b.farbe].tx,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: STATUS_FARBEN[b.farbe].tx }} />
+                  {b.titel}
+                </div>
+                {b.eintraege.map((e) => (
+                  <div key={e.title} style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>
+                      {e.title}
+                      {e.value && <span style={{ color: "var(--ca)" }}> · {e.value}</span>}
+                    </div>
+                    <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ct)", marginTop: 2 }}>{e.text}</div>
+                  </div>
+                ))}
+              </div>
+            ))}
+        </div>
+      )}
+
+      {fehlerText && <div style={fehlerBand}>{fehlerText}</div>}
 
       {zeigtConsent && (
-        <div style={analyseConsentBand}>
+        <div style={consentBand}>
           <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
             {L(
               t,
@@ -1177,10 +1009,10 @@ export function AnalyseKarte({
             )}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" onClick={onConsentJa} style={analyseConsentJa}>
+            <button type="button" onClick={onConsentJa} style={consentJa}>
               {L(t, "brfConsentJa", "Einverstanden, starten")}
             </button>
-            <button type="button" onClick={onConsentAbbrechen} style={analyseConsentNein}>
+            <button type="button" onClick={onConsentAbbrechen} style={consentNein}>
               {L(t, "brfConsentNein", "Abbrechen")}
             </button>
           </div>
@@ -1188,7 +1020,7 @@ export function AnalyseKarte({
       )}
 
       {bestaetigen && !zeigtConsent && (
-        <div style={analyseConsentBand}>
+        <div style={consentBand}>
           <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
             {(erstelltText
               ? L(t, "brfNeuBerechnenFrage", "Zuletzt erstellt am {datum}. Neu berechnen und die bisherige Auswertung ersetzen?")
@@ -1196,10 +1028,10 @@ export function AnalyseKarte({
             ).replace("{datum}", erstelltText || "")}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" onClick={onBestaetigenJa} style={analyseConsentJa}>
+            <button type="button" onClick={onBestaetigenJa} style={consentJa}>
               {L(t, "brfNeuBerechnenJa", "Ja, neu berechnen")}
             </button>
-            <button type="button" onClick={onBestaetigenAbbrechen} style={analyseConsentNein}>
+            <button type="button" onClick={onBestaetigenAbbrechen} style={consentNein}>
               {L(t, "brfConsentNein", "Abbrechen")}
             </button>
           </div>
@@ -1207,34 +1039,231 @@ export function AnalyseKarte({
       )}
 
       {laufend ? (
-        <div aria-busy="true" style={{ marginTop: 10, fontSize: 12.5, color: "var(--cl)" }}>
+        <div aria-busy="true" style={{ marginTop: 12, fontSize: 12.5, color: "var(--cl)" }}>
           {L(t, "brfLaeuft", "Wird berechnet …")}
         </div>
       ) : (
         !zeigtConsent &&
         !bestaetigen && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-            {erstelltText && (
-              <span style={{ ...klein, marginRight: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: hatAnalyse ? "space-between" : "flex-start", gap: 8, marginTop: 14 }}>
+            {erstelltText && hatAnalyse && (
+              <span style={klein}>
                 {L(t, "brfKiGeneriert", "KI-generiert")} · {erstelltText}
               </span>
             )}
-            <button type="button" onClick={onStarten} style={bloecke.length === 0 ? analyseKnopf : textLink}>
-              {bloecke.length === 0 ? (
-                <>
-                  <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
-                  {L(t, "brfStartKnopf", "Investment-Briefing erstellen")}
-                </>
-              ) : (
-                L(t, "brfNeuBerechnen", "↻ Neu berechnen")
-              )}
-            </button>
+            {!hatAnalyse && (
+              <button type="button" onClick={onStarten} style={analyseKnopf}>
+                <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
+                {L(t, "brfStartKnopf", "Investment-Briefing erstellen")}
+              </button>
+            )}
           </div>
         )
       )}
+    </section>
+  );
+}
+
+const neuBerechnenKnopf = {
+  width: 36,
+  height: 36,
+  border: "none",
+  background: "transparent",
+  color: "var(--ca)",
+  fontSize: 16,
+  cursor: "pointer",
+  borderRadius: 8,
+};
+
+// ── Schritt 5: Deine nächsten Schritte (Spec §4.8) ──────────────────────────
+export function LageMiniKarte({ children }) {
+  return (
+    <div style={{ borderRadius: 12, overflow: "hidden", background: "var(--ci)", border: "1px solid var(--cb)" }}>
+      <div
+        aria-hidden="true"
+        style={{
+          height: 64,
+          backgroundColor: "var(--cro)",
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent 0 23px, var(--cb) 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, var(--cb) 23px 24px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <span aria-hidden="true" style={{ fontSize: 22 }}>📍</span>
+      </div>
+      <div style={{ padding: 4 }}>{children}</div>
     </div>
   );
 }
+
+export function WeiterKachel({ titel, beschreibung, aktion, primaer }) {
+  return (
+    <div
+      style={{
+        borderRadius: 12,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        background: primaer ? "var(--ca-bg)" : "var(--ci)",
+        border: `1px solid ${primaer ? "var(--ca-bd)" : "var(--cb)"}`,
+      }}
+    >
+      <span style={{ fontSize: 14.5, fontWeight: 700, color: "var(--ct)" }}>{titel}</span>
+      {beschreibung && <span style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.45, flexGrow: 1 }}>{beschreibung}</span>}
+      {aktion}
+    </div>
+  );
+}
+
+export function primaerKnopfStyle(breit = true) {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: breit ? "100%" : "auto",
+    minHeight: 44,
+    padding: "0 16px",
+    borderRadius: 10,
+    border: "none",
+    background: "var(--ca)",
+    color: "#fff",
+    fontSize: 13.5,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  };
+}
+
+export function sekundaerKnopfStyle(breit = true) {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: breit ? "100%" : "auto",
+    minHeight: 44,
+    padding: "0 16px",
+    borderRadius: 10,
+    border: "1.5px solid var(--cb)",
+    background: "var(--cc)",
+    color: "var(--ct)",
+    fontSize: 13.5,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  };
+}
+
+// ── Baustein: Lage (KI-Einschaetzung, ohne Websuche) - bleibt weitgehend wie
+// bisher, nur ohne eigene Kartentitel-Zeile (die traegt jetzt die kompakte
+// Schritt-5-Kachel darum herum). ───────────────────────────────────────────
+export function LageInhalt({ ergebnis, laufend, fehler, consent, onStarten, onConsentJa, onConsentAbbrechen, t }) {
+  if (ergebnis) {
+    return (
+      <>
+        <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ct)", whiteSpace: "pre-line" }}>{ergebnis.text}</div>
+        <div style={lageDisclaimer}>
+          <span aria-hidden="true" style={{ fontSize: 13, flexShrink: 0 }}>⚠</span>
+          <span>
+            {L(
+              t,
+              "brfLageDisclaimer",
+              "KI-generiert aus Trainingswissen, ohne Websuche und ohne Gewähr — Angaben können veraltet oder falsch sein. Prüfe wichtige Fakten selbst nach.",
+            )}
+          </span>
+        </div>
+      </>
+    );
+  }
+  if (consent) {
+    return (
+      <div style={lageConsentBand}>
+        <div style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
+          {L(
+            t,
+            "brfLageConsentText",
+            "Für die Auswertung werden Ort, PLZ-Gebiet und Bundesland dieses Objekts an unseren KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?",
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" onClick={onConsentJa} style={{ ...consentJa, minHeight: 40 }}>
+            {L(t, "brfConsentJa", "Einverstanden, starten")}
+          </button>
+          <button type="button" onClick={onConsentAbbrechen} style={{ ...consentNein, minHeight: 40 }}>
+            {L(t, "brfConsentNein", "Abbrechen")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (laufend) {
+    return (
+      <div aria-busy="true" style={{ fontSize: 12.5, color: "var(--cl)" }}>
+        {L(t, "brfLaeuft", "Wird berechnet …")}
+      </div>
+    );
+  }
+  if (fehler) {
+    return (
+      <>
+        <div style={lageFehlerBand}>{fehler}</div>
+        <button type="button" onClick={onStarten} style={sekundaerKnopfStyle(true)}>
+          {L(t, "brfLageWiederholen", "Erneut versuchen")}
+        </button>
+      </>
+    );
+  }
+  return (
+    <>
+      <span style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.45 }}>
+        {L(t, "cockLageKurz", "Großprojekte, Wirtschaftsstruktur der Region")}
+      </span>
+      <button type="button" onClick={onStarten} style={sekundaerKnopfStyle(true)}>
+        <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
+        {L(t, "brfLageStarten", "Lage-Analyse erstellen")}
+      </button>
+    </>
+  );
+}
+
+const lageConsentBand = { background: "var(--ci)", border: "1px solid var(--cb)", borderRadius: 10, padding: "10px 12px" };
+const lageFehlerBand = {
+  background: "var(--bad-bg)",
+  border: "1px solid var(--bad-bd)",
+  color: "var(--bad-tx)",
+  borderRadius: 10,
+  padding: "8px 10px",
+  fontSize: 12.5,
+  lineHeight: 1.45,
+};
+const lageDisclaimer = {
+  display: "flex",
+  gap: 8,
+  alignItems: "flex-start",
+  padding: "8px 10px",
+  borderRadius: 8,
+  background: "var(--warn-bg)",
+  border: "1px solid var(--warn-bd)",
+  color: "var(--warn-tx)",
+  fontSize: 11,
+  lineHeight: 1.4,
+};
+
+const textLink = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  color: "var(--ca)",
+  fontSize: 13,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  minHeight: 44,
+  textAlign: "left",
+  marginTop: 12,
+};
 
 const analyseKnopf = {
   display: "inline-flex",
@@ -1251,19 +1280,7 @@ const analyseKnopf = {
   fontFamily: "inherit",
 };
 
-const textLink = {
-  background: "none",
-  border: "none",
-  padding: 0,
-  color: "var(--ca)",
-  fontSize: 13.5,
-  fontWeight: 600,
-  cursor: "pointer",
-  fontFamily: "inherit",
-  minHeight: 44,
-};
-
-const analyseConsentBand = {
+const consentBand = {
   background: "var(--ci)",
   border: "1px solid var(--cb)",
   borderRadius: 12,
@@ -1271,17 +1288,30 @@ const analyseConsentBand = {
   marginTop: 12,
 };
 
-const analyseConsentJa = { ...analyseKnopf, marginTop: 0 };
+const consentJa = {
+  display: "inline-flex",
+  alignItems: "center",
+  height: 44,
+  padding: "0 16px",
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 13.5,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
 
-const analyseConsentNein = {
-  ...analyseConsentJa,
+const consentNein = {
+  ...consentJa,
   background: "var(--cc)",
   color: "var(--ct)",
   border: "1.5px solid var(--cb)",
   fontWeight: 600,
 };
 
-const analyseFehlerBand = {
+const fehlerBand = {
   background: "var(--bad-bg)",
   border: "1px solid var(--bad-bd)",
   color: "var(--bad-tx)",
@@ -1292,20 +1322,15 @@ const analyseFehlerBand = {
   marginTop: 12,
 };
 
-// BegruendungsKarte()/RegelZeile()/begruendungsSatz()/BEGR_TEXT ("Block 7:
-// Warum diese Einschaetzung") sind mit dem Objektseiten-Umbau entfallen
-// (Nutzer-Entscheidung 2026-09-23: "die ganze Karte inkl. Begruendungstext"
-// weg) - der Start-Knopf fuer die KI-Analyse, den diese Karte trug, sitzt
-// jetzt direkt in AnalyseKarte oben. briefing.begruendung selbst bleibt in
-// briefing.js bestehen (wird fuer den KI-Prompt gebraucht, siehe
-// briefingZahlen()), nur die Anzeige des Regel-Satzes ist entfallen.
-
-// HerkunftChip()/AnnahmenListe() ("Block 10: Annahmen") sind mit dem
-// Objektseiten-Neubau entfallen (Nutzer-Entscheidung 2026-09-22) - kein
-// eigener Baustein, das Konzept sieht Feld-Confidence in Baustein 2 vor,
-// nicht als eigenes Akkordeon auf der Objektseite.
-
-// StickyUrteil ist mit dem Entfernen der Handlungsempfehlung (Baustein 7,
-// Nutzer-Entscheidung 2026-09-23) entfallen - sie zeigte nur eine
-// kondensierte Version von EmpfehlungsKopf beim Scrollen, es gibt jetzt
-// nichts mehr, das sie zusammenfassen koennte.
+// ScoreKopf (Baustein 1) und EmpfehlungsKopf (Baustein 7) waren bereits vor
+// diesem Redesign entfernt (Nutzer-Entscheidungen 2026-09-23) und blieben es -
+// der Score kommt mit diesem Redesign nur in die Kennzahlen-Leiste zurueck
+// (KennzahlenLeiste oben), nicht als eigener Urteils-Kopf.
+//
+// MarktVergleich/Balken/MarktKarte/FaktorKachel, Kernkennzahlen/KernKachel,
+// BenchmarkKarte (Alternativanlagen), SpannenKarte/SpannenZeile und
+// AnalyseKarte/ModernisierungsbedarfKarte als eigene Karten sind mit diesem
+// Redesign (docs/technical_specs/objekt-detailseite-redesign.md) entfallen -
+// ihre Daten leben unveraendert in briefing.js/investmentScore.js weiter,
+// nur die Darstellung ist durch die Schritte 1-5 oben ersetzt. Alternativ-
+// anlagen-Vergleich ist in der neuen Spec an keiner Stelle mehr vorgesehen.

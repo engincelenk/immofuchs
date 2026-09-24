@@ -1,19 +1,18 @@
-// Investment-Briefing - die Objektseite (docs/technical_specs/
-// objektseite-vereinfachung-2026-09-23.md). Vereinfacht fuer unerfahrene
-// Investoren: KEIN Urteils-Kopf mehr (weder Score-Ampel noch
-// Handlungsempfehlung, Nutzer-Entscheidungen 2026-09-23) - die Seite startet
-// direkt mit den Kernzahlen. Risiko-Szenarien (Stresstest/Flaggen) sind
-// ebenfalls entfernt. Die Rechenkerne (investmentScore.js,
-// briefingEmpfehlung(), briefingStresstest() etc.) bleiben unangetastet
-// bestehen, nur ihre Anzeige auf dieser Seite entfaellt.
+// Investment-Briefing - die Objektseite. Seit 2026-09-24 im Layout
+// "Geführtes Cockpit" (docs/technical_specs/objekt-detailseite-redesign.md,
+// Variante D): Antwortsatz + Kennzahlen-Leiste zuerst, dann 5 nummerierte
+// Schritte statt einzelner freistehender Karten. Nur die DARSTELLUNG ist
+// neu - alle Zahlen kommen unveraendert aus briefing.js (berechneBriefing()),
+// keine Aenderung an Berechnungen oder KI-Prompts.
 //
-// Grundprinzip: "Zahlen aus der Engine, Worte von der KI". Alle Zahlen sind
-// IMMER live aus briefing.js berechnet, unabhaengig davon, ob und wann
-// zuletzt ein KI-Aufruf lief - nur der Urteilssatz und das erste
-// Hebel-Argument kommen aus dem gespeicherten Ergebnis.
+// Grundprinzip bleibt: "Zahlen aus der Engine, Worte von der KI". Alle
+// Zahlen sind IMMER live aus briefing.js berechnet, unabhaengig davon, ob
+// und wann zuletzt ein KI-Aufruf lief - nur der Analyse-Text (Schritt 4)
+// kommt aus dem gespeicherten Ergebnis.
 import { useMemo, useState } from "react";
 import { alter, ergebnisFuer, istVeraltet, veraltetText } from "../../utils/aiEngine.js";
 import { berechneBriefing } from "../../utils/briefing.js";
+import { cockpitGroessterHebel, cockpitUnterzeile } from "../../utils/objektCockpit.js";
 import {
   regionalLandeswert,
   regionalPreis,
@@ -21,15 +20,22 @@ import {
   regionalVerlauf,
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
+import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import {
-  AnalyseKarte,
-  BenchmarkKarte,
+  AntwortsatzKopf,
+  CockpitStyle,
   EingabeHinweis,
-  Kernkennzahlen,
-  LageKarte,
-  MarktKarte,
-  ModernisierungsbedarfKarte,
-  SpannenKarte,
+  KennzahlenLeiste,
+  LageInhalt,
+  LageMiniKarte,
+  SchrittKosten,
+  SchrittMarkt,
+  SchrittNav,
+  SchrittRisiken,
+  SchrittStellschrauben,
+  WeiterKachel,
+  primaerKnopfStyle,
+  sekundaerKnopfStyle,
 } from "./BriefingVisuals.jsx";
 
 export function InvestmentBriefing({
@@ -44,10 +50,8 @@ export function InvestmentBriefing({
   onStarten,
   onConsentJa,
   onConsentAbbrechen,
-  // Baustein "Lage" (KI-Einschaetzung, §8, ohne Websuche - siehe
-  // modelRouter.ts callLageModel()) - eigener kleiner Ablauf,
-  // Zustand und Aufrufe kommen aus ObjektDetail.jsx (starteLage() /
-  // einwilligenUndStartenLage()).
+  // Baustein "Lage" (KI-Einschaetzung, ohne Websuche) - eigener kleiner
+  // Ablauf, Zustand und Aufrufe kommen aus ObjektDetail.jsx.
   lageErgebnis = null,
   lageLaufend = false,
   lageFehler = null,
@@ -55,11 +59,13 @@ export function InvestmentBriefing({
   onLageStarten,
   onLageConsentJa,
   onLageConsentAbbrechen,
-  // Lage-Adresskarte von der Objektseite (bleibt, kein eigener Baustein -
-  // Nutzer-Entscheidung 2026-09-22; nicht zu verwechseln mit der KI-Lage-
-  // Karte oben, die dieselbe Fachdomaene, aber eine andere Komponente ist).
-  detailsExtra = null,
+  // Handout (Schritt 5.3): einziger CTA jetzt hier - startet direkt, wenn
+  // noch kein Ergebnis vorliegt, sonst Sprung zur bestehenden, unveraenderten
+  // AiEngine-Karte weiter unten auf der Seite (siehe ObjektDetail.jsx).
+  handoutErgebnis = null,
+  onHandoutKlick,
   onBearbeiten = null,
+  onRenditerechner,
 }) {
   const [bestaetigen, setBestaetigen] = useState(false);
   const ergebnis = ergebnisFuer(objekt, "briefing");
@@ -81,7 +87,17 @@ export function InvestmentBriefing({
     [data, t, regGeladen],
   );
 
-  function handleStart() {
+  const cashflowHeute = briefing.R.cf2MitSt;
+  const cashflowVorSteuer = briefing.kernzahlen.find((k) => k.key === "monatlich")?.vorSteuer ?? null;
+  const groessterHebel = useMemo(
+    () => cockpitGroessterHebel(data, t, briefing.spannen, cashflowHeute),
+    [data, t, briefing.spannen, cashflowHeute],
+  );
+  const v1 = briefing.vergleiche.find((v) => v.id === "v1");
+  const v2 = briefing.vergleiche.find((v) => v.id === "v2");
+  const unterzeile = cockpitUnterzeile(v1, v2);
+
+  function handleAnalyseStart() {
     if (ergebnis) {
       setBestaetigen(true);
       return;
@@ -91,25 +107,22 @@ export function InvestmentBriefing({
 
   const erstelltText = ergebnis ? alter(ergebnis, locale) : null;
 
-  // Ohne PLZ gibt es keinen Kreis und damit keinen einzigen Marktvergleich
-  // (§7.1). Der Vergleich-Block, der Ausblick und die Faktor-Flagge
-  // entfallen dann ganz, statt als leere Huelle dazustehen (§25).
+  // Ohne PLZ gibt es keinen Kreis und damit keinen Marktvergleich (Schritt 2
+  // entfaellt dann inhaltlich von selbst, siehe SchrittMarkt).
   const ohnePlz = !String(data?.plz || "").trim();
 
   return (
     <div style={{ marginTop: 12 }}>
+      <CockpitStyle />
+
       {veraltet && (
         <div style={veraltetBand}>
           ⟳ {t.brfVeraltet || "Veraltet"} · {veraltetText(ergebnis, data, locale)}
         </div>
       )}
 
-      {/* Baustein 2: Hinweis zur Datengrundlage - nur bei duenner
-          Datenlage sichtbar (siehe EingabeHinweis in BriefingVisuals.jsx). */}
       <EingabeHinweis data={data} t={t} />
 
-      {/* Hinweis ohne PLZ: kein Marktvergleich moeglich, mit dem direkten
-          Weg zum Nachtragen. */}
       {ohnePlz && (
         <div style={ohnePlzBand}>
           <span>{t.brfOhnePlz || "Ohne PLZ kein Vergleich mit dem Markt."}</span>
@@ -121,71 +134,123 @@ export function InvestmentBriefing({
         </div>
       )}
 
-      {/* ── Baustein 3: Kernzahlen (unveraendert) ── */}
-      <Kernkennzahlen kennzahlen={briefing.kernkennzahlen} t={t} />
+      <AntwortsatzKopf cashflow={cashflowHeute} unterzeile={unterzeile} t={t} />
+      <KennzahlenLeiste score={briefing.score} kennzahlen={briefing.kernkennzahlen} t={t} />
+      <SchrittNav t={t} />
 
-      {/* ── Analyse: Staerken/Risiken/Hebel, eigener Baustein. Traegt seit
-          2026-09-23 auch den Ausloeser (Start/Laden/Fehler/Einwilligung/
-          Neu berechnen) - die vormalige eigene Begruendungs-Karte darueber
-          ist entfallen, siehe AnalyseKarte in BriefingVisuals.jsx. ── */}
-      <AnalyseKarte
-        ergebnis={ergebnis}
-        t={t}
-        laufend={laufend}
-        fehlerText={fehlerText}
-        zeigtConsent={zeigtConsent}
-        bestaetigen={bestaetigen}
-        onStarten={handleStart}
-        onConsentJa={onConsentJa}
-        onConsentAbbrechen={onConsentAbbrechen}
-        onBestaetigenJa={() => {
-          setBestaetigen(false);
-          onStarten();
-        }}
-        onBestaetigenAbbrechen={() => setBestaetigen(false)}
-        erstelltText={erstelltText}
-      />
+      <div className="cockpit-schritte">
+        <SchrittKosten briefing={briefing} cashflowVorSteuer={cashflowVorSteuer} t={t} />
 
-      {/* ── Baustein 4: Vergleich ── */}
-      {!ohnePlz && <MarktKarte briefing={briefing} t={t} />}
-      <BenchmarkKarte alternativanlage={briefing.alternativanlage} t={t} />
-      <SpannenKarte spannen={briefing.spannen} t={t} />
-      <ModernisierungsbedarfKarte modernisierungsbedarf={briefing.modernisierungsbedarf} t={t} />
+        {!ohnePlz && <SchrittMarkt briefing={briefing} t={t} />}
 
-      {/* ── Baustein: Lage (KI-Einschaetzung, §8, ohne Websuche) ── */}
-      <LageKarte
-        ergebnis={lageErgebnis}
-        laufend={lageLaufend}
-        fehler={lageFehler}
-        consent={lageConsent}
-        onStarten={onLageStarten}
-        onConsentJa={onLageConsentJa}
-        onConsentAbbrechen={onLageConsentAbbrechen}
-        t={t}
-      />
+        <SchrittStellschrauben
+          spannen={briefing.spannen}
+          groessterHebel={groessterHebel}
+          onEintragen={onBearbeiten}
+          t={t}
+        />
 
-      {/* ── Besichtigungs-Handout (bleibt, kein Baustein) ── */}
-      <div style={{ textAlign: "center", marginTop: 12 }}>
-        <button
-          type="button"
-          onClick={() =>
-            document.getElementById("ai-sektion-vorbereiten")?.scrollIntoView({ behavior: "smooth" })
-          }
-          style={handoutLink}
-        >
-          {t.brfHandoutLink || "Fragen für die Besichtigung erstellen"}
-        </button>
+        <SchrittRisiken
+          ergebnis={ergebnis}
+          modernisierungsbedarf={briefing.modernisierungsbedarf}
+          t={t}
+          laufend={laufend}
+          fehlerText={fehlerText}
+          zeigtConsent={zeigtConsent}
+          bestaetigen={bestaetigen}
+          onStarten={handleAnalyseStart}
+          onConsentJa={onConsentJa}
+          onConsentAbbrechen={onConsentAbbrechen}
+          onBestaetigenJa={() => {
+            setBestaetigen(false);
+            onStarten();
+          }}
+          onBestaetigenAbbrechen={() => setBestaetigen(false)}
+          erstelltText={erstelltText}
+        />
+
+        <section id="s5" className="cockpit-s5" style={{ marginTop: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <span
+              aria-hidden="true"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                background: "var(--ca)",
+                color: "#fff",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 13,
+                fontWeight: 800,
+                flexShrink: 0,
+              }}
+            >
+              5
+            </span>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--ct)" }}>
+              {t.cockS5Titel || "Deine nächsten Schritte"}
+            </h2>
+          </div>
+
+          <div className="cockpit-weiter-grid">
+            <LageMiniKarte>
+              <ObjektLage data={data} titel={objekt.title} />
+            </LageMiniKarte>
+
+            <WeiterKachel
+              titel={t.cockLageTitel || "Lage prüfen"}
+              aktion={
+                <LageInhalt
+                  ergebnis={lageErgebnis}
+                  laufend={lageLaufend}
+                  fehler={lageFehler}
+                  consent={lageConsent}
+                  onStarten={onLageStarten}
+                  onConsentJa={onLageConsentJa}
+                  onConsentAbbrechen={onLageConsentAbbrechen}
+                  t={t}
+                />
+              }
+            />
+
+            <WeiterKachel
+              titel={t.cockHandoutTitel || "Besichtigung vorbereiten"}
+              beschreibung={
+                handoutErgebnis
+                  ? t.cockHandoutBeschreibungFertig || "Deine Fragen für den Termin liegen bereit."
+                  : t.cockHandoutBeschreibung || "Fragen für den Termin, aus deinen Auswertungen"
+              }
+              aktion={
+                <button type="button" onClick={onHandoutKlick} style={sekundaerKnopfStyle(true)}>
+                  {handoutErgebnis
+                    ? t.cockHandoutAnsehen || "Handout ansehen"
+                    : t.cockHandoutErstellen || "Handout erstellen"}
+                </button>
+              }
+            />
+
+            <WeiterKachel
+              titel={t.cockRechnerTitel || "Szenarien durchrechnen"}
+              beschreibung={t.cockRechnerBeschreibung || "Miete, Preis und Eigenkapital selbst verändern"}
+              primaer
+              aktion={
+                <button type="button" onClick={onRenditerechner} style={primaerKnopfStyle(true)}>
+                  {t.objImRechner || "Im Renditerechner öffnen"}
+                </button>
+              }
+            />
+          </div>
+
+          <p style={{ margin: "14px 0 0", fontSize: 12, color: "var(--ch)" }}>
+            {t.brfKiDisclaimer || "Texte der AI-Engine sind KI-generiert und ersetzen keine Beratung."}
+          </p>
+        </section>
       </div>
-
-      {/* ── Lage (bleibt, kein Baustein) ── */}
-      {detailsExtra}
     </div>
   );
 }
-
-// EbeneVierBlock (Staerken/Risiken/Hebel) ist nach BriefingVisuals.jsx
-// umgezogen und heisst dort AnalyseKarte - eigener Baustein statt
-// eingebettet in die Begruendung (Nutzer-Entscheidung 2026-09-23).
 
 const veraltetBand = {
   background: "var(--warn-bg)",
@@ -199,8 +264,6 @@ const veraltetBand = {
   marginBottom: 8,
 };
 
-// Hinweisband ohne PLZ (§22). Bewusst --info-*, nicht --warn-*: eine fehlende
-// PLZ ist kein Risiko des Objekts, sondern eine Luecke in den Eingaben.
 const ohnePlzBand = {
   display: "flex",
   alignItems: "center",
@@ -228,16 +291,4 @@ const ohnePlzKnopf = {
   fontWeight: 700,
   fontFamily: "inherit",
   cursor: "pointer",
-};
-
-const handoutLink = {
-  background: "none",
-  border: "none",
-  padding: 0,
-  color: "var(--ca)",
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: "pointer",
-  fontFamily: "inherit",
-  minHeight: 44,
 };
