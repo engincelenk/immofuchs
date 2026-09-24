@@ -152,7 +152,13 @@ export function InvestmentBriefing({
       <SchrittNav t={t} />
 
       <div className="cockpit-schritte">
-        <SchrittKosten briefing={briefing} cashflowVorSteuer={cashflowVorSteuer} t={t} />
+        <SchrittKosten
+          briefing={briefing}
+          data={data}
+          cashflowVorSteuer={cashflowVorSteuer}
+          onEintragen={onBearbeiten}
+          t={t}
+        />
 
         {!ohnePlz && <SchrittMarkt briefing={briefing} t={t} />}
 

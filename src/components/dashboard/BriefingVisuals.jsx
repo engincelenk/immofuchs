@@ -407,14 +407,30 @@ function ZeilePaar({ label, wert, borderTop }) {
   );
 }
 
-// ── Schritt 1: Was dich das Objekt kostet (Spec §4.4) ───────────────────────
-export function SchrittKosten({ briefing, cashflowVorSteuer, t }) {
+// ── Schritt 1: Was dich das Objekt kostet ───────────────────────────────────
+// Finanzierungsblock (Nutzer-Vorgabe 2026-09-24): Rate, Zins-/Tilgungs-
+// Anteil, Zinssatz/Tilgungssatz, Darlehenssumme, Eigenkapital - alles
+// bestehende Werte aus computeRendite() (briefing.R) bzw. dem Formular-State
+// (data), keine neue Berechnung.
+const finanzZeile = { fontSize: 12.5, color: "var(--ch)" };
+const finanzWert = { fontWeight: 700, color: "var(--ct)", fontVariantNumeric: "tabular-nums" };
+
+export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, t }) {
   const kennzahlen = briefing?.kernkennzahlen;
   const cash = kennzahlen?.find((k) => k.key === "cashflow");
   const netto = kennzahlen?.find((k) => k.key === "nettorendite");
   if (!cash) return null;
   const negativ = cash.wert < 0;
   const jahr = cockpitCashflowJahr(cash.wert);
+
+  const R = briefing?.R;
+  const zinssatz = +data?.zinssatz || 0;
+  const tilgungssatz = +data?.tilgung || 0;
+  const rate = R?.rateJ1 > 0 ? R.rateJ1 : null;
+  const bankDarlehen = R?.bankDa > 0 ? R.bankDa : null;
+  const kfwDarlehen = R?.kfwDa > 0 ? R.kfwDa : null;
+  const eigenkapital = +data?.eigenkapital || 0;
+  const zeigtFinanzierung = rate != null || bankDarlehen != null || eigenkapital > 0 || onEintragen;
 
   return (
     <section id="schritt-kosten" className="bv bv-auf cockpit-s1" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
@@ -454,6 +470,62 @@ export function SchrittKosten({ briefing, cashflowVorSteuer, t }) {
       {netto && (
         <div className="cockpit-nur-desktop">
           <ZeilePaar label={L(t, "brfKernnettorendite", "Nettomietrendite")} wert={wertText(netto.wert, "prozent")} borderTop />
+        </div>
+      )}
+
+      {zeigtFinanzierung && (
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "var(--ch)" }}>
+            {L(t, "cockFinanzierungTitel", "Finanzierung")}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+            {rate != null && (
+              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
+                <span>{L(t, "cockRate", "Monatliche Rate")}</span>
+                <span style={finanzWert}>{wertText(rate, "eurMonat")}</span>
+              </div>
+            )}
+            {rate != null && R.z1 != null && R.t1 != null && (
+              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
+                <span>{L(t, "cockZinsTilgungAnteil", "davon Zins / Tilgung")}</span>
+                <span style={finanzWert}>
+                  {wertText(R.z1, "eurMonat")} / {wertText(R.t1, "eurMonat")}
+                </span>
+              </div>
+            )}
+            {(zinssatz > 0 || tilgungssatz > 0) && (
+              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
+                <span>{L(t, "cockZinsTilgungssatz", "Zinssatz / Tilgung")}</span>
+                <span style={finanzWert}>
+                  {fmt(zinssatz, 2)} % / {fmt(tilgungssatz, 2)} %
+                </span>
+              </div>
+            )}
+            {bankDarlehen != null && (
+              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
+                <span>{L(t, "cockDarlehen", "Darlehenssumme")}</span>
+                <span style={finanzWert}>{wertText(bankDarlehen, "eurMonat")}</span>
+              </div>
+            )}
+            {kfwDarlehen != null && (
+              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
+                <span>{L(t, "cockDarlehenKfw", "davon KfW-Darlehen")}</span>
+                <span style={finanzWert}>{wertText(kfwDarlehen, "eurMonat")}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
+              <span>{L(t, "cockEigenkapital", "Eigenkapital")}</span>
+              {eigenkapital > 0 ? (
+                <span style={finanzWert}>{wertText(eigenkapital, "eurMonat")}</span>
+              ) : onEintragen ? (
+                <button type="button" onClick={onEintragen} style={eintragenLink}>
+                  {L(t, "cockEintragen", "Eintragen →")}
+                </button>
+              ) : (
+                <span style={{ color: "var(--ch)" }}>—</span>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </section>

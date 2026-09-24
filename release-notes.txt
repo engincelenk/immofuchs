@@ -1,3 +1,19 @@
+## 2026-09-24 (1.100.10)
+
+### Schritt 1 "Was dich das Objekt kostet": Finanzierungsblock
+
+Nutzer-Vorgabe (nach Rückfrage/Vorschlag): unter Cashflow und Nettomiet-
+rendite steht jetzt ein Finanzierungsblock - monatliche Rate, davon Zins/
+Tilgung (Jahr 1), Zinssatz/anfänglicher Tilgungssatz, Darlehenssumme (+ KfW
+separat, falls vorhanden), Eigenkapital (mit "Eintragen →", falls leer - wie
+in Schritt 3). Alles bestehende Werte aus computeRendite() (briefing.R) bzw.
+dem Formular-State, keine neue Berechnung. Kaufnebenkosten/Gesamtinvestition
+bewusst weggelassen (Vorschlag angenommen: sprengt die Kachel, gehört in den
+Renditerechner).
+
+- src/components/dashboard/BriefingVisuals.jsx: SchrittKosten() erweitert.
+- InvestmentBriefing.jsx: `data`/`onEintragen` an SchrittKosten durchgereicht.
+
 ## 2026-09-24 (1.100.9)
 
 ### Objektseite: vier Nutzer-Korrekturen
