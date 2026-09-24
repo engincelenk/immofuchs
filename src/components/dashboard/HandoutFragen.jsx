@@ -160,32 +160,39 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
     }
   };
 
+  const anteil = alleIds.length > 0 ? Math.round((auswahl.size / alleIds.length) * 100) : 0;
+
   return (
-    <div style={{ marginTop: 12 }}>
-      <div style={kopfZeile}>
-        <button
-          type="button"
-          onClick={() => setOffen((o) => !o)}
-          aria-expanded={offen}
-          style={{
-            ...textLink,
-            ...gruppenTitel,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            marginBottom: 0,
-            color: "var(--cl)",
-          }}
-        >
-          <span aria-hidden="true">{offen ? "▴" : "▾"}</span>
-          Fragen für den Termin · {auswahl.size} von {alleIds.length} gewählt
+    <div style={{ marginTop: 14 }}>
+      {/* Fortschrittszeile (objekt-detailseite-redesign.md, Variante E §5):
+          Meter + Zaehler links, Auf-/Zuklappen rechts - ersetzt den fruehren
+          reinen Text-Umschalter. `offen` selbst bleibt unveraendert (Default
+          weiterhin AUF, siehe useState oben - die Fragen sind das bezahlte
+          Produkt und sollen nicht hinter einem Klick verschwinden). */}
+      <div style={fortschrittZeile}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, flexGrow: 1, minWidth: 0 }}>
+          <strong style={{ fontSize: 13.5, color: "var(--ct)" }}>Fragen für den Termin</strong>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={meterTrack}>
+              <span style={{ display: "block", height: 6, borderRadius: 3, background: "var(--ca)", width: `${anteil}%` }} />
+            </div>
+            <span style={{ fontSize: 12.5, color: "var(--cl)", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+              {auswahl.size} von {alleIds.length} gewählt
+            </span>
+          </div>
+        </div>
+        <button type="button" onClick={() => setOffen((o) => !o)} aria-expanded={offen} style={knopf}>
+          {offen ? "Fragen ausblenden" : "Fragen auswählen"}
         </button>
-        {offen && alleIds.length > 0 && (
+      </div>
+
+      {offen && alleIds.length > 0 && (
+        <div style={{ marginTop: 10 }}>
           <button type="button" onClick={toggleAlle} style={textLink}>
             {alleGewaehlt ? "Auswahl aufheben" : "Alle wählen"}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {offen && (
         <>
@@ -201,13 +208,14 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
           Der PDF-Knopf bleibt AUCH im zugeklappten Zustand sichtbar: das
           Handout zuzuklappen heisst "Liste wegraeumen", nicht "Produkt
           wegraeumen" - der Weg zum Dokument darf dadurch nicht verschwinden. */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+      <div style={{ marginTop: 12 }}>
         <button
           type="button"
           onClick={pdfOeffnen}
           disabled={auswahl.size === 0}
           style={{
             ...knopf,
+            width: "100%",
             opacity: auswahl.size === 0 ? 0.5 : 1,
             cursor: auswahl.size === 0 ? "default" : "pointer",
           }}
@@ -217,7 +225,7 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
           PDF für die Besichtigung
         </button>
         {auswahl.size === 0 && (
-          <span style={{ fontSize: 12.5, color: "var(--cl)" }}>
+          <span style={{ display: "block", marginTop: 6, fontSize: 12.5, color: "var(--cl)" }}>
             Mindestens eine Frage auswählen.
           </span>
         )}
@@ -273,12 +281,23 @@ const gruppenTitel = {
   fontWeight: 600,
 };
 
-const kopfZeile = {
+const fortschrittZeile = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
+  gap: 12,
+  padding: "12px 14px",
+  borderRadius: 10,
+  background: "var(--ci)",
   flexWrap: "wrap",
+};
+
+const meterTrack = {
+  flexGrow: 1,
+  height: 6,
+  borderRadius: 3,
+  background: "var(--cro)",
+  maxWidth: 160,
 };
 
 // Die ganze Zeile ist die Trefferflaeche, nicht nur das Kaestchen: 11 px

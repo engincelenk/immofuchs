@@ -139,10 +139,3 @@ export function cockpitMarktSatz(v, art) {
   return v.abw > 0 ? gruppe.ueber(abwText) : gruppe.unter(abwText);
 }
 
-// Nur im "neutral"-Fall angehaengt, weil der Satz dort keine Zahl nennt
-// (siehe oben) - in den anderen Faellen stuende die Prozentzahl doppelt da.
-export function cockpitMarktZusatzProzent(v) {
-  if (!v || v.abw == null || !isFinite(v.abw) || v.status !== "neutral") return "";
-  const vz = v.abw > 0 ? "+" : v.abw < 0 ? "−" : "";
-  return ` · ${vz}${fmt(Math.abs(v.abw), 0)} %`;
-}

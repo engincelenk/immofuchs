@@ -1,3 +1,46 @@
+## 2026-09-24 (1.100.8)
+
+### Objektseite: an Vorlage "Variante E" angeglichen
+
+Nutzer-Vorgabe: komplette HTML-Vorlage geliefert ("genau so, nicht anders").
+Die Objektseite wurde strukturell nachgebaut, alle Werte bleiben unveraendert
+aus briefing.js/investmentScore.js. Wesentliche Aenderungen gegenueber dem
+vorherigen Stand:
+
+- Kopf: Zurueck-Link jetzt eigene Zeile (nur Desktop), Bearbeiten+Primaer-
+  knopf rechts im Kopf (Primaerknopf nur Desktop, siehe mobile Leiste unten).
+  Vollstaendigkeits-Ring entfallen (in der Vorlage nicht vorgesehen).
+- Schritt-Navigation: IDs jetzt volle Woerter (schritt-kosten … schritt-
+  weiter statt s1…s5), aktiver Schritt visuell gefuellt (Klick-Zustand,
+  weiterhin kein Scroll-Spy).
+- Schritt 2 (Markt): jede Zeile jetzt Icon-Kreis (SVG, ✓/↑/⚠) + Fliesssatz +
+  Chip + zwei beschriftete Balken ("Du"/"Markt", Laenge ∝ Wert) - ersetzt die
+  Icon-Zeilen-Fassung vom Vortag (1.100.7).
+- Schritt 4 (Risiken): aufgeklappter Text jetzt eine flache Liste ("Titel.
+  Text") ohne Stärken/Risiken/Hebel-Zwischenueberschriften.
+- Schritt 5: nur noch 2 Karten statt 4 Kacheln - "Lage" (Kartenflaeche +
+  Adresse + Lage-Analyse-KI in EINER Karte, mit Zeilen-Clamp/"Weiterlesen"
+  ab ~260 Zeichen) und "Besichtigung vorbereiten" (die AiEngine-Karte sitzt
+  jetzt DIREKT hier statt in einer separaten Sektion weiter unten - EIN
+  Ort statt zwei Ansichtspunkte fuer das Handout, loest die in 1.100.6
+  benannte Einschraenkung auf).
+- Breakpoint fuer diese Seite jetzt 768px (vorher 1280px+600px Hoehe wie
+  sonst im Projekt ueblich) - explizite Nutzer-Vorgabe, weicht bewusst vom
+  Rest der App ab.
+- Fixierte Leiste unten nur mobil (Renditerechner-Knopf), positioniert
+  oberhalb der bestehenden Tableiste (.tbar-wrap) statt sie zu ueberlagern.
+
+Dateien: src/utils/objektCockpit.js (cockpitMarktSatz ersetzt
+cockpitMarktUeberschrift), src/components/dashboard/BriefingVisuals.jsx
+(Schritt 2/4/5 neu, Breakpoint, Kennzahlen-Leiste: Meter/Zusatz nur Desktop,
+Kaufpreisfaktor-Hinweis rot bei ueber Markt), InvestmentBriefing.jsx (Schritt
+5 neu komponiert, AiEngine eingebettet), ObjektDetail.jsx (Kopf/Fusszeile,
+neue AiEngine-Props durchgereicht), AiEngine.jsx ("↻ Neu" jetzt Icon-Knopf
+oben, kein Gruppentitel/eigene Fusszeile mehr - lebt jetzt in Schritt 5),
+HandoutFragen.jsx (Fortschrittszeile mit Meter statt Text-Umschalter, PDF-
+Knopf volle Breite), ObjektUnterlagen.jsx (ObjektLage: neue Prop
+`eingebettet` fuer die kombinierte Lage-Karte).
+
 ## 2026-09-24 (1.100.7)
 
 ### Schritt 2 (Markt): Icon-Zeilen statt Abweichungs-Track

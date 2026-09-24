@@ -101,11 +101,16 @@ export function AiEngine({
     onStarten(produkt.id);
   };
 
+  // Kein Gruppentitel und keine eigene Fusszeile mehr (objekt-detailseite-
+  // redesign.md, Variante E): die Engine sitzt jetzt direkt als "Besichtigung
+  // vorbereiten"-Karte in Schritt 5 der Objektseite, deren Kopf und
+  // Disclaimer-Zeile (InvestmentBriefing.jsx) das schon uebernehmen. Die
+  // Gruppen-Struktur (GRUPPEN) bleibt bestehen, falls spaeter ein zweites
+  // Produkt dazukommt - nur ihr Titel wird hier nicht mehr gerendert.
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {GRUPPEN.map((gruppe) => (
         <div key={gruppe.id}>
-          <div style={gruppenTitel}>{gruppe.titel}</div>
           <div className="objekt-raster">
             {gruppe.produkte.map((id) => {
               const produkt = AI_PRODUKTE.find((p) => p.id === id);
@@ -144,10 +149,6 @@ export function AiEngine({
           </div>
         </div>
       ))}
-
-      <div style={{ fontSize: 11, color: "var(--cl)", lineHeight: 1.5 }}>
-        Texte der AI-Engine sind KI-generiert und ersetzen keine Beratung.
-      </div>
     </div>
   );
 }
@@ -209,17 +210,29 @@ function ProduktZeile({
 
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--ct)" }}>
+          <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "var(--ct)" }}>
             {produkt.titel}
           </span>
           {(zustand === "fertig" || zustand === "veraltet") && (
-            <span style={{ display: "block", fontSize: 11, color: "var(--cl)", marginTop: 4 }}>
+            <span style={{ display: "block", fontSize: 12, color: "var(--cl)", marginTop: 4 }}>
               KI-generiert · {alter(ergebnis, locale)}
             </span>
           )}
         </span>
         {!proAktiv && (
           <span style={{ ...preisChip, opacity: gesperrt ? 0.5 : 1 }}>Pro</span>
+        )}
+        {/* "Neu" jetzt als Icon-Knopf oben rechts (objekt-detailseite-
+            redesign.md, Variante E) statt als Textlink am Kartenende. */}
+        {(zustand === "fertig" || zustand === "veraltet") && (
+          <button
+            type="button"
+            onClick={onStarten}
+            aria-label="Neu erstellen"
+            style={neuIconKnopf}
+          >
+            ↻
+          </button>
         )}
       </div>
 
@@ -272,19 +285,18 @@ function ProduktZeile({
               summaryVon() liest sowohl das neue Schema (summary) als auch das
               alte (kernaussage) - die Kopfzeile bleibt also auch fuer alte,
               noch nicht neu berechnete Ergebnisse sinnvoll. */}
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <span
-              style={{
-                width: 3,
-                flexShrink: 0,
-                borderRadius: 2,
-                background: zustand === "veraltet" ? "var(--warn-bd)" : KI,
-              }}
-            />
-            <span style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ct)" }}>
-              {summaryVon(ergebnis) || "Ergebnis liegt vor."}
-            </span>
-          </div>
+          <p
+            style={{
+              margin: "12px 0 0",
+              paddingLeft: 12,
+              borderLeft: `2px solid ${zustand === "veraltet" ? "var(--warn-bd)" : "var(--cb)"}`,
+              fontSize: 13.5,
+              lineHeight: 1.55,
+              color: "var(--ch)",
+            }}
+          >
+            {summaryVon(ergebnis) || "Ergebnis liegt vor."}
+          </p>
 
           {/* Das Handout ist kein Text zum Lesen, sondern eine Liste zum
               Abhaken - eigene Renderstrecke, eigenes Schema, unveraendert. */}
@@ -329,16 +341,11 @@ function ProduktZeile({
           <VariantenBlock varianten={ergebnis?.varianten} max={1} />
           <ZahlenBlock zahlen={ergebnis?.zahlen} max={2} />
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: fragen.length > 0 ? "flex-end" : "space-between",
-              gap: 8,
-              marginTop: 12,
-            }}
-          >
-            {fragen.length === 0 && (
+          {/* "↻ Neu" sitzt seit Variante E oben in der Kopfzeile (siehe
+              neuIconKnopf) - hier bleibt nur noch "Grundlage", und die zeigt
+              sich ohnehin nur, wenn es (noch) keine Fragenliste gibt. */}
+          {fragen.length === 0 && (
+            <div style={{ display: "flex", justifyContent: "flex-start", marginTop: 12 }}>
               <button
                 type="button"
                 onClick={() => setAufgeklappt((o) => !o)}
@@ -347,11 +354,8 @@ function ProduktZeile({
               >
                 Grundlage {aufgeklappt ? "▲" : "▼"}
               </button>
-            )}
-            <button type="button" onClick={onStarten} style={{ ...textLink, color: "var(--cl)" }}>
-              ↻ Neu
-            </button>
-          </div>
+            </div>
+          )}
 
           {fragen.length === 0 && aufgeklappt && <GrundlageUndQuellen ergebnis={ergebnis} data={data} t={t} produkt={produkt} />}
 
@@ -785,8 +789,21 @@ function fragenVon(ergebnis) {
 const karte = {
   background: "var(--cc)",
   border: "1px solid var(--cb)",
-  borderRadius: 12,
-  padding: "14px 16px",
+  borderRadius: 16,
+  padding: "22px 24px",
+};
+
+const neuIconKnopf = {
+  flexShrink: 0,
+  width: 36,
+  height: 36,
+  marginTop: -4,
+  border: "none",
+  background: "transparent",
+  color: "var(--ca)",
+  fontSize: 16,
+  cursor: "pointer",
+  borderRadius: 8,
 };
 
 const gruppenTitel = {

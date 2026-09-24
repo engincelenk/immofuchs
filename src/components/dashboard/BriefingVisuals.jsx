@@ -13,12 +13,12 @@ import { useState } from "react";
 import { fmt, fmtE } from "../../utils/helpers.js";
 import { berechneVollstaendigkeit } from "../../utils/objektKennzahlen.js";
 import { hebelTexteVon, risikenVon, staerkenVon } from "../../utils/aiEngine.js";
+import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import {
   cockpitAntwortsatz,
   cockpitCashflowJahr,
   cockpitDiff,
   cockpitMarktSatz,
-  cockpitMarktZusatzProzent,
   fmtKompakt,
 } from "../../utils/objektCockpit.js";
 
@@ -34,9 +34,10 @@ export const STATUS_FARBEN = {
 const L = (t, key, fallback) => (t && t[key]) || fallback;
 const prozent = (n, d = 0) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${fmt(Math.abs(n), d)} %`;
 
-// Desktop-Grenze = die bestehende Grenze des Projekts fuer den Objektbereich
-// (siehe App.jsx, DESKTOP-SEITENNAVIGATION-Block: Sidebar/Split-Layout ab
-// 1280px, min-height:600px verhindert die Landscape-Handy-Kollision).
+// Breakpoint 768px - so wie in der Vorlage (Variante E, @media max-width:767
+// bzw. min-width:768), nicht die sonst im Projekt fuer den Objektbereich
+// uebliche 1280px-Grenze (App.jsx) - Nutzer-Vorgabe 2026-09-24: "genau so
+// wie in der HTML, nicht anders".
 const COCKPIT_CSS = `
 .bv{--bv-ease:var(--ease-out,cubic-bezier(0.23,1,0.32,1))}
 @keyframes bv-auf{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -54,10 +55,16 @@ const COCKPIT_CSS = `
 .cockpit-stepnav{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 2px;margin:0 -2px;position:sticky;top:0;z-index:5;background:var(--bg)}
 .cockpit-stepnav::-webkit-scrollbar{display:none}
 .cockpit-schritte{display:flex;flex-direction:column;gap:14px}
-.cockpit-weiter-grid{display:flex;flex-direction:column;gap:14px}
 .cockpit-stellschrauben-desktop{display:none}
 .cockpit-stellschrauben-mobile{display:block}
-@media(min-width:1280px) and (min-height:600px){
+.cockpit-cmp{grid-template-columns:minmax(0,1fr)!important}
+.cockpit-cmp-icon{display:none}
+.cockpit-cmp-note{padding-left:0!important}
+.cockpit-next{display:flex;flex-direction:column;gap:14px}
+.cockpit-next-besichtigung{order:-1}
+.cockpit-mobile-bar{position:fixed;left:0;right:0;bottom:62px;padding:10px 16px;background:var(--cc);border-top:1px solid var(--cb);z-index:30}
+.cockpit-s5{padding-bottom:76px}
+@media(min-width:768px){
   .cockpit-kennzahlen{grid-template-columns:repeat(4,minmax(0,1fr))}
   .cockpit-nur-desktop{display:block}
   .cockpit-stepnav{position:static;overflow:visible;padding:14px 0;margin:0}
@@ -65,9 +72,15 @@ const COCKPIT_CSS = `
   .cockpit-s2{grid-column:span 2}
   .cockpit-s3{grid-column:span 2}
   .cockpit-s5{grid-column:1 / -1}
-  .cockpit-weiter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
   .cockpit-stellschrauben-desktop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
   .cockpit-stellschrauben-mobile{display:none}
+  .cockpit-cmp{grid-template-columns:32px minmax(0,1fr)!important}
+  .cockpit-cmp-icon{display:flex}
+  .cockpit-cmp-note{padding-left:60px!important}
+  .cockpit-next{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:start}
+  .cockpit-next-besichtigung{order:0}
+  .cockpit-mobile-bar{display:none}
+  .cockpit-s5{padding-bottom:0}
 }
 `;
 
@@ -78,8 +91,8 @@ export function CockpitStyle() {
 const karte = {
   background: "var(--cc)",
   border: "1px solid var(--cb)",
-  borderRadius: 12,
-  padding: "16px 18px",
+  borderRadius: 16,
+  padding: "22px 24px",
   marginTop: 12,
 };
 const klein = { fontSize: 11, color: "var(--cl)" };
@@ -238,7 +251,7 @@ function KennzahlKachel({ k, t }) {
         )}
       </div>
       {istScore && (
-        <div style={{ height: 5, borderRadius: 3, background: "var(--cro)", marginTop: 6 }}>
+        <div className="cockpit-nur-desktop" style={{ height: 5, borderRadius: 3, background: "var(--cro)", marginTop: 6 }}>
           <div
             className="bv-wachsen"
             style={{
@@ -253,11 +266,12 @@ function KennzahlKachel({ k, t }) {
       )}
       {zusatz && (
         <div
+          className="cockpit-nur-desktop"
           style={{
             fontSize: 10.5,
             marginTop: 3,
             whiteSpace: "nowrap",
-            color: negativ ? "var(--bad-tx)" : "var(--ch)",
+            color: negativ || k.ueberMarkt ? "var(--bad-tx)" : "var(--ch)",
           }}
         >
           {zusatz}
@@ -267,18 +281,24 @@ function KennzahlKachel({ k, t }) {
   );
 }
 
-// ── Schritt-Navigation (Spec §4.9) ──────────────────────────────────────────
-const SCHRITTE = [
-  { id: "s1", nr: 1, kurz: "Kosten" },
-  { id: "s2", nr: 2, kurz: "Markt" },
-  { id: "s3", nr: 3, kurz: "Stellschrauben" },
-  { id: "s4", nr: 4, kurz: "Risiken" },
-  { id: "s5", nr: 5, kurz: "Weiter" },
+// ── Schritt-Navigation ───────────────────────────────────────────────────
+// IDs als volle Wörter (schritt-kosten … schritt-weiter) statt s1…s5 - so
+// wie in der Vorlage (Variante E). Aktiver Schritt ist reiner Klick-Zustand
+// (kein Scroll-Spy, bewusst - siehe redesign-Spec §4.9), Default Schritt 1.
+export const SCHRITTE = [
+  { id: "schritt-kosten", nr: 1, kurz: "Kosten" },
+  { id: "schritt-markt", nr: 2, kurz: "Markt" },
+  { id: "schritt-stellschrauben", nr: 3, kurz: "Stellschrauben" },
+  { id: "schritt-risiken", nr: 4, kurz: "Risiken" },
+  { id: "schritt-weiter", nr: 5, kurz: "Weiter" },
 ];
 
 export function SchrittNav({ t }) {
+  const [aktiv, setAktiv] = useState(SCHRITTE[0].id);
+
   function springen(e, id) {
     e.preventDefault();
+    setAktiv(id);
     const el = document.getElementById(id);
     if (!el) return;
     const reduziert = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -286,49 +306,53 @@ export function SchrittNav({ t }) {
   }
   return (
     <nav aria-label={L(t, "cockSchritteLabel", "Schritte")} className="cockpit-stepnav">
-      {SCHRITTE.map((s) => (
-        <a
-          key={s.id}
-          href={`#${s.id}`}
-          onClick={(e) => springen(e, s.id)}
-          style={{
-            flex: "0 0 auto",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            minHeight: 40,
-            padding: "0 12px",
-            borderRadius: 999,
-            border: "1px solid var(--cb)",
-            background: "var(--cc)",
-            color: "var(--ch)",
-            fontSize: 13,
-            fontWeight: 700,
-            textDecoration: "none",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <span
-            aria-hidden="true"
+      {SCHRITTE.map((s) => {
+        const istAktiv = s.id === aktiv;
+        return (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            aria-current={istAktiv ? "true" : undefined}
+            onClick={(e) => springen(e, s.id)}
             style={{
-              width: 20,
-              height: 20,
-              borderRadius: 10,
-              border: "2px solid var(--ca)",
-              color: "var(--ca)",
+              flex: "0 0 auto",
               display: "inline-flex",
               alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              fontWeight: 800,
-              flexShrink: 0,
+              gap: 8,
+              minHeight: 40,
+              padding: "0 14px 0 6px",
+              borderRadius: 999,
+              border: `1px solid ${istAktiv ? "var(--ct)" : "var(--cb)"}`,
+              background: istAktiv ? "var(--ct)" : "var(--cc)",
+              color: istAktiv ? "var(--bg)" : "var(--ch)",
+              fontSize: 13,
+              fontWeight: 700,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
             }}
           >
-            {s.nr}
-          </span>
-          {L(t, `cockSchritt${s.nr}`, s.kurz)}
-        </a>
-      ))}
+            <span
+              aria-hidden="true"
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 11,
+                border: `2px solid ${istAktiv ? "var(--bg)" : "var(--ca)"}`,
+                color: istAktiv ? "var(--bg)" : "var(--ca)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 11,
+                fontWeight: 800,
+                flexShrink: 0,
+              }}
+            >
+              {s.nr}
+            </span>
+            {L(t, `cockSchritt${s.nr}`, s.kurz)}
+          </a>
+        );
+      })}
     </nav>
   );
 }
@@ -393,7 +417,7 @@ export function SchrittKosten({ briefing, cashflowVorSteuer, t }) {
   const jahr = cockpitCashflowJahr(cash.wert);
 
   return (
-    <section id="s1" className="bv bv-auf cockpit-s1" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+    <section id="schritt-kosten" className="bv bv-auf cockpit-s1" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
       <SchrittKopf nr={1} titel={L(t, "cockS1Titel", "Was dich das Objekt kostet")} />
       <div
         style={{
@@ -437,16 +461,38 @@ export function SchrittKosten({ briefing, cashflowVorSteuer, t }) {
 }
 
 // ── Schritt 2: Wie es zum Markt passt ───────────────────────────────────────
-// Icon-Kreis + Fliesssatz + Subzeile links, zwei laengenproportionale Balken
-// (dein Wert oben, Markt unten) rechts - ersetzt den fruehren Abweichungs-
-// Track mit Mittellinie (Nutzer-Vorgabe 2026-09-24, Bildschirmfoto).
-const MARKT_ICON = { neutral: "✓", gruen: "✓", orange: "↑", rot: "⚠" };
+// Icon-Kreis (SVG) + Fliesssatz + Chip, darunter zwei beschriftete Balken-
+// zeilen ("Du"/"Markt", Laenge ∝ Wert) - Nutzer-Vorgabe 2026-09-24
+// (Vorlage-HTML "Variante E", genau nachgebaut statt frei interpretiert).
+function MarktIcon({ status }) {
+  if (status === "orange") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 19V5" />
+        <path d="m5 12 7-7 7 7" />
+      </svg>
+    );
+  }
+  if (status === "rot") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 8v5M12 17h.01" />
+        <circle cx="12" cy="12" r="9" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
 
-function AbweichungsBalken({ art, v, formatWert, einheitLabel, marktLabel, extra, t }) {
+function MarktZeile({ art, v, formatWert, einheitLabel, extra, letzte, t }) {
   if (!v || v.abw == null || !isFinite(v.abw)) return null;
   const f = STATUS_FARBEN[v.status] || STATUS_FARBEN.neutral;
   const satz = cockpitMarktSatz(v, art);
-  const icon = MARKT_ICON[v.status] || MARKT_ICON.neutral;
+  const chipText = `${prozent(v.abw, 0)}${v.status === "orange" ? ` ${L(t, "cockPotenzial", "Potenzial")}` : ""}`;
   // "Dein Wert"-Balken in der Statusfarbe, im neutralen Fall in der
   // normalen Textfarbe (kein eigener Warn-/Erfolgs-Ton fuer "im Rahmen").
   const balkenFarbe = v.status === "neutral" ? "var(--ct)" : f.tx;
@@ -455,59 +501,93 @@ function AbweichungsBalken({ art, v, formatWert, einheitLabel, marktLabel, extra
   const breiteMarkt = Math.max(4, (v.markt / skala) * 100);
 
   return (
-    <div style={{ display: "flex", gap: 14, alignItems: "flex-start", marginTop: 18 }}>
+    <div
+      className="cockpit-cmp"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "32px minmax(0,1fr)",
+        gap: 14,
+        padding: letzte ? "16px 0 4px" : "16px 0",
+        borderBottom: letzte ? "none" : "1px solid var(--cb)",
+      }}
+    >
       <span
         aria-hidden="true"
+        className="cockpit-cmp-icon"
         style={{
-          width: 30,
-          height: 30,
-          borderRadius: 15,
-          flexShrink: 0,
-          display: "inline-flex",
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          display: "flex",
           alignItems: "center",
           justifyContent: "center",
           background: f.bg,
           color: f.tx,
-          fontSize: 13,
-          fontWeight: 800,
         }}
       >
-        {icon}
+        <MarktIcon status={v.status} />
       </span>
-      <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ct)", lineHeight: 1.35 }}>{satz}</div>
-        <div style={{ fontSize: 12.5, color: "var(--ch)", marginTop: 3, lineHeight: 1.4, fontVariantNumeric: "tabular-nums" }}>
-          {formatWert(v.eigen)} {einheitLabel} {L(t, "cockBeiDir", "bei dir")}, {formatWert(v.markt)} {einheitLabel}{" "}
-          {marktLabel}
-          {cockpitMarktZusatzProzent(v)}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, fontSize: 15, fontWeight: 700, color: "var(--ct)" }}>
+          <span>{satz}</span>
+          <span
+            style={{
+              flexShrink: 0,
+              fontSize: 12,
+              fontWeight: 700,
+              color: f.tx,
+              background: f.bg,
+              borderRadius: 999,
+              padding: "3px 10px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {chipText}
+          </span>
         </div>
+        <BalkenZeile
+          label={L(t, "cockDu", "Du")}
+          wert={`${formatWert(v.eigen)}${einheitLabel ? ` ${einheitLabel}` : ""}`}
+          breite={breiteEigen}
+          farbe={balkenFarbe}
+          betont
+        />
+        <BalkenZeile
+          label={L(t, "brfMarkt", "Markt")}
+          wert={`${formatWert(v.markt)}${einheitLabel ? ` ${einheitLabel}` : ""}`}
+          breite={breiteMarkt}
+          farbe="var(--ch)"
+        />
         {extra}
       </div>
-      <div
-        role="img"
-        aria-label={`${satz}. ${formatWert(v.eigen)} bei dir, ${formatWert(v.markt)} Markt`}
-        style={{ width: 96, flexShrink: 0, display: "flex", flexDirection: "column", gap: 5, marginTop: 5 }}
-      >
-        <div style={{ height: 6, borderRadius: 3, background: "var(--cro)" }}>
-          <div
-            className="bv-wachsen"
-            style={{ width: `${breiteEigen}%`, height: 6, borderRadius: 3, background: balkenFarbe, transformOrigin: "left center" }}
-          />
-        </div>
-        <div style={{ height: 6, borderRadius: 3, background: "var(--cro)" }}>
-          <div
-            className="bv-wachsen"
-            style={{
-              "--bv-d": "90ms",
-              width: `${breiteMarkt}%`,
-              height: 6,
-              borderRadius: 3,
-              background: "var(--cb)",
-              transformOrigin: "left center",
-            }}
-          />
-        </div>
+    </div>
+  );
+}
+
+function BalkenZeile({ label, wert, breite, farbe, betont }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <span style={{ width: 48, flexShrink: 0, fontSize: 12, color: "var(--ch)", fontWeight: 600 }}>{label}</span>
+      <div style={{ flexGrow: 1, height: 12, borderRadius: 6, background: "var(--cro)" }}>
+        <div
+          className="bv-wachsen"
+          style={{ width: `${breite}%`, height: 12, borderRadius: 6, background: farbe, transformOrigin: "left center" }}
+        />
       </div>
+      <span
+        className="num"
+        style={{
+          width: 96,
+          flexShrink: 0,
+          textAlign: "right",
+          fontSize: 14,
+          fontVariantNumeric: "tabular-nums",
+          fontWeight: betont ? 700 : 400,
+          color: betont ? "var(--ct)" : "var(--ch)",
+        }}
+      >
+        {wert}
+      </span>
     </div>
   );
 }
@@ -527,15 +607,16 @@ export function SchrittMarkt({ briefing, t }) {
 
   const mieteExtra =
     v2?.erreichbarQm > 0 ? (
-      <div style={{ ...klein, marginTop: 4 }}>
-        {L(t, "brfErreichbar", "In 3 Jahren erreichbar")}: {fmtQm(v2.erreichbarQm)} €/m²
+      <div className="cockpit-cmp-note" style={{ ...klein, paddingLeft: 60 }}>
+        {L(t, "brfErreichbar", "In 3 Jahren erreichbar")}:{" "}
+        <strong style={{ color: "var(--ct)" }}>{fmtQm(v2.erreichbarQm)} €/m²</strong>
         {v2.kappungsgrenzeProzent != null &&
           ` (${L(t, "brfKappung", "Kappungsgrenze")} ${fmt(v2.kappungsgrenzeProzent, 0)} %)`}
       </div>
     ) : null;
 
   return (
-    <section id="s2" className="bv bv-auf cockpit-s2" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+    <section id="schritt-markt" className="bv bv-auf cockpit-s2" style={{ ...karte, marginTop: 0, padding: "22px 24px 12px", scrollMarginTop: 78 }}>
       <SchrittKopf
         nr={2}
         titel={L(t, "cockS2Titel", "Wie es zum Markt passt")}
@@ -547,63 +628,18 @@ export function SchrittMarkt({ briefing, t }) {
           )
         }
       />
-      {v1 && (
-        <AbweichungsBalken
-          art="kaufpreis"
-          v={v1}
-          formatWert={fmtQm}
-          einheitLabel="€/m²"
-          marktLabel={L(t, "cockImMarkt", "im Markt")}
-          t={t}
-        />
-      )}
-      {v2 && (
-        <AbweichungsBalken
-          art="miete"
-          v={v2}
-          formatWert={fmtQm}
-          einheitLabel="€/m²"
-          marktLabel={L(t, "cockImMarkt", "im Markt")}
-          extra={mieteExtra}
-          t={t}
-        />
-      )}
-      {fb && (
-        <AbweichungsBalken
-          art="faktor"
-          v={fb}
-          formatWert={fmtFaktor}
-          einheitLabel=""
-          marktLabel={marktName ? `${L(t, "cockIn", "in")} ${marktName}` : L(t, "cockImMarkt", "im Markt")}
-          t={t}
-        />
-      )}
-      <div style={legendeStil}>
-        <span style={legendeEintrag}>
-          <span aria-hidden="true" style={{ ...legendeStrich, background: "var(--ct)" }} />
-          {L(t, "cockLegendeDein", "Dein Wert (obere Linie)")}
-        </span>
-        <span style={legendeEintrag}>
-          <span aria-hidden="true" style={{ ...legendeStrich, background: "var(--cb)" }} />
-          {L(t, "cockLegendeMarkt", "Markt (untere Linie)")}
-        </span>
+      <div style={{ marginTop: 4 }}>
+        {v1 && (
+          <MarktZeile art="kaufpreis" v={v1} formatWert={fmtQm} einheitLabel="€/m²" letzte={!v2 && !fb} t={t} />
+        )}
+        {v2 && (
+          <MarktZeile art="miete" v={v2} formatWert={fmtQm} einheitLabel="€/m²" extra={mieteExtra} letzte={!fb} t={t} />
+        )}
+        {fb && <MarktZeile art="faktor" v={fb} formatWert={fmtFaktor} einheitLabel="" letzte t={t} />}
       </div>
     </section>
   );
 }
-
-const legendeStil = {
-  display: "flex",
-  gap: 16,
-  flexWrap: "wrap",
-  fontSize: 11,
-  color: "var(--ch)",
-  borderTop: "1px solid var(--cb)",
-  paddingTop: 10,
-  marginTop: 18,
-};
-const legendeEintrag = { display: "inline-flex", alignItems: "center", gap: 6 };
-const legendeStrich = { display: "inline-block", width: 14, height: 3, borderRadius: 2 };
 
 // ── Schritt 3: Was sich ändern müsste (Spec §4.6) ───────────────────────────
 const SPANNEN_METRIK = [
@@ -626,7 +662,7 @@ export function SchrittStellschrauben({ spannen, groessterHebel, onEintragen, t 
   if (zeilen.length === 0) return null;
 
   return (
-    <section id="s3" className="bv bv-auf cockpit-s3" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+    <section id="schritt-stellschrauben" className="bv bv-auf cockpit-s3" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
       <SchrittKopf nr={3} titel={L(t, "cockS3Titel", "Was sich ändern müsste")} />
 
       {/* Desktop: 3 Mini-Karten */}
@@ -906,7 +942,7 @@ export function SchrittRisiken({
       : null;
 
   return (
-    <section id="s4" className="bv bv-auf cockpit-s4" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+    <section id="schritt-risiken" className="bv bv-auf cockpit-s4" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
       <SchrittKopf
         nr={4}
         titel={L(t, "cockS4Titel", "Worauf achten")}
@@ -966,42 +1002,20 @@ export function SchrittRisiken({
         </button>
       )}
 
+      {/* Flache Liste "Titel. Text" - dieselbe Reihenfolge wie die Chips oben
+          (Risiken, Stärken), ohne Gruppen-Zwischenueberschriften (Vorlage
+          "Variante E" zeigt hier keine STÄRKEN/RISIKEN-Blocktitel mehr). */}
       {aufgeklappt && (
-        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 14 }}>
-          {[
-            { titel: L(t, "brfStaerken", "Stärken"), farbe: "gruen", eintraege: staerken },
-            { titel: L(t, "brfRisiken", "Risiken"), farbe: "rot", eintraege: risiken },
-            { titel: L(t, "brfHebel", "Hebel"), farbe: "orange", eintraege: hebel },
-          ]
-            .filter((b) => b.eintraege.length > 0)
-            .map((b) => (
-              <div key={b.titel}>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: STATUS_FARBEN[b.farbe].tx,
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: STATUS_FARBEN[b.farbe].tx }} />
-                  {b.titel}
-                </div>
-                {b.eintraege.map((e) => (
-                  <div key={e.title} style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ct)" }}>
-                      {e.title}
-                      {e.value && <span style={{ color: "var(--ca)" }}> · {e.value}</span>}
-                    </div>
-                    <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ct)", marginTop: 2 }}>{e.text}</div>
-                  </div>
-                ))}
-              </div>
-            ))}
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 12 }}>
+          {[...risiken, ...staerken, ...hebel].map((e) => (
+            <p key={e.title} style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: "var(--ch)" }}>
+              <strong style={{ color: "var(--ct)" }}>
+                {e.title}
+                {e.value && <span style={{ color: "var(--ca)" }}> · {e.value}</span>}.
+              </strong>{" "}
+              {e.text}
+            </p>
+          ))}
         </div>
       )}
 
@@ -1083,49 +1097,8 @@ const neuBerechnenKnopf = {
   borderRadius: 8,
 };
 
-// ── Schritt 5: Deine nächsten Schritte (Spec §4.8) ──────────────────────────
-export function LageMiniKarte({ children }) {
-  return (
-    <div style={{ borderRadius: 12, overflow: "hidden", background: "var(--ci)", border: "1px solid var(--cb)" }}>
-      <div
-        aria-hidden="true"
-        style={{
-          height: 64,
-          backgroundColor: "var(--cro)",
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent 0 23px, var(--cb) 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, var(--cb) 23px 24px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <span aria-hidden="true" style={{ fontSize: 22 }}>📍</span>
-      </div>
-      <div style={{ padding: 4 }}>{children}</div>
-    </div>
-  );
-}
-
-export function WeiterKachel({ titel, beschreibung, aktion, primaer }) {
-  return (
-    <div
-      style={{
-        borderRadius: 12,
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        background: primaer ? "var(--ca-bg)" : "var(--ci)",
-        border: `1px solid ${primaer ? "var(--ca-bd)" : "var(--cb)"}`,
-      }}
-    >
-      <span style={{ fontSize: 14.5, fontWeight: 700, color: "var(--ct)" }}>{titel}</span>
-      {beschreibung && <span style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.45, flexGrow: 1 }}>{beschreibung}</span>}
-      {aktion}
-    </div>
-  );
-}
-
+// ── Schritt 5: Deine nächsten Schritte ──────────────────────────────────────
+// Zwei Karten (Lage, Besichtigung) statt vier Kacheln - Vorlage "Variante E".
 export function primaerKnopfStyle(breit = true) {
   return {
     display: "inline-flex",
@@ -1164,77 +1137,147 @@ export function sekundaerKnopfStyle(breit = true) {
   };
 }
 
-// ── Baustein: Lage (KI-Einschaetzung, ohne Websuche) - bleibt weitgehend wie
-// bisher, nur ohne eigene Kartentitel-Zeile (die traegt jetzt die kompakte
-// Schritt-5-Kachel darum herum). ───────────────────────────────────────────
-export function LageInhalt({ ergebnis, laufend, fehler, consent, onStarten, onConsentJa, onConsentAbbrechen, t }) {
-  if (ergebnis) {
-    return (
-      <>
-        <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ct)", whiteSpace: "pre-line" }}>{ergebnis.text}</div>
-        <div style={lageDisclaimer}>
-          <span aria-hidden="true" style={{ fontSize: 13, flexShrink: 0 }}>⚠</span>
-          <span>
-            {L(
-              t,
-              "brfLageDisclaimer",
-              "KI-generiert aus Trainingswissen, ohne Websuche und ohne Gewähr — Angaben können veraltet oder falsch sein. Prüfe wichtige Fakten selbst nach.",
-            )}
-          </span>
+// ── Lage-Kombikarte: Kartenflaeche+Adresse oben, Lage-Analyse-KI unten ─────
+// Ersetzt LageMiniKarte + die vormalige separate "Lage prüfen"-Kachel - in
+// der Vorlage (Variante E) ist das EINE Karte, keine zwei nebeneinander.
+const LAGE_KURZTEXT_SCHWELLE = 260;
+
+export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent, onStarten, onConsentJa, onConsentAbbrechen, t }) {
+  const [ausgeklappt, setAusgeklappt] = useState(false);
+  const laenglich = (ergebnis?.text?.length || 0) > LAGE_KURZTEXT_SCHWELLE;
+
+  return (
+    <div style={{ background: "var(--cc)", border: "1px solid var(--cb)", borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ display: "flex", borderBottom: "1px solid var(--cb)" }}>
+        <div
+          aria-hidden="true"
+          style={{
+            width: 110,
+            flexShrink: 0,
+            minHeight: 96,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "var(--cro)",
+            backgroundImage:
+              "repeating-linear-gradient(0deg, transparent 0 23px, var(--cb) 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, var(--cb) 23px 24px)",
+          }}
+        >
+          <span aria-hidden="true" style={{ fontSize: 22 }}>📍</span>
         </div>
-      </>
-    );
-  }
-  if (consent) {
-    return (
-      <div style={lageConsentBand}>
-        <div style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
-          {L(
-            t,
-            "brfLageConsentText",
-            "Für die Auswertung werden Ort, PLZ-Gebiet und Bundesland dieses Objekts an unseren KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?",
+        <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0 }}>
+          <ObjektLage data={data} titel={titel} eingebettet />
+        </div>
+      </div>
+
+      <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <strong style={{ fontSize: 15, color: "var(--ct)" }}>{L(t, "brfLageTitel2", "Lage-Analyse")}</strong>
+          {ergebnis && (
+            <button type="button" onClick={onStarten} aria-label="Lage-Analyse neu erstellen" style={neuIconLinkKnopf}>
+              ↻ {L(t, "cockNeu", "Neu")}
+            </button>
           )}
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" onClick={onConsentJa} style={{ ...consentJa, minHeight: 40 }}>
-            {L(t, "brfConsentJa", "Einverstanden, starten")}
-          </button>
-          <button type="button" onClick={onConsentAbbrechen} style={{ ...consentNein, minHeight: 40 }}>
-            {L(t, "brfConsentNein", "Abbrechen")}
-          </button>
-        </div>
+
+        {ergebnis ? (
+          <>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13.5,
+                lineHeight: 1.55,
+                color: "var(--ch)",
+                whiteSpace: "pre-line",
+                ...(laenglich && !ausgeklappt
+                  ? {
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }
+                  : {}),
+              }}
+            >
+              {ergebnis.text}
+            </p>
+            {laenglich && (
+              <button
+                type="button"
+                onClick={() => setAusgeklappt((o) => !o)}
+                aria-expanded={ausgeklappt}
+                style={{ ...textLink, marginTop: 0, alignSelf: "flex-start" }}
+              >
+                {ausgeklappt ? L(t, "cockWenigerAnzeigen", "Weniger anzeigen") : L(t, "cockWeiterlesen", "Weiterlesen")}
+              </button>
+            )}
+            <div style={lageDisclaimer}>
+              <span aria-hidden="true" style={{ fontSize: 13, flexShrink: 0 }}>⚠</span>
+              <span>
+                {L(
+                  t,
+                  "brfLageDisclaimer",
+                  "KI-generiert aus Trainingswissen, ohne Websuche und ohne Gewähr — Angaben können veraltet oder falsch sein. Prüfe wichtige Fakten selbst nach.",
+                )}
+              </span>
+            </div>
+          </>
+        ) : consent ? (
+          <div style={lageConsentBand}>
+            <div style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
+              {L(
+                t,
+                "brfLageConsentText",
+                "Für die Auswertung werden Ort, PLZ-Gebiet und Bundesland dieses Objekts an unseren KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?",
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" onClick={onConsentJa} style={{ ...consentJa, minHeight: 40 }}>
+                {L(t, "brfConsentJa", "Einverstanden, starten")}
+              </button>
+              <button type="button" onClick={onConsentAbbrechen} style={{ ...consentNein, minHeight: 40 }}>
+                {L(t, "brfConsentNein", "Abbrechen")}
+              </button>
+            </div>
+          </div>
+        ) : laufend ? (
+          <div aria-busy="true" style={{ fontSize: 12.5, color: "var(--cl)" }}>
+            {L(t, "brfLaeuft", "Wird berechnet …")}
+          </div>
+        ) : fehler ? (
+          <>
+            <div style={lageFehlerBand}>{fehler}</div>
+            <button type="button" onClick={onStarten} style={sekundaerKnopfStyle(true)}>
+              {L(t, "brfLageWiederholen", "Erneut versuchen")}
+            </button>
+          </>
+        ) : (
+          <>
+            <span style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.45 }}>
+              {L(t, "cockLageKurz", "Großprojekte, Wirtschaftsstruktur der Region")}
+            </span>
+            <button type="button" onClick={onStarten} style={sekundaerKnopfStyle(true)}>
+              <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
+              {L(t, "brfLageStarten", "Lage-Analyse erstellen")}
+            </button>
+          </>
+        )}
       </div>
-    );
-  }
-  if (laufend) {
-    return (
-      <div aria-busy="true" style={{ fontSize: 12.5, color: "var(--cl)" }}>
-        {L(t, "brfLaeuft", "Wird berechnet …")}
-      </div>
-    );
-  }
-  if (fehler) {
-    return (
-      <>
-        <div style={lageFehlerBand}>{fehler}</div>
-        <button type="button" onClick={onStarten} style={sekundaerKnopfStyle(true)}>
-          {L(t, "brfLageWiederholen", "Erneut versuchen")}
-        </button>
-      </>
-    );
-  }
-  return (
-    <>
-      <span style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.45 }}>
-        {L(t, "cockLageKurz", "Großprojekte, Wirtschaftsstruktur der Region")}
-      </span>
-      <button type="button" onClick={onStarten} style={sekundaerKnopfStyle(true)}>
-        <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
-        {L(t, "brfLageStarten", "Lage-Analyse erstellen")}
-      </button>
-    </>
+    </div>
   );
 }
+
+const neuIconLinkKnopf = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  color: "var(--ca)",
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  minHeight: 36,
+};
 
 const lageConsentBand = { background: "var(--ci)", border: "1px solid var(--cb)", borderRadius: 10, padding: "10px 12px" };
 const lageFehlerBand = {

@@ -1,14 +1,15 @@
 // Investment-Briefing - die Objektseite. Seit 2026-09-24 im Layout
-// "Geführtes Cockpit" (docs/technical_specs/objekt-detailseite-redesign.md,
-// Variante D): Antwortsatz + Kennzahlen-Leiste zuerst, dann 5 nummerierte
-// Schritte statt einzelner freistehender Karten. Nur die DARSTELLUNG ist
-// neu - alle Zahlen kommen unveraendert aus briefing.js (berechneBriefing()),
-// keine Aenderung an Berechnungen oder KI-Prompts.
+// "Geführtes Cockpit" (docs/technical_specs/objekt-detailseite-redesign.md),
+// zuletzt an die Vorlage "Variante E" angeglichen (Nutzer-Vorgabe: "genau so
+// wie in der HTML, nicht anders"): Antwortsatz + Kennzahlen-Leiste zuerst,
+// dann 5 nummerierte Schritte statt einzelner freistehender Karten. Nur die
+// DARSTELLUNG ist neu - alle Zahlen kommen unveraendert aus briefing.js
+// (berechneBriefing()), keine Aenderung an Berechnungen oder KI-Prompts.
 //
 // Grundprinzip bleibt: "Zahlen aus der Engine, Worte von der KI". Alle
 // Zahlen sind IMMER live aus briefing.js berechnet, unabhaengig davon, ob
-// und wann zuletzt ein KI-Aufruf lief - nur der Analyse-Text (Schritt 4)
-// kommt aus dem gespeicherten Ergebnis.
+// und wann zuletzt ein KI-Aufruf lief - nur der Analyse-Text (Schritt 4) und
+// das Handout (Schritt 5) kommen aus dem gespeicherten Ergebnis.
 import { useMemo, useState } from "react";
 import { alter, ergebnisFuer, istVeraltet, veraltetText } from "../../utils/aiEngine.js";
 import { berechneBriefing } from "../../utils/briefing.js";
@@ -20,22 +21,18 @@ import {
   regionalVerlauf,
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
-import { ObjektLage } from "./ObjektUnterlagen.jsx";
+import { AiEngine } from "./AiEngine.jsx";
 import {
   AntwortsatzKopf,
   CockpitStyle,
   EingabeHinweis,
   KennzahlenLeiste,
-  LageInhalt,
-  LageMiniKarte,
+  LageKombiKarte,
   SchrittKosten,
   SchrittMarkt,
   SchrittNav,
   SchrittRisiken,
   SchrittStellschrauben,
-  WeiterKachel,
-  primaerKnopfStyle,
-  sekundaerKnopfStyle,
 } from "./BriefingVisuals.jsx";
 
 export function InvestmentBriefing({
@@ -44,12 +41,25 @@ export function InvestmentBriefing({
   locale = "de-DE",
   t = {},
   regGeladen,
+  // Schritt 4 (Analyse/"Worauf achten") - bereits auf Produkt "briefing"
+  // gefiltert, siehe ObjektDetail.jsx.
   laufend,
   fehlerText,
   zeigtConsent,
   onStarten,
   onConsentJa,
   onConsentAbbrechen,
+  // Schritt 5, Karte "Besichtigung vorbereiten": die AiEngine (aktuell nur
+  // Produkt "handout") sitzt jetzt direkt hier statt in einer eigenen
+  // Sektion unter der Seite - braucht deshalb den UNGEFILTERTEN Zustand
+  // (laufend ist eine produktId oder null, nicht auf "briefing" verengt).
+  aiLaufend = null,
+  aiFehler = null,
+  aiConsentFuer = null,
+  onAiStarten,
+  hasFullInput = false,
+  proAktiv = true,
+  onExpose,
   // Baustein "Lage" (KI-Einschaetzung, ohne Websuche) - eigener kleiner
   // Ablauf, Zustand und Aufrufe kommen aus ObjektDetail.jsx.
   lageErgebnis = null,
@@ -59,13 +69,7 @@ export function InvestmentBriefing({
   onLageStarten,
   onLageConsentJa,
   onLageConsentAbbrechen,
-  // Handout (Schritt 5.3): einziger CTA jetzt hier - startet direkt, wenn
-  // noch kein Ergebnis vorliegt, sonst Sprung zur bestehenden, unveraenderten
-  // AiEngine-Karte weiter unten auf der Seite (siehe ObjektDetail.jsx).
-  handoutErgebnis = null,
-  onHandoutKlick,
   onBearbeiten = null,
-  onRenditerechner,
 }) {
   const [bestaetigen, setBestaetigen] = useState(false);
   const ergebnis = ergebnisFuer(objekt, "briefing");
@@ -169,14 +173,14 @@ export function InvestmentBriefing({
           erstelltText={erstelltText}
         />
 
-        <section id="s5" className="cockpit-s5" style={{ marginTop: 0 }}>
+        <section id="schritt-weiter" className="cockpit-s5" style={{ marginTop: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
             <span
               aria-hidden="true"
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
+                width: 30,
+                height: 30,
+                borderRadius: 15,
                 background: "var(--ca)",
                 color: "#fff",
                 display: "inline-flex",
@@ -189,58 +193,45 @@ export function InvestmentBriefing({
             >
               5
             </span>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--ct)" }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--ct)" }}>
               {t.cockS5Titel || "Deine nächsten Schritte"}
             </h2>
           </div>
 
-          <div className="cockpit-weiter-grid">
-            <LageMiniKarte>
-              <ObjektLage data={data} titel={objekt.title} />
-            </LageMiniKarte>
-
-            <WeiterKachel
-              titel={t.cockLageTitel || "Lage prüfen"}
-              aktion={
-                <LageInhalt
-                  ergebnis={lageErgebnis}
-                  laufend={lageLaufend}
-                  fehler={lageFehler}
-                  consent={lageConsent}
-                  onStarten={onLageStarten}
-                  onConsentJa={onLageConsentJa}
-                  onConsentAbbrechen={onLageConsentAbbrechen}
-                  t={t}
-                />
-              }
+          <div className="cockpit-next">
+            <LageKombiKarte
+              data={data}
+              titel={objekt.title}
+              ergebnis={lageErgebnis}
+              laufend={lageLaufend}
+              fehler={lageFehler}
+              consent={lageConsent}
+              onStarten={onLageStarten}
+              onConsentJa={onLageConsentJa}
+              onConsentAbbrechen={onLageConsentAbbrechen}
+              t={t}
             />
 
-            <WeiterKachel
-              titel={t.cockHandoutTitel || "Besichtigung vorbereiten"}
-              beschreibung={
-                handoutErgebnis
-                  ? t.cockHandoutBeschreibungFertig || "Deine Fragen für den Termin liegen bereit."
-                  : t.cockHandoutBeschreibung || "Fragen für den Termin, aus deinen Auswertungen"
-              }
-              aktion={
-                <button type="button" onClick={onHandoutKlick} style={sekundaerKnopfStyle(true)}>
-                  {handoutErgebnis
-                    ? t.cockHandoutAnsehen || "Handout ansehen"
-                    : t.cockHandoutErstellen || "Handout erstellen"}
-                </button>
-              }
-            />
-
-            <WeiterKachel
-              titel={t.cockRechnerTitel || "Szenarien durchrechnen"}
-              beschreibung={t.cockRechnerBeschreibung || "Miete, Preis und Eigenkapital selbst verändern"}
-              primaer
-              aktion={
-                <button type="button" onClick={onRenditerechner} style={primaerKnopfStyle(true)}>
-                  {t.objImRechner || "Im Renditerechner öffnen"}
-                </button>
-              }
-            />
+            {/* Besichtigung vorbereiten: die AiEngine (aktuell nur Produkt
+                "handout") sitzt jetzt direkt hier statt weiter unten in einer
+                eigenen Sektion - EIN Ort statt zwei Ansichtspunkte fuer
+                dasselbe Produkt. */}
+            <div className="cockpit-next-besichtigung">
+              <AiEngine
+                objekt={objekt}
+                data={data}
+                hasFullInput={hasFullInput}
+                proAktiv={proAktiv}
+                laufend={aiLaufend}
+                onStarten={onAiStarten}
+                onExpose={onExpose}
+                locale={locale}
+                fehler={aiFehler}
+                consentFuer={aiConsentFuer}
+                onConsentJa={onConsentJa}
+                onConsentAbbrechen={onConsentAbbrechen}
+              />
+            </div>
           </div>
 
           <p style={{ margin: "14px 0 0", fontSize: 12, color: "var(--ch)" }}>

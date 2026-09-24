@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAccountCtx } from "../../context/AccountContext.jsx";
-import { VollstaendigkeitsRing } from "./ObjektKPIs.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
 import { InvestmentBriefing } from "./InvestmentBriefing.jsx";
 import { primaerKnopfStyle } from "./BriefingVisuals.jsx";
-import { AiEngine } from "./AiEngine.jsx";
 import {
   ergebnisAnlegen,
   ergebnisFuer,
@@ -30,10 +28,7 @@ import {
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
 import { ladePlzKreis, kreisFuerPlz } from "../../utils/plzKreis.js";
-import {
-  berechneObjektKennzahlen,
-  berechneVollstaendigkeit,
-} from "../../utils/objektKennzahlen.js";
+import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
 
 // Schritt A4 und C des Umbauplans (docs/plans/neue-phase2/01-umbauplan-phase-a-b.md).
 //
@@ -136,7 +131,6 @@ export function ObjektDetail({ objekt, onBack }) {
     () => berechneObjektKennzahlen(basis, t),
     [basis, t],
   );
-  const vollstaendigkeit = berechneVollstaendigkeit(basis);
 
   // Einmalig laden, sobald ein Bundesland vorliegt. plzKreis.js parallel
   // dazu (Backlog Punkt 4, 2026-09-11) - beide muessen geladen sein, bevor
@@ -405,21 +399,6 @@ export function ObjektDetail({ objekt, onBack }) {
     starteLage();
   }
 
-  // Schritt-5-Kachel "Besichtigung vorbereiten" (objekt-detailseite-
-  // redesign.md §4.8.3): ersetzt den fruehren zweiten Scroll-Link. Ohne
-  // Ergebnis startet sie das Handout direkt (dieselbe Aktion wie zuvor der
-  // Knopf in AiEngine.jsx); mit Ergebnis springt sie zu der unveraendert
-  // dort stehenden Karte - ein zweiter Klick auf "erneut erstellen" soll
-  // weiterhin ueber deren eigene Bestaetigung laufen, nicht ungefragt
-  // ueberschreiben.
-  function handleHandoutKlick() {
-    if (ergebnisFuer(objektAnzeige, "handout")) {
-      document.getElementById("ai-sektion-vorbereiten")?.scrollIntoView({ behavior: "smooth" });
-      return;
-    }
-    starteProdukt("handout");
-  }
-
   // Der Exposé-Scan lebt weiterhin im Assistenten-Sheet (dort haengen Upload,
   // Feld-Uebernahme und Handout). Von hier fuehrt der Weg dorthin.
   function oeffneExpose() {
@@ -438,13 +417,20 @@ export function ObjektDetail({ objekt, onBack }) {
 
   return (
     <div className="objekt-detail">
-      <button onClick={onBack} style={backBtnStyle}>
+      {/* Zurueck-Link nur Desktop, eigene Zeile ueber dem Kopf (Vorlage
+          "Variante E" - .back{display:none} mobil). Auf dem Handy ersetzt
+          die App-eigene untere Tableiste die Rueckwaerts-Navigation. */}
+      <button onClick={onBack} className="cockpit-nur-desktop" style={backBtnStyle}>
         ← Zurück
       </button>
 
-      {/* Kopf */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, margin: "4px 2px 14px" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Kopf: Titel+Adresse links, Bearbeiten+Primaerknopf rechts - der
+          Primaerknopf ist auf dem Handy ausgeblendet (dort uebernimmt die
+          fixierte Leiste unten dieselbe Aktion, siehe mobileBar weiter
+          unten). Der Vollstaendigkeits-Ring der alten Kopfzeile ist mit
+          diesem Redesign entfallen (in der Vorlage nicht vorgesehen). */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, margin: "4px 2px 14px" }}>
+        <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>
             {objekt.title || "Objekt"}
           </div>
@@ -453,38 +439,36 @@ export function ObjektDetail({ objekt, onBack }) {
             {objekt.source === "expose-scan" && " · aus Exposé"}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setBearbeiten(true)}
-          aria-label="Objekt bearbeiten"
-          style={{
-            width: 40,
-            height: 40,
-            flexShrink: 0,
-            borderRadius: 10,
-            border: "1px solid var(--cb)",
-            background: "var(--cc)",
-            color: "var(--ct)",
-            fontSize: 16,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          ✎
-        </button>
-        <VollstaendigkeitsRing prozent={vollstaendigkeit} groesse={46} />
-      </div>
-
-      {/* Primaerer Button "Im Renditerechner öffnen" im Kopf (objekt-
-          detailseite-redesign.md §4.1) statt ganz unten wie zuvor - auf
-          allen Breiten sichtbar, keine eigene "nur mobil fixiert"-Leiste:
-          die bestehende, immer sichtbare Tableiste (.tbar-wrap, App.jsx)
-          belegt auf dem Handy bereits den unteren Rand, eine zweite fixierte
-          Leiste würde sie überlagern. */}
-      <div style={{ margin: "0 2px 14px" }}>
-        <button type="button" onClick={() => inRechner("haupt")} style={primaerKnopfStyle(true)}>
-          {t.objImRechner || "Im Renditerechner öffnen"}
-        </button>
+        <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setBearbeiten(true)}
+            aria-label="Objekt bearbeiten"
+            style={{
+              width: 44,
+              height: 44,
+              flexShrink: 0,
+              borderRadius: 10,
+              border: "1px solid var(--cb)",
+              background: "var(--cc)",
+              color: "var(--ct)",
+              fontSize: 16,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            ✎
+          </button>
+          <div className="cockpit-nur-desktop">
+            <button
+              type="button"
+              onClick={() => inRechner("haupt")}
+              style={{ ...primaerKnopfStyle(false), whiteSpace: "nowrap" }}
+            >
+              {t.objImRechner || "Im Renditerechner öffnen"}
+            </button>
+          </div>
+        </div>
       </div>
 
       <Sheet
@@ -515,10 +499,11 @@ export function ObjektDetail({ objekt, onBack }) {
       </Sheet>
 
       {/* Seitenaufbau seit 2026-09-24 nach docs/technical_specs/
-          objekt-detailseite-redesign.md ("Geführtes Cockpit", Variante D):
-          Antwortsatz + Kennzahlen-Leiste (inkl. Score, siehe dortige
-          Nutzer-Entscheidung) und 5 nummerierte Schritte statt einzelner
-          Karten. Alle Zahlen kommen unveraendert aus briefing.js. */}
+          objekt-detailseite-redesign.md ("Geführtes Cockpit"), zuletzt an
+          die Vorlage "Variante E" angeglichen: Antwortsatz + Kennzahlen-
+          Leiste (inkl. Score, siehe dortige Nutzer-Entscheidung) und 5
+          nummerierte Schritte statt einzelner Karten. Alle Zahlen kommen
+          unveraendert aus briefing.js. */}
       <InvestmentBriefing
         objekt={objektAnzeige}
         data={basis}
@@ -540,35 +525,25 @@ export function ObjektDetail({ objekt, onBack }) {
         onLageStarten={starteLage}
         onLageConsentJa={einwilligenUndStartenLage}
         onLageConsentAbbrechen={() => setLageConsent(false)}
-        handoutErgebnis={ergebnisFuer(objektAnzeige, "handout")}
-        onHandoutKlick={handleHandoutKlick}
+        aiLaufend={laufend}
+        aiFehler={aiFehler}
+        aiConsentFuer={aiConsent}
+        onAiStarten={starteProdukt}
+        hasFullInput={hasFullInput}
+        proAktiv={account?.zugang !== "keiner"}
+        onExpose={oeffneExpose}
         onRenditerechner={() => inRechner("haupt")}
       />
 
-      {/* Besichtigungshandout (Bug-Fix 2026-09-22: die Karte war seit dem
-          UX-Review 2026-09-05 durch zwei bare Knoepfe ersetzt, die weder
-          Laden/Fehler/Einwilligung noch das fertige Ergebnis anzeigten - ein
-          Klick loeste den KI-Aufruf zwar korrekt aus, aber nichts davon war
-          je sichtbar. AiEngine.jsx hatte das alles bereits fertig gebaut,
-          war nur nirgends mehr eingebunden. "Exposé einlesen" steht hier
-          nicht mehr: der Upload ist bereits bei Objekt anlegen/bearbeiten
-          vorhanden, AiEngine fuehrt ohnehin nur "handout" (expose ist dort
-          bewusst nicht mehr gelistet, siehe GRUPPEN in AiEngine.jsx). */}
-      <div id="ai-sektion-vorbereiten" style={{ marginTop: 16 }}>
-        <AiEngine
-          objekt={objektAnzeige}
-          data={basis}
-          hasFullInput={hasFullInput}
-          proAktiv={account?.zugang !== "keiner"}
-          laufend={laufend}
-          onStarten={starteProdukt}
-          onExpose={oeffneExpose}
-          locale={locale}
-          fehler={aiFehler}
-          consentFuer={aiConsent}
-          onConsentJa={einwilligenUndStarten}
-          onConsentAbbrechen={() => setAiConsent(null)}
-        />
+      {/* Fixierte Leiste unten, nur mobil (Vorlage "Variante E", .mobile-bar):
+          derselbe Weg in den Renditerechner wie der Primaerknopf im Kopf, der
+          dort auf dem Handy ausgeblendet ist. Liegt ueber der App-eigenen
+          Tableiste (.tbar-wrap, App.jsx, bottom:0/~62px hoch), nicht
+          darunter. */}
+      <div className="cockpit-mobile-bar">
+        <button type="button" onClick={() => inRechner("haupt")} style={primaerKnopfStyle(true)}>
+          {t.objImRechner || "Im Renditerechner öffnen"}
+        </button>
       </div>
     </div>
   );

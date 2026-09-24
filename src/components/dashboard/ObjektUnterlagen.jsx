@@ -216,7 +216,11 @@ export function ObjektUnterlagen({ objektId }) {
 // die beiden Links darunter bereits bieten). Die Koordinatenermittlung bleibt
 // bestehen, weil "genau" vs. "nur PLZ-Mitte" weiterhin den Hinweistext unten
 // steuert.
-export function ObjektLage({ data, titel }) {
+// `eingebettet` (objekt-detailseite-redesign.md, Variante E §5-Karte "Lage"):
+// ohne eigene Kartenhuelle/Aussenabstand, weil die Adresse dort neben einer
+// dekorativen Kartenflaeche in EINER gemeinsamen Karte steht. Inhalt und
+// Verhalten bleiben identisch, nur die Aussenhuelle entfaellt.
+export function ObjektLage({ data, titel, eingebettet = false }) {
   const [koord, setKoord] = useState(null);
   const strasse = [data?.strasse, data?.hausnummer].filter(Boolean).join(" ");
   const ortsteil = [data?.plz, data?.ort].filter(Boolean).join(" ");
@@ -245,15 +249,8 @@ export function ObjektLage({ data, titel }) {
 
   const suche = encodeURIComponent(adresse);
 
-  return (
-    <div
-      style={{
-        background: "var(--cc)",
-        border: "1px solid var(--cb)",
-        borderRadius: 12,
-        padding: "14px 16px",
-      }}
-    >
+  const inhalt = (
+    <>
       <div
         style={{
           fontSize: 11,
@@ -261,13 +258,22 @@ export function ObjektLage({ data, titel }) {
           textTransform: "uppercase",
           letterSpacing: 0.6,
           fontWeight: 600,
-          marginBottom: 8,
+          marginBottom: eingebettet ? 4 : 8,
         }}
       >
         Lage
       </div>
 
-      <div style={{ fontSize: 13.5, color: "var(--ct)", marginBottom: 12 }}>{adresse}</div>
+      <div
+        style={{
+          fontSize: 13.5,
+          color: "var(--ct)",
+          fontWeight: eingebettet ? 600 : 400,
+          marginBottom: eingebettet ? 6 : 12,
+        }}
+      >
+        {adresse}
+      </div>
 
       {/* Nur noch EIN Kartenlink (2026-09-08): zwei Knoepfe fuer dasselbe Ziel
           zwangen zu einer Entscheidung, die niemanden interessiert - wer die
@@ -277,18 +283,34 @@ export function ObjektLage({ data, titel }) {
           href={`https://www.google.com/maps/search/?api=1&query=${suche}`}
           target="_blank"
           rel="noopener noreferrer"
-          style={kartenLinkStil}
+          style={eingebettet ? { ...kartenLinkStil, minHeight: 28, padding: 0, border: "none", background: "none" } : kartenLinkStil}
         >
-          <span aria-hidden="true">📍</span> In Google Maps öffnen
+          {eingebettet ? "In Google Maps öffnen ↗" : (<><span aria-hidden="true">📍</span> In Google Maps öffnen</>)}
         </a>
       </div>
 
       {koord && !genau && (
-        <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 8, lineHeight: 1.5 }}>
-          Der Pin zeigt die Mitte der Postleitzahl. Für die genaue Lage wähle die
-          Adresse beim Bearbeiten aus der Adresssuche.
+        <div style={{ fontSize: 11, color: "var(--cl)", marginTop: eingebettet ? 4 : 8, lineHeight: 1.5 }}>
+          {eingebettet
+            ? "Pin = Mitte der Postleitzahl"
+            : "Der Pin zeigt die Mitte der Postleitzahl. Für die genaue Lage wähle die Adresse beim Bearbeiten aus der Adresssuche."}
         </div>
       )}
+    </>
+  );
+
+  if (eingebettet) return inhalt;
+
+  return (
+    <div
+      style={{
+        background: "var(--cc)",
+        border: "1px solid var(--cb)",
+        borderRadius: 12,
+        padding: "14px 16px",
+      }}
+    >
+      {inhalt}
     </div>
   );
 }
