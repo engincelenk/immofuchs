@@ -108,19 +108,41 @@ export function cockpitGroessterHebel(d, t, spannen, cashflowHeute) {
   return bestFeld;
 }
 
-// ── Schritt 2: Überschrift + Farbklasse für die drei Abweichungsbalken ───
-// Gemeinsame Form für Kaufpreis/m², Miete/m² (aus briefing.vergleiche) UND
-// Kaufpreisfaktor (aus briefing.faktorBenchmark) - beide liefern dieselbe
-// Form {eigen, markt, abw, status, key}. `art` waehlt nur die Wortpaare.
-const WORT_PAARE = {
-  kaufpreis: { ueber: "über Markt", unter: "unter Markt", rahmen: "im Rahmen" },
-  miete: { ueber: "über Markt", unter: "unter Markt", rahmen: "im Rahmen" },
-  faktor: { ueber: "höher", unter: "niedriger", rahmen: "im Rahmen" },
+// ── Schritt 2: Fliesssatz je Zeile (Kaufpreis/m², Miete/m², Kaufpreisfaktor) ─
+// Gemeinsame Form fuer alle drei: {eigen, markt, abw, status, key}. `art`
+// waehlt nur die Satzvorlage. Im "neutral"-Fall (im Rahmen) enthaelt der Satz
+// keine Zahl - die liefert cockpitMarktZusatzProzent() separat fuer die
+// Subzeile nach.
+const MARKT_SATZ = {
+  kaufpreis: {
+    rahmen: () => "Der Kaufpreis pro m² ist im Rahmen",
+    ueber: (abw) => `Der Kaufpreis pro m² liegt ${abw} % über Markt`,
+    unter: (abw) => `Der Kaufpreis pro m² liegt ${abw} % unter Markt`,
+  },
+  miete: {
+    rahmen: () => "Die Miete ist im Rahmen",
+    ueber: (abw) => `Die Miete liegt ${abw} % über Markt`,
+    unter: (abw) => `Die Miete liegt ${abw} % unter Markt`,
+  },
+  faktor: {
+    rahmen: () => "Der Kaufpreisfaktor ist im Rahmen",
+    ueber: (abw) => `Dadurch ist der Kaufpreisfaktor ${abw} % höher`,
+    unter: (abw) => `Dadurch ist der Kaufpreisfaktor ${abw} % niedriger`,
+  },
 };
 
-export function cockpitMarktUeberschrift(v, art) {
+export function cockpitMarktSatz(v, art) {
   if (!v || v.abw == null || !isFinite(v.abw)) return "";
-  const paar = WORT_PAARE[art] || WORT_PAARE.kaufpreis;
-  if (v.status === "neutral") return paar.rahmen;
-  return v.abw > 0 ? paar.ueber : paar.unter;
+  const gruppe = MARKT_SATZ[art] || MARKT_SATZ.kaufpreis;
+  if (v.status === "neutral") return gruppe.rahmen();
+  const abwText = fmt(Math.abs(v.abw), 0);
+  return v.abw > 0 ? gruppe.ueber(abwText) : gruppe.unter(abwText);
+}
+
+// Nur im "neutral"-Fall angehaengt, weil der Satz dort keine Zahl nennt
+// (siehe oben) - in den anderen Faellen stuende die Prozentzahl doppelt da.
+export function cockpitMarktZusatzProzent(v) {
+  if (!v || v.abw == null || !isFinite(v.abw) || v.status !== "neutral") return "";
+  const vz = v.abw > 0 ? "+" : v.abw < 0 ? "−" : "";
+  return ` · ${vz}${fmt(Math.abs(v.abw), 0)} %`;
 }

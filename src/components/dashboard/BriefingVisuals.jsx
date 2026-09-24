@@ -17,7 +17,8 @@ import {
   cockpitAntwortsatz,
   cockpitCashflowJahr,
   cockpitDiff,
-  cockpitMarktUeberschrift,
+  cockpitMarktSatz,
+  cockpitMarktZusatzProzent,
   fmtKompakt,
 } from "../../utils/objektCockpit.js";
 
@@ -50,7 +51,6 @@ const COCKPIT_CSS = `
 }
 .cockpit-kennzahlen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .cockpit-nur-desktop{display:none}
-.cockpit-legende{display:none}
 .cockpit-stepnav{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 2px;margin:0 -2px;position:sticky;top:0;z-index:5;background:var(--bg)}
 .cockpit-stepnav::-webkit-scrollbar{display:none}
 .cockpit-schritte{display:flex;flex-direction:column;gap:14px}
@@ -60,7 +60,6 @@ const COCKPIT_CSS = `
 @media(min-width:1280px) and (min-height:600px){
   .cockpit-kennzahlen{grid-template-columns:repeat(4,minmax(0,1fr))}
   .cockpit-nur-desktop{display:block}
-  .cockpit-legende{display:flex}
   .cockpit-stepnav{position:static;overflow:visible;padding:14px 0;margin:0}
   .cockpit-schritte{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
   .cockpit-s2{grid-column:span 2}
@@ -437,88 +436,78 @@ export function SchrittKosten({ briefing, cashflowVorSteuer, t }) {
   );
 }
 
-// ── Schritt 2: Wie es zum Markt passt (Spec §4.5) ───────────────────────────
-const MARKT_SPANNE = 40;
+// ── Schritt 2: Wie es zum Markt passt ───────────────────────────────────────
+// Icon-Kreis + Fliesssatz + Subzeile links, zwei laengenproportionale Balken
+// (dein Wert oben, Markt unten) rechts - ersetzt den fruehren Abweichungs-
+// Track mit Mittellinie (Nutzer-Vorgabe 2026-09-24, Bildschirmfoto).
+const MARKT_ICON = { neutral: "✓", gruen: "✓", orange: "↑", rot: "⚠" };
 
-function AbweichungsBalken({ titel, art, v, formatWert, einheitLabel, extra, t }) {
+function AbweichungsBalken({ art, v, formatWert, einheitLabel, marktLabel, extra, t }) {
   if (!v || v.abw == null || !isFinite(v.abw)) return null;
   const f = STATUS_FARBEN[v.status] || STATUS_FARBEN.neutral;
-  const ueberschrift = cockpitMarktUeberschrift(v, art);
-  const pos = (abw) => 50 + (Math.max(-MARKT_SPANNE, Math.min(MARKT_SPANNE, abw)) / (2 * MARKT_SPANNE)) * 100;
-  const p = pos(v.abw);
-  const vonLinks = Math.min(50, p);
-  const breite = Math.abs(p - 50);
+  const satz = cockpitMarktSatz(v, art);
+  const icon = MARKT_ICON[v.status] || MARKT_ICON.neutral;
+  // "Dein Wert"-Balken in der Statusfarbe, im neutralen Fall in der
+  // normalen Textfarbe (kein eigener Warn-/Erfolgs-Ton fuer "im Rahmen").
+  const balkenFarbe = v.status === "neutral" ? "var(--ct)" : f.tx;
+  const skala = Math.max(v.eigen, v.markt, 0.0001) * 1.08;
+  const breiteEigen = Math.max(4, (v.eigen / skala) * 100);
+  const breiteMarkt = Math.max(4, (v.markt / skala) * 100);
 
   return (
-    <div style={{ marginTop: 18 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ct)" }}>
-          {titel} {ueberschrift}
-        </span>
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 700,
-            color: f.tx,
-            background: f.bg,
-            border: f.bd !== "transparent" ? `1px solid ${f.bd}` : "none",
-            borderRadius: 999,
-            padding: "3px 9px",
-          }}
-        >
-          {prozent(v.abw, 0)}
-        </span>
-      </div>
-      <div
-        style={{ position: "relative", height: 18, marginTop: 8 }}
-        role="img"
-        aria-label={`${titel}: ${formatWert(v.eigen)} du, ${formatWert(v.markt)} Markt`}
-      >
-        <div style={{ position: "absolute", left: 0, right: 0, top: 7, height: 4, borderRadius: 2, background: "var(--cro)" }} />
-        <div
-          className="bv-wachsen"
-          style={{
-            position: "absolute",
-            top: 7,
-            height: 4,
-            left: `${vonLinks}%`,
-            width: `${breite}%`,
-            borderRadius: 2,
-            background: f.tx,
-            transformOrigin: p >= 50 ? "left center" : "right center",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: 1,
-            width: 2,
-            height: 16,
-            marginLeft: -1,
-            borderRadius: 1,
-            background: "var(--ch)",
-          }}
-        />
-      </div>
-      <div
+    <div style={{ display: "flex", gap: 14, alignItems: "flex-start", marginTop: 18 }}>
+      <span
+        aria-hidden="true"
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 8,
-          marginTop: 6,
-          fontSize: 12.5,
-          fontVariantNumeric: "tabular-nums",
+          width: 30,
+          height: 30,
+          borderRadius: 15,
+          flexShrink: 0,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: f.bg,
+          color: f.tx,
+          fontSize: 13,
+          fontWeight: 800,
         }}
       >
-        <span style={{ color: "var(--ct)" }}>
-          <strong>{formatWert(v.eigen)}</strong> {einheitLabel} <span style={{ color: "var(--ch)" }}>{L(t, "brfDu", "du")}</span>
-        </span>
-        <span style={{ color: "var(--ch)" }}>
-          {formatWert(v.markt)} {einheitLabel} {L(t, "brfMarkt", "Markt")}
-        </span>
+        {icon}
+      </span>
+      <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ct)", lineHeight: 1.35 }}>{satz}</div>
+        <div style={{ fontSize: 12.5, color: "var(--ch)", marginTop: 3, lineHeight: 1.4, fontVariantNumeric: "tabular-nums" }}>
+          {formatWert(v.eigen)} {einheitLabel} {L(t, "cockBeiDir", "bei dir")}, {formatWert(v.markt)} {einheitLabel}{" "}
+          {marktLabel}
+          {cockpitMarktZusatzProzent(v)}
+        </div>
+        {extra}
       </div>
-      {extra}
+      <div
+        role="img"
+        aria-label={`${satz}. ${formatWert(v.eigen)} bei dir, ${formatWert(v.markt)} Markt`}
+        style={{ width: 96, flexShrink: 0, display: "flex", flexDirection: "column", gap: 5, marginTop: 5 }}
+      >
+        <div style={{ height: 6, borderRadius: 3, background: "var(--cro)" }}>
+          <div
+            className="bv-wachsen"
+            style={{ width: `${breiteEigen}%`, height: 6, borderRadius: 3, background: balkenFarbe, transformOrigin: "left center" }}
+          />
+        </div>
+        <div style={{ height: 6, borderRadius: 3, background: "var(--cro)" }}>
+          <div
+            className="bv-wachsen"
+            style={{
+              "--bv-d": "90ms",
+              width: `${breiteMarkt}%`,
+              height: 6,
+              borderRadius: 3,
+              background: "var(--cb)",
+              transformOrigin: "left center",
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -560,42 +549,61 @@ export function SchrittMarkt({ briefing, t }) {
       />
       {v1 && (
         <AbweichungsBalken
-          titel={L(t, "cockMarktKaufpreis", "Kaufpreis / m²")}
           art="kaufpreis"
           v={v1}
           formatWert={fmtQm}
           einheitLabel="€/m²"
+          marktLabel={L(t, "cockImMarkt", "im Markt")}
           t={t}
         />
       )}
       {v2 && (
         <AbweichungsBalken
-          titel={L(t, "brfMiete", "Miete")}
           art="miete"
           v={v2}
           formatWert={fmtQm}
           einheitLabel="€/m²"
+          marktLabel={L(t, "cockImMarkt", "im Markt")}
           extra={mieteExtra}
           t={t}
         />
       )}
       {fb && (
         <AbweichungsBalken
-          titel={L(t, "brfKernfaktor", "Kaufpreisfaktor")}
           art="faktor"
           v={fb}
           formatWert={fmtFaktor}
           einheitLabel=""
+          marktLabel={marktName ? `${L(t, "cockIn", "in")} ${marktName}` : L(t, "cockImMarkt", "im Markt")}
           t={t}
         />
       )}
-      <div className="cockpit-legende" style={{ justifyContent: "space-between", fontSize: 11, color: "var(--ch)", borderTop: "1px solid var(--cb)", paddingTop: 10, marginTop: 16 }}>
-        <span>{L(t, "cockLegendeLinks", "← günstiger / unter Markt")}</span>
-        <span>{L(t, "cockLegendeRechts", "teurer / über Markt →")}</span>
+      <div style={legendeStil}>
+        <span style={legendeEintrag}>
+          <span aria-hidden="true" style={{ ...legendeStrich, background: "var(--ct)" }} />
+          {L(t, "cockLegendeDein", "Dein Wert (obere Linie)")}
+        </span>
+        <span style={legendeEintrag}>
+          <span aria-hidden="true" style={{ ...legendeStrich, background: "var(--cb)" }} />
+          {L(t, "cockLegendeMarkt", "Markt (untere Linie)")}
+        </span>
       </div>
     </section>
   );
 }
+
+const legendeStil = {
+  display: "flex",
+  gap: 16,
+  flexWrap: "wrap",
+  fontSize: 11,
+  color: "var(--ch)",
+  borderTop: "1px solid var(--cb)",
+  paddingTop: 10,
+  marginTop: 18,
+};
+const legendeEintrag = { display: "inline-flex", alignItems: "center", gap: 6 };
+const legendeStrich = { display: "inline-block", width: 14, height: 3, borderRadius: 2 };
 
 // ── Schritt 3: Was sich ändern müsste (Spec §4.6) ───────────────────────────
 const SPANNEN_METRIK = [
