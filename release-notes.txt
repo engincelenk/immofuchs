@@ -1,3 +1,25 @@
+## 2026-09-24 (1.100.7)
+
+### Schritt 2 (Markt): Icon-Zeilen statt Abweichungs-Track
+
+Nutzer-Vorgabe (Bildschirmfoto): jede Vergleichszeile (Kaufpreis/m²,
+Miete/m², Kaufpreisfaktor) zeigt jetzt einen Status-Icon-Kreis (✓/↑/⚠) plus
+einen vollstaendigen Satz ("Die Miete liegt 20 % unter Markt") und eine
+Subzeile mit beiden Werten, statt Titel + Prozent-Chip + Abweichungs-Balken
+mit Mittellinie. Rechts zwei laengenproportionale Balken (dein Wert oben,
+Markt unten) statt eines Deviations-Tracks. Legende jetzt immer sichtbar
+(vorher nur Desktop), weil die zwei Balken das ohne Erklaerung nicht mehr
+selbsterklaerend sind. Kopfzeile von Schritt 2 unveraendert (einheitlicher
+Stil mit den anderen 4 Schritten, Nutzer-Entscheidung).
+
+- src/utils/objektCockpit.js: cockpitMarktUeberschrift() ersetzt durch
+  cockpitMarktSatz() (voller Satz je Zeile) + cockpitMarktZusatzProzent()
+  (Prozentzahl nur im "im Rahmen"-Fall angehaengt, sonst steht sie schon im
+  Satz).
+- src/components/dashboard/BriefingVisuals.jsx: AbweichungsBalken() komplett
+  neu (Icon-Kreis, Satz, zwei Balken). Legende umgestellt auf "Dein Wert
+  (obere Linie)" / "Markt (untere Linie)".
+
 ## 2026-09-24 (1.100.6)
 
 ### Objektseite: Redesign "Geführtes Cockpit" (Variante D)
