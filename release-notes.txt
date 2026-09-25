@@ -1,3 +1,30 @@
+## 2026-09-25 (1.100.11)
+
+### Objektseite: vier Feinschliff-Korrekturen
+
+- Layout-Lücken beim Auf-/Zuklappen von KI-Karten behoben: `.cockpit-schritte`
+  und `.cockpit-next` (BriefingVisuals.jsx) nutzten `align-items: start` -
+  klappte eine Karte auf (z. B. "Worauf achten" oder "Weiterlesen" bei der
+  Lage-Analyse), wuchs die geteilte Grid-Zeile, die kürzere Nachbarkarte blieb
+  aber oben stehen und hinterliess eine leere Fläche. Jetzt `align-items:
+  stretch` - die kürzere Karte streckt sich automatisch mit Rahmen/Hintergrund
+  bis zur Zeilenhöhe.
+- Nummerierung Schritt 5 ("Deine nächsten Schritte") an Schritt 1-4
+  angeglichen: nutzte bisher eine eigene Inline-Badge (30px, dauerhaft
+  gefüllt) statt der gemeinsamen `SchrittKopf`-Komponente (28px, Rahmen,
+  transparent). `SchrittKopf` jetzt exportiert und für Schritt 5
+  wiederverwendet; der nie erreichbare `nr === 5`-Sonderfall darin (Ursache
+  der Abweichung) entfernt.
+- Lage-Analyse-Karte: Disclaimer "KI-generiert aus Trainingswissen, ohne
+  Websuche und ohne Gewähr …" entfernt (Nutzer-Vorgabe). Der andere Hinweis
+  am Seitenende ("Texte der AI-Engine sind KI-generiert und ersetzen keine
+  Beratung.") bleibt unverändert.
+- Schritt 1 "Was dich das Objekt kostet": neuer Block "Anschaffungskosten"
+  (Kaufpreis, Kaufnebenkosten, Gesamt) oberhalb des Finanzierungsblocks -
+  kehrt die Entscheidung aus 1.100.10 um (Nutzer-Vorgabe).
+
+Dateien: src/components/dashboard/BriefingVisuals.jsx, InvestmentBriefing.jsx.
+
 ## 2026-09-24 (1.100.10)
 
 ### Schritt 1 "Was dich das Objekt kostet": Finanzierungsblock

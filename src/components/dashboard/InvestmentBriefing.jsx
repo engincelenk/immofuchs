@@ -29,6 +29,7 @@ import {
   EingabeHinweis,
   KennzahlenLeiste,
   LageKombiKarte,
+  SchrittKopf,
   SchrittKosten,
   SchrittMarkt,
   SchrittNav,
@@ -189,28 +190,8 @@ export function InvestmentBriefing({
         />
 
         <section id="schritt-weiter" className="cockpit-s5" style={{ marginTop: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <span
-              aria-hidden="true"
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 15,
-                background: "var(--ca)",
-                color: "#fff",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 13,
-                fontWeight: 800,
-                flexShrink: 0,
-              }}
-            >
-              5
-            </span>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--ct)" }}>
-              {t.cockS5Titel || "Deine nächsten Schritte"}
-            </h2>
+          <div style={{ marginBottom: 14 }}>
+            <SchrittKopf nr={5} titel={t.cockS5Titel || "Deine nächsten Schritte"} />
           </div>
 
           <div className="cockpit-next">

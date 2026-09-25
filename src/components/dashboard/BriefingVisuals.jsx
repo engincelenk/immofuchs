@@ -54,7 +54,7 @@ const COCKPIT_CSS = `
 .cockpit-nur-desktop{display:none}
 .cockpit-stepnav{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 2px;margin:0 -2px;position:sticky;top:0;z-index:5;background:var(--bg)}
 .cockpit-stepnav::-webkit-scrollbar{display:none}
-.cockpit-schritte{display:flex;flex-direction:column;gap:14px}
+.cockpit-schritte{display:flex;flex-direction:column;gap:14px;align-items:stretch}
 .cockpit-stellschrauben-desktop{display:none}
 .cockpit-stellschrauben-mobile{display:block}
 .cockpit-cmp{grid-template-columns:minmax(0,1fr)!important}
@@ -68,7 +68,7 @@ const COCKPIT_CSS = `
   .cockpit-kennzahlen{grid-template-columns:repeat(4,minmax(0,1fr))}
   .cockpit-nur-desktop{display:block}
   .cockpit-stepnav{position:static;overflow:visible;padding:14px 0;margin:0}
-  .cockpit-schritte{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+  .cockpit-schritte{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
   .cockpit-s2{grid-column:span 2}
   .cockpit-s3{grid-column:span 2}
   .cockpit-s5{grid-column:1 / -1}
@@ -77,7 +77,7 @@ const COCKPIT_CSS = `
   .cockpit-cmp{grid-template-columns:32px minmax(0,1fr)!important}
   .cockpit-cmp-icon{display:flex}
   .cockpit-cmp-note{padding-left:60px!important}
-  .cockpit-next{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:start}
+  .cockpit-next{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:stretch}
   .cockpit-next-besichtigung{order:0}
   .cockpit-mobile-bar{display:none}
   .cockpit-s5{padding-bottom:0}
@@ -357,7 +357,7 @@ export function SchrittNav({ t }) {
   );
 }
 
-function SchrittKopf({ nr, titel, aktion }) {
+export function SchrittKopf({ nr, titel, aktion }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -368,8 +368,8 @@ function SchrittKopf({ nr, titel, aktion }) {
             height: 28,
             borderRadius: 14,
             border: `2px solid var(--ca)`,
-            background: nr === 5 ? "var(--ca)" : "transparent",
-            color: nr === 5 ? "#fff" : "var(--ca)",
+            background: "transparent",
+            color: "var(--ca)",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
@@ -431,6 +431,10 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
   const kfwDarlehen = R?.kfwDa > 0 ? R.kfwDa : null;
   const eigenkapital = +data?.eigenkapital || 0;
   const zeigtFinanzierung = rate != null || bankDarlehen != null || eigenkapital > 0 || onEintragen;
+  const kaufpreis = R?.gKP > 0 ? R.gKP : null;
+  const nebenkosten = R?.nbk > 0 ? R.nbk : null;
+  const anschaffungskosten = kaufpreis != null ? kaufpreis + (nebenkosten || 0) : null;
+  const zeigtAnschaffung = kaufpreis != null;
 
   return (
     <section id="schritt-kosten" className="bv bv-auf cockpit-s1" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
@@ -470,6 +474,30 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
       {netto && (
         <div className="cockpit-nur-desktop">
           <ZeilePaar label={L(t, "brfKernnettorendite", "Nettomietrendite")} wert={wertText(netto.wert, "prozent")} borderTop />
+        </div>
+      )}
+
+      {zeigtAnschaffung && (
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "var(--ch)" }}>
+            {L(t, "cockAnschaffungTitel", "Anschaffungskosten")}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
+              <span>{L(t, "cockKaufpreis", "Kaufpreis")}</span>
+              <span style={finanzWert}>{wertText(kaufpreis, "eurMonat")}</span>
+            </div>
+            {nebenkosten != null && (
+              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
+                <span>{L(t, "cockNebenkosten", "Kaufnebenkosten")}</span>
+                <span style={finanzWert}>{wertText(nebenkosten, "eurMonat")}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile, borderTop: "1px solid var(--cb)", paddingTop: 6 }}>
+              <span style={{ fontWeight: 700, color: "var(--ct)" }}>{L(t, "cockAnschaffungGesamt", "Gesamt")}</span>
+              <span style={finanzWert}>{wertText(anschaffungskosten, "eurMonat")}</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1283,16 +1311,6 @@ export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent
                 {ausgeklappt ? L(t, "cockWenigerAnzeigen", "Weniger anzeigen") : L(t, "cockWeiterlesen", "Weiterlesen")}
               </button>
             )}
-            <div style={lageDisclaimer}>
-              <span aria-hidden="true" style={{ fontSize: 13, flexShrink: 0 }}>⚠</span>
-              <span>
-                {L(
-                  t,
-                  "brfLageDisclaimer",
-                  "KI-generiert aus Trainingswissen, ohne Websuche und ohne Gewähr — Angaben können veraltet oder falsch sein. Prüfe wichtige Fakten selbst nach.",
-                )}
-              </span>
-            </div>
           </>
         ) : consent ? (
           <div style={lageConsentBand}>
@@ -1350,19 +1368,6 @@ const lageFehlerBand = {
   fontSize: 12.5,
   lineHeight: 1.45,
 };
-const lageDisclaimer = {
-  display: "flex",
-  gap: 8,
-  alignItems: "flex-start",
-  padding: "8px 10px",
-  borderRadius: 8,
-  background: "var(--warn-bg)",
-  border: "1px solid var(--warn-bd)",
-  color: "var(--warn-tx)",
-  fontSize: 11,
-  lineHeight: 1.4,
-};
-
 const textLink = {
   background: "none",
   border: "none",
