@@ -1,3 +1,41 @@
+## 2026-09-25 (1.100.13)
+
+### Exposé-Ladeeffekt, "Was sich ändern müsste" ausführlich, Prompt-Feinschliff
+
+- ExposeUploadProgress.jsx nutzte einen eigenen, 1:1 nachgebauten KI-Sterne/
+  Schimmer-Effekt (musste damals dupliziert werden, weil AiEngine.jsx ihn
+  nicht exportierte, siehe 1.100.12). Jetzt dieselbe `KiLadeeffekt`-Komponente
+  wie ueberall sonst - neue optionale Props `intervalMs`/`loop`, damit das
+  bisherige Tempo (2,2 s/Schritt, endloses Rotieren waehrend der Extraktion)
+  erhalten bleibt.
+- Schritt 3 "Was sich ändern müsste" (SchrittStellschrauben) hat jetzt einen
+  Aufklapp-Bereich mit denselben KI-Texten (Hebel + Stärken), die "Worauf
+  achten" (Schritt 4) schon zeigt - vollstaendige, auf das Objekt zugeschnit-
+  tene Saetze inkl. Ortsname (der Analyse-Prompt verlangt das bereits seit
+  Einfuehrung), nur sichtbar, wenn die Analyse schon gelaufen ist. Kein
+  eigener Start-Knopf, keine Backend-Aenderung fuer diesen Teil noetig.
+- worker/src/exposePrompt.ts: Beispiele fuer Strasse/Hausnummer um
+  abgekuerzte Schreibweisen mit Punkt ("Hohenzollernstr. 43") und
+  Hausnummern mit Buchstabenzusatz ("12a") ergaenzt sowie den Hinweis, zuerst
+  im Kopfbereich/Titel des Exposes zu suchen - Nutzer-Befund: eine Adresse in
+  dieser Form wurde nicht ins Formular uebernommen.
+- worker/src/analysePrompt.ts (BRIEFING): neue Ton-Regel "professionell,
+  aber zugewandt" ergaenzt, ausdruecklich ohne die bestehende Klartext-Pflicht
+  aufzuweichen. Wirkt sich auf alle Investment-Briefing-Texte aus (Schritt 3
+  und 4 der Objektseite).
+- Live-Log-Abgleich (wrangler tail --env dev) zum gemeldeten Lage-Analyse-
+  Fehler: kein reproduzierbarer Code-Fehler gefunden, stattdessen ein
+  vereinzelter Gemini-Timeout ("The operation was aborted") beim parallel
+  laufenden /analyse-Aufruf - dort fing der Workers-AI-Fallback das ab
+  (200 OK), bei /lage gibt es bewusst KEINEN Fallback (Nutzer-Entscheidung
+  2026-09-23, Risiko erfundener Fakten). Der naechste /lage-Aufruf in
+  derselben Sitzung war bereits wieder Ok. Vermutlich ein vereinzelter
+  Aussetzer, kein dauerhafter Ausfall - weiter beobachten.
+
+Dateien: src/components/assistant/ExposeUploadProgress.jsx,
+src/components/dashboard/AiEngine.jsx, BriefingVisuals.jsx,
+InvestmentBriefing.jsx, worker/src/exposePrompt.ts, worker/src/analysePrompt.ts.
+
 ## 2026-09-25 (1.100.12)
 
 ### Objektseite: mobile Bar, KI-Ladeeffekt, weitere Textentfernungen

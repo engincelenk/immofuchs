@@ -167,6 +167,7 @@ export function InvestmentBriefing({
           spannen={briefing.spannen}
           groessterHebel={groessterHebel}
           onEintragen={onBearbeiten}
+          ergebnis={ergebnis}
           t={t}
         />
 

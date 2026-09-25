@@ -162,7 +162,12 @@ Regeln:
   Kopfbereich, "gemaess Berechnung 47,88 m2" im Text), trage die kleinere,
   belegte Zahl ein und melde die Abweichung im "warnungen"-Array.
 - "strasse" und "hausnummer" getrennt eintragen: "Murrstrasse 2" ergibt
-  strasse="Murrstrasse" und hausnummer="2".
+  strasse="Murrstrasse" und hausnummer="2". Gilt genauso fuer abgekuerzte
+  Schreibweisen mit Punkt ("Hohenzollernstr. 43" ergibt strasse=
+  "Hohenzollernstr." und hausnummer="43") und fuer Hausnummern mit
+  Buchstabenzusatz ("Bahnhofstraße 12a" ergibt strasse="Bahnhofstraße" und
+  hausnummer="12a"). Die Adresse steht oft im Kopfbereich/Titel des Exposes,
+  nicht nur im Fliesstext - dort zuerst suchen.
 - "baujahr_waermeerzeuger" ist das Baujahr der HEIZUNG, nicht des Gebaeudes
   ("Baujahr Waermeerzeuger 1996", "Gas-Zentralheizung aus 1996"). Steht im
   Expose kein eigenes Baujahr fuer die Heizung, MUSS das Feld null bleiben -

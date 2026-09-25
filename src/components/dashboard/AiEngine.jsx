@@ -603,13 +603,19 @@ const KI_LADEEFFEKT_CSS = `
 // jetzt auch bei "Worauf achten" und der Lage-Analyse (BriefingVisuals.jsx)
 // statt des dort bisherigen reinen Textes "Wird berechnet …" - eigene
 // Phasentexte je Aufrufer statt eines festen PHASEN-Arrays.
-export function KiLadeeffekt({ ariaLabel, phasen = PHASEN }) {
+export function KiLadeeffekt({ ariaLabel, phasen = PHASEN, intervalMs = 4000, loop = false }) {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
+    setPhase(0);
     // Mindestens 4 s je Phase, sonst flackert der Text bei schnellen Antworten.
-    const t = setInterval(() => setPhase((p) => Math.min(p + 1, phasen.length - 1)), 4000);
+    // `loop` fuer Aufrufer mit unvorhersehbarer Dauer (z.B. Bild-Extraktion) -
+    // sonst bleibt der letzte Phasentext stehen, statt von vorn zu beginnen.
+    const t = setInterval(
+      () => setPhase((p) => (loop ? (p + 1) % phasen.length : Math.min(p + 1, phasen.length - 1))),
+      intervalMs,
+    );
     return () => clearInterval(t);
-  }, [phasen]);
+  }, [phasen, intervalMs, loop]);
   return (
     <div aria-busy="true" style={{ marginTop: 8 }}>
       <style>{KI_LADEEFFEKT_CSS}</style>

@@ -172,6 +172,10 @@ Weitere Regeln fuer dieses Produkt:
 - Der Leser ist Einsteiger. Verwende keine Fachbegriffe wie DSCR, ICR oder LTV - sage in
   Worten, was gemeint ist ("die Miete deckt die Rate nicht").
 - Nenne den Ort ("ort" in den Kennzahlen) genau einmal beim Namen.
+- Ton: professionell, aber zugewandt - kein trockener Behoerden- oder Gutachterstil. Das
+  aendert NICHT die Direktheit aus "Sage im Klartext, was Sache ist" oben: eine Schwaeche
+  bleibt beim Namen genannt, nur die Ansprache ist die eines hilfreichen Beraters, nicht die
+  eines neutralen Formulars.
 
 Zu den einzelnen Feldern:
 - urteil: die Gesamteinordnung, passend zur Ampel.

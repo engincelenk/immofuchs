@@ -7,47 +7,28 @@
 //   Text ist ein reiner Beschaeftigungs-Indikator und behauptet deshalb NICHT,
 //   einzelne Felder seien schon gefunden.
 
-import { useEffect, useState } from "react";
 import { fuelle } from "../../i18n/expose.js";
+import { KiLadeeffekt } from "../dashboard/AiEngine.jsx";
 
-// KI-Sterne/Schimmer-Ladeeffekt (Nutzer-Vorgabe 2026-09-09: "auch hier Expose
-// auswerten mit Effekt versehen, wie bei Objekt KI-Services") - 1:1 im Design
-// an RechnerAiKarte.jsx/Laeuft() angelehnt (dort wiederum an AiEngine.jsx).
-// Nicht von dort importiert, da beide Vorbilder ihr CSS nicht exportieren -
-// eigener Klassenname (expu-*) verhindert eine Kollision.
+// Nutzte bis 2026-09-25 einen eigenen, 1:1 nachgebauten KI-Sterne/Schimmer-
+// Effekt (Nutzer-Vorgabe 2026-09-09), weil AiEngine.jsx ihn damals nicht
+// exportierte. Jetzt derselbe Effekt wie ueberall sonst (KiLadeeffekt),
+// eigene Phasentexte "Ich lese das Exposé — {Schritt}" per `phasen`-Prop,
+// `loop` weil die Extraktionsdauer (Vision-Modell, mehrere Bilder) im
+// Gegensatz zu den anderen Aufrufern nicht ungefaehr feststeht.
 //
 // Bewusst nur fuer "extracting", nicht fuer "uploading": Phase 1 hat einen
 // echten, zaehlbaren Fortschritt (ein Bild = ein Schritt) - ein Schimmer-
 // Platzhalter, der eine unbekannte Dauer suggeriert, waere dort eine
-// Verschlechterung gegenueber dem bereits vorhandenen Prozentbalken. Phase 2
-// ist wie bei der KI-Karte ein einzelner, nicht streamender Modell-Aufruf
-// ohne zaehlbaren Fortschritt - genau der Fall, fuer den der Effekt gedacht ist.
-const EXPU_LADEEFFEKT_CSS = `
-@keyframes expu-stern-glitzern{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
-@keyframes expu-balken-schimmer{0%{background-position:160% 0}100%{background-position:-60% 0}}
-.expu-stern{display:inline-block;animation:expu-stern-glitzern 1.6s ease-in-out infinite}
-.expu-balken{background-color:var(--cro);background-image:linear-gradient(90deg,var(--cro) 0%,var(--cro) 35%,var(--ca) 50%,var(--cro) 65%,var(--cro) 100%);
-  background-size:300% 100%;animation:expu-balken-schimmer 1.8s linear infinite}
-@media(prefers-reduced-motion: reduce){
-  .expu-stern{animation:none;opacity:.9}
-  .expu-balken{animation:none;background-image:none}
-}
-`;
+// Verschlechterung gegenueber dem bereits vorhandenen Prozentbalken.
 
 export function ExposeUploadProgress({ phase, fortschritt, t }) {
-  const [schritt, setSchritt] = useState(0);
   const schritte = t.phaseExtractSchritte ?? [];
-
-  useEffect(() => {
-    if (phase !== "extracting" || schritte.length === 0) return;
-    const id = setInterval(() => setSchritt((s) => (s + 1) % schritte.length), 2200);
-    return () => clearInterval(id);
-  }, [phase, schritte.length]);
 
   const text =
     phase === "uploading"
       ? fuelle(t.phaseUpload, { n: fortschritt.fertig, m: fortschritt.gesamt })
-      : `${t.phaseExtract} — ${schritte[schritt] ?? ""}`;
+      : t.phaseExtract;
 
   const anteil =
     phase === "uploading" && fortschritt.gesamt > 0
@@ -56,35 +37,13 @@ export function ExposeUploadProgress({ phase, fortschritt, t }) {
 
   if (phase === "extracting") {
     return (
-      <div className="if-exp-progress" role="status" aria-busy="true">
-        <style>{EXPU_LADEEFFEKT_CSS}</style>
-        <div
-          className="if-exp-progress-text"
-          style={{ display: "flex", alignItems: "center", gap: 6 }}
-        >
-          {[0, 180, 360].map((verzoegerung, i) => (
-            <span
-              key={verzoegerung}
-              className="expu-stern"
-              aria-hidden="true"
-              style={{
-                color: "var(--ca)",
-                fontSize: i === 1 ? 15 : 10,
-                animationDelay: `${verzoegerung}ms`,
-              }}
-            >
-              ✦
-            </span>
-          ))}
-          {text}
-        </div>
-        {[100, 78, 46].map((breite) => (
-          <div
-            key={breite}
-            className="expu-balken"
-            style={{ height: 10, width: `${breite}%`, borderRadius: 4, marginTop: 8 }}
-          />
-        ))}
+      <div className="if-exp-progress">
+        <KiLadeeffekt
+          ariaLabel={t.phaseExtract}
+          phasen={schritte.length > 0 ? schritte.map((s) => `${t.phaseExtract} — ${s}`) : [t.phaseExtract]}
+          intervalMs={2200}
+          loop
+        />
       </div>
     );
   }

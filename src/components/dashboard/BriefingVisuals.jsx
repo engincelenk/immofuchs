@@ -754,13 +754,23 @@ function spannenWertText(wert, monatlich) {
   return monatlich ? fmtE(Math.round(wert)) : fmtKompakt(wert);
 }
 
-export function SchrittStellschrauben({ spannen, groessterHebel, onEintragen, t }) {
+export function SchrittStellschrauben({ spannen, groessterHebel, onEintragen, ergebnis, t }) {
+  const [aufgeklappt, setAufgeklappt] = useState(false);
   if (!spannen) return null;
   const zeilen = SPANNEN_METRIK.filter((m) => {
     const s = spannen[m.key];
     return s && (s.aktuell != null || s.realistisch != null || s.optimal != null);
   });
   if (zeilen.length === 0) return null;
+
+  // Dieselbe Datenquelle wie der Aufklapp-Bereich in "Worauf achten"
+  // (SchrittRisiken) - Hebel zuerst (Kartenthema "was sich ändern müsste"),
+  // dann Stärken als das Positive ("was bereits gut ist", Nutzerwunsch
+  // 2026-09-25). Kein eigener Start-Knopf: dieselbe Analyse wie Schritt 4,
+  // hier nur sichtbar, wenn sie bereits gelaufen ist.
+  const hebelTexte = ergebnis ? hebelTexteVon(ergebnis) : [];
+  const staerkenTexte = ergebnis ? staerkenVon(ergebnis) : [];
+  const ausfuehrlich = [...hebelTexte, ...staerkenTexte];
 
   return (
     <section id="schritt-stellschrauben" className="bv bv-auf cockpit-s3" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
@@ -843,6 +853,28 @@ export function SchrittStellschrauben({ spannen, groessterHebel, onEintragen, t 
           "Realistisch = was der Markt hergibt · Tragfähig = ab hier trägt sich das Objekt",
         )}
       </div>
+
+      {ausfuehrlich.length > 0 && (
+        <button type="button" onClick={() => setAufgeklappt((o) => !o)} aria-expanded={aufgeklappt} style={textLink}>
+          {aufgeklappt
+            ? L(t, "cockWenigerAnzeigen", "Weniger anzeigen")
+            : L(t, "cockAusfuehrlich", "Ausführliche Begründung ansehen")}
+        </button>
+      )}
+
+      {aufgeklappt && ausfuehrlich.length > 0 && (
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 12 }}>
+          {ausfuehrlich.map((e) => (
+            <p key={e.title} style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: "var(--ch)" }}>
+              <strong style={{ color: "var(--ct)" }}>
+                {e.title}
+                {e.value && <span style={{ color: "var(--ca)" }}> · {e.value}</span>}.
+              </strong>{" "}
+              {e.text}
+            </p>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
