@@ -200,6 +200,11 @@ function ObjektFormular({
   // nur die sichtbaren Felder zusammensetzt.
   const [exposeExtra, setExposeExtra] = useState({});
   const [exposeOffen, setExposeOffen] = useState(false);
+  // Fertiger Anfragetext fuer AdressSuche.autoSuche (Nutzer-Vorgabe
+  // 2026-09-26): sobald ein Expose Strasse/Hausnummer/PLZ/Ort liefert, sucht
+  // die Adresssuche automatisch danach, statt leer zu bleiben - siehe
+  // Kommentar an AdressSuche/autoSuche in ObjektAnlegenWizard.jsx.
+  const [exposeAdresse, setExposeAdresse] = useState("");
   // Verhindert ein doppelt angelegtes Objekt bei einem zweiten, schnellen
   // Klick, waehrend onAnlegen (jetzt async: legt an UND laedt den
   // Renditerechner) noch laeuft.
@@ -224,6 +229,7 @@ function ObjektFormular({
     const sichtbar = new Set([...FELDER.map((f) => f.key), "plz", "ort", "strasse", "hausnummer"]);
     const extra = {};
     const exposeKeys = [];
+    const adresse = {};
     uebernehmeZeilen(
       zeilen,
       auswahl,
@@ -232,9 +238,18 @@ function ObjektFormular({
         if (k === "bundesland") setBundesland(v);
         else if (sichtbar.has(k)) setzenMit(k, v, HERKUNFT.EXPOSE);
         else extra[k] = v;
+        if (k === "strasse" || k === "hausnummer" || k === "plz" || k === "ort") adresse[k] = v;
       },
       ergebnis,
     );
+    // Automatische Adresssuche anstossen (siehe AdressSuche/autoSuche) -
+    // ohne Strasse kein sinnvoller Suchtext, dann bleibt das Feld leer und
+    // die Koordinaten fallen auf die PLZ-Mitte zurueck (unveraendertes
+    // Verhalten von vorher).
+    const anschrift = [adresse.strasse, adresse.hausnummer].filter(Boolean).join(" ");
+    const ortszeile = [adresse.plz, adresse.ort].filter(Boolean).join(" ");
+    const autoQuery = [anschrift, ortszeile].filter(Boolean).join(", ");
+    if (anschrift && autoQuery) setExposeAdresse(autoQuery);
     // Ein Fallback-Name ist hier nicht mehr noetig: der Name ist seit
     // objektseite-neu.md §7.1 kein Pflichtfeld mehr, und namensVorschlag()
     // unten faellt ohnehin auf "{Ort} · {Kaufpreis}" zurueck.
@@ -374,6 +389,7 @@ function ObjektFormular({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <AdressSuche
+          autoSuche={exposeAdresse}
           onTreffer={(tr) => {
             // Die Strasse bleibt der beste Name: sie unterscheidet zwei
             // Wohnungen in derselben Stadt, "{Ort} · {Kaufpreis}" nicht.

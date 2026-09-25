@@ -265,7 +265,7 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
 // deshalb steht der Hinweis darauf direkt am Feld und nicht im Kleingedruckten.
 // Entprellt (350 ms) und erst ab drei Zeichen, damit nicht jeder Tastendruck
 // eine Anfrage ausloest.
-export function AdressSuche({ onTreffer }) {
+export function AdressSuche({ onTreffer, autoSuche }) {
   const [text, setText] = useState("");
   const [treffer, setTreffer] = useState([]);
   const [offen, setOffen] = useState(false);
@@ -273,6 +273,18 @@ export function AdressSuche({ onTreffer }) {
   const [fehler, setFehler] = useState(false);
   const box = useRef(null);
   const abbruch = useRef(null);
+  // `onTreffer` per Ref statt als Effekt-Abhaengigkeit: der Aufrufer uebergibt
+  // ueblicherweise eine Inline-Funktion, die sich bei jedem Render neu
+  // erzeugt - als Abhaengigkeit wuerde der Auto-Suche-Effekt unten dadurch bei
+  // jedem Render erneut feuern, nicht nur bei einer neuen `autoSuche`.
+  const onTrefferRef = useRef(onTreffer);
+  useEffect(() => {
+    onTrefferRef.current = onTreffer;
+  }, [onTreffer]);
+  // Naechste `text`-Aenderung kam aus der Auto-Suche unten, nicht aus dem
+  // Tippen - der Debounce-Effekt darunter soll sie nicht ein zweites Mal
+  // nachsuchen.
+  const automatisch = useRef(false);
 
   useEffect(() => {
     const zu = (e) => {
@@ -283,6 +295,10 @@ export function AdressSuche({ onTreffer }) {
   }, []);
 
   useEffect(() => {
+    if (automatisch.current) {
+      automatisch.current = false;
+      return undefined;
+    }
     if (text.trim().length < MIN_ZEICHEN) {
       setTreffer([]);
       setOffen(false);
@@ -311,6 +327,49 @@ export function AdressSuche({ onTreffer }) {
     }, 350);
     return () => clearTimeout(zeit);
   }, [text]);
+
+  // Automatische Suche nach einer Exposé-Übernahme (Nutzer-Vorgabe
+  // 2026-09-26): dieselbe Photon-Anfrage wie beim manuellen Tippen, nur
+  // programmatisch aus der bereits extrahierten Adresse ausgeloest - sonst
+  // blieb dieses Feld nach einem Expose-Upload leer und der Nutzer musste die
+  // schon gefundene Adresse ein zweites Mal eintippen. `autoSuche` ist ein
+  // fertiger Anfragetext ("Strasse Hausnummer, PLZ Ort") vom Aufrufer, aendert
+  // sich nur bei einem neuen Expose-Ergebnis - der Ref-Vergleich verhindert
+  // ein erneutes Ausloesen bei jedem Re-Render mit demselben Wert.
+  const autoLetzter = useRef(null);
+  useEffect(() => {
+    const q = String(autoSuche || "").trim();
+    if (!q || q === autoLetzter.current) return undefined;
+    autoLetzter.current = q;
+    let abgebrochen = false;
+    (async () => {
+      setLaedt(true);
+      setFehler(false);
+      try {
+        const ergebnis = await sucheAdressen(q);
+        if (abgebrochen) return;
+        setTreffer(ergebnis);
+        if (ergebnis.length > 0) {
+          onTrefferRef.current?.(ergebnis[0]);
+          automatisch.current = true;
+          setText(ergebnis[0].anzeige);
+          setOffen(false);
+        } else {
+          // Kein Treffer: Suchtext trotzdem zeigen, damit sichtbar ist, was
+          // gesucht wurde, statt eines stillen leeren Felds.
+          automatisch.current = true;
+          setText(q);
+        }
+      } catch {
+        if (!abgebrochen) setFehler(true);
+      } finally {
+        if (!abgebrochen) setLaedt(false);
+      }
+    })();
+    return () => {
+      abgebrochen = true;
+    };
+  }, [autoSuche]);
 
   return (
     <div ref={box} style={{ position: "relative" }}>

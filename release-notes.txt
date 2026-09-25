@@ -1,3 +1,31 @@
+## 2026-09-26 (1.100.14)
+
+### Objekt anlegen: Adresssuche nach Exposé-Upload automatisch ausgeloest
+
+Nutzer-Befund (mit Test-PDF bestaetigt, Adresse "Murrstrasse 2, Ingersheim" -
+dieselbe Adresse funktioniert an anderer Stelle der App bereits einwandfrei,
+also lag es NICHT an der KI-Extraktion selbst, siehe 1.100.13): Nach einem
+Exposé-Upload fuellte `exposeUebernehmen()` zwar Strasse/Hausnummer/PLZ/Ort
+als Text in die Formularfelder, aber das separate Feld "Adresse suchen"
+(AdressSuche in ObjektAnlegenWizard.jsx) blieb leer - es hat keine externe
+Verbindung zu diesen Feldern, weil es die einzige Stelle der App ist, an der
+eine Eingabe den Browser verlaesst (Photon/OpenStreetMap), und bisher bewusst
+nur bei manueller Eingabe feuerte. Dadurch blieben auch die hausnummergenauen
+Koordinaten (lat/lon) leer, Fallback war nur die PLZ-Mitte.
+
+Jetzt (Nutzer-Entscheidung 2026-09-26, ausdruecklich inklusive der damit
+verbundenen automatischen externen Anfrage): AdressSuche bekommt einen neuen
+`autoSuche`-Prop - ObjektAnlegen.jsx baut daraus nach jeder Exposé-Übernahme
+einen Suchtext ("Strasse Hausnummer, PLZ Ort") und die Komponente sucht und
+uebernimmt den besten Treffer automatisch, ohne dass der Nutzer die Adresse
+ein zweites Mal eintippen muss.
+
+Nicht end-to-end mit echtem Login/Exposé-Upload getestet (kein Zugriff auf
+das Nutzerkonto) - nur Build und bestehende Tests gepruefte, Logik am
+Code nachvollzogen. Bitte einmal live pruefen.
+
+Dateien: src/components/dashboard/ObjektAnlegenWizard.jsx, ObjektAnlegen.jsx.
+
 ## 2026-09-25 (1.100.13)
 
 ### Exposé-Ladeeffekt, "Was sich ändern müsste" ausführlich, Prompt-Feinschliff
