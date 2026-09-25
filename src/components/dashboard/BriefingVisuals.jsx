@@ -14,6 +14,7 @@ import { fmt, fmtE } from "../../utils/helpers.js";
 import { berechneVollstaendigkeit } from "../../utils/objektKennzahlen.js";
 import { hebelTexteVon, risikenVon, staerkenVon } from "../../utils/aiEngine.js";
 import { ObjektLage } from "./ObjektUnterlagen.jsx";
+import { KiLadeeffekt } from "./AiEngine.jsx";
 import {
   cockpitAntwortsatz,
   cockpitCashflowJahr,
@@ -62,7 +63,7 @@ const COCKPIT_CSS = `
 .cockpit-cmp-note{padding-left:0!important}
 .cockpit-next{display:flex;flex-direction:column;gap:14px}
 .cockpit-next-besichtigung{order:-1}
-.cockpit-mobile-bar{position:fixed;left:0;right:0;bottom:62px;padding:10px 16px;background:var(--cc);border-top:1px solid var(--cb);z-index:30}
+.cockpit-mobile-bar{position:fixed;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));padding:10px 16px;background:var(--cc);border-top:1px solid var(--cb);z-index:30}
 .cockpit-s5{padding-bottom:76px}
 @media(min-width:768px){
   .cockpit-kennzahlen{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -1161,18 +1162,11 @@ export function SchrittRisiken({
       )}
 
       {laufend ? (
-        <div aria-busy="true" style={{ marginTop: 12, fontSize: 12.5, color: "var(--cl)" }}>
-          {L(t, "brfLaeuft", "Wird berechnet …")}
-        </div>
+        <KiLadeeffekt ariaLabel={L(t, "brfStartKnopf", "Investment-Briefing erstellen")} />
       ) : (
         !zeigtConsent &&
         !bestaetigen && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: hatAnalyse ? "space-between" : "flex-start", gap: 8, marginTop: 14 }}>
-            {erstelltText && hatAnalyse && (
-              <span style={klein}>
-                {L(t, "brfKiGeneriert", "KI-generiert")} · {erstelltText}
-              </span>
-            )}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 8, marginTop: 14 }}>
             {!hatAnalyse && (
               <button type="button" onClick={onStarten} style={analyseKnopf}>
                 <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
@@ -1241,6 +1235,7 @@ export function sekundaerKnopfStyle(breit = true) {
 // Ersetzt LageMiniKarte + die vormalige separate "Lage prüfen"-Kachel - in
 // der Vorlage (Variante E) ist das EINE Karte, keine zwei nebeneinander.
 const LAGE_KURZTEXT_SCHWELLE = 260;
+const LAGE_PHASEN = ["Standort einordnen …", "Mit Region vergleichen …", "Text formulieren …"];
 
 export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent, onStarten, onConsentJa, onConsentAbbrechen, t }) {
   const [ausgeklappt, setAusgeklappt] = useState(false);
@@ -1331,9 +1326,10 @@ export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent
             </div>
           </div>
         ) : laufend ? (
-          <div aria-busy="true" style={{ fontSize: 12.5, color: "var(--cl)" }}>
-            {L(t, "brfLaeuft", "Wird berechnet …")}
-          </div>
+          <KiLadeeffekt
+            ariaLabel={L(t, "brfLageStarten", "Lage-Analyse erstellen")}
+            phasen={LAGE_PHASEN}
+          />
         ) : fehler ? (
           <>
             <div style={lageFehlerBand}>{fehler}</div>

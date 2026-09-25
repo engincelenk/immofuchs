@@ -1,3 +1,29 @@
+## 2026-09-25 (1.100.12)
+
+### Objektseite: mobile Bar, KI-Ladeeffekt, weitere Textentfernungen
+
+- Mobiler "Im Renditerechner öffnen"-Button war auf Geräten mit Home-
+  Indicator grösstenteils hinter der App-Tableiste versteckt (nur ein
+  schmaler oranger Streifen sichtbar): `.cockpit-mobile-bar` nutzte
+  `bottom:62px` ohne `env(safe-area-inset-bottom)`, die Tableiste selbst
+  (App.jsx `.tbar-wrap`) ist aber `62px + safe-area-inset-bottom` hoch. Jetzt
+  `bottom:calc(62px + env(safe-area-inset-bottom))`.
+- Footer-Disclaimer "Texte der AI-Engine sind KI-generiert und ersetzen
+  keine Beratung." entfernt (InvestmentBriefing.jsx).
+- "KI-generiert · <Datum>"-Zeile entfernt bei "Worauf achten"
+  (BriefingVisuals.jsx) und beim Besichtigungshandout (AiEngine.jsx). Nicht
+  angefasst: dieselbe Zeile in RechnerAiKarte.jsx (andere Rechner-Seiten,
+  ausserhalb der Objektseite).
+- KI-Ladeeffekt (Sterne + Balken-Schimmer, bisher nur beim
+  Besichtigungshandout) als `KiLadeeffekt` aus AiEngine.jsx exportiert und
+  jetzt auch bei "Worauf achten" (dieselben Phasentexte) und bei der
+  Lage-Analyse (eigene Phasentexte: "Standort einordnen …", "Mit Region
+  vergleichen …", "Text formulieren …") eingesetzt - ersetzt den bisherigen
+  reinen Text "Wird berechnet …" an beiden Stellen.
+
+Dateien: src/components/dashboard/BriefingVisuals.jsx, InvestmentBriefing.jsx,
+AiEngine.jsx.
+
 ## 2026-09-25 (1.100.11)
 
 ### Objektseite: vier Feinschliff-Korrekturen

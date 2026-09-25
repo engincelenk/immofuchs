@@ -229,10 +229,6 @@ export function InvestmentBriefing({
               />
             </div>
           </div>
-
-          <p style={{ margin: "14px 0 0", fontSize: 12, color: "var(--ch)" }}>
-            {t.brfKiDisclaimer || "Texte der AI-Engine sind KI-generiert und ersetzen keine Beratung."}
-          </p>
         </section>
       </div>
     </div>

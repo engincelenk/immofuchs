@@ -213,11 +213,6 @@ function ProduktZeile({
           <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "var(--ct)" }}>
             {produkt.titel}
           </span>
-          {(zustand === "fertig" || zustand === "veraltet") && (
-            <span style={{ display: "block", fontSize: 12, color: "var(--cl)", marginTop: 4 }}>
-              KI-generiert · {alter(ergebnis, locale)}
-            </span>
-          )}
         </span>
         {!proAktiv && (
           <span style={{ ...preisChip, opacity: gesperrt ? 0.5 : 1 }}>Pro</span>
@@ -604,13 +599,17 @@ const KI_LADEEFFEKT_CSS = `
 }
 `;
 
-function Laeuft({ produkt }) {
+// Wiederverwendbar (Nutzerwunsch 2026-09-25): derselbe Sterne+Balken-Effekt
+// jetzt auch bei "Worauf achten" und der Lage-Analyse (BriefingVisuals.jsx)
+// statt des dort bisherigen reinen Textes "Wird berechnet …" - eigene
+// Phasentexte je Aufrufer statt eines festen PHASEN-Arrays.
+export function KiLadeeffekt({ ariaLabel, phasen = PHASEN }) {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
     // Mindestens 4 s je Phase, sonst flackert der Text bei schnellen Antworten.
-    const t = setInterval(() => setPhase((p) => Math.min(p + 1, PHASEN.length - 1)), 4000);
+    const t = setInterval(() => setPhase((p) => Math.min(p + 1, phasen.length - 1)), 4000);
     return () => clearInterval(t);
-  }, []);
+  }, [phasen]);
   return (
     <div aria-busy="true" style={{ marginTop: 8 }}>
       <style>{KI_LADEEFFEKT_CSS}</style>
@@ -629,7 +628,7 @@ function Laeuft({ produkt }) {
             ✦
           </span>
         ))}
-        <span style={{ fontSize: 12.5, color: "var(--cl)" }}>{PHASEN[phase]}</span>
+        <span style={{ fontSize: 12.5, color: "var(--cl)" }}>{phasen[phase]}</span>
       </div>
       {[100, 72, 42].map((breite) => (
         <div
@@ -644,10 +643,14 @@ function Laeuft({ produkt }) {
         />
       ))}
       <span style={{ position: "absolute", left: -9999 }} aria-live="polite">
-        {produkt.titel} wird erstellt
+        {ariaLabel}
       </span>
     </div>
   );
+}
+
+function Laeuft({ produkt }) {
+  return <KiLadeeffekt ariaLabel={`${produkt.titel} wird erstellt`} />;
 }
 
 function Bestaetigung({ produkt, ersetzt, onAbbrechen, onJa }) {
