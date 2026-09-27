@@ -152,9 +152,13 @@ export default function Haupt() {
   const lastEditedRef = mietQuelleRef;
   // Grund- und Gebaeudeanteil ergaenzen sich immer auf 100% - beim Editieren
   // des einen wird der andere gegengerechnet.
+  // Geklemmt auf 0-100 % (Nutzer-Befund 2026-09-27): ohne diese Grenze liess
+  // sich z.B. 120 eintragen, das Gegenfeld sprang dann auf -20 und die AfA-
+  // Bemessungsgrundlage (rendite.js) rechnete mit einer ueberhoehten Quote.
   const setAnteil = (feld, gegenfeld, v) => {
-    set(feld, v);
-    set(gegenfeld, 100 - (+v || 0));
+    const geklemmt = Math.max(0, Math.min(100, +v || 0));
+    set(feld, String(geklemmt));
+    set(gegenfeld, String(100 - geklemmt));
   };
   // mieteQm: use typed value; if empty string, don't fall back (allow clearing)
   const mieteQm = d.mieteQm !== "" ? +d.mieteQm || 0 : 0;

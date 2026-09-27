@@ -11,8 +11,6 @@
 // der Nutzer zweimal fuer dieselbe Auskunft. Bis 2026-09 waren alle
 // Ergebnisse fluechtig: Chat zu, Analyse weg.
 
-export const AI_ENGINE_NAME = "AI-Engine";
-
 // Produkte der Engine. `id` landet als Schluessel in resultData.ai und darf
 // sich deshalb nicht mehr aendern, sobald etwas gespeichert wurde.
 //

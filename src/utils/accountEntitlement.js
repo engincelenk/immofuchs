@@ -4,10 +4,6 @@
 // aus der /api/v1/me-Antwort, damit useAccount.js schlank bleibt und diese
 // Datei ohne Mock-Server testbar ist.
 
-export function isProFromMeResponse(me) {
-  return Boolean(me?.isPro);
-}
-
 const PLAN_LABELS = { monthly: "Monatlich", yearly: "Jährlich" };
 
 export function formatPlanLabel(subscription) {
@@ -41,13 +37,6 @@ export function trialDaysRemaining(subscription, now = Date.now()) {
   if (subscription?.status !== "trialing" || !subscription?.currentPeriodEnd) return null;
   const days = Math.ceil((subscription.currentPeriodEnd - now) / (24 * 60 * 60 * 1000));
   return days > 0 ? days : null;
-}
-
-// Innerhalb der freiwilligen 14-Tage-Geld-zurueck-Frist (4.12)?
-export function isWithinRefundWindow(subscription, now = Date.now()) {
-  if (!subscription?.firstPurchaseAt) return false;
-  const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
-  return now - subscription.firstPurchaseAt <= FOURTEEN_DAYS_MS;
 }
 
 // "password" ist der einzige Provider-Wert, der kein Eigenname ist und daher

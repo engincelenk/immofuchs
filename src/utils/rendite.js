@@ -49,7 +49,13 @@ export function computeRendite(d, t) {
     leerstandMon = +d.leerstand || 0;
   const steuerProz = +d.steuersatz || 0,
     afaProz = +d.afaSatz || 0,
-    gebaeudeAnteilProz = +d.gebAnteil || 0;
+    // Geklemmt auf 0-100 % (Nutzer-Befund 2026-09-27, docs/test-exposes/
+    // PRUEFBERICHT_2026-09-27.md Kernbefund 1): ungeprueft konnte ein Wert
+    // >100 % die AfA-Bemessungsgrundlage ueber den tatsaechlichen Kaufpreis
+    // hinaus aufblaehen. Hier statt nur in Renditerechner.jsx.setAnteil(),
+    // damit die Grenze unabhaengig vom Eingabeweg gilt (auch bei alten
+    // gespeicherten Objekten mit einem bereits fehlerhaften Wert).
+    gebaeudeAnteilProz = Math.max(0, Math.min(100, +d.gebAnteil || 0));
   const wertsteigerungProz = +d.wertP || 0,
     jahre = +d.jahre || 10,
     sonderumlage = +d.sonder || 0;

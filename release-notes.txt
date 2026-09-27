@@ -1,3 +1,115 @@
+## 2026-09-27 (1.100.17)
+
+### Clean Code: totes/ungenutztes entfernt (Phase 1)
+
+Nutzer-Auftrag: kompletten Code auf tot/ungenutzt pruefen. Ein Explore-Agent
+hat app-weit (Frontend + Worker) nach ungenutzten Exports/Dateien und
+berechneten-aber-nie-angezeigten Werten gesucht, jeder Fund einzeln per Grep
+gegengeprueft.
+
+Entfernt (verifiziert null externe Referenzen):
+- 9 komplett ungenutzte Dateien: src/components/dashboard/Stellschrauben.jsx,
+  src/components/calculators/KiToolsSection.jsx, vier alte Chart-Komponenten
+  (CashflowDarlehenChart/ExitSzenarioChart/LineChart/RenditequellenChart.jsx -
+  Vorgaenger-Set der heute aktiven Charts in Renditerechner.jsx),
+  src/hooks/useSpeechOutput.js, src/utils/kreditKennzahlen.js,
+  src/LoadingScreen.jsx (abgeloest durch KiLadeeffekt).
+- 7 ungenutzte Exports: worker/src/db.ts listPushTokensForUsers,
+  worker/src/entitlement.ts requireUser, worker/src/trialLimits.ts
+  TRIAL_UNBEGRENZT; src/utils/accountEntitlement.js isProFromMeResponse +
+  isWithinRefundWindow, src/utils/aiEngine.js AI_ENGINE_NAME,
+  src/utils/mietReferenz.js MIET_REFERENZ_QUELLE.
+- 39 tote Übersetzungs-Keys aus translations.js (alle 5 Sprachen) - Reste der
+  Vor-Redesign-Karten (alte Score-Karte, Stärken/Risiken-Blocktitel,
+  Vergleichstitel V1-V6, Zeitraum-/Tragfähigkeits-Bloecke) sowie
+  brfKiGeneriert/brfLaeuft, die durch die Aenderungen vom 25./26.09. (KI-
+  Ladeeffekt ueberall, "KI-generiert"-Zeile entfernt) selbst nachtraeglich
+  tot wurden.
+- Bonus: 6 fehlende Übersetzungs-Keys ergaenzt (brfSpannenkaufpreis/
+  -eigenkapital, brfSpannenkaltmiete nur en/tr/zh/hi - bewusst nicht in de,
+  siehe Kommentar im Code -, brfModStufegering/-mittel/-hoch) - fielen
+  bisher in jeder Sprache still auf Deutsch zurueck.
+- gebAnteil-Fix (1.100.16) zusaetzlich mit Clamp direkt in rendite.js
+  abgesichert (bereits committet-faehig).
+
+BEWUSST NICHT angefasst (Korrektur eines ersten Verdachts): briefing.js
+(marktpreis/kombiweg/empfehlung/begruendung/alternativanlage/sensitivitaet/
+flaggen) und die Worker-KI-Felder markt/tragfaehigkeit/zeitraum/stresstest
+SEHEN aus wie totes Gewicht (im neuen Cockpit-Design nirgends angezeigt),
+haben aber eigene, aktive Testsuiten (briefing.test.js
+"berechneBriefing - Empfehlung mit echter Rechnung", analyseOutput.test.ts/
+analysePrompt.test.ts) - eine fertige, getestete Kauf-/Verhandlungs-
+Empfehlungs-Engine, die beim Redesign von der Anzeige getrennt wurde, aber
+nicht kaputt ist. Entfernen waere eine Produktentscheidung, kein Cleanup -
+Nutzer-Entscheidung 2026-09-27: vorerst unangetastet lassen.
+
+816 Frontend- + 246 Worker-Tests weiterhin gruen, kein Build-/Typefehler.
+
+Dateien: siehe oben; ausserdem src/components/calculators/Renditerechner.jsx,
+src/utils/rendite.js (aus 1.100.16, noch nicht deployt).
+
+## 2026-09-27 (1.100.16)
+
+### Bugfix: gebAnteil ungeklemmt + Test-Fixtures korrigiert
+
+Aus PRUEFBERICHT_2026-09-27.md (Testfälle docs/test-exposes durchgespielt):
+
+- **Bug behoben:** `gebAnteil` (Gebäudeanteil %) war weder im Formular noch
+  im State-Setter noch in der AfA-Berechnung auf 0–100 % begrenzt. Bei
+  Eingabe >100 % wurde die AfA-Bemessungsgrundlage entsprechend überhöht
+  berechnet (Testfall F2: 120 % ergab afaBem = 120 % der Anschaffungskosten).
+  Jetzt geklemmt in `utils/rendite.js` (`gebaeudeAnteilProz`) UND
+  `Renditerechner.jsx` (`setAnteil()`), damit die Grenze unabhaengig vom
+  Eingabeweg gilt.
+- Drei Fehler in den Test-Fixture-Dateien selbst korrigiert (kein App-Bug,
+  aber irreführend fürs manuelle Testen): `bundesland` braucht das
+  2-Buchstaben-Kürzel statt vollem Namen (alle 10 Dateien), S1s `notar`/
+  `makler` sind Prozent- keine Eurofelder, F2s `leerstand` ist in Monaten
+  nicht Prozent angegeben. README.md entsprechend ergänzt.
+
+816 Frontend-Tests weiterhin gruen.
+
+Dateien: src/utils/rendite.js, src/components/calculators/Renditerechner.jsx,
+docs/test-exposes/*.md.
+
+## 2026-09-27 (1.100.15)
+
+### i18n-Audit: fehlende Übersetzungen ergänzt (Fokus Objektdetailseite)
+
+Nutzer-Auftrag: alle Übersetzungen der App pruefen, insbesondere Objektdetail-
+seite, fehlende ergaenzen. Ein Explore-Agent hat alle `t.xxx`/`L(t,"xxx",...)`-
+Zugriffe app-weit gesammelt und korrekt den vier PARALLELEN Wörterbüchern
+zugeordnet (`T`/translations.js, `ACCOUNT_T`, `ASSISTANT_T`, `EXPOSE_T` - ca.
+450 vermeintliche Treffer waren False Positives aus den drei anderen
+Woerterbuechern, nicht aus `T`).
+
+Ergaenzt in `src/i18n/translations.js`, alle 5 Sprachen (de/en/tr/zh/hi):
+- 53 Keys aus dem "Geführtes Cockpit" (BriefingVisuals.jsx/InvestmentBriefing.jsx,
+  Objektdetailseite-Redesign 2026-09-24/25) - waren nur als deutscher
+  Inline-Fallback vorhanden, nie in `T` selbst nachgetragen. Betrifft u.a.
+  alle Schritt-Titel, die Finanzierungs-/Anschaffungskosten-Zeilen, die
+  Lage-Analyse-Karte, "Worauf achten"/"Was sich aendern muesste".
+- `objektOhneKennzahlen` (Merkliste.jsx) - fehlte komplett in `T`.
+- `hauptFull`/`kreditFull`/`mieteFull`/`sanierFull`/`steuer6Full`/`vfeFull`
+  nachgetragen fuer tr/zh/hi (gab es nur in de/en - Rechner-Titel fielen in
+  diesen drei Sprachen still auf die Kurzform zurueck).
+- `tierG`/`tierM`/`tierS` (Sanierungsrechner-Stufen) nachgetragen fuer en
+  (gab es nur in de/tr/zh/hi).
+
+Bewusst NICHT uebersetzt: `cockAntwortNegativ`/`cockAntwortPositiv`
+(utils/objektCockpit.js) - toter Code, der berechnete `.satz`-Wert wird von
+AntwortsatzKopf (BriefingVisuals.jsx) nie gelesen, die Komponente baut den
+Satz stattdessen aus den bereits vorhandenen …VorspannNachspann-Paaren
+zusammen. Neue Uebersetzungen dafuer waeren unerreichbar geblieben.
+
+Bewusst unveraendert gelassen: 71 `s1b1…s7t4`-Keys in Renditerechner.jsx
+fehlen absichtlich in `de` (jeder Lesezugriff ist mit `lang !== "de"`
+abgesichert, Deutsch zeigt dort einen eigenen Fliesstext) - kein Bug.
+
+816 Frontend-Tests weiterhin gruen, kein Build-Fehler.
+
+Dateien: src/i18n/translations.js.
+
 ## 2026-09-26 (1.100.14)
 
 ### Objekt anlegen: Adresssuche nach Exposé-Upload automatisch ausgeloest

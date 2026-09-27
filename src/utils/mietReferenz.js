@@ -22,13 +22,6 @@
 
 const DATEI = "/miete-referenz.txt";
 
-export const MIET_REFERENZ_QUELLE = {
-  name: "Zensus 2022",
-  herausgeber: "Statistisches Bundesamt",
-  stichtag: "15.05.2022",
-  art: "Bestandsmiete",
-};
-
 let tabelle = null;
 let laufend = null;
 

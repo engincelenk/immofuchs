@@ -34,9 +34,6 @@ export const TRIAL_LIMITS = {
   lage: 3,
 } as const;
 
-// Features ohne jedes Kontingent in der Testphase.
-export const TRIAL_UNBEGRENZT = ["rechner", "pdf"] as const;
-
 // Gespeicherte Objekte, Gesamtzahl fuer die ganze Testphase - kein
 // Tageskontingent, weil es kein Verbrauch ist, sondern ein Bestand: die
 // Merkliste soll sich nicht Tag fuer Tag weiter fuellen lassen.

@@ -223,7 +223,3 @@ export async function getEntitlement(request: Request, env: Env, userId: string)
     : null;
   return { isPro, setCookie };
 }
-
-export async function requireUser(env: Env, userId: string): Promise<UserRow | null> {
-  return getUserById(env.DB, userId);
-}

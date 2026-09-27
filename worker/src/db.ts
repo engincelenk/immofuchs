@@ -852,19 +852,6 @@ export async function listPushTokensForUser(db: Env["DB"], userId: string): Prom
   return rows.results;
 }
 
-export async function listPushTokensForUsers(
-  db: Env["DB"],
-  userIds: string[],
-): Promise<PushTokenRow[]> {
-  if (userIds.length === 0) return [];
-  const placeholders = userIds.map(() => "?").join(",");
-  const rows = await db
-    .prepare(`SELECT token, user_id, platform FROM push_tokens WHERE user_id IN (${placeholders})`)
-    .bind(...userIds)
-    .all<PushTokenRow>();
-  return rows.results;
-}
-
 // ═══ E-Mail-Änderung (4.10) ═══
 
 const EMAIL_CHANGE_TTL_MS = 15 * 60 * 1000;
