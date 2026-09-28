@@ -11,79 +11,136 @@
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap');
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'DM Sans',sans-serif;background:#f5f5f0;color:#1a1a1a;padding:20px;line-height:1.7}
-    .wrap{max-width:680px;margin:0 auto;background:#fff;border-radius:16px;padding:32px 24px;border:1px solid #e5e5dc}
-    h1{font-size:22px;color:#e8600a;margin-bottom:8px}
-    h2{font-size:15px;margin-top:24px;margin-bottom:8px;color:#1a1a1a}
-    p,li{font-size:13px;color:#3d3d3a;margin-bottom:8px}
-    ul{padding-left:20px}
-    a{color:#e8600a;text-decoration:none}
-    .back{display:inline-block;margin-bottom:16px;font-size:13px;color:#e8600a}
-    .updated{font-size:11px;color:#8a8a80;margin-top:24px}
-    .notice{background:rgba(232,96,10,.06);border:1px solid rgba(232,96,10,.2);border-radius:8px;padding:12px 16px;font-size:12px;color:#7a3800;margin:16px 0}
-    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e5e5dc;font-size:11px;color:#8a8a80;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
-    .footer a{color:#e8600a}
+    .wrap{max-width:720px;margin:0 auto;background:#fff;border-radius:16px;padding:32px 24px;border:1px solid #e5e5dc}
+    h1{font-size:22px;color:#c44d00;margin-bottom:8px}
+    h2{font-size:16px;margin-top:28px;margin-bottom:8px;color:#1a1a1a}
+    h3{font-size:14px;margin-top:14px;margin-bottom:6px;color:#1a1a1a}
+    p,li{font-size:14px;color:#3d3d3a;margin-bottom:8px}
+    ul{padding-left:20px;margin-bottom:8px}
+    a{color:#c44d00;text-decoration:none}
+    .back{display:inline-block;margin-bottom:16px;font-size:14px;color:#c44d00}
+    .draft{background:#fbe1e1;border:1px solid #b3261e;border-radius:8px;padding:14px 16px;font-size:13px;color:#7a1610;margin:0 0 20px}
+    .notice{background:#fdeee3;border:1px solid #f6c9a8;border-radius:8px;padding:12px 16px;font-size:13px;color:#6b3300;margin:16px 0}
+    table{width:100%;border-collapse:collapse;margin:8px 0 12px;font-size:13px}
+    th,td{text-align:left;vertical-align:top;padding:8px;border-bottom:1px solid #e5e5dc;color:#3d3d3a}
+    th{color:#1a1a1a;font-weight:700;background:#fafaf7}
+    .updated{font-size:13px;color:#6c6c62;margin-top:24px}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e5e5dc;font-size:13px;color:#6c6c62;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .footer a{color:#c44d00}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <a href="/" class="back">← Zurück zum Rechner</a>
+    <a href="/" class="back">← Zurück zu ImmoFuchs</a>
     <h1>Datenschutzerklärung</h1>
-    <p>Für <strong>immofuchs.info</strong></p>
+    <p>Für die Web-App <strong>immofuchs.info</strong> und die ImmoFuchs-Apps für Android und iOS.</p>
 
-    <div class="notice">
-      <strong>Kurz &amp; klar:</strong> immofuchs.info verzichtet vollständig auf Tracking, Analytics, Werbung und Affiliate-Links. Alle Berechnungen laufen ausschließlich lokal in Ihrem Browser. Es werden keine personenbezogenen Daten an Server übertragen.
+    <div class="draft">
+      <strong>⚠ Entwurf – vor Veröffentlichung prüfen.</strong><br>
+      Platzhalter und mit [PRÜFEN] markierte Stellen müssen vor dem Livegang geklärt werden. Der
+      Text wurde nicht anwaltlich geprüft und ist keine Rechtsberatung.
     </div>
 
-    <h2>1. Verantwortliche Stelle</h2>
-    <p>Engin Celenk.<br/>
-    Kontakt: <a href="mailto:info@immofuchs.info">info@immofuchs.info</a></p>
+    <div class="notice">
+      <strong>Kurz zusammengefasst:</strong> Für Konto, gespeicherte Objekte, Zahlungen und
+      KI-Auswertungen verarbeiten wir Daten auf Servern und bei den unten genannten
+      Dienstleistern. KI-Auswertungen und Google Analytics nutzen wir nur mit deiner Einwilligung.
+      Einen Teil deiner Eingaben speichert die App zusätzlich lokal auf deinem Gerät.
+    </div>
 
-    <h2>2. Datenverarbeitung auf einen Blick</h2>
-    <p>Immofuchs ist eine rein clientseitige Webanwendung. Alle Berechnungen finden ausschließlich in Ihrem Browser statt. Es werden <strong>keine personenbezogenen Daten an Server übertragen</strong>.</p>
+    <h2>1. Verantwortlicher</h2>
+    <p>Engin Celenk<br>
+    [Straße Hausnummer], [PLZ Ort], Deutschland<br>
+    E-Mail: <a href="mailto:info@immofuchs.info">info@immofuchs.info</a></p>
+    <p>Einen Datenschutzbeauftragten haben wir nicht benannt, da keine gesetzliche Pflicht dazu besteht. [PRÜFEN]</p>
 
-    <h2>3. Lokale Datenspeicherung (localStorage)</h2>
-    <p>Ihre Eingaben (Kaufpreis, Zinssatz, etc.) werden im localStorage Ihres Browsers gespeichert, damit Sie beim nächsten Besuch fortfahren können. Diese Daten:</p>
+    <h2>2. Hosting, Server und Protokolle</h2>
+    <p>Web-App, Schnittstellen (API) und Datenbank betreibt Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA. Beim Aufruf verarbeitet Cloudflare technisch notwendige Zugriffsdaten (IP-Adresse, Datum und Uhrzeit, aufgerufene Adresse, Browser- und Geräteinformationen), um die Seite auszuliefern, Angriffe abzuwehren und Fehler zu analysieren. Zur Missbrauchsabwehr begrenzen wir die Zahl der Anfragen je Sitzung und je IP-Adresse.</p>
+    <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (sicherer und stabiler Betrieb). Protokolle werden nach [Dauer, PRÜFEN] gelöscht. Zur Übermittlung in die USA siehe Abschnitt 14.</p>
+
+    <h2>3. Nutzerkonto und Anmeldung</h2>
+    <p>Für die Nutzung der Rechner und Auswertungen brauchst du ein Konto. Dabei verarbeiten wir deine E-Mail-Adresse, optional deinen Namen, ein verschlüsseltes Passwort (nur als Hash), Angaben zu Testphase, Tarif und Rolle sowie Anmeldezeitpunkte.</p>
     <ul>
-      <li>verlassen niemals Ihren Browser</li>
-      <li>sind nur für Sie zugänglich</li>
-      <li>können jederzeit über die Browser-Einstellungen gelöscht werden</li>
+      <li><strong>E-Mail und Passwort:</strong> Bei der Wahl eines Passworts prüfen wir, ob es in bekannten Datenlecks vorkommt (Dienst „Pwned Passwords“ von Have I Been Pwned). Dabei werden nur die ersten fünf Zeichen eines Hashwerts übertragen – nie das Passwort selbst.</li>
+      <li><strong>Anmeldelink per E-Mail:</strong> Wir senden dir einen einmaligen Link (siehe Abschnitt 8).</li>
+      <li><strong>Mit Google anmelden</strong> (Google Ireland Limited, Irland) oder <strong>mit Apple anmelden</strong> (Apple Distribution International Ltd., Irland): Wir erhalten von dort deine E-Mail-Adresse, deinen Namen (falls freigegeben) und eine Kennung. Für die Anmeldung gelten zusätzlich die Datenschutzhinweise des jeweiligen Anbieters.</li>
+      <li><strong>Bot-Schutz:</strong> Bei Registrierung und Anmeldung nutzen wir Cloudflare Turnstile, um automatisierte Zugriffe zu erkennen. Dabei werden technische Merkmale deines Browsers ausgewertet.</li>
     </ul>
+    <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertrag), für Passwort-Prüfung und Bot-Schutz Art. 6 Abs. 1 lit. f DSGVO. Kontodaten speichern wir, bis du dein Konto löschst.</p>
 
-    <h2>4. Cookies</h2>
-    <p>Immofuchs setzt <strong>keine Tracking-Cookies</strong>. Es wird lediglich localStorage verwendet (technisch notwendig). Der Cookie-Consent-Eintrag wird in localStorage gespeichert, sobald Sie eine Auswahl getroffen haben.</p>
+    <h2>4. Gespeicherte Objekte und Auswertungen</h2>
+    <p>Legst du ein Objekt an, speichern wir die eingegebenen oder übernommenen Daten (z. B. Adresse, Kaufpreis, Wohnfläche, Miete, Finanzierungsangaben) und die zugehörigen Auswertungen in unserer Datenbank, damit du sie auf allen Geräten öffnen kannst. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Die Daten bleiben gespeichert, bis du das Objekt oder dein Konto löschst.</p>
 
-    <h2>5. Hosting &amp; Server-Logs</h2>
-    <p>Die Website wird bei einem Hosting-Anbieter betrieben. Beim Abrufen der Seiten werden durch den Hosting-Anbieter automatisch technische Zugriffsdaten in Server-Log-Dateien gespeichert (Browsertyp, Betriebssystem, Referrer-URL, Datum/Uhrzeit, IP-Adresse). Diese Daten werden aus technischen Gründen erhoben, nicht mit anderen Quellen zusammengeführt und dienen allein dem sicheren Betrieb. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.</p>
-
-    <h2>6. Externe Dienste</h2>
-    <p>Zur Darstellung der Website werden Schriftarten von Google Fonts (DM Sans) geladen. Dabei kann die IP-Adresse an Google übertragen werden. Details: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Datenschutzerklärung</a>.</p>
-    <p>Optional werden tagesaktuelle Bauzinsen von einer öffentlichen JSON-Datei geladen (GitHub Pages). Diese Datei enthält keine personenbezogenen Daten; beim Abruf wird jedoch Ihre IP-Adresse an GitHub übertragen. Details: <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub Privacy Statement</a>.</p>
-    <p>Es werden <strong>keine</strong> weiteren externen Dienste eingebunden — kein Google Analytics, keine Werbung, kein Facebook Pixel, keine Affiliate-Links.</p>
-
-    <h2>7. Kein Kontaktformular</h2>
-    <p>Diese Website enthält kein Kontaktformular. Eine Kontaktaufnahme ist ausschließlich per E-Mail möglich. Wenn Sie uns per E-Mail kontaktieren, speichern wir Ihre Angaben zur Bearbeitung der Anfrage. Eine Weitergabe an Dritte erfolgt nicht. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.</p>
-
-    <h2>8. Ihre Rechte (DSGVO)</h2>
-    <p>Sie haben das Recht auf:</p>
+    <h2>5. KI-Funktionen</h2>
+    <p>Für Exposé-Scan, Investment-Analyse, Lage-Analyse, Besichtigungshandout und den KI-Assistenten Finn nutzen wir die Gemini-Schnittstelle von Google (Google Ireland Limited, Irland / Google LLC, USA). Fällt Gemini aus, beantwortet für einzelne Funktionen ein Sprachmodell von Cloudflare (Workers AI) die Anfrage. Übertragen wird nur, was für die jeweilige Funktion nötig ist:</p>
     <ul>
-      <li>Auskunft über verarbeitete Daten (Art. 15 DSGVO)</li>
+      <li><strong>Analysen, Handout, Finn:</strong> die Kennzahlen deines Objekts und deine Fragen – ohne Adresse und ohne Namen.</li>
+      <li><strong>Lage-Analyse:</strong> Ort, PLZ-Gebiet und Bundesland – ohne Straße und Hausnummer.</li>
+      <li><strong>Exposé-Scan:</strong> die hochgeladenen Bilder oder PDF-Dateien vollständig. Enthält ein Exposé personenbezogene Daten (z. B. Kontaktdaten eines Maklers), werden diese mit übertragen.</li>
+    </ul>
+    <p>Bevor Daten erstmals an die KI gehen, fragen wir nach deiner Einwilligung. Diese speichern wir zusammen mit einer zufälligen Geräte-Kennung, damit du nicht bei jeder Anfrage erneut gefragt wirst. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO; du kannst die Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen (E-Mail genügt).</p>
+    <p>[PRÜFEN: Nutzungsbedingungen der Gemini-API – ob übermittelte Inhalte von Google zur Verbesserung eigener Produkte genutzt werden dürfen, hängt vom gewählten Tarif ab (kostenlos oder kostenpflichtig). Hier den tatsächlich genutzten Tarif und die Regelung ergänzen.]</p>
+    <p>KI-Ergebnisse sind automatisch erzeugte Einschätzungen. Sie entfalten keine rechtliche Wirkung und sind keine automatisierte Entscheidung im Sinne von Art. 22 DSGVO.</p>
+
+    <h2>6. Adresssuche</h2>
+    <p>Die Adresssuche beim Anlegen eines Objekts nutzt den Dienst Photon der komoot GmbH, Potsdam (auf Basis von OpenStreetMap). Übertragen wird der eingegebene Suchtext; nach einem Exposé-Upload startet die Suche automatisch mit der aus dem Exposé gelesenen Adresse. Zurück erhalten wir Adressvorschläge mit Koordinaten. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.</p>
+
+    <h2>7. Zahlungen</h2>
+    <p>Abschluss und Abrechnung von ImmoFuchs Pro wickelt Stripe Payments Europe, Ltd., Dublin, Irland ab. Deine Zahlungsdaten (z. B. Kartennummer) gibst du direkt bei Stripe ein; wir erhalten sie nicht. Wir speichern eine Kunden- und Abo-Kennung, Tarif, Laufzeit und Zahlungsstatus. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO; Rechnungsdaten bewahren wir wegen gesetzlicher Pflichten bis zu 10 Jahre auf (Art. 6 Abs. 1 lit. c DSGVO, § 147 AO, § 257 HGB). [PRÜFEN]</p>
+
+    <h2>8. E-Mail-Versand</h2>
+    <p>Anmeldelinks, Bestätigungen und Hinweise zu deinem Abo (z. B. eine Erinnerung vor der Verlängerung) versenden wir über Resend (Resend, Inc., USA). Übermittelt werden deine E-Mail-Adresse und der Inhalt der Nachricht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.</p>
+
+    <h2>9. Push-Benachrichtigungen</h2>
+    <p>In den Apps kannst du Benachrichtigungen erlauben, z. B. für den Zinsalarm. Dafür speichern wir ein Geräte-Token und senden Nachrichten über Firebase Cloud Messaging (Google Ireland Limited / Google LLC). Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO – du kannst Benachrichtigungen jederzeit in den Einstellungen deines Geräts abschalten.</p>
+
+    <h2>10. Webanalyse mit Google Analytics</h2>
+    <p>Nur wenn du im Cookie-Banner „Statistik“ erlaubst, laden wir Google Analytics 4 (Google Ireland Limited, Irland / Google LLC, USA). Google Analytics erfasst, wie die App genutzt wird (z. B. aufgerufene Seiten, Gerät, ungefährer Standort), und setzt dafür Cookies (u. a. „_ga“, Speicherdauer bis zu 2 Jahre). Dabei wird deine IP-Adresse an Google übertragen. Ohne Einwilligung wird das Analyse-Skript nicht geladen.</p>
+    <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO und § 25 Abs. 1 TDDDG. Du kannst deine Einwilligung jederzeit über „Cookie-Einstellungen“ im Seitenfuß widerrufen.</p>
+
+    <h2>11. Cookies und lokale Speicherung</h2>
+    <p>Technisch notwendige Cookies und Einträge im lokalen Speicher deines Browsers (localStorage) setzen wir ohne Einwilligung ein, weil der Dienst sonst nicht funktioniert (§ 25 Abs. 2 Nr. 2 TDDDG, Art. 6 Abs. 1 lit. b und f DSGVO).</p>
+    <table>
+      <tr><th>Name</th><th>Zweck</th><th>Dauer</th></tr>
+      <tr><td>if_session</td><td>Hält dich angemeldet</td><td>90 Tage</td></tr>
+      <tr><td>if_entitlement</td><td>Merkt sich kurz, ob du Pro nutzt</td><td>5 Minuten</td></tr>
+      <tr><td>if_oauth_state</td><td>Schutz bei der Anmeldung mit Google oder Apple</td><td>10 Minuten</td></tr>
+      <tr><td>if_delete_reauth</td><td>Bestätigung beim Löschen des Kontos</td><td>10 Minuten</td></tr>
+      <tr><td>localStorage</td><td>Deine Rechner-Eingaben, Sprache, Design, Cookie-Auswahl, Zinsalarm-Einstellung</td><td>bis du sie löschst</td></tr>
+    </table>
+
+    <h2>12. Schriftarten</h2>
+    <p>Die Schriftart „DM Sans“ laden wir von Google Fonts (Google Ireland Limited / Google LLC). Dabei wird deine IP-Adresse an Google übertragen. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (einheitliche Darstellung). [PRÜFEN: Empfehlung – Schriftart selbst hosten, dann entfällt dieser Abschnitt.]</p>
+
+    <h2>13. Bauzinsen und externe Links</h2>
+    <p>Die angezeigten Bauzinsen laden wir von unserem eigenen Server; dabei werden keine Daten an Dritte übertragen. Links zu externen Diensten (z. B. „In Google Maps öffnen“) werden erst aufgerufen, wenn du sie anklickst; ab dann gilt die Datenschutzerklärung des jeweiligen Anbieters.</p>
+
+    <h2>14. Übermittlung in Drittländer</h2>
+    <p>Einige Dienstleister sitzen in den USA oder können Daten dorthin übertragen (Cloudflare, Google, Resend, Stripe). Soweit diese nach dem EU-US Data Privacy Framework zertifiziert sind, erfolgt die Übermittlung auf Grundlage des Angemessenheitsbeschlusses der EU-Kommission (Art. 45 DSGVO), sonst auf Grundlage von Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO). Mit allen Dienstleistern bestehen bzw. werden Verträge zur Auftragsverarbeitung geschlossen. [PRÜFEN je Anbieter]</p>
+
+    <h2>15. Deine Rechte</h2>
+    <p>Du hast das Recht auf:</p>
+    <ul>
+      <li>Auskunft (Art. 15 DSGVO)</li>
       <li>Berichtigung (Art. 16 DSGVO)</li>
-      <li>Löschung (Art. 17 DSGVO) — Löschen Sie Ihre Browser-Daten</li>
+      <li>Löschung (Art. 17 DSGVO) – dein Konto samt Objekten kannst du selbst unter „Mein Konto“ löschen</li>
       <li>Einschränkung der Verarbeitung (Art. 18 DSGVO)</li>
-      <li>Widerspruch gegen die Verarbeitung (Art. 21 DSGVO)</li>
-      <li>Beschwerde bei einer Aufsichtsbehörde (Art. 77 DSGVO)</li>
+      <li>Datenübertragbarkeit (Art. 20 DSGVO)</li>
+      <li>Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21 DSGVO)</li>
+      <li>Widerruf erteilter Einwilligungen mit Wirkung für die Zukunft (Art. 7 Abs. 3 DSGVO)</li>
+      <li>Beschwerde bei einer Datenschutz-Aufsichtsbehörde (Art. 77 DSGVO)</li>
     </ul>
-    <p>Da auf dieser Website kaum personenbezogene Daten erhoben werden, sind die Ausübungsmöglichkeiten dieser Rechte naturgemäß begrenzt. Für Anfragen: <a href="mailto:info@immofuchs.info">info@immofuchs.info</a></p>
+    <p>Für Anfragen: <a href="mailto:info@immofuchs.info">info@immofuchs.info</a></p>
 
-    <h2>9. SSL-/TLS-Verschlüsselung</h2>
-    <p>Diese Seite nutzt aus Sicherheitsgründen eine SSL-/TLS-Verschlüsselung. Eine verschlüsselte Verbindung erkennen Sie an „https://" und dem Schloss-Symbol in der Adresszeile Ihres Browsers.</p>
+    <h2>16. Verschlüsselung</h2>
+    <p>Alle Verbindungen zu ImmoFuchs sind per TLS verschlüsselt. Passwörter speichern wir nur als Hash.</p>
 
-    <p class="updated">Stand: April 2026 · Alle Angaben ohne Gewähr.</p>
+    <p class="updated">Stand: September 2026</p>
 
     <div class="footer">
       <span>© 2026 immofuchs.info</span>
       <div style="display:flex;gap:16px">
-        <a href="/">Rechner</a>
+        <a href="/">Startseite</a>
         <a href="/impressum.html">Impressum</a>
         <a href="/agb.html">AGB</a>
       </div>

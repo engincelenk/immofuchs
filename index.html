@@ -172,15 +172,18 @@
       .cc-overlay.show{opacity:1;pointer-events:auto}
       .cc-inner{max-width:820px;margin:0 auto;padding:20px 16px}
       .cc-title{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:8px}
-      .cc-text{font-size:12px;color:#6b6b60;line-height:1.6;margin-bottom:14px}
-      .cc-text a{color:#e8600a;text-decoration:none}
+      .cc-text{font-size:13px;color:#5f5f56;line-height:1.6;margin-bottom:14px}
+      .cc-text a{color:#c44d00;text-decoration:underline}
       .cc-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-      .cc-opt{display:flex;align-items:center;gap:8px;font-size:12px;color:#3d3d3a}
-      .cc-opt input{width:15px;height:15px;accent-color:#e8600a}
-      .cc-req{font-size:10px;color:#8a8a80}
+      .cc-opt{display:flex;align-items:center;gap:8px;font-size:13px;color:#3d3d3a}
+      .cc-opt input{width:18px;height:18px;accent-color:#e8600a}
+      .cc-req{font-size:12px;color:#6c6c62}
       .cc-btns{display:flex;gap:8px;flex-wrap:wrap}
-      .cc-btn{padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;flex:1;min-width:100px}
-      .cc-all{background:#e8600a;color:#fff}.cc-all:hover{background:#c44d00}
+      .cc-btn{min-height:44px;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:inherit;flex:1;min-width:120px}
+      .cc-btn:focus-visible{outline:2px solid #e8600a;outline-offset:2px}
+      /* "Alle akzeptieren" und "Nur notwendige" bewusst identisch gestaltet:
+         Ablehnen muss so leicht und so sichtbar sein wie Zustimmen. */
+      .cc-all{background:#c44d00;color:#fff}.cc-all:hover{background:#a84200}
       .cc-sel{background:#f5f5f0;color:#1a1a1a;border:1px solid #e5e5dc}.cc-sel:hover{background:#e5e5dc}
       /* Dark-Varianten (Etappe 1, 2026-08-26): dieselben Literalwerte wie
          DARK_TOKENS in App.jsx, hier absichtlich dupliziert - dieser Block
@@ -193,6 +196,7 @@
       html[data-theme="dark"] .cc-banner{background:#232323;border-top-color:#3a3a38}
       html[data-theme="dark"] .cc-title{color:#f0f0ea}
       html[data-theme="dark"] .cc-text{color:#9a9a90}
+      html[data-theme="dark"] .cc-text a{color:#ff9a57}
       html[data-theme="dark"] .cc-opt{color:#d8d8d2}
       html[data-theme="dark"] .cc-req{color:#9a9a90}
       html[data-theme="dark"] .cc-sel{background:#2a2a2a;color:#f0f0ea;border-color:#3a3a38}
@@ -202,12 +206,12 @@
         html:not([data-theme="light"]):not([data-theme="dark"]) .cc-banner{background:#232323;border-top-color:#3a3a38}
         html:not([data-theme="light"]):not([data-theme="dark"]) .cc-title{color:#f0f0ea}
         html:not([data-theme="light"]):not([data-theme="dark"]) .cc-text{color:#9a9a90}
+        html:not([data-theme="light"]):not([data-theme="dark"]) .cc-text a{color:#ff9a57}
         html:not([data-theme="light"]):not([data-theme="dark"]) .cc-opt{color:#d8d8d2}
         html:not([data-theme="light"]):not([data-theme="dark"]) .cc-req{color:#9a9a90}
         html:not([data-theme="light"]):not([data-theme="dark"]) .cc-sel{background:#2a2a2a;color:#f0f0ea;border-color:#3a3a38}
         html:not([data-theme="light"]):not([data-theme="dark"]) .cc-sel:hover{background:#3a3a38}
       }
-      .cc-rej{background:transparent;color:#8a8a80;font-weight:400}.cc-rej:hover{color:#1a1a1a}
       @media print{.cc-banner,.cc-overlay{display:none!important}}
     </style>
 
@@ -268,106 +272,125 @@
     <div id="cc-ov" class="cc-overlay"></div>
     <div id="cc-ban" class="cc-banner" role="dialog" aria-label="Cookie-Einstellungen">
       <div class="cc-inner">
-        <div class="cc-title">🍪 Cookie-Einstellungen</div>
+        <div class="cc-title">Cookie-Einstellungen</div>
         <div class="cc-text">
-          Immofuchs verwendet <strong>nur technisch notwendige Speicherung</strong> (localStorage)
-          für Ihre Eingaben. Wir setzen <strong>keine</strong> Tracking-, Werbe- oder
-          Drittanbieter-Cookies ein. Ihre Daten verlassen Ihren Browser nicht. <br /><a
-            href="/datenschutz.html"
-            id="cc-dse"
-            target="_blank"
-            rel="noopener"
+          Wir verwenden <strong>technisch notwendige Cookies</strong> und den lokalen Speicher deines
+          Browsers, damit Anmeldung und deine Eingaben funktionieren. Nur mit deiner Zustimmung
+          nutzen wir zusätzlich <strong>Google Analytics</strong>, um ImmoFuchs zu verbessern – dabei
+          werden Nutzungsdaten und deine IP-Adresse an Google übertragen, auch in die USA. Du kannst
+          deine Auswahl jederzeit über „Cookie-Einstellungen“ im Seitenfuß ändern.
+          <a href="/datenschutz.html" id="cc-dse" target="_blank" rel="noopener"
             >Datenschutzerklärung</a
           >
         </div>
         <div class="cc-opts">
           <label class="cc-opt"
             ><input type="checkbox" checked disabled /><span
-              ><strong>Notwendig</strong> — Speicherung Ihrer Eingaben im Browser
-              <span class="cc-req">(erforderlich)</span></span
+              ><strong>Notwendig</strong> – Anmeldung, Sicherheit und deine Eingaben
+              <span class="cc-req">(immer aktiv)</span></span
             ></label
           >
           <label class="cc-opt"
             ><input type="checkbox" id="cc-stat" /><span
-              ><strong>Statistik</strong> — Anonyme Nutzungsdaten zur Verbesserung</span
+              ><strong>Statistik</strong> – Google Analytics zur Verbesserung der App</span
             ></label
           >
         </div>
         <div class="cc-btns">
           <button class="cc-btn cc-all" id="cc-yes">Alle akzeptieren</button>
-          <button class="cc-btn cc-sel" id="cc-ok">Auswahl bestätigen</button>
-          <button class="cc-btn cc-rej" id="cc-no">Nur notwendige</button>
+          <button class="cc-btn cc-all" id="cc-no">Nur notwendige</button>
+          <button class="cc-btn cc-sel" id="cc-ok">Auswahl speichern</button>
         </div>
         <details style="margin-top:12px;border-top:1px solid #e5e5dc;padding-top:10px">
-          <summary style="font-size:11px;color:#8a8a80;cursor:pointer">
+          <summary style="font-size:13px;color:#5f5f56;cursor:pointer">
             Weitere Informationen
           </summary>
-          <div style="font-size:11px;color:#6b6b60;line-height:1.7;margin-top:8px">
+          <div style="font-size:13px;color:#5f5f56;line-height:1.7;margin-top:8px">
             <p>
-              <strong>Notwendig:</strong> localStorage speichert Ihre Rechner-Eingaben lokal. Ohne
-              diese Funktion gehen Daten beim Schließen verloren.
+              <strong>Notwendig:</strong> Anmelde-Cookies (z. B. „if_session“) und der lokale
+              Speicher für Rechner-Eingaben, Sprache und diese Auswahl. Ohne sie funktioniert
+              ImmoFuchs nicht. Rechtsgrundlage: § 25 Abs. 2 Nr. 2 TDDDG.
             </p>
             <p>
-              <strong>Statistik:</strong> Falls aktiviert, anonymisierte Nutzungsdaten (keine
-              IP-Adressen, keine persönlichen Daten).
+              <strong>Statistik:</strong> Google Analytics 4 (Google Ireland Ltd. / Google LLC)
+              setzt Cookies wie „_ga“ (bis zu 2 Jahre) und verarbeitet deine IP-Adresse. Das
+              Skript wird erst nach deiner Zustimmung geladen. Rechtsgrundlage: § 25 Abs. 1 TDDDG,
+              Art. 6 Abs. 1 lit. a DSGVO.
             </p>
             <p>
-              <strong>Datenverarbeitung:</strong> Alle Berechnungen finden ausschließlich in Ihrem
-              Browser statt. Kein Server empfängt Ihre Daten.
-            </p>
-            <p>
-              <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) · Art. 6
-              Abs. 1 lit. f DSGVO (berechtigtes Interesse).
-            </p>
-            <p>
-              <strong>Widerruf:</strong> Jederzeit über den Link „Cookie-Einstellungen" im Footer
-              oder durch Löschen der Browser-Daten.
+              <strong>Widerruf:</strong> Jederzeit über „Cookie-Einstellungen“ im Seitenfuß. Details
+              zu allen Diensten findest du in der Datenschutzerklärung.
             </p>
           </div>
         </details>
       </div>
     </div>
 
-    <!-- ═══ Google Consent Mode v2 (DSGVO-konform) ═══ -->
+    <!-- ═══ Google Consent Mode v2 ═══
+         gtag.js wird erst NACH einer Einwilligung geladen (loadGa unten) - bis
+         2026-09 lud es sofort beim Seitenaufruf, womit die IP-Adresse schon vor
+         jeder Zustimmung an Google ging (§ 25 TDDDG). -->
     <script>
       window.dataLayer=window.dataLayer||[];
       function gtag(){dataLayer.push(arguments);}
-      // Standard: alles verweigert bis Consent erteilt
       gtag('consent','default',{
         analytics_storage:'denied',
         ad_storage:'denied',
         ad_user_data:'denied',
-        ad_personalization:'denied',
-        wait_for_update:500
+        ad_personalization:'denied'
       });
-      gtag('js',new Date());
-      gtag('config','G-MQTYK65G3H',{anonymize_ip:true,send_page_view:false});
     </script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MQTYK65G3H"></script>
 
     <script>
       (function(){
-        function updateConsent(granted){
-          gtag('consent','update',{
-            analytics_storage: granted ? 'granted' : 'denied'
+        var GA_ID='G-MQTYK65G3H';
+        // v2: Banner-Text 2026-09 korrigiert (vorher "keine Drittanbieter-Cookies",
+        // "Daten verlassen den Browser nicht"). Wer unter v1 zugestimmt hat, wird
+        // deshalb einmal neu gefragt.
+        var CONSENT_VERSION=2;
+        var gaLoaded=false;
+        function loadGa(){
+          if(gaLoaded)return;
+          gaLoaded=true;
+          gtag('js',new Date());
+          gtag('config',GA_ID,{send_page_view:false});
+          var s=document.createElement('script');
+          s.async=true;
+          s.src='https://www.googletagmanager.com/gtag/js?id='+GA_ID;
+          document.head.appendChild(s);
+        }
+        function removeGaCookies(){
+          document.cookie.split(';').forEach(function(c){
+            var name=c.split('=')[0].trim();
+            if(name.indexOf('_ga')===0){
+              document.cookie=name+'=; Max-Age=0; path=/';
+              document.cookie=name+'=; Max-Age=0; path=/; domain=.'+location.hostname.replace(/^www\./,'');
+            }
           });
         }
+        function applyConsent(granted){
+          gtag('consent','update',{analytics_storage: granted ? 'granted' : 'denied'});
+          if(granted){loadGa();}else{removeGaCookies();}
+        }
         var b=document.getElementById('cc-ban'),o=document.getElementById('cc-ov');
-        function show(){b.classList.add('show');o.classList.add('show')}
+        var stat=document.getElementById('cc-stat');
+        function show(){
+          try{var c=JSON.parse(localStorage.getItem('cc_consent')||'null');stat.checked=!!(c&&c.analytics&&c.v===CONSENT_VERSION);}catch(e){}
+          b.classList.add('show');o.classList.add('show');
+        }
         function hide(){b.classList.remove('show');o.classList.remove('show')}
         function save(s){
-          localStorage.setItem('cc_consent',JSON.stringify({necessary:true,analytics:s,v:1,ts:Date.now()}));
-          updateConsent(s);
+          try{localStorage.setItem('cc_consent',JSON.stringify({necessary:true,analytics:s,v:CONSENT_VERSION,ts:Date.now()}));}catch(e){}
+          applyConsent(s);
           hide();
         }
         document.getElementById('cc-yes').onclick=function(){save(true)};
-        document.getElementById('cc-ok').onclick=function(){save(document.getElementById('cc-stat').checked)};
+        document.getElementById('cc-ok').onclick=function(){save(stat.checked)};
         document.getElementById('cc-no').onclick=function(){save(false)};
         window.ccReopen=show;
-        var existing=localStorage.getItem('cc_consent');
-        if(!existing){setTimeout(show,600);}else{
-          try{var c=JSON.parse(existing);updateConsent(!!c.analytics);}catch(e){}
-        }
+        var c=null;
+        try{c=JSON.parse(localStorage.getItem('cc_consent')||'null');}catch(e){}
+        if(!c||c.v!==CONSENT_VERSION){setTimeout(show,600);}else{applyConsent(!!c.analytics);}
       })();
     </script>
 

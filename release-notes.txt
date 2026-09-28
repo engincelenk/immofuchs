@@ -1,3 +1,36 @@
+## 2026-09-28 (1.100.18)
+
+### Rechtstexte an den aktuellen Stand angepasst (Entwurf, vor Livegang prüfen)
+
+Impressum, Datenschutzerklärung und Cookie-Banner beschrieben noch eine reine
+Browser-App ohne Server, ohne Konto und ohne Analytics – das stimmte seit
+Konto, Pro-Abo, KI-Funktionen und Google Analytics nicht mehr.
+
+- public/impressum.html: § 5 DDG statt TMG, Platzhalter für Anschrift,
+  Telefon und USt-Angabe, "kein Handelsgewerbe"/"kein Verbrauchervertrag"
+  entfernt, Link zur abgeschalteten EU-OS-Plattform entfernt, Hinweis zu
+  KI-Inhalten. Deutlich als Entwurf markiert.
+- public/datenschutz.html komplett neu: Hosting (Cloudflare), Konto und
+  Anmeldung (E-Mail/Passwort inkl. Pwned-Passwords-Prüfung, Anmeldelink,
+  Google, Apple, Turnstile), gespeicherte Objekte, KI (Gemini, Workers AI –
+  was genau übertragen wird, Einwilligung), Adresssuche (Photon/komoot),
+  Stripe, Resend, Push (Firebase), Google Analytics nur mit Einwilligung,
+  Cookie-Tabelle (if_session 90 Tage usw.), Google Fonts, Drittland,
+  Betroffenenrechte. Offene Punkte mit [PRÜFEN] markiert (u. a.
+  Gemini-Tarif und Training, Log-Dauer, Auftragsverarbeitungsverträge).
+- index.html Cookie-Banner: Text korrigiert (du-Form), "Alle akzeptieren"
+  und "Nur notwendige" gleichwertig gestaltet, Schrift/Kontrast erhöht,
+  § 25 TDDDG ergänzt. Google Analytics wird jetzt erst NACH Zustimmung
+  geladen (vorher lud gtag.js sofort beim Seitenaufruf); bei Widerruf
+  werden die _ga-Cookies gelöscht. Consent-Version 2: wer unter dem alten
+  Text zugestimmt hat, wird einmal neu gefragt. Lokal getestet: ohne
+  Zustimmung kein GA-Skript, nach "Alle akzeptieren" wird es geladen.
+
+Nicht angefasst: AGB (weiter als Entwurf markiert), die Kopien in
+android/ios/dist (entstehen beim nächsten Build bzw. cap sync neu).
+
+Dateien: public/impressum.html, public/datenschutz.html, index.html.
+
 ## 2026-09-27 (1.100.17)
 
 ### Clean Code: totes/ungenutztes entfernt (Phase 1)
