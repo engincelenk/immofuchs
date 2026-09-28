@@ -1,3 +1,21 @@
+## 2026-09-28 (1.100.21)
+
+### Impressum und Datenschutz final, Schriftart selbst gehostet
+
+- Impressum: Anschrift (Hohenzollernstr. 43, 74385 Pleidelsheim),
+  USt-IdNr. DE158501034, Kontakt per E-Mail. Entwurfs-Hinweis entfernt.
+- Datenschutz: Anschrift ergänzt, alle [PRÜFEN]-Stellen geklärt – kein
+  Datenschutzbeauftragter, Protokolle nur bei Cloudflare, kostenpflichtige
+  Gemini-API (kein Training mit Nutzerdaten), Aufbewahrung Rechnungsdaten,
+  AV-Verträge geschlossen. App-Bezug und Firebase-Push entfernt (nur
+  Web-App); Zinsalarm als reine Browser-Benachrichtigung beschrieben.
+  Entwurfs-Hinweis entfernt.
+- DM Sans liegt jetzt unter public/fonts (aus @fontsource-variable/dm-sans,
+  OFL-Lizenz) statt bei Google Fonts: App, Rechtstexte, AGB, Datenstatus,
+  PDF-/Handout-Export und das Datenstatus-Skript laden sie vom eigenen
+  Server. Content-Security-Policy entsprechend verschärft. Damit entfällt
+  die IP-Übertragung an Google beim Seitenaufruf.
+
 ## 2026-09-28 (1.100.20)
 
 ### Landingpage: Finn mit ganzem Kopf, Hero ohne Orange-Schimmer

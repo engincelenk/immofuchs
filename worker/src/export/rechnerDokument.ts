@@ -15,7 +15,7 @@
 // Eingaben neu und besitzt auch das Layout) waere die naechste Stufe - das
 // sind sechs Ergebnis-Layouts inklusive Diagramme und gehoert in ein eigenes
 // Vorhaben, nicht in diese Aenderung.
-import { SCHRIFT_IMPORT, datumFuer, esc, logoUrl } from "./gemeinsam";
+import { schriftImport, datumFuer, esc, logoUrl } from "./gemeinsam";
 
 const MAX_INHALT_LEN = 400_000; // grosszuegig: Tilgungsplaene werden lang
 
@@ -59,7 +59,7 @@ export function baueRechnerDokument(anfrage: RechnerAnfrage, basisUrl: string): 
     '<div style="font-size:30px;font-weight:700;letter-spacing:-.5px;color:#1a1a2e;line-height:1">immo<span style="color:#e8650a">fuchs</span>.info</div>';
 
   return `<!DOCTYPE html><html lang="${esc(lang)}"><head><meta charset="utf-8"><title>Immofuchs - ${esc(titel)}</title>
-<style>${SCHRIFT_IMPORT}
+<style>${schriftImport(basisUrl)}
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:#fff;color:#1a1a1a;padding:30px;max-width:800px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 table{border-collapse:collapse;width:100%}svg{max-width:100%}
 .hdr-print{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #e8600a}

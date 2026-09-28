@@ -244,8 +244,9 @@ function createDefaults() {
 
 // Gemeinsame CSS-Bausteine fuer Landing- und App-Ansicht (frueher in beiden
 // <style>-Bloecken dupliziert). Die Design-Tokens leben nur noch hier an einer Stelle.
-const FONT_CSS =
-  "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');";
+// Selbst gehostet statt Google Fonts (Datenschutz, 2026-09-28) - siehe
+// public/fonts/dm-sans.css.
+const FONT_CSS = "@import url('/fonts/dm-sans.css');";
 // Bugreport 25.08.: der native Fokusring (in Safari ein schwarzes,
 // abgerundetes Rechteck) fiel z.B. um den Schliessen-Knopf des
 // Checkout-Wizards auf, den der Fokus-Trap dort automatisch fokussiert -

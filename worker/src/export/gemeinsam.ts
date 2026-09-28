@@ -38,13 +38,18 @@ export function esc(wert: unknown): string {
 // data:-URI eingebettet: das Druckfenster entsteht per document.write und hat
 // keine Basis-URL, an der ein relativer Pfad aufloesen wuerde - eine absolute
 // URL loest dieselbe Aufgabe, ohne dass der Worker die Datei erst laden und
-// base64-kodieren muss. Die Schriftart kommt ohnehin schon aus dem Netz.
+// base64-kodieren muss. Die Schriftart kommt ebenfalls von dort.
 export function logoUrl(basis: string): string {
   return `${basis.replace(/\/$/, "")}/logo-transparent.png`;
 }
 
-export const SCHRIFT_IMPORT =
-  "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');";
+// DM Sans vom eigenen Server statt von Google Fonts (Datenschutz, 2026-09-28).
+// Das Dokument wird per document.write in ein Fenster der App geschrieben und
+// laeuft damit unter deren Origin - die Schrift kommt also ohne CORS-Frage
+// von derselben Adresse wie das Logo.
+export function schriftImport(basis: string): string {
+  return `@import url('${basis.replace(/\/$/, "")}/fonts/dm-sans.css');`;
+}
 
 // Datum in der Sprache des Nutzers. Intl steht in Workers zur Verfuegung.
 export function datumFuer(lang: string): string {

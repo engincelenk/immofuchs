@@ -10,7 +10,7 @@
 // stehen in src/i18n/expose.js. Beides hier zu duplizieren hiesse, dieselbe
 // Wahrheit an zwei Orten zu pflegen - die Grenze, die zaehlt, ist requirePro
 // auf der Route, nicht die Herkunft der Wortmarken.
-import { FARBE as C, SCHRIFT_IMPORT, datumFuer, esc, liste, logoUrl, text } from "./gemeinsam";
+import { FARBE as C, schriftImport, datumFuer, esc, liste, logoUrl, text } from "./gemeinsam";
 
 const MAX_FINDINGS = 10;
 const MAX_PREISZEILEN = 20;
@@ -221,7 +221,7 @@ export function baueHandoutDokument(anfrage: HandoutAnfrage, basisUrl: string): 
 
   return `<!DOCTYPE html><html lang="${esc(lang)}"><head><meta charset="utf-8">
 <title>${esc(labels.titel)} — ${esc(adresse || titel)}</title>
-<style>${SCHRIFT_IMPORT}
+<style>${schriftImport(basisUrl)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:#fff;color:${C.text};padding:28px;max-width:820px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @media print{body{padding:14px}div,table,tr{break-inside:avoid;page-break-inside:avoid}}

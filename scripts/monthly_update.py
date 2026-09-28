@@ -287,8 +287,7 @@ def render_datenstatus_html(status: list, now) -> str:
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ImmoFuchs — Datenstatus</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="/fonts/dm-sans.css" rel="stylesheet">
 <style>
   :root {{
     --ca:#E8600A; --ca-dk:#C44D00; --bg:#F5F5F0; --cc:#FFFFFF;
