@@ -738,7 +738,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               <p className="lp-ki-lead">{l.kiLead}</p>
             </div>
             <div className="lp-ki-maskottchen" aria-hidden="true">
-              <img src="/fuchs-mascot.webp" alt="" width="250" height="250" loading="lazy" />
+              <img src="/fuchs-mascot.webp" alt="" width="250" height="275" loading="lazy" />
             </div>
           </div>
           <div className="lp-ki-main">
@@ -1235,7 +1235,8 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       /* Endliche Wiederholung statt infinite: die Sterne sollen beim
          Ankommen aufmerksam machen, nicht dauerhaft neben dem Text flackern. */
       .lp-stern{display:inline-block;flex-shrink:0;animation:lp-stern 1.8s ease-in-out 6 alternate}
-      .lp-hero{position:relative;text-align:center;background-image:radial-gradient(ellipse 60% 60% at 50% 45%,var(--ca-bg) 0%,transparent 70%)}
+      /* Ohne Orange-Schimmer im Hintergrund (Nutzer-Korrektur 2026-09-28). */
+      .lp-hero{position:relative;text-align:center}
       .lp-hero-stern{position:absolute;pointer-events:none;color:var(--ca)}
       .lp-stern-hell{color:#ffb27a}
       @media(max-width:1180px){.lp-hero-stern{display:none}}
@@ -1271,7 +1272,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-ki-lead{margin:0;max-width:560px;font-size:clamp(16px,1.4vw,18px);line-height:1.6;color:rgba(255,255,255,.86)}
       .lp-ki-maskottchen{display:none}
       @media(min-width:900px){.lp-ki-maskottchen{display:flex;justify-content:center;align-items:center}}
-      .lp-ki-maskottchen img{width:250px;height:auto;padding:25px;border-radius:50%;background:radial-gradient(circle,rgba(255,178,122,.35),transparent 70%)}
+      /* Ganzer Kopf ohne Kreis-Zuschnitt und ohne Orange-Schein
+         (Nutzer-Korrektur 2026-09-28: der Kreis schnitt die Ohrspitzen ab). */
+      .lp-ki-maskottchen img{width:250px;height:auto}
       .lp-ki-main,.lp-ki-more{display:grid;grid-template-columns:1fr;gap:16px}
       .lp-ki-more{margin-top:16px}
       @media(min-width:760px){.lp-ki-main{grid-template-columns:1fr 1fr}.lp-ki-more{grid-template-columns:1fr 1fr}}

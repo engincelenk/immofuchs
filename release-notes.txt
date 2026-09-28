@@ -1,3 +1,11 @@
+## 2026-09-28 (1.100.20)
+
+### Landingpage: Finn mit ganzem Kopf, Hero ohne Orange-Schimmer
+
+- KI-Sektion: Finn wird nicht mehr in einen Kreis zugeschnitten (der schnitt
+  die Ohrspitzen ab) und steht ohne orangen Schein auf dem Marineblau.
+- Hero: oranger Hintergrund-Schimmer entfernt, KI-Sterne bleiben.
+
 ## 2026-09-28 (1.100.19)
 
 ### Landingpage neu gestaltet (Option C, Stand v4)
