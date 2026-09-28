@@ -17,15 +17,12 @@ import {
 // weiterhin "ImmoFuchs" mit Laufzeit als Unterzeile, die Jahreskarte bekommt
 // zusaetzlich zum Ersparnis-Badge ein "EMPFOHLEN"-Ribbon (reaktiviert den seit
 // der Free-Kachel-Entfernung ungenutzten i18n-Key `planPopular`), beide CTAs
-// sind vollflaechig orange, die Leistungsliste steht als sechsspaltige
-// Icon-Reihe mit Trennlinien und zweigeteiltem Text statt als Checkliste, und
-// darunter folgt eine ebenso aufgebaute Vertrauens-Zeile.
+// sind vollflaechig orange, darunter folgt eine Vertrauens-Zeile.
 //
-// Zwischenstand am selben Tag zurueckgenommen: der Zahlungsdaten-Punkt war
-// kurzzeitig auf "Zahlungsdaten erforderlich" geaendert worden. Das war
-// falsch - die 7-Tage-Testphase startet automatisch beim ersten Login
-// (startAppTrialIfNew in worker/src/routes/account.ts) und verlangt keine
-// Zahlungsdaten; der Stripe-Checkout ist ein davon getrennter Weg zu Pro.
+// Landing Option C (2026-09-28, Nutzer-Vorgabe): die sechsspaltige
+// Leistungsliste ("Mit ImmoFuchs erhaeltst du") ist entfallen - dieselben
+// Funktionen stehen jetzt in der KI-Sektion weiter oben, hier waren sie
+// doppelt. Ebenso der Vertrauens-Punkt "Keine Zahlungsdaten".
 //
 // Umschalter entfernt (Nutzer-Vorgabe 2026-08-18): frueher wechselte eine
 // einzelne Pro-Karte per Monatlich/Jaehrlich-Umschalter ihren Preis. Jetzt
@@ -41,17 +38,7 @@ import {
 // im Rumpf der Landingpage, und dort gibt es den AppContext nicht - er umgibt
 // nur die Dialoge (siehe landingCtxValue in Landing.jsx). Ein useApp() an
 // dieser Stelle wuerde beim Rendern der Seite abstuerzen.
-const LEISTUNGEN = [
-  { title: "featRechnerTitle", sub: "featRechnerSub", Icon: IconRechner },
-  { title: "featFinnTitle", sub: "featFinnSub", Icon: IconFinn },
-  { title: "featExposeTitle", sub: "featExposeSub", Icon: IconExpose },
-  { title: "featHandoutTitle", sub: "featHandoutSub", Icon: IconHandout },
-  { title: "featPdfTitle", sub: "featPdfSub", Icon: IconPdf },
-  { title: "featMerklisteTitle", sub: "featMerklisteSub", Icon: IconMerkliste },
-];
-
 const VERTRAUEN = [
-  { title: "trustNoPaymentTitle", sub: "trustNoPaymentSub", Icon: IconSchildHaken },
   { title: "trustCancelTitle", sub: "trustCancelSub", Icon: IconKuendbar },
   { title: "trustDsgvoTitle", sub: "trustDsgvoSub", Icon: IconSchloss },
 ];
@@ -75,16 +62,10 @@ export function PricingSection({ lang, onChoosePlan }) {
     >
       <div className="lp-container">
         <div style={{ textAlign: "center", marginBottom: 26 }}>
-          <div
-            style={{
-              fontSize: 11,
-              letterSpacing: 2.5,
-              textTransform: "uppercase",
-              color: "var(--ca)",
-              marginBottom: 10,
-              fontWeight: 700,
-            }}
-          >
+          {/* Kennung wie die uebrigen Sektionen der Landingpage (.lp-eyebrow
+              aus Landing.jsx, 2026-09-28): dunkle Schrift mit orangem Punkt. */}
+          <div className="lp-eyebrow">
+            <span aria-hidden="true" className="lp-eyebrow-dot" />
             {t.pricingEyebrow}
           </div>
           <h2
@@ -145,7 +126,6 @@ export function PricingSection({ lang, onChoosePlan }) {
         </div>
 
         <style>{GRID_CSS}</style>
-        <Leistungsliste t={t} />
         <Vertrauenszeile t={t} />
       </div>
     </section>
@@ -263,101 +243,19 @@ function PlanCard({
 // nicht. Spaltenzahl und die passende nth-child-Regel muessen je Breakpoint
 // zusammen wechseln, sonst stuenden die Linien an der falschen Stelle.
 const GRID_CSS = `
-  .ps-feat{display:grid;grid-template-columns:repeat(6,1fr)}
-  .ps-feat>*{border-left:1px solid var(--cb)}
-  .ps-feat>*:nth-child(6n+1){border-left:none}
-  .ps-trust{display:grid;grid-template-columns:repeat(3,1fr)}
+  .ps-trust{display:grid;grid-template-columns:repeat(2,1fr)}
   .ps-trust>*{border-left:1px solid var(--cb)}
-  .ps-trust>*:nth-child(3n+1){border-left:none}
-  @media(max-width:900px){
-    .ps-feat{grid-template-columns:repeat(3,1fr);row-gap:24px}
-    .ps-feat>*:nth-child(6n+1){border-left:1px solid var(--cb)}
-    .ps-feat>*:nth-child(3n+1){border-left:none}
-  }
+  .ps-trust>*:nth-child(2n+1){border-left:none}
   @media(max-width:620px){
-    .ps-feat{grid-template-columns:repeat(2,1fr)}
-    .ps-feat>*:nth-child(3n+1){border-left:1px solid var(--cb)}
-    .ps-feat>*:nth-child(2n+1){border-left:none}
     .ps-trust{grid-template-columns:1fr;row-gap:18px}
     .ps-trust>*{border-left:none}
   }
 `;
 
-// Leistungs-Kacheln: sechs Spalten in EINER Reihe mit Trennlinien, je
-// Ueberschrift und Unterzeile (Neugestaltung 25.08.2026, Referenz-Screenshot).
-// Vorher eine Checkliste mit den compareRow*-Saetzen - die bleiben unberuehrt,
-// weil sie auch im Checkout-Wizard und in "Mein Konto" stehen; hier liegen
-// eigene feat*-Keys mit der zweigeteilten Form.
-function Leistungsliste({ t }) {
-  return (
-    <div
-      style={{
-        maxWidth: 1100,
-        margin: "26px auto 0",
-        background: "var(--cc)",
-        border: "1px solid var(--cb)",
-        borderRadius: 14,
-        padding: "24px 12px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 16,
-          fontWeight: 800,
-          color: "var(--ct)",
-          textAlign: "center",
-          marginBottom: 22,
-        }}
-      >
-        {t.pricingFeaturesTitle}
-      </div>
-      <div className="ps-feat">
-        {LEISTUNGEN.map(({ title, sub, Icon }) => (
-          <div
-            key={title}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              textAlign: "center",
-              gap: 8,
-              padding: "0 12px",
-            }}
-          >
-            <div
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: "50%",
-                background: "var(--ca-bg)",
-                color: "var(--ca)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Icon size={21} />
-            </div>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ct)", lineHeight: 1.3 }}>
-              {t[title]}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.4 }}>{t[sub]}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Vertrauens-Zeile unter der Leistungsbox. "Keine Zahlungsdaten waehrend der
-// Testphase" ist korrekt und bewusst so formuliert: die Testphase startet
-// automatisch beim ersten Login (startAppTrialIfNew in
-// worker/src/routes/account.ts) und verlangt keinerlei Zahlungsdaten - der
-// Stripe-Checkout ist ein davon getrennter Weg zu Pro.
+// Vertrauens-Zeile unter den Preiskarten.
 function Vertrauenszeile({ t }) {
   return (
-    <div className="ps-trust" style={{ maxWidth: 1100, margin: "20px auto 0" }}>
+    <div className="ps-trust" style={{ maxWidth: 720, margin: "26px auto 0" }}>
       {VERTRAUEN.map(({ title, sub, Icon }) => (
         <div
           key={title}
@@ -373,10 +271,10 @@ function Vertrauenszeile({ t }) {
             <Icon size={26} />
           </span>
           <span style={{ minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "var(--ct)", lineHeight: 1.3 }}>
+            <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "var(--ct)", lineHeight: 1.3 }}>
               {t[title]}
             </span>
-            <span style={{ display: "block", fontSize: 12, color: "var(--ch)", lineHeight: 1.4 }}>
+            <span style={{ display: "block", fontSize: 13, color: "var(--ch)", lineHeight: 1.4 }}>
               {t[sub]}
             </span>
           </span>
@@ -386,7 +284,7 @@ function Vertrauenszeile({ t }) {
   );
 }
 
-// ═══ Icons fuer die Leistungs-Kacheln + Vertrauenszeile (24er-Koordinaten,
+// ═══ Icons fuer die Vertrauenszeile (24er-Koordinaten,
 // stroke=currentColor, gleiches Muster wie accountIcons.jsx). Lokal statt in
 // der geteilten Icon-Datei, da sie ausschliesslich hier gebraucht werden. ═══
 function Svg({ size = 20, children }) {
@@ -408,74 +306,7 @@ function Svg({ size = 20, children }) {
   );
 }
 
-function IconRechner({ size }) {
-  return (
-    <Svg size={size}>
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M7 7h10" />
-      <path d="M7.5 12h.01M12 12h.01M16.5 12h.01M7.5 16h.01M12 16h.01M16.5 16h.01" />
-    </Svg>
-  );
-}
-
-function IconFinn({ size }) {
-  return (
-    <Svg size={size}>
-      <path d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 16H9l-4 4v-4H4a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 4 5z" />
-      <path d="M7.5 9.5h9M7.5 12.5h5.5" />
-    </Svg>
-  );
-}
-
-function IconExpose({ size }) {
-  return (
-    <Svg size={size}>
-      <rect x="4.5" y="3.5" width="12" height="16" rx="1.5" />
-      <path d="M8 8h5M8 11h5M8 14h3" />
-      <circle cx="17" cy="17.5" r="3" />
-      <path d="M19.3 19.8L21.5 22" />
-    </Svg>
-  );
-}
-
-function IconHandout({ size }) {
-  return (
-    <Svg size={size}>
-      <rect x="5" y="4" width="14" height="17" rx="2" />
-      <path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z" />
-      <path d="M8.5 11.5l1.6 1.6 3.4-3.4M8.5 17h7" />
-    </Svg>
-  );
-}
-
-function IconPdf({ size }) {
-  return (
-    <Svg size={size}>
-      <path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-      <path d="M14 3v4h4" />
-      <path d="M12 12v6M9.2 15.2l2.8 2.8 2.8-2.8" />
-    </Svg>
-  );
-}
-
-function IconMerkliste({ size }) {
-  return (
-    <Svg size={size}>
-      <path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.5l-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.5z" />
-    </Svg>
-  );
-}
-
 // ── Vertrauens-Zeile: Schild/Haken, Kreis/Haken, Schloss (Referenz) ──
-function IconSchildHaken({ size }) {
-  return (
-    <Svg size={size}>
-      <path d="M12 3l7.5 3v5.5c0 4.5-3.1 8.3-7.5 9.5-4.4-1.2-7.5-5-7.5-9.5V6L12 3z" />
-      <path d="M9 11.8l2.2 2.2 4-4.2" />
-    </Svg>
-  );
-}
-
 function IconKuendbar({ size }) {
   return (
     <Svg size={size}>

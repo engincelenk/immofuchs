@@ -1,3 +1,35 @@
+## 2026-09-28 (1.100.19)
+
+### Landingpage neu gestaltet (Option C, Stand v4)
+
+Umsetzung des freigegebenen Mockups. Nur die Landingpage, andere Seiten
+unverändert.
+
+- Hero: zentrierter bisheriger Text auf weichem Orange-Schimmer, ohne Bild.
+  Browser-Mockup mit Beispielzahlen und Exposé-Kachel entfernt (keine
+  nachgebauten Oberflächen mehr, die bei App-Änderungen veralten).
+  Hauptknopf für nicht Angemeldete jetzt "Kostenlos starten", darunter
+  "7 Tage kostenlos testen" und "In 5 Sprachen".
+- Neue KI-Sektion direkt unter dem Hero (Marineblau): Exposé-Scan und Finn
+  als Hauptkarten, dazu Risiken & Stärken, Verhandlungshebel,
+  Lage-Analyse, Besichtigungs-Handout. Ersetzt "Mehr als nur ein Rechner".
+- Kopfzeile: neuer Punkt "KI-Funktionen", Reihenfolge wie die Sektionen;
+  "Kostenlos starten" neben "Anmelden" (ab 1200 px). Handy: fester
+  "Kostenlos starten"-Balken unten.
+- "So funktioniert's": SVG-Symbole statt Emoji, "Schritt 1" in der
+  Seitensprache statt "STEP 1". Die vier Schritte selbst unverändert.
+- Preise: Leistungsleiste "Mit ImmoFuchs erhältst du" und der Punkt
+  "Keine Zahlungsdaten" entfernt (standen schon in der KI-Sektion bzw.
+  auf Wunsch raus).
+- Bauzinsen: "Monatlich aktuelle Bauzinsen" statt "Tagesaktuelle", Stand
+  lesbar ("September 2026" statt "2026-09"), kein pulsierender Live-Punkt.
+- Abschnitts-Kennungen dunkel mit orangem Punkt statt 11px-Orange
+  (WCAG-Kontrast), Texte mind. 13px; Dark-Mode-Kontrast geprüft.
+- Animationen: kurzes Einblenden im Hero, KI-Sterne pulsieren beim Laden
+  (endlich, nicht dauerhaft); bei "Bewegung reduzieren" aus.
+- Texte in allen 5 Sprachen. 32 nicht mehr genutzte Landing-Schlüssel
+  und 15 Preis-Schlüssel aus den Übersetzungen entfernt.
+
 ## 2026-09-28 (1.100.18)
 
 ### Rechtstexte an den aktuellen Stand angepasst (Entwurf, vor Livegang prüfen)

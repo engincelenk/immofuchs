@@ -63,6 +63,129 @@ const navLink = {
   letterSpacing: 0.1,
   transition: "color .15s",
 };
+
+// Der Server liefert den Zinsstand als "2026-09" - fuer Menschen als
+// "September 2026" in der Seitensprache. Andere Formate bleiben unveraendert.
+function standLesbar(stand, lang) {
+  const m = /^(\d{4})-(\d{2})$/.exec(String(stand || ""));
+  if (!m) return stand;
+  return new Date(+m[1], +m[2] - 1, 1).toLocaleDateString(LANG_LOCALE[lang] || "de-DE", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+// ═══ Kleine Bausteine der Landingpage (Neugestaltung 2026-09-28) ═══
+// Der Vier-Zacken-Stern ist das KI-Zeichen der Seite (Hero, KI-Sektion,
+// Schritt 4). Farbe ueber currentColor, damit ihn die umgebende Klasse steuert.
+function Stern({ size = 16, className, style }) {
+  return (
+    <svg
+      className={className}
+      style={style}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z" />
+    </svg>
+  );
+}
+
+// Abschnitts-Kennung ueber der Ueberschrift: dunkle Schrift mit orangem
+// Punkt statt 11px-Orange - das erreichte auf Weiss nur 3,4:1 (WCAG AA
+// verlangt 4,5:1 fuer diese Schriftgroesse).
+function Eyebrow({ children }) {
+  return (
+    <div className="lp-eyebrow">
+      <span aria-hidden="true" className="lp-eyebrow-dot" />
+      {children}
+    </div>
+  );
+}
+
+function Linie({ size = 24, children }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+const IconDoc = () => (
+  <Linie size={28}>
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+    <path d="M14 3v5h5" />
+    <path d="M9 13h6" />
+    <path d="M9 17h4" />
+  </Linie>
+);
+const IconChat = () => (
+  <Linie size={28}>
+    <path d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 16H9l-4 4v-4H4a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 4 5z" />
+    <path d="M7.5 9.5h9M7.5 12.5h5.5" />
+  </Linie>
+);
+const IconWarn = () => (
+  <Linie size={22}>
+    <path d="M12 3 2 20h20z" />
+    <path d="M12 10v4" />
+    <path d="M12 17h.01" />
+  </Linie>
+);
+const IconRegler = () => (
+  <Linie size={22}>
+    <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" />
+    <circle cx="16" cy="6" r="2" />
+    <circle cx="10" cy="12" r="2" />
+    <circle cx="18" cy="18" r="2" />
+  </Linie>
+);
+const IconPin = () => (
+  <Linie size={22}>
+    <path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z" />
+    <circle cx="12" cy="9" r="2.5" />
+  </Linie>
+);
+const IconClipboard = () => (
+  <Linie size={22}>
+    <path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
+    <path d="M9 3h6v3H9z" />
+    <path d="m8.5 12.5 2 2 4-4" />
+    <path d="M8.5 18h7" />
+  </Linie>
+);
+const IconUser = () => (
+  <Linie>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21a8 8 0 0 1 16 0" />
+  </Linie>
+);
+const IconUpload = () => (
+  <Linie>
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+    <path d="M14 3v5h5" />
+    <path d="M12 17v-6" />
+    <path d="m9 13 3-3 3 3" />
+  </Linie>
+);
+const IconBars = () => (
+  <Linie>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </Linie>
+);
+
 export function Landing({ onStart, zinsen, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
@@ -166,9 +289,20 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       doScroll();
     }
   };
+  // Reihenfolge = Reihenfolge der Sektionen auf der Seite (seit 2026-09-28
+  // stehen die KI-Funktionen direkt unter dem Hero). Kopfzeile und
+  // Handy-Schublade teilen sich diese eine Liste.
+  const navItems = [
+    { key: "ki", label: l.navKi, onSelect: () => scrollTo("ki") },
+    { key: "funktioniert", label: l.navHow, onSelect: () => scrollTo("funktioniert") },
+    { key: "rechner", label: l.navRechner, onSelect: () => scrollTo("rechner") },
+    { key: "preise", label: l.navPreise, onSelect: () => scrollTo("preise") },
+    { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
+  ];
 
   return (
     <div
+      className={account && !account.initialLoading && !account.isLoggedIn ? "lp-sticky-pad" : undefined}
       style={{
         minHeight: "100dvh",
         background: "var(--bg)",
@@ -259,18 +393,11 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
 
           {/* Desktop Nav */}
           <nav className="lp-nav" style={{ display: "flex", alignItems: "center", gap: 28 }}>
-            <button onClick={() => scrollTo("rechner")} style={navLink}>
-              {l.navRechner}
-            </button>
-            <button onClick={() => scrollTo("preise")} style={navLink}>
-              {l.navPreise}
-            </button>
-            <button onClick={() => scrollTo("funktioniert")} style={navLink}>
-              {l.navHow}
-            </button>
-            <button onClick={() => scrollTo("zinsen")} style={navLink}>
-              {l.navZinsen}
-            </button>
+            {navItems.map((n) => (
+              <button key={n.key} onClick={n.onSelect} style={navLink}>
+                {n.label}
+              </button>
+            ))}
           </nav>
 
           {/* Right side: Anmelden/Mein Konto + lang + CTA */}
@@ -347,12 +474,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 setNavOpen(false);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              navItems={[
-                { key: "rechner", label: l.navRechner, onSelect: () => scrollTo("rechner") },
-                { key: "preise", label: l.navPreise, onSelect: () => scrollTo("preise") },
-                { key: "funktioniert", label: l.navHow, onSelect: () => scrollTo("funktioniert") },
-                { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
-              ]}
+              navItems={navItems}
               langSelector={<LangSel lang={lang} setLang={setLang} />}
               onLogin={() => {
                 setNavOpen(false);
@@ -375,18 +497,22 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 <LangSel lang={lang} setLang={setLang} />
               </div>
             )}
-            {/* REQ-LP-01 (Nutzer-Konzept 2026-08-11): "Jetzt rechnen" nur fuer
-                eingeloggte Nutzer sichtbar - nicht eingeloggte sehen bereits
-                den "Anmelden"-Knopf oben, ein zweiter waere redundant. Die
+            {/* REQ-LP-01 (Nutzer-Konzept 2026-08-11): eingeloggt "Jetzt
+                rechnen". Seit 2026-09-28 (Landing Option C, Nutzer-Freigabe)
+                bekommen auch nicht eingeloggte Besucher einen gefuellten
+                "Kostenlos starten"-Knopf neben "Anmelden": beide oeffnen
+                dieselbe Anmeldung, aber nur einer sagt, dass der Einstieg
+                nichts kostet. Erst ab 1200px (.lp-cta-free), darunter reicht
+                der Platz neben Navigation und Sprachwahl nicht. Die
                 serverseitige Durchsetzung uebernehmen ohnehin requireAuth +
                 CalculatorTrialGate, unabhaengig von dieser reinen UI-Sichtbarkeit. */}
-            {account?.isLoggedIn && (
+            {account && !account.initialLoading && (
               <button
-                onClick={() => scrollTo("rechner")}
-                className="lp-cta"
+                onClick={() => (account.isLoggedIn ? scrollTo("rechner") : setOpenMode("login"))}
+                className={account.isLoggedIn ? "lp-cta" : "lp-cta lp-cta-free"}
                 style={{
                   padding: "10px 18px",
-                  background: "var(--ca)",
+                  background: account.isLoggedIn ? "var(--ca)" : "var(--ca-dk)",
                   color: "#fff",
                   border: "none",
                   borderRadius: 10,
@@ -399,7 +525,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                   whiteSpace: "nowrap",
                 }}
               >
-                {l.heroCtaPrimary}
+                {account.isLoggedIn ? l.heroCtaPrimary : l.ctaFree}
               </button>
             )}
             {/* ☰ oeffnet die Seiten-Navigation - jetzt fuer ALLE Besucher
@@ -510,677 +636,170 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       )}
 
       {/* ═══════════ HERO ═══════════ */}
+      {/* Neugestaltung 2026-09-28 (Landing Option C, Hero E - Nutzer-Auswahl
+          aus fuenf Varianten): zentrierter Text auf weichem Orange-Schimmer,
+          ohne Bild. Vorher rechts ein Browser-Mockup mit Beispielzahlen und
+          darunter die Exposé-Kachel. Nachgebaute Oberflaechen muessten bei
+          jeder App-Aenderung mitgezogen werden - Nutzer-Vorgabe: keine
+          Screenshots, Bilder sollen universell sein. Die KI-Funktionen folgen
+          direkt darunter in einer eigenen Sektion statt als Labels hier
+          (Nutzer-Korrektur am Mockup: sonst doppelt). */}
       <section
-        className="lp-container"
+        className="lp-container lp-hero"
         style={{
-          // Nutzer-Feedback 2026-08-11: Hero-Kante muss mit Header/anderen
-          // Abschnitten fluchten (.lp-container liefert dasselbe
-          // max-width:1400px + responsives Padding). Vertikales Padding
-          // bleibt inline (Klasse setzt nur horizontal) - siehe .lp-container
-          // in der Style-Definition unten. Das eingebettete Bild
-          // (finn-expose-tile.webp) nutzt bereits width:100%/height:100%/
-          // objectFit:cover ueber den gesamten bisherigen Breiten-Bereich,
-          // die zusaetzlichen 120px hier aendern daran nichts Grundsaetzliches.
-          paddingTop: "clamp(32px,6vw,80px)",
-          paddingBottom: "clamp(32px,5vw,60px)",
+          paddingTop: "clamp(40px,7vw,88px)",
+          paddingBottom: "clamp(44px,7vw,96px)",
           width: "100%",
         }}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,360px),1fr))",
-            gap: "clamp(28px,5vw,48px)",
-            alignItems: "start",
-            justifyItems: "center",
-          }}
-        >
-          {/* LEFT: Headline + CTAs */}
-          <div style={{ width: "100%" }}>
-            <h1
-              style={{
-                fontSize: "clamp(34px,5vw,56px)",
-                fontWeight: 800,
-                color: "var(--ct)",
-                letterSpacing: -1,
-                lineHeight: 1.05,
-                margin: "0 0 18px",
-              }}
+        <Stern className="lp-stern lp-hero-stern" size={26} style={{ left: "11%", top: "16%" }} />
+        <Stern
+          className="lp-stern lp-hero-stern lp-stern-hell"
+          size={16}
+          style={{ left: "14%", top: "27%", animationDelay: "300ms" }}
+        />
+        <Stern
+          className="lp-stern lp-hero-stern lp-stern-hell"
+          size={22}
+          style={{ right: "11%", top: "20%", animationDelay: "600ms" }}
+        />
+        <div className="lp-hero-inner">
+          <span className="lp-auf lp-hero-badge">
+            <Stern size={14} />
+            {l.heroKiBadge}
+          </span>
+          <h1 className="lp-hero-h1">
+            {l.h1a}
+            <span style={{ color: "var(--ca)" }}>{l.h1b}</span>
+            {l.h1c.startsWith(" ") ? " " : ""}
+            <br className="lp-h1-br" />
+            {l.h1c.trim()}
+          </h1>
+          <p className="lp-auf lp-hero-sub" style={{ animationDelay: "60ms" }}>
+            {l.subShort}
+          </p>
+          {/* REQ-LP-01: nicht eingeloggte Besucher starten kostenlos ueber
+              die Anmeldung (Konto + 7-Tage-Test), eingeloggte springen direkt
+              zu den Rechnern. */}
+          <div className="lp-auf lp-hero-ctas" style={{ animationDelay: "120ms" }}>
+            <button
+              onClick={() => (account?.isLoggedIn ? scrollTo("rechner") : setOpenMode("login"))}
+              className="lp-btn-primary"
             >
-              {l.h1a}
-              <span style={{ color: "var(--ca)" }}>{l.h1b}</span>
-              {l.h1c}
-            </h1>
-
-            <p
-              style={{
-                fontSize: "clamp(16px,1.6vw,19px)",
-                color: "var(--ch)",
-                lineHeight: 1.55,
-                margin: "0 0 28px",
-                maxWidth: 540,
-              }}
-            >
-              {l.subShort}
-            </p>
-
-            {/* CTAs */}
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
-              {/* REQ-LP-01: Hero-Primaer-CTA hat keinen zweiten "Anmelden"-Knopf
-                  in der Naehe (anders als der Header) - deshalb hier Label +
-                  Aktion tauschen statt nur auszublenden, sonst faehlt
-                  nicht eingeloggten Erstbesuchern die primaere Handlung. */}
-              <button
-                onClick={() => (account?.isLoggedIn ? scrollTo("rechner") : setOpenMode("login"))}
-                style={{
-                  padding: "14px 26px",
-                  background: "var(--ca)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 11,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  boxShadow: "0 8px 20px rgba(232,96,10,.28)",
-                  letterSpacing: 0.2,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                {account?.isLoggedIn ? l.heroCtaPrimary : at.loginSubmit}{" "}
-                <span style={{ fontSize: 18, marginTop: -2 }}>→</span>
-              </button>
-              <button
-                onClick={() => scrollTo("funktioniert")}
-                style={{
-                  padding: "14px 24px",
-                  background: "var(--cc)",
-                  color: "var(--ct)",
-                  border: "1.5px solid var(--cb)",
-                  borderRadius: 11,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  letterSpacing: 0.2,
-                }}
-              >
-                {l.heroCtaSecondary}
-              </button>
-            </div>
-
-            {/* Trust element: Datenstand statt statischer Marketing-Badges
-                (Konzept-Dok 1.1) - ersetzt die vier alten Badges "100%
-                kostenlos"/"In 1 Minute startklar"/"Aktuelle Marktdaten"/
-                "KI-Assistent inklusive". Monat/Jahr wird wie zuvor in der
-                jetzt entfernten Statusleiste dynamisch berechnet, nicht
-                hartkodiert - sonst entsteht exakt das Datumsproblem, das
-                Anlass fuer diese Aenderung war. */}
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "10px 24px",
-                fontSize: 13,
-                color: "var(--ch)",
-              }}
-            >
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <span
-                  style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    background: "#22c55e",
-                    color: "#fff",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    flexShrink: 0,
-                  }}
+              {account?.isLoggedIn ? l.heroCtaPrimary : l.ctaFree}{" "}
+              <span aria-hidden="true">→</span>
+            </button>
+            <button onClick={() => scrollTo("funktioniert")} className="lp-btn-secondary">
+              {l.heroCtaSecondary}
+            </button>
+          </div>
+          <div className="lp-auf lp-hero-trust" style={{ animationDelay: "180ms" }}>
+            {[at.pricingTrialBadge, l.heroTrustLang].map((txt) => (
+              <span key={txt}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--ok-tx)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
                 >
-                  ✓
-                </span>
-                <span style={{ fontWeight: 500, color: "var(--cl)" }}>
-                  {l.trust4} · {l.ratesStand}:{" "}
-                  {new Date().toLocaleDateString(LANG_LOCALE[lang] || "de-DE", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </span>
+                  <path d="m5 12 5 5 9-10" />
+                </svg>
+                {txt}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════ KI-FUNKTIONEN ═══════════ */}
+      {/* Ersetzt 2026-09-28 die fruehere Sektion "Mehr als nur ein Rechner"
+          (USP + Datenbasis) und steht bewusst direkt unter dem Hero: die
+          KI-Funktionen sind das, was ImmoFuchs von einem reinen Rechner
+          unterscheidet (Nutzer-Vorgabe: KI-Funktionen hervorheben). Marineblau
+          (--primary, auch im Dark Mode unveraendert) hebt sie als einzige
+          dunkle Flaeche der Seite ab. Ohne eigene Buttons (Nutzer-Korrektur am
+          Mockup) - der Einstieg laeuft ueber die Konto-Anmeldung. */}
+      <section id="ki" className="lp-ki">
+        <div className="lp-container">
+          <div className="lp-ki-top">
+            <div>
+              <div className="lp-ki-eyebrow">
+                <Stern className="lp-stern" size={13} />
+                <Stern className="lp-stern" size={17} style={{ animationDelay: "300ms" }} />
+                <Stern className="lp-stern" size={13} style={{ animationDelay: "600ms" }} />
+                <span style={{ marginLeft: 4 }}>{l.navKi}</span>
               </div>
+              <h2 className="lp-ki-h2">{l.kiH2}</h2>
+              <p className="lp-ki-lead">{l.kiLead}</p>
+            </div>
+            <div className="lp-ki-maskottchen" aria-hidden="true">
+              <img src="/fuchs-mascot.webp" alt="" width="250" height="250" loading="lazy" />
             </div>
           </div>
-
-          {/* RIGHT: Browser Mockup (larger, more polished) */}
-          <div
-            style={{ position: "relative", width: "100%", maxWidth: "100%", overflow: "hidden" }}
-          >
-            <div
-              style={{
-                background: "#1a1a1a",
-                borderRadius: "14px 14px 0 0",
-                padding: "12px 16px",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                boxShadow: "0 30px 60px -10px rgba(0,0,0,.18)",
-              }}
-            >
-              <div style={{ display: "flex", gap: 7 }}>
-                <div
-                  style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f56" }}
-                />
-                <div
-                  style={{ width: 12, height: 12, borderRadius: "50%", background: "#ffbd2e" }}
-                />
-                <div
-                  style={{ width: 12, height: 12, borderRadius: "50%", background: "#27c93f" }}
-                />
-              </div>
-              <div
-                style={{
-                  flex: 1,
-                  background: "#2a2a2a",
-                  borderRadius: 7,
-                  padding: "5px 14px",
-                  fontSize: 12,
-                  color: "#aaa",
-                  textAlign: "center",
-                  fontFamily: "'DM Sans',sans-serif",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                }}
-              >
-                <span style={{ color: "#27c93f", fontSize: 10 }}>🔒</span> immofuchs.info
-              </div>
-            </div>
-            <div
-              style={{
-                background: "var(--cc)",
-                borderRadius: "0 0 14px 14px",
-                padding: "20px",
-                boxShadow: "0 30px 60px -10px rgba(0,0,0,.18)",
-                border: "1px solid var(--cb)",
-                borderTop: "none",
-              }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,180px),1fr))",
-                  gap: 14,
-                }}
-              >
-                <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 9,
-                        letterSpacing: 1,
-                        textTransform: "uppercase",
-                        color: "var(--ch)",
-                        marginBottom: 3,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {l.mockKauf}
-                    </div>
-                    <div
-                      style={{
-                        padding: "9px 12px",
-                        border: "1px solid var(--cb)",
-                        borderRadius: 7,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        background: "var(--ci)",
-                      }}
-                    >
-                      350.000 €
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 9,
-                        letterSpacing: 1,
-                        textTransform: "uppercase",
-                        color: "var(--ch)",
-                        marginBottom: 3,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {l.mockMiete}
-                    </div>
-                    <div
-                      style={{
-                        padding: "9px 12px",
-                        border: "1px solid var(--cb)",
-                        borderRadius: 7,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        background: "var(--ci)",
-                      }}
-                    >
-                      1.200 €
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 9,
-                        letterSpacing: 1,
-                        textTransform: "uppercase",
-                        color: "var(--ch)",
-                        marginBottom: 3,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {l.mockZins}
-                    </div>
-                    <div
-                      style={{
-                        padding: "9px 12px",
-                        border: "1px solid var(--cb)",
-                        borderRadius: 7,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        background: "var(--ci)",
-                      }}
-                    >
-                      {zinsen?.avg || MARKET_RATES.avg} % p.a.
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 9,
-                        letterSpacing: 1,
-                        textTransform: "uppercase",
-                        color: "var(--ch)",
-                        marginBottom: 3,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {l.mockEK}
-                    </div>
-                    <div
-                      style={{
-                        padding: "9px 12px",
-                        border: "1px solid var(--cb)",
-                        borderRadius: 7,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        background: "var(--ci)",
-                      }}
-                    >
-                      70.000 €
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <div
-                      style={{
-                        padding: "10px 11px",
-                        background: "var(--ca-bg)",
-                        border: "1px solid var(--ca-bd)",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 9,
-                          letterSpacing: 0.8,
-                          textTransform: "uppercase",
-                          color: "var(--ca)",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {l.mockBrutto}
-                      </div>
-                      <div
-                        style={{ fontSize: 18, fontWeight: 700, color: "var(--ca)", marginTop: 3 }}
-                      >
-                        4,11 %
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        padding: "10px 11px",
-                        background: "#e7f7ee",
-                        border: "1px solid #b7e4c7",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 9,
-                          letterSpacing: 0.8,
-                          textTransform: "uppercase",
-                          color: "#1a7f3e",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {l.mockNetto}
-                      </div>
-                      <div
-                        style={{ fontSize: 18, fontWeight: 700, color: "#1a7f3e", marginTop: 3 }}
-                      >
-                        2,98 %
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      border: "1px solid var(--cb)",
-                      borderRadius: 8,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--cl)", fontWeight: 600 }}>
-                        {l.mockRate}
-                      </div>
-                      <div style={{ fontSize: 9, color: "var(--ch)" }}>{l.mockRateSub}</div>
-                    </div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1d6af5" }}>1.154 €</div>
-                  </div>
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      background: "#e7f7ee",
-                      border: "1px solid #b7e4c7",
-                      borderRadius: 8,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 11, color: "#1a7f3e", fontWeight: 600 }}>
-                        {l.mockCF}
-                      </div>
-                      <div style={{ fontSize: 9, color: "#5a8a6f" }}>{l.mockCFSub}</div>
-                    </div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1a7f3e" }}>+46 €</div>
-                  </div>
-                  <div
-                    style={{ padding: "10px 12px", border: "1px solid var(--cb)", borderRadius: 8 }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 9,
-                        letterSpacing: 0.8,
-                        textTransform: "uppercase",
-                        color: "var(--ch)",
-                        fontWeight: 700,
-                        marginBottom: 7,
-                      }}
-                    >
-                      {l.mockChart}
-                    </div>
-                    <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 42 }}>
-                      {[30, 36, 42, 50, 56, 64, 70, 78, 85, 92, 100].map((h, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            flex: 1,
-                            height: h + "%",
-                            background: "var(--ca)",
-                            borderRadius: "2px 2px 0 0",
-                            opacity: 0.3 + i * 0.07,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
+          <div className="lp-ki-main">
+            {[
+              { icon: <IconDoc />, h: l.kiScanH, p: l.kiScanP },
+              { icon: <IconChat />, h: l.kiFinnH, p: l.kiFinnP },
+            ].map((k) => (
+              <div key={k.h} className="lp-ki-karte lp-ki-karte-gross">
+                <span className="lp-ki-ic lp-ki-ic-gross">{k.icon}</span>
+                <div>
+                  <h3>{k.h}</h3>
+                  <p>{k.p}</p>
                 </div>
               </div>
-            </div>
-
-            {/* Expose-Upload Spotlight (Nutzerwunsch 2026-07-29, finale Form):
-                nur noch EINE Kachel, hier unter dem Mockup in dessen Breite -
-                die frueher zusaetzlich in der linken Spalte gerenderte
-                Mobile-Instanz ist entfallen (doppelte Kachel war redundant).
-                Aufbau bewusst identisch zur grossen Renditerechner-Karte weiter
-                unten (`.calc-hero-card`): weisse Flaeche, 1.5px --cb-Rahmen,
-                Radius 14, oranger Hover - Bild links / Text rechts je 50%.
-                Das halbiert die Kachelhoehe gegenueber der frueheren
-                Bild-ueber-Text-Variante und verhindert unnoetige Textzeilen,
-                weil Titel, Beschreibung und CTA neben dem Bild stehen.
-                "Jetzt hochladen" ist ein gefuellter Orange-Pill statt einer
-                Textzeile (Nutzerwunsch: soll deutlich sichtbarer sein).
-                Klick fuehrt seit 2026-09-06 in den Objektbereich (App.jsx
-                startApp, opts.openUpload) - der Scan haengt am Objekt, nicht
-                mehr im Chat. Seit 2026-09-07 oeffnet das Ziel dort "Objekt
-                anlegen" mit dem Exposé-Upload ganz oben, nicht mehr den
-                Scan direkt als eigenstaendiges Feature: der Scan ist ein Weg,
-                ein Objekt anzulegen, kein eigener Einstiegspunkt mehr. */}
-            <button
-              onClick={() => starteRechner("haupt", { openUpload: true })}
-              className="hero-upload-spot"
-              style={{
-                display: "block",
-                width: "100%",
-                marginTop: 20,
-                background: "var(--cc)",
-                border: "1.5px solid var(--cb)",
-                borderRadius: 14,
-                overflow: "hidden",
-                padding: 0,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                textAlign: "left",
-                WebkitAppearance: "none",
-              }}
-            >
-              <span className="hero-upload-grid" style={{ display: "grid" }}>
-                <span
-                  style={{
-                    display: "block",
-                    overflow: "hidden",
-                    background: "#E6F1FB",
-                    minHeight: 150,
-                  }}
-                >
-                  <img
-                    src="/finn-expose-tile.webp"
-                    alt=""
-                    aria-hidden="true"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                  />
-                </span>
-                <span
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    padding: "20px 22px",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: "fit-content",
-                      fontSize: 9,
-                      fontWeight: 700,
-                      letterSpacing: 1.2,
-                      textTransform: "uppercase",
-                      color: "#185FA5",
-                      background: "#E6F1FB",
-                      padding: "3px 8px",
-                      borderRadius: 4,
-                      marginBottom: 10,
-                    }}
-                  >
-                    {l.heroUploadBadge}
-                  </span>
-                  <span
-                    style={{
-                      display: "block",
-                      fontSize: 19,
-                      fontWeight: 700,
-                      color: "var(--ct)",
-                      letterSpacing: -0.3,
-                      marginBottom: 6,
-                    }}
-                  >
-                    {l.heroUploadTitle}
-                  </span>
-                  <span
-                    style={{
-                      display: "block",
-                      fontSize: 12.5,
-                      color: "var(--ch)",
-                      lineHeight: 1.45,
-                      marginBottom: 14,
-                    }}
-                  >
-                    {l.heroUploadDesc}
-                  </span>
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      width: "fit-content",
-                      background: "var(--ca)",
-                      color: "#fff",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      padding: "9px 16px",
-                      borderRadius: 9,
-                      boxShadow: "0 4px 12px rgba(232,96,10,.25)",
-                    }}
-                  >
-                    {l.heroUploadCta} <span style={{ fontSize: 15, marginTop: -1 }}>→</span>
-                  </span>
-                </span>
-              </span>
-            </button>
+            ))}
+          </div>
+          <div className="lp-ki-more">
+            {[
+              { icon: <IconWarn />, h: l.kiRiskH, p: l.kiRiskP },
+              { icon: <IconRegler />, h: l.kiHebelH, p: l.kiHebelP },
+              { icon: <IconPin />, h: l.kiLageH, p: l.kiLageP },
+              { icon: <IconClipboard />, h: l.kiHandoutH, p: l.kiHandoutP },
+            ].map((k) => (
+              <div key={k.h} className="lp-ki-karte">
+                <span className="lp-ki-ic">{k.icon}</span>
+                <h3>{k.h}</h3>
+                <p>{k.p}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ═══════════ HOW IT WORKS ═══════════ */}
-      <section
-        id="funktioniert"
-        style={{
-          padding: "clamp(40px,5vw,72px) 0",
-          background: "var(--cc)",
-          borderTop: "1px solid var(--cb)",
-          borderBottom: "1px solid var(--cb)",
-        }}
-      >
+      {/* Gestaltung 2026-09-28 an die neue Landingpage angeglichen: SVG statt
+          Emoji (rendern je Plattform anders, Screenreader lasen sie vor),
+          "Schritt 1" in der Seitensprache statt festem "STEP 1", weisse Karten
+          auf Seitengrund. Inhalt und Reihenfolge der vier Schritte unveraendert
+          (Nutzer-Vorgabe 2026-09-11). */}
+      <section id="funktioniert" style={{ padding: "clamp(40px,5vw,80px) 0" }}>
         <div className="lp-container">
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <div
-              style={{
-                fontSize: 11,
-                letterSpacing: 2.5,
-                textTransform: "uppercase",
-                color: "var(--ca)",
-                marginBottom: 10,
-                fontWeight: 700,
-              }}
-            >
-              {l.howTitle}
-            </div>
-            <h2
-              style={{
-                fontSize: "clamp(26px,3vw,38px)",
-                fontWeight: 800,
-                color: "var(--ct)",
-                margin: 0,
-                letterSpacing: -0.5,
-                lineHeight: 1.15,
-              }}
-            >
-              {l.howShort}
-            </h2>
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <Eyebrow>{l.howTitle}</Eyebrow>
+            <h2 className="lp-h2">{l.howShort}</h2>
           </div>
           <div className="how-steps-grid">
             {[
-              // Ablauf neu gefasst (Nutzer-Vorgabe 2026-09-11): Anmelden,
-              // Objekt anlegen, Sofort-Ergebnis, KI-Beratung - die i18n-
-              // Schluessel step1..4 stehen jetzt selbst schon in dieser
-              // Reihenfolge, keine Anzeige-Umsortierung mehr noetig.
-              { n: "1", icon: "🦊", t: l.step1H, d: l.step1P },
-              { n: "2", icon: "🏠", t: l.step2H, d: l.step2P },
-              { n: "3", icon: "📊", t: l.step3H, d: l.step3P },
-              { n: "4", icon: "✦", t: l.step4H, d: l.step4P },
-            ].map((s, i) => (
-              <div
-                key={i}
-                style={{
-                  background: "var(--bg)",
-                  borderRadius: 14,
-                  padding: "18px 16px",
-                  border: "1px solid var(--cb)",
-                  position: "relative",
-                  transition: "transform .2s, box-shadow .2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.boxShadow = "0 12px 30px rgba(0,0,0,.06)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "";
-                  e.currentTarget.style.boxShadow = "";
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div
-                    style={{
-                      width: 34,
-                      height: 34,
-                      background: "var(--ca-bg)",
-                      borderRadius: 9,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 18,
-                      border: "1px solid var(--ca-bd)",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {s.icon}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      color: "var(--ca)",
-                      letterSpacing: 0.8,
-                    }}
-                  >
-                    STEP {s.n}
-                  </div>
+              { n: 1, icon: <IconUser />, t: l.step1H, d: l.step1P },
+              { n: 2, icon: <IconUpload />, t: l.step2H, d: l.step2P },
+              { n: 3, icon: <IconBars />, t: l.step3H, d: l.step3P },
+              { n: 4, icon: <Stern size={22} />, t: l.step4H, d: l.step4P },
+            ].map((s) => (
+              <div key={s.n} className="lp-step lp-karte">
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                  <span className="lp-step-ic">{s.icon}</span>
+                  <span className="lp-step-n">
+                    {l.stepLabel} {s.n}
+                  </span>
                 </div>
-                <h3
-                  style={{
-                    fontSize: 15.5,
-                    fontWeight: 700,
-                    color: "var(--ct)",
-                    margin: "0 0 6px",
-                    letterSpacing: -0.1,
-                  }}
-                >
-                  {s.t}
-                </h3>
-                <p style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5, margin: 0 }}>
-                  {s.d}
-                </p>
+                <h3>{s.t}</h3>
+                <p>{s.d}</p>
               </div>
             ))}
           </div>
@@ -1188,33 +807,18 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       </section>
 
       {/* ═══════════ CALCULATOR CARDS ═══════════ */}
-      <section id="rechner" style={{ padding: "clamp(40px,5vw,72px) 0" }}>
+      <section
+        id="rechner"
+        style={{
+          padding: "clamp(40px,5vw,72px) 0",
+          background: "var(--cc)",
+          borderTop: "1px solid var(--cb)",
+        }}
+      >
         <div className="lp-container">
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div
-              style={{
-                fontSize: 11,
-                letterSpacing: 2.5,
-                textTransform: "uppercase",
-                color: "var(--ca)",
-                marginBottom: 10,
-                fontWeight: 700,
-              }}
-            >
-              {l.cardsTitle}
-            </div>
-            <h2
-              style={{
-                fontSize: "clamp(26px,3vw,38px)",
-                fontWeight: 800,
-                color: "var(--ct)",
-                margin: 0,
-                letterSpacing: -0.5,
-                lineHeight: 1.15,
-              }}
-            >
-              {l.cardsSub}
-            </h2>
+            <Eyebrow>{l.cardsTitle}</Eyebrow>
+            <h2 className="lp-h2">{l.cardsSub}</h2>
           </div>
 
           {/* ── HERO: Renditerechner ── */}
@@ -1487,230 +1091,27 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         }}
       />
 
-      {/* ═══════════ USP + DATENBASIS ═══════════ */}
-      {/* Zusammenlegung 2026-08-25 (Nutzer-Vorgabe): vorher zwei Sektionen —
-          "Echte Marktdaten. Durchdachte Rechner." mit neun Wert-Kacheln und
-          "Mehr als nur ein Rechner" mit sieben USP-Karten. Die Karten "Alle
-          Daten aktuell" und "Recht und Bundesland eingebaut" erzaehlten
-          dasselbe wie die Kacheln. Jetzt eine Sektion mit der Dramaturgie:
-          was ImmoFuchs kann (Funktionen) -> worauf er basiert (Datenbasis).
-
-          Gestaltung ueberarbeitet 2026-08-25 nach Design-Review:
-          - 2+3-Komposition statt auto-fit. Bei 5 Karten erzeugt
-            auto-fit,minmax(220px,1fr) je nach Fensterbreite eine
-            Waisenreihe (1024-1200px: 4+1, 480-760px: 2+2+1) - 5 ist prim,
-            auto-fit kann das nicht loesen. Explizite Breakpoints wie bei
-            .calc-cards-support weiter oben; die beiden NEU-Funktionen
-            stehen bewusst breit in der ersten Reihe.
-          - Emoji durch Inline-SVG ersetzt: 📄 und 📋 sahen bei 28px fast
-            gleich aus (beides ein weisses Blatt), Emoji rendern je
-            Plattform in anderen Farben (Windows grau-blau, iOS bunt) und
-            Screenreader lasen "Seite nach oben zeigend" vor jeder
-            Ueberschrift.
-          - Die neun Werte als Hairline-Raster statt gerahmter Chips: die
-            Chips standen direkt unter der Preise-CTA und sahen dort nach
-            Knoepfen aus, und flex-wrap+center liess die letzte Reihe in
-            jeder Sprache anders ausfransen. 9 Werte gehen als 3x3 exakt auf.
-          - Kontrast (WCAG AA, alles mit vorhandenen Tokens): Fliesstext
-            --ch (3,5:1 auf Weiss) -> --cl, kleine orange Schrift --ca
-            (3,4:1) -> --ca-dk, gruener Wert-Text (2,3:1) -> --ct mit
-            gruenem Punkt davor. Orange traegt jetzt nur noch den einen
-            Live-Wert (Bauzins) statt acht Werte gleichzeitig. */}
+      {/* ═══════════ ZINSEN ═══════════ */}
+      {/* Die Zinsdaten werden monatlich aktualisiert (Nutzer-Korrektur
+          2026-09-28: vorher hiess es "tagesaktuell", dazu ein pulsierender
+          Live-Punkt - beides versprach mehr, als die Daten leisten). */}
       <section
-        aria-labelledby="usp-heading"
-        style={{
-          background: "var(--cc)",
-          borderTop: "1px solid var(--cb)",
-          borderBottom: "1px solid var(--cb)",
-          padding: "clamp(40px,5vw,72px) 0",
-        }}
+        id="zinsen"
+        style={{ padding: "clamp(36px,4vw,56px) 24px", borderTop: "1px solid var(--cb)" }}
       >
-        <div className="lp-container">
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div
-              style={{
-                fontSize: 11,
-                letterSpacing: 2.5,
-                textTransform: "uppercase",
-                color: "var(--ca-dk)",
-                marginBottom: 10,
-                fontWeight: 700,
-              }}
-            >
-              {l.uspTitle}
-            </div>
-            <h2
-              id="usp-heading"
-              style={{
-                fontSize: "clamp(26px,3vw,38px)",
-                fontWeight: 800,
-                color: "var(--ct)",
-                margin: "0 0 14px",
-                letterSpacing: -0.5,
-                lineHeight: 1.15,
-              }}
-            >
-              {l.uspSub}
-            </h2>
-            <p
-              style={{
-                fontSize: 15,
-                color: "var(--cl)",
-                maxWidth: 600,
-                margin: "0 auto",
-                lineHeight: 1.6,
-              }}
-            >
-              {l.uspLead}
-            </p>
-          </div>
-          {/* Funktionen als rahmenlose Spalten (Design-Review 2026-08-25,
-              Variante A). Vorher gerahmte Karten in 2+3-Komposition: die
-              trugen dasselbe visuelle Gewicht wie die Datentafel darunter,
-              waehrend die Werte mit 15px kleiner gesetzt waren als die
-              Headlines und sich dadurch als Fussnote lasen. Jetzt ein
-              Gefaelle: Funktionen leicht (Haarlinie statt Rahmen), Zahlen
-              schwer.
-
-              Die NEU-Pillen bei Expose-Scan und Handout entfallen
-              (Nutzer-Vorgabe 2026-08-25) - damit stehen alle fuenf
-              Headlines auf einer Grundlinie. Der Schluessel l.badgeNeu
-              bleibt vorerst ungenutzt in translations.js stehen.
-
-              Reihenfolge unveraendert: die drei KI-Funktionen zuerst - sie
-              sind das, was es sonst nirgends gibt -, danach der Einstieg.
-              Die SVGs sind dieselben wie bisher: inline, ohne Fuellung,
-              stroke="currentColor", damit sie die Akzentfarbe erben statt
-              wie Emoji je Plattform in einer anderen Farbwelt zu landen. */}
-          <div className="fn-row">
-            {[
-              {
-                svg: (
-                  <>
-                    <path d="M13 3H7a2 2 0 0 0-2 2v5" />
-                    <path d="M19 14v5a2 2 0 0 1-2 2h-6" />
-                    <path d="M13 3l6 6" />
-                    <path d="M13 3v6h6" />
-                    <path d="M3 12h18" />
-                  </>
-                ),
-                h: l.uspScanH,
-                p: l.uspScanP,
-              },
-              {
-                svg: (
-                  <>
-                    <path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
-                    <path d="M9 3h6v3H9z" />
-                    <path d="M8.5 12.5l2 2 4-4" />
-                    <path d="M8.5 18h7" />
-                  </>
-                ),
-                h: l.uspHandoutH,
-                p: l.uspHandoutP,
-              },
-              {
-                svg: (
-                  <>
-                    <path d="M20 12a8 8 0 1 0-3.1 6.3L21 20l-1.2-3.6A7.9 7.9 0 0 0 20 12z" />
-                    <path d="M9 10h6" />
-                    <path d="M9 14h4" />
-                  </>
-                ),
-                h: l.uspAiH,
-                p: l.uspAiP,
-              },
-              {
-                svg: (
-                  <>
-                    <path d="M4 18a8 8 0 1 1 16 0" />
-                    <path d="M12 18l4-6" />
-                    <path d="M12 18h.01" />
-                  </>
-                ),
-                h: l.uspScoreH,
-                p: l.uspScoreP,
-              },
-              {
-                svg: (
-                  <>
-                    <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />
-                  </>
-                ),
-                h: l.usp4H,
-                p: l.usp4P,
-              },
-              {
-                svg: (
-                  <>
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M3 12h18" />
-                    <path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z" />
-                  </>
-                ),
-                h: l.usp6H,
-                p: l.usp6P,
-              },
-            ].map((u, i) => (
-              <div key={i} className="fn">
-                <svg
-                  className="fn-ic"
-                  aria-hidden="true"
-                  width="26"
-                  height="26"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  {u.svg}
-                </svg>
-                <h3 className="fn-h">{u.h}</h3>
-                <p className="fn-p">{u.p}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ ZINSEN — discreet ticker section ═══════════ */}
-      <section id="zinsen" style={{ padding: "clamp(30px,4vw,50px) 24px" }}>
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <div style={{ borderLeft: "3px solid var(--ca)", paddingLeft: 18 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 8,
-                fontSize: 10,
-                color: "var(--ca)",
-                fontWeight: 700,
-                letterSpacing: 1.5,
-                textTransform: "uppercase",
-              }}
-            >
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  background: "var(--ca)",
-                  borderRadius: "50%",
-                  animation: "pulse 2s infinite",
-                }}
-              />
-              <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
-              📊 {l.ratesTitle} · {l.ratesStand}: {zinsen?.stand || MARKET_RATES.stand}
+          <div style={{ borderLeft: "3px solid var(--ca)", paddingLeft: 20 }}>
+            <div className="lp-eyebrow" style={{ letterSpacing: 1.5 }}>
+              <span aria-hidden="true" className="lp-eyebrow-dot" />
+              {l.ratesTitle} · {l.ratesStand}: {standLesbar(zinsen?.stand || MARKET_RATES.stand, lang)}
             </div>
-            <p style={{ margin: "0 0 6px", fontSize: 13, color: "var(--cl)", lineHeight: 1.7 }}>
+            <p style={{ margin: "0 0 6px", fontSize: 15, color: "var(--cl)", lineHeight: 1.6 }}>
               {l.ratesIntro2}{" "}
               <strong>
                 {l.ratesCompact}: {zinsen?.avg || MARKET_RATES.avg} %
               </strong>
             </p>
-            <p style={{ margin: 0, fontSize: 11, color: "var(--ch)", lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ch)", lineHeight: 1.5 }}>
               {l.ratesDisclaim}
             </p>
             <ZinsAlarm zinsen={zinsen} lang={lang} />
@@ -1827,10 +1228,84 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-container{max-width:none;margin:0 auto;padding:0 14px;box-sizing:border-box}
       @media(min-width:700px){.lp-container{padding-left:28px;padding-right:28px}}
       @media(min-width:1100px){.lp-container{padding-left:40px;padding-right:40px}}
-      .hero-upload-spot{transition:border-color .2s,box-shadow .2s}
-      .hero-upload-spot:hover{border-color:var(--ca);box-shadow:0 8px 28px rgba(232,96,10,.14)}
-      .hero-upload-grid{grid-template-columns:1fr}
-      @media(min-width:640px){.hero-upload-grid{grid-template-columns:1fr 1fr}}
+      /* ── Landing Option C (2026-09-28) ── */
+      @keyframes lp-auf{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+      @keyframes lp-stern{0%{opacity:.4;transform:scale(.8)}100%{opacity:1;transform:scale(1.15)}}
+      .lp-auf{animation:lp-auf .32s var(--ease-out) both}
+      /* Endliche Wiederholung statt infinite: die Sterne sollen beim
+         Ankommen aufmerksam machen, nicht dauerhaft neben dem Text flackern. */
+      .lp-stern{display:inline-block;flex-shrink:0;animation:lp-stern 1.8s ease-in-out 6 alternate}
+      .lp-hero{position:relative;text-align:center;background-image:radial-gradient(ellipse 60% 60% at 50% 45%,var(--ca-bg) 0%,transparent 70%)}
+      .lp-hero-stern{position:absolute;pointer-events:none;color:var(--ca)}
+      .lp-stern-hell{color:#ffb27a}
+      @media(max-width:1180px){.lp-hero-stern{display:none}}
+      .lp-hero-inner{max-width:980px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:24px}
+      .lp-hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--cc);border:1px solid var(--ca-bd);font-size:14px;font-weight:700;color:var(--ca-dk)}
+      .lp-hero-h1{margin:0;font-size:clamp(34px,5.2vw,64px);font-weight:800;color:var(--ct);letter-spacing:-1.2px;line-height:1.05}
+      .lp-hero-sub{margin:0;max-width:720px;font-size:clamp(16px,1.6vw,19px);color:var(--cl);line-height:1.55}
+      .lp-hero-ctas{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+      .lp-btn-primary,.lp-btn-secondary{min-height:52px;padding:0 26px;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+      .lp-btn-primary{border:none;background:var(--ca);color:#fff;font-size:17px;box-shadow:0 8px 20px rgba(232,96,10,.28);transition:background .15s}
+      .lp-btn-primary:hover{background:var(--ca-dk)}
+      .lp-btn-secondary{border:1.5px solid var(--cb);background:var(--cc);color:var(--ct);font-size:16px;font-weight:600}
+      .lp-hero-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px;font-size:14px;color:var(--cl)}
+      .lp-hero-trust>span{display:inline-flex;align-items:center;gap:6px}
+      @media(max-width:560px){
+        .lp-h1-br{display:none}
+        .lp-hero-ctas{width:100%;flex-direction:column}
+        .lp-hero-ctas>button{justify-content:center;width:100%}
+      }
+      .lp-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ct)}
+      .lp-eyebrow-dot{width:7px;height:7px;border-radius:50%;background:var(--ca);flex-shrink:0}
+      .lp-h2{margin:0;font-size:clamp(26px,3vw,40px);font-weight:800;color:var(--ct);letter-spacing:-.5px;line-height:1.15}
+      .lp-karte{transition:transform .2s var(--ease-out),box-shadow .2s,border-color .2s}
+      .lp-karte:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(30,58,95,.12);border-color:var(--ca)}
+      /* KI-Sektion: --primary bleibt auch im Dark Mode Marineblau, weisse
+         Schrift traegt dort also in beiden Themes. */
+      .lp-ki{background-color:var(--primary);background-image:radial-gradient(circle at 85% 12%,rgba(232,96,10,.18),transparent 55%);padding:clamp(48px,6vw,88px) 0;color:#fff}
+      .lp-ki-top{display:grid;grid-template-columns:1fr;gap:32px;align-items:center;margin-bottom:36px}
+      @media(min-width:900px){.lp-ki-top{grid-template-columns:1fr 1fr;gap:56px}}
+      .lp-ki-eyebrow{display:flex;align-items:center;gap:6px;margin-bottom:14px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff}
+      .lp-ki-eyebrow svg{color:var(--ca)}
+      .lp-ki-h2{margin:0 0 14px;font-size:clamp(28px,3.4vw,46px);font-weight:800;letter-spacing:-.8px;line-height:1.1;color:#fff}
+      .lp-ki-lead{margin:0;max-width:560px;font-size:clamp(16px,1.4vw,18px);line-height:1.6;color:rgba(255,255,255,.86)}
+      .lp-ki-maskottchen{display:none}
+      @media(min-width:900px){.lp-ki-maskottchen{display:flex;justify-content:center;align-items:center}}
+      .lp-ki-maskottchen img{width:250px;height:auto;padding:25px;border-radius:50%;background:radial-gradient(circle,rgba(255,178,122,.35),transparent 70%)}
+      .lp-ki-main,.lp-ki-more{display:grid;grid-template-columns:1fr;gap:16px}
+      .lp-ki-more{margin-top:16px}
+      @media(min-width:760px){.lp-ki-main{grid-template-columns:1fr 1fr}.lp-ki-more{grid-template-columns:1fr 1fr}}
+      @media(min-width:1100px){.lp-ki-more{grid-template-columns:repeat(4,1fr)}}
+      .lp-ki-karte{padding:24px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
+      .lp-ki-karte:hover{border-color:rgba(232,96,10,.6)}
+      .lp-ki-karte-gross{padding:28px;flex-direction:row;gap:20px;align-items:flex-start;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16)}
+      .lp-ki-karte h3{margin:0;font-size:18px;font-weight:800;color:#fff}
+      .lp-ki-karte-gross h3{font-size:22px;margin-bottom:8px}
+      .lp-ki-karte p{margin:0;font-size:15px;line-height:1.55;color:rgba(255,255,255,.86)}
+      .lp-ki-karte-gross p{font-size:16px}
+      .lp-ki-ic{width:46px;height:46px;flex-shrink:0;border-radius:12px;border:1px solid rgba(255,255,255,.28);display:inline-flex;align-items:center;justify-content:center;color:#fff}
+      .lp-ki-ic-gross{width:56px;height:56px}
+      .lp-step{padding:26px;border:1px solid var(--cb);border-radius:12px;background:var(--cc)}
+      .lp-step h3{margin:0 0 6px;font-size:19px;font-weight:800;color:var(--ct);letter-spacing:-.2px}
+      .lp-step p{margin:0;font-size:15px;line-height:1.55;color:var(--cl)}
+      .lp-step-ic{width:48px;height:48px;flex-shrink:0;border-radius:12px;background:var(--ca-bg);color:var(--ca-dk);display:inline-flex;align-items:center;justify-content:center}
+      .lp-step-n{font-size:14px;font-weight:700;color:var(--ca-dk)}
+      /* Dark Mode: --ca-dk (#c44d00) erreicht auf dunklen Karten nur ~3:1,
+         dort traegt das hellere --ca (~5:1). */
+      html[data-theme="dark"] .lp-hero-badge,html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic{color:var(--ca)}
+      @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-hero-badge,.lp-step-n,.lp-step-ic){color:var(--ca)}}
+      /* Handy: fester "Kostenlos starten"-Balken unten, nur fuer nicht
+         eingeloggte Besucher. Finns Knopf sitzt mit bottom:76px darueber. */
+      .lp-sticky-cta{display:none}
+      @media(max-width:560px){
+        .lp-sticky-cta{display:block;position:fixed;left:0;right:0;bottom:0;z-index:40;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--cc);border-top:1px solid var(--cb)}
+        .lp-sticky-cta button{width:100%;min-height:48px;border:none;border-radius:12px;background:var(--ca-dk);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+        .lp-sticky-pad{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+      }
+      @media(prefers-reduced-motion:reduce){
+        .lp-auf,.lp-stern{animation:none}
+        .lp-karte:hover{transform:none}
+      }
       .calc-hero-card{grid-template-columns:1fr!important}
       @media(min-width:640px){.calc-hero-card{grid-template-columns:1fr 1fr!important}}
       .calc-hero-card>div:first-child{min-height:200px}
@@ -1839,34 +1314,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .calc-cards-support>*{width:100%;min-width:0;box-sizing:border-box}
       @media(min-width:640px){.calc-cards-support{grid-template-columns:repeat(3,1fr)}}
       @media(min-width:900px){.calc-cards-support{grid-template-columns:repeat(5,1fr)}}
-      /* Funktionen als rahmenlose Spalten (Design-Review 2026-08-25,
-         Variante A). Die gerahmten Karten trugen dasselbe visuelle Gewicht
-         wie die Datentafel darunter - zwei Raster, die um dieselbe
-         Aufmerksamkeit konkurrierten. Haarlinie statt Rahmen nimmt der
-         Reihe das Gewicht, ohne eine Ebene zu verlieren.
-         Kein auto-fit (siehe .calc-cards-support): 5 gleiche Spalten ab
-         960px, darunter 2 Spalten mit waagerechten Trennern, mobil eine
-         Liste. Damit gibt es in keiner Breite eine Waisenreihe. */
-      .fn-row{display:grid;grid-template-columns:1fr;gap:0}
-      .fn-row>*{min-width:0;box-sizing:border-box}
-      .fn{padding:18px 0;border-top:1px solid var(--cb)}
-      .fn:first-child{border-top:0}
-      @media(min-width:560px){
-        .fn-row{grid-template-columns:repeat(2,1fr);column-gap:28px}
-        .fn:nth-child(2){border-top:0}
-      }
-      @media(min-width:960px){
-        .fn-row{grid-template-columns:repeat(5,1fr);column-gap:26px}
-        .fn{border-top:0;padding:0 0 0 20px;border-left:1px solid var(--cb)}
-        .fn:first-child{padding-left:0;border-left:0}
-      }
-      .fn-ic{color:var(--ca);display:block;margin-bottom:12px}
-      .fn-h{font-size:15.5px;font-weight:800;color:var(--ct);margin:0 0 5px;
-        letter-spacing:-.2px;line-height:1.25}
-      .fn-p{font-size:13px;color:var(--cl);line-height:1.55;margin:0}
-      .how-steps-grid{display:grid;grid-template-columns:1fr;gap:14px}
+      .how-steps-grid{display:grid;grid-template-columns:1fr;gap:16px}
       @media(min-width:560px){.how-steps-grid{grid-template-columns:repeat(2,1fr)}}
-      @media(min-width:860px){.how-steps-grid{grid-template-columns:repeat(4,1fr)}}
+      @media(min-width:1000px){.how-steps-grid{grid-template-columns:repeat(4,1fr);gap:20px}}
       /* Bugreport 2026-08-12 (Screenshot: abgeschnittener Menue-Knopf): Nach
          dem Login wuchs der Konto-Knopf durch Tarif-Chip + "Mein Konto" so
          weit, dass der ☰-Knopf rechts aus dem Viewport lief. Die Kurzform
@@ -1885,9 +1335,17 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         .lp-acct-short{display:none}
         .lp-logo-icon{height:56px!important;width:auto!important}
       }
-      @media(max-width:880px){
+      /* Navigation seit 2026-09-28 mit fuenf Eintraegen (KI-Funktionen dazu)
+         - sie klappt deshalb schon unter 1000px in die Schublade, nicht erst
+         unter 880px. Der "Kostenlos starten"-Knopf im Kopf braucht noch
+         mehr Platz und erscheint erst ab 1200px. */
+      .lp-cta-free{display:none}
+      @media(min-width:1200px){.lp-cta-free{display:inline-block}}
+      @media(max-width:1000px){
         .lp-nav{display:none!important}
         .lp-burger{display:inline-flex!important}
+      }
+      @media(max-width:880px){
         .lp-langsel-top{display:none!important}
         .lp-account-btn{padding:8px 10px!important;font-size:12.5px!important}
       }
@@ -1899,6 +1357,11 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         .lp-cta{display:none!important}
       }
     `}</style>
+      {account && !account.initialLoading && !account.isLoggedIn && (
+        <div className="lp-sticky-cta">
+          <button onClick={() => setOpenMode("login")}>{l.ctaFree}</button>
+        </div>
+      )}
       <LandingMascot onStart={starteRechner} lang={lang} />
     </div>
   );
