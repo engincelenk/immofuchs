@@ -738,7 +738,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               <p className="lp-ki-lead">{l.kiLead}</p>
             </div>
             <div className="lp-ki-maskottchen" aria-hidden="true">
-              <img src="/fuchs-mascot.webp" alt="" width="250" height="275" loading="lazy" />
+              <img src="/finn.webp" alt="" width="166" height="280" loading="lazy" />
             </div>
           </div>
           <div className="lp-ki-main">
@@ -1263,7 +1263,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-karte:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(30,58,95,.12);border-color:var(--ca)}
       /* KI-Sektion: festes Schwarz (#111111) in beiden Themes, weisse
          Schrift traegt dort also immer. */
-      .lp-ki{background-color:#111111;background-image:radial-gradient(circle at 85% 12%,rgba(232,96,10,.18),transparent 55%);padding:clamp(48px,6vw,88px) 0;color:#fff}
+      .lp-ki{background-color:#111111;padding:clamp(48px,6vw,88px) 0;color:#fff}
       .lp-ki-top{display:grid;grid-template-columns:1fr;gap:32px;align-items:center;margin-bottom:36px}
       @media(min-width:900px){.lp-ki-top{grid-template-columns:1fr 1fr;gap:56px}}
       .lp-ki-eyebrow{display:flex;align-items:center;gap:6px;margin-bottom:14px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff}
@@ -1272,9 +1272,10 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-ki-lead{margin:0;max-width:560px;font-size:clamp(16px,1.4vw,18px);line-height:1.6;color:rgba(255,255,255,.86)}
       .lp-ki-maskottchen{display:none}
       @media(min-width:900px){.lp-ki-maskottchen{display:flex;justify-content:center;align-items:center}}
-      /* Ganzer Kopf ohne Kreis-Zuschnitt und ohne Orange-Schein
-         (Nutzer-Korrektur 2026-09-28: der Kreis schnitt die Ohrspitzen ab). */
-      .lp-ki-maskottchen img{width:250px;height:auto}
+      /* Finn als Oberkörper (2026-09-29, ersetzt den Kopf) ohne Kreis-Zuschnitt
+         und ohne Orange-Schein; der untere Rand blendet per Maske ins Schwarz
+         aus, das Bild endet an der Hüfte. */
+      .lp-ki-maskottchen img{width:auto;height:280px;-webkit-mask-image:linear-gradient(to bottom,#000 72%,transparent 100%);mask-image:linear-gradient(to bottom,#000 72%,transparent 100%)}
       .lp-ki-main,.lp-ki-more{display:grid;grid-template-columns:1fr;gap:16px}
       .lp-ki-more{margin-top:16px}
       @media(min-width:760px){.lp-ki-main{grid-template-columns:1fr 1fr}.lp-ki-more{grid-template-columns:1fr 1fr}}
