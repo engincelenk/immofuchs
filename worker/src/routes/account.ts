@@ -25,6 +25,7 @@ import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/pas
 import { sendEmail } from "../email";
 import { dispatchNotification } from "../notifications";
 import { deleteAccountCompletely } from "../accountDeletion";
+import { syncCustomerFromUser } from "../stripe/customerSync";
 import { TRIAL_DAUER_MS, TRIAL_LIMITS, TRIAL_MERKLISTE_GESAMT, trialTag } from "../trialLimits";
 import { buildClearSessionCookie, extractSessionId, logout } from "../auth/session";
 
@@ -194,6 +195,8 @@ accountRoutes.get("/account/email/confirm", async (c) => {
   const result = await consumeEmailChangeRequest(c.env.DB, token);
   if (!result) return c.redirect(`${base}/?email_change_error=invalid_or_expired`, 302);
   await updateUserEmail(c.env.DB, result.userId, result.newEmail);
+  // Stripe-Kopie nachziehen (best effort, blockiert die Aenderung nie).
+  await syncCustomerFromUser(c.env, result.userId);
   return c.redirect(`${base}/?email_change_success=1`, 302);
 });
 
@@ -206,6 +209,7 @@ accountRoutes.post("/account/name", requireAuth, requireCsrfOrigin, async (c) =>
   const name = body && typeof body.name === "string" ? body.name.trim() : "";
   if (!name || name.length > 100) return c.json({ error: "invalid_name" }, 400);
   await updateUserName(c.env.DB, c.var.userId, name);
+  await syncCustomerFromUser(c.env, c.var.userId);
   return c.json({ ok: true });
 });
 

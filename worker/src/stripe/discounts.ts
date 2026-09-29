@@ -45,12 +45,28 @@ function mapDiscount(promo: Stripe.PromotionCode, coupon: Stripe.Coupon): Stripe
   };
 }
 
+// Stripe liefert max. 100 pro Seite - frueher wurde danach abgeschnitten, Codes
+// ab Nummer 101 fehlten im Admin. Jetzt seitenweise, mit Obergrenze als Schutz
+// vor Endlosschleifen bzw. Subrequest-Limits (20 x 100 = 2000 Codes).
+const MAX_DISCOUNT_PAGES = 20;
+
 export async function listDiscounts(env: Env): Promise<StripeDiscount[]> {
   const stripe = getStripeClient(env);
-  const promoCodes = await stripe.promotionCodes.list({ limit: 100, expand: ["data.coupon"] });
-  return promoCodes.data
-    .filter((p): p is Stripe.PromotionCode & { coupon: Stripe.Coupon } => Boolean(p.coupon))
-    .map((p) => mapDiscount(p, p.coupon));
+  const all: StripeDiscount[] = [];
+  let startingAfter: string | undefined;
+  for (let page = 0; page < MAX_DISCOUNT_PAGES; page++) {
+    const res = await stripe.promotionCodes.list({
+      limit: 100,
+      expand: ["data.coupon"],
+      starting_after: startingAfter,
+    });
+    for (const p of res.data) {
+      if (p.coupon) all.push(mapDiscount(p, p.coupon));
+    }
+    if (!res.has_more || res.data.length === 0) break;
+    startingAfter = res.data[res.data.length - 1].id;
+  }
+  return all;
 }
 
 export interface DiscountInput {

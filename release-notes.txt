@@ -1,3 +1,31 @@
+## 2026-09-29 (1.100.24) [BACKEND]
+
+### Nutzerdaten App -> Stripe, Gutscheinliste vollständig
+
+- Neu: `stripe/customerSync.ts`. Ändert ein Nutzer E-Mail (Bestätigung des
+  Änderungslinks) oder Namen (`/account/name`), wird der Stripe-Kunde
+  nachgezogen - best effort: ein Stripe-Fehler blockiert die Änderung in der
+  App nie (nur Log). Ohne Stripe-Kunde (nie gekauft, Testabo) kein Aufruf.
+- Bewusste Abweichung vom Auftragstext: der Name wird NUR gesetzt, wenn Stripe
+  noch keinen hat. `customer.name` ist dort der Rechnungsempfänger (bei
+  Firmenkunden der Firmenname aus dem Checkout) und darf nicht durch den
+  Profilnamen überschrieben werden. Die E-Mail wird immer angeglichen - sonst
+  fände der nächste Checkout den Kunden (Suche per E-Mail) nicht mehr und
+  legte einen Duplikat-Kunden an.
+- Täglicher Cron: `reconcileCustomers` vergleicht Kundendaten und meldet
+  Abweichungen; nach Stripe geschrieben wird nur bei
+  `STRIPE_RECONCILE_MODE=apply` (Default "log", wie beim Abo-Abgleich; max.
+  50 Updates pro Lauf).
+- Gutscheinliste (`listDiscounts`) blättert über alle Stripe-Seiten statt bei
+  100 Codes abzuschneiden (Obergrenze 2000). Keine Kopie in D1 - Gutscheine
+  liegen weiterhin nur in Stripe.
+
+**Verifiziert:** `npx tsc --noEmit`, Worker-Vitest 288/288 (18 neue Tests).
+Noch NICHT deployed, keine Migration nötig.
+
+**Betroffene Dateien:** worker/src/stripe/{customerSync,discounts}.ts (+ Tests),
+worker/src/routes/account.ts, worker/src/scheduled.ts
+
 ## 2026-09-29 (1.100.23) [FRONTEND+BACKEND]
 
 ### Admin: Button "Jetzt mit Stripe abgleichen" im Abo-Detail

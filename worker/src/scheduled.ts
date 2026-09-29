@@ -11,6 +11,7 @@ import {
 } from "./db";
 import { dispatchNotification } from "./notifications";
 import { reconcileSubscriptions } from "./stripe/reconcile";
+import { reconcileCustomers } from "./stripe/customerSync";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -30,6 +31,12 @@ export async function handleScheduled(env: Env): Promise<void> {
     await reconcileSubscriptions(env);
   } catch (err) {
     console.error("stripe_reconcile_failed", err instanceof Error ? err.message : "unknown");
+  }
+
+  try {
+    await reconcileCustomers(env);
+  } catch (err) {
+    console.error("stripe_customer_reconcile_failed", err instanceof Error ? err.message : "unknown");
   }
 
   const due = await listSubscriptionsDueForRenewalReminder(env.DB, SEVEN_DAYS_MS);
