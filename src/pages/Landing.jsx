@@ -720,9 +720,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       {/* Ersetzt 2026-09-28 die fruehere Sektion "Mehr als nur ein Rechner"
           (USP + Datenbasis) und steht bewusst direkt unter dem Hero: die
           KI-Funktionen sind das, was ImmoFuchs von einem reinen Rechner
-          unterscheidet (Nutzer-Vorgabe: KI-Funktionen hervorheben). Marineblau
-          (--primary, auch im Dark Mode unveraendert) hebt sie als einzige
-          dunkle Flaeche der Seite ab. Ohne eigene Buttons (Nutzer-Korrektur am
+          unterscheidet (Nutzer-Vorgabe: KI-Funktionen hervorheben). Schwarz
+          (#111111, seit 2026-09-29 statt Marineblau, auch im Dark Mode
+          unveraendert) hebt sie als einzige dunkle Flaeche der Seite ab. Ohne eigene Buttons (Nutzer-Korrektur am
           Mockup) - der Einstieg laeuft ueber die Konto-Anmeldung. */}
       <section id="ki" className="lp-ki">
         <div className="lp-container">
@@ -1261,9 +1261,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-h2{margin:0;font-size:clamp(26px,3vw,40px);font-weight:800;color:var(--ct);letter-spacing:-.5px;line-height:1.15}
       .lp-karte{transition:transform .2s var(--ease-out),box-shadow .2s,border-color .2s}
       .lp-karte:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(30,58,95,.12);border-color:var(--ca)}
-      /* KI-Sektion: --primary bleibt auch im Dark Mode Marineblau, weisse
-         Schrift traegt dort also in beiden Themes. */
-      .lp-ki{background-color:var(--primary);background-image:radial-gradient(circle at 85% 12%,rgba(232,96,10,.18),transparent 55%);padding:clamp(48px,6vw,88px) 0;color:#fff}
+      /* KI-Sektion: festes Schwarz (#111111) in beiden Themes, weisse
+         Schrift traegt dort also immer. */
+      .lp-ki{background-color:#111111;background-image:radial-gradient(circle at 85% 12%,rgba(232,96,10,.18),transparent 55%);padding:clamp(48px,6vw,88px) 0;color:#fff}
       .lp-ki-top{display:grid;grid-template-columns:1fr;gap:32px;align-items:center;margin-bottom:36px}
       @media(min-width:900px){.lp-ki-top{grid-template-columns:1fr 1fr;gap:56px}}
       .lp-ki-eyebrow{display:flex;align-items:center;gap:6px;margin-bottom:14px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff}
