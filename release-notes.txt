@@ -1,3 +1,13 @@
+## 2026-09-29 (1.100.30) [FRONTEND]
+
+### Support-FAQs an den Code angeglichen
+
+- FAQ 1 (Testphase): Lage-Analyse (3 pro Tag) ergaenzt, passend zu
+  `TRIAL_LIMITS.lage` im Worker.
+- FAQ 8 (Konto loeschen): Export liegt unter "Einstellungen", Loeschen unter
+  "Konto & Sicherheit" - vorher stand beides unter "Konto & Sicherheit".
+- Alle fuenf Sprachen (de, en, tr, zh, hi).
+
 ## 2026-09-29 (1.100.29) [FRONTEND]
 
 ### Landingpage (Handy): nur noch ein "Kostenlos starten" sichtbar
