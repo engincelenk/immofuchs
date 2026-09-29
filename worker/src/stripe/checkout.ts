@@ -155,6 +155,11 @@ export async function createSubscriptionCheckout(
     payment_settings: { save_default_payment_method: "on_subscription" },
     expand: ["latest_invoice.payment_intent"],
     metadata: { user_id: userId },
+    // Regelbesteuerung (Stand 2026-09-29): Stripe Tax berechnet aus der
+    // Kundenadresse den Satz und weist Netto/Steuer/Brutto auf der Rechnung
+    // aus (§ 14 UStG). Voraussetzung in Stripe: Herkunftsadresse,
+    // Registrierung und Preise mit tax_behavior "inclusive".
+    automatic_tax: { enabled: true },
     // Stufe F (Gutscheine ueber Stripe Coupons/Promotion Codes): discounts
     // statt eines rohen Codes - routes/billing.ts loest den vom Nutzer
     // eingegebenen Code vorher ueber findUsableCouponByCode() auf.

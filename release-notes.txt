@@ -1,3 +1,15 @@
+## 2026-09-29 (1.100.28) [WORKER]
+
+### Stripe Tax: Rechnung weist MwSt. aus (Regelbesteuerung)
+
+- `createSubscriptionCheckout` setzt `automatic_tax: { enabled: true }`; die
+  Rechnung zeigt Netto, 19 % MwSt. und Brutto (§ 14 UStG).
+- Voraussetzung in Stripe (pro Umgebung): Herkunftsadresse, Registrierung
+  Deutschland, Steuer-ID im Konto, Preise mit tax_behavior "inclusive"
+  (neue Preise, Env STRIPE_PRICE_ID_MONTHLY/YEARLY umstellen). Ohne das
+  schlaegt der Kauf fehl - deshalb erst nach der Stripe-Einrichtung deployen.
+- Neu: `stripe/checkout.test.ts`.
+
 ## 2026-09-29 (1.100.27) [FRONTEND]
 
 ### Landingpage: KI-Sektion ohne orangen Schimmer, Finn statt Kopf
@@ -8,6 +20,16 @@
   mit rembg aus docs/images/finn.png freigestellt, das Original hatte ein
   eingebranntes Schachbrett statt Transparenz). Hoehe 280 px, unterer Rand
   blendet per CSS-Maske ins Schwarz aus. `fuchs-mascot.webp` bleibt liegen.
+
+## 2026-09-29 (1.100.26) [TESTS]
+
+### e2e-Suite an den aktuellen Code angepasst und ergänzt
+
+- `analyse.e2e.test.ts`: Produkte auf briefing/handout/kredit/miete/sanier/vfe/steuer6 umgestellt (analyse/hebel/preis existieren nicht mehr, liefern 400), Briefing-Antwortschema (urteil/staerken/risiken/hebel), Timeout 90 s, 502 zusätzlich als "Gate passiert" akzeptiert; neu: invalid_json, kennzahlen als Array.
+- Neu `lage-public.e2e.test.ts`: /lage (401/400/412, Regression Consent-Session), /kappungsgrenze (öffentlich, Cache), /feedback (Fehlerpfade).
+- `admin-permissions`: /admin/feedback und /admin/test-emails ergänzt (403 für Nicht-Admin).
+- `uiHelpers.ts`: Cookie-Consent-Version 1 -> 2 (Banner blockierte sonst alle Klicks der Browser-Suite).
+- Neu `consent-banner.spec.ts`: Banner (Erstbesuch, Nur notwendige, Alle, veraltete Version) und Rechtsseiten.
 
 ## 2026-09-29 (1.100.25) [FRONTEND]
 
