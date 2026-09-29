@@ -1,4 +1,4 @@
-import { useRef, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { lazyWithReload } from "../utils/lazyRetry.js";
 import { TL } from "../i18n/translations.js";
 import { MARKET_RATES } from "../data.js";
@@ -214,6 +214,17 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   const [navOpen, setNavOpen] = useState(false);
   const [sectionKey, setSectionKey] = useState("profil");
   const avatarRef = useRef(null);
+  // Fester Handy-Balken erst zeigen, wenn der Hero-Knopf aus dem Bild ist
+  // (sonst stehen zwei "Kostenlos starten" gleichzeitig auf dem Screen).
+  const heroCtaRef = useRef(null);
+  const [heroCtaVisible, setHeroCtaVisible] = useState(true);
+  useEffect(() => {
+    const el = heroCtaRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const io = new IntersectionObserver(([e]) => setHeroCtaVisible(e.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // Bugfix (Nutzer-Feedback 2026-08-11): CheckoutWizard/MyAccount lesen
   // `lang` ueber useApp() aus Ctx (AppContext.jsx) - der existiert bisher
@@ -683,6 +694,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               zu den Rechnern. */}
           <div className="lp-auf lp-hero-ctas" style={{ animationDelay: "120ms" }}>
             <button
+              ref={heroCtaRef}
               onClick={() => (account?.isLoggedIn ? scrollTo("rechner") : setOpenMode("login"))}
               className="lp-btn-primary"
             >
@@ -1361,7 +1373,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         .lp-cta{display:none!important}
       }
     `}</style>
-      {account && !account.initialLoading && !account.isLoggedIn && (
+      {account && !account.initialLoading && !account.isLoggedIn && !heroCtaVisible && (
         <div className="lp-sticky-cta">
           <button onClick={() => setOpenMode("login")}>{l.ctaFree}</button>
         </div>

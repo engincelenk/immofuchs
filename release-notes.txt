@@ -1,3 +1,11 @@
+## 2026-09-29 (1.100.29) [FRONTEND]
+
+### Landingpage (Handy): nur noch ein "Kostenlos starten" sichtbar
+
+- Der feste Balken unten erscheint erst, wenn der Hero-Knopf aus dem Bild
+  gescrollt ist (IntersectionObserver). Vorher standen zwei gleiche Knoepfe
+  gleichzeitig auf dem Screen und der Balken ueberdeckte die Vertrauens-Haekchen.
+
 ## 2026-09-29 (1.100.28) [WORKER]
 
 ### Stripe Tax: Rechnung weist MwSt. aus (Regelbesteuerung)
