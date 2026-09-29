@@ -79,6 +79,8 @@ export interface SubscriptionRow {
   trial_reminder_sent_at: number | null;
   latest_invoice_id: string | null;
   updated_at: number;
+  // Unix-Sekunden des zuletzt angewendeten Stripe-Events (Migration 0034).
+  stripe_event_created: number | null;
 }
 
 export interface ObjectRow {

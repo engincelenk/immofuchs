@@ -10,6 +10,7 @@ import {
   markTrialReminderSent,
 } from "./db";
 import { dispatchNotification } from "./notifications";
+import { reconcileSubscriptions } from "./stripe/reconcile";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -21,6 +22,14 @@ export async function handleScheduled(env: Env): Promise<void> {
     await cleanupOldLoginAttempts(env.DB, ONE_DAY_MS);
   } catch (err) {
     console.error("login_attempts_cleanup_failed", err instanceof Error ? err.message : "unknown");
+  }
+
+  // Abgleich D1 <-> Stripe VOR den Erinnerungs-Mails, damit diese auf dem
+  // korrigierten Stand beruhen. Ein Fehler hier darf die Mails nicht blockieren.
+  try {
+    await reconcileSubscriptions(env);
+  } catch (err) {
+    console.error("stripe_reconcile_failed", err instanceof Error ? err.message : "unknown");
   }
 
   const due = await listSubscriptionsDueForRenewalReminder(env.DB, SEVEN_DAYS_MS);

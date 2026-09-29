@@ -9,6 +9,7 @@ import { getUserById, isWebhookEventProcessed, markTrialUsedForUser, markWebhook
 import { dispatchNotification } from "../notifications";
 import { PAST_DUE_GRACE_MS } from "../entitlement";
 import { getStripeClient } from "./client";
+import { mapStripeSubscription } from "./subscriptionMapping";
 
 export async function verifyStripeSignature(
   env: Env,
@@ -27,42 +28,6 @@ export async function verifyStripeSignature(
   }
 }
 
-// Stripe kennt 'trialing', 'active', 'past_due', 'canceled', 'unpaid',
-// 'incomplete', 'incomplete_expired'. Die bestehende Vier-Wert-Logik
-// ('active'/'trialing'/'past_due'/'canceled') bleibt.
-//
-// Live-Befund (2026-08-27, gegen den echten Stripe-Testmodus verifiziert,
-// siehe Spec Abschnitt 9.2 "muss geprueft werden"): subscriptions.create()
-// mit payment_behavior:"default_incomplete" (stripe/checkout.ts) loest SOFORT
-// ein customer.subscription.created-Event mit Status 'incomplete' aus -
-// lange BEVOR der Kunde ueberhaupt die Kartendaten eingegeben hat. Wurde das
-// wie 'unpaid' auf 'canceled' abgebildet, legte der allererste Webhook eine
-// D1-Zeile mit status='canceled' an; der spaetere echte Uebergang zu
-// 'active'/'trialing' lief dadurch als UPDATE von 'canceled' statt als
-// INSERT bzw. als Uebergang von 'trialing' - und traf keine der beiden
-// Willkommens-Mail-Bedingungen in upsertSubscriptionFromStripe() mehr
-// (siehe dort). 'incomplete'/'incomplete_expired' sind reines
-// Vor-Zahlung-Rauschen ohne jede Entitlement-Bedeutung (kein Kunde hat
-// jemals Zugriff, solange dieser Status steht) und werden deshalb jetzt statt
-// dessen komplett ignoriert (null) - der naechste Webhook mit einem echten
-// Status legt die Zeile dann sauber per INSERT an. 'unpaid' bleibt auf
-// 'canceled' abgebildet: das betrifft eine BEREITS bezahlte Subscription,
-// deren Verlaengerung nach allen Dunning-Versuchen endgueltig fehlschlug -
-// dort existiert die D1-Zeile schon und der Uebergang ist inhaltlich korrekt.
-function statusFromStripe(stripeStatus: unknown): "active" | "trialing" | "past_due" | "canceled" | null {
-  if (stripeStatus === "active") return "active";
-  if (stripeStatus === "trialing") return "trialing";
-  if (stripeStatus === "past_due") return "past_due";
-  if (stripeStatus === "canceled" || stripeStatus === "unpaid") return "canceled";
-  return null;
-}
-
-function planFromPriceId(env: Env, priceId: unknown): "monthly" | "yearly" | null {
-  if (priceId === env.STRIPE_PRICE_ID_MONTHLY) return "monthly";
-  if (priceId === env.STRIPE_PRICE_ID_YEARLY) return "yearly";
-  return null;
-}
-
 export async function handleStripeWebhook(env: Env, event: Stripe.Event): Promise<{ ok: boolean }> {
   // Idempotenz VOR jeder Aktion - ein bereits verarbeitetes Event aendert
   // garantiert nichts mehr, egal wie oft Stripe es erneut zustellt.
@@ -71,9 +36,9 @@ export async function handleStripeWebhook(env: Env, event: Stripe.Event): Promis
   }
 
   if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
-    await upsertSubscriptionFromStripe(env, event.data.object as Stripe.Subscription);
+    await upsertSubscriptionFromStripe(env, event.data.object as Stripe.Subscription, eventCreatedOf(event));
   } else if (event.type === "customer.subscription.deleted") {
-    await markSubscriptionCanceled(env, event.data.object as Stripe.Subscription);
+    await markSubscriptionCanceled(env, event.data.object as Stripe.Subscription, eventCreatedOf(event));
   } else if (event.type === "invoice.payment_succeeded") {
     await storeLatestInvoiceId(env, event.data.object as Stripe.Invoice);
   } else if (event.type === "invoice.payment_failed") {
@@ -93,57 +58,30 @@ export async function handleStripeWebhook(env: Env, event: Stripe.Event): Promis
   return { ok: true };
 }
 
-async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription): Promise<void> {
-  const userId = sub.metadata?.user_id;
-  if (!userId) {
-    console.error("stripe_webhook_missing_user_id");
-    return;
-  }
-  const stripeSubscriptionId = sub.id;
-  const stripeCustomerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-  // Stripe garantiert die Zustellreihenfolge von Webhook-Events NICHT (Live-
-  // Befund 2026-08-27: Rechnungsuebersicht blieb nach dem allerersten Kauf
-  // dauerhaft leer). invoice.payment_succeeded traf teils EHER ein als
-  // dieses subscription.updated/created - storeLatestInvoiceId() lief dann
-  // gegen ein UPDATE ohne passende Zeile (die entsteht ja erst hier unten
-  // per INSERT), und Stripes Idempotenz-Garantie ("at least once") stellt
-  // dasselbe Event nie wieder zu - die Rechnungs-ID war fuer den ersten
-  // Abrechnungszyklus fuer immer verloren. sub.latest_invoice traegt dieselbe
-  // ID bereits am Subscription-Objekt selbst (wie sub.customer oben), macht
-  // das Race also komplett ueberfluessig: die ID kommt direkt von hier statt
-  // vom separaten Event.
-  const latestInvoiceId =
-    typeof sub.latest_invoice === "string"
-      ? sub.latest_invoice
-      : (sub.latest_invoice?.id ?? null);
-  const status = statusFromStripe(sub.status);
-  const priceId = sub.items.data[0]?.price?.id;
-  const plan = planFromPriceId(env, priceId);
-  // Stripe hat mit der API-Version "Basil" (2025-03-31) current_period_end
-  // vom Subscription-Objekt entfernt und auf die einzelnen Items verschoben
-  // (https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-subscription-current-period-start-and-end).
-  // Live-Befund 2026-09-10: sub.current_period_end kam bei echten Webhook-
-  // Events bereits als undefined an, der bisherige Fallback auf Date.now()
-  // schrieb dadurch ein bereits "abgelaufenes" Ablaufdatum in derselben
-  // Millisekunde wie der Kauf - das Abo war fuer den Zugangs-Check (current_
-  // period_end > now, siehe entitlement.ts computeIsPro) sofort ungueltig,
-  // obwohl status korrekt "active" war. sub.items.data[0].current_period_end
-  // existiert im aktuellen Schema, fehlt aber noch in den mitgelieferten
-  // stripe-node-Typen (Paket ist aelter als Basil) - deshalb der Cast, analog
-  // zum bestehenden Cast in storeLatestInvoiceId() fuer denselben Grund.
-  // Fallback auf das alte Feld bleibt bestehen, falls Stripe je auf ein
-  // Konto mit vor-Basil-API-Version zurueckfaellt.
-  const itemPeriodEnd = (
-    sub.items.data[0] as unknown as { current_period_end?: number } | undefined
-  )?.current_period_end;
-  const rawPeriodEnd = itemPeriodEnd ?? sub.current_period_end;
-  const periodEnd = rawPeriodEnd ? rawPeriodEnd * 1000 : Date.now();
-  const cancelAtPeriodEnd = sub.cancel_at_period_end ? 1 : 0;
+// event.created ist bei echten Stripe-Events immer gesetzt (Unix-Sekunden);
+// der Fallback deckt nur handgebaute Test-Events ab.
+function eventCreatedOf(event: Stripe.Event): number {
+  return typeof event.created === "number" ? event.created : Math.floor(Date.now() / 1000);
+}
+
+async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription, eventCreated: number): Promise<void> {
+  const mapped = mapStripeSubscription(env, sub);
+  const { userId, stripeSubscriptionId, stripeCustomerId, latestInvoiceId, status, plan, periodEnd, cancelAtPeriodEnd } =
+    mapped;
 
   // Kein Fehler, sondern erwartetes Vor-Zahlung-Rauschen ('incomplete'/
   // 'incomplete_expired', siehe statusFromStripe) - kein console.error, das
   // waere bei jedem einzelnen Checkout-Start ein falscher Alarm im Log.
   if (!status) return;
+
+  // Ohne user_id laesst sich die Subscription keinem Konto zuordnen. Frueher
+  // wurde das nur geloggt und das Event danach als verarbeitet markiert - die
+  // Aenderung ging dauerhaft verloren. Jetzt wirft der Handler: die Route
+  // antwortet 500, Stripe stellt erneut zu, und der Fehler bleibt sichtbar.
+  if (!userId) {
+    console.error("stripe_webhook_missing_user_id", stripeSubscriptionId);
+    throw new Error("stripe_webhook_missing_user_id");
+  }
 
   if (!stripeSubscriptionId || !plan) {
     console.error("stripe_webhook_incomplete_subscription_data");
@@ -160,7 +98,14 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
 
   const existing = await env.DB.prepare("SELECT * FROM subscriptions WHERE stripe_subscription_id = ?")
     .bind(stripeSubscriptionId)
-    .first<{ id: string; first_purchase_at: number; status: string; past_due_since: number | null }>();
+    .first<{ id: string; first_purchase_at: number; status: string; past_due_since: number | null; stripe_event_created: number | null }>();
+
+  // Reihenfolge-Schutz: ein aelteres Event als der bereits angewendete Stand
+  // wird verworfen (der Aufrufer markiert es trotzdem als verarbeitet).
+  if (existing?.stripe_event_created != null && eventCreated < existing.stripe_event_created) {
+    console.warn("stripe_webhook_stale_event_ignored", stripeSubscriptionId);
+    return;
+  }
 
   const now = Date.now();
   const pastDueSince =
@@ -171,7 +116,8 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
   if (existing) {
     await env.DB.prepare(
       `UPDATE subscriptions SET status = ?, plan = ?, stripe_customer_id = ?, current_period_end = ?,
-         cancel_at_period_end = ?, past_due_since = ?, latest_invoice_id = COALESCE(?, latest_invoice_id), updated_at = ? WHERE id = ?`,
+         cancel_at_period_end = ?, past_due_since = ?, latest_invoice_id = COALESCE(?, latest_invoice_id), updated_at = ?,
+         stripe_event_created = ? WHERE id = ?`,
     )
       .bind(
         cancelAtPeriodEnd ? "cancel_scheduled" : status,
@@ -182,6 +128,7 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
         pastDueSince,
         latestInvoiceId,
         now,
+        eventCreated,
         existing.id,
       )
       .run();
@@ -222,8 +169,8 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
     await env.DB.prepare(
       `INSERT INTO subscriptions
         (id, user_id, status, plan, stripe_customer_id, stripe_subscription_id, current_period_end,
-         cancel_at_period_end, first_purchase_at, past_due_since, latest_invoice_id, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         cancel_at_period_end, first_purchase_at, past_due_since, latest_invoice_id, updated_at, stripe_event_created)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         newId(),
@@ -238,6 +185,7 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription):
         pastDueSince,
         latestInvoiceId,
         now,
+        eventCreated,
       )
       .run();
 
@@ -273,12 +221,15 @@ async function storeLatestInvoiceId(env: Env, invoice: Stripe.Invoice): Promise<
     .run();
 }
 
-async function markSubscriptionCanceled(env: Env, sub: Stripe.Subscription): Promise<void> {
+async function markSubscriptionCanceled(env: Env, sub: Stripe.Subscription, eventCreated: number): Promise<void> {
   const stripeSubscriptionId = sub.id;
   if (!stripeSubscriptionId) return;
+  // Gleicher Reihenfolge-Schutz wie im Upsert: ein verspaetetes 'deleted' darf
+  // ein neueres Event nicht ueberschreiben (Bedingung im WHERE).
   await env.DB.prepare(
-    "UPDATE subscriptions SET status = 'canceled', updated_at = ? WHERE stripe_subscription_id = ?",
+    `UPDATE subscriptions SET status = 'canceled', updated_at = ?, stripe_event_created = ?
+     WHERE stripe_subscription_id = ? AND (stripe_event_created IS NULL OR stripe_event_created <= ?)`,
   )
-    .bind(Date.now(), stripeSubscriptionId)
+    .bind(Date.now(), eventCreated, stripeSubscriptionId, eventCreated)
     .run();
 }

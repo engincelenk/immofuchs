@@ -18,6 +18,7 @@ function sub(overrides: Partial<SubscriptionRow>): SubscriptionRow {
     trial_reminder_sent_at: null,
     latest_invoice_id: null,
     updated_at: Date.now(),
+    stripe_event_created: null,
     ...overrides,
   };
 }

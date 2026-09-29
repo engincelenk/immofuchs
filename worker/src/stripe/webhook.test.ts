@@ -142,6 +142,7 @@ interface FakeSubscription {
   past_due_since: number | null;
   latest_invoice_id: string | null;
   updated_at: number;
+  stripe_event_created?: number | null;
 }
 
 function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSubscription[] } = {}) {
@@ -192,6 +193,7 @@ function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSub
                   pastDueSince,
                   latestInvoiceId,
                   updatedAt,
+                  eventCreated,
                   id,
                 ] = args;
                 const row = subscriptions.get(String(id));
@@ -205,6 +207,7 @@ function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSub
                   // Spiegelt COALESCE(?, latest_invoice_id) aus der echten Query.
                   row.latest_invoice_id = latestInvoiceId === null ? row.latest_invoice_id : String(latestInvoiceId);
                   row.updated_at = Number(updatedAt);
+                  row.stripe_event_created = Number(eventCreated);
                 }
                 return { meta: { changes: row ? 1 : 0 } };
               }
@@ -222,6 +225,7 @@ function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSub
                   pastDueSince,
                   latestInvoiceId,
                   updatedAt,
+                  eventCreated,
                 ] = args;
                 subscriptions.set(String(id), {
                   id: String(id),
@@ -236,6 +240,7 @@ function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSub
                   past_due_since: pastDueSince === null ? null : Number(pastDueSince),
                   latest_invoice_id: latestInvoiceId === null ? null : String(latestInvoiceId),
                   updated_at: Number(updatedAt),
+                  stripe_event_created: Number(eventCreated),
                 });
                 return { meta: { changes: 1 } };
               }
@@ -246,13 +251,17 @@ function createFakeBillingD1(seed: { users?: FakeUser[]; subscriptions?: FakeSub
                 return { meta: { changes: row ? 1 : 0 } };
               }
               if (sql.includes("UPDATE subscriptions SET status = 'canceled'")) {
-                const [updatedAt, stripeSubscriptionId] = args;
+                const [updatedAt, eventCreated, stripeSubscriptionId] = args;
                 const row = findSubByStripeId(String(stripeSubscriptionId));
-                if (row) {
+                // Spiegelt die WHERE-Bedingung (Reihenfolge-Schutz) der echten Query.
+                const stale =
+                  row?.stripe_event_created != null && Number(eventCreated) < row.stripe_event_created;
+                if (row && !stale) {
                   row.status = "canceled";
                   row.updated_at = Number(updatedAt);
+                  row.stripe_event_created = Number(eventCreated);
                 }
-                return { meta: { changes: row ? 1 : 0 } };
+                return { meta: { changes: row && !stale ? 1 : 0 } };
               }
               if (sql.includes("UPDATE users SET trial_used_at")) {
                 const [trialUsedAt, userId] = args;
@@ -281,9 +290,10 @@ function subscriptionEvent(
   eventId: string,
   eventType: "customer.subscription.created" | "customer.subscription.updated",
   data: Record<string, unknown>,
+  created?: number,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
-  return { id: eventId, type: eventType, data: { object: data } };
+  return { id: eventId, type: eventType, ...(created !== undefined ? { created } : {}), data: { object: data } };
 }
 
 describe("handleStripeWebhook — Status-/Plan-Mapping und Mail-Trigger", () => {
@@ -735,7 +745,7 @@ describe("handleStripeWebhook — Status-/Plan-Mapping und Mail-Trigger", () => 
     expect(dispatchNotification).toHaveBeenCalledTimes(1); // keine zweite Mail
   });
 
-  it("fehlt metadata.user_id, wird nichts angelegt und es wird nicht geworfen", async () => {
+  it("fehlt metadata.user_id, wird nichts angelegt, geworfen und das Event NICHT als verarbeitet markiert", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { db, subscriptions } = createFakeBillingD1();
     const event = subscriptionEvent("evt_10", "customer.subscription.created", {
@@ -748,9 +758,11 @@ describe("handleStripeWebhook — Status-/Plan-Mapping und Mail-Trigger", () => 
       metadata: {},
     });
 
-    await expect(handleStripeWebhook({ ...billingEnv, DB: db }, event)).resolves.toEqual({ ok: true });
+    await expect(handleStripeWebhook({ ...billingEnv, DB: db }, event)).rejects.toThrow("stripe_webhook_missing_user_id");
     expect(subscriptions.size).toBe(0);
     expect(dispatchNotification).not.toHaveBeenCalled();
+    // Nicht als verarbeitet markiert -> Stripes Wiederzustellung wird nicht als Duplikat verworfen.
+    expect(await isWebhookEventProcessed(db, "evt_10")).toBe(false);
     errorSpy.mockRestore();
   });
 
@@ -771,5 +783,87 @@ describe("handleStripeWebhook — Status-/Plan-Mapping und Mail-Trigger", () => 
     expect(subscriptions.size).toBe(0);
     expect(dispatchNotification).not.toHaveBeenCalled();
     errorSpy.mockRestore();
+  });
+});
+
+describe("handleStripeWebhook — Reihenfolge-Schutz", () => {
+  beforeEach(() => {
+    vi.mocked(dispatchNotification).mockClear();
+  });
+
+  const user = { id: "user_1", email: "kunde@example.com", trial_used_at: null };
+  const periodEnd = Math.floor(new Date("2026-09-18T00:00:00.000Z").getTime() / 1000);
+  function sub(status: string, cancelAtPeriodEnd = false) {
+    return {
+      id: "sub_1",
+      customer: "cus_1",
+      status,
+      items: { data: [{ price: { id: "price_monthly_1" } }] },
+      current_period_end: periodEnd,
+      cancel_at_period_end: cancelAtPeriodEnd,
+      metadata: { user_id: "user_1" },
+    };
+  }
+
+  it("ein AELTERES subscription.updated nach einem neueren ueberschreibt den Stand nicht", async () => {
+    const { db, subscriptions } = createFakeBillingD1({ users: [user] });
+    const env = { ...billingEnv, DB: db };
+    await handleStripeWebhook(env, subscriptionEvent("evt_new", "customer.subscription.created", sub("active"), 2000));
+    // Verspaetet zugestelltes, aelteres Event mit anderem Status.
+    await handleStripeWebhook(env, subscriptionEvent("evt_old", "customer.subscription.updated", sub("past_due"), 1000));
+    const row = [...subscriptions.values()][0];
+    expect(row.status).toBe("active");
+    expect(row.stripe_event_created).toBe(2000);
+    // Das verworfene Event gilt trotzdem als verarbeitet (keine Endlos-Wiederzustellung).
+    expect(await isWebhookEventProcessed(db, "evt_old")).toBe(true);
+    // Und loest keine Dunning-Mail aus.
+    expect(dispatchNotification).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ event: "payment_failed" }));
+  });
+
+  it("ein NEUERES Event wird angewendet und hebt den gespeicherten Stand an", async () => {
+    const { db, subscriptions } = createFakeBillingD1({ users: [user] });
+    const env = { ...billingEnv, DB: db };
+    await handleStripeWebhook(env, subscriptionEvent("evt_a", "customer.subscription.created", sub("active"), 1000));
+    await handleStripeWebhook(env, subscriptionEvent("evt_b", "customer.subscription.updated", sub("past_due"), 2000));
+    const row = [...subscriptions.values()][0];
+    expect(row.status).toBe("past_due");
+    expect(row.stripe_event_created).toBe(2000);
+  });
+
+  it("gleicher Zeitstempel (gleiche Sekunde) wird noch angewendet", async () => {
+    const { db, subscriptions } = createFakeBillingD1({ users: [user] });
+    const env = { ...billingEnv, DB: db };
+    await handleStripeWebhook(env, subscriptionEvent("evt_a", "customer.subscription.created", sub("active"), 1000));
+    await handleStripeWebhook(env, subscriptionEvent("evt_b", "customer.subscription.updated", sub("past_due"), 1000));
+    expect([...subscriptions.values()][0].status).toBe("past_due");
+  });
+
+  it("dasselbe Event doppelt (gleiche ID) aendert nichts (Idempotenz bleibt)", async () => {
+    const { db, subscriptions } = createFakeBillingD1({ users: [user] });
+    const env = { ...billingEnv, DB: db };
+    const ev = subscriptionEvent("evt_dup", "customer.subscription.created", sub("active"), 1000);
+    await handleStripeWebhook(env, ev);
+    await handleStripeWebhook(env, ev);
+    expect(subscriptions.size).toBe(1);
+  });
+
+  it("ein verspaetetes subscription.deleted ueberschreibt ein neueres Event nicht", async () => {
+    const { db, subscriptions } = createFakeBillingD1({ users: [user] });
+    const env = { ...billingEnv, DB: db };
+    await handleStripeWebhook(env, subscriptionEvent("evt_a", "customer.subscription.created", sub("active"), 2000));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const deleted: any = { id: "evt_del", type: "customer.subscription.deleted", created: 1000, data: { object: sub("canceled") } };
+    await handleStripeWebhook(env, deleted);
+    expect([...subscriptions.values()][0].status).toBe("active");
+  });
+
+  it("ein neueres subscription.deleted kuendigt", async () => {
+    const { db, subscriptions } = createFakeBillingD1({ users: [user] });
+    const env = { ...billingEnv, DB: db };
+    await handleStripeWebhook(env, subscriptionEvent("evt_a", "customer.subscription.created", sub("active"), 1000));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const deleted: any = { id: "evt_del", type: "customer.subscription.deleted", created: 3000, data: { object: sub("canceled") } };
+    await handleStripeWebhook(env, deleted);
+    expect([...subscriptions.values()][0].status).toBe("canceled");
   });
 });

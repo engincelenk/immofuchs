@@ -238,6 +238,9 @@ export interface Env {
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_PRICE_ID_MONTHLY?: string;
   STRIPE_PRICE_ID_YEARLY?: string;
+  // Taeglicher D1<->Stripe-Abgleich (stripe/reconcile.ts): "log" (Default, nur
+  // melden), "apply" (korrigieren) oder "off".
+  STRIPE_RECONCILE_MODE?: string;
   // QA-Hilfsmittel (2026-08-18): Mails an is_test_user-Konten (siehe
   // db.ts, setUserFlags) landen bei gesetztem Wert hier statt an die
   // Test-Adresse - so lassen sich echte Test-E-Mail-Adressen (test.free@...)

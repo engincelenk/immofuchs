@@ -1,3 +1,34 @@
+## 2026-09-29 (1.100.22) [BACKEND]
+
+### Stripe-Sync: Reihenfolge-Schutz im Webhook + täglicher Abgleich D1 <-> Stripe
+
+- Neue Spalte `subscriptions.stripe_event_created` (Migration 0034). Ein
+  verspätet zugestelltes, älteres Stripe-Event (subscription.updated/deleted)
+  überschreibt den neueren Stand nicht mehr; es gilt trotzdem als verarbeitet.
+- Fehlt `metadata.user_id`, wird das Event nicht mehr still als verarbeitet
+  verbucht: der Webhook antwortet 500, Stripe stellt erneut zu, der Fehler
+  steht im Log. ACHTUNG: eine ohne App (z.B. direkt im Stripe-Dashboard)
+  angelegte Subscription erzeugt dadurch wiederholt Fehler-Zustellungen.
+- Neu: `stripe/reconcile.ts`, läuft im täglichen Cron (`scheduled.ts`) vor den
+  Erinnerungs-Mails. Vergleicht alle D1-Abos mit Stripe (Status, Plan,
+  Periodenende, Kündigung, Kunde), korrigiert Abweichungen, legt fehlende
+  Zeilen nach und schreibt jede Korrektur ins Audit-Log (Akteur "system").
+  `admin-test:`-Abos bleiben unberührt, es werden keine Mails verschickt.
+- Gemeinsame Status-/Plan-Abbildung in `stripe/subscriptionMapping.ts`
+  (Webhook und Abgleich nutzen dieselbe Logik).
+- Modus über Env `STRIPE_RECONCILE_MODE`: "log" (Default, nur melden, nichts
+  schreiben), "apply" (korrigieren), "off". Zum Aktivieren pro Umgebung
+  "apply" setzen - empfohlen erst nach einigen "log"-Läufen auf dev.
+
+**Verifiziert:** `npx tsc --noEmit`, Worker-Vitest 265/265 (u.a. 6 neue
+Reihenfolge-Tests, 15 neue Abgleich-Tests). Migration 0034 noch NICHT gegen
+D1 angewendet, noch NICHT deployed.
+
+**Betroffene Dateien:** worker/migrations/0034_stripe_event_ordering.sql,
+worker/src/stripe/{webhook,reconcile,subscriptionMapping}.ts,
+worker/src/{scheduled,db,types}.ts, worker/src/stripe/*.test.ts,
+worker/src/entitlement.test.ts
+
 ## 2026-09-28 (1.100.21)
 
 ### Impressum und Datenschutz final, Schriftart selbst gehostet
