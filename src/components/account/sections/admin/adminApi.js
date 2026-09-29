@@ -115,6 +115,12 @@ export function fetchSubscriptionDetail(id) {
   return request(`/admin/subscriptions/${encodeURIComponent(id)}`);
 }
 
+// Gleicht ein Abo mit Stripe ab (Stripe ist die Wahrheit). Antwort:
+// {result: "unchanged" | "corrected" | "not_applicable", diff?}.
+export function reconcileSubscription(id) {
+  return post(`/admin/subscriptions/${encodeURIComponent(id)}/reconcile`);
+}
+
 // filters: {admin, action, target, from, to} - from/to als ms-Zeitstempel.
 export function fetchAuditLog(page, filters = {}) {
   const params = new URLSearchParams();

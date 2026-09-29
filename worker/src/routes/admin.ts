@@ -44,6 +44,7 @@ import {
 } from "../db";
 import { deleteAccountCompletely } from "../accountDeletion";
 import { cancelImmediately } from "../stripe/checkout";
+import { reconcileOneSubscription } from "../stripe/reconcile";
 import { requestPasswordReset, sendPasswordSetupInvite } from "../auth/passwordAuth";
 import { ROLE_PERMISSIONS, type Role } from "../entitlement";
 import {
@@ -701,6 +702,30 @@ adminRoutes.get("/subscriptions/:id", requireAuth, requirePermission("subscripti
     stripeUrl: sub.stripe_subscription_id ? stripeDashboardSubscriptionUrl(c.env, sub.stripe_subscription_id) : null,
   });
 });
+
+// Einzelabgleich mit Stripe (Admin-Button). Stripe bleibt die Wahrheit: die
+// Route holt genau EINE Subscription und gleicht D1 daran an - sie setzt nie
+// selbst Betrag, Status oder Plan. Siehe stripe/reconcile.ts.
+adminRoutes.post(
+  "/subscriptions/:id/reconcile",
+  requireAuth,
+  requirePermission("subscription.manage"),
+  requireCsrfOrigin,
+  async (c) => {
+    const row = await getSubscriptionForAdmin(c.env.DB, c.req.param("id"));
+    if (!row) return c.json({ error: "not_found" }, 404);
+    try {
+      const outcome = await reconcileOneSubscription(c.env, row, {
+        adminUserId: c.var.userId,
+        adminEmail: c.var.user.email,
+      });
+      return c.json(outcome);
+    } catch (err) {
+      console.error("admin_reconcile_failed", err instanceof Error ? err.message : "unknown");
+      return c.json({ error: "reconcile_failed_try_again" }, 502);
+    }
+  },
+);
 
 // Dashboard (Konzept-Dok Abschnitt 3, MVP-Pflicht #1).
 adminRoutes.get("/dashboard", requireAuth, requireAdminRead, async (c) => {

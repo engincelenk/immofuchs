@@ -23,7 +23,12 @@ export type ReconcileMode = "off" | "log" | "apply";
 const MAX_LIST_PAGES = 20; // 20 x 100 = 2000 Abos
 const MAX_INDIVIDUAL_RETRIEVES = 20;
 
-const SYSTEM_ACTOR = { adminUserId: "system", adminEmail: "system@stripe-reconcile" };
+export interface Actor {
+  adminUserId: string;
+  adminEmail: string;
+}
+
+const SYSTEM_ACTOR: Actor = { adminUserId: "system", adminEmail: "system@stripe-reconcile" };
 
 export interface ReconcileReport {
   mode: ReconcileMode;
@@ -231,14 +236,62 @@ export async function reconcileSubscriptions(env: Env): Promise<ReconcileReport>
   return report;
 }
 
-async function reportDiff(env: Env, mode: ReconcileMode, row: SubscriptionRow, diff: Diff): Promise<void> {
+async function reportDiff(
+  env: Env,
+  mode: ReconcileMode,
+  row: SubscriptionRow,
+  diff: Diff,
+  actor: Actor = SYSTEM_ACTOR,
+): Promise<void> {
   console.error("stripe_reconcile_diff", row.id, row.stripe_subscription_id, mode, JSON.stringify(diff));
   if (mode !== "apply") return;
   await logAdminAction(env.DB, {
-    ...SYSTEM_ACTOR,
+    ...actor,
     action: "subscription.reconcile",
     targetType: "subscription",
     targetId: row.id,
     details: { userId: row.user_id, diff },
   });
+}
+
+export type ReconcileOneResult =
+  | { result: "unchanged" }
+  | { result: "corrected"; diff: Diff }
+  // Abo hat kein Stripe-Gegenstueck (admin-test:-Abo oder ohne Stripe-ID).
+  | { result: "not_applicable" };
+
+// Einzelabgleich fuer den Admin-Button (routes/admin.ts). Korrigiert IMMER,
+// unabhaengig von STRIPE_RECONCILE_MODE - der Modus schuetzt nur den
+// automatischen Cron; wer bewusst klickt, will die Korrektur. Audit-Log mit
+// dem echten Admin als Akteur. Stripe-Fehler werden nicht gefangen: die Route
+// antwortet dann mit 502, statt "unveraendert" vorzutaeuschen.
+export async function reconcileOneSubscription(
+  env: Env,
+  row: SubscriptionRow,
+  actor: Actor,
+): Promise<ReconcileOneResult> {
+  const stripeId = row.stripe_subscription_id;
+  if (!stripeId || stripeId.startsWith(ADMIN_TEST_SUBSCRIPTION_PREFIX)) return { result: "not_applicable" };
+  const nowMs = Date.now();
+  let sub: Stripe.Subscription;
+  try {
+    sub = await getStripeClient(env).subscriptions.retrieve(stripeId);
+  } catch (err) {
+    if ((err as { code?: string })?.code !== "resource_missing") throw err;
+    if (row.status === "canceled") return { result: "unchanged" };
+    const diff: Diff = { status: { d1: row.status, stripe: "canceled (missing in Stripe)" } };
+    await env.DB.prepare(
+      "UPDATE subscriptions SET status = 'canceled', updated_at = ?, stripe_event_created = ? WHERE id = ?",
+    )
+      .bind(nowMs, Math.floor(nowMs / 1000), row.id)
+      .run();
+    await reportDiff(env, "apply", row, diff, actor);
+    return { result: "corrected", diff };
+  }
+  const mapped = mapStripeSubscription(env, sub);
+  const diff = diffSubscription(row, mapped);
+  if (Object.keys(diff).length === 0) return { result: "unchanged" };
+  await applyCorrection(env, row, mapped, nowMs);
+  await reportDiff(env, "apply", row, diff, actor);
+  return { result: "corrected", diff };
 }

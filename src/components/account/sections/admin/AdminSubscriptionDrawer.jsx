@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sheet } from "../../../ui/Sheet.jsx";
 import { IconExternal } from "../../accountIcons.jsx";
-import { fetchSubscriptionDetail } from "./adminApi.js";
+import { fetchSubscriptionDetail, reconcileSubscription } from "./adminApi.js";
 import { useAdminToast } from "./AdminToast.jsx";
 import {
   PLAN_LABELS,
@@ -50,6 +50,32 @@ export function AdminSubscriptionDrawer({ subscriptionId, onClose }) {
   useEffect(() => {
     if (open) load();
   }, [open, load]);
+
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileMsg, setReconcileMsg] = useState(null);
+
+  // Gleicht dieses Abo mit Stripe ab (Stripe ist die Wahrheit). Danach neu laden,
+  // damit die Anzeige den korrigierten Stand zeigt.
+  async function reconcile() {
+    setReconciling(true);
+    setReconcileMsg(null);
+    try {
+      const res = await reconcileSubscription(effectiveId);
+      if (res.result === "corrected") {
+        const parts = Object.entries(res.diff || {}).map(([k, v]) => `${diffLabel(k)}: ${diffValue(v.d1)} → ${diffValue(v.stripe)}`);
+        setReconcileMsg(`Korrigiert – ${parts.join(", ")}`);
+        await load();
+      } else if (res.result === "not_applicable") {
+        setReconcileMsg("Kein Stripe-Abo (Testabo) – nichts abzugleichen.");
+      } else {
+        setReconcileMsg("Kein Unterschied – Anzeige stimmt mit Stripe überein.");
+      }
+    } catch (err) {
+      setReconcileMsg(errorText(err));
+    } finally {
+      setReconciling(false);
+    }
+  }
 
   async function copy(value, label) {
     try {
@@ -161,6 +187,18 @@ export function AdminSubscriptionDrawer({ subscriptionId, onClose }) {
                   <IconExternal size={16} />
                 </a>
               )}
+              <button
+                onClick={reconcile}
+                disabled={reconciling}
+                style={{ ...secondaryBtnStyle, marginTop: 10, opacity: reconciling ? 0.6 : 1 }}
+              >
+                {reconciling ? "Wird abgeglichen …" : "Jetzt mit Stripe abgleichen"}
+              </button>
+              {reconcileMsg && (
+                <p role="status" style={{ ...mutedTextStyle, marginTop: 8, marginBottom: 0 }}>
+                  {reconcileMsg}
+                </p>
+              )}
               <p style={{ ...mutedTextStyle, marginTop: 10, marginBottom: 0 }}>
                 Zahlungsbetrag, Erstattung, Zahlungsart und Abrechnungszyklus werden ausschließlich in Stripe
                 geändert – nicht hier.
@@ -249,4 +287,23 @@ function IdRow({ label, value, onCopy }) {
       </div>
     </div>
   );
+}
+
+const DIFF_LABELS = {
+  status: "Status",
+  plan: "Plan",
+  currentPeriodEnd: "Periodenende",
+  cancelAtPeriodEnd: "Kündigung zum Periodenende",
+  stripeCustomerId: "Customer ID",
+};
+
+function diffLabel(key) {
+  return DIFF_LABELS[key] || key;
+}
+
+function diffValue(value) {
+  if (value === null || value === undefined) return "–";
+  if (typeof value === "string" && SUB_STATUS_LABELS[value]) return SUB_STATUS_LABELS[value];
+  if (typeof value === "string" && PLAN_LABELS[value]) return PLAN_LABELS[value];
+  return String(value);
 }

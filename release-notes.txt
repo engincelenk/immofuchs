@@ -1,3 +1,24 @@
+## 2026-09-29 (1.100.23) [FRONTEND+BACKEND]
+
+### Admin: Button "Jetzt mit Stripe abgleichen" im Abo-Detail
+
+- Neue Route `POST /api/v1/admin/subscriptions/:id/reconcile` (Recht
+  `subscription.manage`, CSRF-geschützt): holt genau EIN Abo bei Stripe und
+  gleicht D1 daran an. Korrigiert immer, unabhängig von
+  `STRIPE_RECONCILE_MODE` (der gilt nur für den Cron). Audit-Log mit dem
+  echten Admin als Akteur. Testabos (`admin-test:`) werden abgelehnt
+  ("nicht anwendbar"), Stripe-Ausfall liefert 502 statt "unverändert".
+- Abo-Drawer (Block "Stripe"): Knopf "Jetzt mit Stripe abgleichen", danach
+  Meldung ("Kein Unterschied" bzw. "Korrigiert – Status: Aktiv → Gekündigt")
+  und Neuladen der Anzeige.
+
+**Verifiziert:** tsc, Worker-Vitest 270/270, Frontend-Vitest 840/840,
+Frontend-Build. Noch NICHT deployed.
+
+**Betroffene Dateien:** worker/src/stripe/reconcile.ts,
+worker/src/routes/admin.ts, worker/src/stripe/reconcile.test.ts,
+src/components/account/sections/admin/{AdminSubscriptionDrawer.jsx,adminApi.js,adminUiStyles.js}
+
 ## 2026-09-29 (1.100.22) [BACKEND]
 
 ### Stripe-Sync: Reihenfolge-Schutz im Webhook + täglicher Abgleich D1 <-> Stripe

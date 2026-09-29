@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Env } from "../types";
 import type { SubscriptionRow } from "../db";
-import { diffSubscription, reconcileModeOf, reconcileSubscriptions } from "./reconcile";
+import { diffSubscription, reconcileModeOf, reconcileOneSubscription, reconcileSubscriptions } from "./reconcile";
 import { mapStripeSubscription } from "./subscriptionMapping";
 
 const listMock = vi.fn();
@@ -195,5 +195,52 @@ describe("reconcileSubscriptions", () => {
     const r = await reconcileSubscriptions({ ...baseEnv, DB: db, STRIPE_RECONCILE_MODE: "apply" });
     expect(r.errors).toBe(1);
     expect(r.checked).toBe(2);
+  });
+});
+
+describe("reconcileOneSubscription (Admin-Button)", () => {
+  const admin = { adminUserId: "admin_1", adminEmail: "chef@immofuchs.info" };
+
+  it("korrigiert IMMER, auch wenn der Cron-Modus 'log' ist, und loggt den echten Admin", async () => {
+    retrieveMock.mockResolvedValue(stripeSub({ status: "canceled" }));
+    const { db, writes } = fakeDb([]);
+    const out = await reconcileOneSubscription({ ...baseEnv, DB: db }, row(), admin);
+    expect(out.result).toBe("corrected");
+    expect(writes).toHaveLength(1);
+    expect(writes[0].args[0]).toBe("canceled");
+    expect(logAdminActionMock).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ adminUserId: "admin_1", adminEmail: "chef@immofuchs.info", action: "subscription.reconcile" }),
+    );
+  });
+
+  it("gleicher Stand -> unchanged, nichts geschrieben", async () => {
+    retrieveMock.mockResolvedValue(stripeSub());
+    const { db, writes } = fakeDb([]);
+    expect(await reconcileOneSubscription({ ...baseEnv, DB: db }, row(), admin)).toEqual({ result: "unchanged" });
+    expect(writes).toHaveLength(0);
+    expect(logAdminActionMock).not.toHaveBeenCalled();
+  });
+
+  it("admin-test:-Abo oder ohne Stripe-ID -> not_applicable, kein Stripe-Aufruf", async () => {
+    const { db } = fakeDb([]);
+    const env = { ...baseEnv, DB: db };
+    expect(await reconcileOneSubscription(env, row({ stripe_subscription_id: "admin-test:abc" }), admin)).toEqual({ result: "not_applicable" });
+    expect(await reconcileOneSubscription(env, row({ stripe_subscription_id: null }), admin)).toEqual({ result: "not_applicable" });
+    expect(retrieveMock).not.toHaveBeenCalled();
+  });
+
+  it("in Stripe nicht vorhanden -> als gekuendigt korrigiert", async () => {
+    retrieveMock.mockRejectedValue(Object.assign(new Error("nope"), { code: "resource_missing" }));
+    const { db, writes } = fakeDb([]);
+    const out = await reconcileOneSubscription({ ...baseEnv, DB: db }, row(), admin);
+    expect(out.result).toBe("corrected");
+    expect(writes[0].sql).toContain("status = 'canceled'");
+  });
+
+  it("Stripe-Fehler wird durchgereicht (Route antwortet 502) statt 'unchanged' vorzutaeuschen", async () => {
+    retrieveMock.mockRejectedValue(new Error("stripe down"));
+    const { db } = fakeDb([]);
+    await expect(reconcileOneSubscription({ ...baseEnv, DB: db }, row(), admin)).rejects.toThrow("stripe down");
   });
 });

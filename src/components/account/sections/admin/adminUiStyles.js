@@ -138,6 +138,7 @@ const ERROR_TEXTS = {
   email_exists: "Ein Konto mit dieser E-Mail-Adresse existiert bereits.",
   invalid_subscription: "Ungültiger Abo-Status oder -Plan.",
   subscription_requires_test_user: "Ein Abo-Zustand lässt sich nur für Testuser direkt setzen.",
+  reconcile_failed_try_again: "Stripe war nicht erreichbar – bitte erneut versuchen.",
   request_failed: "Die Aktion ist fehlgeschlagen.",
 };
 
