@@ -829,6 +829,8 @@ export default function App() {
       .objekt-detail{padding:12px 14px 100px}
       .objekt-liste{padding:16px 16px 100px}
       .objekt-liste button:focus-visible,.objekt-liste input:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+      .objekt-anlegen-kurz{display:none}
+      @media(max-width:340px){.objekt-anlegen-lang{display:none}.objekt-anlegen-kurz{display:inline}}
       .objekt-chips-wrap{position:relative;margin:0 -14px 12px}
       .objekt-chips{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;
         -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 14px 10px}

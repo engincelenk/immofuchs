@@ -1348,51 +1348,39 @@ export function Merkliste() {
           )}
         </div>
       )}
-      {/* Kopfzeile (Nutzer-Vorgabe 2026-09-30): Reiter inhaltsbreit links, "Objekt
-          anlegen" als kompakter Knopf rechts statt Vollbreiten-Banner. Die Reiter
-          erscheinen erst, sobald es mindestens ein Rechner-Ergebnis gibt - vorher
-          gaebe es einen Umschalter, der auf einer leeren Seite landet. */}
+      {/* Titelzeile (Nutzer-Vorgabe 2026-09-30): Ueberschrift links, "Objekt anlegen"
+          rechts in EINER Zeile - vorher rutschte der Knopf auf dem Handy allein in eine
+          zweite Zeile unter den Reitern. Die Ueberschrift ist zugleich die erste
+          Ueberschrift der Seite (h1). Unter ~340 px wird der Knopftext gekuerzt, damit
+          beides nebeneinander bleibt. */}
       <div
         style={{
           display: "flex",
-          alignItems: "flex-end",
+          alignItems: "center",
           justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 8,
-          borderBottom: "1px solid var(--cb)",
-          marginBottom: 14,
+          gap: 10,
+          marginBottom: 12,
         }}
       >
-        {hatRechnerErgebnisse ? (
-          <div role="tablist" aria-label="Objektart" style={{ display: "flex", gap: 20 }}>
-            {[
-              ["objekte", "Objekte", anzahlObjekte],
-              ["rechner", "Rechner-Ergebnisse", anzahlRechner],
-            ].map(([id, label, anzahl]) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={listArt === id}
-                tabIndex={listArt === id ? 0 : -1}
-                onClick={() => wechsleArt(id)}
-                style={listArt === id ? reiterActiveStyle : reiterStyle}
-              >
-                {label} ({anzahl})
-              </button>
-            ))}
-          </div>
-        ) : (
-          <span />
-        )}
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 800,
+            letterSpacing: "-0.01em",
+            color: "var(--ct)",
+            minWidth: 0,
+          }}
+        >
+          {t.meineObjekte || "Meine Objekte"}
+        </h1>
         <button
           type="button"
           onClick={() => setAnlegenOffen(true)}
           style={{
+            flexShrink: 0,
             height: 44,
-            padding: "0 18px",
-            marginBottom: 8,
-            marginLeft: "auto",
+            padding: "0 16px",
             borderRadius: 10,
             border: "none",
             background: "var(--ca)",
@@ -1401,11 +1389,39 @@ export function Merkliste() {
             fontWeight: 700,
             cursor: "pointer",
             fontFamily: "inherit",
+            whiteSpace: "nowrap",
           }}
         >
-          + Objekt anlegen
+          <span className="objekt-anlegen-lang">+ Objekt anlegen</span>
+          <span className="objekt-anlegen-kurz">+ Anlegen</span>
         </button>
       </div>
+      {/* Reiter: erst sichtbar, sobald es mindestens ein Rechner-Ergebnis gibt - vorher
+          gaebe es einen Umschalter, der auf einer leeren Seite landet. */}
+      {hatRechnerErgebnisse && (
+        <div
+          role="tablist"
+          aria-label="Objektart"
+          style={{ display: "flex", gap: 20, borderBottom: "1px solid var(--cb)", marginBottom: 14 }}
+        >
+          {[
+            ["objekte", "Objekte", anzahlObjekte],
+            ["rechner", "Rechner-Ergebnisse", anzahlRechner],
+          ].map(([id, label, anzahl]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={listArt === id}
+              tabIndex={listArt === id ? 0 : -1}
+              onClick={() => wechsleArt(id)}
+              style={listArt === id ? reiterActiveStyle : reiterStyle}
+            >
+              {label} ({anzahl})
+            </button>
+          ))}
+        </div>
+      )}
       <div
         style={{
           display: "flex",

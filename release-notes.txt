@@ -1,3 +1,12 @@
+## 2026-09-30 (1.100.49) [FRONTEND]
+
+### Objekt-Uebersicht: Titelzeile mit "Objekt anlegen" statt Knopf allein in der Reiterzeile
+
+- Neue Titelzeile: Ueberschrift "Meine Objekte" (h1, t.meineObjekte) links, "+ Objekt anlegen"
+  rechts in einer Zeile. Vorher rutschte der Knopf auf dem Handy allein in eine zweite
+  Zeile unter die Reiter. Darunter die Reiter (nur mit Rechner-Ergebnissen), dann die Suche.
+- Unter 340 px kuerzt der Knopf auf "+ Anlegen".
+
 ## 2026-09-30 (1.100.48) [FRONTEND]
 
 ### Landingpage: KI-Sektion folgt dem Theme statt festem Schwarz
