@@ -1,3 +1,11 @@
+## 2026-09-30 (1.100.42) [FRONTEND]
+
+### Diagnose: Testseite /motion-test.html (nur dev-Pruefung)
+
+- Kleine statische Seite, die auf dem Handy zeigt: meldet der Browser "Bewegung
+  reduzieren", laeuft eine CSS-Animation, laeuft requestAnimationFrame. Nicht in der
+  App verlinkt, noindex; wird nach der Fehlersuche wieder entfernt.
+
 ## 2026-09-30 (1.100.41) [FRONTEND]
 
 ### Score-Kachel: Balken auch auf dem Handy, Zahl zaehlt hoch
