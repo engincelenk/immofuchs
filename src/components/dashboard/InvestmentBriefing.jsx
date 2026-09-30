@@ -153,14 +153,17 @@ export function InvestmentBriefing({
       <SchrittNav t={t} />
 
       <div className="cockpit-schritte">
-        <SchrittKosten
-          briefing={briefing}
-          data={data}
-          cashflowVorSteuer={cashflowVorSteuer}
-          onEintragen={onBearbeiten}
-          t={t}
-        />
+        <div className="cockpit-spalte">
+          <SchrittKosten
+            briefing={briefing}
+            data={data}
+            cashflowVorSteuer={cashflowVorSteuer}
+            onEintragen={onBearbeiten}
+            t={t}
+          />
+        </div>
 
+        <div className="cockpit-spalte">
         {!ohnePlz && <SchrittMarkt briefing={briefing} t={t} />}
 
         <SchrittStellschrauben
@@ -189,10 +192,11 @@ export function InvestmentBriefing({
           onBestaetigenAbbrechen={() => setBestaetigen(false)}
           erstelltText={erstelltText}
         />
+        </div>
 
-        <section id="schritt-weiter" className="cockpit-s5" style={{ marginTop: 0 }}>
+        <section id="schritt-weiter" aria-labelledby="schritt-weiter-titel" className="cockpit-s5" style={{ marginTop: 0 }}>
           <div style={{ marginBottom: 14 }}>
-            <SchrittKopf nr={5} titel={t.cockS5Titel || "Deine nächsten Schritte"} />
+            <SchrittKopf id="schritt-weiter-titel" nr={5} titel={t.cockS5Titel || "Deine nächsten Schritte"} />
           </div>
 
           <div className="cockpit-next">

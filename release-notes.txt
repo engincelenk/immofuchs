@@ -1,3 +1,17 @@
+## 2026-09-30 (1.100.35) [FRONTEND]
+
+### Objektseite: Zwei-Spalten-Layout gegen Leerraeume, kleine UI-Verbesserungen
+
+- Desktop ab 1024 px: links der Kostenkasten (ein Drittel), rechts ein Stapel
+  aus Markt, Stellschrauben und Risiken. Keine Streckung auf gleiche Hoehe mehr
+  (align-items: start). Darunter Lage und Handout, ebenfalls hoehenrichtig.
+- Markt-Block zweispaltig (Kaufpreis/Miete/Faktor | Kreis gegen Land/Trend),
+  Risiken in zwei Spalten, Punktlinie zwischen Label und Wert im Kostenkasten.
+- Unter 1024 px bleibt alles untereinander (wie auf dem Handy).
+- Tastaturfokus sichtbar (focus-visible), Trefferflaechen 44 px (Neu-berechnen,
+  "Eintragen"), geschuetzte Leerzeichen zwischen Zahl und Einheit,
+  aria-labelledby an allen fuenf Schritt-Abschnitten.
+
 ## 2026-09-30 (1.100.34) [FRONTEND]
 
 ### Objektseite: Markt-Block ueberarbeitet, Kostenkasten links ueber zwei Zeilen

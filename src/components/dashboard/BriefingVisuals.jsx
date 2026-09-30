@@ -32,7 +32,7 @@ export const STATUS_FARBEN = {
 
 // Deutscher Rueckfall wie im Rest der Briefing-Karte (t.brfX || "...").
 const L = (t, key, fallback) => (t && t[key]) || fallback;
-const prozent = (n, d = 0) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${fmt(Math.abs(n), d)} %`;
+const prozent = (n, d = 0) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${fmt(Math.abs(n), d)}\u00A0%`;
 
 // Breakpoint 768px - so wie in der Vorlage (Variante E, @media max-width:767
 // bzw. min-width:768), nicht die sonst im Projekt fuer den Objektbereich
@@ -55,6 +55,10 @@ const COCKPIT_CSS = `
 .cockpit-stepnav{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 2px;margin:0 -2px;position:sticky;top:0;z-index:5;background:var(--bg)}
 .cockpit-stepnav::-webkit-scrollbar{display:none}
 .cockpit-schritte{display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.cockpit-spalte{display:flex;flex-direction:column;gap:14px;min-width:0}
+.cockpit-schritte button:focus-visible,.cockpit-schritte a:focus-visible{outline:2px solid var(--ca);outline-offset:2px;border-radius:6px}
+.cockpit-schritte button{touch-action:manipulation}
+.cockpit-markt-liste{display:block}
 .cockpit-stellschrauben-desktop{display:none}
 .cockpit-stellschrauben-mobile{display:block}
 .cockpit-cmp{grid-template-columns:minmax(0,1fr)!important}
@@ -66,19 +70,20 @@ const COCKPIT_CSS = `
   .cockpit-kennzahlen{grid-template-columns:repeat(4,minmax(0,1fr))}
   .cockpit-nur-desktop{display:block}
   .cockpit-stepnav{position:static;overflow:visible;padding:14px 0;margin:0}
-  .cockpit-schritte{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
-  .cockpit-s1{grid-row:span 2}
-  .cockpit-s2{grid-column:span 2}
-  .cockpit-s3{grid-column:span 2}
-  .cockpit-s4{grid-column:1 / -1}
   .cockpit-s5{grid-column:1 / -1}
   .cockpit-stellschrauben-desktop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
   .cockpit-stellschrauben-mobile{display:none}
   .cockpit-cmp{grid-template-columns:120px minmax(0,1fr)!important}
-  .cockpit-next{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:stretch}
+  .cockpit-next{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:start}
   .cockpit-next-besichtigung{order:0}
   .cockpit-mobile-bar{display:none}
   .cockpit-s5{padding-bottom:0}
+}
+@media(min-width:1024px){
+  .cockpit-schritte{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:16px;align-items:start}
+  .cockpit-markt-liste{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));column-gap:32px}
+  .cockpit-markt-liste>div>:last-child{border-bottom:none!important}
+  .cockpit-risiken-liste{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 28px!important}
 }
 `;
 
@@ -99,8 +104,8 @@ const klein = { fontSize: 11, color: "var(--cl)" };
 function wertText(wert, einheit) {
   if (wert == null || !isFinite(wert)) return "—";
   if (einheit === "faktor") return `${fmt(wert, 1)}×`;
-  if (einheit === "prozent") return `${fmt(wert, 1)} %`;
-  return fmtE(Math.round(wert));
+  if (einheit === "prozent") return `${fmt(wert, 1)}\u00A0%`;
+  return fmtE(Math.round(wert)).replace(/ /g, "\u00A0");
 }
 
 // ── Baustein 2: Hinweis zur Datengrundlage (bleibt, siehe redesign-Spec §0:
@@ -355,7 +360,7 @@ export function SchrittNav({ t }) {
   );
 }
 
-export function SchrittKopf({ nr, titel, aktion }) {
+export function SchrittKopf({ nr, titel, aktion, id }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -378,7 +383,7 @@ export function SchrittKopf({ nr, titel, aktion }) {
         >
           {nr}
         </span>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--ct)" }}>
+        <h2 id={id} style={{ margin: 0, fontSize: 16, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--ct)" }}>
           {titel}
         </h2>
       </div>
@@ -399,8 +404,10 @@ const finanzZeile = { fontSize: 13, color: "var(--ch)" };
 const finanzWert = { fontWeight: 700, color: "var(--ct)", fontVariantNumeric: "tabular-nums" };
 const zeileZeile = { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 };
 const einzug = { paddingLeft: 14, fontSize: 12.5 };
+// Punktlinie zwischen Label und Wert: bei breiten Zeilen fuehrt sie das Auge.
+const fuehrung = { flex: 1, minWidth: 12, borderBottom: "1px dotted var(--cb)", transform: "translateY(-3px)" };
 
-const vz = (n) => `${n < 0 ? "−" : "+"} ${fmtE(Math.round(Math.abs(n)))}`;
+const vz = (n) => `${n < 0 ? "−" : "+"} ${fmtE(Math.round(Math.abs(n))).replace(/ /g, " ")}`;
 
 function BlockKopf({ nr, titel }) {
   return (
@@ -448,7 +455,8 @@ function Zeile({ label, wert, style, linie, fett }) {
         ...(linie ? { borderTop: "1px solid var(--cb)", paddingTop: 6 } : null),
       }}
     >
-      <span style={fett ? { fontWeight: 700, color: "var(--ct)" } : undefined}>{label}</span>
+      <span style={fett ? { fontWeight: 700, color: "var(--ct)", minWidth: 0 } : { minWidth: 0 }}>{label}</span>
+      <span aria-hidden="true" style={fuehrung} />
       <span style={{ ...finanzWert, whiteSpace: "nowrap" }}>{wert}</span>
     </div>
   );
@@ -496,8 +504,8 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
   const zeilen = { display: "flex", flexDirection: "column", gap: 6, marginTop: 10 };
 
   return (
-    <section id="schritt-kosten" className="bv bv-auf cockpit-s1" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
-      <SchrittKopf nr={1} titel={L(t, "cockS1Titel", "Was dich das Objekt kostet")} />
+    <section id="schritt-kosten" aria-labelledby="schritt-kosten-titel" className="bv bv-auf cockpit-s1" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+      <SchrittKopf id="schritt-kosten-titel" nr={1} titel={L(t, "cockS1Titel", "Was dich das Objekt kostet")} />
 
       {zeigtBlock1 && (
         <div style={{ marginTop: 16 }}>
@@ -689,14 +697,14 @@ function MarktZeile({ titel, v, formatWert, einheitLabel, extra, letzte, t }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: MARKT_BALKEN_MAX_PX }}>
           <BalkenZeile
             label={L(t, "cockDu", "Du")}
-            wert={`${formatWert(v.eigen)}${einheitLabel ? ` ${einheitLabel}` : ""}`}
+            wert={`${formatWert(v.eigen)}${einheitLabel ? `\u00A0${einheitLabel}` : ""}`}
             breite={breiteEigen}
             farbe={farbe}
             betont
           />
           <BalkenZeile
             label={L(t, "brfMarkt", "Markt")}
-            wert={`${formatWert(v.markt)}${einheitLabel ? ` ${einheitLabel}` : ""}`}
+            wert={`${formatWert(v.markt)}${einheitLabel ? `\u00A0${einheitLabel}` : ""}`}
             breite={breiteMarkt}
             farbe="var(--ch)"
           />
@@ -762,6 +770,7 @@ function MarktInfoZeile({ gross, unter, titel, zeilen, letzte }) {
         {zeilen.map(([label, wert]) => (
           <div key={label} style={{ display: "flex", gap: 10, maxWidth: MARKT_BALKEN_MAX_PX, justifyContent: "space-between", fontSize: 13 }}>
             <span style={{ color: "var(--ch)" }}>{label}</span>
+            <span aria-hidden="true" style={fuehrung} />
             <span className="num" style={{ fontWeight: 700, color: "var(--ct)", fontVariantNumeric: "tabular-nums" }}>{wert}</span>
           </div>
         ))}
@@ -803,8 +812,8 @@ export function SchrittMarkt({ briefing, t }) {
           gross: prozent(v5.abw, 0),
           unter: v5.abw >= 0 ? L(t, "cockKreisUeberLand", "Kreis über Land") : L(t, "cockKreisUnterLand", "Kreis unter Land"),
           zeilen: [
-            [(v5.ebeneName || "").replace(/\s*\((Kreis|Bezirk)\)\s*$/i, ""), `${fmtQm(v5.eigen)} €/m²`],
-            [L(t, "cockLand", "Bundesland"), `${fmtQm(v5.markt)} €/m²`],
+            [(v5.ebeneName || "").replace(/\s*\((Kreis|Bezirk)\)\s*$/i, ""), `${fmtQm(v5.eigen)} €/m²`],
+            [L(t, "cockLand", "Bundesland"), `${fmtQm(v5.markt)} €/m²`],
           ],
         }
       : null;
@@ -822,8 +831,9 @@ export function SchrittMarkt({ briefing, t }) {
       : null;
 
   return (
-    <section id="schritt-markt" className="bv bv-auf cockpit-s2" style={{ ...karte, marginTop: 0, padding: "22px 24px 12px", scrollMarginTop: 78 }}>
+    <section id="schritt-markt" aria-labelledby="schritt-markt-titel" className="bv bv-auf cockpit-s2" style={{ ...karte, marginTop: 0, padding: "22px 24px 12px", scrollMarginTop: 78 }}>
       <SchrittKopf
+        id="schritt-markt-titel"
         nr={2}
         titel={L(t, "cockS2Titel", "Wie es zum Markt passt")}
         aktion={
@@ -834,7 +844,8 @@ export function SchrittMarkt({ briefing, t }) {
           )
         }
       />
-      <div style={{ marginTop: 4 }}>
+      <div className="cockpit-markt-liste" style={{ marginTop: 4 }}>
+        <div>
         {v1 && (
           <MarktZeile titel={L(t, "cockMarktKaufpreis", "Kaufpreis pro m²")} v={v1} formatWert={fmtQm} einheitLabel="€/m²" letzte={!v2 && !fb && !kreisVsLand && !trend} t={t} />
         )}
@@ -844,11 +855,16 @@ export function SchrittMarkt({ briefing, t }) {
         {fb && (
           <MarktZeile titel={L(t, "cockMarktFaktor", "Kaufpreisfaktor")} v={fb} formatWert={fmtFaktor} einheitLabel="" letzte={!kreisVsLand && !trend} t={t} />
         )}
+        </div>
+        {(kreisVsLand || trend) && (
+        <div>
         {kreisVsLand && (
           <MarktInfoZeile gross={kreisVsLand.gross} unter={kreisVsLand.unter} titel={L(t, "cockKreisVsLand", "Kreis gegen Land")} zeilen={kreisVsLand.zeilen} letzte={!trend} />
         )}
         {trend && (
           <MarktInfoZeile gross={trend.gross} unter={trend.unter} titel={L(t, "cockPreisentwicklung", "Preisentwicklung im Land")} zeilen={trend.zeilen} letzte />
+        )}
+        </div>
         )}
       </div>
     </section>
@@ -886,8 +902,8 @@ export function SchrittStellschrauben({ spannen, groessterHebel, onEintragen, er
   const ausfuehrlich = [...hebelTexte, ...staerkenTexte];
 
   return (
-    <section id="schritt-stellschrauben" className="bv bv-auf cockpit-s3" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
-      <SchrittKopf nr={3} titel={L(t, "cockS3Titel", "Was sich ändern müsste")} />
+    <section id="schritt-stellschrauben" aria-labelledby="schritt-stellschrauben-titel" className="bv bv-auf cockpit-s3" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+      <SchrittKopf id="schritt-stellschrauben-titel" nr={3} titel={L(t, "cockS3Titel", "Was sich ändern müsste")} />
 
       {/* Desktop: 3 Mini-Karten */}
       <div className="cockpit-stellschrauben-desktop" style={{ marginTop: 14 }}>
@@ -1104,13 +1120,14 @@ function SpannenZeileMobil({ titel, monatlich, werte, onEintragen }) {
 const eintragenLink = {
   background: "none",
   border: "none",
-  padding: 0,
   color: "var(--ca)",
   fontWeight: 700,
   fontSize: 13,
   cursor: "pointer",
   fontFamily: "inherit",
-  minHeight: 32,
+  // Trefferflaeche 44 px hoch, ohne die Zeile zu vergroessern
+  padding: "12px 8px",
+  margin: "-12px -8px",
 };
 
 // ── Schritt 4: Worauf achten (Spec §4.7) ────────────────────────────────────
@@ -1188,8 +1205,9 @@ export function SchrittRisiken({
       : null;
 
   return (
-    <section id="schritt-risiken" className="bv bv-auf cockpit-s4" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
+    <section id="schritt-risiken" aria-labelledby="schritt-risiken-titel" className="bv bv-auf cockpit-s4" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
       <SchrittKopf
+        id="schritt-risiken-titel"
         nr={4}
         titel={L(t, "cockS4Titel", "Worauf achten")}
         aktion={
@@ -1213,7 +1231,7 @@ export function SchrittRisiken({
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: hatAnalyse || modText ? 12 : 0 }}>
+      <div className="cockpit-risiken-liste" style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: hatAnalyse || modText ? 12 : 0 }}>
         {risiken.map((r) => (
           <div key={r.title} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <Chip farbe="rot" text={L(t, "brfRisikoChip", "Risiko")} />
@@ -1326,8 +1344,8 @@ export function SchrittRisiken({
 }
 
 const neuBerechnenKnopf = {
-  width: 36,
-  height: 36,
+  width: 44,
+  height: 44,
   border: "none",
   background: "transparent",
   color: "var(--ca)",
