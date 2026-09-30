@@ -9,7 +9,7 @@
 // State), unter 700 ms, bei prefers-reduced-motion nur ein kurzes Einblenden.
 // Farben ausschliesslich ueber bestehende Tokens (Dark Mode laeuft allein
 // darueber) - keine neuen Tokens, keine Hex-Werte.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fmt, fmtE } from "../../utils/helpers.js";
 import { berechneVollstaendigkeit } from "../../utils/objektKennzahlen.js";
 import { hebelTexteVon, risikenVon, staerkenVon } from "../../utils/aiEngine.js";
@@ -225,9 +225,44 @@ export function KennzahlenLeiste({ score, kennzahlen, t }) {
   );
 }
 
+// Zahl beim ersten Erscheinen von 0 auf den Zielwert hochzaehlen - gleiche Dauer
+// und Kurve wie der Score-Balken (bv-wachsen, .5s), damit beides zusammen laeuft.
+// Bei "Bewegung reduzieren" und ohne Browser (SSR/Tests) steht der Wert sofort da.
+// Aendert sich der Zielwert spaeter, zaehlt die Zahl vom aktuellen Stand weiter.
+function bewegungReduziert() {
+  return typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+}
+
+function useHochzaehlen(ziel, dauer = 600) {
+  const sofort = typeof window === "undefined" || bewegungReduziert();
+  const [wert, setWert] = useState(sofort ? ziel : 0);
+  const aktuell = useRef(sofort ? ziel : 0);
+  useEffect(() => {
+    if (bewegungReduziert()) {
+      aktuell.current = ziel;
+      setWert(ziel);
+      return undefined;
+    }
+    const start = aktuell.current;
+    const t0 = performance.now();
+    let raf;
+    const schritt = (jetzt) => {
+      const f = Math.min(1, (jetzt - t0) / dauer);
+      const eased = 1 - Math.pow(1 - f, 3);
+      aktuell.current = start + (ziel - start) * eased;
+      setWert(aktuell.current);
+      if (f < 1) raf = requestAnimationFrame(schritt);
+    };
+    raf = requestAnimationFrame(schritt);
+    return () => cancelAnimationFrame(raf);
+  }, [ziel, dauer]);
+  return wert;
+}
+
 function KennzahlKachel({ k, t }) {
   const negativ = k.key === "cashflow" && k.wert < 0;
   const istScore = k.key === "score";
+  const scoreAnzeige = useHochzaehlen(istScore ? k.wert : 0);
   // Kaufpreisfaktor-Kachel liefert nur `markt` (kein `abw`, siehe
   // briefingKernkennzahlen() in briefing.js) - die Abweichung wird hier aus
   // wert/markt nachgerechnet, dieselbe Formel wie briefing.js `abweichung()`.
@@ -269,7 +304,7 @@ function KennzahlKachel({ k, t }) {
       >
         {istScore ? (
           <>
-            {Math.round(k.wert)}
+            {Math.round(scoreAnzeige)}
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ch)" }}> / 100</span>
           </>
         ) : (
@@ -277,7 +312,7 @@ function KennzahlKachel({ k, t }) {
         )}
       </div>
       {istScore && (
-        <div className="cockpit-nur-desktop" style={{ height: 5, borderRadius: 3, background: "var(--cro)", marginTop: 6 }}>
+        <div style={{ height: 5, borderRadius: 3, background: "var(--cro)", marginTop: 6 }}>
           <div
             className="bv-wachsen"
             style={{

@@ -1,3 +1,13 @@
+## 2026-09-30 (1.100.41) [FRONTEND]
+
+### Score-Kachel: Balken auch auf dem Handy, Zahl zaehlt hoch
+
+- Der animierte Score-Balken war mit cockpit-nur-desktop auf dem Handy
+  ausgeblendet, dort fehlte die Bewegung. Jetzt auf allen Breiten sichtbar.
+- Die Score-Zahl zaehlt beim ersten Erscheinen von 0 auf den Wert hoch (0,6 s,
+  gleiche Kurve wie der Balken); bei "Bewegung reduzieren" steht sie sofort da.
+- Sonst gab es auf der Objektseite keine Animation, die nur auf einer Breite lief.
+
 ## 2026-09-30 (1.100.40) [FRONTEND]
 
 ### Objekt-Uebersicht (Merkliste): kompaktere Kopfzeile, ein Hinweis, klarere Zaehler
