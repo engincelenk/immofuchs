@@ -243,7 +243,19 @@ function bewegungReduziert() {
 // Haelt fest, wann welche Animation-Stufe auf dem Geraet laeuft (Nutzer-Rueckmeldung
 // 2026-09-30: auf dem iPhone sind die Effekte der Objektseite nicht zu sehen).
 // Wird nach der Fehlersuche entfernt.
-const DIAG_AN = typeof window !== "undefined" && /[?&]diag=1/.test(window.location.search);
+// Der Schalter bleibt im Browser gespeichert (localStorage), damit er einen Neuladen
+// nach Login oder Logo-Klick uebersteht. Ausschalten: ?diag=0 in der Adresse.
+const DIAG_AN = (() => {
+  if (typeof window === "undefined") return false;
+  const q = window.location.search;
+  try {
+    if (/[?&]diag=1/.test(q)) localStorage.setItem("if_diag", "1");
+    if (/[?&]diag=0/.test(q)) localStorage.removeItem("if_diag");
+    return localStorage.getItem("if_diag") === "1";
+  } catch {
+    return /[?&]diag=1/.test(q);
+  }
+})();
 function diagLog(name) {
   if (!DIAG_AN) return;
   (window.__ifDiag = window.__ifDiag || []).push([
