@@ -592,6 +592,13 @@ export default function App() {
     sessionStorage.setItem("if_landed", "1");
     setLanded(true);
     window.scrollTo({ top: 0, behavior: "instant" });
+    // Ein zweites Mal NACH dem Rendern (wie goHome): Der Login-Dialog sperrt das
+    // Scrollen der Seite (overflow: hidden), und die Landingpage war beim Login
+    // oft weit unten gescrollt. Das sofortige scrollTo oben greift dann vor dem
+    // Wechsel der Ansicht, die neue Seite (z.B. der lange Renditerechner) blieb
+    // am Seitenende stehen (Nutzer-Rueckmeldung 2026-09-30).
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
   };
   // Zurueck zur Landing-Ansicht (frueher zweimal inline dupliziert).
   const goHome = () => {

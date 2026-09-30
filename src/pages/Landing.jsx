@@ -285,8 +285,8 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
   // zurueckgeworfen - ohne diesen Umweg passierte auf einen Rechnerklick
   // scheinbar nichts. Deshalb hier gar nicht erst hineinfuehren, sondern den
   // Login oeffnen: derselbe Dialog, den auch der "Anmelden"-Knopf zeigt, und
-  // nach erfolgreicher Anmeldung landet man ohnehin im Rechner (openMode
-  // "login" ruft onStart("haupt") beim Schliessen).
+  // nach erfolgreicher Anmeldung landet man bei seinen Objekten (openMode
+  // "login" ruft onStart("saved") beim Schliessen).
   const starteRechner = (tab, opts) => {
     if (!account?.isLoggedIn) {
       setOpenMode("login");
@@ -623,18 +623,20 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               der gewaehlten Methode ab. Google/Apple verlassen die Seite und
               kommen mit ?login_success=1 zurueck, worauf App.jsx
               (hasAuthRedirectParam) direkt den App-Shell zeigt - der Nutzer
-              landet im Rechner. Passwort laeuft ohne Redirect, der
+              landet bei seinen Objekten. Passwort laeuft ohne Redirect, der
               Wizard schliesst sich nur selbst und der Nutzer stand wieder auf
               der Landingpage, wo er "Jetzt rechnen" erst suchen musste.
               Derselbe Vorsatz fuehrte also je nach Anmeldeweg woanders hin,
               entgegen der Vorgabe in App.jsx ("Login landet immer auf dem
-              Dashboard, nie zurueck auf S1"). Jetzt fuehren beide Wege in den
-              Rechner - bei Abbruch ohne Anmeldung bleibt alles wie gehabt. */}
+              Dashboard, nie zurueck auf S1"). Jetzt fuehren beide Wege in die
+              Objekt-Uebersicht ("saved", Standardeinstieg seit A5; bis
+              2026-09-30 stand hier der Renditerechner) - bei Abbruch ohne
+              Anmeldung bleibt alles wie gehabt. */}
             {openMode === "login" && (
               <CheckoutWizard
                 onClose={() => {
                   setOpenMode(null);
-                  if (account?.isLoggedIn) onStart("haupt");
+                  if (account?.isLoggedIn) onStart("saved");
                 }}
                 entryPoint="login"
               />
