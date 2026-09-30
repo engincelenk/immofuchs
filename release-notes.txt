@@ -1,3 +1,18 @@
+## 2026-09-30 (1.100.36) [WORKER + FRONTEND]
+
+### Finn auch auf der Objektseite
+
+- Neue Finn-Flaeche "objekt": 12 Fragen nach Wichtigkeit (Seiten zu je 3), 3
+  Sprechblasen-Texte (der erste erscheint einmal, eine Warnung wie rote Ampel,
+  negativer Cashflow oder niedriger Score ersetzt ihn), wie in den Rechnern.
+- Kontext fuer Finn ohne Adresse: Eingaben wie im Renditerechner plus Score,
+  Cashflow vor/nach Steuer, Kaufpreisfaktor und Marktabweichungen.
+- Worker: "objekt" in types.ts/validator.ts freigeschaltet. Das Tageslimit
+  zaehlt je Flaeche, die Objektseite hat also ein eigenes Kontingent.
+- Auf dem Handy sitzt der Fuchs hoeher, damit er die untere Leiste
+  "Im Renditerechner oeffnen" nicht ueberdeckt.
+- 16 neue Texte in allen 5 Sprachen. Worker- und Frontend-Deploy noetig.
+
 ## 2026-09-30 (1.100.35) [FRONTEND]
 
 ### Objektseite: Zwei-Spalten-Layout gegen Leerraeume, kleine UI-Verbesserungen

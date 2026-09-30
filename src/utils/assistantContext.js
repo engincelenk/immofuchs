@@ -49,6 +49,10 @@ export const ASSISTANT_FIELDS = {
     "tilgung",
     "jahre",
   ],
+  // Objektseite: dieselben Eingaben wie der Renditerechner, bewusst ohne
+  // Adresse/Ort - die Kennzahlen (Score, Cashflow, Marktabweichung) kommen
+  // fertig gerechnet aus briefing.js.
+  objekt: ["kaufpreis", "flaeche", "kaltmiete", "eigenkapital", "zinssatz", "tilgung", "jahre"],
   finanzierung: ["kaufpreis", "eigenkapital", "zinssatz", "tilgung", "zinsbindung"],
   miete: ["vergleichsmiete", "letzteErhDatum", "letzteErhMiete", "mietJahre"],
   sanierung: ["baujahr", "sanFl", "sanHt", "sanHa", "sanPe", "sanIsfp"],

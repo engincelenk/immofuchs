@@ -23,6 +23,7 @@ export function AssistantWidget({
   lang,
   disabled,
   signale,
+  fabBottom,
 }) {
   const t = ASSISTANT_T[lang] || ASSISTANT_T.de;
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -37,6 +38,7 @@ export function AssistantWidget({
         onDismissBubble={dismissBubble}
         t={t}
         hidden={disabled || sheetOpen}
+        {...(fabBottom ? { bottom: fabBottom } : {})}
         onOpen={() => setSheetOpen(true)}
       />
       <AssistantSheet

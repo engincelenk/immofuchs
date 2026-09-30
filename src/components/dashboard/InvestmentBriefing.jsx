@@ -23,6 +23,12 @@ import {
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
 import { AiEngine } from "./AiEngine.jsx";
+import { AssistantGate } from "../assistant/AssistantGate.jsx";
+import { ASSISTANT_T } from "../../i18n/assistant.js";
+import { buildAssistantContext } from "../../utils/assistantContext.js";
+import { useApp } from "../../context/AppContext.jsx";
+import { rate } from "../../utils/bands.js";
+import { tpl } from "../../utils/helpers.js";
 import {
   AntwortsatzKopf,
   CockpitStyle,
@@ -73,6 +79,7 @@ export function InvestmentBriefing({
   onLageConsentAbbrechen,
   onBearbeiten = null,
 }) {
+  const { lang } = useApp();
   const [bestaetigen, setBestaetigen] = useState(false);
   const ergebnis = ergebnisFuer(objekt, "briefing");
   const veraltet = ergebnis ? istVeraltet(ergebnis, data) : false;
@@ -124,6 +131,28 @@ export function InvestmentBriefing({
   // Ohne PLZ gibt es keinen Kreis und damit keinen Marktvergleich (Schritt 2
   // entfaellt dann inhaltlich von selbst, siehe SchrittMarkt).
   const ohnePlz = !String(data?.plz || "").trim();
+
+  // Finn fuer die Objektseite: 12 Fragen nach Wichtigkeit (Seiten zu je 3, siehe
+  // AssistantSheet), drei Sprechblasen-Texte (finnHints.js). Kontext ohne
+  // Adresse - Kennzahlen kommen fertig gerechnet aus briefing.js.
+  const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
+  const R = briefing.R;
+  const scoreWert = score?.verfuegbar ? Math.round(score.score) : null;
+  const nrTier = rate("nettoR", R.nR).tier;
+  const finnFragen = [
+    at.objSuggested1,
+    at.objSuggested2,
+    at.objSuggested3,
+    at.objSuggested4,
+    at.objSuggested5,
+    at.objSuggested6,
+    at.objSuggested7,
+    at.objSuggested8,
+    at.objSuggested9,
+    scoreWert != null ? tpl(at.objSuggested10, { score: scoreWert }) : null,
+    at.objSuggested11,
+    at.objSuggested12,
+  ].filter(Boolean);
 
   return (
     <div style={{ marginTop: 12 }}>
@@ -236,6 +265,32 @@ export function InvestmentBriefing({
           </div>
         </section>
       </div>
+      <AssistantGate
+        active={!!R}
+        rechner="objekt"
+        buildKontext={() =>
+          buildAssistantContext("objekt", data, {
+            nettoRendite: R.nR,
+            bruttoRendite: R.bR,
+            kaufpreisfaktor: R.kpF,
+            cashflowVorSteuerMonat: R.cf2OhneSt,
+            cashflowNachSteuerMonat: R.cf2MitSt,
+            score: scoreWert,
+            abweichungKaufpreisQmVomMarktProzent: v1?.abw != null ? Math.round(v1.abw) : null,
+            abweichungMieteVomMarktProzent: v2?.abw != null ? Math.round(v2.abw) : null,
+            bewertung: { tier: nrTier },
+          })
+        }
+        contextLabel={at.contextObjekt}
+        suggested={finnFragen}
+        lang={lang}
+        fabBottom="calc(140px + env(safe-area-inset-bottom))"
+        signale={{
+          tier: nrTier,
+          cashflow: R.cf2,
+          financeScore: score?.verfuegbar ? score.score : null,
+        }}
+      />
     </div>
   );
 }
