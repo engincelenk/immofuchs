@@ -1,3 +1,11 @@
+## 2026-09-30 (1.100.31) [FRONTEND]
+
+### Konto/Support aufgeraeumt
+
+- Support: FAQ "Bekomme ich mein Geld zurueck?" entfernt (alle Sprachen).
+- Konto: "Aktive Sitzungen" ist aufklappbar; die doppelten Bloecke "Abmelden"
+  und "Gespeicherte Berechnungen" sind entfernt (stehen im Burger-Menue).
+
 ## 2026-09-29 (1.100.30) [FRONTEND]
 
 ### Support-FAQs an den Code angeglichen

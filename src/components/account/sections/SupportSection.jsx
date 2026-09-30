@@ -15,7 +15,7 @@ import {
 // Adresse ist dieselbe wie im Impressum; ein zweites Postfach waere nur eine
 // weitere Stelle, die jemand im Blick behalten muesste.
 const SUPPORT_MAIL = "info@immofuchs.info";
-const FAQ_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8"];
+const FAQ_KEYS = ["1", "2", "3", "4", "5", "6", "7"];
 
 export function SupportSection({ t, onBack }) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);

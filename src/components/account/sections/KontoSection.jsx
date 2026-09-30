@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { useApp } from "../../../context/AppContext.jsx";
+import { AccordionSection } from "../../ui/AccordionSection.jsx";
 import { LANG_LOCALE } from "../../../utils/helpers.js";
 import { linkedProviderLabel } from "../../../utils/accountEntitlement.js";
 import { errorBannerStyle, textInputStyle, warnBannerStyle } from "../../checkout/checkoutStyles.js";
-import { IconArrowRight } from "../accountIcons.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
 import {
   actionBtnStyle,
@@ -13,22 +12,13 @@ import {
   dangerBtnStyle,
   emptyStateStyle,
   inlineLinkBtnStyle,
-  labelStyle,
-  labelValueRowStyle,
   sectionIntroStyle,
-  valueStyle,
 } from "../accountStyles.js";
 
-// Spec-v3.0 Kap. 4.1: "Konto" (Logout, Konto löschen). Zusaetzlich hier
-// gebuendelt, weil die Spec dafuer keinen eigenen der 6 Bereiche vorsieht,
-// es aber bestehende Funktionalitaet ist, die nicht verloren gehen soll:
-// aktive Sitzungen (vorher eigener Tab "Sicherheit") und der Einstieg in die
-// Merkliste (vorher eigener Tab "Gespeicherte Berechnungen").
+// Spec-v3.0 Kap. 4.1: "Konto": aktive Sitzungen (aufklappbar), Alle Geraete
+// abmelden und Konto loeschen. Abmelden und Merkliste stehen im Burger-Menue.
 export function KontoSection({ t, account, lang, onClose, onBack }) {
   const locale = LANG_LOCALE[lang] || "de-DE";
-  const { savedList, setTabExt, isProSavedObjects, savedObjectsFreeLimit } = useApp();
-  const savedCount = savedList?.length || 0;
-
   const [sessions, setSessions] = useState(null); // null = laedt noch
   const [sessionsError, setSessionsError] = useState(false);
   const [logoutAllConfirming, setLogoutAllConfirming] = useState(false);
@@ -52,11 +42,6 @@ export function KontoSection({ t, account, lang, onClose, onBack }) {
   // Nach dem Rundumschlag ist auch diese Sitzung tot - der Kontobereich wird
   // deshalb sofort geschlossen, statt den Nutzer vor einer Maske sitzen zu
   // lassen, die keine Daten mehr laden kann.
-  async function handleLogout() {
-    await account.logout();
-    onClose();
-  }
-
   async function handleLogoutAll() {
     await account.logoutAllDevices();
     onClose();
@@ -65,15 +50,6 @@ export function KontoSection({ t, account, lang, onClose, onBack }) {
   function formatMoment(value) {
     if (!value) return null;
     return new Date(value).toLocaleString(locale);
-  }
-
-  // Bewusst NUR Einstieg und Kennzahl, keine eingebettete Merkliste - deren
-  // "Laden"-Knopf schreibt die Eingaben in den Rechner und wechselt den Tab,
-  // was hinter dem geoeffneten Vollbild-Konto unsichtbar bliebe. Der Knopf
-  // hier schliesst deshalb erst das Konto und wechselt dann zur Merkliste.
-  function handleOpenMerkliste() {
-    onClose();
-    setTabExt("saved");
   }
 
   // D2 (Spec-v3.0 Kap. 4.5): Loeschung ist unwiderruflich, daher
@@ -117,8 +93,7 @@ export function KontoSection({ t, account, lang, onClose, onBack }) {
 
       {sessionsError && <div style={errorBannerStyle}>{t.sicherheitSessionsError}</div>}
 
-      <div style={blockCardStyle}>
-        <div style={blockTitleStyle}>{t.sicherheitSessionsTitle}</div>
+      <AccordionSection question={t.sicherheitSessionsTitle}>
         <p style={blockHintStyle}>{t.sicherheitSessionsHint}</p>
         {sessions === null && !sessionsError && <div style={emptyStateStyle}>{t.commonLoading}</div>}
         {sessions !== null && sessions.length === 0 && (
@@ -161,15 +136,7 @@ export function KontoSection({ t, account, lang, onClose, onBack }) {
             </div>
           </div>
         ))}
-      </div>
-
-      <div style={blockCardStyle}>
-        <div style={blockTitleStyle}>{t.logout}</div>
-        <p style={blockHintStyle}>{t.sicherheitLogoutHint}</p>
-        <button onClick={handleLogout} style={actionBtnStyle}>
-          {t.logout}
-        </button>
-      </div>
+      </AccordionSection>
 
       <div style={blockCardStyle}>
         <div style={blockTitleStyle}>{t.accountLogoutAll}</div>
@@ -198,30 +165,6 @@ export function KontoSection({ t, account, lang, onClose, onBack }) {
             </div>
           </div>
         )}
-      </div>
-
-      <div style={blockCardStyle}>
-        <div style={blockTitleStyle}>{t.navGespeichert}</div>
-        <div style={labelValueRowStyle}>
-          <span style={labelStyle}>{t.gespeichertCountLabel}</span>
-          <span style={valueStyle}>
-            {savedCount === 1
-              ? t.gespeichertCountOne
-              : t.gespeichertCount.replace("{n}", String(savedCount))}
-          </span>
-        </div>
-        {!isProSavedObjects && (
-          <p style={{ ...blockHintStyle, marginTop: 8 }}>
-            {t.gespeichertFreeHint.replace("{limit}", String(savedObjectsFreeLimit))}
-          </p>
-        )}
-        <button
-          onClick={handleOpenMerkliste}
-          style={{ ...actionBtnStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}
-        >
-          {t.gespeichertCta}
-          <IconArrowRight size={17} />
-        </button>
       </div>
 
       <div style={blockCardStyle}>
