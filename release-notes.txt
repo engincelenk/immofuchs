@@ -1,3 +1,14 @@
+## 2026-09-30 (1.100.32) [WORKER]
+
+### Gutschein deaktivieren loescht jetzt auch den Stripe-Coupon
+
+- Bisher wurde nur der Promotion Code abgeschaltet; der Coupon blieb in Stripe
+  (Produktkatalog > Gutscheine) aktiv. Jetzt: erst Code sperren, dann Coupon
+  loeschen (`stripe/discounts.ts`, `deactivateDiscount`).
+- Folge: deaktivierte Gutscheine lassen sich nicht reaktivieren, sondern nur
+  neu anlegen (Admin-UI "Duplizieren").
+- Worker-Deploy noetig (`npx wrangler deploy`, dev: `--env dev`).
+
 ## 2026-09-30 (1.100.31) [FRONTEND]
 
 ### Konto/Support aufgeraeumt

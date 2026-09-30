@@ -1,9 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Env } from "../types";
-import { listDiscounts } from "./discounts";
+import { listDiscounts, setDiscountStatus } from "./discounts";
 
 const listMock = vi.fn();
-vi.mock("./client", () => ({ getStripeClient: () => ({ promotionCodes: { list: listMock } }) }));
+const retrieveMock = vi.fn();
+const updateMock = vi.fn();
+const delMock = vi.fn();
+vi.mock("./client", () => ({
+  getStripeClient: () => ({
+    promotionCodes: { list: listMock, retrieve: retrieveMock, update: updateMock },
+    coupons: { del: delMock },
+  }),
+}));
 
 function promo(id: string, code: string) {
   return {
@@ -17,7 +25,12 @@ function promo(id: string, code: string) {
   };
 }
 
-beforeEach(() => listMock.mockReset());
+beforeEach(() => {
+  listMock.mockReset();
+  retrieveMock.mockReset();
+  updateMock.mockReset();
+  delMock.mockReset();
+});
 
 describe("listDiscounts (Paginierung)", () => {
   it("blaettert ueber alle Seiten, statt bei 100 abzuschneiden", async () => {
@@ -47,5 +60,33 @@ describe("listDiscounts (Paginierung)", () => {
     listMock.mockResolvedValue({ data: [promo("p1", "A")], has_more: true });
     await listDiscounts({} as Env);
     expect(listMock).toHaveBeenCalledTimes(20);
+  });
+});
+
+describe("setDiscountStatus", () => {
+  it("archived: sperrt den Code und loescht danach den Coupon", async () => {
+    retrieveMock.mockResolvedValue({ id: "p1", coupon: "c_p1" });
+    await setDiscountStatus({} as Env, "p1", "archived");
+    expect(updateMock).toHaveBeenCalledWith("p1", { active: false });
+    expect(delMock).toHaveBeenCalledWith("c_p1");
+    expect(updateMock.mock.invocationCallOrder[0]).toBeLessThan(delMock.mock.invocationCallOrder[0]);
+  });
+
+  it("archived: bereits geloeschter Coupon ist kein Fehler", async () => {
+    retrieveMock.mockResolvedValue({ id: "p1", coupon: { id: "c_p1" } });
+    delMock.mockRejectedValue({ code: "resource_missing" });
+    await expect(setDiscountStatus({} as Env, "p1", "archived")).resolves.toBeUndefined();
+  });
+
+  it("archived: anderer Loeschfehler wird durchgereicht", async () => {
+    retrieveMock.mockResolvedValue({ id: "p1", coupon: "c_p1" });
+    delMock.mockRejectedValue(new Error("boom"));
+    await expect(setDiscountStatus({} as Env, "p1", "archived")).rejects.toThrow("boom");
+  });
+
+  it("active: aktiviert nur den Code, kein Coupon-Zugriff", async () => {
+    await setDiscountStatus({} as Env, "p1", "active");
+    expect(updateMock).toHaveBeenCalledWith("p1", { active: true });
+    expect(delMock).not.toHaveBeenCalled();
   });
 });

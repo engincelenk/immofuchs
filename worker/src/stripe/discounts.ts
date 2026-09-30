@@ -108,6 +108,22 @@ export interface DiscountPatch {
   status?: "active" | "archived";
 }
 
+// Deaktivieren = Promotion Code abschalten UND Coupon loeschen: der Coupon ist
+// in Stripe sonst weiter "aktiv" (Dashboard: Produktkatalog > Gutscheine), obwohl
+// der Code nicht mehr einloesbar ist. Reihenfolge bewusst so: erst der Code
+// (sperrt sofort), dann der Coupon - schlaegt das Loeschen fehl, ist der
+// Gutschein trotzdem gesperrt. Bereits geloeschte Coupons (resource_missing)
+// sind kein Fehler. Folge: ein geloeschter Coupon laesst sich nicht
+// reaktivieren, dafuer gibt es "Duplizieren" in der Admin-UI.
+async function deactivateDiscount(stripe: Stripe, promotionCodeId: string, couponId: string): Promise<void> {
+  await stripe.promotionCodes.update(promotionCodeId, { active: false });
+  try {
+    await stripe.coupons.del(couponId);
+  } catch (err) {
+    if ((err as { code?: string })?.code !== "resource_missing") throw err;
+  }
+}
+
 export async function updateDiscount(
   env: Env,
   promotionCodeId: string,
@@ -123,7 +139,12 @@ export async function updateDiscount(
   }
   let updatedPromo = promo;
   if (patch.status !== undefined) {
-    updatedPromo = await stripe.promotionCodes.update(promotionCodeId, { active: patch.status === "active" });
+    if (patch.status === "archived") {
+      await deactivateDiscount(stripe, promotionCodeId, couponId);
+      updatedPromo = { ...promo, active: false };
+    } else {
+      updatedPromo = await stripe.promotionCodes.update(promotionCodeId, { active: true });
+    }
   }
   return mapDiscount(updatedPromo, coupon);
 }
@@ -134,7 +155,13 @@ export async function setDiscountStatus(
   status: "active" | "archived",
 ): Promise<void> {
   const stripe = getStripeClient(env);
-  await stripe.promotionCodes.update(promotionCodeId, { active: status === "active" });
+  if (status === "active") {
+    await stripe.promotionCodes.update(promotionCodeId, { active: true });
+    return;
+  }
+  const promo = await stripe.promotionCodes.retrieve(promotionCodeId);
+  const couponId = typeof promo.coupon === "string" ? promo.coupon : promo.coupon.id;
+  await deactivateDiscount(stripe, promotionCodeId, couponId);
 }
 
 // Mehrere Codes auf einmal - ohne 0/O/1/I/L: die Codes werden abgetippt oder
