@@ -390,170 +390,249 @@ export function SchrittKopf({ nr, titel, aktion }) {
   );
 }
 
-function ZeilePaar({ label, wert, borderTop }) {
+// ── Schritt 1: Was dich das Objekt kostet ───────────────────────────────────
+// Drei klar getrennte Bloecke (Nutzer-Vorgabe 2026-09-30): 1. einmalig (was
+// muss ich auf den Tisch legen), 2. laufend (was kostet es pro Monat, als
+// Rechnung von der Miete bis zum Cashflow), 3. was am Ende wirklich bleibt.
+// Hauptzahl im laufenden Block ist der Cashflow VOR Steuer - die Steuerwirkung
+// ist geschaetzt und steht deshalb als eigene, benannte Zeile darunter.
+// Nur Anordnung: alle Werte stammen aus computeRendite() (briefing.R) bzw. dem
+// Formular-State (data). Die Nettomietrendite steht in der Kennzahlenleiste.
+const finanzZeile = { fontSize: 13, color: "var(--ch)" };
+const finanzWert = { fontWeight: 700, color: "var(--ct)", fontVariantNumeric: "tabular-nums" };
+const zeileZeile = { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 };
+const einzug = { paddingLeft: 14, fontSize: 12.5 };
+
+const vz = (n) => `${n < 0 ? "−" : "+"} ${fmtE(Math.round(Math.abs(n)))}`;
+
+function BlockKopf({ nr, titel }) {
   return (
     <div
       style={{
         display: "flex",
-        justifyContent: "space-between",
-        alignItems: "baseline",
-        fontSize: 13.5,
-        padding: "8px 0",
-        borderTop: borderTop ? "1px solid var(--cb)" : "none",
+        alignItems: "center",
+        gap: 10,
+        padding: "8px 12px",
+        borderRadius: 10,
+        background: "var(--cro)",
+        borderLeft: "3px solid var(--ca)",
       }}
     >
-      <span style={{ color: "var(--ch)" }}>{label}</span>
-      <span style={{ fontWeight: 700, color: "var(--ct)", fontVariantNumeric: "tabular-nums" }}>{wert}</span>
+      <span
+        aria-hidden="true"
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 6,
+          background: "var(--ca)",
+          color: "#fff",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 12.5,
+          fontWeight: 800,
+          flexShrink: 0,
+        }}
+      >
+        {nr}
+      </span>
+      <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "var(--ct)", letterSpacing: "0.01em" }}>{titel}</h3>
     </div>
   );
 }
 
-// ── Schritt 1: Was dich das Objekt kostet ───────────────────────────────────
-// Finanzierungsblock (Nutzer-Vorgabe 2026-09-24): Rate, Zins-/Tilgungs-
-// Anteil, Zinssatz/Tilgungssatz, Darlehenssumme, Eigenkapital - alles
-// bestehende Werte aus computeRendite() (briefing.R) bzw. dem Formular-State
-// (data), keine neue Berechnung.
-const finanzZeile = { fontSize: 12.5, color: "var(--ch)" };
-const finanzWert = { fontWeight: 700, color: "var(--ct)", fontVariantNumeric: "tabular-nums" };
+function Zeile({ label, wert, style, linie, fett }) {
+  return (
+    <div
+      style={{
+        ...zeileZeile,
+        ...finanzZeile,
+        ...(style || {}),
+        ...(linie ? { borderTop: "1px solid var(--cb)", paddingTop: 6 } : null),
+      }}
+    >
+      <span style={fett ? { fontWeight: 700, color: "var(--ct)" } : undefined}>{label}</span>
+      <span style={{ ...finanzWert, whiteSpace: "nowrap" }}>{wert}</span>
+    </div>
+  );
+}
 
 export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, t }) {
   const kennzahlen = briefing?.kernkennzahlen;
   const cash = kennzahlen?.find((k) => k.key === "cashflow");
-  const netto = kennzahlen?.find((k) => k.key === "nettorendite");
-  if (!cash) return null;
-  const negativ = cash.wert < 0;
-  const jahr = cockpitCashflowJahr(cash.wert);
-
   const R = briefing?.R;
+  if (!cash || !R) return null;
+
+  // ── Block 1: einmalig ──
+  const kaufpreis = R.gKP > 0 ? R.gKP : null;
+  const nebenkosten = R.nbk > 0 ? R.nbk : null;
+  const renovierung = R.ren > 0 ? R.ren : 0;
+  const sonderumlage = +data?.sonder > 0 ? +data.sonder : 0;
+  const gesamtinvestition = kaufpreis != null ? kaufpreis + (nebenkosten || 0) + renovierung + sonderumlage : null;
   const zinssatz = +data?.zinssatz || 0;
   const tilgungssatz = +data?.tilgung || 0;
-  const rate = R?.rateJ1 > 0 ? R.rateJ1 : null;
-  const bankDarlehen = R?.bankDa > 0 ? R.bankDa : null;
-  const kfwDarlehen = R?.kfwDa > 0 ? R.kfwDa : null;
+  const bankDarlehen = R.bankDa > 0 ? R.bankDa : null;
+  const kfwDarlehen = R.kfwDa > 0 ? R.kfwDa : null;
   const eigenkapital = +data?.eigenkapital || 0;
-  const zeigtFinanzierung = rate != null || bankDarlehen != null || eigenkapital > 0 || onEintragen;
-  const kaufpreis = R?.gKP > 0 ? R.gKP : null;
-  const nebenkosten = R?.nbk > 0 ? R.nbk : null;
-  const anschaffungskosten = kaufpreis != null ? kaufpreis + (nebenkosten || 0) : null;
-  const zeigtAnschaffung = kaufpreis != null;
+  const rate = R.rateJ1 > 0 ? R.rateJ1 : null;
+  const zeigtBlock1 = kaufpreis != null || bankDarlehen != null || eigenkapital > 0 || !!onEintragen;
+
+  // ── Block 2: laufend ──
+  const cfVor = cashflowVorSteuer ?? R.cf2OhneSt;
+  const negativ = cfVor < 0;
+  const farbe = negativ ? "var(--bad-tx)" : "var(--ok-tx)";
+  const jahr = cockpitCashflowJahr(cfVor);
+  const kaltmiete = +data?.kaltmiete || 0;
+  const leerstand = kaltmiete > 0 && R.mieteEffMon != null ? kaltmiete - R.mieteEffMon : 0;
+  const nichtUmlagbar = R.nuJ > 0 ? R.nuJ / 12 : 0;
+  const steuerMon = (R.yearRows?.[0]?.steuer || 0) / 12;
+  const zeigtSteuer = Math.abs(steuerMon) >= 1;
+
+  // ── Block 3: was bleibt ──
+  const tilgung = rate != null && R.t1 > 0 ? R.t1 : 0;
+  const echterCf = cfVor + tilgung;
+  const echtNegativ = echterCf < 0;
+  const ekRendite = eigenkapital > 0 ? ((cfVor * 12) / eigenkapital) * 100 : null;
+  const zeigtBlock3 = tilgung > 0 || ekRendite != null;
+
+  const trenner = { marginTop: 18 };
+  const zeilen = { display: "flex", flexDirection: "column", gap: 6, marginTop: 10 };
 
   return (
     <section id="schritt-kosten" className="bv bv-auf cockpit-s1" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
       <SchrittKopf nr={1} titel={L(t, "cockS1Titel", "Was dich das Objekt kostet")} />
-      <div
-        style={{
-          marginTop: 14,
-          padding: "14px 16px",
-          borderRadius: 12,
-          background: negativ ? "var(--bad-bg)" : "var(--ok-bg)",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 30,
-            fontWeight: 800,
-            letterSpacing: "-0.01em",
-            color: negativ ? "var(--bad-tx)" : "var(--ok-tx)",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {wertText(cash.wert, "eurMonat")}{" "}
-          <span style={{ fontSize: 13, fontWeight: 600 }}>{L(t, "cockProMonat", "/ Monat")}</span>
-        </div>
-        {jahr != null && (
-          <div style={{ fontSize: 12.5, marginTop: 2, color: negativ ? "var(--bad-tx)" : "var(--ok-tx)" }}>
-            = {wertText(jahr, "eurMonat")}{" "}
-            {negativ
-              ? L(t, "cockProJahrZuzahlung", "pro Jahr aus eigener Tasche")
-              : L(t, "cockProJahrUeberschuss", "Überschuss pro Jahr")}
-          </div>
-        )}
-      </div>
-      {cashflowVorSteuer != null && (
-        <ZeilePaar label={L(t, "cockVorSteuer", "Vor Steuer / Monat")} wert={wertText(cashflowVorSteuer, "eurMonat")} borderTop />
-      )}
-      {netto && (
-        <div className="cockpit-nur-desktop">
-          <ZeilePaar label={L(t, "brfKernnettorendite", "Nettomietrendite")} wert={wertText(netto.wert, "prozent")} borderTop />
-        </div>
-      )}
 
-      {zeigtAnschaffung && (
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "var(--ch)" }}>
-            {L(t, "cockAnschaffungTitel", "Anschaffungskosten")}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
-              <span>{L(t, "cockKaufpreis", "Kaufpreis")}</span>
-              <span style={finanzWert}>{wertText(kaufpreis, "eurMonat")}</span>
+      {zeigtBlock1 && (
+        <div style={{ marginTop: 16 }}>
+          <BlockKopf nr={1} titel={L(t, "cockBlock1", "Einmalig: Was du zahlst")} />
+          {gesamtinvestition != null && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--ct)", fontVariantNumeric: "tabular-nums", lineHeight: 1.15 }}>
+                {wertText(gesamtinvestition, "eurMonat")}
+              </div>
+              <div style={{ fontSize: 12.5, marginTop: 2, color: "var(--ch)" }}>
+                {L(t, "cockGesamtinvestition", "Gesamtinvestition")}
+              </div>
             </div>
+          )}
+          <div style={zeilen}>
+            {kaufpreis != null && <Zeile label={L(t, "cockKaufpreis", "Kaufpreis")} wert={wertText(kaufpreis, "eurMonat")} />}
             {nebenkosten != null && (
-              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
-                <span>{L(t, "cockNebenkosten", "Kaufnebenkosten")}</span>
-                <span style={finanzWert}>{wertText(nebenkosten, "eurMonat")}</span>
-              </div>
+              <>
+                <Zeile label={L(t, "cockNebenkosten", "Kaufnebenkosten")} wert={wertText(nebenkosten, "eurMonat")} />
+                {[
+                  ["cockNkGrest", "Grunderwerbsteuer", R.nbkGrest],
+                  ["cockNkNotar", "Notar & Grundbuch", R.nbkNotar],
+                  ["cockNkMakler", "Makler", R.nbkMakler],
+                ]
+                  .filter(([, , w]) => w > 0)
+                  .map(([k, fb, w]) => (
+                    <Zeile key={k} label={L(t, k, fb)} wert={wertText(w, "eurMonat")} style={einzug} />
+                  ))}
+              </>
             )}
-            <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile, borderTop: "1px solid var(--cb)", paddingTop: 6 }}>
-              <span style={{ fontWeight: 700, color: "var(--ct)" }}>{L(t, "cockAnschaffungGesamt", "Gesamt")}</span>
-              <span style={finanzWert}>{wertText(anschaffungskosten, "eurMonat")}</span>
+            {renovierung > 0 && <Zeile label={L(t, "cockRenovierung", "Renovierung")} wert={wertText(renovierung, "eurMonat")} />}
+            {sonderumlage > 0 && <Zeile label={L(t, "cockSonderumlage", "Sonderumlage")} wert={wertText(sonderumlage, "eurMonat")} />}
+          </div>
+
+          <div style={{ ...trenner, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "var(--ch)" }}>
+              {L(t, "cockFinanziertDurch", "Finanziert durch")}
+            </div>
+            <div style={zeilen}>
+              {bankDarlehen != null && (
+                <>
+                  <Zeile label={L(t, "cockDarlehen", "Darlehen")} wert={wertText(bankDarlehen, "eurMonat")} />
+                  {(zinssatz > 0 || tilgungssatz > 0) && (
+                    <Zeile
+                      label={L(t, "cockZinsTilgungssatz", "Zinssatz / Tilgung")}
+                      wert={`${fmt(zinssatz, 2)} % / ${fmt(tilgungssatz, 2)} %`}
+                      style={einzug}
+                    />
+                  )}
+                </>
+              )}
+              {kfwDarlehen != null && <Zeile label={L(t, "cockDarlehenKfw", "davon KfW-Darlehen")} wert={wertText(kfwDarlehen, "eurMonat")} />}
+              <div style={{ ...zeileZeile, ...finanzZeile }}>
+                <span>{L(t, "cockEigenkapital", "Eigenkapital")}</span>
+                {eigenkapital > 0 ? (
+                  <span style={finanzWert}>{wertText(eigenkapital, "eurMonat")}</span>
+                ) : onEintragen ? (
+                  <button type="button" onClick={onEintragen} style={eintragenLink}>
+                    {L(t, "cockEintragen", "Eintragen →")}
+                  </button>
+                ) : (
+                  <span style={{ color: "var(--ch)" }}>—</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {zeigtFinanzierung && (
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "var(--ch)" }}>
-            {L(t, "cockFinanzierungTitel", "Finanzierung")}
+      <div style={trenner}>
+        <BlockKopf nr={2} titel={L(t, "cockBlock2", "Laufend: Was es pro Monat kostet")} />
+        <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 12, background: negativ ? "var(--bad-bg)" : "var(--ok-bg)" }}>
+          <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.01em", color: farbe, fontVariantNumeric: "tabular-nums" }}>
+            {wertText(cfVor, "eurMonat")} <span style={{ fontSize: 13, fontWeight: 600 }}>{L(t, "cockProMonat", "/ Monat")}</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-            {rate != null && (
-              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
-                <span>{L(t, "cockRate", "Monatliche Rate")}</span>
-                <span style={finanzWert}>{wertText(rate, "eurMonat")}</span>
-              </div>
+          <div style={{ fontSize: 12.5, marginTop: 2, color: farbe }}>
+            {L(t, "cockCfVorSteuer", "Cashflow vor Steuer")}
+            {jahr != null && (
+              <>
+                {" · = "}
+                {wertText(jahr, "eurMonat")}{" "}
+                {negativ ? L(t, "cockProJahrZuzahlung", "pro Jahr aus eigener Tasche") : L(t, "cockProJahrUeberschuss", "Überschuss pro Jahr")}
+              </>
             )}
-            {rate != null && R.z1 != null && R.t1 != null && (
-              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
-                <span>{L(t, "cockZinsTilgungAnteil", "davon Zins / Tilgung")}</span>
-                <span style={finanzWert}>
-                  {wertText(R.z1, "eurMonat")} / {wertText(R.t1, "eurMonat")}
-                </span>
-              </div>
-            )}
-            {(zinssatz > 0 || tilgungssatz > 0) && (
-              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
-                <span>{L(t, "cockZinsTilgungssatz", "Zinssatz / Tilgung")}</span>
-                <span style={finanzWert}>
-                  {fmt(zinssatz, 2)} % / {fmt(tilgungssatz, 2)} %
-                </span>
-              </div>
-            )}
-            {bankDarlehen != null && (
-              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
-                <span>{L(t, "cockDarlehen", "Darlehenssumme")}</span>
-                <span style={finanzWert}>{wertText(bankDarlehen, "eurMonat")}</span>
-              </div>
-            )}
-            {kfwDarlehen != null && (
-              <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
-                <span>{L(t, "cockDarlehenKfw", "davon KfW-Darlehen")}</span>
-                <span style={finanzWert}>{wertText(kfwDarlehen, "eurMonat")}</span>
-              </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", ...finanzZeile }}>
-              <span>{L(t, "cockEigenkapital", "Eigenkapital")}</span>
-              {eigenkapital > 0 ? (
-                <span style={finanzWert}>{wertText(eigenkapital, "eurMonat")}</span>
-              ) : onEintragen ? (
-                <button type="button" onClick={onEintragen} style={eintragenLink}>
-                  {L(t, "cockEintragen", "Eintragen →")}
-                </button>
-              ) : (
-                <span style={{ color: "var(--ch)" }}>—</span>
+          </div>
+        </div>
+        <div style={zeilen}>
+          {kaltmiete > 0 && <Zeile label={L(t, "cockKaltmiete", "Kaltmiete")} wert={wertText(kaltmiete, "eurMonat")} />}
+          {leerstand >= 1 && <Zeile label={L(t, "cockLeerstand", "Leerstand")} wert={vz(-leerstand)} />}
+          {nichtUmlagbar >= 1 && <Zeile label={L(t, "cockNichtUml", "Nicht umlagefähige Kosten")} wert={vz(-nichtUmlagbar)} />}
+          {rate != null && (
+            <>
+              <Zeile label={L(t, "cockKreditrate", "Kreditrate")} wert={vz(-rate)} />
+              {R.z1 != null && R.t1 != null && (
+                <Zeile
+                  label={L(t, "cockZinsTilgungAnteil", "davon Zins / Tilgung")}
+                  wert={`${wertText(R.z1, "eurMonat")} / ${wertText(R.t1, "eurMonat")}`}
+                  style={einzug}
+                />
               )}
-            </div>
+            </>
+          )}
+          <Zeile label={`= ${L(t, "cockCfVorSteuer", "Cashflow vor Steuer")}`} wert={wertText(cfVor, "eurMonat")} fett linie />
+          {zeigtSteuer && (
+            <>
+              <Zeile label={L(t, "cockSteuerwirkung", "Steuerwirkung (geschätzt)")} wert={vz(steuerMon)} />
+              <Zeile label={`= ${L(t, "cockCfNachSteuer", "Cashflow nach Steuer")}`} wert={wertText(R.cf2MitSt, "eurMonat")} fett linie />
+            </>
+          )}
+        </div>
+      </div>
+
+      {zeigtBlock3 && (
+        <div style={trenner}>
+          <BlockKopf nr={3} titel={L(t, "cockBlock3", "Am Ende: Was wirklich bleibt")} />
+          <div style={zeilen}>
+            {tilgung > 0 && (
+              <>
+                <Zeile label={L(t, "cockTilgungVermoegen", "Tilgung – baut dein Vermögen auf")} wert={vz(tilgung)} />
+                <Zeile
+                  label={`= ${echtNegativ ? L(t, "cockEchtZuzahlung", "Wirkliche Zuzahlung vor Steuer") : L(t, "cockEchtUeberschuss", "Wirklicher Überschuss vor Steuer")}`}
+                  wert={`${wertText(echterCf, "eurMonat")} ${L(t, "cockProMonat", "/ Monat")}`}
+                  fett
+                  linie
+                />
+              </>
+            )}
+            {ekRendite != null && (
+              <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--ch)", paddingTop: tilgung > 0 ? 6 : 0 }}>
+                {L(t, "cockEkRendite", "Bezogen auf dein Eigenkapital: {p} % pro Jahr (vor Steuer)").replace("{p}", fmt(ekRendite, 1))}
+              </div>
+            )}
           </div>
         </div>
       )}

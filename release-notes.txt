@@ -1,3 +1,18 @@
+## 2026-09-30 (1.100.33) [FRONTEND]
+
+### Objektseite: "Was dich das Objekt kostet" in drei Bloecke gegliedert
+
+- Block 1 "Einmalig: Was du zahlst": Gesamtinvestition, Kaufpreis,
+  Nebenkosten (Grunderwerbsteuer, Notar, Makler einzeln), Renovierung,
+  Sonderumlage, danach Darlehen und Eigenkapital.
+- Block 2 "Laufend: Was es pro Monat kostet": Rechnung Kaltmiete - Leerstand -
+  nicht umlagefaehige Kosten - Kreditrate = Cashflow VOR Steuer (Hauptzahl),
+  dann Steuerwirkung (geschaetzt) und Cashflow nach Steuer.
+- Block 3 "Am Ende: Was wirklich bleibt": Tilgung als Vermoegensaufbau,
+  wirklicher Ueberschuss und Rendite auf das Eigenkapital (vor Steuer).
+- Nettomietrendite aus diesem Kasten entfernt (steht in der Kennzahlenleiste).
+- Neu: R.mieteEffMon (rendite.js), 21 Texte in allen 5 Sprachen.
+
 ## 2026-09-30 (1.100.32) [WORKER + FRONTEND]
 
 ### Gutscheine nur noch in Stripe verwalten

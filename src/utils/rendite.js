@@ -392,6 +392,7 @@ export function computeRendite(d, t) {
     jMiete: jahresMiete,
     kpF: kaufpreisFaktor,
     nuJ: nichtUmlagbarJahr,
+    mieteEffMon: effektivMieteMon,
     bR: bruttoRendite,
     nR: nettoRendite,
     ann: annuitaetMon,
