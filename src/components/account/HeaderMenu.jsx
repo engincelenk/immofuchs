@@ -137,7 +137,8 @@ export function HeaderMenu({
                 paddingRight: 16,
               }}
             >
-              {langSelector}
+              {/* Inhaltsbreite: sonst zoege die Liste an den rechten Rand der Schublade. */}
+              <div style={{ display: "inline-block" }}>{langSelector}</div>
             </div>
           )}
 

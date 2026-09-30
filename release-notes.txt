@@ -1,3 +1,15 @@
+## 2026-09-30 (1.100.38) [FRONTEND]
+
+### Landingpage: Badge raus, Sprachmenue am Knopf, Effekte auch auf dem Handy
+
+- Hero-Badge "Mit KI-Exposé-Scan, Lage-Analyse und Finn" entfernt (Text in allen 5
+  Sprachen, CSS).
+- Sprachmenue in der Mobil-Schublade oeffnete am rechten Rand statt unter dem
+  Knopf: Wrapper mit Inhaltsbreite, Liste linksbuendig (LangSel align="left").
+- Effekte auf dem Handy: sanftes Einblenden der Abschnitte und Karten beim
+  Scrollen (aus bei "Bewegung reduzieren"), Druck-Effekt beim Antippen statt
+  Hover, zwei kleine Sterne im Hero auch unter 1180 px.
+
 ## 2026-09-30 (1.100.37) [WORKER + FRONTEND]
 
 ### Finn ueberall durchgesehen: Fehler behoben, Chips ergaenzt, Finn auf der Objekt-Uebersicht

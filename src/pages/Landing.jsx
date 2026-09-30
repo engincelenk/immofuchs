@@ -226,6 +226,42 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
     return () => io.disconnect();
   }, []);
 
+  // Sanftes Einblenden der Abschnitte und Karten beim Scrollen. Aus bei "Bewegung
+  // reduzieren" und ohne IntersectionObserver. Stufung je Geschwister-Position,
+  // damit Kartenreihen nacheinander erscheinen statt alle gleichzeitig.
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return undefined;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return undefined;
+    const ziele = Array.from(
+      document.querySelectorAll(".lp-ki-top,.lp-ki-karte,.lp-step,.calc-hero-card,.calc-cards-support>*"),
+    );
+    const io = new IntersectionObserver(
+      (eintraege) => {
+        for (const e of eintraege) {
+          if (!e.isIntersecting) continue;
+          const el = e.target;
+          io.unobserve(el);
+          el.classList.add("lp-rev-in");
+          setTimeout(() => el.classList.remove("lp-rev", "lp-rev-in"), 1100);
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+    );
+    ziele.forEach((el) => {
+      // Schon oberhalb des Bildschirms (z.B. nach Neuladen mitten auf der Seite):
+      // gar nicht erst ausblenden, sonst bliebe es unsichtbar, bis man hochscrollt.
+      if (el.getBoundingClientRect().bottom < 0) return;
+      const pos = el.parentElement ? Array.prototype.indexOf.call(el.parentElement.children, el) : 0;
+      el.style.setProperty("--rd", `${(pos % 4) * 70}ms`);
+      el.classList.add("lp-rev");
+      io.observe(el);
+    });
+    return () => {
+      io.disconnect();
+      ziele.forEach((el) => el.classList.remove("lp-rev", "lp-rev-in"));
+    };
+  }, []);
+
   // Bugfix (Nutzer-Feedback 2026-08-11): CheckoutWizard/MyAccount lesen
   // `lang` ueber useApp() aus Ctx (AppContext.jsx) - der existiert bisher
   // nur innerhalb von AppProviders im "landed"-Zustand. Auf der Landingpage
@@ -486,7 +522,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               navItems={navItems}
-              langSelector={<LangSel lang={lang} setLang={setLang} />}
+              langSelector={<LangSel lang={lang} setLang={setLang} align="left" />}
               onLogin={() => {
                 setNavOpen(false);
                 setOpenMode("login");
@@ -675,10 +711,6 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           style={{ right: "11%", top: "20%", animationDelay: "600ms" }}
         />
         <div className="lp-hero-inner">
-          <span className="lp-auf lp-hero-badge">
-            <Stern size={14} />
-            {l.heroKiBadge}
-          </span>
           <h1 className="lp-hero-h1">
             {l.h1a}
             <span style={{ color: "var(--ca)" }}>{l.h1b}</span>
@@ -1251,14 +1283,22 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-hero{position:relative;text-align:center}
       .lp-hero-stern{position:absolute;pointer-events:none;color:var(--ca)}
       .lp-stern-hell{color:#ffb27a}
-      @media(max-width:1180px){.lp-hero-stern{display:none}}
+      /* Handy/Tablet: zwei kleine Sterne im oberen Polster des Heros (dort liegt
+         kein Text), der mittlere entfaellt - die grossen Positionen wuerden die
+         Ueberschrift ueberdecken. */
+      @media(max-width:1180px){
+        .lp-hero-stern{width:13px;height:13px}
+        .lp-hero-stern:nth-of-type(1){left:10%!important;top:16px!important}
+        .lp-hero-stern:nth-of-type(2){display:none}
+        .lp-hero-stern:nth-of-type(3){right:12%!important;top:22px!important}
+      }
       .lp-hero-inner{max-width:980px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:24px}
-      .lp-hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--cc);border:1px solid var(--ca-bd);font-size:14px;font-weight:700;color:var(--ca-dk)}
       .lp-hero-h1{margin:0;font-size:clamp(34px,5.2vw,64px);font-weight:800;color:var(--ct);letter-spacing:-1.2px;line-height:1.05}
       .lp-hero-sub{margin:0;max-width:720px;font-size:clamp(16px,1.6vw,19px);color:var(--cl);line-height:1.55}
       .lp-hero-ctas{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
       .lp-btn-primary,.lp-btn-secondary{min-height:52px;padding:0 26px;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
-      .lp-btn-primary{border:none;background:var(--ca);color:#fff;font-size:17px;box-shadow:0 8px 20px rgba(232,96,10,.28);transition:background .15s}
+      .lp-btn-primary{border:none;background:var(--ca);color:#fff;font-size:17px;box-shadow:0 8px 20px rgba(232,96,10,.28);transition:background .15s,transform .12s var(--ease-out)}
+      .lp-btn-secondary{transition:transform .12s var(--ease-out)}
       .lp-btn-primary:hover{background:var(--ca-dk)}
       .lp-btn-secondary{border:1.5px solid var(--cb);background:var(--cc);color:var(--ct);font-size:16px;font-weight:600}
       .lp-hero-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px;font-size:14px;color:var(--cl)}
@@ -1273,6 +1313,17 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-h2{margin:0;font-size:clamp(26px,3vw,40px);font-weight:800;color:var(--ct);letter-spacing:-.5px;line-height:1.15}
       .lp-karte{transition:transform .2s var(--ease-out),box-shadow .2s,border-color .2s}
       .lp-karte:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(30,58,95,.12);border-color:var(--ca)}
+      /* Sanftes Einblenden beim Scrollen (Nutzerwunsch 2026-09-30, Handy hatte keine
+         Effekte). Die Klassen setzt ein Effekt in Landing() erst per Skript - ohne
+         JS bleibt alles sichtbar. Nach dem Einblenden werden sie wieder entfernt,
+         damit Hover/Druck-Effekte der Karten ihre eigenen Zeiten behalten. */
+      .lp-rev{opacity:0;transform:translateY(14px);transition:opacity .5s var(--ease-out),transform .5s var(--ease-out);transition-delay:var(--rd,0ms)}
+      .lp-rev.lp-rev-in{opacity:1;transform:none}
+      /* Touch hat kein Hover: stattdessen ein kurzes Eindruecken beim Antippen. */
+      @media(hover:none){
+        .lp-karte:active,.lp-ki-karte:active{transform:scale(.985)}
+        .lp-btn-primary:active,.lp-btn-secondary:active{transform:scale(.98)}
+      }
       /* KI-Sektion: festes Schwarz (#111111) in beiden Themes, weisse
          Schrift traegt dort also immer. */
       .lp-ki{background-color:#111111;padding:clamp(48px,6vw,88px) 0;color:#fff}
@@ -1292,7 +1343,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-ki-more{margin-top:16px}
       @media(min-width:760px){.lp-ki-main{grid-template-columns:1fr 1fr}.lp-ki-more{grid-template-columns:1fr 1fr}}
       @media(min-width:1100px){.lp-ki-more{grid-template-columns:repeat(4,1fr)}}
-      .lp-ki-karte{padding:24px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
+      .lp-ki-karte{padding:24px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);display:flex;flex-direction:column;gap:10px;transition:border-color .2s,transform .15s var(--ease-out)}
       .lp-ki-karte:hover{border-color:rgba(232,96,10,.6)}
       .lp-ki-karte-gross{padding:28px;flex-direction:row;gap:20px;align-items:flex-start;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16)}
       .lp-ki-karte h3{margin:0;font-size:18px;font-weight:800;color:#fff}
@@ -1308,8 +1359,8 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-step-n{font-size:14px;font-weight:700;color:var(--ca-dk)}
       /* Dark Mode: --ca-dk (#c44d00) erreicht auf dunklen Karten nur ~3:1,
          dort traegt das hellere --ca (~5:1). */
-      html[data-theme="dark"] .lp-hero-badge,html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic{color:var(--ca)}
-      @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-hero-badge,.lp-step-n,.lp-step-ic){color:var(--ca)}}
+      html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic{color:var(--ca)}
+      @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-step-n,.lp-step-ic){color:var(--ca)}}
       /* Handy: fester "Kostenlos starten"-Balken unten, nur fuer nicht
          eingeloggte Besucher. Finns Knopf sitzt mit bottom:76px darueber. */
       .lp-sticky-cta{display:none}
@@ -1321,6 +1372,8 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       @media(prefers-reduced-motion:reduce){
         .lp-auf,.lp-stern{animation:none}
         .lp-karte:hover{transform:none}
+        .lp-rev{opacity:1;transform:none;transition:none}
+        .lp-karte:active,.lp-ki-karte:active,.lp-btn-primary:active,.lp-btn-secondary:active{transform:none}
       }
       .calc-hero-card{grid-template-columns:1fr!important}
       @media(min-width:640px){.calc-hero-card{grid-template-columns:1fr 1fr!important}}

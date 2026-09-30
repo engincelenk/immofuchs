@@ -10,7 +10,7 @@ import { LANGS } from "../../i18n/translations.js";
 // Praxis - rein visuelle Abkuerzung, kein Anspruch auf Praezision.
 export const FLAGS = { de: "🇩🇪", en: "🇬🇧", tr: "🇹🇷", zh: "🇨🇳", hi: "🇮🇳" };
 
-export function LangSel({ lang, setLang }) {
+export function LangSel({ lang, setLang, align = "right" }) {
   const [open, setOpen] = useState(false);
   const ref = useRef();
   const cur = LANGS.find((l) => l.v === lang) || LANGS[0];
@@ -55,7 +55,7 @@ export function LangSel({ lang, setLang }) {
           style={{
             position: "absolute",
             top: "calc(100% + 4px)",
-            right: 0,
+            ...(align === "left" ? { left: 0 } : { right: 0 }),
             background: "var(--cc)",
             border: "1px solid var(--cb)",
             borderRadius: 10,
