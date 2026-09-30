@@ -10,12 +10,13 @@ import { fmt, fmtP } from "../../utils/helpers.js";
 // `score` erwartet das Rueckgabeobjekt von investmentScore.js/berechneScore().
 // Ist `score.verfuegbar` false (Datengrundlage unter 60 % des Stufe-2-
 // Gewichts), zeigt die Komponente einen Platzhalter statt einer Zahl.
-// Kubische Ease-out-Naeherung von cubic-bezier(.4,0,.2,1) (derselben Kurve
-// und Dauer, die die Nadel per CSS-Transition faehrt) - die hochzaehlende
-// Zahl soll optisch mit der Nadelbewegung mithalten, nicht schneller fertig
-// sein.
+// Weiche Ease-out-Kurve fuer die hochzaehlende Zahl. Nadel (CSS-Transition) und Zahl
+// laufen gleich lang (ANIMATION_MS), damit die Zahl optisch mit der Nadel mithaelt.
+// 1,2 s wie die Score-Kachel der Objektseite (vorher 0,8 s - auf dem Handy kaum
+// wahrnehmbar, Nutzer 2026-09-30).
+const ANIMATION_MS = 1200;
 function easeOut(p) {
-  return 1 - Math.pow(1 - p, 3);
+  return 1 - Math.pow(1 - p, 2);
 }
 
 export function ScoreBlock({ score }) {
@@ -23,10 +24,32 @@ export function ScoreBlock({ score }) {
   const [ex, setEx] = useState(false);
   const [animated, setAnimated] = useState(false);
   const [displayScore, setDisplayScore] = useState(0);
+  // Die Animation startet erst, wenn der Tacho im Bild ist (einmalig). Vorher lief sie
+  // 80 ms nach dem Aufbau - auf dem Handy liegt das Ergebnis in einer ausgeblendeten
+  // Ansicht bzw. weit unten und war fertig, bevor man es sah (Nutzer 2026-09-30).
+  // Callback-Ref als State, damit auch ein spaeter erscheinender Block (Score wird erst
+  // verfuegbar) beobachtet wird. Ohne IntersectionObserver oder bei "Bewegung
+  // reduzieren" gilt er sofort als gesehen.
+  const [knoten, setKnoten] = useState(null);
   useEffect(() => {
-    const id = setTimeout(() => setAnimated(true), 80);
-    return () => clearTimeout(id);
-  }, [score?.score]);
+    if (animated || !knoten) return undefined;
+    const reduziert = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (typeof IntersectionObserver === "undefined" || reduziert) {
+      setAnimated(true);
+      return undefined;
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setAnimated(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.25 },
+    );
+    io.observe(knoten);
+    return () => io.disconnect();
+  }, [knoten, animated]);
 
   // Zahl zaehlt von 0 auf den Zielwert hoch, synchron zur 1,2s-Nadel-
   // Transition. prefers-reduced-motion: sofort auf den Endwert springen,
@@ -41,7 +64,7 @@ export function ScoreBlock({ score }) {
       return;
     }
     let frame;
-    const dauer = 800;
+    const dauer = ANIMATION_MS;
     const start = performance.now();
     const schritt = (jetzt) => {
       const p = Math.min((jetzt - start) / dauer, 1);
@@ -109,6 +132,7 @@ export function ScoreBlock({ score }) {
 
   return (
     <div
+      ref={setKnoten}
       style={{
         background: "var(--cc)",
         borderRadius: 16,
@@ -240,7 +264,7 @@ export function ScoreBlock({ score }) {
 
               <g
                 style={{
-                  transition: "transform .8s cubic-bezier(.4,0,.2,1)",
+                  transition: `transform ${ANIMATION_MS}ms cubic-bezier(.25,.8,.25,1)`,
                   transformOrigin: `${C}px ${C}px`,
                   transform: `rotate(${needleAngle}deg)`,
                   filter: "drop-shadow(0 2px 4px rgba(0,0,0,.45))",
