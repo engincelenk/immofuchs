@@ -1,3 +1,24 @@
+## 2026-09-30 (1.100.44) [FRONTEND]
+
+### Animationen starten, wenn man sie sieht; Objektseite oeffnet oben
+
+- Score-Balken, Hochzaehlen und Marktbalken starten erst beim ersten Sichtbarwerden
+  (IntersectionObserver, einmalig) statt beim Aufbau der Seite. Auf dem Handy liegt
+  der Markt-Block weit unten und war fertig animiert, bevor man ihn sah. Ohne
+  Beobachter oder bei "Bewegung reduzieren" erscheinen sie sofort.
+- ObjektDetail scrollt beim Oeffnen nach oben (vorher blieb die Scroll-Position der
+  Merkliste stehen, man landete mitten auf der Seite).
+
+## 2026-09-30 (1.100.43) [FRONTEND]
+
+### Nach dem Login: Objekt-Uebersicht statt Renditerechner, Scroll oben
+
+- Der Anmelde-Dialog der Landingpage rief nach erfolgreichem Passwort-Login
+  onStart("haupt") auf und fuehrte in den Renditerechner. Jetzt onStart("saved"):
+  Objekt-Uebersicht (Standardeinstieg seit A5). Google/Apple waren schon dort.
+- startApp scrollt zusaetzlich nach dem Rendern nach oben (wie goHome), damit die
+  neue Seite nicht am Seitenende stehen bleibt.
+
 ## 2026-09-30 (1.100.42) [FRONTEND]
 
 ### Diagnose: Testseite /motion-test.html (nur dev-Pruefung)

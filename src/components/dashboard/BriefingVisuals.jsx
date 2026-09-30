@@ -233,7 +233,36 @@ function bewegungReduziert() {
   return typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 }
 
-function useHochzaehlen(ziel, dauer = 600) {
+// Animationen laufen erst, wenn das Element zum ersten Mal im Bild ist. Vorher
+// starteten sie beim Aufbau der Seite: auf dem Handy liegt der Markt-Block weit
+// unter dem Kostenkasten, und die Objektseite konnte mitten auf der Seite
+// aufgehen - die Animation war vorbei, bevor man das Element sah (Nutzer-
+// Rueckmeldung 2026-09-30). Ohne IntersectionObserver oder bei "Bewegung
+// reduzieren" gilt das Element sofort als gesehen.
+function useErstSichtbar() {
+  const ref = useRef(null);
+  const sofort = typeof IntersectionObserver === "undefined" || bewegungReduziert();
+  const [gesehen, setGesehen] = useState(sofort);
+  useEffect(() => {
+    if (gesehen) return undefined;
+    const el = ref.current;
+    if (!el) return undefined;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setGesehen(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [gesehen]);
+  return [ref, gesehen];
+}
+
+function useHochzaehlen(ziel, dauer = 600, aktiv = true) {
   const sofort = typeof window === "undefined" || bewegungReduziert();
   const [wert, setWert] = useState(sofort ? ziel : 0);
   const aktuell = useRef(sofort ? ziel : 0);
@@ -243,6 +272,7 @@ function useHochzaehlen(ziel, dauer = 600) {
       setWert(ziel);
       return undefined;
     }
+    if (!aktiv) return undefined;
     const start = aktuell.current;
     const t0 = performance.now();
     let raf;
@@ -255,14 +285,15 @@ function useHochzaehlen(ziel, dauer = 600) {
     };
     raf = requestAnimationFrame(schritt);
     return () => cancelAnimationFrame(raf);
-  }, [ziel, dauer]);
+  }, [ziel, dauer, aktiv]);
   return wert;
 }
 
 function KennzahlKachel({ k, t }) {
   const negativ = k.key === "cashflow" && k.wert < 0;
   const istScore = k.key === "score";
-  const scoreAnzeige = useHochzaehlen(istScore ? k.wert : 0);
+  const [scoreRef, scoreGesehen] = useErstSichtbar();
+  const scoreAnzeige = useHochzaehlen(istScore ? k.wert : 0, 600, scoreGesehen);
   // Kaufpreisfaktor-Kachel liefert nur `markt` (kein `abw`, siehe
   // briefingKernkennzahlen() in briefing.js) - die Abweichung wird hier aus
   // wert/markt nachgerechnet, dieselbe Formel wie briefing.js `abweichung()`.
@@ -312,15 +343,16 @@ function KennzahlKachel({ k, t }) {
         )}
       </div>
       {istScore && (
-        <div style={{ height: 5, borderRadius: 3, background: "var(--cro)", marginTop: 6 }}>
+        <div ref={scoreRef} style={{ height: 5, borderRadius: 3, background: "var(--cro)", marginTop: 6 }}>
           <div
-            className="bv-wachsen"
+            className={scoreGesehen ? "bv-wachsen" : undefined}
             style={{
               width: `${Math.max(0, Math.min(100, k.wert))}%`,
               height: 5,
               borderRadius: 3,
               background: "var(--ca)",
               transformOrigin: "left center",
+              transform: scoreGesehen ? undefined : "scaleX(0)",
             }}
           />
         </div>
@@ -774,13 +806,21 @@ function MarktZeile({ titel, v, formatWert, einheitLabel, extra, letzte, t }) {
 }
 
 function BalkenZeile({ label, wert, breite, farbe, betont }) {
+  const [spurRef, gesehen] = useErstSichtbar();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{ width: 42, flexShrink: 0, fontSize: 12, color: "var(--ch)", fontWeight: 600 }}>{label}</span>
-      <div style={{ flexGrow: 1, height: 8, borderRadius: 4, background: "var(--cro)" }}>
+      <div ref={spurRef} style={{ flexGrow: 1, height: 8, borderRadius: 4, background: "var(--cro)" }}>
         <div
-          className="bv-wachsen"
-          style={{ width: `${breite}%`, height: 8, borderRadius: 4, background: farbe, transformOrigin: "left center" }}
+          className={gesehen ? "bv-wachsen" : undefined}
+          style={{
+            width: `${breite}%`,
+            height: 8,
+            borderRadius: 4,
+            background: farbe,
+            transformOrigin: "left center",
+            transform: gesehen ? undefined : "scaleX(0)",
+          }}
         />
       </div>
       <span

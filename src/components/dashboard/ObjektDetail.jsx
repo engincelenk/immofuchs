@@ -65,6 +65,12 @@ export function ObjektDetail({ objekt, onBack }) {
   const account = useAccountCtx();
   const locale = lang === "de" ? "de-DE" : "de-DE";
   const [bearbeiten, setBearbeiten] = useState(false);
+  // Beim Oeffnen eines Objekts nach oben: die Merkliste-Seite war oft gescrollt, die
+  // Objektseite ersetzt sie nur, die Scroll-Position blieb stehen und man landete
+  // mitten auf der Seite (Nutzer-Rueckmeldung 2026-09-30, Handy).
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [objekt?.id]);
   // AI-Engine: welches Produkt gerade laeuft, und ob der letzte Aufruf
   // gescheitert ist. Der fruehere "volltext"-State (welches Sheet offen ist)
   // ist mit dem UX-Review 2026-09-09 entfallen - Grundlage & Quellen klappen
