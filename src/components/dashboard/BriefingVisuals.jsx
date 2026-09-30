@@ -239,10 +239,62 @@ function bewegungReduziert() {
 // aufgehen - die Animation war vorbei, bevor man das Element sah (Nutzer-
 // Rueckmeldung 2026-09-30). Ohne IntersectionObserver oder bei "Bewegung
 // reduzieren" gilt das Element sofort als gesehen.
-function useErstSichtbar() {
+// ── DIAGNOSE (temporaer, nur mit ?diag=1 in der Adresse) ──────────────────────
+// Haelt fest, wann welche Animation-Stufe auf dem Geraet laeuft (Nutzer-Rueckmeldung
+// 2026-09-30: auf dem iPhone sind die Effekte der Objektseite nicht zu sehen).
+// Wird nach der Fehlersuche entfernt.
+const DIAG_AN = typeof window !== "undefined" && /[?&]diag=1/.test(window.location.search);
+function diagLog(name) {
+  if (!DIAG_AN) return;
+  (window.__ifDiag = window.__ifDiag || []).push([
+    name,
+    Math.round(performance.now()),
+    document.visibilityState,
+    Math.round(window.scrollY),
+  ]);
+}
+
+export function DiagZeile() {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 700);
+    return () => clearInterval(id);
+  }, []);
+  if (!DIAG_AN) return null;
+  const skripte = Array.from(document.scripts)
+    .map((s) => s.src)
+    .filter((x) => /index-/.test(x))
+    .map((x) => x.split("/").pop());
+  const zeilen = (window.__ifDiag || []).map((e) => `${e[1]}ms  ${e[0]}  [${e[2]}, scrollY ${e[3]}]`);
+  return (
+    <pre
+      style={{
+        whiteSpace: "pre-wrap",
+        fontSize: 11,
+        lineHeight: 1.4,
+        background: "var(--ci)",
+        border: "1px solid var(--cb)",
+        borderRadius: 8,
+        padding: 8,
+        margin: "0 0 10px",
+        color: "var(--ct)",
+      }}
+    >
+      {`DIAG Paket: ${skripte.join(", ") || "?"}
+Bewegung reduziert: ${bewegungReduziert() ? "JA" : "nein"} · IntersectionObserver: ${typeof IntersectionObserver !== "undefined" ? "ja" : "NEIN"}
+Breite: ${window.innerWidth} · jetzt: ${Math.round(performance.now())}ms
+${zeilen.join("\n") || "(noch keine Ereignisse)"}`}
+    </pre>
+  );
+}
+
+function useErstSichtbar(name = "?") {
   const ref = useRef(null);
   const sofort = typeof IntersectionObserver === "undefined" || bewegungReduziert();
   const [gesehen, setGesehen] = useState(sofort);
+  useEffect(() => {
+    diagLog(`aufgebaut:${name}${sofort ? " (sofort gesehen)" : ""}`);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (gesehen) return undefined;
     const el = ref.current;
@@ -250,6 +302,7 @@ function useErstSichtbar() {
     const io = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) {
+          diagLog(`sichtbar:${name}`);
           setGesehen(true);
           io.disconnect();
         }
@@ -258,7 +311,7 @@ function useErstSichtbar() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [gesehen]);
+  }, [gesehen, name]);
   return [ref, gesehen];
 }
 
@@ -273,6 +326,7 @@ function useHochzaehlen(ziel, dauer = 600, aktiv = true) {
       return undefined;
     }
     if (!aktiv) return undefined;
+    diagLog("zaehlen-start");
     const start = aktuell.current;
     const t0 = performance.now();
     let raf;
@@ -282,6 +336,7 @@ function useHochzaehlen(ziel, dauer = 600, aktiv = true) {
       aktuell.current = start + (ziel - start) * eased;
       setWert(aktuell.current);
       if (f < 1) raf = requestAnimationFrame(schritt);
+      else diagLog("zaehlen-ende");
     };
     raf = requestAnimationFrame(schritt);
     return () => cancelAnimationFrame(raf);
@@ -292,7 +347,7 @@ function useHochzaehlen(ziel, dauer = 600, aktiv = true) {
 function KennzahlKachel({ k, t }) {
   const negativ = k.key === "cashflow" && k.wert < 0;
   const istScore = k.key === "score";
-  const [scoreRef, scoreGesehen] = useErstSichtbar();
+  const [scoreRef, scoreGesehen] = useErstSichtbar("score");
   const scoreAnzeige = useHochzaehlen(istScore ? k.wert : 0, 600, scoreGesehen);
   // Kaufpreisfaktor-Kachel liefert nur `markt` (kein `abw`, siehe
   // briefingKernkennzahlen() in briefing.js) - die Abweichung wird hier aus
@@ -806,7 +861,7 @@ function MarktZeile({ titel, v, formatWert, einheitLabel, extra, letzte, t }) {
 }
 
 function BalkenZeile({ label, wert, breite, farbe, betont }) {
-  const [spurRef, gesehen] = useErstSichtbar();
+  const [spurRef, gesehen] = useErstSichtbar(`balken:${label}`);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{ width: 42, flexShrink: 0, fontSize: 12, color: "var(--ch)", fontWeight: 600 }}>{label}</span>

@@ -32,6 +32,7 @@ import { tpl } from "../../utils/helpers.js";
 import {
   AntwortsatzKopf,
   CockpitStyle,
+  DiagZeile,
   EingabeHinweis,
   KennzahlenLeiste,
   LageKombiKarte,
@@ -191,6 +192,7 @@ export function InvestmentBriefing({
         </div>
       )}
 
+      <DiagZeile />
       <AntwortsatzKopf einschaetzung={einschaetzung} t={t} />
       <KennzahlenLeiste score={score} kennzahlen={briefing.kernkennzahlen} t={t} />
       <SchrittNav t={t} />
