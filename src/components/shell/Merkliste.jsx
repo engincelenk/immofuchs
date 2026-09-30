@@ -10,6 +10,7 @@ import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { ASSISTANT_FIELDS, tabZuRechner } from "../../utils/assistantContext.js";
+import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { apiFetch } from "../../utils/apiBase.js";
 import { Sheet } from "../ui/Sheet.jsx";
 import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
@@ -823,6 +824,26 @@ export function Merkliste() {
   const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
   const acct = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const [confirmDel, setConfirmDel] = useState(null);
+  // Hinweis "hier landen Objekte UND Rechner-Berechnungen": wegklickbar, damit er
+  // Stammnutzer nicht dauerhaft stoert. Bei leerer Liste bleibt er immer stehen -
+  // dort erklaert er, was die Seite ueberhaupt ist. Der Reiter "Rechner-
+  // Ergebnisse" erscheint erst nach dem ersten gespeicherten Ergebnis.
+  const HINWEIS_KEY = "if_merkliste_hinweis_zu";
+  const [hinweisZu, setHinweisZu] = useState(() => {
+    try {
+      return localStorage.getItem(HINWEIS_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const schliesseHinweis = () => {
+    setHinweisZu(true);
+    try {
+      localStorage.setItem(HINWEIS_KEY, "1");
+    } catch {
+      /* Storage blockiert - Hinweis bleibt bis zum Neuladen zu */
+    }
+  };
   const [showUpgrade, setShowUpgrade] = useState(false);
   // Zusammengefuehrter Tab (Konzept-Dok Abschnitt 8.5a, 2026-08): ersetzt die
   // vormals getrennten Tabs "Merkliste" (Free+Pro, manuell gespeichert) sowie
@@ -953,6 +974,35 @@ export function Merkliste() {
     return { name: o.name, tab: rechner, felder };
   });
   const compareRechner = tabZuRechner(compareObjs[0]?.letzteAnsicht);
+
+  // Finn fuer die Objekt-Uebersicht: bis zu 5 Objekte mit den besten Scores gehen
+  // als vergleichsObjekte mit (Limit im Worker), OHNE Titel/Adresse - die Namen
+  // sind neutral durchnummeriert. Nur Zahlen: Eingaben wie im Renditerechner plus
+  // Score und die fertig gerechneten Kennzahlen.
+  const finnObjekte = useMemo(
+    () =>
+      savedList
+        .filter((o) => o.kennzahlen?.art !== "rechnerErgebnis" && o.data)
+        .slice()
+        .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+        .slice(0, 5)
+        .map((o, i) => {
+          const k = berechneObjektKennzahlen(o.data);
+          const eingaben = Object.fromEntries((ASSISTANT_FIELDS.objekt ?? []).map((f) => [f, o.data[f]]));
+          return {
+            name: `Objekt ${i + 1}`,
+            tab: "objekt",
+            felder: {
+              ...eingaben,
+              score: k.score,
+              cashflowProMonat: k.cashflowMon,
+              nettoRendite: k.nettoRendite,
+              kaufpreisfaktor: k.faktor,
+            },
+          };
+        }),
+    [savedList],
+  );
 
   // Gibt es ueberhaupt Rechner-Ergebnisse, zeigt sich der Reiter erst dann -
   // sonst ein Umschalter, der auf einer leeren Seite landet.
@@ -1235,6 +1285,32 @@ export function Merkliste() {
         </button>
         {anlegenSheet}
         {exposeSheet}
+      <AssistantGate
+        active={true}
+        rechner="objekte"
+        buildKontext={() => ({
+          anzahlGespeichert: savedList.length,
+          proNutzer: !!isProSavedObjects,
+          gratisLimit: savedObjectsFreeLimit,
+        })}
+        contextLabel={at.contextObjekte}
+        suggested={[
+          at.objekteSuggested1,
+          at.objekteSuggested2,
+          at.objekteSuggested3,
+          at.objekteSuggested4,
+          at.objekteSuggested5,
+          at.objekteSuggested6,
+          at.objekteSuggested7,
+          at.objekteSuggested8,
+          at.objekteSuggested9,
+          at.objekteSuggested10,
+          at.objekteSuggested11,
+          at.objekteSuggested12,
+        ]}
+        lang={lang}
+        vergleichsObjekte={finnObjekte}
+      />
       </div>
     );
   return (
@@ -1278,6 +1354,47 @@ export function Merkliste() {
             Durchspielen — und darunter alle Zahlen im Detail. Die Rechner bleiben
             als Schnellrechnen daneben erhalten.
           </div>
+        </div>
+      )}
+      {(!hinweisZu || savedList.length === 0) && (
+        <div
+          role="note"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            background: "var(--info-bg)",
+            border: "1px solid var(--info-bd)",
+            color: "var(--info-tx)",
+            borderRadius: 10,
+            padding: "10px 12px",
+            marginBottom: 14,
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          <span style={{ flex: 1 }}>{t.merklisteHinweis}</span>
+          {savedList.length > 0 && (
+            <button
+              type="button"
+              onClick={schliesseHinweis}
+              aria-label={t.merklisteHinweisZu}
+              style={{
+                flexShrink: 0,
+                width: 44,
+                height: 44,
+                margin: "-12px -12px -12px 0",
+                border: "none",
+                background: "transparent",
+                color: "inherit",
+                fontSize: 18,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          )}
         </div>
       )}
       <button
@@ -1964,7 +2081,14 @@ export function Merkliste() {
         kontext={{}}
         vergleichsObjekte={vergleichsObjekte}
         contextLabel={at.contextVergleich}
-        suggested={[at.vglSuggested1, at.vglSuggested2]}
+        suggested={[
+          at.vglSuggested1,
+          at.vglSuggested2,
+          at.vglSuggested3,
+          at.vglSuggested4,
+          at.vglSuggested5,
+          at.vglSuggested6,
+        ]}
         lang={lang}
         t={at}
         autoAskQuestion={compareAutoAsk ? at.vglSuggested1 : null}

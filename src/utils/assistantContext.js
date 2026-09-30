@@ -53,6 +53,9 @@ export const ASSISTANT_FIELDS = {
   // Adresse/Ort - die Kennzahlen (Score, Cashflow, Marktabweichung) kommen
   // fertig gerechnet aus briefing.js.
   objekt: ["kaufpreis", "flaeche", "kaltmiete", "eigenkapital", "zinssatz", "tilgung", "jahre"],
+  // Objekt-Uebersicht (Merkliste): die Objekte selbst gehen als
+  // vergleichsObjekte mit (max. 5, ohne Namen/Adresse), hier keine Felder.
+  objekte: [],
   finanzierung: ["kaufpreis", "eigenkapital", "zinssatz", "tilgung", "zinsbindung"],
   miete: ["vergleichsmiete", "letzteErhDatum", "letzteErhMiete", "mietJahre"],
   sanierung: ["baujahr", "sanFl", "sanHt", "sanHa", "sanPe", "sanIsfp"],

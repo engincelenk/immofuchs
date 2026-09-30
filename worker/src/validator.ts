@@ -16,6 +16,7 @@ export const RECHNER_VALUES: ReadonlySet<Rechner> = new Set([
   "steuertrick",
   "vorfaelligkeit",
   "objekt",
+  "objekte",
 ]);
 
 const LANG_VALUES: ReadonlySet<Lang> = new Set(["de", "en", "tr", "zh", "hi"]);

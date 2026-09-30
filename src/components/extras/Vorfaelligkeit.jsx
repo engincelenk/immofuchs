@@ -744,7 +744,14 @@ export function Vorfaelligkeit() {
       Eingabe-Ansicht komplett (Nutzer-Feedback 2026-07-22). */}
       {(() => {
         const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
-        const suggested = [at.vfeSuggested1, at.vfeSuggested2, at.vfeSuggested3];
+        const suggested = [
+          at.vfeSuggested1,
+          at.vfeSuggested2,
+          at.vfeSuggested3,
+          at.vfeSuggested4,
+          at.vfeSuggested5,
+          at.vfeSuggested6,
+        ];
         return (
           <AssistantGate
             active={!!R}

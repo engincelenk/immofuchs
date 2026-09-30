@@ -472,7 +472,14 @@ export function SteuerTrick() {
               kennt - waere eine eigene Erweiterung, kein reiner Lesezugriff. */}
               {(() => {
                 const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
-                const suggested = [at.steuerSuggested1, at.steuerSuggested2, at.steuerSuggested3];
+                const suggested = [
+                  at.steuerSuggested1,
+                  at.steuerSuggested2,
+                  at.steuerSuggested3,
+                  at.steuerSuggested4,
+                  at.steuerSuggested5,
+                  at.steuerSuggested6,
+                ];
                 return (
                   <AssistantGate
                     active={true}

@@ -24,6 +24,7 @@ export function AssistantWidget({
   disabled,
   signale,
   fabBottom,
+  vergleichsObjekte,
 }) {
   const t = ASSISTANT_T[lang] || ASSISTANT_T.de;
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -50,6 +51,7 @@ export function AssistantWidget({
         suggested={suggested}
         lang={lang}
         t={t}
+        vergleichsObjekte={vergleichsObjekte}
       />
     </>
   );

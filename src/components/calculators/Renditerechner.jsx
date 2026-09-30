@@ -1988,6 +1988,8 @@ export default function Haupt() {
           at.suggested13,
           at.suggested14,
           at.suggested15,
+          at.suggested16,
+          at.suggested17,
         ];
         // Signale fuer die Sprechblase: Ampel, Monats-Cashflow und
         // Risikoscore sind hier ohnehin schon berechnet (siehe finnHints.js).

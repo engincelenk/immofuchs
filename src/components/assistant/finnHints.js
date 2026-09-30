@@ -10,6 +10,7 @@ const FLAECHEN_TEXTE = {
   landing: ["hintLanding1", "hintLanding2", "hintLanding3"],
   renditerechner: ["hintRendite1", "hintRendite2", "hintRendite3"],
   objekt: ["hintObjekt1", "hintObjekt2", "hintObjekt3"],
+  objekte: ["hintObjekte1", "hintObjekte2", "hintObjekte3"],
   finanzierung: ["hintKredit1", "hintKredit2", "hintKredit3"],
   miete: ["hintMiete1", "hintMiete2", "hintMiete3"],
   sanierung: ["hintSanier1", "hintSanier2", "hintSanier3"],
