@@ -1326,15 +1326,15 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         .lp-karte:active,.lp-ki-karte:active{transform:scale(.985)}
         .lp-btn-primary:active,.lp-btn-secondary:active{transform:scale(.98)}
       }
-      /* KI-Sektion: festes Schwarz (#111111) in beiden Themes, weisse
-         Schrift traegt dort also immer. */
-      .lp-ki{background-color:#111111;padding:clamp(48px,6vw,88px) 0;color:#fff}
+      /* KI-Sektion folgt dem Theme (Nutzer 2026-09-30, vorher festes Schwarz): leicht
+         abgesetzter Streifen (--cro) mit Karten wie die uebrigen Bereiche. */
+      .lp-ki{background-color:var(--cro);padding:clamp(48px,6vw,88px) 0;color:var(--ct)}
       .lp-ki-top{display:grid;grid-template-columns:1fr;gap:32px;align-items:center;margin-bottom:36px}
       @media(min-width:900px){.lp-ki-top{grid-template-columns:1fr 1fr;gap:56px}}
-      .lp-ki-eyebrow{display:flex;align-items:center;gap:6px;margin-bottom:14px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff}
+      .lp-ki-eyebrow{display:flex;align-items:center;gap:6px;margin-bottom:14px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ct)}
       .lp-ki-eyebrow svg{color:var(--ca)}
-      .lp-ki-h2{margin:0 0 14px;font-size:clamp(28px,3.4vw,46px);font-weight:800;letter-spacing:-.8px;line-height:1.1;color:#fff}
-      .lp-ki-lead{margin:0;max-width:560px;font-size:clamp(16px,1.4vw,18px);line-height:1.6;color:rgba(255,255,255,.86)}
+      .lp-ki-h2{margin:0 0 14px;font-size:clamp(28px,3.4vw,46px);font-weight:800;letter-spacing:-.8px;line-height:1.1;color:var(--ct)}
+      .lp-ki-lead{margin:0;max-width:560px;font-size:clamp(16px,1.4vw,18px);line-height:1.6;color:var(--cl)}
       .lp-ki-maskottchen{display:none}
       @media(min-width:900px){.lp-ki-maskottchen{display:flex;justify-content:center;align-items:center}}
       /* Finn als Oberkörper (2026-09-29, ersetzt den Kopf) ohne Kreis-Zuschnitt
@@ -1345,14 +1345,14 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-ki-more{margin-top:16px}
       @media(min-width:760px){.lp-ki-main{grid-template-columns:1fr 1fr}.lp-ki-more{grid-template-columns:1fr 1fr}}
       @media(min-width:1100px){.lp-ki-more{grid-template-columns:repeat(4,1fr)}}
-      .lp-ki-karte{padding:24px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);display:flex;flex-direction:column;gap:10px;transition:border-color .2s,transform .15s var(--ease-out)}
+      .lp-ki-karte{padding:24px;border-radius:12px;background:var(--cc);border:1px solid var(--cb);display:flex;flex-direction:column;gap:10px;transition:border-color .2s,transform .15s var(--ease-out)}
       .lp-ki-karte:hover{border-color:rgba(232,96,10,.6)}
-      .lp-ki-karte-gross{padding:28px;flex-direction:row;gap:20px;align-items:flex-start;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16)}
-      .lp-ki-karte h3{margin:0;font-size:18px;font-weight:800;color:#fff}
+      .lp-ki-karte-gross{padding:28px;flex-direction:row;gap:20px;align-items:flex-start}
+      .lp-ki-karte h3{margin:0;font-size:18px;font-weight:800;color:var(--ct)}
       .lp-ki-karte-gross h3{font-size:22px;margin-bottom:8px}
-      .lp-ki-karte p{margin:0;font-size:15px;line-height:1.55;color:rgba(255,255,255,.86)}
+      .lp-ki-karte p{margin:0;font-size:15px;line-height:1.55;color:var(--cl)}
       .lp-ki-karte-gross p{font-size:16px}
-      .lp-ki-ic{width:46px;height:46px;flex-shrink:0;border-radius:12px;border:1px solid rgba(255,255,255,.28);display:inline-flex;align-items:center;justify-content:center;color:#fff}
+      .lp-ki-ic{width:46px;height:46px;flex-shrink:0;border-radius:12px;border:1px solid var(--cb);background:var(--ca-bg);display:inline-flex;align-items:center;justify-content:center;color:var(--ca-dk)}
       .lp-ki-ic-gross{width:56px;height:56px}
       .lp-step{padding:26px;border:1px solid var(--cb);border-radius:12px;background:var(--cc)}
       .lp-step h3{margin:0 0 6px;font-size:19px;font-weight:800;color:var(--ct);letter-spacing:-.2px}
@@ -1361,8 +1361,8 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-step-n{font-size:14px;font-weight:700;color:var(--ca-dk)}
       /* Dark Mode: --ca-dk (#c44d00) erreicht auf dunklen Karten nur ~3:1,
          dort traegt das hellere --ca (~5:1). */
-      html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic{color:var(--ca)}
-      @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-step-n,.lp-step-ic){color:var(--ca)}}
+      html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic,html[data-theme="dark"] .lp-ki-ic{color:var(--ca)}
+      @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-step-n,.lp-step-ic,.lp-ki-ic){color:var(--ca)}}
       /* Handy: fester "Kostenlos starten"-Balken unten, nur fuer nicht
          eingeloggte Besucher. Finns Knopf sitzt mit bottom:76px darueber. */
       .lp-sticky-cta{display:none}
