@@ -68,7 +68,7 @@ const searchChipActiveStyle = {
 // Der aktive Reiter ist nicht nur farblich markiert (WCAG 1.4.1), sondern auch
 // ueber Unterstrich und Fettung.
 const reiterStyle = {
-  flex: 1,
+  flex: "0 0 auto",
   height: 44,
   padding: "0 4px",
   // Durchgaengig dieselbe Eigenschaftsebene: React warnt, sobald eine Kurzform
@@ -907,24 +907,6 @@ export function Merkliste() {
   // KPIs), dass sie getrennte Reiter brauchen statt gemeinsam durcheinander
   // zu stehen.
   const [listArt, setListArt] = useState("objekte");
-  // Phase D: einmaliger Willkommenshinweis. Die Analyse-Vorlage macht das als
-  // persoenlichen Brief - das schafft Vertrauen bei einer App, in die man
-  // Geldzahlen eintippt. Bewusst schliessbar und nur einmal.
-  const [willkommenWeg, setWillkommenWeg] = useState(() => {
-    try {
-      return localStorage.getItem("if_willkommen_v1") === "1";
-    } catch {
-      return true;
-    }
-  });
-  const willkommenSchliessen = () => {
-    setWillkommenWeg(true);
-    try {
-      localStorage.setItem("if_willkommen_v1", "1");
-    } catch {
-      /* Storage blockiert - Hinweis erscheint dann erneut, kein Blocker */
-    }
-  };
   const [query, setQuery] = useState("");
   const [onlyGut, setOnlyGut] = useState(false);
   // Voreinstellung Ampel (objektseite-neu.md §8): die Frage "welches zuerst
@@ -1050,18 +1032,28 @@ export function Merkliste() {
     if (hasScores && sortByScore) list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
     return list;
   }, [listeVorArt, query, onlyGut, sortByScore, hasScores]);
-  // Der Zaehler zeigte bisher immer savedList.length - also ALLE Eintraege,
-  // auch die des anderen Reiters ("5 Objekte gespeichert" bei 3 sichtbaren
-  // Karten). Jetzt wird getrennt: waehrend gefiltert wird die Trefferzahl,
-  // sonst das Kontingent (das gilt weiterhin ueber beide Arten zusammen).
+  // Zaehler je Reiter ("1 Objekt" gehoert zum Reiter Objekte). Das Kontingent
+  // (Gratis-Limit gilt ueber Objekte UND Rechner-Ergebnisse zusammen) steht
+  // getrennt und beschriftet - vorher las sich "2 Objekte gespeichert" neben
+  // dem Reiter "Objekte (1)" wie ein Widerspruch.
   const wirdGefiltert = query.trim() !== "" || (hasScores && onlyGut);
+  const nSichtbar = listeVorArt.length;
+  const artLabel =
+    listArt === "rechner"
+      ? nSichtbar === 1
+        ? t.merklisteZaehlerErgebnis || "Rechner-Ergebnis"
+        : t.merklisteZaehlerErgebnisse || "Rechner-Ergebnisse"
+      : nSichtbar === 1
+        ? t.merklisteZaehlerObjekt || "Objekt"
+        : t.merklisteZaehlerObjekte || "Objekte";
   const zaehlerText = wirdGefiltert
-    ? `${filtered.length} von ${listeVorArt.length}`
-    : `${savedList.length}${!isProSavedObjects ? `/${savedObjectsFreeLimit}` : ""} ${
-        savedList.length === 1
-          ? t.countSingular || "Objekt gespeichert"
-          : t.countPlural || "Objekte gespeichert"
-      }`;
+    ? (t.merklisteTrefferVon || "{n} von {m}").replace("{n}", filtered.length).replace("{m}", nSichtbar)
+    : `${nSichtbar} ${artLabel}`;
+  const kontingentText = !isProSavedObjects
+    ? (t.merklistePlaetze || "{n} von {max} Plätzen belegt")
+        .replace("{n}", savedList.length)
+        .replace("{max}", savedObjectsFreeLimit)
+    : null;
   // Die Orte-Ansicht bleibt als Wunsch gespeichert, greift aber nur auf dem
   // Objekte-Reiter - Rechner-Ergebnisse haben keinen Ort zum Gruppieren.
   const ansichtEffektiv = listArt === "rechner" ? "liste" : ansicht;
@@ -1315,47 +1307,6 @@ export function Merkliste() {
     );
   return (
     <div className="objekt-liste">
-      {!willkommenWeg && (
-        <div
-          style={{
-            background: "var(--ci)",
-            border: "1px solid var(--cb)",
-            borderRadius: 12,
-            padding: "14px 16px",
-            marginBottom: 14,
-            position: "relative",
-          }}
-        >
-          <button
-            type="button"
-            onClick={willkommenSchliessen}
-            aria-label="Hinweis schließen"
-            style={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              width: 30,
-              height: 30,
-              border: "none",
-              background: "none",
-              color: "var(--ch)",
-              fontSize: 17,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            ✕
-          </button>
-          <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 6, paddingRight: 28 }}>
-            Deine Objekte an einem Ort
-          </div>
-          <div style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.55 }}>
-            Jedes Objekt zeigt dir zuerst eine Einschätzung, dann die Regler zum
-            Durchspielen — und darunter alle Zahlen im Detail. Die Rechner bleiben
-            als Schnellrechnen daneben erhalten.
-          </div>
-        </div>
-      )}
       {(!hinweisZu || savedList.length === 0) && (
         <div
           role="note"
@@ -1397,57 +1348,64 @@ export function Merkliste() {
           )}
         </div>
       )}
-      <button
-        type="button"
-        onClick={() => setAnlegenOffen(true)}
+      {/* Kopfzeile (Nutzer-Vorgabe 2026-09-30): Reiter inhaltsbreit links, "Objekt
+          anlegen" als kompakter Knopf rechts statt Vollbreiten-Banner. Die Reiter
+          erscheinen erst, sobald es mindestens ein Rechner-Ergebnis gibt - vorher
+          gaebe es einen Umschalter, der auf einer leeren Seite landet. */}
+      <div
         style={{
-          width: "100%",
-          height: 46,
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 8,
+          borderBottom: "1px solid var(--cb)",
           marginBottom: 14,
-          borderRadius: 10,
-          border: "1.5px dashed var(--ca)",
-          background: "transparent",
-          color: "var(--ca)",
-          fontSize: 15,
-          fontWeight: 700,
-          cursor: "pointer",
-          fontFamily: "inherit",
         }}
       >
-        + Objekt anlegen
-      </button>
-      {/* Zwei-Produkte-Reiter (Auftrag 2026-09-08): nur sichtbar, sobald es
-          mindestens ein Rechner-Ergebnis gibt - vorher gaebe es einen
-          Umschalter, der auf einer leeren Seite landet. */}
-      {hatRechnerErgebnisse && (
-        <div
-          role="tablist"
-          aria-label="Objektart"
+        {hatRechnerErgebnisse ? (
+          <div role="tablist" aria-label="Objektart" style={{ display: "flex", gap: 20 }}>
+            {[
+              ["objekte", "Objekte", anzahlObjekte],
+              ["rechner", "Rechner-Ergebnisse", anzahlRechner],
+            ].map(([id, label, anzahl]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={listArt === id}
+                tabIndex={listArt === id ? 0 : -1}
+                onClick={() => wechsleArt(id)}
+                style={listArt === id ? reiterActiveStyle : reiterStyle}
+              >
+                {label} ({anzahl})
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          onClick={() => setAnlegenOffen(true)}
           style={{
-            display: "flex",
-            gap: 20,
-            borderBottom: "1px solid var(--cb)",
-            marginBottom: 14,
+            height: 44,
+            padding: "0 18px",
+            marginBottom: 8,
+            marginLeft: "auto",
+            borderRadius: 10,
+            border: "none",
+            background: "var(--ca)",
+            color: "#fff",
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: "inherit",
           }}
         >
-          {[
-            ["objekte", "Objekte", anzahlObjekte],
-            ["rechner", "Rechner-Ergebnisse", anzahlRechner],
-          ].map(([id, label, anzahl]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={listArt === id}
-              tabIndex={listArt === id ? 0 : -1}
-              onClick={() => wechsleArt(id)}
-              style={listArt === id ? reiterActiveStyle : reiterStyle}
-            >
-              {label} ({anzahl})
-            </button>
-          ))}
-        </div>
-      )}
+          + Objekt anlegen
+        </button>
+      </div>
       <div
         style={{
           display: "flex",
@@ -1458,6 +1416,9 @@ export function Merkliste() {
         }}
       >
         <input
+          type="search"
+          name="q"
+          autoComplete="off"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={
@@ -1470,6 +1431,7 @@ export function Merkliste() {
             // auf dem Desktop dehnt es sich stattdessen und teilt sich die
             // Zeile mit Umschalter und Zaehler.
             flex: "1 1 260px",
+            maxWidth: 420,
             height: 44,
             padding: "0 12px",
             // 16px ist Projektregel (iOS zoomt sonst beim Fokus hinein).
@@ -1480,6 +1442,7 @@ export function Merkliste() {
             color: "var(--ct)",
             fontFamily: "inherit",
             boxSizing: "border-box",
+            appearance: "none",
           }}
         />
         {/* Die Orte-Gruppierung ergibt nur fuer Rendite-Objekte Sinn: Kredit-,
@@ -1518,33 +1481,41 @@ export function Merkliste() {
             ))}
           </div>
         )}
+        {hasScores && (
+          <>
+            <button
+              type="button"
+              onClick={() => setOnlyGut((v) => !v)}
+              aria-pressed={onlyGut}
+              style={onlyGut ? searchChipActiveStyle : searchChipStyle}
+            >
+              Score „Gut“
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortByScore((v) => !v)}
+              aria-pressed={sortByScore}
+              style={sortByScore ? searchChipActiveStyle : searchChipStyle}
+            >
+              Sortierung: {sortByScore ? "Score" : "Neueste"}
+            </button>
+          </>
+        )}
         <div
           aria-live="polite"
+          aria-atomic="true"
           style={{
             fontSize: 12.5,
             color: "var(--ch)",
             fontWeight: 500,
-            whiteSpace: "nowrap",
             marginLeft: "auto",
+            textAlign: "right",
           }}
         >
-          {zaehlerText}
+          <span style={{ whiteSpace: "nowrap" }}>{zaehlerText}</span>
+          {kontingentText && <span style={{ whiteSpace: "nowrap" }}> · {kontingentText}</span>}
         </div>
       </div>
-      {hasScores && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-          <button
-            onClick={() => setOnlyGut((v) => !v)}
-            aria-pressed={onlyGut}
-            style={onlyGut ? searchChipActiveStyle : searchChipStyle}
-          >
-            Score „Gut"
-          </button>
-          <button onClick={() => setSortByScore((v) => !v)} style={searchChipStyle}>
-            Sortierung: {sortByScore ? "Score" : "Neueste"}
-          </button>
-        </div>
-      )}
       {limitReached && (
         <button
           onClick={() => setShowUpgrade(true)}
@@ -1670,7 +1641,6 @@ export function Merkliste() {
               background: "var(--cc)",
               borderRadius: 12,
               padding: "16px",
-              marginBottom: 10,
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
               border: unvollstaendig ? "1px dashed var(--cb)" : undefined,
             }}

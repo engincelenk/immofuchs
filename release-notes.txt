@@ -1,3 +1,17 @@
+## 2026-09-30 (1.100.40) [FRONTEND]
+
+### Objekt-Uebersicht (Merkliste): kompaktere Kopfzeile, ein Hinweis, klarere Zaehler
+
+- Der alte graue Kasten "Deine Objekte an einem Ort" (fest deutsch, beschrieb die
+  Objektseite) entfaellt; der blaue Hinweis ist auf einen Satz gekuerzt (5 Sprachen).
+- Kopfzeile: Reiter inhaltsbreit links, "+ Objekt anlegen" als gefuellter Knopf
+  rechts statt Vollbreiten-Banner. Suchfeld max. 420 px (type=search), Filter-Chips
+  in der Werkzeugzeile, Sortierung mit aria-pressed.
+- Zaehler je Reiter ("1 Objekt"), Kontingent getrennt ("2 von 5 Plaetzen belegt",
+  nur Gratis). Vorher stand "2 Objekte gespeichert" neben "Objekte (1)".
+- Desktop: Inhaltsbreite der Liste max. 1200 px; kein doppelter Kartenabstand
+  (marginBottom entfernt); sichtbarer Fokus-Rahmen in der Liste.
+
 ## 2026-09-30 (1.100.39) [FRONTEND]
 
 ### Objektseite: Ueberschrift beruecksichtigt Preis und Score, nicht nur den Cashflow

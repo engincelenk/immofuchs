@@ -821,6 +821,7 @@ export default function App() {
          dadurch nicht. */
       .objekt-detail{padding:12px 14px 100px}
       .objekt-liste{padding:16px 16px 100px}
+      .objekt-liste button:focus-visible,.objekt-liste input:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
       .objekt-chips-wrap{position:relative;margin:0 -14px 12px}
       .objekt-chips{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;
         -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 14px 10px}
@@ -891,7 +892,7 @@ export default function App() {
            mehr als der Header. Der negative Rand der Chip-Leiste muss im
            selben Zug weg, sonst ragt sie 14px heraus. */
         .objekt-detail{padding:0 0 40px}
-        .objekt-liste{padding:0 0 40px}
+        .objekt-liste{padding:0 0 40px;max-width:1200px}
         .objekt-chips-wrap{margin:0 0 16px;position:sticky;top:86px;z-index:20;background:var(--bg)}
         /* Fuenf Chips brauchen rund 620px - in 1116px passen sie dreifach.
            Ein Scroll-Hinweis ohne Scroll-Bedarf ist reines Rauschen. */
