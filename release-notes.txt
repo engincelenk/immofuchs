@@ -1,3 +1,14 @@
+## 2026-09-30 (1.100.46) [FRONTEND]
+
+### Animationen spuerbarer (Handy und Desktop gleich), Diagnose entfernt
+
+- Die Diagnose auf dem iPhone (?diag=1) hat gezeigt: Die Animationen liefen, waren
+  aber zu kurz/steil (Zahl 0,6 s, Balken 0,5 s mit steiler Kurve) und fielen mit dem
+  Seitenwechsel zusammen. Jetzt: Score-Zahl zaehlt 1,2 s hoch (250 ms Verzoegerung,
+  weiche Kurve), Balken 0,9 s mit weicher Kurve, "Du"-Balken vor "Markt"-Balken.
+- Entfernt: DiagZeile/?diag=1 (BriefingVisuals, InvestmentBriefing) und die Testseite
+  public/motion-test.html.
+
 ## 2026-09-30 (1.100.45) [FRONTEND]
 
 ### Diagnose (temporaer): ?diag=1 zeigt auf der Objektseite den Animations-Ablauf

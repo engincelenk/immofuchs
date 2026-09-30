@@ -43,7 +43,7 @@ const COCKPIT_CSS = `
 @keyframes bv-wachsen{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes bv-punkt{from{opacity:0;transform:translate(-50%,-50%) scale(.4)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 .bv-auf{animation:bv-auf .32s var(--bv-ease) both;animation-delay:var(--bv-d,0ms)}
-.bv-wachsen{animation:bv-wachsen .5s var(--bv-ease) both;animation-delay:var(--bv-d,0ms)}
+.bv-wachsen{animation:bv-wachsen .9s cubic-bezier(0.25,0.8,0.25,1) both;animation-delay:var(--bv-d,0ms)}
 .bv-punkt{animation:bv-punkt .3s var(--bv-ease) both;animation-delay:var(--bv-d,500ms)}
 @media (prefers-reduced-motion: reduce){
   .bv-auf,.bv-wachsen,.bv-punkt{animation:bv-fade .2s ease both}
@@ -225,8 +225,10 @@ export function KennzahlenLeiste({ score, kennzahlen, t }) {
   );
 }
 
-// Zahl beim ersten Erscheinen von 0 auf den Zielwert hochzaehlen - gleiche Dauer
-// und Kurve wie der Score-Balken (bv-wachsen, .5s), damit beides zusammen laeuft.
+// Zahl beim ersten Erscheinen von 0 auf den Zielwert hochzaehlen. Dauer/Verzoegerung
+// (1,2 s / 250 ms) und die weiche Kurve passen zum Balken (bv-wachsen, .9 s).
+// Vorher 0,6 s mit steiler Kurve: auf dem Handy kaum wahrnehmbar (Nutzer 2026-09-30).
+const VERZOEGERUNG_SCORE = 250;
 // Bei "Bewegung reduzieren" und ohne Browser (SSR/Tests) steht der Wert sofort da.
 // Aendert sich der Zielwert spaeter, zaehlt die Zahl vom aktuellen Stand weiter.
 function bewegungReduziert() {
@@ -239,74 +241,10 @@ function bewegungReduziert() {
 // aufgehen - die Animation war vorbei, bevor man das Element sah (Nutzer-
 // Rueckmeldung 2026-09-30). Ohne IntersectionObserver oder bei "Bewegung
 // reduzieren" gilt das Element sofort als gesehen.
-// ── DIAGNOSE (temporaer, nur mit ?diag=1 in der Adresse) ──────────────────────
-// Haelt fest, wann welche Animation-Stufe auf dem Geraet laeuft (Nutzer-Rueckmeldung
-// 2026-09-30: auf dem iPhone sind die Effekte der Objektseite nicht zu sehen).
-// Wird nach der Fehlersuche entfernt.
-// Der Schalter bleibt im Browser gespeichert (localStorage), damit er einen Neuladen
-// nach Login oder Logo-Klick uebersteht. Ausschalten: ?diag=0 in der Adresse.
-const DIAG_AN = (() => {
-  if (typeof window === "undefined") return false;
-  const q = window.location.search;
-  try {
-    if (/[?&]diag=1/.test(q)) localStorage.setItem("if_diag", "1");
-    if (/[?&]diag=0/.test(q)) localStorage.removeItem("if_diag");
-    return localStorage.getItem("if_diag") === "1";
-  } catch {
-    return /[?&]diag=1/.test(q);
-  }
-})();
-function diagLog(name) {
-  if (!DIAG_AN) return;
-  (window.__ifDiag = window.__ifDiag || []).push([
-    name,
-    Math.round(performance.now()),
-    document.visibilityState,
-    Math.round(window.scrollY),
-  ]);
-}
-
-export function DiagZeile() {
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => tick((n) => n + 1), 700);
-    return () => clearInterval(id);
-  }, []);
-  if (!DIAG_AN) return null;
-  const skripte = Array.from(document.scripts)
-    .map((s) => s.src)
-    .filter((x) => /index-/.test(x))
-    .map((x) => x.split("/").pop());
-  const zeilen = (window.__ifDiag || []).map((e) => `${e[1]}ms  ${e[0]}  [${e[2]}, scrollY ${e[3]}]`);
-  return (
-    <pre
-      style={{
-        whiteSpace: "pre-wrap",
-        fontSize: 11,
-        lineHeight: 1.4,
-        background: "var(--ci)",
-        border: "1px solid var(--cb)",
-        borderRadius: 8,
-        padding: 8,
-        margin: "0 0 10px",
-        color: "var(--ct)",
-      }}
-    >
-      {`DIAG Paket: ${skripte.join(", ") || "?"}
-Bewegung reduziert: ${bewegungReduziert() ? "JA" : "nein"} · IntersectionObserver: ${typeof IntersectionObserver !== "undefined" ? "ja" : "NEIN"}
-Breite: ${window.innerWidth} · jetzt: ${Math.round(performance.now())}ms
-${zeilen.join("\n") || "(noch keine Ereignisse)"}`}
-    </pre>
-  );
-}
-
-function useErstSichtbar(name = "?") {
+function useErstSichtbar() {
   const ref = useRef(null);
   const sofort = typeof IntersectionObserver === "undefined" || bewegungReduziert();
   const [gesehen, setGesehen] = useState(sofort);
-  useEffect(() => {
-    diagLog(`aufgebaut:${name}${sofort ? " (sofort gesehen)" : ""}`);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (gesehen) return undefined;
     const el = ref.current;
@@ -314,7 +252,6 @@ function useErstSichtbar(name = "?") {
     const io = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) {
-          diagLog(`sichtbar:${name}`);
           setGesehen(true);
           io.disconnect();
         }
@@ -323,11 +260,11 @@ function useErstSichtbar(name = "?") {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [gesehen, name]);
+  }, [gesehen]);
   return [ref, gesehen];
 }
 
-function useHochzaehlen(ziel, dauer = 600, aktiv = true) {
+function useHochzaehlen(ziel, dauer = 1200, aktiv = true) {
   const sofort = typeof window === "undefined" || bewegungReduziert();
   const [wert, setWert] = useState(sofort ? ziel : 0);
   const aktuell = useRef(sofort ? ziel : 0);
@@ -338,17 +275,15 @@ function useHochzaehlen(ziel, dauer = 600, aktiv = true) {
       return undefined;
     }
     if (!aktiv) return undefined;
-    diagLog("zaehlen-start");
     const start = aktuell.current;
-    const t0 = performance.now();
+    const t0 = performance.now() + VERZOEGERUNG_SCORE;
     let raf;
     const schritt = (jetzt) => {
-      const f = Math.min(1, (jetzt - t0) / dauer);
-      const eased = 1 - Math.pow(1 - f, 3);
+      const f = Math.max(0, Math.min(1, (jetzt - t0) / dauer));
+      const eased = 1 - Math.pow(1 - f, 2);
       aktuell.current = start + (ziel - start) * eased;
       setWert(aktuell.current);
       if (f < 1) raf = requestAnimationFrame(schritt);
-      else diagLog("zaehlen-ende");
     };
     raf = requestAnimationFrame(schritt);
     return () => cancelAnimationFrame(raf);
@@ -359,8 +294,8 @@ function useHochzaehlen(ziel, dauer = 600, aktiv = true) {
 function KennzahlKachel({ k, t }) {
   const negativ = k.key === "cashflow" && k.wert < 0;
   const istScore = k.key === "score";
-  const [scoreRef, scoreGesehen] = useErstSichtbar("score");
-  const scoreAnzeige = useHochzaehlen(istScore ? k.wert : 0, 600, scoreGesehen);
+  const [scoreRef, scoreGesehen] = useErstSichtbar();
+  const scoreAnzeige = useHochzaehlen(istScore ? k.wert : 0, 1200, scoreGesehen);
   // Kaufpreisfaktor-Kachel liefert nur `markt` (kein `abw`, siehe
   // briefingKernkennzahlen() in briefing.js) - die Abweichung wird hier aus
   // wert/markt nachgerechnet, dieselbe Formel wie briefing.js `abweichung()`.
@@ -420,6 +355,7 @@ function KennzahlKachel({ k, t }) {
               background: "var(--ca)",
               transformOrigin: "left center",
               transform: scoreGesehen ? undefined : "scaleX(0)",
+              "--bv-d": `${VERZOEGERUNG_SCORE}ms`,
             }}
           />
         </div>
@@ -858,12 +794,14 @@ function MarktZeile({ titel, v, formatWert, einheitLabel, extra, letzte, t }) {
             breite={breiteEigen}
             farbe={farbe}
             betont
+            versatz={100}
           />
           <BalkenZeile
             label={L(t, "brfMarkt", "Markt")}
             wert={`${formatWert(v.markt)}${einheitLabel ? `\u00A0${einheitLabel}` : ""}`}
             breite={breiteMarkt}
             farbe="var(--ch)"
+            versatz={350}
           />
         </div>
         {extra}
@@ -872,8 +810,8 @@ function MarktZeile({ titel, v, formatWert, einheitLabel, extra, letzte, t }) {
   );
 }
 
-function BalkenZeile({ label, wert, breite, farbe, betont }) {
-  const [spurRef, gesehen] = useErstSichtbar(`balken:${label}`);
+function BalkenZeile({ label, wert, breite, farbe, betont, versatz = 0 }) {
+  const [spurRef, gesehen] = useErstSichtbar();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{ width: 42, flexShrink: 0, fontSize: 12, color: "var(--ch)", fontWeight: 600 }}>{label}</span>
@@ -887,6 +825,7 @@ function BalkenZeile({ label, wert, breite, farbe, betont }) {
             background: farbe,
             transformOrigin: "left center",
             transform: gesehen ? undefined : "scaleX(0)",
+            "--bv-d": `${versatz}ms`,
           }}
         />
       </div>
