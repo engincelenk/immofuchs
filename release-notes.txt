@@ -1,3 +1,16 @@
+## 2026-09-30 (1.100.34) [FRONTEND]
+
+### Objektseite: Markt-Block ueberarbeitet, Kostenkasten links ueber zwei Zeilen
+
+- Markt-Zeilen: Abweichung als grosse Zahl links, Titel und zwei kurze Balken
+  (max. 380 px, Wert am Balkenende) rechts. Farbe weiter aus dem bestehenden
+  Status (vergleichStatus). Der kleinere Balken ist mindestens 8 % lang.
+- Neu im Markt-Block: "Kreis gegen Land" (V5) und "Preisentwicklung im Land"
+  (V6), beide neutral und ohne Balken. Erscheinen nur, wenn Daten vorliegen.
+- Desktop-Layout: Kostenkasten (Schritt 1) laeuft ueber zwei Zeilen, Markt und
+  Stellschrauben stehen rechts daneben, Risiken (Schritt 4) volle Breite.
+- 13 neue Texte in allen 5 Sprachen.
+
 ## 2026-09-30 (1.100.33) [FRONTEND]
 
 ### Objektseite: "Was dich das Objekt kostet" in drei Bloecke gegliedert

@@ -19,7 +19,6 @@ import {
   cockpitAntwortsatz,
   cockpitCashflowJahr,
   cockpitDiff,
-  cockpitMarktSatz,
   fmtKompakt,
 } from "../../utils/objektCockpit.js";
 
@@ -59,8 +58,6 @@ const COCKPIT_CSS = `
 .cockpit-stellschrauben-desktop{display:none}
 .cockpit-stellschrauben-mobile{display:block}
 .cockpit-cmp{grid-template-columns:minmax(0,1fr)!important}
-.cockpit-cmp-icon{display:none}
-.cockpit-cmp-note{padding-left:0!important}
 .cockpit-next{display:flex;flex-direction:column;gap:14px}
 .cockpit-next-besichtigung{order:-1}
 .cockpit-mobile-bar{position:fixed;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));padding:10px 16px;background:var(--cc);border-top:1px solid var(--cb);z-index:30}
@@ -70,14 +67,14 @@ const COCKPIT_CSS = `
   .cockpit-nur-desktop{display:block}
   .cockpit-stepnav{position:static;overflow:visible;padding:14px 0;margin:0}
   .cockpit-schritte{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+  .cockpit-s1{grid-row:span 2}
   .cockpit-s2{grid-column:span 2}
   .cockpit-s3{grid-column:span 2}
+  .cockpit-s4{grid-column:1 / -1}
   .cockpit-s5{grid-column:1 / -1}
   .cockpit-stellschrauben-desktop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
   .cockpit-stellschrauben-mobile{display:none}
-  .cockpit-cmp{grid-template-columns:32px minmax(0,1fr)!important}
-  .cockpit-cmp-icon{display:flex}
-  .cockpit-cmp-note{padding-left:60px!important}
+  .cockpit-cmp{grid-template-columns:120px minmax(0,1fr)!important}
   .cockpit-next{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:stretch}
   .cockpit-next-besichtigung{order:0}
   .cockpit-mobile-bar{display:none}
@@ -644,100 +641,66 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
 // Icon-Kreis (SVG) + Fliesssatz + Chip, darunter zwei beschriftete Balken-
 // zeilen ("Du"/"Markt", Laenge ∝ Wert) - Nutzer-Vorgabe 2026-09-24
 // (Vorlage-HTML "Variante E", genau nachgebaut statt frei interpretiert).
-function MarktIcon({ status }) {
-  if (status === "orange") {
-    return (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 19V5" />
-        <path d="m5 12 7-7 7 7" />
-      </svg>
-    );
-  }
-  if (status === "rot") {
-    return (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 8v5M12 17h.01" />
-        <circle cx="12" cy="12" r="9" />
-      </svg>
-    );
-  }
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
+// Layout je Zeile (Nutzer-Vorgabe 2026-09-30): links die Abweichung als grosse
+// Zahl, rechts Titel und zwei kurze Balken (max. 380 px, Wert direkt am
+// Balkenende). Die Farbe kommt weiter aus v.status (vergleichStatus in
+// briefing.js) - hier wird keine eigene Schwelle erfunden.
+const MARKT_BALKEN_MIN = 8; // Prozent - sonst verschwindet der kleinere Balken bei sehr grossem Abstand
+const MARKT_BALKEN_MAX_PX = 380;
 
-function MarktZeile({ art, v, formatWert, einheitLabel, extra, letzte, t }) {
+function MarktZeile({ titel, v, formatWert, einheitLabel, extra, letzte, t }) {
   if (!v || v.abw == null || !isFinite(v.abw)) return null;
   const f = STATUS_FARBEN[v.status] || STATUS_FARBEN.neutral;
-  const satz = cockpitMarktSatz(v, art);
-  const chipText = `${prozent(v.abw, 0)}${v.status === "orange" ? ` ${L(t, "cockPotenzial", "Potenzial")}` : ""}`;
-  // "Dein Wert"-Balken in der Statusfarbe, im neutralen Fall in der
-  // normalen Textfarbe (kein eigener Warn-/Erfolgs-Ton fuer "im Rahmen").
-  const balkenFarbe = v.status === "neutral" ? "var(--ct)" : f.tx;
-  const skala = Math.max(v.eigen, v.markt, 0.0001) * 1.08;
-  const breiteEigen = Math.max(4, (v.eigen / skala) * 100);
-  const breiteMarkt = Math.max(4, (v.markt / skala) * 100);
+  // Im neutralen Fall normale Textfarbe (kein eigener Warn-/Erfolgs-Ton fuer
+  // "im Rahmen").
+  const farbe = v.status === "neutral" ? "var(--ct)" : f.tx;
+  const skala = Math.max(v.eigen, v.markt, 0.0001);
+  const breiteEigen = Math.max(MARKT_BALKEN_MIN, (v.eigen / skala) * 100);
+  const breiteMarkt = Math.max(MARKT_BALKEN_MIN, (v.markt / skala) * 100);
+  const richtung =
+    v.status === "orange"
+      ? L(t, "cockPotenzial", "Potenzial")
+      : v.status === "neutral"
+        ? L(t, "cockImRahmen", "im Rahmen")
+        : v.abw > 0
+          ? L(t, "cockUeberMarkt", "über Markt")
+          : L(t, "cockUnterMarkt", "unter Markt");
 
   return (
     <div
       className="cockpit-cmp"
       style={{
         display: "grid",
-        gridTemplateColumns: "32px minmax(0,1fr)",
-        gap: 14,
-        padding: letzte ? "16px 0 4px" : "16px 0",
+        gridTemplateColumns: "120px minmax(0,1fr)",
+        gap: "6px 16px",
+        alignItems: "center",
+        padding: letzte ? "14px 0 4px" : "14px 0",
         borderBottom: letzte ? "none" : "1px solid var(--cb)",
       }}
     >
-      <span
-        aria-hidden="true"
-        className="cockpit-cmp-icon"
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: 16,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: f.bg,
-          color: f.tx,
-        }}
-      >
-        <MarktIcon status={v.status} />
-      </span>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, fontSize: 15, fontWeight: 700, color: "var(--ct)" }}>
-          <span>{satz}</span>
-          <span
-            style={{
-              flexShrink: 0,
-              fontSize: 12,
-              fontWeight: 700,
-              color: f.tx,
-              background: f.bg,
-              borderRadius: 999,
-              padding: "3px 10px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {chipText}
-          </span>
+      <div>
+        <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1, color: farbe, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+          {prozent(v.abw, 0)}
         </div>
-        <BalkenZeile
-          label={L(t, "cockDu", "Du")}
-          wert={`${formatWert(v.eigen)}${einheitLabel ? ` ${einheitLabel}` : ""}`}
-          breite={breiteEigen}
-          farbe={balkenFarbe}
-          betont
-        />
-        <BalkenZeile
-          label={L(t, "brfMarkt", "Markt")}
-          wert={`${formatWert(v.markt)}${einheitLabel ? ` ${einheitLabel}` : ""}`}
-          breite={breiteMarkt}
-          farbe="var(--ch)"
-        />
+        <div style={{ fontSize: 12, color: "var(--ch)", marginTop: 2 }}>{richtung}</div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ct)" }}>{titel}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: MARKT_BALKEN_MAX_PX }}>
+          <BalkenZeile
+            label={L(t, "cockDu", "Du")}
+            wert={`${formatWert(v.eigen)}${einheitLabel ? ` ${einheitLabel}` : ""}`}
+            breite={breiteEigen}
+            farbe={farbe}
+            betont
+          />
+          <BalkenZeile
+            label={L(t, "brfMarkt", "Markt")}
+            wert={`${formatWert(v.markt)}${einheitLabel ? ` ${einheitLabel}` : ""}`}
+            breite={breiteMarkt}
+            farbe="var(--ch)"
+          />
+        </div>
         {extra}
       </div>
     </div>
@@ -746,21 +709,21 @@ function MarktZeile({ art, v, formatWert, einheitLabel, extra, letzte, t }) {
 
 function BalkenZeile({ label, wert, breite, farbe, betont }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <span style={{ width: 48, flexShrink: 0, fontSize: 12, color: "var(--ch)", fontWeight: 600 }}>{label}</span>
-      <div style={{ flexGrow: 1, height: 12, borderRadius: 6, background: "var(--cro)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{ width: 42, flexShrink: 0, fontSize: 12, color: "var(--ch)", fontWeight: 600 }}>{label}</span>
+      <div style={{ flexGrow: 1, height: 8, borderRadius: 4, background: "var(--cro)" }}>
         <div
           className="bv-wachsen"
-          style={{ width: `${breite}%`, height: 12, borderRadius: 6, background: farbe, transformOrigin: "left center" }}
+          style={{ width: `${breite}%`, height: 8, borderRadius: 4, background: farbe, transformOrigin: "left center" }}
         />
       </div>
       <span
         className="num"
         style={{
-          width: 96,
+          minWidth: 92,
           flexShrink: 0,
           textAlign: "right",
-          fontSize: 14,
+          fontSize: 13,
           fontVariantNumeric: "tabular-nums",
           fontWeight: betont ? 700 : 400,
           color: betont ? "var(--ct)" : "var(--ch)",
@@ -772,12 +735,49 @@ function BalkenZeile({ label, wert, breite, farbe, betont }) {
   );
 }
 
+// Reine Information (Kreis gegen Land, Preisentwicklung im Land): gleiche
+// Zeilenform wie MarktZeile, aber ohne Balken und ohne Bewertungsfarbe - beide
+// Werte sind Marktwerte, "dein" Wert kommt darin nicht vor.
+function MarktInfoZeile({ gross, unter, titel, zeilen, letzte }) {
+  return (
+    <div
+      className="cockpit-cmp"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "120px minmax(0,1fr)",
+        gap: "6px 16px",
+        alignItems: "center",
+        padding: letzte ? "14px 0 4px" : "14px 0",
+        borderBottom: letzte ? "none" : "1px solid var(--cb)",
+      }}
+    >
+      <div>
+        <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1, color: "var(--ch)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+          {gross}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--ch)", marginTop: 2 }}>{unter}</div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ct)" }}>{titel}</div>
+        {zeilen.map(([label, wert]) => (
+          <div key={label} style={{ display: "flex", gap: 10, maxWidth: MARKT_BALKEN_MAX_PX, justifyContent: "space-between", fontSize: 13 }}>
+            <span style={{ color: "var(--ch)" }}>{label}</span>
+            <span className="num" style={{ fontWeight: 700, color: "var(--ct)", fontVariantNumeric: "tabular-nums" }}>{wert}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const fmtQm = (w) => fmt(w, w < 100 ? 2 : 0);
 const fmtFaktor = (w) => `${fmt(w, 1)}×`;
 
 export function SchrittMarkt({ briefing, t }) {
   const v1 = briefing?.vergleiche?.find((v) => v.id === "v1");
   const v2 = briefing?.vergleiche?.find((v) => v.id === "v2");
+  const v5 = briefing?.vergleiche?.find((v) => v.id === "v5");
+  const v6 = briefing?.vergleiche?.find((v) => v.id === "v6");
   const fb = briefing?.faktorBenchmark;
   if (!v1 && !v2 && !fb) return null;
   const marktName = (fb?.ebeneName || v1?.ebeneName || v2?.ebeneName || "").replace(
@@ -787,13 +787,39 @@ export function SchrittMarkt({ briefing, t }) {
 
   const mieteExtra =
     v2?.erreichbarQm > 0 ? (
-      <div className="cockpit-cmp-note" style={{ ...klein, paddingLeft: 60 }}>
+      <div className="cockpit-cmp-note" style={klein}>
         {L(t, "brfErreichbar", "In 3 Jahren erreichbar")}:{" "}
         <strong style={{ color: "var(--ct)" }}>{fmtQm(v2.erreichbarQm)} €/m²</strong>
         {v2.kappungsgrenzeProzent != null &&
           ` (${L(t, "brfKappung", "Kappungsgrenze")} ${fmt(v2.kappungsgrenzeProzent, 0)} %)`}
       </div>
     ) : null;
+
+  // V5: nur wenn der Ort einem Kreis zugeordnet ist (sonst gibt briefing.js
+  // keine Kachel aus). V6: Landestrend, einzelne fehlende Werte entfallen.
+  const kreisVsLand =
+    v5 && v5.abw != null && isFinite(v5.abw)
+      ? {
+          gross: prozent(v5.abw, 0),
+          unter: v5.abw >= 0 ? L(t, "cockKreisUeberLand", "Kreis über Land") : L(t, "cockKreisUnterLand", "Kreis unter Land"),
+          zeilen: [
+            [(v5.ebeneName || "").replace(/\s*\((Kreis|Bezirk)\)\s*$/i, ""), `${fmtQm(v5.eigen)} €/m²`],
+            [L(t, "cockLand", "Bundesland"), `${fmtQm(v5.markt)} €/m²`],
+          ],
+        }
+      : null;
+  const trendZeilen = [];
+  if (v6?.trendVorjahr != null) trendZeilen.push([L(t, "cockZumVorjahr", "Zum Vorjahr"), prozent(v6.trendVorjahr, 1)]);
+  if (v6?.trend4J != null) trendZeilen.push([L(t, "cockSeit4J", "In 4 Jahren"), prozent(v6.trend4J, 1)]);
+  const trendGross = v6?.trendVorjahr ?? v6?.trend4J ?? null;
+  const trend =
+    trendZeilen.length > 0
+      ? {
+          gross: prozent(trendGross, 1),
+          unter: v6.trendVorjahr != null ? L(t, "cockZumVorjahr", "Zum Vorjahr") : L(t, "cockSeit4J", "In 4 Jahren"),
+          zeilen: trendZeilen,
+        }
+      : null;
 
   return (
     <section id="schritt-markt" className="bv bv-auf cockpit-s2" style={{ ...karte, marginTop: 0, padding: "22px 24px 12px", scrollMarginTop: 78 }}>
@@ -810,12 +836,20 @@ export function SchrittMarkt({ briefing, t }) {
       />
       <div style={{ marginTop: 4 }}>
         {v1 && (
-          <MarktZeile art="kaufpreis" v={v1} formatWert={fmtQm} einheitLabel="€/m²" letzte={!v2 && !fb} t={t} />
+          <MarktZeile titel={L(t, "cockMarktKaufpreis", "Kaufpreis pro m²")} v={v1} formatWert={fmtQm} einheitLabel="€/m²" letzte={!v2 && !fb && !kreisVsLand && !trend} t={t} />
         )}
         {v2 && (
-          <MarktZeile art="miete" v={v2} formatWert={fmtQm} einheitLabel="€/m²" extra={mieteExtra} letzte={!fb} t={t} />
+          <MarktZeile titel={L(t, "cockMarktMiete", "Miete pro m²")} v={v2} formatWert={fmtQm} einheitLabel="€/m²" extra={mieteExtra} letzte={!fb && !kreisVsLand && !trend} t={t} />
         )}
-        {fb && <MarktZeile art="faktor" v={fb} formatWert={fmtFaktor} einheitLabel="" letzte t={t} />}
+        {fb && (
+          <MarktZeile titel={L(t, "cockMarktFaktor", "Kaufpreisfaktor")} v={fb} formatWert={fmtFaktor} einheitLabel="" letzte={!kreisVsLand && !trend} t={t} />
+        )}
+        {kreisVsLand && (
+          <MarktInfoZeile gross={kreisVsLand.gross} unter={kreisVsLand.unter} titel={L(t, "cockKreisVsLand", "Kreis gegen Land")} zeilen={kreisVsLand.zeilen} letzte={!trend} />
+        )}
+        {trend && (
+          <MarktInfoZeile gross={trend.gross} unter={trend.unter} titel={L(t, "cockPreisentwicklung", "Preisentwicklung im Land")} zeilen={trend.zeilen} letzte />
+        )}
       </div>
     </section>
   );
