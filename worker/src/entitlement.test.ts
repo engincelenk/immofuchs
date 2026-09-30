@@ -110,14 +110,14 @@ describe("hasPermission — Admin-Permissions vs. Customer", () => {
     expect(hasPermission({ role: "admin" }, "user.read")).toBe(true);
     expect(hasPermission({ role: "admin" }, "user.note")).toBe(true);
     expect(hasPermission({ role: "admin" }, "user.delete")).toBe(true);
-    expect(hasPermission({ role: "admin" }, "discount.manage")).toBe(true);
+    expect(hasPermission({ role: "admin" }, "subscription.manage")).toBe(true);
   });
 
   it("customer kommt an keine einzige Admin-Permission", () => {
     expect(hasPermission({ role: "customer" }, "user.read")).toBe(false);
     expect(hasPermission({ role: "customer" }, "user.note")).toBe(false);
     expect(hasPermission({ role: "customer" }, "user.delete")).toBe(false);
-    expect(hasPermission({ role: "customer" }, "discount.read")).toBe(false);
+    expect(hasPermission({ role: "customer" }, "subscription.read")).toBe(false);
   });
 
   it("'test_user' und 'support' sind keine Rollen mehr und haben daher keine Rechte", () => {

@@ -63,7 +63,7 @@ export function AdminUsersView({ currentUser }) {
   const [selectedId, setSelectedId] = useState(null);
 
   // "User direkt anlegen" (Nutzer-Entscheidung 2026-08-1X) - nur fuer 'admin'
-  // sichtbar, analog zu AdminUserDrawer/AdminDiscountsView. Mit nur noch zwei
+  // sichtbar, analog zu AdminUserDrawer. Mit nur noch zwei
   // Rollen ist das aktuell immer wahr (nur 'admin' erreicht diesen Bereich
   // ueberhaupt, siehe accountSections.js), bleibt aber als explizite Pruefung
   // bestehen statt sich implizit darauf zu verlassen.

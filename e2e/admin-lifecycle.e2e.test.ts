@@ -16,10 +16,6 @@ import { apiFetch, adminSessionId } from "./setup";
 //  2. Voller Lebenszyklus an einem eigens angelegten Wegwerf-Testnutzer
 //     (E2E-Praefix in der E-Mail) - wird am Ende wieder geloescht, beruehrt
 //     keine der geteilten Fixtures (test.monatlich/jaehrlich).
-//
-// Bewusst NICHT hier: POST /discounts/bulk (mehrere echte Stripe-Aufrufe pro
-// Lauf, siehe Kommentar in routes/admin.ts zu Stripe-Ratelimits) - der
-// einfache Discount-Test unten deckt denselben Code-Pfad einmal ab.
 describe.skipIf(!adminSessionId)("Admin-Lifecycle (E2E_SESSION_ADMIN)", () => {
   const sessionId = adminSessionId as string;
   let selfId: string;
@@ -177,54 +173,6 @@ describe.skipIf(!adminSessionId)("Admin-Lifecycle (E2E_SESSION_ADMIN)", () => {
       const res = await apiFetch(sessionId, `/api/v1/admin/users/${userId}/password-reset`, { method: "POST" });
       expect(res.status).toBe(400);
       expect(await res.json()).toEqual({ error: "no_password_account" });
-    });
-  });
-
-  describe("Discount-Lebenszyklus (eigens angelegter Testcode)", () => {
-    // Kein Bindestrich (urspruenglich ein Paddle-Befund vom 19.08., dieselbe
-    // Vorsicht gilt fuer Stripes Promotion-Code-Format): DISCOUNT_CODE_PATTERN
-    // in routes/admin.ts akzeptiert nur ^[A-Z0-9]{1,32}$, ein "E2E-XXXXXXXX"
-    // waere sonst serverseitig abgelehnt worden - alle nachfolgenden
-    // update/archive-Tests liefen dadurch gegen /admin/discounts/undefined (404).
-    const code = `E2E${randomUUID().slice(0, 8).toUpperCase()}`;
-    let discountId: string;
-
-    it("POST /discounts legt einen Testcode an", async () => {
-      const res = await apiFetch(sessionId, "/api/v1/admin/discounts", {
-        method: "POST",
-        body: JSON.stringify({ code, description: "E2E Testcode", type: "percentage", amount: "5" }),
-      });
-      const body = await res.json();
-      expect(res.status, `Antwort: ${JSON.stringify(body)}`).toBe(200);
-      expect(body.discount.code).toBe(code);
-      discountId = body.discount.id;
-    });
-
-    it("GET /discounts listet den Testcode", async () => {
-      const res = await apiFetch(sessionId, "/api/v1/admin/discounts");
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.discounts.some((d: { id: string }) => d.id === discountId)).toBe(true);
-    });
-
-    it("POST /discounts/:id bearbeitet die Beschreibung", async () => {
-      const res = await apiFetch(sessionId, `/api/v1/admin/discounts/${discountId}`, {
-        method: "POST",
-        body: JSON.stringify({ description: "E2E Testcode (bearbeitet)" }),
-      });
-      expect(res.status).toBe(200);
-      expect((await res.json()).discount.description).toBe("E2E Testcode (bearbeitet)");
-    });
-
-    // Kein DELETE-Endpunkt fuer Discounts (Absicht laut Kommentar in
-    // routes/admin.ts) - Aufraeumen heisst hier: archivieren statt loeschen.
-    it("POST /discounts/:id/status archiviert den Testcode (Aufraeumen)", async () => {
-      const res = await apiFetch(sessionId, `/api/v1/admin/discounts/${discountId}/status`, {
-        method: "POST",
-        body: JSON.stringify({ status: "archived" }),
-      });
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true, status: "archived" });
     });
   });
 });

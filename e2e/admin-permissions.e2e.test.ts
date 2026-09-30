@@ -32,11 +32,6 @@ const ADMIN_ROUTES: Array<{ method: string; path: string; label: string }> = [
   { method: "GET", path: `/api/v1/admin/subscriptions/${DUMMY_ID}`, label: "GET /subscriptions/:id" },
   { method: "GET", path: "/api/v1/admin/dashboard", label: "GET /dashboard" },
   { method: "GET", path: "/api/v1/admin/activity", label: "GET /activity" },
-  { method: "GET", path: "/api/v1/admin/discounts", label: "GET /discounts" },
-  { method: "POST", path: "/api/v1/admin/discounts", label: "POST /discounts" },
-  { method: "POST", path: "/api/v1/admin/discounts/bulk", label: "POST /discounts/bulk" },
-  { method: "POST", path: `/api/v1/admin/discounts/${DUMMY_ID}`, label: "POST /discounts/:id" },
-  { method: "POST", path: `/api/v1/admin/discounts/${DUMMY_ID}/status`, label: "POST /discounts/:id/status" },
   { method: "GET", path: "/api/v1/admin/audit-log", label: "GET /audit-log" },
 ];
 

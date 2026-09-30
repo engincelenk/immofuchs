@@ -1,9 +1,7 @@
-// H — Admin-Panel. Siehe browser-test-usecases.md Kategorie H. Zwei Tests
-// hier sind direkte UI-Regressionstests fuer die Backend-Fixes von heute
-// (release-notes.txt 1.20.22): der instr()-Suchfix (H3) und die neue
-// Discount-Code-Formatpruefung (H9/H10). Ueberspringt sich selbst, wenn
-// E2E_PASSWORD_ADMIN nicht gesetzt ist (kein Admin-storageState vorhanden) -
-// genau wie admin-lifecycle.e2e.test.ts auf API-Ebene.
+// H — Admin-Panel. Siehe browser-test-usecases.md Kategorie H. H3 ist ein
+// direkter UI-Regressionstest fuer den instr()-Suchfix (release-notes.txt
+// 1.20.22). Ueberspringt sich selbst, wenn E2E_PASSWORD_ADMIN nicht gesetzt ist (kein
+// Admin-storageState vorhanden) - genau wie admin-lifecycle.e2e.test.ts auf API-Ebene.
 import { existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
@@ -38,39 +36,5 @@ test.describe("Admin-Panel", () => {
     await page.getByPlaceholder("E-Mail …").fill(longQuery);
     await page.getByPlaceholder("E-Mail …").press("Enter");
     await expect(page.getByText("Die Aktion ist fehlgeschlagen.")).not.toBeVisible({ timeout: 8_000 });
-  });
-
-  test.describe("Gutscheine", () => {
-    // Direkter Regressionstest fuer die DISCOUNT_CODE_PATTERN-Pruefung
-    // (1.20.22): ein Code mit Bindestrich scheiterte urspruenglich erst beim
-    // Zahlungsanbieter (frueher Paddle, dieselbe Vorsicht gilt fuer Stripes
-    // Promotion-Code-Format). Hinweis: die Fehlermeldung ist aktuell
-    // noch der generische Text ("Die Aktion ist fehlgeschlagen.") - ERROR_TEXTS
-    // in adminUiStyles.js kennt "invalid_discount_code" noch nicht. Kleiner,
-    // separater Nachtrag empfohlen, hier bewusst nicht mit umgesetzt.
-    test("H10 — Gutschein mit Bindestrich im Code wird abgelehnt", async ({ page }) => {
-      await openAdminTab(page, "Gutscheine");
-      await page.getByLabel(CODE_FELD).fill(`E2E-${randomUUID().slice(0, 6).toUpperCase()}`);
-      await page.getByLabel("Beschreibung", { exact: true }).fill("Browser-E2E Testcode (ungueltig)");
-      await page.getByLabel(/Wert \(%\)/).fill("5");
-      await page.getByRole("button", { name: "Gutschein erstellen" }).click();
-      await expect(page.getByText("Die Aktion ist fehlgeschlagen.")).toBeVisible({ timeout: 8_000 });
-    });
-
-    test("H9 — Gutschein mit gueltigem Code wird angelegt", async ({ page }) => {
-      const code = `E2E${randomUUID().slice(0, 8).toUpperCase()}`;
-      await openAdminTab(page, "Gutscheine");
-      await page.getByLabel(CODE_FELD).fill(code);
-      await page.getByLabel("Beschreibung", { exact: true }).fill("Browser-E2E Testcode");
-      await page.getByLabel(/Wert \(%\)/).fill("5");
-      await page.getByRole("button", { name: "Gutschein erstellen" }).click();
-      await expect(page.getByText("Gutschein erstellt.")).toBeVisible({ timeout: 8_000 });
-      // Aufraeumen: den soeben angelegten Testcode wieder deaktivieren, statt
-      // ihn als aktiven Gutschein stehen zu lassen (kein Loesch-Endpunkt fuer
-      // Gutscheine vorhanden, Stripe kennt nur aktiv/inaktiv/abgelaufen).
-      const row = page.getByRole("row", { name: new RegExp(code) });
-      await row.getByRole("button", { name: "Deaktivieren" }).click();
-      await expect(row.getByText("Deaktiviert")).toBeVisible({ timeout: 8_000 });
-    });
   });
 });

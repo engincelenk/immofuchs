@@ -1,13 +1,16 @@
-## 2026-09-30 (1.100.32) [WORKER]
+## 2026-09-30 (1.100.32) [WORKER + FRONTEND]
 
-### Gutschein deaktivieren loescht jetzt auch den Stripe-Coupon
+### Gutscheine nur noch in Stripe verwalten
 
-- Bisher wurde nur der Promotion Code abgeschaltet; der Coupon blieb in Stripe
-  (Produktkatalog > Gutscheine) aktiv. Jetzt: erst Code sperren, dann Coupon
-  loeschen (`stripe/discounts.ts`, `deactivateDiscount`).
-- Folge: deaktivierte Gutscheine lassen sich nicht reaktivieren, sondern nur
-  neu anlegen (Admin-UI "Duplizieren").
-- Worker-Deploy noetig (`npx wrangler deploy`, dev: `--env dev`).
+- Anlegen, Deaktivieren, Aktivieren, Bearbeiten und Loeschen von Gutscheinen
+  geschieht ausschliesslich im Stripe-Dashboard (Nutzer-Entscheidung).
+- Entfernt: Admin-Tab "Gutscheine", die Admin-Routen /admin/discounts*, die
+  Permissions discount.read/discount.manage sowie zugehoerige Tests.
+- Unveraendert: der Checkout loest den eingegebenen Code weiter live bei
+  Stripe auf (nur aktive Promotion Codes).
+- Der Commit "Coupon beim Deaktivieren loeschen" (1.100.32, dev) ist damit
+  hinfaellig und zurueckgenommen.
+- Worker- und Frontend-Deploy noetig.
 
 ## 2026-09-30 (1.100.31) [FRONTEND]
 

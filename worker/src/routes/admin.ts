@@ -47,14 +47,6 @@ import { cancelImmediately } from "../stripe/checkout";
 import { reconcileOneSubscription } from "../stripe/reconcile";
 import { requestPasswordReset, sendPasswordSetupInvite } from "../auth/passwordAuth";
 import { ROLE_PERMISSIONS, type Role } from "../entitlement";
-import {
-  listDiscounts,
-  createDiscount,
-  updateDiscount,
-  setDiscountStatus,
-  generateDiscountCode,
-  type DiscountPatch,
-} from "../stripe/discounts";
 import { getInvoiceSummary, stripeDashboardSubscriptionUrl } from "../stripe/transactions";
 import { sendEmail } from "../email";
 import { dispatchNotification, type NotificationEvent } from "../notifications";
@@ -65,41 +57,13 @@ const PAGE_SIZE = 20;
 // eine kuenftige vierte Rolle nicht an dieser Stelle vergessen wird.
 const VALID_ROLES = Object.keys(ROLE_PERMISSIONS) as Role[];
 
-// Obergrenze fuer die Mehrfach-Erzeugung (Auftrag nennt 10/50/100). Jeder
-// Code ist ein eigener Stripe-Aufruf - ohne Deckel liesse sich der Worker
-// mit einer einzigen Anfrage minutenlang beschaeftigen.
-const MAX_BULK_DISCOUNTS = 100;
-
-// Urspruenglich ein Paddle-spezifisches Format (Live-Befund 19.08.: ein Code
-// mit Bindestrich wurde von Paddle mit "Does not match pattern
-// '^[a-zA-Z0-9]{1,32}$'" abgelehnt, kam beim Admin aber nur als
-// nichtssagender 502 an). Vorab hier geprueft statt einen kryptischen
-// Anbieter-Fehler durchzureichen - dieselbe Vorsicht gilt fuer Stripes eigene
-// Promotion-Code-Formatregeln.
-const DISCOUNT_CODE_PATTERN = /^[A-Z0-9]{1,32}$/;
-
 // Nutzer direkt anlegen (Nutzer-Entscheidung 2026-08-1X). Gleiches Muster wie
 // in auth/magicLink.ts, hier lokal statt importiert, weil es dort nicht
 // exportiert ist und Validierungs-Konstanten in diesem File ohnehin lokal
-// gehalten werden (siehe VALID_ROLES/MAX_BULK_DISCOUNTS).
+// gehalten werden (siehe VALID_ROLES).
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_SUB_STATUSES = ["active", "trialing", "past_due", "cancel_scheduled", "canceled"] as const;
 const VALID_SUB_PLANS = ["monthly", "yearly"] as const;
-
-// Datumsangaben aus der Oberflaeche kommen als "YYYY-MM-DD" (input[type=date]).
-// Rueckgabe als ISO-8601-String; stripe/discounts.ts wandelt das beim
-// Erzeugen in den von Stripe erwarteten Unix-Zeitstempel um. Ende des Tages
-// in UTC, damit ein Gutschein am angegebenen Tag noch gilt und nicht um
-// 00:00 verfaellt.
-export function parseExpiryDate(value: unknown): string | null | undefined {
-  if (value === null) return null; // ausdruecklich "laeuft nicht ab"
-  if (typeof value !== "string" || !value.trim()) return undefined; // nicht mitgeschickt
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-  if (!match) return undefined;
-  const ms = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59);
-  if (!Number.isFinite(ms)) return undefined;
-  return new Date(ms).toISOString();
-}
 
 // Kein Wildcard-Escaping mehr noetig (19.08., IMP-12-Nachtrag): listUsersForAdmin
 // (db.ts) nutzt seither instr() statt LIKE fuer die E-Mail-Suche - instr() kennt
@@ -741,185 +705,6 @@ adminRoutes.get("/activity", requireAuth, requireAdminRead, async (c) => {
   const entries = await listAdminActivity(c.env.DB, ACTIVITY_LIMIT);
   return c.json({ entries });
 });
-
-// Gutscheine (Stufe F, Nutzer-Konzept 2026-08-11) - Stripe bleibt einzige
-// Quelle fuer Rabattdaten, D1 speichert dazu nichts. "amount" ist bei
-// type==="percentage" ein reiner Prozentwert ("10" = 10%), bei "flat" ein
-// Betrag in der kleinsten Waehrungseinheit (Cent) - siehe Stripe-API.
-adminRoutes.get("/discounts", requireAuth, requirePermission("discount.read"), async (c) => {
-  try {
-    const discounts = await listDiscounts(c.env);
-    return c.json({ discounts });
-  } catch (err) {
-    console.error("admin_list_discounts_failed", err instanceof Error ? err.message : "unknown");
-    return c.json({ error: "discounts_failed" }, 502);
-  }
-});
-
-adminRoutes.post(
-  "/discounts",
-  requireAuth,
-  requirePermission("discount.manage"),
-  requireCsrfOrigin,
-  async (c) => {
-    const body = await c.req.json().catch(() => null);
-    const code = body && typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
-    const description = body && typeof body.description === "string" ? body.description.trim() : "";
-    const type = body?.type === "flat" ? "flat" : body?.type === "percentage" ? "percentage" : null;
-    const amount = body && typeof body.amount === "string" ? body.amount.trim() : "";
-    const usageLimit = Number.isInteger(body?.usageLimit) && body.usageLimit > 0 ? body.usageLimit : null;
-    const expiresAt = parseExpiryDate(body?.expiresAt) ?? null;
-    if (!code || !description || !type || !amount) return c.json({ error: "invalid_discount" }, 400);
-    // Vorab geprueft (siehe DISCOUNT_CODE_PATTERN oben, historisch aus einem
-    // Stripe-Befund), damit ein Admin sofort einen verstaendlichen 400 statt
-    // eines kryptischen 502 vom Zahlungsanbieter sieht.
-    if (!DISCOUNT_CODE_PATTERN.test(code)) return c.json({ error: "invalid_discount_code" }, 400);
-
-    try {
-      const discount = await createDiscount(c.env, { code, description, type, amount, usageLimit, expiresAt });
-      await logAdminAction(c.env.DB, {
-        adminUserId: c.var.userId,
-        adminEmail: c.var.user.email,
-        action: "discount.create",
-        targetType: "discount",
-        targetId: discount.id,
-        details: { code: discount.code, type: discount.type, amount: discount.amount },
-      });
-      return c.json({ discount });
-    } catch (err) {
-      console.error("admin_create_discount_failed", err instanceof Error ? err.message : "unknown");
-      return c.json({ error: "create_discount_failed" }, 502);
-    }
-  },
-);
-
-// Mehrere Codes auf einmal (Auftrag Abschnitt 9). Jeder Code ist ein eigener
-// Stripe-Aufruf - bewusst nacheinander statt parallel, um nicht in
-// Stripe-Ratelimits zu laufen. Bereits erzeugte Codes bleiben bestehen, wenn
-// einer scheitert: sie sind gueltige Gutscheine, ein Rueckbau waere
-// schlimmer als ein Teilergebnis. Die Antwort meldet beides ehrlich.
-adminRoutes.post(
-  "/discounts/bulk",
-  requireAuth,
-  requirePermission("discount.manage"),
-  requireCsrfOrigin,
-  async (c) => {
-    const body = await c.req.json().catch(() => null);
-    const count = Number.isInteger(body?.count) ? body.count : 0;
-    const description = body && typeof body.description === "string" ? body.description.trim() : "";
-    const type = body?.type === "flat" ? "flat" : body?.type === "percentage" ? "percentage" : null;
-    const amount = body && typeof body.amount === "string" ? body.amount.trim() : "";
-    const prefix = body && typeof body.prefix === "string" ? body.prefix : "";
-    const usageLimit = Number.isInteger(body?.usageLimit) && body.usageLimit > 0 ? body.usageLimit : null;
-    const expiresAt = parseExpiryDate(body?.expiresAt) ?? null;
-
-    if (count < 1 || count > MAX_BULK_DISCOUNTS) return c.json({ error: "invalid_count" }, 400);
-    if (!description || !type || !amount) return c.json({ error: "invalid_discount" }, 400);
-
-    const created: string[] = [];
-    let failed = 0;
-    for (let i = 0; i < count; i++) {
-      try {
-        const discount = await createDiscount(c.env, {
-          code: generateDiscountCode(prefix),
-          description,
-          type,
-          amount,
-          usageLimit,
-          expiresAt,
-        });
-        created.push(discount.code || discount.id);
-      } catch (err) {
-        console.error("admin_bulk_discount_failed", err instanceof Error ? err.message : "unknown");
-        failed++;
-      }
-    }
-
-    // Ein Audit-Eintrag fuer den ganzen Vorgang statt 100 einzelner - der Log
-    // soll die Aktion des Admins abbilden, nicht jede Stripe-Anfrage.
-    if (created.length > 0) {
-      await logAdminAction(c.env.DB, {
-        adminUserId: c.var.userId,
-        adminEmail: c.var.user.email,
-        action: "discount.bulk_create",
-        targetType: "discount",
-        targetId: `bulk:${created.length}`,
-        details: { requested: count, created: created.length, failed, type, amount, prefix: prefix || null },
-      });
-    }
-    if (created.length === 0) return c.json({ error: "create_discount_failed" }, 502);
-    return c.json({ codes: created, requested: count, failed });
-  },
-);
-
-// Bearbeiten: nur Beschreibung und Status. Stripe erlaubt bei Coupons/
-// Promotion Codes nach dem Anlegen KEINE Aenderung von Betrag, Nutzungslimit
-// oder Ablaufdatum mehr (offizielle API-Referenz - deutlich enger als Stripe,
-// siehe stripe/discounts.ts). Code und Rabatt-Typ waren schon bei Stripe
-// bewusst nicht aenderbar; dafuer gibt es "Duplizieren".
-adminRoutes.post(
-  "/discounts/:id",
-  requireAuth,
-  requirePermission("discount.manage"),
-  requireCsrfOrigin,
-  async (c) => {
-    const id = c.req.param("id");
-    const body = await c.req.json().catch(() => null);
-    const patch: DiscountPatch = {};
-
-    if (typeof body?.description === "string" && body.description.trim()) {
-      patch.description = body.description.trim();
-    }
-    if (body?.status === "active" || body?.status === "archived") patch.status = body.status;
-
-    if (Object.keys(patch).length === 0) return c.json({ error: "invalid_discount" }, 400);
-
-    try {
-      const discount = await updateDiscount(c.env, id, patch);
-      await logAdminAction(c.env.DB, {
-        adminUserId: c.var.userId,
-        adminEmail: c.var.user.email,
-        action: "discount.update",
-        targetType: "discount",
-        targetId: id,
-        details: { code: discount.code, changed: Object.keys(patch) },
-      });
-      return c.json({ discount });
-    } catch (err) {
-      console.error("admin_update_discount_failed", err instanceof Error ? err.message : "unknown");
-      return c.json({ error: "update_discount_failed" }, 502);
-    }
-  },
-);
-
-adminRoutes.post(
-  "/discounts/:id/status",
-  requireAuth,
-  requirePermission("discount.manage"),
-  requireCsrfOrigin,
-  async (c) => {
-    const id = c.req.param("id");
-    const body = await c.req.json().catch(() => null);
-    const status = body && typeof body.status === "string" ? body.status : "";
-    if (status !== "active" && status !== "archived") return c.json({ error: "invalid_status" }, 400);
-
-    try {
-      await setDiscountStatus(c.env, id, status);
-      await logAdminAction(c.env.DB, {
-        adminUserId: c.var.userId,
-        adminEmail: c.var.user.email,
-        action: status === "archived" ? "discount.deactivate" : "discount.activate",
-        targetType: "discount",
-        targetId: id,
-        details: { to: status },
-      });
-      return c.json({ ok: true, status });
-    } catch (err) {
-      console.error("admin_update_discount_failed", err instanceof Error ? err.message : "unknown");
-      return c.json({ error: "update_discount_failed" }, 502);
-    }
-  },
-);
 
 // Audit Log (Konzept-Dok Abschnitt 13/6, MVP-Pflicht #7). Read-Only, ohne
 // Bearbeiten/Loeschen - es gibt bewusst keine schreibende Route dafuer.

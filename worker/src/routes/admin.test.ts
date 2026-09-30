@@ -3,9 +3,7 @@ import {
   parseAdminUsersQuery,
   parseAdminAuditQuery,
   parseAdminSubscriptionsQuery,
-  parseExpiryDate,
 } from "./admin";
-import { generateDiscountCode } from "../stripe/discounts";
 
 describe("parseAdminUsersQuery (Such-Sanitizing fuer GET /admin/users)", () => {
   it("liefert leere Suche, keine Filter und Seite 1 ohne Parameter", () => {
@@ -117,55 +115,6 @@ describe("parseAdminSubscriptionsQuery (Filter fuer GET /admin/subscriptions)", 
 // Der Rueckgabewert hat drei Bedeutungen, die nicht verwechselt werden
 // duerfen: ein ISO-String (setzen), null (ausdruecklich "laeuft nicht ab")
 // und undefined (nicht mitgeschickt -> Feld unangetastet lassen).
-describe("parseExpiryDate (Gutschein-Ablaufdatum)", () => {
-  it("wandelt YYYY-MM-DD in ISO-8601 am Tagesende UTC um", () => {
-    // Tagesende, damit ein Gutschein am angegebenen Tag noch gilt und nicht
-    // um 00:00 verfaellt.
-    expect(parseExpiryDate("2026-09-30")).toBe("2026-09-30T23:59:59.000Z");
-  });
-
-  it("unterscheidet null (kein Ablauf) von undefined (nicht mitgeschickt)", () => {
-    expect(parseExpiryDate(null)).toBeNull();
-    expect(parseExpiryDate(undefined)).toBeUndefined();
-    expect(parseExpiryDate("")).toBeUndefined();
-    expect(parseExpiryDate("   ")).toBeUndefined();
-  });
-
-  it("verwirft alles, was nicht dem Datumsformat entspricht", () => {
-    expect(parseExpiryDate("30.09.2026")).toBeUndefined();
-    expect(parseExpiryDate("2026-9-3")).toBeUndefined();
-    expect(parseExpiryDate("morgen")).toBeUndefined();
-    expect(parseExpiryDate(12345)).toBeUndefined();
-  });
-});
-
-describe("generateDiscountCode (Mehrfach-Codes)", () => {
-  it("haengt einen Zufalls-Suffix an den Praefix", () => {
-    expect(generateDiscountCode("SOMMER")).toMatch(/^SOMMER-[A-Z0-9]{6}$/);
-  });
-
-  it("funktioniert auch ohne Praefix", () => {
-    expect(generateDiscountCode("")).toMatch(/^[A-Z0-9]{6}$/);
-    expect(generateDiscountCode("   ")).toMatch(/^[A-Z0-9]{6}$/);
-  });
-
-  it("normalisiert den Praefix (Grossschreibung, keine Sonderzeichen)", () => {
-    expect(generateDiscountCode("sommer 25!")).toMatch(/^SOMMER25-[A-Z0-9]{6}$/);
-  });
-
-  it("verwendet keine verwechselbaren Zeichen (0 O 1 I L)", () => {
-    // Die Codes werden abgetippt und vorgelesen - ueber viele Ziehungen darf
-    // keines dieser Zeichen auftauchen.
-    const codes = Array.from({ length: 200 }, () => generateDiscountCode(""));
-    expect(codes.join("")).not.toMatch(/[01OIL]/);
-  });
-
-  it("liefert praktisch nie zweimal denselben Code", () => {
-    const codes = new Set(Array.from({ length: 500 }, () => generateDiscountCode("X")));
-    expect(codes.size).toBe(500);
-  });
-});
-
 describe("parseAdminAuditQuery (Filter fuer GET /admin/audit-log)", () => {
   it("liefert ohne Parameter leere Filter und Seite 1", () => {
     expect(parseAdminAuditQuery(new URLSearchParams())).toEqual({

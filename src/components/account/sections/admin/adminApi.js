@@ -134,30 +134,6 @@ export function fetchAuditLog(page, filters = {}) {
   return request(`/admin/audit-log${qs ? `?${qs}` : ""}`);
 }
 
-export function fetchDiscounts() {
-  return request("/admin/discounts");
-}
-
-export function createDiscount(input) {
-  return post("/admin/discounts", input);
-}
-
-export function setDiscountStatus(id, status) {
-  return post(`/admin/discounts/${encodeURIComponent(id)}/status`, { status });
-}
-
-// patch: {description?, status?} - Stripe erlaubt bei Coupons/Promotion Codes
-// nach dem Anlegen keine Aenderung von Betrag, Nutzungslimit oder
-// Ablaufdatum mehr (siehe worker/src/stripe/discounts.ts, Wechsel weg von
-// Paddle 2026-08-27).
-export function updateDiscount(id, patch) {
-  return post(`/admin/discounts/${encodeURIComponent(id)}`, patch);
-}
-
-export function createDiscountsBulk(input) {
-  return post("/admin/discounts/bulk", input);
-}
-
 // Schickt alle E-Mail-Vorlagen einmal an den eingeloggten Admin selbst
 // (Nutzeranfrage 2026-08-26) - zum Pruefen von Layout/Inhalt im echten
 // Postfach, ohne jeden Ausloeser einzeln durchzuspielen.

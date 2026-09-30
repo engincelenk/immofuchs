@@ -46,8 +46,6 @@ export type Permission =
   | "subscription.read"
   | "subscription.manage"
   | "invoice.manage"
-  | "discount.read"
-  | "discount.manage"
   | "product.manage"
   | "security.manage"
   | "calculator.use"
@@ -67,8 +65,6 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "subscription.read",
     "subscription.manage",
     "invoice.manage",
-    "discount.read",
-    "discount.manage",
     "product.manage",
     "security.manage",
   ],

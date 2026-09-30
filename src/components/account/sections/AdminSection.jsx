@@ -6,7 +6,6 @@ import { AdminDashboardView } from "./admin/AdminDashboardView.jsx";
 import { AdminUsersView } from "./admin/AdminUsersView.jsx";
 import { AdminSubscriptionsView } from "./admin/AdminSubscriptionsView.jsx";
 import { AdminAuditLogView } from "./admin/AdminAuditLogView.jsx";
-import { AdminDiscountsView } from "./admin/AdminDiscountsView.jsx";
 import { AdminFeedbackView } from "./admin/AdminFeedbackView.jsx";
 
 // Bereich nur fuer role==='admin' (siehe MyAccount.jsx SECTIONS-Filter).
@@ -20,7 +19,6 @@ const TABS = [
   { key: "dashboard", label: "Dashboard", Component: AdminDashboardView },
   { key: "users", label: "Nutzer", Component: AdminUsersView },
   { key: "subscriptions", label: "Abos & Zahlungen", Component: AdminSubscriptionsView },
-  { key: "discounts", label: "Gutscheine", Component: AdminDiscountsView },
   { key: "feedback", label: "Feedback", Component: AdminFeedbackView },
   { key: "audit", label: "Sicherheit & Audit-Log", Component: AdminAuditLogView },
 ];
