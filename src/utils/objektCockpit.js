@@ -6,15 +6,90 @@
 import { computeRendite } from "./rendite.js";
 import { fmt, fmtE } from "./helpers.js";
 
-// ── 5.1 Antwortsatz ──────────────────────────────────────────────────────
-export function cockpitAntwortsatz(cashflowMonat, t) {
-  if (cashflowMonat == null || !isFinite(cashflowMonat)) return null;
-  const negativ = cashflowMonat < 0;
-  const betrag = fmtE(Math.abs(Math.round(cashflowMonat)));
-  const vorlage = negativ
-    ? (t && t.cockAntwortNegativ) || "Aktuell nicht. Du zahlst jeden Monat {betrag} zu."
-    : (t && t.cockAntwortPositiv) || "Ja, es trägt sich. Monatlich bleiben {betrag} übrig.";
-  return { negativ, betrag, satz: vorlage.replace("{betrag}", betrag) };
+// ── 5.1 Einschaetzung (Ueberschrift der Objektseite) ─────────────────────
+// Frueher nur "Cashflow >= 0 ja/nein". Ob sich ein Objekt lohnt, haengt aber
+// nicht allein am Cashflow (Nutzer-Rueckmeldung 2026-09-30: "Ja, es traegt sich"
+// bei Preis +367 % ueber Markt). Deshalb zwei Signale in EINEM Satz (Cashflow
+// und Preis gegen den Markt) plus drei Ampel-Chips. Reine Zusammensetzung: die
+// Stufen kommen aus briefing.js (cashflowUrteil, vergleichStatus) bzw. dem Score.
+const NBSP = "\u00A0";
+const STUFE_VON_SCORE = { green: "gruen", yellow: "gelb", orange: "gelb", red: "rot" };
+
+function chipVorzeichen(n) {
+  return n < 0 ? "−" : n > 0 ? "+" : "";
+}
+
+export function cockpitEinschaetzung(
+  { cashflow, cashflowStufe, preis, scoreWert, scoreTier, tilgung, topRisiko },
+  t,
+) {
+  if (cashflow == null || !isFinite(cashflow)) return null;
+  const T = (key, fallback) => (t && t[key]) || fallback;
+  const negativ = cashflow < 0;
+  const betrag = fmtE(Math.abs(Math.round(cashflow)));
+  const preisOk = !!preis && preis.abw != null && isFinite(preis.abw);
+  // "teuer" = ungünstig aus Kaeufersicht UND ueber Markt (status "rot" gibt es in
+  // der Vergleichskachel nur in dieser Richtung).
+  const teuer = preisOk && preis.abw > 0 && preis.status === "rot";
+  const p = teuer ? fmt(Math.abs(preis.abw), 0) : "";
+  const hatTilgung = tilgung > 0;
+
+  let fall;
+  let vorlage;
+  if (!negativ && teuer) {
+    fall = "traegtTeuer";
+    vorlage = T("cockEinschTraegtTeuer", "Es trägt sich, aber der Preis liegt {p} % über dem Markt.");
+  } else if (!negativ) {
+    fall = "traegt";
+    vorlage = T("cockEinschTraegt", "Rechnerisch trägt es sich: {betrag} bleiben monatlich übrig.");
+  } else if (teuer) {
+    fall = "teuerZuzahlung";
+    vorlage = T("cockEinschTeuerZuzahlung", "Teuer und mit Zuzahlung: {betrag} im Monat, Preis {p} % über Markt.");
+  } else if (hatTilgung) {
+    fall = "zuzahlungVermoegen";
+    vorlage = T("cockEinschZuzahlungVermoegen", "Du zahlst {betrag} im Monat zu. Dafür baust du Vermögen auf.");
+  } else {
+    fall = "zuzahlung";
+    vorlage = T("cockEinschZuzahlung", "Du zahlst {betrag} im Monat zu.");
+  }
+  const satz = vorlage.replace("{betrag}", betrag).replace("{p}", p);
+
+  const chips = [
+    {
+      key: "cashflow",
+      stufe: cashflowStufe || (negativ ? "gelb" : "gruen"),
+      text: `${T("cockChipCashflow", "Cashflow")}${NBSP}${chipVorzeichen(cashflow)}${betrag.replace(/ /g, NBSP)}`,
+    },
+  ];
+  if (preisOk) {
+    chips.push({
+      key: "preis",
+      stufe: preis.status === "rot" ? "rot" : preis.status === "gelb" ? "gelb" : "gruen",
+      text: `${T("cockChipPreis", "Preis")}${NBSP}${chipVorzeichen(Math.round(preis.abw))}${fmt(Math.abs(preis.abw), 0)}${NBSP}%`,
+    });
+  }
+  if (scoreWert != null && isFinite(scoreWert)) {
+    chips.push({
+      key: "score",
+      stufe: STUFE_VON_SCORE[scoreTier] || "gelb",
+      text: `${T("cockChipScore", "Score")}${NBSP}${Math.round(scoreWert)}`,
+    });
+  }
+
+  // Hinweiszeile: bei Zuzahlung mit Tilgung deren Betrag, danach entweder der
+  // groesste Punkt aus der KI-Analyse (falls gelaufen) oder der Standardhinweis
+  // auf das, was die Zahlen nicht enthalten.
+  const teile = [];
+  if (negativ && hatTilgung) {
+    teile.push(T("cockEinschTilgung", "Tilgung {betrag} im Monat").replace("{betrag}", fmtE(Math.round(tilgung))));
+  }
+  teile.push(
+    topRisiko
+      ? T("cockEinschRisiko", "Größter Punkt aus der Analyse: {titel}").replace("{titel}", topRisiko)
+      : T("cockEinschHinweis", "Lage, Zustand und Mieter fließen in diese Zahlen nicht ein."),
+  );
+
+  return { fall, negativ, teuer, betrag, satz, chips, hinweis: teile.join(" · ") };
 }
 
 // Unterzeile aus den zwei Markt-Vergleichskacheln (V1 Kaufpreis, V2 Miete),

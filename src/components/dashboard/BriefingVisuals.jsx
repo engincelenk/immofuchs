@@ -16,7 +16,6 @@ import { hebelTexteVon, risikenVon, staerkenVon } from "../../utils/aiEngine.js"
 import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { KiLadeeffekt } from "./AiEngine.jsx";
 import {
-  cockpitAntwortsatz,
   cockpitCashflowJahr,
   cockpitDiff,
   fmtKompakt,
@@ -130,13 +129,28 @@ export function EingabeHinweis({ data, t }) {
 }
 
 // ── Kopf: Antwortsatz + Kennzahlen-Leiste (Spec §3/§4.2/§4.3) ──────────────
-export function AntwortsatzKopf({ cashflow, unterzeile, t }) {
-  const antwort = cockpitAntwortsatz(cashflow, t);
-  if (!antwort) return null;
+// Zahlen im Satz einfaerben (Betrag: ok/Warnung, Prozent: schlecht), der Rest
+// bleibt Fliesstext - so bleibt der Satz komplett uebersetzbar.
+function faerbeSatz(einschaetzung) {
+  const { satz, negativ, teuer } = einschaetzung;
+  const betragFarbe = !negativ ? "var(--ok-tx)" : teuer ? "var(--bad-tx)" : "var(--warn-tx)";
+  return satz.split(/(\d[\d.,]*[\s\u00A0]?(?:€|%)|%\d[\d.,]*)/).map((teil, i) => {
+    if (i % 2 === 0) return teil;
+    const farbe = teil.includes("%") ? "var(--bad-tx)" : betragFarbe;
+    return (
+      <span key={i} style={{ color: farbe, fontVariantNumeric: "tabular-nums" }}>
+        {teil}
+      </span>
+    );
+  });
+}
+
+export function AntwortsatzKopf({ einschaetzung, t }) {
+  if (!einschaetzung) return null;
   return (
     <div className="bv bv-auf">
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--ca)" }}>
-        {L(t, "cockAntwortEyebrow", "Lohnt sich dieses Objekt?")}
+        {L(t, "cockAntwortEyebrow", "Was die Zahlen sagen")}
       </div>
       <div
         style={{
@@ -148,25 +162,34 @@ export function AntwortsatzKopf({ cashflow, unterzeile, t }) {
           color: "var(--ct)",
         }}
       >
-        {antwort.negativ ? (
-          <>
-            {L(t, "cockAntwortNegativVorspann", "Aktuell nicht. Du zahlst jeden Monat")}{" "}
-            <span style={{ color: "var(--bad-tx)", fontVariantNumeric: "tabular-nums" }}>{antwort.betrag}</span>{" "}
-            {L(t, "cockAntwortNegativNachspann", "zu.")}
-          </>
-        ) : (
-          <>
-            {L(t, "cockAntwortPositivVorspann", "Ja, es trägt sich. Monatlich bleiben")}{" "}
-            <span style={{ color: "var(--ok-tx)", fontVariantNumeric: "tabular-nums" }}>{antwort.betrag}</span>{" "}
-            {L(t, "cockAntwortPositivNachspann", "übrig.")}
-          </>
-        )}
+        {faerbeSatz(einschaetzung)}
       </div>
-      {unterzeile && (
-        <div className="cockpit-nur-desktop" style={{ fontSize: 13, color: "var(--ch)", marginTop: 6, lineHeight: 1.4 }}>
-          {unterzeile}
-        </div>
-      )}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+        {einschaetzung.chips.map((c) => {
+          const f = STATUS_FARBEN[c.stufe] || STATUS_FARBEN.neutral;
+          return (
+            <span
+              key={c.key}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12.5,
+                fontWeight: 700,
+                color: f.tx,
+                background: f.bg,
+                borderRadius: 999,
+                padding: "3px 10px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: f.tx }} />
+              {c.text}
+            </span>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 12.5, color: "var(--ch)", marginTop: 8, lineHeight: 1.4 }}>{einschaetzung.hinweis}</div>
     </div>
   );
 }

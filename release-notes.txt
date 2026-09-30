@@ -1,3 +1,17 @@
+## 2026-09-30 (1.100.39) [FRONTEND]
+
+### Objektseite: Ueberschrift beruecksichtigt Preis und Score, nicht nur den Cashflow
+
+- Vorher: "Lohnt sich dieses Objekt? Ja, es traegt sich" allein aus dem Cashflow.
+  Jetzt "Was die Zahlen sagen" mit einem Satz aus Cashflow UND Preis gegen den
+  Markt (vier Faelle, z.B. "Es traegt sich, aber der Preis liegt 367 % ueber dem
+  Markt"), drei Ampel-Chips (Cashflow, Preis, Score) und einer Hinweiszeile
+  ("Lage, Zustand und Mieter fliessen nicht ein", bei gelaufener Analyse der
+  groesste Punkt daraus, bei Zuzahlung mit Tilgungsbetrag).
+- Stufen kommen aus der bestehenden Logik (cashflowUrteil, vergleichStatus,
+  Score-Tier). Ohne PLZ entfaellt der Preis-Teil. Neu: cockpitEinschaetzung()
+  mit Tests, 11 neue Texte je Sprache (5 Sprachen); alte Antwortsatz-Texte entfernt.
+
 ## 2026-09-30 (1.100.38) [FRONTEND]
 
 ### Landingpage: Badge raus, Sprachmenue am Knopf, Effekte auch auf dem Handy

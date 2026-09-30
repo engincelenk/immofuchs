@@ -11,10 +11,10 @@
 // und wann zuletzt ein KI-Aufruf lief - nur der Analyse-Text (Schritt 4) und
 // das Handout (Schritt 5) kommen aus dem gespeicherten Ergebnis.
 import { useMemo, useState } from "react";
-import { alter, ergebnisFuer, istVeraltet, veraltetText } from "../../utils/aiEngine.js";
+import { alter, ergebnisFuer, istVeraltet, risikenVon, veraltetText } from "../../utils/aiEngine.js";
 import { berechneBriefing } from "../../utils/briefing.js";
 import { berechneScore } from "../../utils/investmentScore.js";
-import { cockpitGroessterHebel, cockpitUnterzeile } from "../../utils/objektCockpit.js";
+import { cockpitEinschaetzung, cockpitGroessterHebel } from "../../utils/objektCockpit.js";
 import {
   regionalLandeswert,
   regionalPreis,
@@ -116,7 +116,21 @@ export function InvestmentBriefing({
   );
   const v1 = briefing.vergleiche.find((v) => v.id === "v1");
   const v2 = briefing.vergleiche.find((v) => v.id === "v2");
-  const unterzeile = cockpitUnterzeile(v1, v2);
+  // Ueberschrift: Cashflow UND Preis gegen den Markt, dazu drei Ampel-Chips
+  // (siehe cockpitEinschaetzung). Der groesste Punkt aus der KI-Analyse ersetzt
+  // den Standardhinweis, sobald die Analyse gelaufen ist.
+  const einschaetzung = cockpitEinschaetzung(
+    {
+      cashflow: cashflowHeute,
+      cashflowStufe: briefing.ampel?.stufe,
+      preis: v1,
+      scoreWert: score?.verfuegbar ? score.score : null,
+      scoreTier: score?.verfuegbar ? score.tier : null,
+      tilgung: briefing.R.t1,
+      topRisiko: ergebnis ? risikenVon(ergebnis)[0]?.title || null : null,
+    },
+    t,
+  );
 
   function handleAnalyseStart() {
     if (ergebnis) {
@@ -177,7 +191,7 @@ export function InvestmentBriefing({
         </div>
       )}
 
-      <AntwortsatzKopf cashflow={cashflowHeute} unterzeile={unterzeile} t={t} />
+      <AntwortsatzKopf einschaetzung={einschaetzung} t={t} />
       <KennzahlenLeiste score={score} kennzahlen={briefing.kernkennzahlen} t={t} />
       <SchrittNav t={t} />
 
