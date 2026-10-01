@@ -73,3 +73,32 @@ jobs:
           mirror -R ./dist /dev.immofuchs.info --reverse --verbose --continue --delete;
           quit;
           "
+
+      # Rauchtest nach dem Hochladen (Vorfall 2026-10-01: ein Build ohne
+      # VITE_ASSISTANT_URL lag online, Login und alle API-Aufrufe waren tot, und
+      # niemand hat es am Lauf gesehen). Prueft die LIVE-Seite: enthaelt das
+      # ausgelieferte Bundle die API-Adresse, und antwortet der Worker (401 ohne
+      # Anmeldung = erreichbar)? Sonst wird der Lauf rot.
+      - name: 🔎 Rauchtest dev.immofuchs.info
+        run: |
+          OK=""
+          for i in $(seq 1 12); do
+            B=$(curl -fsS "https://dev.immofuchs.info/?nc=$(date +%s)$i" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1 || true)
+            if [ -n "$B" ] && curl -fsS "https://dev.immofuchs.info/$B" -o /tmp/bundle.js \
+              && grep -q "api-dev.immofuchs.info/api/assistant" /tmp/bundle.js; then
+              echo "✓ Live-Bundle $B enthaelt die API-Adresse"
+              OK=1
+              break
+            fi
+            sleep 5
+          done
+          if [ -z "$OK" ]; then
+            echo "::error::Live-Bundle (${B:-unbekannt}) enthaelt keine API-Adresse - Login und API waeren tot"
+            exit 1
+          fi
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" https://api-dev.immofuchs.info/api/v1/me)
+          echo "api-dev /api/v1/me -> HTTP $CODE"
+          if [ "$CODE" != "401" ]; then
+            echo "::error::Worker antwortet mit HTTP $CODE statt 401 (nicht angemeldet)"
+            exit 1
+          fi

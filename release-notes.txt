@@ -1,3 +1,18 @@
+## 2026-10-01 (1.100.53) [CI]
+
+### Monatsjob: 01:07 Uhr deutscher Zeit, Waechter, Rauchtest nach Deploy, Re-run-Warnung
+
+- Zeitplan mit timezone "Europe/Berlin": Hauptlauf am 1. um 01:07 Uhr (MEZ/MESZ),
+  Ersatzlaeufe am 1. und 2. um 06:23 Uhr. Auf main als d8c50c4 [skip ci].
+- monthly_update.py rechnet den Monat in deutscher Zeit (sonst um 01:07 MESZ =
+  23:07 UTC am Vortag noch der Vormonat).
+- Neu: monthly-watchdog.yml - taeglich 08:41 Uhr; ab dem 3. Issue "Monatsjob nicht
+  gelaufen (DEV)" und roter Lauf, wenn dev/zinsen.json nicht den aktuellen Monat traegt.
+- deploy-dev.yml: Rauchtest nach dem Hochladen (Live-Bundle enthaelt API-Adresse,
+  /api/v1/me antwortet 401), sonst roter Lauf.
+- Warnhinweis oben in monthly-update.yml: nie "Re-run" alter Laeufe (Ursache 01.10.).
+- QA und PROD bewusst unveraendert.
+
 ## 2026-10-01 (1.100.52) [CI]
 
 ### Monatsjob: Zeitplan robuster, alte Job-Versionen entfernt

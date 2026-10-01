@@ -24,6 +24,16 @@ monatelang Mai-Zinsen trotz laufendem Job).
 import os, re, json
 from datetime import date, datetime
 
+# Deutsche Zeit (MEZ/MESZ) statt Runner-Uhr (UTC): der Job laeuft am 1. um 01:07 Uhr
+# deutscher Zeit - im Sommer ist das 23:07 UTC am VORTAG, mit UTC wuerde hier der
+# Vormonat eingetragen. Fallback auf UTC, falls die Zeitzonen-Datenbank fehlt (Windows
+# ohne tzdata) - auf dem GitHub-Runner (Ubuntu) ist sie vorhanden.
+try:
+    from zoneinfo import ZoneInfo
+    BERLIN = ZoneInfo("Europe/Berlin")
+except Exception:  # pragma: no cover
+    BERLIN = None
+
 import requests
 import pdfplumber
 from playwright.sync_api import sync_playwright
@@ -404,7 +414,7 @@ def fetch_pfandbrief_zins() -> float | None:
     """Fetch current Hypothekenpfandbrief yield (10Y) from Bundesbank API.
     Series: BBK01.WU8148 — Umlaufrendite Hypothekenpfandbriefe 10J"""
     try:
-        start = date.today().replace(day=1).isoformat()[:7]  # YYYY-MM
+        start = datetime.now(BERLIN).date().replace(day=1).isoformat()[:7]  # YYYY-MM
         url = (
             "https://api.bundesbank.de/service/data/BBK/BBK01.WU8148"
             f"?detail=dataonly&startPeriod={start}&format=json"
@@ -422,7 +432,7 @@ def fetch_pfandbrief_zins() -> float | None:
 
 
 def main():
-    now   = datetime.now()
+    now   = datetime.now(BERLIN)
     m_idx = now.month - 1   # 0-based
     year  = now.year
     new_stand = f"{MONTH_DE[m_idx]} {year}"

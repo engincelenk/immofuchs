@@ -1,14 +1,27 @@
 name: 📊 Monthly Data Update
 
+# ACHTUNG: Diesen Job NIE ueber "Re-run" eines alten Laufs starten. GitHub nimmt dann
+# die Workflow-Datei VON DAMALS (bis 03.09.2026 mit eigenem Build ohne VITE_*-
+# Variablen), checkt aber den HEUTIGEN Code aus - genau so wurde am 01.10.2026 DEV
+# ohne API-Adresse deployt (Login und alle API-Aufrufe tot). Manuell immer:
+# Actions -> Monthly Data Update -> "Run workflow" (Branch main).
+
 on:
   schedule:
-    # 1. UND 2. jeden Monats um 04:23 UTC (06:23 MESZ). Vorher "0 7 1 * *": am
-    # 01.09. und 01.10.2026 hat GitHub den Lauf gar nicht ausgeloest (kein Eintrag
-    # in Actions). Geplante Laeufe zur vollen Stunde und am Monatsersten werden bei
-    # hoher Last verzoegert oder verworfen - deshalb eine krumme Minute und ein
-    # zweiter Versuch am 2. Der zweite Lauf ist harmlos: ohne Datenaenderung
-    # committet und deployt er nichts (changed=false).
-    - cron: "23 4 1,2 * *"
+    # Hauptlauf: am 1. des Monats um 01:07 Uhr DEUTSCHER Zeit (MEZ im Winter, MESZ im
+    # Sommer - GitHub rechnet die Zeitzone selbst um). Nutzer-Vorgabe 2026-10-01: "am 1.
+    # nachts um 1 Uhr, MEZ nicht UTC". 7 Minuten statt :00, weil GitHub geplante Laeufe
+    # zur vollen Stunde bei Last verwirft (01.09. und 01.10.2026 sind ganz ausgefallen).
+    # monthly_update.py rechnet den Monat ebenfalls in deutscher Zeit (sonst stuende
+    # um 01:07 MESZ = 23:07 UTC am Vortag noch der Vormonat drin).
+    - cron: "7 1 1 * *"
+      timezone: "Europe/Berlin"
+    # Ersatzlaeufe am 1. und 2. um 06:23 Uhr deutscher Zeit, falls der Hauptlauf
+    # verworfen wird. Harmlos: ohne Datenaenderung kein Commit und kein Deploy
+    # (changed=false). Ob der Monat wirklich aktualisiert wurde, prueft zusaetzlich
+    # monthly-watchdog.yml.
+    - cron: "23 6 1,2 * *"
+      timezone: "Europe/Berlin"
   workflow_dispatch:
     # Manuell auslösbar: GitHub → Actions → Monthly Data Update → Run workflow
 
