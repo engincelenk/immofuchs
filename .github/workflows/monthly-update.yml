@@ -2,8 +2,13 @@ name: 📊 Monthly Data Update
 
 on:
   schedule:
-    # 1. jeden Monats um 07:00 UTC = 08:00 MEZ / 09:00 MESZ
-    - cron: "0 7 1 * *"
+    # 1. UND 2. jeden Monats um 04:23 UTC (06:23 MESZ). Vorher "0 7 1 * *": am
+    # 01.09. und 01.10.2026 hat GitHub den Lauf gar nicht ausgeloest (kein Eintrag
+    # in Actions). Geplante Laeufe zur vollen Stunde und am Monatsersten werden bei
+    # hoher Last verzoegert oder verworfen - deshalb eine krumme Minute und ein
+    # zweiter Versuch am 2. Der zweite Lauf ist harmlos: ohne Datenaenderung
+    # committet und deployt er nichts (changed=false).
+    - cron: "23 4 1,2 * *"
   workflow_dispatch:
     # Manuell auslösbar: GitHub → Actions → Monthly Data Update → Run workflow
 

@@ -1,3 +1,25 @@
+## 2026-10-01 (1.100.52) [CI]
+
+### Monatsjob: Zeitplan robuster, alte Job-Versionen entfernt
+
+- Zeitplan "0 7 1 * *" hat am 01.09. und 01.10. nicht ausgeloest (kein Eintrag in
+  Actions). Neu: "23 4 1,2 * *" (04:23 UTC, 1. und 2. des Monats). Auf main als
+  df0df15 mit [skip ci] (kein PROD-Deploy), hier auf dev nachgezogen.
+- Remote-Branches "Immofuchs-qa#" und "claude/finn-missing-results-error-ks16zm"
+  geloescht: sie trugen noch die alte, selbst bauende Version des Monatsjobs.
+  Lokale Sicherung: backup/Immofuchs-qa-hash, backup/claude-finn-missing-results.
+
+## 2026-10-01 (1.100.51) [BUILD]
+
+### Build-Sperre: kein Produktions-Build mehr ohne VITE_ASSISTANT_URL
+
+- Vorfall 01.10.: Nach dem Monatsjob lief auf DEV ein Build ohne API-Adresse
+  (Login, Konto, Objekte, Finn tot). Behoben durch Neu-Deploy (d7b7e1d).
+- vite.config.js bricht "vite build" jetzt ab, wenn VITE_ASSISTANT_URL fehlt (aus der
+  Umgebung oder .env) - unabhaengig davon, welcher Workflow baut. Die alte Version
+  bleibt dann online. Ausnahme fuer lokale Pruef-Builds: IMMOFUCHS_BUILD_OHNE_API=1
+  (mit Warnung). deploy-dev.yml und die Mobile-Workflows setzen die Variable bereits.
+
 ## 2026-10-01 (1.100.50) [FRONTEND]
 
 ### Objekt-Uebersicht Desktop: Knopf neben der Ueberschrift, Zaehler hinter den Filtern
