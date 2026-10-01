@@ -19,7 +19,8 @@ import { PLAN_AMOUNTS, YEARLY_LIST_AMOUNT, formatMoney } from "./planPricing.js"
 //
 // Keine MwSt-Zeile (Nutzer-Entscheidung 2026-08-17): der Ausweis gehoert auf
 // die von Stripe Invoicing erzeugte Rechnung, nicht in die Kaufstrecke.
-// Angezeigt wird der Bruttobetrag mit dem Hinweis "inkl. MwSt.".
+// Seit 2026-10-01 Kleinunternehmerregelung: angezeigt wird der Endbetrag mit
+// dem Hinweis "Gemaess § 19 UStG ohne Umsatzsteuer" (summaryVatNote).
 //
 // Anders als zuvor bei Paddle gibt es hier KEINEN Live-Betrag aus einem
 // Client-Event mehr: Stripe Payment Element liefert den finalen Betrag nicht

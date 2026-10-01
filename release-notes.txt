@@ -1,3 +1,20 @@
+## 2026-10-01 (1.100.58) [FRONTEND] [WORKER]
+
+### Kleinunternehmerregelung (§ 19 UStG) und Einblenden der Landingpage-Sektionen
+
+- § 19 UStG: Stripe Tax im Checkout aus (automatic_tax: false), der Preis ist der
+  Endbetrag. Impressum und AGB mit Pflichthinweis "Gemaess § 19 UStG wird keine
+  Umsatzsteuer berechnet und ausgewiesen"; Bestelluebersicht und Support-FAQ in 5
+  Sprachen statt "inkl. MwSt.". USt-IdNr. bleibt im Impressum stehen.
+  Offen im Stripe-Dashboard (Nutzer): Steuerregistrierung entfernen, Standard-
+  Fusszeile der Rechnung mit dem § 19-Satz.
+- Landingpage: jede Sektion unterhalb des Hero gleitet beim Scrollen langsam herein
+  (1,1 s, 32 px), Karten darin weiter gestaffelt (0,8 s). Browser und Handy gleich,
+  aus bei "Bewegung reduzieren".
+- Fix dabei: Ausloeser jetzt "Oberkante kommt ins Bild" statt "12 % sichtbar" -
+  ganze Sektionen sind auf dem Handy bis 2.000 px hoch und waeren sonst unsichtbar
+  geblieben.
+
 ## 2026-10-01 (1.100.57) [FRONTEND] [CI]
 
 ### Bauzins nur noch aus data.js, Datenpflege-Erinnerung pro Thema

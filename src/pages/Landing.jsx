@@ -407,17 +407,23 @@ export function Landing({ onStart, lang, setLang }) {
     return () => io.disconnect();
   }, []);
 
-  // Sanftes Einblenden der Abschnitte und Karten beim Scrollen. Aus bei "Bewegung
-  // reduzieren" und ohne IntersectionObserver. Stufung je Geschwister-Position,
-  // damit Kartenreihen nacheinander erscheinen statt alle gleichzeitig.
+  // Sanftes Einblenden beim Scrollen, Browser und Handy gleich. Zwei Stufen:
+  //  - jede Sektion unterhalb des Hero gleitet als Ganzes langsam herein
+  //    (Nutzerwunsch 2026-10-01: "langsame Einblendung des Contents" pro Sektion),
+  //  - Karten darin erscheinen zusaetzlich nacheinander (Stufung je
+  //    Geschwister-Position), statt alle gleichzeitig.
+  // Aus bei "Bewegung reduzieren" und ohne IntersectionObserver.
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return undefined;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return undefined;
-    const ziele = Array.from(
+    const abschnitte = Array.from(document.querySelectorAll("section:not(.lp-hero)>*"));
+    const karten = Array.from(
       document.querySelectorAll(
         ".lp-ki-top,.lp-ki-karte,.lp-step,.calc-hero-card,.calc-cards-support>*",
       ),
     );
+    abschnitte.forEach((el) => el.classList.add("lp-rev-sektion"));
+    const ziele = [...abschnitte, ...karten];
     const io = new IntersectionObserver(
       (eintraege) => {
         for (const e of eintraege) {
@@ -425,10 +431,14 @@ export function Landing({ onStart, lang, setLang }) {
           const el = e.target;
           io.unobserve(el);
           el.classList.add("lp-rev-in");
-          setTimeout(() => el.classList.remove("lp-rev", "lp-rev-in"), 1100);
+          setTimeout(() => el.classList.remove("lp-rev", "lp-rev-in", "lp-rev-sektion"), 1600);
         }
       },
-      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+      // threshold 0 statt eines Anteils: eine ganze Sektion ist auf dem Handy oft
+      // hoeher als der Bildschirm - "12 % sichtbar" wuerde dort nie erreicht und
+      // der Inhalt bliebe unsichtbar. Ausloeser ist, dass die Oberkante ins
+      // untere Zehntel des Bildes rueckt.
+      { threshold: 0, rootMargin: "0px 0px -10% 0px" },
     );
     ziele.forEach((el) => {
       // Schon oberhalb des Bildschirms (z.B. nach Neuladen mitten auf der Seite):
@@ -437,13 +447,15 @@ export function Landing({ onStart, lang, setLang }) {
       const pos = el.parentElement
         ? Array.prototype.indexOf.call(el.parentElement.children, el)
         : 0;
-      el.style.setProperty("--rd", `${(pos % 4) * 70}ms`);
+      // Karten gestaffelt; Sektionen ohne Verzoegerung, sie sind ohnehin langsam
+      if (!el.classList.contains("lp-rev-sektion"))
+        el.style.setProperty("--rd", `${(pos % 4) * 90}ms`);
       el.classList.add("lp-rev");
       io.observe(el);
     });
     return () => {
       io.disconnect();
-      ziele.forEach((el) => el.classList.remove("lp-rev", "lp-rev-in"));
+      ziele.forEach((el) => el.classList.remove("lp-rev", "lp-rev-in", "lp-rev-sektion"));
     };
   }, []);
 
@@ -1510,7 +1522,9 @@ export function Landing({ onStart, lang, setLang }) {
          Effekte). Die Klassen setzt ein Effekt in Landing() erst per Skript - ohne
          JS bleibt alles sichtbar. Nach dem Einblenden werden sie wieder entfernt,
          damit Hover/Druck-Effekte der Karten ihre eigenen Zeiten behalten. */
-      .lp-rev{opacity:0;transform:translateY(14px);transition:opacity .5s var(--ease-out),transform .5s var(--ease-out);transition-delay:var(--rd,0ms)}
+      .lp-rev{opacity:0;transform:translateY(18px);transition:opacity .8s var(--ease-out),transform .8s var(--ease-out);transition-delay:var(--rd,0ms)}
+      /* Ganze Sektion: langsamer und mit etwas mehr Weg - "langsame Einblendung" */
+      .lp-rev.lp-rev-sektion{transform:translateY(32px);transition-duration:1.1s}
       .lp-rev.lp-rev-in{opacity:1;transform:none}
       /* Touch hat kein Hover: stattdessen ein kurzes Eindruecken beim Antippen. */
       @media(hover:none){

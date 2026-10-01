@@ -30,10 +30,10 @@ beforeEach(() => {
 });
 
 describe("createSubscriptionCheckout", () => {
-  it("aktiviert Stripe Tax, damit die Rechnung Netto/Steuer/Brutto ausweist", async () => {
+  it("rechnet ohne Stripe Tax (Kleinunternehmer, § 19 UStG)", async () => {
     const result = await createSubscriptionCheckout(env, "user_1", "a@b.de", "monthly");
     expect(result).toEqual({ clientSecret: "pi_secret", subscriptionId: "sub_1" });
-    expect(subscriptionsCreate.mock.calls[0][0].automatic_tax).toEqual({ enabled: true });
+    expect(subscriptionsCreate.mock.calls[0][0].automatic_tax).toEqual({ enabled: false });
     expect(subscriptionsCreate.mock.calls[0][0].items).toEqual([{ price: "price_m" }]);
   });
 });
