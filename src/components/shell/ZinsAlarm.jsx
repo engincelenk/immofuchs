@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { TL } from "../../i18n/translations.js";
+import { MARKET_RATES } from "../../data.js";
 
 function showAlarmNotification(avg, threshold, lang) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
@@ -21,9 +22,10 @@ function showAlarmNotification(avg, threshold, lang) {
 }
 
 // ═══════════ ZINSALARM COMPONENT ═══════════
-export function ZinsAlarm({ zinsen, lang }) {
+export function ZinsAlarm({ lang }) {
   const l = TL[lang] || TL.de;
-  const avg = zinsen?.avg ?? null;
+  // Bauzins aus data.js (Monatsjob); zinsen.json entfiel 2026-10-01.
+  const avg = Number(MARKET_RATES.avg) || null;
 
   const [threshold, setThreshold] = useState(() => {
     try {

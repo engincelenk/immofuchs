@@ -419,7 +419,6 @@ export default function App() {
   const account = useAccountCtx();
   const { resolvedTheme } = useTheme();
   const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-dark.png" : "/logo-wordmark.png";
-  const [zinsen, setZinsen] = useState(null); // holds the raw zinsen.json config (with live BBK)
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator !== "undefined" ? navigator.onLine : true,
   );
@@ -443,7 +442,6 @@ export default function App() {
       window.gtag("event", "tab_view", { tab_id: tab, tab_name: TAB_LABELS[tab] || tab });
     }
   }, [tab]);
-  const zinssatzTouchedRef = useRef(false); // true once user manually edits the field
   // Welches der beiden gekoppelten Mietfelder im Renditerechner zuletzt gesetzt
   // wurde ("kalt" = Kaltmiete ist fuehrend, mieteQm wird daraus abgeleitet).
   // Liegt hier statt im Renditerechner, weil auch die Expose-Uebernahme die
@@ -453,7 +451,7 @@ export default function App() {
   const mietQuelleRef = useRef(null);
   // Nicht umlagefaehige Kosten folgen der Wohnflaeche (Richtwert 1,75 €/m²/Mon),
   // bis der Nutzer das Feld selbst setzt - danach gilt sein Wert. Gleiches
-  // Muster wie zinssatzTouchedRef.
+  // Muster wie frueher beim Zinssatz (Vorbelegung bis zur ersten Eingabe).
   //
   // Warum zwei Refs: das Eingabefeld (atoms.jsx, F) feuert onChange auch beim
   // blossen Verlassen des Feldes, ohne dass sich etwas geaendert hat. Wuerde
@@ -464,62 +462,12 @@ export default function App() {
   const nichtUmlTouchedRef = useRef(false);
   const nichtUmlAutoRef = useRef(String(berechneNichtUml(FLAECHE_DEFAULT)));
 
-  // ── Zinsen laden: zinsen.json (lokal, kein Bundesbank-API-Call wegen CORS) ──
-  useEffect(() => {
-    async function loadZinsen() {
-      // 1. Cache check (max 60 Minuten)
-      try {
-        const cached = localStorage.getItem("if_zinsen_v3");
-        if (cached) {
-          const { ts, data } = JSON.parse(cached);
-          if (Date.now() - ts < 60 * 60 * 1000) {
-            setZinsen(data);
-            return;
-          }
-        }
-      } catch {
-        /* defekter/geblockter localStorage-Cache → einfach frisch laden */
-      }
-
-      // 2. zinsen.json von eigenem Server laden (Bundesbank-API entfällt wegen CORS)
-      let config = null;
-      try {
-        const res = await fetch("/zinsen.json");
-        if (res.ok) config = await res.json();
-      } catch (e) {
-        console.warn("[zinsen] zinsen.json nicht geladen:", e);
-      }
-      if (!config) {
-        setZinsen(null);
-        return;
-      }
-
-      // 3. avg/top kommen direkt aus zinsen.json (vom Skript berechnet, siehe
-      // scripts/monthly_update.py) - keine clientseitige Neuberechnung mehr
-      // (frueher aus einem quellen[]-Array mit benannten Anbietern, das seit
-      // 2026-08-24 entfaellt).
-      setZinsen(config);
-      try {
-        localStorage.setItem("if_zinsen_v3", JSON.stringify({ ts: Date.now(), data: config }));
-      } catch {
-        /* Cache-Schreiben optional (z.B. Private-Mode/Quota) → nicht kritisch */
-      }
-    }
-    loadZinsen();
-  }, []);
-
-  // ── Wenn Live-Durchschnitt kommt und User hat nichts getippt → Default setzen ──
-  useEffect(() => {
-    if (zinssatzTouchedRef.current) return;
-    if (zinsen?.avg) {
-      const live = String(zinsen.avg);
-      setData((p) => ({ ...p, zinssatz: live }));
-    }
-  }, [zinsen]);
+  // Bauzins: kommt seit 2026-10-01 nur noch aus MARKET_RATES in data.js
+  // (Vorbelegung in createDefaults). public/zinsen.json war derselbe Wert und
+  // entfaellt - der Monatsjob deployt nach jedem Update ohnehin neu.
 
   const [data, setData] = useState(createDefaults);
   const set = useCallback((k, v) => {
-    if (k === "zinssatz") zinssatzTouchedRef.current = true;
     // Nur ein vom automatisch gesetzten Richtwert abweichender Wert zaehlt als
     // echte Nutzereingabe - siehe Kommentar bei nichtUmlAutoRef.
     if (k === "nichtUml" && String(v) !== nichtUmlAutoRef.current)
@@ -624,7 +572,7 @@ export default function App() {
     return (
       <>
         <style>{`${FONT_CSS}${ROOT_TOKENS_CSS}html{overflow-y:scroll}html,body{margin:0;padding:0;overflow-x:hidden;width:100%;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y;scrollbar-gutter:stable}*{box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);-webkit-font-smoothing:antialiased;position:relative}section,footer,header{min-width:0;max-width:100%}`}</style>
-        <Landing onStart={startApp} zinsen={zinsen} lang={lang} setLang={setLang} />
+        <Landing onStart={startApp} lang={lang} setLang={setLang} />
         {!isOnline && <OfflineBanner bottom={"calc(16px + env(safe-area-inset-bottom))"} />}
       </>
     );
@@ -642,7 +590,6 @@ export default function App() {
         // Kopfzeilen-Menue auch im Profil-Bereich, der als Portal ausserhalb
         // der Kopfzeile haengt und die Prop nicht durchgereicht bekommt.
         setLang,
-        zinsen,
         tip: (k) => (TIPS[lang] || TIPS.de)[k],
         savedList,
         saveObj,
@@ -1082,45 +1029,45 @@ export default function App() {
           )}
           {tab === "haupt" && (
             <CalculatorTrialGate
-            rechner={tabZuRechner("haupt")}
-            onDismiss={() => {
-              setAktivesObjekt(null);
-              setTab("saved");
-            }}
-          >
+              rechner={tabZuRechner("haupt")}
+              onDismiss={() => {
+                setAktivesObjekt(null);
+                setTab("saved");
+              }}
+            >
               <Haupt />
             </CalculatorTrialGate>
           )}
           {tab === "kredit" && (
             <CalculatorTrialGate
-            rechner={tabZuRechner("kredit")}
-            onDismiss={() => {
-              setAktivesObjekt(null);
-              setTab("saved");
-            }}
-          >
+              rechner={tabZuRechner("kredit")}
+              onDismiss={() => {
+                setAktivesObjekt(null);
+                setTab("saved");
+              }}
+            >
               <Kredit />
             </CalculatorTrialGate>
           )}
           {tab === "miete" && (
             <CalculatorTrialGate
-            rechner={tabZuRechner("miete")}
-            onDismiss={() => {
-              setAktivesObjekt(null);
-              setTab("saved");
-            }}
-          >
+              rechner={tabZuRechner("miete")}
+              onDismiss={() => {
+                setAktivesObjekt(null);
+                setTab("saved");
+              }}
+            >
               <Miete />
             </CalculatorTrialGate>
           )}
           {tab === "sanier" && (
             <CalculatorTrialGate
-            rechner={tabZuRechner("sanier")}
-            onDismiss={() => {
-              setAktivesObjekt(null);
-              setTab("saved");
-            }}
-          >
+              rechner={tabZuRechner("sanier")}
+              onDismiss={() => {
+                setAktivesObjekt(null);
+                setTab("saved");
+              }}
+            >
               <Sanier />
             </CalculatorTrialGate>
           )}
@@ -1137,12 +1084,12 @@ export default function App() {
           )}
           {tab === "vfe" && (
             <CalculatorTrialGate
-            rechner={tabZuRechner("vfe")}
-            onDismiss={() => {
-              setAktivesObjekt(null);
-              setTab("saved");
-            }}
-          >
+              rechner={tabZuRechner("vfe")}
+              onDismiss={() => {
+                setAktivesObjekt(null);
+                setTab("saved");
+              }}
+            >
               <Vorfaelligkeit />
             </CalculatorTrialGate>
           )}

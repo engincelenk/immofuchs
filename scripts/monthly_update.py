@@ -3,7 +3,8 @@
 ImmoFuchs Monthly Data Update
 Runs on the 1st of each month via GitHub Actions.
 Updates src/data.js (MARKET_RATES), src/i18n/translations.js (ratesTip
-Stand-Datum) und public/zinsen.json (Live-Datenquelle der Landingpage).
+Stand-Datum). public/zinsen.json entfiel 2026-10-01 - die App liest den
+Bauzins nur noch aus MARKET_RATES, der anschliessende Deploy baut neu.
 
 Bauzinsen-Ermittlung (2026-08-24 umgestellt, kein LLM mehr noetig):
   1. Deutsche Bundesbank: Rendite 10J Bundeswertpapier + 0,75 Aufschlag
@@ -21,7 +22,7 @@ einen simplen requests.get() - das liess Claude fast jeden Monat
 monatelang Mai-Zinsen trotz laufendem Job).
 """
 
-import os, re, json
+import os, re
 from datetime import date, datetime
 
 # Deutsche Zeit (MEZ/MESZ) statt Runner-Uhr (UTC): der Job laeuft am 1. um 01:07 Uhr
@@ -42,7 +43,6 @@ from playwright.sync_api import sync_playwright
 REPO_ROOT       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_JS         = os.path.join(REPO_ROOT, "src", "data.js")
 TRANSLATIONS_JS = os.path.join(REPO_ROOT, "src", "i18n", "translations.js")
-ZINSEN_JSON     = os.path.join(REPO_ROOT, "public", "zinsen.json")
 DATENSTATUS_HTML = os.path.join(REPO_ROOT, "public", "datenstatus.html")
 
 HEADERS = {
@@ -461,7 +461,7 @@ def main():
         final_avg = round((bbk_adjusted + interhyp_avg) / 2, 2)
         print(f"\n=> Zins (Ø aus Bundesbank+0,75={bbk_adjusted} und Interhyp-Ø={interhyp_avg}): {final_avg} %")
     else:
-        print("\n⚠ Mindestens eine Quelle nicht verfuegbar — MARKET_RATES/zinsen.json bleiben unveraendert.")
+        print("\n⚠ Mindestens eine Quelle nicht verfuegbar — MARKET_RATES bleibt unveraendert.")
 
     # ── 2. data.js aktualisieren ────────────────────────────────────────────
     print("\nApplying updates to data.js...")
@@ -550,44 +550,6 @@ def main():
     else:
         print("  translations.js — keine Änderungen")
 
-    # ── 4. public/zinsen.json (Live-Quelle der Landingpage) ────────────────
-    print("\nUpdating public/zinsen.json...")
-    zinsen = json.loads(open(ZINSEN_JSON, encoding="utf-8").read())
-    zinsen_changed = []
-
-    if final_avg is not None:
-        new_zinsen_stand = f"{year}-{now.month:02d}"
-        new_hinweis = (
-            "Bauzinsen (10J): Durchschnitt aus Bundesbank-Rendite Bundeswertpapiere und "
-            "Interhyp-Konditionsvergleich. Automatisiert aktualisiert (scripts/monthly_update.py). "
-            f"Stand: {new_stand}."
-        )
-        for key, new_val in (
-            ("stand", new_zinsen_stand),
-            ("hinweis", new_hinweis),
-            ("avg", final_avg),
-            ("bundesanleihe_10j", bbk_10j),
-        ):
-            if zinsen.get(key) != new_val:
-                zinsen_changed.append(f"  {key}: {zinsen.get(key)} → {new_val}")
-                zinsen[key] = new_val
-        # alte, namentliche Quellenliste entfaellt (2026-08-24 umgestellt)
-        if "quellen" in zinsen:
-            del zinsen["quellen"]
-            zinsen_changed.append("  quellen[]: entfernt (keine namentlichen Quellen mehr)")
-        # Topzins entfaellt (2026-08-24 Folge-Anpassung) - nur noch eine Zinsangabe
-        if "top" in zinsen:
-            del zinsen["top"]
-            zinsen_changed.append("  top: entfernt (keine separate Topzins-Angabe mehr)")
-
-    if zinsen_changed:
-        open(ZINSEN_JSON, "w", encoding="utf-8").write(json.dumps(zinsen, indent=2, ensure_ascii=False) + "\n")
-        print(f"✓ zinsen.json — {len(zinsen_changed)} Änderungen:")
-        for c in zinsen_changed:
-            print(c)
-    else:
-        print("  zinsen.json — keine Änderungen")
-
     # ── 5. Faelligkeitspruefung + Datenstatus-Seite (meldet nur, aendert
     #      an data.js nichts) ────────────────────────────────────────────────
     status = sammle_konstanten_status(open(DATA_JS, encoding="utf-8").read(), now)
@@ -612,7 +574,7 @@ def main():
             f.write("\n".join(faellig))
             f.write("\nEOF_OVERDUE\n")
 
-    total = len(changes) + len(i18n_changed) + len(zinsen_changed)
+    total = len(changes) + len(i18n_changed)
     print(f"\n=== Abgeschlossen — {total} Änderungen gesamt ===")
 
 

@@ -1,3 +1,25 @@
+## 2026-10-01 (1.100.57) [FRONTEND] [CI]
+
+### Bauzins nur noch aus data.js, Datenpflege-Erinnerung pro Thema
+
+- public/zinsen.json entfaellt: Landingpage (Bauzinsen, Echte Marktdaten), App und
+  Zinsalarm lesen MARKET_RATES aus data.js; der Monatsjob deployt ohnehin nach jedem
+  Update. Stand wird weiter in der Seitensprache angezeigt ("Oktober 2026" -> "October
+  2026"). Der Hintergrund-Zinsalarm im Service Worker las ein seit 24.08. entfallenes
+  Feld und hat nie ausgeloest - entfernt; zinsen.json auch aus dem SW-Precache (sonst
+  scheitert die SW-Installation).
+- Monatsjob: committet datenstatus.html mit, zinsen.json nur noch wo vorhanden,
+  GENESIS_USER/GENESIS_PASS werden an das Skript weitergegeben (Wertsteigerung laeuft,
+  sobald die Secrets hinterlegt sind). Sammel-Issue "Datenpflege ueberfaellig" entfernt.
+- Waechter prueft jetzt "Letzter Lauf" in dev.immofuchs.info/datenstatus.html.
+- Neu: .github/workflows/datenpflege-erinnerung.yml + scripts/datenpflege_erinnerung.py.
+  Am 1. jedes Monats 08:17 Uhr ein Issue pro faelligem Thema (quartalsweise,
+  halbjaehrlich, jaehrlich; dazu veraltete PFANDBRIEF/WERTSTEIGERUNG), dem Besitzer
+  zugewiesen (Mail), mit Quelle, Datei, Verwendung und fertigem Satz fuer Claude.
+  Bereits im laufenden Monat gepflegte Konstanten werden uebersprungen.
+- Workflow-Dateien (monthly-update, monthly-watchdog, datenpflege-erinnerung) auch auf
+  main [skip ci], weil GitHub geplante Laeufe nur von dort startet.
+
 ## 2026-10-01 (1.100.56) [FRONTEND]
 
 ### Sanierungsrechner: Foerderung nach BAFA und KfW 458 getrennt, korrekte Hoechstgrenzen

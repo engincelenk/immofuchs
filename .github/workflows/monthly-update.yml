@@ -32,7 +32,6 @@ permissions:
   # actions: write - dieser Job stoesst die regulaeren deploy-*.yml per
   # workflow_dispatch an, statt selbst zu bauen und zu spiegeln (siehe unten).
   actions: write
-  issues: write
 
 jobs:
   update-and-deploy:
@@ -109,12 +108,22 @@ jobs:
       # Seit 2026-08-24 ohne LLM: Bundesbank-PDF (pdfplumber) + Interhyp-
       # Zinstabelle (Playwright, da clientseitig gerendert) - kein
       # ANTHROPIC_API_KEY/Guthaben mehr noetig, siehe scripts/monthly_update.py.
+      #
+      # GENESIS_USER/GENESIS_PASS: Zugang zur Destatis-GENESIS-API fuer die
+      # Wertsteigerung (WERTSTEIGERUNG). Fehlten hier bis 2026-10-01 - das
+      # Skript lief deshalb nie gegen GENESIS. Ohne hinterlegte Secrets bleiben
+      # sie leer, das Skript meldet das und laesst den Wert stehen.
+      # ANTHROPIC_API_KEY nur noch fuer den aelteren Skriptstand auf main.
       - name: 🔄 Marktdaten aktualisieren
         id: update
+        env:
+          GENESIS_USER: ${{ secrets.GENESIS_USER }}
+          GENESIS_PASS: ${{ secrets.GENESIS_PASS }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/monthly_update.py
 
-      # ── 4. Änderungen committen UND zurückpushen - data.js/translations.js/
-      #      zinsen.json bleiben so dauerhaft die Quelle der Wahrheit in Git,
+      # ── 4. Änderungen committen UND zurückpushen - data.js/translations.js
+      #      bleiben so dauerhaft die Quelle der Wahrheit in Git,
       #      statt nur einmalig auf dem Runner fuer diesen einen Deploy zu
       #      existieren und beim naechsten Push auf den Branch wieder auf den
       #      alten committeten Stand zurueckzufallen (siehe Vorfall
@@ -125,7 +134,12 @@ jobs:
         run: |
           git config --global user.name "ImmoFuchs Bot"
           git config --global user.email "bot@immofuchs.info"
-          git add src/data.js src/i18n/translations.js public/zinsen.json public/datenstatus.html
+          git add src/data.js src/i18n/translations.js
+          # zinsen.json gibt es auf dev seit 2026-10-01 nicht mehr (Bauzins nur
+          # noch aus data.js), auf aelteren Branches noch - daher nur wenn vorhanden.
+          for f in public/zinsen.json public/datenstatus.html; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
           if git diff --staged --quiet; then
             echo "Keine Änderungen — kein Commit nötig"
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -137,40 +151,9 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── 4b. Faelligkeits-Issue - nur einmal (PROD-Zweig genuegt, die
-      #        Pflegeintervalle sind branch-unabhaengig dieselben Werte) ─────
-      - name: 🔔 Fälligkeits-Issue aktualisieren
-        if: matrix.env.slug == 'prod'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OVERDUE: ${{ steps.update.outputs.overdue }}
-        run: |
-          TITLE="🗓️ Datenpflege überfällig"
-          EXISTING=$(gh issue list --repo "${{ github.repository }}" --search "$TITLE in:title" --state open --json number --jq '.[0].number')
-          if [ -n "$OVERDUE" ]; then
-            BODY="Folgende Konstanten in \`src/data.js\` sind laut ihrem Pflegeintervall überfällig und müssen von Hand aktualisiert werden:
-
-          \`\`\`
-          $OVERDUE
-          \`\`\`
-
-          Übersicht aller Werte: siehe \`public/datenstatus.html\` (mit deployt).
-          Zum Aktualisieren: neuen Wert + Quelle angeben, \`src/data.js\` entsprechend anpassen (\`stand\`-Feld nicht vergessen).
-
-          _Automatisch erzeugt vom Monthly-Data-Update-Workflow._"
-            if [ -n "$EXISTING" ]; then
-              gh issue edit "$EXISTING" --repo "${{ github.repository }}" --body "$BODY" --add-assignee "${{ github.repository_owner }}"
-              echo "Issue #$EXISTING aktualisiert"
-            else
-              gh issue create --repo "${{ github.repository }}" --title "$TITLE" --body "$BODY" --assignee "${{ github.repository_owner }}"
-              echo "Neues Issue erstellt"
-            fi
-          elif [ -n "$EXISTING" ]; then
-            gh issue close "$EXISTING" --repo "${{ github.repository }}" --comment "Alle Werte sind wieder innerhalb ihres Pflegeintervalls."
-            echo "Issue #$EXISTING geschlossen"
-          else
-            echo "Nichts überfällig, kein offenes Issue vorhanden"
-          fi
+      # ── 4b. Erinnerungen an die Handpflege: eigener Workflow
+      #        datenpflege-erinnerung.yml (seit 2026-10-01). Das fruehere
+      #        Sammel-Issue hier lief nur im PROD-Zweig und kam nie an. ─────
 
       # ── 5. Deploy - NICHT mehr selbst bauen und spiegeln, sondern den
       #      regulaeren Deploy-Workflow der Umgebung anstossen.

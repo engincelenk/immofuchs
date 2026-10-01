@@ -19,7 +19,6 @@ const APP_SHELL = [
   '/favicon.ico',
   '/icon-192.png',
   '/icon-512.png',
-  '/zinsen.json',
 ];
 
 // ── Install ──────────────────────────────────────────────
@@ -78,10 +77,6 @@ self.addEventListener('fetch', event => {
     fetchWithTimeout(request, 800)
       .then(response => {
         if (response.ok) {
-          // Zinsalarm: bei /zinsen.json Fetch im Hintergrund prüfen
-          if (url.pathname === '/zinsen.json' && alarmConfig?.enabled) {
-            response.clone().json().then(checkAlarmFromZinsen).catch(() => {});
-          }
           cacheResponse(CACHE_NAME, request, response.clone());
         }
         return response;
@@ -132,30 +127,11 @@ function fetchWithTimeout(request, ms = 800) {
   });
 }
 
-// ── Alarm: Zinsen prüfen und ggf. Notification anzeigen ──
-function checkAlarmFromZinsen(jsonData) {
-  if (!alarmConfig?.enabled || typeof alarmConfig.threshold !== 'number') return;
-  try {
-    const werte = (jsonData.quellen || []).map(q => q.wert).filter(v => v > 0);
-    if (!werte.length) return;
-    const sum = werte.reduce((a, b) => a + b, 0);
-    const avg = Math.round(sum / werte.length * 20) / 20;
-    if (avg <= alarmConfig.threshold) {
-      const title = alarmConfig.notifTitle || 'ImmoFuchs Zinsalarm';
-      const body = (alarmConfig.notifBody || 'Zinsen bei {avg}% – unter {threshold}%')
-        .replace('{avg}', avg)
-        .replace('{threshold}', alarmConfig.threshold);
-      self.registration.showNotification(title, {
-        body,
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        tag: 'zinsalarm',
-        renotify: true,
-        data: { avg, threshold: alarmConfig.threshold },
-      });
-    }
-  } catch(e) { /* silent */ }
-}
+// Zinsalarm: Der Bauzins kommt seit 2026-10-01 aus data.js und steckt im
+// Bundle. Die App schickt ihn per SET_ALARM mit (siehe ZinsAlarm.jsx), nach
+// jedem Deploy also der neue Wert. Die fruehere Hintergrundpruefung von
+// /zinsen.json las ein Feld "quellen", das es seit 2026-08-24 nicht mehr gab -
+// sie hat nie ausgeloest und ist mit der Datei entfallen.
 
 // ── Message Handler: Alarm-Config vom App empfangen ───────
 self.addEventListener('message', event => {

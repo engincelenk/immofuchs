@@ -65,12 +65,33 @@ const navLink = {
   transition: "color .15s",
 };
 
-// Der Server liefert den Zinsstand als "2026-09" - fuer Menschen als
-// "September 2026" in der Seitensprache. Andere Formate bleiben unveraendert.
+// Stand-Angaben aus data.js ("Oktober 2026") oder im Format "2026-10" - fuer
+// Menschen als Monat + Jahr in der Seitensprache. Andere Formate (z. B.
+// "Q1 2026") bleiben unveraendert.
+const MONATE_DE = [
+  "januar",
+  "februar",
+  "märz",
+  "april",
+  "mai",
+  "juni",
+  "juli",
+  "august",
+  "september",
+  "oktober",
+  "november",
+  "dezember",
+];
 function standLesbar(stand, lang) {
-  const m = /^(\d{4})-(\d{2})$/.exec(String(stand || ""));
-  if (!m) return stand;
-  return new Date(+m[1], +m[2] - 1, 1).toLocaleDateString(LANG_LOCALE[lang] || "de-DE", {
+  const text = String(stand || "");
+  const iso = /^(\d{4})-(\d{2})$/.exec(text);
+  const de = /^(\S+) (\d{4})$/.exec(text);
+  let jahr, monat;
+  if (iso) [jahr, monat] = [+iso[1], +iso[2] - 1];
+  else if (de && MONATE_DE.includes(de[1].toLowerCase()))
+    [jahr, monat] = [+de[2], MONATE_DE.indexOf(de[1].toLowerCase())];
+  else return stand;
+  return new Date(jahr, monat, 1).toLocaleDateString(LANG_LOCALE[lang] || "de-DE", {
     month: "long",
     year: "numeric",
   });
@@ -187,13 +208,12 @@ const IconBars = () => (
   </Linie>
 );
 
-
 // ═══ Sektion "Echte Marktdaten" (Nutzer-Vorgabe 2026-10-01) ═══
 // Sechs Kacheln: Nutzen in einem Satz, Beleg als Zahl. KEINE Zahl steht fest im
 // Text - jede kommt aus der Quelle, die der Monatsjob (scripts/monthly_update.py)
 // bzw. die Datenpflege aktualisiert:
-//   - Bauzinsen + Stand: zinsen.json (live geladen, wie die Zinsleiste unten) -
-//     sofort aktuell nach dem Monatsjob, ohne neuen Build.
+//   - Bauzinsen + Stand: MARKET_RATES in data.js - vom Monatsjob committet,
+//     der anschliessende Deploy baut neu (zinsen.json entfiel 2026-10-01).
 //   - Wertsteigerung: WERTSTEIGERUNG in data.js - vom Monatsjob committet, der
 //     anschliessende Deploy baut neu.
 //   - Mietprognose: MIET_P in data.js - Handpflege, deshalb immer mit Stand.
@@ -230,7 +250,7 @@ const IconLinie = () => (
   </Linie>
 );
 
-function MarktdatenSection({ l, lang, zinsen }) {
+function MarktdatenSection({ l, lang }) {
   const ref = useRef(null);
   const [zahlen, setZahlen] = useState(MARKT_FALLBACK);
   useEffect(() => {
@@ -270,12 +290,20 @@ function MarktdatenSection({ l, lang, zinsen }) {
   const zahl = (v, d) =>
     Number(v).toLocaleString(loc, { minimumFractionDigits: d, maximumFractionDigits: d });
   const mitVorzeichen = (v, d) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${zahl(Math.abs(v), d)} %`;
-  const zinsWert = Number(zinsen?.avg ?? MARKET_RATES.avg);
-  const zinsStand = standLesbar(zinsen?.stand || MARKET_RATES.stand, lang);
-  const ersetze = (s, werte) => Object.entries(werte).reduce((t, [k, v]) => t.replace(`{${k}}`, v), s || "");
+  const zinsWert = Number(MARKET_RATES.avg);
+  const zinsStand = standLesbar(MARKET_RATES.stand, lang);
+  const ersetze = (s, werte) =>
+    Object.entries(werte).reduce((t, [k, v]) => t.replace(`{${k}}`, v), s || "");
 
   const kacheln = [
-    { key: "markt", icon: <IconPin />, t: l.md1T, b: ersetze(l.md1B, { kreise: zahl(zahlen.kreise, 0) }), s: ersetze(l.md1S, { laender: zahlen.laender }), e: l.md1E },
+    {
+      key: "markt",
+      icon: <IconPin />,
+      t: l.md1T,
+      b: ersetze(l.md1B, { kreise: zahl(zahlen.kreise, 0) }),
+      s: ersetze(l.md1S, { laender: zahlen.laender }),
+      e: l.md1E,
+    },
     { key: "score", icon: <IconGauge />, t: l.md2T, b: l.md2B, s: l.md2S, e: l.md2E },
     { key: "preis", icon: <IconZiel />, t: l.md3T, b: l.md3B, s: l.md3S, e: l.md3E },
     { key: "recht", icon: <IconWaage />, t: l.md4T, b: l.md4B, s: l.md4S, e: l.md4E },
@@ -284,7 +312,11 @@ function MarktdatenSection({ l, lang, zinsen }) {
   ];
 
   return (
-    <section id="marktdaten" ref={ref} style={{ padding: "clamp(40px,5vw,80px) 0", borderTop: "1px solid var(--cb)" }}>
+    <section
+      id="marktdaten"
+      ref={ref}
+      style={{ padding: "clamp(40px,5vw,80px) 0", borderTop: "1px solid var(--cb)" }}
+    >
       <div className="lp-container">
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <Eyebrow>{l.mdEyebrow}</Eyebrow>
@@ -313,7 +345,11 @@ function MarktdatenSection({ l, lang, zinsen }) {
                     </div>
                   </dl>
                   <p className="lp-md-quelle">
-                    {ersetze(l.md5Quelle, { zins: zinsStand, wert: WERTSTEIGERUNG.stand, miete: MIET_P.stand })}
+                    {ersetze(l.md5Quelle, {
+                      zins: zinsStand,
+                      wert: WERTSTEIGERUNG.stand,
+                      miete: MIET_P.stand,
+                    })}
                   </p>
                 </>
               ) : (
@@ -331,7 +367,7 @@ function MarktdatenSection({ l, lang, zinsen }) {
   );
 }
 
-export function Landing({ onStart, zinsen, lang, setLang }) {
+export function Landing({ onStart, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
   // Login-Standard-Flow (Konzept-Dok Abschnitt 2/1.5): "Anmelden" ist bereits
@@ -378,7 +414,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
     if (typeof IntersectionObserver === "undefined") return undefined;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return undefined;
     const ziele = Array.from(
-      document.querySelectorAll(".lp-ki-top,.lp-ki-karte,.lp-step,.calc-hero-card,.calc-cards-support>*"),
+      document.querySelectorAll(
+        ".lp-ki-top,.lp-ki-karte,.lp-step,.calc-hero-card,.calc-cards-support>*",
+      ),
     );
     const io = new IntersectionObserver(
       (eintraege) => {
@@ -396,7 +434,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       // Schon oberhalb des Bildschirms (z.B. nach Neuladen mitten auf der Seite):
       // gar nicht erst ausblenden, sonst bliebe es unsichtbar, bis man hochscrollt.
       if (el.getBoundingClientRect().bottom < 0) return;
-      const pos = el.parentElement ? Array.prototype.indexOf.call(el.parentElement.children, el) : 0;
+      const pos = el.parentElement
+        ? Array.prototype.indexOf.call(el.parentElement.children, el)
+        : 0;
       el.style.setProperty("--rd", `${(pos % 4) * 70}ms`);
       el.classList.add("lp-rev");
       io.observe(el);
@@ -494,7 +534,9 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
 
   return (
     <div
-      className={account && !account.initialLoading && !account.isLoggedIn ? "lp-sticky-pad" : undefined}
+      className={
+        account && !account.initialLoading && !account.isLoggedIn ? "lp-sticky-pad" : undefined
+      }
       style={{
         minHeight: "100dvh",
         background: "var(--bg)",
@@ -877,8 +919,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
               onClick={() => (account?.isLoggedIn ? scrollTo("rechner") : setOpenMode("login"))}
               className="lp-btn-primary"
             >
-              {account?.isLoggedIn ? l.heroCtaPrimary : l.ctaFree}{" "}
-              <span aria-hidden="true">→</span>
+              {account?.isLoggedIn ? l.heroCtaPrimary : l.ctaFree} <span aria-hidden="true">→</span>
             </button>
             <button onClick={() => scrollTo("funktioniert")} className="lp-btn-secondary">
               {l.heroCtaSecondary}
@@ -1285,7 +1326,7 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       {/* ═══════════ MARKTDATEN ═══════════ */}
       {/* Hinter "Preise", nicht davor: Preise steht laut Vorgabe 2026-08-18 direkt
           hinter der Rechner-Uebersicht, ohne Daten-/USP-Abschnitte dazwischen. */}
-      <MarktdatenSection l={l} lang={lang} zinsen={zinsen} />
+      <MarktdatenSection l={l} lang={lang} />
 
       {/* ═══════════ ZINSEN ═══════════ */}
       {/* Die Zinsdaten werden monatlich aktualisiert (Nutzer-Korrektur
@@ -1299,18 +1340,18 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
           <div style={{ borderLeft: "3px solid var(--ca)", paddingLeft: 20 }}>
             <div className="lp-eyebrow" style={{ letterSpacing: 1.5 }}>
               <span aria-hidden="true" className="lp-eyebrow-dot" />
-              {l.ratesTitle} · {l.ratesStand}: {standLesbar(zinsen?.stand || MARKET_RATES.stand, lang)}
+              {l.ratesTitle} · {l.ratesStand}: {standLesbar(MARKET_RATES.stand, lang)}
             </div>
             <p style={{ margin: "0 0 6px", fontSize: 15, color: "var(--cl)", lineHeight: 1.6 }}>
               {l.ratesIntro2}{" "}
               <strong>
-                {l.ratesCompact}: {zinsen?.avg || MARKET_RATES.avg} %
+                {l.ratesCompact}: {MARKET_RATES.avg} %
               </strong>
             </p>
             <p style={{ margin: 0, fontSize: 13, color: "var(--ch)", lineHeight: 1.5 }}>
               {l.ratesDisclaim}
             </p>
-            <ZinsAlarm zinsen={zinsen} lang={lang} />
+            <ZinsAlarm lang={lang} />
           </div>
         </div>
       </section>
