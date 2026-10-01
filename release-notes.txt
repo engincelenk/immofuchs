@@ -1,3 +1,36 @@
+## 2026-10-01 (1.100.56) [FRONTEND]
+
+### Sanierungsrechner: Foerderung nach BAFA und KfW 458 getrennt, korrekte Hoechstgrenzen
+
+- Werte gegengeprueft auf bafa.de (Gebaeudehuelle, Anlagentechnik; Merkblatt Juli
+  2026) und kfw.de (Zuschuss 458) am 2026-10-01.
+- Gebaeudehuelle + Lueftung ueber BAFA: 15 %, EINE gemeinsame Hoechstgrenze je
+  Wohneinheit (30.000 / 15.000 / 8.000 EUR, mit iSFP doppelt) statt einer Grenze pro
+  Massnahme; iSFP-Bonus +5 % nur auf den Betrag ueber der Mindestinvestition.
+- Heizung ueber KfW 458: 30 % Grundfoerderung, Hoechstgrenze 28.000 EUR fuer die erste
+  Wohneinheit, kein iSFP-Bonus mehr. Klimabonus (16 %) und Einkommensbonus (10/30/40 %)
+  nur fuer Selbstnutzer, Gesamtfoerdersatz max. 80 %. Absenkungen ab 01.02.2027
+  (Klimabonus -4 Punkte, Grenze -750 EUR je Halbjahr) rechnet der Rechner selbst.
+- Neue Felder: Wohneinheiten (geteilt mit dem Kreditrechner), "Ich wohne selbst im
+  Haus", Einkommensbonus. Klimabonus-Hinweis haengt jetzt an Heizungsart, -alter und
+  Selbstnutzung statt am Baujahr vor 2002.
+- Folge: fuer Vermieter mit alter Oelheizung sinkt die Heizungsfoerderung z. B. von
+  bis zu 15.000 auf 8.400 EUR; mehrere Huellen-Massnahmen werden nicht mehr mehrfach
+  gedeckelt.
+- Neu: src/utils/begFoerderung.js (+ 6 Tests); data.js: BAFA neu, KFW_HEIZUNG ersetzt
+  KFW; iSFP-Texte in 5 Sprachen korrigiert; monthly_update.py erinnert an KFW_HEIZUNG.
+
+## 2026-10-01 (1.100.55) [DOKU]
+
+### Technical Specs: Datenquellen und Aktualisierung
+
+- Neue Liste docs/technical_specs/datenquellen-und-aktualisierung.md: je Datenreihe
+  Datei, Quelle, Intervall, Workflow/Skript, automatisch oder manuell und die
+  Verwendung in der App (Seite/Rechner/Feld), dazu ein "Was muss ich wann tun?".
+- Befund: Der Monatsjob gibt GENESIS_USER/GENESIS_PASS nicht an monthly_update.py
+  weiter - die Wertsteigerung wird deshalb nie automatisch aktualisiert (Q1 2026).
+  Kein Code geaendert.
+
 ## 2026-10-01 (1.100.54) [FRONTEND]
 
 ### Landingpage: neue Sektion "Echte Marktdaten" mit Live-Werten

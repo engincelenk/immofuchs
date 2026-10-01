@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import {
-  KFW,
+  BAFA,
+  KFW_HEIZUNG,
   SAN_ENERGIE,
   SAN_NORMEN,
   SAN_TIERS,
@@ -15,7 +16,7 @@ import {
 } from "../../data.js";
 import { LEG } from "../../i18n/legal.js";
 import { fmt, fmtE, fmtP } from "../../utils/helpers.js";
-import { F, Sel, Row, Sec, KPI, Ins, VT } from "../ui/atoms.jsx";
+import { F, Sel, Row, Sec, KPI, Ins, VT, Toggle } from "../ui/atoms.jsx";
 import { Tip } from "../ui/Tip.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { ExportPDF } from "../export/ExportPDF.jsx";
@@ -26,6 +27,18 @@ import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 import { ladeRegionalpreise, regionalPreis, regionalFakten } from "../../utils/regionalpreis.js";
 import { ladePlzKreis } from "../../utils/plzKreis.js";
+import {
+  huelleFoerderung,
+  heizungFoerderung,
+  klimabonusBerechtigt,
+  klimabonusAktuell,
+  staffelGrenze,
+  heizungGrenzeErste,
+} from "../../utils/begFoerderung.js";
+
+// Massnahmen der BAFA-Einzelmassnahmen (Gebaeudehuelle + Anlagentechnik ohne
+// Heizung) - sie teilen sich EINE Hoechstgrenze je Wohneinheit.
+const HUELLE = ["fenster", "fassade", "dach", "tuer", "keller", "ogdecke", "lueftung"];
 
 const EC_O = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
 const EC_C = [
@@ -223,46 +236,13 @@ export default function Sanier() {
     const skJ = skJahrUser > 0 ? skJahrUser : sk_auto;
 
     const anbauF = s.anbau === "doppel" ? 0.75 : s.anbau === "mittel" ? 0.5 : 1;
-    const oF = (ht === "heizoel" || ht === "gas" || ht === "kohle") && ha === "alt";
-    // Foerderquoten aus KFW in data.js (Zentralisierung 2026-08-25). Vorher
-    // standen dieselben Zahlen hier als Literale, obwohl KFW importiert war
-    // und bis auf klimaBonus_baujahrGrenze ungenutzt blieb. Die zwei Werte,
-    // die es nur hier gab (30 % Heizungs-Grundfoerderung, 5 % iSFP-Bonus),
-    // sind dafuer nach data.js gewandert. Rechenergebnis unveraendert.
-    const BASIS = KFW.basisfoerderung / 100,
-      MAX_FQ = KFW.maxFoerderung / 100,
-      CAP = KFW.maxInvestition;
-    const hFQ = Math.min(
-      KFW.heizungGrundfoerderung / 100 + (oF ? KFW.klimageschwindigkeitsbonus / 100 : 0),
-      MAX_FQ,
-    ); // BEG 2026: Grundfoerderung + Klimabonus (alte Öl/Gas/Kohle), kein +5% für andere
-    const iB = d.sanIsfp ? KFW.isfpBonus / 100 : 0; // iSFP-Bonus auf alle BEG-fähigen Maßnahmen
-
-    const FQ = {
-      fenster: BASIS + iB,
-      fassade: BASIS + iB,
-      heizung: Math.min(hFQ + iB, MAX_FQ),
-      dach: BASIS + iB,
-      tuer: BASIS + iB,
-      pv: 0,
-      keller: BASIS + iB,
-      ogdecke: BASIS + iB,
-      batterie: 0,
-      lueftung: BASIS + iB,
-    };
-    // BAFA/KfW Förder-Caps: dynamisch aus FQ (damit iSFP-Bonus automatisch einfliesst)
-    const FO_CAP = {
-      fenster: Math.round(CAP * FQ.fenster),
-      fassade: Math.round(CAP * FQ.fassade),
-      heizung: Math.round(CAP * FQ.heizung),
-      dach: Math.round(CAP * FQ.dach),
-      tuer: Math.round(CAP * FQ.tuer),
-      pv: Infinity, // KfW 270: kein Betragscap
-      keller: Math.round(CAP * FQ.keller),
-      ogdecke: Math.round(CAP * FQ.ogdecke),
-      batterie: Infinity, // Landesförderung: variiert
-      lueftung: Math.round(CAP * FQ.lueftung),
-    };
+    // Foerderung nach BEG (gegengeprueft auf bafa.de/kfw.de am 2026-10-01),
+    // Rechnung in utils/begFoerderung.js: Gebaeudehuelle + Lueftung ueber BAFA
+    // mit einer gemeinsamen Hoechstgrenze, Heizung ueber KfW 458 ohne iSFP-Bonus.
+    // Klima- und Einkommensbonus nur fuer selbstnutzende Eigentuemer.
+    const we = Math.max(1, Math.floor(+d.wohneinheiten || 1));
+    const selbst = !!d.sanSelbst;
+    const klimaOk = klimabonusBerechtigt(ht, ha);
     const ES = {
       fenster: { ek: 0.12, co2: 0.1 },
       fassade: { ek: 0.2, co2: 0.18 },
@@ -402,12 +382,32 @@ export default function Sanier() {
       cM = 1;
     const rows = [];
     const blBonus = LAND_BONUS_FQ[d.bundesland] || {};
+    const huelleK = ALL.filter((m) => act[m.k] && HUELLE.includes(m.k)).reduce(
+      (n, m) => n + m.c,
+      0,
+    );
+    const hf = huelleFoerderung(huelleK, { we, isfp: !!d.sanIsfp });
+    const hzF = heizungFoerderung(hzK, {
+      we,
+      selbst,
+      klima: klimaOk,
+      einkommensStufe: +d.sanEinkommen || 0,
+      datum: new Date(),
+    });
     ALL.forEach((m) => {
       if (!act[m.k]) return;
-      const fq = FQ[m.k] || 0;
       const fqL = blBonus[m.k] || 0; // Landesbonus-Quote
-      const foRaw = Math.round((m.c * fq) / 100) * 100;
-      const fo = Math.min(foRaw, FO_CAP[m.k] ?? foRaw); // BAFA/KfW Cap
+      // Huelle: gemeinsame Foerderung anteilig nach Kosten verteilen
+      const istHuelle = HUELLE.includes(m.k);
+      const foExakt = istHuelle
+        ? huelleK > 0
+          ? (hf.betrag * m.c) / huelleK
+          : 0
+        : m.k === "heizung"
+          ? hzF.betrag
+          : 0;
+      const fo = Math.round(foExakt / 100) * 100;
+      const fq = m.c > 0 ? fo / m.c : 0;
       const foLandRaw = Math.round((m.c * fqL) / 100) * 100;
       const foLand = Math.min(foLandRaw, LAND_BONUS_CAP); // Landesbonus Cap
       tK += m.c;
@@ -417,7 +417,9 @@ export default function Sanier() {
       const co2E = Math.round(co2H * (ES[m.k]?.co2 || 0));
       eM *= 1 - (ES[m.k]?.ek || 0);
       cM *= 1 - (ES[m.k]?.co2 || 0);
-      const capped = foRaw > fo;
+      const capped = istHuelle
+        ? hf.foerderfaehig < huelleK
+        : m.k === "heizung" && hzF.foerderfaehig < m.c;
       rows.push({
         n: m.n,
         em: m.em,
@@ -486,6 +488,9 @@ export default function Sanier() {
       tFo,
       tFoLand,
       ne,
+      we,
+      selbst,
+      klimaOk,
       ekG,
       co2G,
       amJ,
@@ -625,6 +630,28 @@ export default function Sanier() {
               <div style={{ fontSize: 10, color: "var(--ch)", marginTop: 1 }}>{t.sanIsfpSub}</div>
             </div>
           </button>
+          <F
+            label={t.kfwWE}
+            value={d.wohneinheiten || "1"}
+            onChange={(v) => set("wohneinheiten", v)}
+            tip={tip("sanWohneinheiten")}
+            slider={{ min: 1, max: 20, step: 1 }}
+          />
+          <Toggle
+            checked={!!d.sanSelbst}
+            onChange={(v) => set("sanSelbst", v)}
+            label={t.sanSelbstLabel}
+            sub={t.sanSelbstSub}
+            tip={tip("sanSelbst")}
+          />
+          {d.sanSelbst && (
+            <Sel
+              label={t.sanEinkLabel}
+              value={d.sanEinkommen || "0"}
+              onChange={(v) => set("sanEinkommen", v)}
+              options={[0, 1, 2, 3].map((i) => ({ v: String(i), l: t["sanEink" + i] }))}
+            />
+          )}
           <Sec title={t.sGebData} icon="🏠" />
           <Row>
             <F
@@ -656,10 +683,14 @@ export default function Sanier() {
               <span style={{ color: "var(--ch)" }}>
                 🏠 {t.eKl}: <b style={{ color: "var(--ct)" }}>{getEkl(d.baujahr)}</b>
               </span>
-              {+d.baujahr < KFW.klimaBonus_baujahrGrenze ? (
-                <span style={{ color: "var(--ok-tx)", fontWeight: 600 }}>· ✅ KfW Klimabonus</span>
+              {R.selbst && R.klimaOk && klimabonusAktuell() > 0 ? (
+                <span style={{ color: "var(--ok-tx)", fontWeight: 600 }}>
+                  · ✅ KfW-Klimabonus {klimabonusAktuell()} %
+                </span>
               ) : (
-                <span style={{ color: "var(--ch)" }}>· KfW Klimabonus: ✗</span>
+                <span style={{ color: "var(--ch)" }}>
+                  · KfW-Klimabonus: ✗{!R.selbst ? ` (${t.sanKlimaNurSelbst})` : ""}
+                </span>
               )}
             </div>
           )}
@@ -701,7 +732,15 @@ export default function Sanier() {
           />
           {/* Herkunft des Kennwerts sichtbar machen: sonst aendert sich das
               Ergebnis nach einer Expose-Uebernahme ohne erkennbare Ursache. */}
-          <div style={{ fontSize: 10, color: "var(--ch)", marginTop: -6, marginBottom: 10, paddingLeft: 4 }}>
+          <div
+            style={{
+              fontSize: 10,
+              color: "var(--ch)",
+              marginTop: -6,
+              marginBottom: 10,
+              paddingLeft: 4,
+            }}
+          >
             {R.istVerbrauchGueltig
               ? `✓ ${t.sIstVerbrauchAktiv} — ${fmt(R.hk)} kWh/m²a ${t.sIstVerbrauchNachWw}`
               : `${t.sIstVerbrauchSchaetzung}: ${fmt(R.hkSchaetzung)} kWh/m²a (${t.sBJ} ${d.baujahr || "1981"})`}
@@ -1027,7 +1066,9 @@ export default function Sanier() {
                 marginBottom: 12,
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--warn-tx)", marginBottom: 6 }}>
+              <div
+                style={{ fontSize: 11, fontWeight: 600, color: "var(--warn-tx)", marginBottom: 6 }}
+              >
                 ⚖️ {t.mR} — GEG
               </div>
               {R.gegReq.map((g, i) => (
@@ -1388,89 +1429,81 @@ export default function Sanier() {
                 )}
               </div>
               <SaveBtn tab="sanier" />
-              {aktivesObjekt?.art === "rechnerErgebnis" && aktivesObjekt?.rechnerTyp === "sanier" && (
-                <RechnerAiKarte
-                  produktId="sanier"
-                  titel="Sanierung analysieren"
-                  kurz="Einschätzung zu Kosten, Förderung und Amortisation"
-                  data={d}
-                  standortFakten={regGeladen ? regionalFakten(d.bundesland) : []}
-                  kennzahlen={{
-                    sanierungskostenBrutto: R.tK,
-                    foerderungGesamt: R.tFo + R.tFoLand,
-                    sanierungskostenNetto: R.ne,
-                    baujahr: d.baujahr,
-                    massnahmen: R.ALL.filter((m) => act[m.k]).map((m) => m.n),
-                    amortisationJahre: R.amJ,
-                    energieklasseVorher: EC_O[R.ecV],
-                    energieklasseNachher: EC_O[R.ecN],
-                  }}
-                  zahlen={(() => {
-                    // Vereinfachung: die tatsaechliche Foerderquote im
-                    // Rechner haengt von Bonus-Kombinationen ab (iSFP,
-                    // Klimageschwindigkeitsbonus, Landesbonus - siehe FQ/hFQ
-                    // oben) und geht bereits GERECHNET als foerderungGesamt
-                    // in die Kennzahlen ein. Hier reichen die groben
-                    // KFW-Basisquoten als Marktvergleich, keine zweite
-                    // Nachrechnung der vollen Bonuslogik. BAFA.basisfoerderung
-                    // deckt sich der Hoehe nach mit KFW.basisfoerderung (beide
-                    // 15 %) - referenziert wird nur EINE Quelle, damit sich
-                    // Kennzahl und Zahlen-Benchmark nicht scheinbar
-                    // widersprechen.
-                    const z = [
-                      {
-                        label: "Förderquote Einzelmaßnahme (BAFA/KfW-Basis)",
-                        wert: `${KFW.basisfoerderung} %`,
-                      },
-                    ];
-                    if (act.heizung) {
-                      z.push({
-                        label: "Förderquote Heizungstausch (BEG-Grundförderung)",
-                        wert: `${KFW.heizungGrundfoerderung} %`,
-                      });
-                    }
-                    z.push({ label: "Maximale Gesamtförderung (Deckel)", wert: `${KFW.maxFoerderung} %` });
-                    // Der Worker-Prompt fuer "sanier" (worker/src/analysePrompt.ts)
-                    // erwartet neben dem Foerdersatz auch einen Hoechstbetrag
-                    // unter "Gerechnete Werte" - KFW.maxInvestition ist der
-                    // dafuer vorgesehene Deckel je Wohneinheit.
-                    z.push({
-                      label: "Max. förderfähige Investitionskosten je Wohneinheit",
-                      wert: `${KFW.maxInvestition.toLocaleString("de-DE")} €`,
-                    });
-                    // Werteinschaetzung nach Sanierung (Backlog B.4): Kaufpreis
-                    // + Nettosanierungskosten je m² gegen den regionalen
-                    // Kaufpreis-Richtwert gespiegelt - zeigt, ob der Gesamt-
-                    // aufwand nach Sanierung noch im regionalen Rahmen liegt.
-                    // Nur wenn Kaufpreis/Flaeche/Ort tatsaechlich gesetzt sind
-                    // (dieser Rechner hat kein eigenes Kaufpreis-Feld).
-                    if (regGeladen) {
-                      const kaufpreis = +d.kaufpreis || 0;
-                      const flaeche = +d.sanFl || +d.flaeche || 0;
-                      if (kaufpreis > 0 && flaeche > 0) {
-                        const regRef = regionalPreis(d.bundesland, d.ort, d.plz);
-                        if (regRef?.kaufWohnung > 0) {
-                          const aufwandJeQm = (kaufpreis + R.ne) / flaeche;
-                          const abweichung = (aufwandJeQm / regRef.kaufWohnung - 1) * 100;
-                          z.push({
-                            label: "Regionaler Kaufpreis-Richtwert",
-                            wert: `${fmt(regRef.kaufWohnung, 2)} €/m²`,
-                          });
-                          z.push({
-                            label: "Gesamtaufwand nach Sanierung je m² (Kaufpreis + Nettokosten)",
-                            wert: `${fmt(aufwandJeQm, 2)} €/m²`,
-                          });
-                          z.push({
-                            label: "Abweichung vom Richtwert",
-                            wert: `${abweichung > 0 ? "+" : "−"}${fmt(Math.abs(abweichung), 0)} %`,
-                          });
+              {aktivesObjekt?.art === "rechnerErgebnis" &&
+                aktivesObjekt?.rechnerTyp === "sanier" && (
+                  <RechnerAiKarte
+                    produktId="sanier"
+                    titel="Sanierung analysieren"
+                    kurz="Einschätzung zu Kosten, Förderung und Amortisation"
+                    data={d}
+                    standortFakten={regGeladen ? regionalFakten(d.bundesland) : []}
+                    kennzahlen={{
+                      sanierungskostenBrutto: R.tK,
+                      foerderungGesamt: R.tFo + R.tFoLand,
+                      sanierungskostenNetto: R.ne,
+                      baujahr: d.baujahr,
+                      massnahmen: R.ALL.filter((m) => act[m.k]).map((m) => m.n),
+                      amortisationJahre: R.amJ,
+                      energieklasseVorher: EC_O[R.ecV],
+                      energieklasseNachher: EC_O[R.ecN],
+                    }}
+                    zahlen={(() => {
+                      // Regelwerte der Programme als Marktvergleich; die
+                      // tatsaechlich gerechnete Foerderung (Hoechstgrenzen,
+                      // iSFP, Boni) steckt bereits in foerderungGesamt.
+                      const z = [
+                        {
+                          label: "Förderquote Gebäudehülle/Lüftung (BAFA)",
+                          wert: `${BAFA.basisfoerderung} %${d.sanIsfp ? ` + ${BAFA.isfpBonus} % iSFP` : ""}`,
+                        },
+                        {
+                          label: `Max. förderfähige Kosten Gebäudehülle (${R.we} WE)`,
+                          wert: `${staffelGrenze(d.sanIsfp ? BAFA.hoechstgrenzeIsfp : BAFA.hoechstgrenze, R.we).toLocaleString("de-DE")} €`,
+                        },
+                      ];
+                      if (act.heizung) {
+                        z.push({
+                          label: "Förderquote Heizungstausch (KfW 458)",
+                          wert: `${KFW_HEIZUNG.grundfoerderung} %${R.selbst ? `, Selbstnutzer bis ${KFW_HEIZUNG.maxFoerderung} %` : ""}`,
+                        });
+                        z.push({
+                          label: `Max. förderfähige Kosten Heizung (${R.we} WE)`,
+                          wert: `${staffelGrenze(KFW_HEIZUNG.hoechstgrenze, R.we, heizungGrenzeErste()).toLocaleString("de-DE")} €`,
+                        });
+                      }
+                      // Werteinschaetzung nach Sanierung (Backlog B.4): Kaufpreis
+                      // + Nettosanierungskosten je m² gegen den regionalen
+                      // Kaufpreis-Richtwert gespiegelt - zeigt, ob der Gesamt-
+                      // aufwand nach Sanierung noch im regionalen Rahmen liegt.
+                      // Nur wenn Kaufpreis/Flaeche/Ort tatsaechlich gesetzt sind
+                      // (dieser Rechner hat kein eigenes Kaufpreis-Feld).
+                      if (regGeladen) {
+                        const kaufpreis = +d.kaufpreis || 0;
+                        const flaeche = +d.sanFl || +d.flaeche || 0;
+                        if (kaufpreis > 0 && flaeche > 0) {
+                          const regRef = regionalPreis(d.bundesland, d.ort, d.plz);
+                          if (regRef?.kaufWohnung > 0) {
+                            const aufwandJeQm = (kaufpreis + R.ne) / flaeche;
+                            const abweichung = (aufwandJeQm / regRef.kaufWohnung - 1) * 100;
+                            z.push({
+                              label: "Regionaler Kaufpreis-Richtwert",
+                              wert: `${fmt(regRef.kaufWohnung, 2)} €/m²`,
+                            });
+                            z.push({
+                              label: "Gesamtaufwand nach Sanierung je m² (Kaufpreis + Nettokosten)",
+                              wert: `${fmt(aufwandJeQm, 2)} €/m²`,
+                            });
+                            z.push({
+                              label: "Abweichung vom Richtwert",
+                              wert: `${abweichung > 0 ? "+" : "−"}${fmt(Math.abs(abweichung), 0)} %`,
+                            });
+                          }
                         }
                       }
-                    }
-                    return z;
-                  })()}
-                />
-              )}
+                      return z;
+                    })()}
+                  />
+                )}
               <ExportPDF title={t.sanierFull || t.sanier} rechner="sanierung" />
               <Legal items={LEG.sanier} />
             </>

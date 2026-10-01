@@ -4,8 +4,7 @@ import { AFA, KFW_KREDIT, MARKET_RATES, NICHT_UML, VERBRAUCH_GRENZEN } from "../
 // Erklaerung und Formel (berechneNichtUml in utils/rendite.js) nicht
 // auseinanderlaufen. Dezimaltrennzeichen je Sprachraum.
 const nu = (locale) => {
-  const f = (v) =>
-    v.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const f = (v) => v.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return { min: f(NICHT_UML.min), max: f(NICHT_UML.max), mittel: f(NICHT_UML.mittel) };
 };
 const NU_DE = nu("de-DE");
@@ -91,7 +90,11 @@ export const TIPS = {
     daFl: "Satteldach: ca. Grundfläche × 1.4, Flachdach: ≈ Grundfläche.",
     keFl: "Fläche der Kellerdecke. Bei unbeheiztem Keller empfehlenswert.",
     pvLeistung: "1 kWp ≈ 7m² Dachfläche. Ertrag ca. 950 kWh/kWp pro Jahr.",
-    isfp: "Individueller Sanierungsfahrplan: Ein Energieberater erstellt einen maßgeschneiderten Sanierungsplan. Belohnung: +5% BAFA-Bonus auf jede BEG-Maßnahme. Energieberatung wird mit 50% bezuschusst. Antrag stets VOR Auftragsvergabe!",
+    isfp: "Individueller Sanierungsfahrplan: Ein Energieberater erstellt einen Sanierungsplan. Vorteil: +5 % BAFA-Bonus auf Gebäudehülle und Lüftung (nicht auf die Heizung) für den Betrag über der Mindestinvestition (30.000 € bei einer Wohneinheit), dazu verdoppelt sich die förderfähige Kostengrenze auf 60.000 €. Die Beratung wird mit 50 % bezuschusst. Antrag stets VOR Auftragsvergabe!",
+    sanWohneinheiten:
+      "Anzahl der Wohneinheiten im Gebäude. Die förderfähigen Kosten sind gestaffelt: Gebäudehülle (BAFA) 30.000 € für die erste, je 15.000 € für die 2.–6., je 8.000 € ab der 7. Wohneinheit (mit iSFP doppelt). Heizung (KfW 458) 28.000 € für die erste, danach gleiche Staffel.",
+    sanSelbst:
+      "Klimageschwindigkeitsbonus und Einkommensbonus der KfW-Heizungsförderung gibt es nur für die selbst bewohnte Wohneinheit (Haupt- oder alleiniger Wohnsitz). Vermieter erhalten 30 % Grundförderung. Im Mehrfamilienhaus gilt der Bonus nur für den Kostenanteil der eigenen Wohneinheit.",
     sanIstVerbrauch: `Endenergieverbrauch aus dem Energieausweis (kWh/m²a). Ist der Wert gesetzt, rechnet der Rechner damit statt mit der groben Baujahr-Schätzung — die liegt bei Bauten der 90er oft 30–50 % zu hoch. Der Warmwasseranteil wird abgezogen, weil er im Ausweis schon enthalten ist. Werte außerhalb ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} werden ignoriert.`,
     zinsbindung:
       "Zeitraum, für den der Zinssatz vertraglich festgeschrieben ist. Danach wird zum dann gültigen Marktzins prolongiert — die Restschuld zu diesem Zeitpunkt ist dein Zinsänderungsrisiko. Lange Bindung kostet Aufschlag, kauft aber Planungssicherheit.",
@@ -171,7 +174,11 @@ export const TIPS = {
     daFl: "Gable roof: ~ground area × 1.4, flat roof: ≈ ground area.",
     keFl: "Area of basement ceiling. Recommended for unheated basements.",
     pvLeistung: "1 kWp ≈ 7m² roof area. Yield ~950 kWh/kWp per year.",
-    isfp: "Individual Energy Renovation Roadmap: A certified energy consultant creates a personalised step-by-step plan. Reward: +5% extra BAFA subsidy on every BEG measure. Consulting is 50% subsidised. Apply before placing any orders!",
+    isfp: "Individual renovation roadmap: an energy consultant draws up a renovation plan. Benefit: +5% BAFA bonus on building envelope and ventilation (not heating) for the amount above the minimum investment (€30,000 for one unit), and the eligible cost cap doubles to €60,000. Consulting is 50% subsidised. Always apply BEFORE placing orders!",
+    sanWohneinheiten:
+      "Number of residential units. Eligible costs are tiered: envelope (BAFA) €30,000 for the first, €15,000 each for units 2–6, €8,000 each from unit 7 (doubled with iSFP). Heating (KfW 458) €28,000 for the first, then the same tiers.",
+    sanSelbst:
+      "The climate-speed and income bonus of the KfW heating subsidy only apply to the unit you live in yourself (main or sole residence). Landlords receive the 30% base subsidy. In multi-family buildings the bonus only applies to your own unit's share of the costs.",
     sanIstVerbrauch: `Final energy consumption from the energy certificate (kWh/m²a). When set, the calculator uses it instead of the rough year-built estimate — for 1990s buildings that is often 30–50 % too high. The hot water share is deducted because the certificate already includes it. Values outside ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} are ignored.`,
     zinsbindung:
       "Period for which the interest rate is contractually fixed. After it ends the loan is refinanced at the market rate then prevailing — the remaining debt at that moment is your interest-rate risk. A longer fixed period costs a premium but buys planning certainty.",
@@ -247,7 +254,11 @@ export const TIPS = {
     daFl: "Beşik çatı: ~zemin alanı × 1.4, düz çatı: ≈ zemin alanı.",
     keFl: "Bodrum tavanı alanı. Isıtılmamış bodrumlar için önerilir.",
     pvLeistung: "1 kWp ≈ 7m² çatı alanı. Yıllık verim ~950 kWh/kWp.",
-    isfp: "Bireysel Enerji Yenileme Planı: Sertifikalı enerji danışmanı adım adım yenileme planı oluşturur. Ödül: Her BEG önlemi için +%5 BAFA teşviki. Danışmanlık %50 sübvanse edilir. Siparişten ÖNCE başvurun!",
+    isfp: "Bireysel yenileme planı: Enerji danışmanı bir yenileme planı hazırlar. Avantaj: Bina kabuğu ve havalandırmada (ısıtma hariç) asgari yatırımın (bir birim için 30.000 €) üzerindeki tutara +%5 BAFA bonusu; teşvike esas maliyet sınırı 60.000 € olur. Danışmanlık %50 sübvanse edilir. Siparişten ÖNCE başvurun!",
+    sanWohneinheiten:
+      "Binadaki konut birimi sayısı. Teşvike esas maliyetler kademelidir: kabuk (BAFA) ilk birim 30.000 €, 2–6. birimler 15.000 €, 7. birimden itibaren 8.000 € (iSFP ile iki kat). Isıtma (KfW 458) ilk birim 28.000 €, sonra aynı kademe.",
+    sanSelbst:
+      "KfW ısıtma teşvikinde iklim ve gelir bonusu yalnızca kendi oturduğunuz birim için geçerlidir. Ev sahipleri %30 temel teşvik alır. Çok daireli binada bonus yalnızca kendi biriminizin maliyet payına uygulanır.",
     sanIstVerbrauch: `Enerji sertifikasındaki nihai enerji tüketimi (kWh/m²a). Girildiğinde hesaplayıcı, inşaat yılına dayalı kaba tahmin yerine bunu kullanır — 90'lı yılların yapılarında bu tahmin çoğu kez %30–50 fazladır. Sıcak su payı düşülür, çünkü sertifikada zaten dahildir. ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} dışındaki değerler yok sayılır.`,
     zinsbindung:
       "Faiz oranının sözleşmeyle sabitlendiği süre. Süre bitince o günkü piyasa faiziyle yeniden finanse edilir — o andaki kalan borç, faiz değişim riskinizdir. Uzun sabitleme ek maliyet getirir ama planlama güvenliği sağlar.",
@@ -285,7 +296,8 @@ export const TIPS = {
     afa: "按德国所得税法第 7 条折旧。1925 年起线性 2%，2023 年起新建筑 3%。",
     grundAnteil: "不可折旧。城市通常20%，农村10-15%。",
     gebAnteil: "建筑价值 - 按 AfA 率折旧。",
-    bewegl: "动产（如嵌入式厨房、家具）的购房价份额，前提是购房合同中单独列明。与建筑物分开，按10年直线折旧。",
+    bewegl:
+      "动产（如嵌入式厨房、家具）的购房价份额，前提是购房合同中单独列明。与建筑物分开，按10年直线折旧。",
     wertP: "长期历史增值年度 2-3%。地区差异很大。",
     altAnlage: "假设的替代投资（如ETF/股市）年化收益率，用于与房产比较。历史参考值：年化6-7%。",
     sonder: "一次性物业特别征收，例如新供暖、屋顶、外墙翻新、电梯。购买前查阅业主大会会议记录。",
@@ -314,7 +326,11 @@ export const TIPS = {
     daFl: "双坡顶：约地面面积 × 1.4，平顶：≈ 地面面积。",
     keFl: "地下室天花板面积。对于无供暖的地下室建议。",
     pvLeistung: "1 kWp ≈ 7 m² 屋顶面积。年产量约 950 kWh/kWp。",
-    isfp: "个人能源改造路线图：认证能源顾问制定个性化改造计划。奖励：每项BEG措施+5% BAFA补贴。咨询费用50%受补贴。下订单前申请！",
+    isfp: "个人改造路线图：能源顾问制定改造计划。好处：建筑外围护和通风（不含供暖）超出最低投资（一个单元30,000欧元）的部分+5% BAFA奖励，可补贴费用上限翻倍至60,000欧元。咨询费用50%受补贴。下订单前申请！",
+    sanWohneinheiten:
+      "楼内住宅单元数。可补贴费用分级：外围护（BAFA）第一个单元30,000欧元，第2–6个各15,000欧元，第7个起各8,000欧元（有iSFP翻倍）。供暖（KfW 458）第一个单元28,000欧元，之后相同分级。",
+    sanSelbst:
+      "KfW供暖补贴的气候奖励和收入奖励仅适用于自住单元。房东获得30%基础补贴。多户住宅中奖励仅适用于自住单元的费用份额。",
     sanIstVerbrauch: `能源证书中的终端能耗（kWh/m²a）。填入后，计算器采用该数值而非依据建筑年份的粗略估算——对90年代建筑该估算常偏高30–50%。热水部分会被扣除，因为证书已包含该部分。超出 ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} 的数值将被忽略。`,
     zinsbindung:
       "利率在合同中锁定的期限。期满后按届时的市场利率续贷——此刻的剩余贷款额就是你的利率风险敞口。锁定期越长，利率加价越高，但换来规划确定性。",
@@ -387,7 +403,11 @@ export const TIPS = {
     daFl: "ढलान छत: ~जमीन क्षेत्र × 1.4, समतल छत: ≈ जमीन क्षेत्र।",
     keFl: "तहखाने की छत का क्षेत्र। बिना गर्म तहखाने के लिए अनुशंसित।",
     pvLeistung: "1 kWp ≈ 7 m² छत क्षेत्र। वार्षिक उत्पादन ~950 kWh/kWp।",
-    isfp: "व्यक्तिगत ऊर्जा नवीनीकरण रोडमैप: प्रमाणित ऊर्जा सलाहकार चरण-दर-चरण योजना बनाता है। पुरस्कार: हर BEG उपाय पर +5% BAFA सब्सिडी। परामर्श 50% अनुदानित। ऑर्डर से पहले आवेदन करें!",
+    isfp: "व्यक्तिगत नवीनीकरण रोडमैप: ऊर्जा सलाहकार नवीनीकरण योजना बनाता है। लाभ: भवन आवरण और वेंटिलेशन (हीटिंग नहीं) पर न्यूनतम निवेश (एक इकाई के लिए €30,000) से ऊपर की राशि पर +5% BAFA बोनस, और पात्र लागत सीमा €60,000 तक दोगुनी। परामर्श 50% अनुदानित। ऑर्डर से पहले आवेदन करें!",
+    sanWohneinheiten:
+      "भवन में आवासीय इकाइयों की संख्या। पात्र लागत चरणबद्ध: आवरण (BAFA) पहली इकाई €30,000, 2–6 प्रत्येक €15,000, 7 से प्रत्येक €8,000 (iSFP के साथ दोगुना)। हीटिंग (KfW 458) पहली इकाई €28,000, फिर वही चरण।",
+    sanSelbst:
+      "KfW हीटिंग सब्सिडी का जलवायु और आय बोनस केवल स्वयं निवास वाली इकाई पर लागू होता है। मकान मालिकों को 30% मूल सब्सिडी मिलती है। बहु-परिवार भवन में बोनस केवल अपनी इकाई के लागत हिस्से पर।",
     sanIstVerbrauch: `ऊर्जा प्रमाणपत्र से अंतिम ऊर्जा खपत (kWh/m²a)। मान भरने पर कैलकुलेटर निर्माण-वर्ष के मोटे अनुमान के बजाय इसका उपयोग करता है — 1990 के दशक की इमारतों के लिए वह अनुमान अक्सर 30–50 % अधिक होता है। गर्म पानी का हिस्सा घटा दिया जाता है, क्योंकि प्रमाणपत्र में वह पहले से शामिल है। ${VERBRAUCH_GRENZEN.min}–${VERBRAUCH_GRENZEN.max} से बाहर के मान अनदेखे किए जाते हैं।`,
     zinsbindung:
       "वह अवधि जिसके लिए ब्याज दर अनुबंध में तय है। इसके बाद उस समय की बाज़ार दर पर पुनर्वित्त होता है — उस क्षण की बकाया राशि ही आपका ब्याज-दर जोखिम है। लंबी अवधि पर प्रीमियम लगता है, पर योजना की निश्चितता मिलती है।",

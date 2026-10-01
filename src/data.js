@@ -193,21 +193,6 @@ export const NICHT_UML = {
   mittel: 1.75, // €/m²/Monat — damit rechnet die App
 };
 
-// ── KFW FÖRDERQUOTEN BEG ─────────────────────────────────────────────────
-// Intervall: quartalsweise
-// Quelle: kfw.de
-export const KFW = {
-  stand: "August 2026",
-  basisfoerderung: 15, // % der Investitionskosten (Einzelmaßnahmen)
-  heizungGrundfoerderung: 30, // % Grundförderung Heizungstausch (BEG 2026)
-  einkommensbonus: 30, // % zusätzlich bei niedrigem Einkommen (BEG 2024/2025: zvE ≤ 40.000 €)
-  klimageschwindigkeitsbonus: 20, // % beim Heizungstausch (bis 2028)
-  isfpBonus: 5, // % zusätzlich mit individuellem Sanierungsfahrplan
-  maxFoerderung: 70, // % maximale Gesamtförderung
-  maxInvestition: 30000, // € max. förderfähige Kosten je Wohneinheit
-  klimaBonus_baujahrGrenze: 2002, // Klimageschwindigkeitsbonus nur für Gebäude erstmals errichtet vor 01.01.2002
-};
-
 // ── ENERGIEKLASSEN (kWh/m²a → Buchstabe) ────────────────────────────────────
 // Quelle: GEG 2024, EnEV-Systematik (Primärenergiebedarf)
 export const ENERGIE_KLASSEN = [
@@ -222,14 +207,35 @@ export const ENERGIE_KLASSEN = [
   { bis: Infinity, kl: "H" },
 ];
 
-// ── BAFA FÖRDERUNG ───────────────────────────────────────────────────────
-// Intervall: quartalsweise
-// Quelle: bafa.de
+// ── BAFA FÖRDERUNG (BEG EM) ──────────────────────────────────────────────
+// Gebaeudehuelle + Anlagentechnik ausser Heizung (Sanierungsrechner: Fenster,
+// Fassade, Dach, Tuer, Keller, oberste Geschossdecke, Lueftung).
+// Intervall: quartalsweise (Handpflege, Erinnerung ueber PFLEGE_INTERVALL)
+// Quelle: bafa.de > Sanierung Wohngebaeude > Gebaeudehuelle / Anlagentechnik,
+// Merkblatt Juli 2026, geprueft 2026-10-01. Rechnung: utils/begFoerderung.js.
 export const BAFA = {
-  stand: "August 2026",
-  aktiv: true, // steuert die Kachel "BAFA Förderung" auf der Landingpage
-  basisfoerderung: 15, // % der förderfähigen Kosten
-  heizungstauschBonus: 5, // % zusätzlich
+  stand: "Oktober 2026",
+  basisfoerderung: 15, // % der foerderfaehigen Ausgaben
+  isfpBonus: 5, // % - nur auf den Betrag ueber der Mindestinvestition (= Hoechstgrenze ohne iSFP)
+  // Hoechstgrenze foerderfaehiger Ausgaben fuer alle Massnahmen ZUSAMMEN, je Wohneinheit gestaffelt
+  hoechstgrenze: { erste: 30000, zweiBisSechs: 15000, abSieben: 8000 },
+  hoechstgrenzeIsfp: { erste: 60000, zweiBisSechs: 30000, abSieben: 15000 },
+};
+
+// ── KFW 458 HEIZUNGSFOERDERUNG (BEG EM) ────────────────────────────────────
+// Intervall: quartalsweise (Handpflege, Erinnerung ueber PFLEGE_INTERVALL)
+// Quelle: kfw.de, Zuschuss 458 (Privatpersonen; GbR/Firmen: 459), geprueft
+// 2026-10-01. Klima- und Einkommensbonus nur fuer die selbstgenutzte
+// Wohneinheit. Die angekuendigten Absenkungen (Klimabonus -4 Punkte, erste
+// Hoechstgrenze -750 EUR, jeweils halbjaehrlich ab 01.02.2027) rechnet
+// utils/begFoerderung.js selbst nach Datum.
+export const KFW_HEIZUNG = {
+  stand: "Oktober 2026",
+  grundfoerderung: 30, // %
+  maxFoerderung: 80, // % Gesamtfoerdersatz inkl. Boni
+  klimabonusStart: 16, // % bis 31.01.2027, entfaellt ab 01.08.2028
+  einkommensbonus: [0, 10, 30, 40], // % je Stufe (Auswahl im Rechner)
+  hoechstgrenze: { erste: 28000, zweiBisSechs: 15000, abSieben: 8000 },
 };
 
 // ── SANIERUNGSRECHNER: ENERGIEDATEN ─────────────────────────────────────
