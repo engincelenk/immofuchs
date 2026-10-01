@@ -829,6 +829,11 @@ export default function App() {
       .objekt-detail{padding:12px 14px 100px}
       .objekt-liste{padding:16px 16px 100px}
       .objekt-liste button:focus-visible,.objekt-liste input:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
+      /* Handy: Ueberschrift links, Knopf rechts, Zaehler rechts. Desktop: Knopf direkt neben
+         der Ueberschrift, Zaehler hinter den Filtern (nichts klebt am rechten Rand). */
+      .objekt-titelzeile{justify-content:space-between}
+      .objekt-zaehler{margin-left:auto;text-align:right}
+      @media(min-width:768px){.objekt-titelzeile{justify-content:flex-start;gap:16px}.objekt-zaehler{margin-left:8px;text-align:left}}
       .objekt-anlegen-kurz{display:none}
       @media(max-width:340px){.objekt-anlegen-lang{display:none}.objekt-anlegen-kurz{display:inline}}
       .objekt-chips-wrap{position:relative;margin:0 -14px 12px}

@@ -1,3 +1,11 @@
+## 2026-10-01 (1.100.50) [FRONTEND]
+
+### Objekt-Uebersicht Desktop: Knopf neben der Ueberschrift, Zaehler hinter den Filtern
+
+- Ab 768 px steht "+ Objekt anlegen" direkt neben "Meine Objekte" (16 px Abstand) statt
+  ganz rechts am Rand, der Zaehler ("1 Objekt") hinter den Filtern. Auf dem Handy
+  bleibt es: Ueberschrift links, Knopf und Zaehler rechts.
+
 ## 2026-09-30 (1.100.49) [FRONTEND]
 
 ### Objekt-Uebersicht: Titelzeile mit "Objekt anlegen" statt Knopf allein in der Reiterzeile

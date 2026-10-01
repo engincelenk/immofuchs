@@ -1354,10 +1354,10 @@ export function Merkliste() {
           Ueberschrift der Seite (h1). Unter ~340 px wird der Knopftext gekuerzt, damit
           beides nebeneinander bleibt. */}
       <div
+        className="objekt-titelzeile"
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
           gap: 10,
           marginBottom: 12,
         }}
@@ -1524,9 +1524,8 @@ export function Merkliste() {
             fontSize: 12.5,
             color: "var(--ch)",
             fontWeight: 500,
-            marginLeft: "auto",
-            textAlign: "right",
           }}
+          className="objekt-zaehler"
         >
           <span style={{ whiteSpace: "nowrap" }}>{zaehlerText}</span>
           {kontingentText && <span style={{ whiteSpace: "nowrap" }}> · {kontingentText}</span>}
