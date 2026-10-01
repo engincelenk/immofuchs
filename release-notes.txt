@@ -1,3 +1,17 @@
+## 2026-10-01 (1.100.54) [FRONTEND]
+
+### Landingpage: neue Sektion "Echte Marktdaten" mit Live-Werten
+
+- Sechs Kacheln (Preis gegen Markt, Finanz-Score, tragfaehiger Preis, Recht und Steuer,
+  aktuelle Marktannahmen, Expose bis Besichtigung), hinter "Preise" und vor der
+  Zinsleiste (Preise bleibt laut Vorgabe 2026-08-18 direkt hinter den Rechnern).
+- Keine festen Zahlen: Bauzinsen und Stand live aus zinsen.json (sofort nach dem
+  Monatsjob), Wertsteigerung aus WERTSTEIGERUNG (data.js, Monatsjob + Deploy),
+  Mietprognose aus MIET_P (Handpflege, mit Stand), Kreise/Bundeslaender live aus
+  regionalpreise.json (erst geladen, wenn die Sektion naeher kommt). Faellt eine
+  Quelle aus, steht der zuletzt gebaute Wert da.
+- 28 Texte in allen 5 Sprachen. Folgt dem Theme, Einblenden beim Scrollen.
+
 ## 2026-10-01 (1.100.53) [CI]
 
 ### Monatsjob: 01:07 Uhr deutscher Zeit, Waechter, Rauchtest nach Deploy, Re-run-Warnung

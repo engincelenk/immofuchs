@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, Suspense } from "react";
 import { lazyWithReload } from "../utils/lazyRetry.js";
 import { TL } from "../i18n/translations.js";
-import { MARKET_RATES } from "../data.js";
+import { MARKET_RATES, MIET_P, WERTSTEIGERUNG } from "../data.js";
+import { ladeRegionalpreise } from "../utils/regionalpreis.js";
 import { LANG_LOCALE } from "../utils/helpers.js";
 import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
@@ -185,6 +186,150 @@ const IconBars = () => (
     <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
   </Linie>
 );
+
+
+// ═══ Sektion "Echte Marktdaten" (Nutzer-Vorgabe 2026-10-01) ═══
+// Sechs Kacheln: Nutzen in einem Satz, Beleg als Zahl. KEINE Zahl steht fest im
+// Text - jede kommt aus der Quelle, die der Monatsjob (scripts/monthly_update.py)
+// bzw. die Datenpflege aktualisiert:
+//   - Bauzinsen + Stand: zinsen.json (live geladen, wie die Zinsleiste unten) -
+//     sofort aktuell nach dem Monatsjob, ohne neuen Build.
+//   - Wertsteigerung: WERTSTEIGERUNG in data.js - vom Monatsjob committet, der
+//     anschliessende Deploy baut neu.
+//   - Mietprognose: MIET_P in data.js - Handpflege, deshalb immer mit Stand.
+//   - Kreise/Bundeslaender: live aus regionalpreise.json gezaehlt, erst geladen,
+//     wenn die Sektion in die Naehe des Bildes kommt (48 KB).
+// Faellt eine Quelle aus, steht der zuletzt gebaute Wert da, nie eine Luecke.
+const MARKT_FALLBACK = { kreise: 259, laender: 16 }; // Stand Datenblaetter Q2 2026
+const IconGauge = () => (
+  <Linie size={22}>
+    <path d="M4 16a8 8 0 1 1 16 0" />
+    <path d="m12 16 4-5" />
+    <path d="M12 16h.01" />
+  </Linie>
+);
+const IconZiel = () => (
+  <Linie size={22}>
+    <circle cx="12" cy="12" r="8" />
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 12h.01" />
+  </Linie>
+);
+const IconWaage = () => (
+  <Linie size={22}>
+    <path d="M12 4v16M7 20h10" />
+    <path d="M5 8h14" />
+    <path d="m5 8-3 6a3 3 0 0 0 6 0z" />
+    <path d="m19 8-3 6a3 3 0 0 0 6 0z" />
+  </Linie>
+);
+const IconLinie = () => (
+  <Linie size={22}>
+    <path d="M4 19h16" />
+    <path d="m5 15 4-4 3 3 6-7" />
+  </Linie>
+);
+
+function MarktdatenSection({ l, lang, zinsen }) {
+  const ref = useRef(null);
+  const [zahlen, setZahlen] = useState(MARKT_FALLBACK);
+  useEffect(() => {
+    let aktiv = true;
+    const laden = () =>
+      ladeRegionalpreise()
+        .then((d) => {
+          const laender = d?.bundeslaender?.length || 0;
+          const kreise = (d?.bundeslaender || []).reduce((n, b) => n + (b.kreise?.length || 0), 0);
+          if (aktiv && laender > 0 && kreise > 0) setZahlen({ kreise, laender });
+        })
+        .catch(() => {});
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      laden();
+      return () => {
+        aktiv = false;
+      };
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          io.disconnect();
+          laden();
+        }
+      },
+      { rootMargin: "400px 0px" },
+    );
+    io.observe(el);
+    return () => {
+      aktiv = false;
+      io.disconnect();
+    };
+  }, []);
+
+  const loc = LANG_LOCALE[lang] || "de-DE";
+  const zahl = (v, d) =>
+    Number(v).toLocaleString(loc, { minimumFractionDigits: d, maximumFractionDigits: d });
+  const mitVorzeichen = (v, d) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${zahl(Math.abs(v), d)} %`;
+  const zinsWert = Number(zinsen?.avg ?? MARKET_RATES.avg);
+  const zinsStand = standLesbar(zinsen?.stand || MARKET_RATES.stand, lang);
+  const ersetze = (s, werte) => Object.entries(werte).reduce((t, [k, v]) => t.replace(`{${k}}`, v), s || "");
+
+  const kacheln = [
+    { key: "markt", icon: <IconPin />, t: l.md1T, b: ersetze(l.md1B, { kreise: zahl(zahlen.kreise, 0) }), s: ersetze(l.md1S, { laender: zahlen.laender }), e: l.md1E },
+    { key: "score", icon: <IconGauge />, t: l.md2T, b: l.md2B, s: l.md2S, e: l.md2E },
+    { key: "preis", icon: <IconZiel />, t: l.md3T, b: l.md3B, s: l.md3S, e: l.md3E },
+    { key: "recht", icon: <IconWaage />, t: l.md4T, b: l.md4B, s: l.md4S, e: l.md4E },
+    { key: "annahmen", icon: <IconLinie />, t: l.md5T },
+    { key: "expose", icon: <IconClipboard />, t: l.md6T, b: l.md6B, s: l.md6S, e: l.md6E },
+  ];
+
+  return (
+    <section id="marktdaten" ref={ref} style={{ padding: "clamp(40px,5vw,80px) 0", borderTop: "1px solid var(--cb)" }}>
+      <div className="lp-container">
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <Eyebrow>{l.mdEyebrow}</Eyebrow>
+          <h2 className="lp-h2">{l.mdH2}</h2>
+          <p className="lp-md-sub">{l.mdSub}</p>
+        </div>
+        <div className="lp-md-grid">
+          {kacheln.map((k) => (
+            <div key={k.key} className="lp-step lp-karte lp-md-karte">
+              <span className="lp-step-ic">{k.icon}</span>
+              <h3>{k.t}</h3>
+              {k.key === "annahmen" ? (
+                <>
+                  <dl className="lp-md-werte">
+                    <div>
+                      <dt>{l.md5Zins}</dt>
+                      <dd>{zahl(zinsWert, 2)}&nbsp;%</dd>
+                    </div>
+                    <div>
+                      <dt>{l.md5Wert}</dt>
+                      <dd>{mitVorzeichen(WERTSTEIGERUNG.pA, 1)}</dd>
+                    </div>
+                    <div>
+                      <dt>{l.md5Miete}</dt>
+                      <dd>{mitVorzeichen(MIET_P.normal.pA, 1)}</dd>
+                    </div>
+                  </dl>
+                  <p className="lp-md-quelle">
+                    {ersetze(l.md5Quelle, { zins: zinsStand, wert: WERTSTEIGERUNG.stand, miete: MIET_P.stand })}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="lp-md-beleg">{k.b}</div>
+                  <div className="lp-md-beleg-sub">{k.s}</div>
+                  <p>{k.e}</p>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Landing({ onStart, zinsen, lang, setLang }) {
   const l = TL[lang] || TL.de;
@@ -1137,6 +1282,11 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
         }}
       />
 
+      {/* ═══════════ MARKTDATEN ═══════════ */}
+      {/* Hinter "Preise", nicht davor: Preise steht laut Vorgabe 2026-08-18 direkt
+          hinter der Rechner-Uebersicht, ohne Daten-/USP-Abschnitte dazwischen. */}
+      <MarktdatenSection l={l} lang={lang} zinsen={zinsen} />
+
       {/* ═══════════ ZINSEN ═══════════ */}
       {/* Die Zinsdaten werden monatlich aktualisiert (Nutzer-Korrektur
           2026-09-28: vorher hiess es "tagesaktuell", dazu ein pulsierender
@@ -1359,10 +1509,24 @@ export function Landing({ onStart, zinsen, lang, setLang }) {
       .lp-step p{margin:0;font-size:15px;line-height:1.55;color:var(--cl)}
       .lp-step-ic{width:48px;height:48px;flex-shrink:0;border-radius:12px;background:var(--ca-bg);color:var(--ca-dk);display:inline-flex;align-items:center;justify-content:center}
       .lp-step-n{font-size:14px;font-weight:700;color:var(--ca-dk)}
+      .lp-md-sub{margin:10px auto 0;max-width:640px;font-size:clamp(15px,1.3vw,17px);line-height:1.6;color:var(--cl)}
+      .lp-md-grid{display:grid;grid-template-columns:1fr;gap:16px}
+      @media(min-width:640px){.lp-md-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(min-width:1000px){.lp-md-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+      .lp-md-karte{display:flex;flex-direction:column;gap:8px}
+      .lp-md-karte h3{margin:6px 0 0}
+      .lp-md-beleg{font-size:26px;font-weight:800;color:var(--ca-dk);line-height:1.15;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+      .lp-md-beleg-sub{font-size:13px;color:var(--ch);margin-top:-4px}
+      .lp-md-werte{margin:2px 0 0;display:flex;flex-direction:column}
+      .lp-md-werte div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;border-top:1px solid var(--cb)}
+      .lp-md-werte div:first-child{border-top:none}
+      .lp-md-werte dt{color:var(--cl);font-size:14.5px}
+      .lp-md-werte dd{margin:0;font-weight:800;font-size:17px;color:var(--ca-dk);font-variant-numeric:tabular-nums;white-space:nowrap}
+      .lp-step p.lp-md-quelle{font-size:12.5px;color:var(--ch)}
       /* Dark Mode: --ca-dk (#c44d00) erreicht auf dunklen Karten nur ~3:1,
          dort traegt das hellere --ca (~5:1). */
-      html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic,html[data-theme="dark"] .lp-ki-ic{color:var(--ca)}
-      @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-step-n,.lp-step-ic,.lp-ki-ic){color:var(--ca)}}
+      html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic,html[data-theme="dark"] .lp-ki-ic,html[data-theme="dark"] .lp-md-beleg,html[data-theme="dark"] .lp-md-werte dd{color:var(--ca)}
+      @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-step-n,.lp-step-ic,.lp-ki-ic,.lp-md-beleg,.lp-md-werte dd){color:var(--ca)}}
       /* Handy: fester "Kostenlos starten"-Balken unten, nur fuer nicht
          eingeloggte Besucher. Finns Knopf sitzt mit bottom:76px darueber. */
       .lp-sticky-cta{display:none}
