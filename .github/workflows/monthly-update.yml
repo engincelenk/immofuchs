@@ -88,7 +88,7 @@ jobs:
         # verdrahtete Liste laeuft dadurch zwangslaeufig auseinander, sobald
         # das Skript auf einem Branch eine neue Bibliothek importiert - genau
         # das war die Ursache des monatelangen "ModuleNotFoundError:
-        # pdfplumber": hier stand noch "pip install anthropic requests",
+        # pdfplumber": main hatte noch "pip install anthropic requests",
         # waehrend das Skript laengst pdfplumber importierte. Neue
         # Abhaengigkeit daher in scripts/requirements.txt eintragen, im selben
         # Branch wie die Skript-Aenderung.
@@ -105,13 +105,25 @@ jobs:
           fi
 
       # ── 3. Marktdaten aktualisieren ──────────────────────────────────────
+      # Seit 2026-08-24 ohne LLM: Bundesbank-PDF (pdfplumber) + Interhyp-
+      # Zinstabelle (Playwright, da clientseitig gerendert) - kein
+      # ANTHROPIC_API_KEY/Guthaben mehr noetig, siehe scripts/monthly_update.py.
+      #
+      # GENESIS_USER/GENESIS_PASS: Zugang zur Destatis-GENESIS-API fuer die
+      # Wertsteigerung (WERTSTEIGERUNG). Fehlten hier bis 2026-10-01 - das
+      # Skript lief deshalb nie gegen GENESIS. Ohne hinterlegte Secrets bleiben
+      # sie leer, das Skript meldet das und laesst den Wert stehen.
+      # ANTHROPIC_API_KEY nur noch fuer den aelteren Skriptstand auf main.
       - name: 🔄 Marktdaten aktualisieren
+        id: update
         env:
+          GENESIS_USER: ${{ secrets.GENESIS_USER }}
+          GENESIS_PASS: ${{ secrets.GENESIS_PASS }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/monthly_update.py
 
-      # ── 4. Änderungen committen UND zurückpushen - data.js/translations.js/
-      #      zinsen.json bleiben so dauerhaft die Quelle der Wahrheit in Git,
+      # ── 4. Änderungen committen UND zurückpushen - data.js/translations.js
+      #      bleiben so dauerhaft die Quelle der Wahrheit in Git,
       #      statt nur einmalig auf dem Runner fuer diesen einen Deploy zu
       #      existieren und beim naechsten Push auf den Branch wieder auf den
       #      alten committeten Stand zurueckzufallen (siehe Vorfall
@@ -122,7 +134,12 @@ jobs:
         run: |
           git config --global user.name "ImmoFuchs Bot"
           git config --global user.email "bot@immofuchs.info"
-          git add src/data.js src/i18n/translations.js public/zinsen.json
+          git add src/data.js src/i18n/translations.js
+          # zinsen.json gibt es auf dev seit 2026-10-01 nicht mehr (Bauzins nur
+          # noch aus data.js), auf aelteren Branches noch - daher nur wenn vorhanden.
+          for f in public/zinsen.json public/datenstatus.html; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
           if git diff --staged --quiet; then
             echo "Keine Änderungen — kein Commit nötig"
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -133,6 +150,10 @@ jobs:
             echo "✓ Commit erstellt und gepusht"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # ── 4b. Erinnerungen an die Handpflege: eigener Workflow
+      #        datenpflege-erinnerung.yml (seit 2026-10-01). Das fruehere
+      #        Sammel-Issue hier lief nur im PROD-Zweig und kam nie an. ─────
 
       # ── 5. Deploy - NICHT mehr selbst bauen und spiegeln, sondern den
       #      regulaeren Deploy-Workflow der Umgebung anstossen.
