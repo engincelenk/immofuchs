@@ -25,8 +25,8 @@ import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
-import { ladeRegionalpreise, regionalPreis, regionalFakten } from "../../utils/regionalpreis.js";
-import { ladePlzKreis } from "../../utils/plzKreis.js";
+import { regionalPreis, regionalFakten } from "../../utils/regionalpreis.js";
+import { useRegionaldaten } from "../../utils/useRegionaldaten.js";
 import {
   huelleFoerderung,
   heizungFoerderung,
@@ -120,12 +120,7 @@ export default function Sanier() {
   // B.4): dieser Rechner hat kein eigenes Kaufpreis-/Ort-Feld, nutzt aber
   // d.kaufpreis/d.ort/d.bundesland aus dem geteilten Objekt-State (falls im
   // Renditerechner-Tab desselben Objekts bereits gesetzt).
-  const [regGeladen, setRegGeladen] = useState(false);
-  useEffect(() => {
-    Promise.all([ladeRegionalpreise(), ladePlzKreis()])
-      .then(() => setRegGeladen(true))
-      .catch(() => {});
-  }, []);
+  const regGeladen = useRegionaldaten(d.bundesland, d.plz);
   const [act, setAct] = useState({
     fenster: false,
     fassade: false,

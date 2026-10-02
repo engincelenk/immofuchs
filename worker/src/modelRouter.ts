@@ -375,6 +375,9 @@ export async function callLageModel(
   env: Env,
   systemPrompt: string,
   userPayload: string,
+  // Standard sind die knappen Werte der Lage-Analyse; laengere Fliesstexte
+  // (Alternativ-Investment) setzen eigene Grenzen.
+  opts: { maxTokens?: number; temperature?: number } = {},
 ): Promise<string> {
   if (!env.GEMINI_API_KEY) {
     throw new Error("gemini_api_key_missing");
@@ -398,8 +401,8 @@ export async function callLageModel(
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: userPayload }] }],
           generationConfig: {
-            maxOutputTokens: LAGE_MAX_TOKENS,
-            temperature: LAGE_TEMPERATURE,
+            maxOutputTokens: opts.maxTokens ?? LAGE_MAX_TOKENS,
+            temperature: opts.temperature ?? LAGE_TEMPERATURE,
           },
         }),
         signal: controller.signal,

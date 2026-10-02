@@ -310,7 +310,7 @@ export async function markTrialUsedForUser(db: Env["DB"], userId: string): Promi
 // Sonderfaelle, und an den Nutzer gebunden statt an die Session - siehe
 // Kommentar in der Migration.
 
-export type TrialFeature = "rechner" | "finn" | "expose" | "pdf" | "handout" | "lage";
+export type TrialFeature = "rechner" | "finn" | "expose" | "pdf" | "handout" | "lage" | "alternativ";
 
 // Alle Zaehler der laufenden Testphase, als "feature:rechner" -> count.
 // Zeilen aelterer Testphasen (anderes trial_start) werden nicht gelesen und

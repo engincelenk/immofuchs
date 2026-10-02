@@ -110,7 +110,9 @@ THEMEN = [
         "claude": "Datenpflege Regionalpreise: Unter src/immodata/<Jahr>/<Quartal>/ liegen die neuen "
         "ImmoScout24-Datenblätter. Aktualisiere damit immodaten.json, stelle "
         "scripts/extract_datenblatt_zusatz.py auf das neue Quartal um, baue public/regionalpreise.json "
-        "mit node scripts/build_regionalpreise.mjs neu und prüfe die Werte stichprobenartig gegen die PDFs.",
+        "mit node scripts/build_regionalpreise.mjs neu und prüfe die Werte stichprobenartig gegen die PDFs. "
+        "Danach IMMER node scripts/sync_worker_daten.mjs ausführen und den Worker neu deployen "
+        "(die Datei wird nicht mehr statisch ausgeliefert, sondern vom Worker je Bundesland).",
     },
     # ── halbjaehrlich ────────────────────────────────────────────────────
     {
@@ -235,7 +237,22 @@ THEMEN = [
         "verwendung": "Zuordnung PLZ → Kreis für alle Regionalvergleiche, Karte auf der Objektseite, Ortsmiete",
         "claude": "Datenpflege PLZ-Daten: Prüfe, ob es neue PLZ-/Gemeindezuordnungen oder einen neuen Zensus "
         "gibt, und baue bei Bedarf plz-kreis.txt, plz-geo.txt und miete-referenz.txt mit den Skripten in "
-        "scripts/ neu (build_plz_kreis.mjs, build_miete_referenz.py).",
+        "scripts/ neu (build_plz_kreis.mjs, build_miete_referenz.py). Nach Änderungen an plz-kreis.txt "
+        "IMMER node scripts/sync_worker_daten.mjs ausführen und den Worker neu deployen (plz-kreis.txt "
+        "wird nicht mehr statisch ausgeliefert).",
+    },
+    {
+        "key": "ALTERNATIV",
+        "titel": "Alternativ-Investment (Renditen der Vergleichsanlagen)",
+        "monate": QUARTAL,
+        "quelle": "justETF (Wertentwicklung in EUR), MSCI, goldavenue.com, onvista/zinsen.net, Fidelity Digital Assets",
+        "datei": "`src/data/alternativAnlagen.js`",
+        "verwendung": "Objektseite: Karte „Alternativ-Investment“ (Szenarien, Rückblick, Risiko) und KI-Einordnung",
+        "claude": "Datenpflege Alternativ-Investment: Prüfe die Rückblick-Werte (historie), Risikoangaben und "
+        "Kosten (TER) je Anlage in src/data/alternativAnlagen.js gegen die aktuellen Quellen (justETF-Profile "
+        "der genannten ETFs, Bundesbank/zinsen.net für Bundesanleihe, onvista für Tages-/Festgeld, MSCI-Factsheet) "
+        "und setze ALTERNATIV_STAND. Die Szenario-Renditen (pess/basis/opt) bleiben bewusst vorsichtige Annahmen "
+        "und folgen NICHT den jüngsten Spitzenrenditen - ändere sie nur mit Begründung, nicht bei jeder Kursbewegung.",
     },
 ]
 

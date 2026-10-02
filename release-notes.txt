@@ -1,3 +1,29 @@
+## 2026-10-03 (1.100.59) [FRONTEND] [WORKER]
+
+### Alternativ-Investment auf der Objektseite, Regionaldaten nicht mehr als Datei abrufbar
+
+- Neue Karte "Alternativ-Investment" unter dem Investment-Briefing: der Betrag aus
+  eigener Tasche (Eigenkapital + bar gezahlte Kaufnebenkosten + Nachschuesse bei
+  negativem Cashflow) im Vergleich mit MSCI World, FTSE All-World, S&P 500, Gold,
+  Bitcoin, Bundesanleihe und Tages-/Festgeld. 10/15/20 Jahre, drei Szenarien
+  (vorsichtig/mittel/guenstig), nach Steuer. Immobilienseite = Gesamtsaldo des
+  Renditerechners (R.g). Renditen sind Annahmen, nicht Prognose; Rueckblick mit
+  Quelle und Stand in src/data/alternativAnlagen.js (neues Thema "Alternativ-
+  Investment" in der Datenpflege-Erinnerung).
+- KI-Einordnung per neuer Route POST /api/v1/alternativ (Pro/Testphase, 3 pro Tag,
+  Einwilligung wie Lage): erklaert nur die gerechneten Zahlen, nennt Vor- und
+  Nachteile, keine Empfehlung. Nutzlast wird serverseitig streng geprueft.
+- Schutz vor Massenabzug: plz-kreis.txt und regionalpreise.json liegen nicht mehr
+  oeffentlich. Der Worker liefert je Anfrage eine PLZ bzw. ein Bundesland
+  (GET /api/v1/daten/..., 300/120 Abfragen je Stunde und IP, Origin-Pruefung).
+  miete-referenz.txt, mieten-fortschreibung.json (von der App nicht geladen) und
+  germanpostcodes.csv (nirgends referenziert) werden nicht mehr ausgeliefert
+  (vite.config.js). Nach jeder Datenpflege: node scripts/sync_worker_daten.mjs +
+  Worker-Deploy; ein Test schlaegt sonst an.
+- robots.txt: weitere KI-Agenten und SEO-Scraper gesperrt, /assets/ nicht mehr
+  gesperrt (Googlebot braucht JS/CSS).
+- Worker-Deploy noetig (neue Routen).
+
 ## 2026-10-01 (1.100.58) [FRONTEND] [WORKER]
 
 ### Kleinunternehmerregelung (§ 19 UStG) und Einblenden der Landingpage-Sektionen

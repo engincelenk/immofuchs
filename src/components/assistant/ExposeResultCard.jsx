@@ -18,11 +18,10 @@ import {
 import { fuelle } from "../../i18n/expose.js";
 import { PLZ_DB } from "../../data/plzData.js";
 import {
-  ladeRegionalpreise,
   regionalAmpelText,
   regionalPreis,
 } from "../../utils/regionalpreis.js";
-import { ladePlzKreis } from "../../utils/plzKreis.js";
+import { useRegionaldaten } from "../../utils/useRegionaldaten.js";
 
 const GRUPPEN_LABEL = {
   objekt: "gruppeObjekt",
@@ -41,12 +40,8 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
   // regionalen Richtwert gespiegelt, bevor der Nutzer ueberhaupt etwas
   // uebernommen hat. PLZ -> Bundesland ueber PLZ_DB (dasselbe Nachschlagen
   // wie in PLZSearch.jsx/uebernehmeZeilen), Ort direkt aus dem Expose.
-  const [regGeladen, setRegGeladen] = useState(false);
-  useEffect(() => {
-    Promise.all([ladeRegionalpreise(), ladePlzKreis()])
-      .then(() => setRegGeladen(true))
-      .catch(() => {});
-  }, []);
+  const exposeBundesland = ergebnis?.plz ? PLZ_DB.byPlz[String(ergebnis.plz)]?.bl : null;
+  const regGeladen = useRegionaldaten(exposeBundesland, ergebnis?.plz);
   const regionalCheck = useMemo(() => {
     if (!regGeladen) return null;
     const kaufpreisQm =

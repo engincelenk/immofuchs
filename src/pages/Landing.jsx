@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import { lazyWithReload } from "../utils/lazyRetry.js";
 import { TL } from "../i18n/translations.js";
 import { MARKET_RATES, MIET_P, WERTSTEIGERUNG } from "../data.js";
-import { ladeRegionalpreise } from "../utils/regionalpreis.js";
+import { ladeRegionalMeta } from "../utils/regionalpreis.js";
 import { LANG_LOCALE } from "../utils/helpers.js";
 import { LangSel } from "../components/ui/LangSel.jsx";
 import { ZinsAlarm } from "../components/shell/ZinsAlarm.jsx";
@@ -256,10 +256,8 @@ function MarktdatenSection({ l, lang }) {
   useEffect(() => {
     let aktiv = true;
     const laden = () =>
-      ladeRegionalpreise()
-        .then((d) => {
-          const laender = d?.bundeslaender?.length || 0;
-          const kreise = (d?.bundeslaender || []).reduce((n, b) => n + (b.kreise?.length || 0), 0);
+      ladeRegionalMeta()
+        .then(({ laender, kreise }) => {
           if (aktiv && laender > 0 && kreise > 0) setZahlen({ kreise, laender });
         })
         .catch(() => {});

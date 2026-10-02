@@ -32,6 +32,8 @@ export const TRIAL_LIMITS = {
   // 2026-09-23.md §8) - dasselbe knappe Kontingent wie beim Handout statt
   // des hoeheren Finn-Kontingents.
   lage: 3,
+  // Alternativ-Investment-Einordnungen pro Tag (rechneruebergreifend).
+  alternativ: 3,
 } as const;
 
 // Gespeicherte Objekte, Gesamtzahl fuer die ganze Testphase - kein
@@ -52,4 +54,4 @@ export function trialTag(jetzt: number = Date.now()): string {
 // Welche Features taeglich zaehlen. Wer hier fehlt, zaehlt ueber die ganze
 // Phase (tag='') - heute niemand mehr, das Feld bleibt aber bestehen, damit
 // ein kuenftiges Gesamtkontingent ohne Schema-Aenderung moeglich ist.
-export const TAGESKONTINGENT: ReadonlySet<string> = new Set(["finn", "expose", "handout", "lage"]);
+export const TAGESKONTINGENT: ReadonlySet<string> = new Set(["finn", "expose", "handout", "lage", "alternativ"]);

@@ -1,6 +1,5 @@
 // Regionaler Kaufpreis-Richtwert je Bundesland/Kreis, fuer die Einordnung im
-// Renditerechner. Gleiches Lade-Muster wie mietReferenz.js (statische Datei,
-// einmalig per fetch geladen, kein Laufzeit-Request je Objekt).
+// Renditerechner. Geladen wird je Bundesland vom Worker (siehe unten).
 //
 // Matching-Strategie bewusst dreistufig statt einer erfundenen Genauigkeit:
 // 1. Exakter Namensabgleich Ort <-> Kreis/Stadt (deckt kreisfreie Staedte
@@ -18,31 +17,74 @@
 // Ebenen-Angabe ("kreis"/"bundesland") fuer die UI-Formulierung.
 
 import { fmt, fmtP } from "./helpers.js";
-import { kreisFuerPlz } from "./plzKreis.js";
+import { apiV1 } from "./apiBase.js";
+import { kreisFuerPlz, ladePlzKreis } from "./plzKreis.js";
 
-const DATEI = "/regionalpreise.json";
+// Seit 2026-10-03 NICHT mehr als statische Datei (public/regionalpreise.json
+// war per Direkt-URL am Stueck herunterladbar): der Worker liefert je Anfrage
+// genau EIN Bundesland (GET /api/v1/daten/regionalpreise/:code, mit
+// Rate-Limit je IP, worker/src/routes/daten.ts). Der Client sammelt die
+// geladenen Bundeslaender in `daten.bundeslaender` - alle synchronen
+// Zugriffe unten suchen dort wie bisher und finden ein Land, sobald es
+// geladen ist.
 
 let daten = null;
-let laufend = null;
+const laufend = new Map();
+let metaLaufend = null;
 
-export function ladeRegionalpreise() {
-  if (daten) return Promise.resolve(daten);
-  if (!laufend) {
-    laufend = fetch(DATEI)
+// Laedt das Bundesland (Kuerzel wie "BW"). Mehrere gleichzeitige Aufrufe
+// teilen sich dieselbe Anfrage; ein Fehlschlag wird nicht gemerkt. Ohne
+// gueltiges Kuerzel gibt es nichts zu laden.
+export function ladeRegionalpreise(bundeslandCode) {
+  const code = String(bundeslandCode ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return Promise.resolve(daten);
+  if (daten?.bundeslaender.some((b) => b.code === code)) return Promise.resolve(daten);
+  if (!laufend.has(code)) {
+    laufend.set(
+      code,
+      fetch(apiV1(`/daten/regionalpreise/${code}`))
+        .then((r) => {
+          if (!r.ok) throw new Error(`regionalpreise_${r.status}`);
+          return r.json();
+        })
+        .then(({ stand, bundesland }) => {
+          daten = {
+            stand,
+            bundeslaender: [...(daten?.bundeslaender || []), bundesland],
+          };
+          laufend.delete(code);
+          return daten;
+        })
+        .catch((err) => {
+          laufend.delete(code);
+          throw err;
+        }),
+    );
+  }
+  return laufend.get(code);
+}
+
+// Alles, was regionalPreis() fuer ein Objekt braucht: das Bundesland und die
+// Kreiszuordnung der PLZ.
+export function ladeRegionaldaten(bundeslandCode, plz) {
+  return Promise.all([ladeRegionalpreise(bundeslandCode), ladePlzKreis(plz)]);
+}
+
+// Nur Zaehlwerte (Stand, Laender, Kreise) fuer die Landingpage - ohne Login
+// und ohne ein Bundesland zu kennen.
+export function ladeRegionalMeta() {
+  if (!metaLaufend) {
+    metaLaufend = fetch(apiV1("/daten/regionalpreise-meta"))
       .then((r) => {
-        if (!r.ok) throw new Error(`regionalpreise_${r.status}`);
+        if (!r.ok) throw new Error(`regionalpreise_meta_${r.status}`);
         return r.json();
       })
-      .then((json) => {
-        daten = json;
-        return daten;
-      })
       .catch((err) => {
-        laufend = null;
+        metaLaufend = null;
         throw err;
       });
   }
-  return laufend;
+  return metaLaufend;
 }
 
 function normalisiere(s) {

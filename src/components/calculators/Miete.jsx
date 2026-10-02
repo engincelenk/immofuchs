@@ -9,11 +9,10 @@ import { F, Row, Sec, Ins, VT } from "../ui/atoms.jsx";
 import { Legal } from "../ui/LangSel.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
 import {
-  ladeRegionalpreise,
   regionalAmpelText,
   regionalPreis,
 } from "../../utils/regionalpreis.js";
-import { ladePlzKreis } from "../../utils/plzKreis.js";
+import { useRegionaldaten } from "../../utils/useRegionaldaten.js";
 import { ExportPDF } from "../export/ExportPDF.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
@@ -78,12 +77,7 @@ export default function Miete() {
   // Regionaler Mietrichtwert (2026-09-10, Backlog B.3): dieselbe Ampel-Idee
   // wie der Kaufpreis-Realitaetscheck im Renditerechner, hier fuer die vom
   // Nutzer selbst geschaetzte Vergleichsmiete.
-  const [regGeladen, setRegGeladen] = useState(false);
-  useEffect(() => {
-    Promise.all([ladeRegionalpreise(), ladePlzKreis()])
-      .then(() => setRegGeladen(true))
-      .catch(() => {});
-  }, []);
+  const regGeladen = useRegionaldaten(d.bundesland, d.plz);
   // Vergleichsmiete regional vorbelegen (Backlog Punkt 7 - "dieselben Felder
   // bei Miete auch anpassen"): identisches Zwei-Werte-Muster wie im
   // Renditerechner (RegionalWertHinweis-Kommentar dort) - eigener Ref hier,

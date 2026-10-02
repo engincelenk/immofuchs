@@ -4,6 +4,7 @@ import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
 import { InvestmentBriefing } from "./InvestmentBriefing.jsx";
+import { AlternativInvestment } from "./AlternativInvestment.jsx";
 import { primaerKnopfStyle } from "./BriefingVisuals.jsx";
 import {
   ergebnisAnlegen,
@@ -20,14 +21,14 @@ import { getSessionId } from "../../utils/assistantSession.js";
 import { rufeAnalyseAuf, analyseFehlertext, erteileConsent } from "../../utils/aiAnalyse.js";
 import { rufeLageAnalyseAuf } from "../../utils/lageAnalyse.js";
 import {
-  ladeRegionalpreise,
   regionalFakten,
   regionalLandeswert,
   regionalPreis,
   regionalTrend,
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
-import { ladePlzKreis, kreisFuerPlz } from "../../utils/plzKreis.js";
+import { kreisFuerPlz } from "../../utils/plzKreis.js";
+import { useRegionaldaten } from "../../utils/useRegionaldaten.js";
 import { berechneObjektKennzahlen } from "../../utils/objektKennzahlen.js";
 
 // Schritt A4 und C des Umbauplans (docs/plans/neue-phase2/01-umbauplan-phase-a-b.md).
@@ -88,12 +89,6 @@ export function ObjektDetail({ objekt, onBack }) {
   const [aiFehler, setAiFehler] = useState(null);
   // Welches Produkt auf die KI-Einwilligung wartet (null = keines).
   const [aiConsent, setAiConsent] = useState(null);
-  // Ortsuebliche Miete fuer die PLZ dieses Objekts. Die Tabelle (53 KB) wird
-  // erst geladen, wenn eine PLZ vorliegt - sie soll das Haupt-Bundle nicht
-  // belasten, genau wie plz-geo.txt. Bis 2026-09-07 erst beim Aufklappen der
-  // (damals einklappbaren) AI-Sektion; die Sektion steht seither immer offen
-  // im Ueberblick (UX-Review).
-  const [regGeladen, setRegGeladen] = useState(false);
   // Baustein "Lage" (objektseite-vereinfachung-2026-09-23.md Abschnitt 8) -
   // eigener State statt Wiederverwendung von laufend/aiFehler/aiConsent:
   // die dortigen drei sind an eine produktId aus AI_PRODUKTE (aiEngine.js)
@@ -138,21 +133,10 @@ export function ObjektDetail({ objekt, onBack }) {
     [basis, t],
   );
 
-  // Einmalig laden, sobald ein Bundesland vorliegt. plzKreis.js parallel
-  // dazu (Backlog Punkt 4, 2026-09-11) - beide muessen geladen sein, bevor
+  // Laedt Bundesland und PLZ-Kreis des Objekts (je Anfrage nur dieser
+  // Ausschnitt, siehe regionalpreis.js); beides muss da sein, bevor
   // regionalPreis() die PLZ-Kreis-Stufe nutzen kann.
-  useEffect(() => {
-    if (!basis?.bundesland) return;
-    let lebt = true;
-    Promise.all([ladeRegionalpreise().catch(() => null), ladePlzKreis().catch(() => null)]).then(
-      () => {
-        if (lebt) setRegGeladen(true);
-      },
-    );
-    return () => {
-      lebt = false;
-    };
-  }, [basis?.bundesland]);
+  const regGeladen = useRegionaldaten(basis?.bundesland, basis?.plz);
 
   // Ruft den Worker und legt das Ergebnis AM OBJEKT ab. Der Kern der
   // Umstellung: was Kontingent kostet, muss beim naechsten Oeffnen wieder da
@@ -540,6 +524,10 @@ export function ObjektDetail({ objekt, onBack }) {
         onExpose={oeffneExpose}
         onRenditerechner={() => inRechner("haupt")}
       />
+
+      {/* Alternativ-Investment: dasselbe Geld in ETF, Gold, Bitcoin usw.
+          statt in die Immobilie (eigene Karte, eigene KI-Route). */}
+      <AlternativInvestment data={basis} t={t} />
 
       {/* Fixierte Leiste unten, nur mobil (Vorlage "Variante E", .mobile-bar):
           derselbe Weg in den Renditerechner wie der Primaerknopf im Kopf, der

@@ -28,8 +28,7 @@ import {
   rangiereObjekte,
   SORTIERUNGEN,
 } from "../../utils/objektKennzahlen.js";
-import { ladeRegionalpreise, regionalSnapshot } from "../../utils/regionalpreis.js";
-import { ladePlzKreis } from "../../utils/plzKreis.js";
+import { ladeRegionaldaten, regionalSnapshot } from "../../utils/regionalpreis.js";
 
 // Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
 // Merkliste haengt auf jeder Rechner-Seite, CheckoutWizard aber nur bei
@@ -309,17 +308,6 @@ export function useSavedObjects(setData) {
     return () => window.removeEventListener("if:ispro-changed", handler);
   }, []);
 
-  // Regionaldaten vorab laden (2026-09-10, B.5): dieser Hook laeuft in
-  // App.jsx quasi von Anfang an, lange bevor ein Speichern moeglich ist -
-  // damit ist der Modul-Cache in regionalpreis.js beim ersten
-  // toServerPayload()-Aufruf (SaveBtn) so gut wie immer schon befuellt.
-  // Fehlschlag bleibt still, wie beim gleichen Muster in ObjektDetail.jsx -
-  // ohne Daten faellt toServerPayload() nur auf "kein Snapshot" zurueck.
-  useEffect(() => {
-    ladeRegionalpreise().catch(() => {});
-    ladePlzKreis().catch(() => {});
-  }, []);
-
   const [savedList, setSavedList] = useState(() => (isPro ? [] : readLocalList()));
   const migratedRef = useRef(false);
 
@@ -359,6 +347,9 @@ export function useSavedObjects(setData) {
     (async () => {
       const localList = readLocalList();
       if (localList.length > 0) {
+        await Promise.all(
+          localList.map((o) => ladeRegionaldaten(o.data?.bundesland, o.data?.plz).catch(() => {})),
+        );
         try {
           const res = await apiFetch("/objects/import", {
             method: "POST",
@@ -406,6 +397,7 @@ export function useSavedObjects(setData) {
         obj.kennzahlen = { ...(obj.kennzahlen || {}), herkunft: opts.herkunft };
       }
       if (isPro) {
+        await ladeRegionaldaten(data?.bundesland, data?.plz).catch(() => {});
         try {
           await apiFetch("/objects", {
             method: "POST",
@@ -449,6 +441,7 @@ export function useSavedObjects(setData) {
     async (id, name, data, extra = {}) => {
       const kz = berechneObjektKennzahlen(data);
       if (isPro) {
+        await ladeRegionaldaten(data?.bundesland, data?.plz).catch(() => {});
         try {
           const vorher = savedList.find((o) => o.id === id);
           // 2026-09-08: vorher?.kennzahlen wird durchgereicht, damit

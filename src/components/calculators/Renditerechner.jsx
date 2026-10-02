@@ -33,12 +33,11 @@ import { ExportPDF } from "../export/ExportPDF.jsx";
 import { BreakEvenCards } from "./SelbsttraegerCheck.jsx";
 import { PLZSearch } from "../ui/PLZSearch.jsx";
 import {
-  ladeRegionalpreise,
   regionalAmpelText,
   regionalPreis,
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
-import { ladePlzKreis } from "../../utils/plzKreis.js";
+import { useRegionaldaten } from "../../utils/useRegionaldaten.js";
 import { Legal } from "../ui/LangSel.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
@@ -187,12 +186,7 @@ export default function Haupt() {
   // Regionaler Kaufpreis-Richtwert (2026-09-09): einmalig laden, dann
   // synchron per regionalPreis() abfragbar - gleiches Muster wie
   // ladeMietReferenz()/referenzMiete(). Kein Re-Fetch je Tastendruck.
-  const [regGeladen, setRegGeladen] = useState(false);
-  useEffect(() => {
-    Promise.all([ladeRegionalpreise(), ladePlzKreis()])
-      .then(() => setRegGeladen(true))
-      .catch(() => {});
-  }, []);
+  const regGeladen = useRegionaldaten(d.bundesland, d.plz);
   const regRef = useMemo(
     () => (regGeladen ? regionalPreis(d.bundesland, d.ort, d.plz) : null),
     [regGeladen, d.bundesland, d.ort, d.plz],
