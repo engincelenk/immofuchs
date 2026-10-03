@@ -369,7 +369,6 @@ const karte = {
   display: "flex",
   flexDirection: "column",
   gap: 14,
-  marginTop: 16,
 };
 const titel = { fontSize: 16, color: "var(--ct)" };
 const leise = { margin: "4px 0 0", fontSize: 12.5, lineHeight: 1.5, color: "var(--ch)" };

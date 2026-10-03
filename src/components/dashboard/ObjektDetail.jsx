@@ -4,7 +4,6 @@ import { useAccountCtx } from "../../context/AccountContext.jsx";
 import { ObjektAnlegen } from "./ObjektAnlegen.jsx";
 import { Sheet } from "../ui/Sheet.jsx";
 import { InvestmentBriefing } from "./InvestmentBriefing.jsx";
-import { AlternativInvestment } from "./AlternativInvestment.jsx";
 import { primaerKnopfStyle } from "./BriefingVisuals.jsx";
 import {
   ergebnisAnlegen,
@@ -446,7 +445,7 @@ export function ObjektDetail({ objekt, onBack }) {
           fixierte Leiste unten dieselbe Aktion, siehe mobileBar weiter
           unten). Der Vollstaendigkeits-Ring der alten Kopfzeile ist mit
           diesem Redesign entfallen (in der Vorlage nicht vorgesehen). */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, margin: "4px 2px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, margin: "4px 2px 16px" }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>
             {objekt.title || "Objekt"}
@@ -553,9 +552,9 @@ export function ObjektDetail({ objekt, onBack }) {
         onNkFinanzieren={setzeNkFinanzieren}
       />
 
-      {/* Alternativ-Investment: dasselbe Geld in ETF, Gold, Bitcoin usw.
-          statt in die Immobilie (eigene Karte, eigene KI-Route). */}
-      <AlternativInvestment data={basis} t={t} />
+      {/* Platz fuer die fixierte Leiste unten (nur mobil, siehe COCKPIT_CSS) -
+          am Seitenende statt als padding an Schritt 5. */}
+      <div className="cockpit-bar-platz" aria-hidden="true" />
 
       {/* Fixierte Leiste unten, nur mobil (Vorlage "Variante E", .mobile-bar):
           derselbe Weg in den Renditerechner wie der Primaerknopf im Kopf, der

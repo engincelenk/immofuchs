@@ -50,34 +50,34 @@ const COCKPIT_CSS = `
   .bv-auf,.bv-wachsen,.bv-punkt{animation:bv-fade .2s ease both}
   @keyframes bv-fade{from{opacity:0}to{opacity:1}}
 }
-.cockpit-kennzahlen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cockpit-kennzahlen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .cockpit-nur-desktop{display:none}
 .cockpit-stepnav{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 2px;margin:0 -2px;position:sticky;top:0;z-index:5;background:var(--bg)}
 .cockpit-stepnav::-webkit-scrollbar{display:none}
-.cockpit-schritte{display:flex;flex-direction:column;gap:14px;align-items:stretch}
-.cockpit-spalte{display:flex;flex-direction:column;gap:14px;min-width:0}
+.cockpit-schritte{display:flex;flex-direction:column;gap:16px;align-items:stretch}
+.cockpit-spalte{display:flex;flex-direction:column;gap:16px;min-width:0}
 .cockpit-schritte button:focus-visible,.cockpit-schritte a:focus-visible{outline:2px solid var(--ca);outline-offset:2px;border-radius:6px}
 .cockpit-schritte button{touch-action:manipulation}
 .cockpit-markt-liste{display:block}
 .cockpit-stellschrauben-desktop{display:none}
 .cockpit-stellschrauben-mobile{display:block}
 .cockpit-cmp{grid-template-columns:minmax(0,1fr)!important}
-.cockpit-next{display:flex;flex-direction:column;gap:14px}
+.cockpit-next{display:flex;flex-direction:column;gap:16px}
 .cockpit-next-besichtigung{order:-1}
 .cockpit-mobile-bar{position:fixed;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));padding:10px 16px;background:var(--cc);border-top:1px solid var(--cb);z-index:30}
-.cockpit-s5{padding-bottom:76px}
+.cockpit-bar-platz{height:76px}
 @media(min-width:768px){
   .cockpit-kennzahlen{grid-template-columns:repeat(4,minmax(0,1fr))}
   .cockpit-nur-desktop{display:block}
   .cockpit-stepnav{position:static;overflow:visible;padding:14px 0;margin:0}
-  .cockpit-s5{grid-column:1 / -1}
+  .cockpit-s5,.cockpit-voll{grid-column:1 / -1}
   .cockpit-stellschrauben-desktop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
   .cockpit-stellschrauben-mobile{display:none}
   .cockpit-cmp{grid-template-columns:120px minmax(0,1fr)!important}
-  .cockpit-next{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:start}
+  .cockpit-next{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;align-items:start}
   .cockpit-next-besichtigung{order:0}
   .cockpit-mobile-bar{display:none}
-  .cockpit-s5{padding-bottom:0}
+  .cockpit-bar-platz{display:none}
 }
 @media(min-width:1024px){
   .cockpit-schritte{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:16px;align-items:start}
@@ -95,7 +95,7 @@ const karte = {
   background: "var(--cc)",
   border: "1px solid var(--cb)",
   borderRadius: 16,
-  padding: "22px 24px",
+  padding: 18,
   marginTop: 12,
 };
 const klein = { fontSize: 11, color: "var(--cl)" };
@@ -218,7 +218,7 @@ export function KennzahlenLeiste({ score, kennzahlen, t }) {
   if (kacheln.length === 0) return null;
 
   return (
-    <div className="cockpit-kennzahlen bv bv-auf" style={{ marginTop: 14 }}>
+    <div className="cockpit-kennzahlen bv bv-auf" style={{ marginTop: 16 }}>
       {kacheln.map((k) => (
         <KennzahlKachel key={k.key} k={k} t={t} />
       ))}
@@ -971,7 +971,7 @@ export function SchrittMarkt({ briefing, t }) {
       : null;
 
   return (
-    <section id="schritt-markt" aria-labelledby="schritt-markt-titel" className="bv bv-auf cockpit-s2" style={{ ...karte, marginTop: 0, padding: "22px 24px 12px", scrollMarginTop: 78 }}>
+    <section id="schritt-markt" aria-labelledby="schritt-markt-titel" className="bv bv-auf cockpit-s2" style={{ ...karte, marginTop: 0, padding: "18px 18px 12px", scrollMarginTop: 78 }}>
       <SchrittKopf
         id="schritt-markt-titel"
         nr={2}

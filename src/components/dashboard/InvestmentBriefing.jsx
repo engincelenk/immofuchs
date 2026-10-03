@@ -23,6 +23,7 @@ import {
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
 import { AiEngine } from "./AiEngine.jsx";
+import { AlternativInvestment } from "./AlternativInvestment.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
@@ -239,8 +240,16 @@ export function InvestmentBriefing({
         />
         </div>
 
+        {/* Alternativ-Investment: gehoert zur Bewertung ("lohnt sich das?"),
+            deshalb vor dem Abschluss-Schritt 5 und als volle Zeile im Raster -
+            ohne eigene Schritt-Nummer. Bis 2026-10-03 hing die Karte ausserhalb
+            des Rasters unter dem Cockpit (mobil 92 px Luecke). */}
+        <div className="cockpit-voll">
+          <AlternativInvestment data={data} t={t} />
+        </div>
+
         <section id="schritt-weiter" aria-labelledby="schritt-weiter-titel" className="cockpit-s5" style={{ marginTop: 0 }}>
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 12 }}>
             <SchrittKopf id="schritt-weiter-titel" nr={5} titel={t.cockS5Titel || "Deine nächsten Schritte"} />
           </div>
 

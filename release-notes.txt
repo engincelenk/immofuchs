@@ -1,3 +1,17 @@
+## 2026-10-03 (1.100.64) [FRONTEND]
+
+### Objektseite neu geordnet: Alternativ-Investment im Raster, Abstaende einheitlich
+
+- Alternativ-Investment steht jetzt als volle Zeile im Cockpit-Raster zwischen
+  Schritt 4 (Risiken) und Schritt 5 (Naechste Schritte), ohne eigene Nummer. Vorher
+  hing die Karte ausserhalb des Rasters - mobil entstand eine Luecke von 92 px.
+- Platz fuer die fixierte Leiste unten (76 px, nur mobil) sitzt jetzt als Platzhalter
+  am Seitenende statt als padding an Schritt 5.
+- Abstaende zwischen allen Bloecken 16 px (vorher gemischt 14/16/20), Kennzahlen-
+  Leiste 12 px, Kopf von Schritt 5 zum Inhalt 12 px, Seitenkopf 16 px - zurueck auf die
+  Skala 4/8/12/16 aus dem UX-Review vom 06.09.
+- Karten-Innenabstand einheitlich 18 px (Schritt-Karten vorher 22/24).
+
 ## 2026-10-03 (1.100.63) [FRONTEND] [CI]
 
 ### Objektseite: Kostenblock stimmig, Nebenkosten-Schalter, Alternativ-Investment, Bundesanleihe automatisch
