@@ -138,7 +138,7 @@ export function InvestmentBriefing({
       preis: v1,
       scoreWert: score?.verfuegbar ? score.score : null,
       scoreTier: score?.verfuegbar ? score.tier : null,
-      tilgung: briefing.R.t1,
+      tilgung: briefing.R.t1Gesamt,
       topRisiko: ergebnis ? risikenVon(ergebnis)[0]?.title || null : null,
     },
     t,

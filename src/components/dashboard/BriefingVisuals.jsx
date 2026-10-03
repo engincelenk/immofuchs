@@ -599,7 +599,7 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
   const zeigtSteuer = Math.abs(steuerMon) >= 1;
 
   // ── Block 3: was bleibt ──
-  const tilgung = rate != null && R.t1 > 0 ? R.t1 : 0;
+  const tilgung = rate != null && R.t1Gesamt > 0 ? R.t1Gesamt : 0;
   const echterCf = cfVor + tilgung;
   const echtNegativ = echterCf < 0;
   // Nenner = "Aus eigener Tasche" (siehe oben), nicht nur das Eigenkapital.
@@ -732,10 +732,10 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
           {rate != null && (
             <>
               <Zeile label={L(t, "cockKreditrate", "Kreditrate")} wert={vz(-rate)} />
-              {R.z1 != null && R.t1 != null && (
+              {R.z1Gesamt != null && R.t1Gesamt != null && (
                 <Zeile
                   label={L(t, "cockZinsTilgungAnteil", "davon Zins / Tilgung")}
-                  wert={`${wertText(R.z1, "eurMonat")} / ${wertText(R.t1, "eurMonat")}`}
+                  wert={`${wertText(R.z1Gesamt, "eurMonat")} / ${wertText(R.t1Gesamt, "eurMonat")}`}
                   style={einzug}
                 />
               )}

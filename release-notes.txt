@@ -1,3 +1,17 @@
+## 2026-10-03 (1.100.77) [FRONTEND]
+
+### Abschlussanalyse Ursache 1: KfW-Darlehen in allen Raten- und Restschuld-Anzeigen
+
+- Rechenkern liefert Zins- und Tilgungsanteil der Gesamtrate (Bank + KfW) im ersten Monat
+  (rendite.js: z1Gesamt, t1Gesamt, kfwTf).
+- Renditerechner: Rate-Kachel zeigt die Gesamtrate (dieselbe, mit der der Cashflow rechnet), dazu "Rate ab Jahr X",
+  wenn die KfW-Tilgung spaeter einsetzt; Texte zu Annuitaet/Rate ebenso. Vorher nur die Bankrate.
+- Objektseite: "davon Zins / Tilgung" summiert zur Kreditrate.
+- Kreditrechner: Zins/Tilgung Monat 1 als Gesamtwerte (keine negative Tilgung mehr); "Restschuld n. ZB" und
+  "Gesamtzinsen" inklusive KfW, passend zur Tabelle und zum Gesamtaufwand; Sondertilgung rechnet auf dem
+  Bankdarlehen gegen dieselbe Basis (0 % Sondertilgung = 0 EUR gespart). Rechnung nach utils/kredit.js ausgelagert.
+- Matrix-Test: Befunde C1, C3, C4, C5, C6, C9 in 0 von 72 Szenarien.
+
 ## 2026-10-03 (1.100.76) [FRONTEND]
 
 ### Startseite mobil: Hero fuellt den ersten Bildschirm

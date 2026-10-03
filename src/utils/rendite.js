@@ -405,6 +405,12 @@ export function computeRendite(d, t) {
       ? ((kfwPlan.rows[tfJahre]?.zins || 0) + (kfwPlan.rows[tfJahre]?.tilgung || 0)) / 12
       : 0;
   const rateMonJ1 = annuitaetMon + kfwRateMonJ1;
+  // Zins- und Tilgungsanteil der GESAMTRATE im ersten Monat (Bank + KfW).
+  // z1/t1 unten sind nur das Bankdarlehen; neben einer Gesamtrate angezeigt
+  // summierten sie nicht zur Rate und die Tilgung konnte negativ werden
+  // (Abschlussanalyse 2026-10-03, Ursache 1).
+  const zinsMonJ1Gesamt = darlehenBank * monatsZins + (kfwPlan.rows[0]?.zins || 0) / 12;
+  const tilgMonJ1Gesamt = rateMonJ1 - zinsMonJ1Gesamt;
   const rateMonNachTf = annuitaetMon + kfwRateMonNachTf;
   // Mischzins der Fremdfinanzierung im ersten Jahr.
   const mischzins =
@@ -459,6 +465,9 @@ export function computeRendite(d, t) {
     kfwAnn: kfwPlan.annuitaet,
     kfwRestEnde: kfwPlan.restEnde,
     rateJ1: rateMonJ1,
+    z1Gesamt: zinsMonJ1Gesamt,
+    t1Gesamt: tilgMonJ1Gesamt,
+    kfwTf: darlehenKfw > 0 ? tfJahre : 0,
     rateNachTf: rateMonNachTf,
     mzins: mischzins,
     st23: steuer23,

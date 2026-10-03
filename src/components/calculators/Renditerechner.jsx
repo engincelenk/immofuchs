@@ -1034,7 +1034,7 @@ export default function Haupt() {
                     hint={t.selfHint}
                     color={selfHex}
                     sync={{ key: secAllKey, open: secAllOpen }}
-                    hidden={!R.ann || R.ann === 0 || !R.da || R.da === 0}
+                    hidden={!R.rateJ1 || !R.da}
                   >
                     <div style={{ marginTop: 10 }}>
                       <BreakEvenCards R={R} />
@@ -1305,7 +1305,7 @@ export default function Haupt() {
                                   `Mit Steuerbonus dreht der Cashflow ins Positive — Vorsicht: Bonus kommt erst mit der Steuererklärung`,
                                 ]
                               : []),
-                            `Annuität gesamt: ${fmtE(R.ann)}/Mon. (Zinsen: ${fmtE(R.z1)}, Tilgung: ${fmtE(R.t1)})`,
+                            `Annuität gesamt: ${fmtE(R.rateJ1)}/Mon. (Zinsen: ${fmtE(R.z1Gesamt)}, Tilgung: ${fmtE(R.t1Gesamt)})`,
                           ];
                         })()}
                         text={`Der Cashflow ist die Antwort auf die Frage: "Muss ich monatlich eigenes Geld reinbuttern — oder wirft die Immobilie sogar etwas ab?" Die Rechnung ist simpel: Kaltmiete minus nicht-umlegbare Kosten minus deine Kreditrate. Wenn das positiv ist, trägt sich die Immobilie selbst. Negativ bedeutet: du zahlst jeden Monat drauf.\n\nJetzt der wichtige Unterschied zwischen "ohne Steuer" und "mit Steuer": Als Vermieter kannst du die Darlehenszinsen und die Gebäudeabschreibung (AfA) steuerlich geltend machen. Das senkt deine Steuerlast und verbessert den Cashflow — aber Vorsicht: dieser Steuerbonus landet nicht direkt auf deinem Konto. Du siehst ihn erst bei der Steuererklärung, meist Monate später. Er ist real, aber kein Geld zum Ausgeben am 1. des Monats.\n\n${R.cf2OhneSt < 0 ? "Negativer Cashflow ist nicht per se schlimm — viele Profi-Investoren nehmen monatliche Zuzahlungen bewusst in Kauf, wenn Wertsteigerung und Steuereffekte das langfristig ausgleichen. Aber du musst diese Reserve wirklich haben. Ein Leerstandsmonat kommt obendrauf." : "Positiver Cashflow ohne Steuerbonus ist das Goldstandard-Ziel: die Immobilie zahlt sich selbst und bringt dir sogar Geld — unabhängig von deiner Steuererklärung."}\n\nStellschrauben: Den größten Hebel hat der Tilgungssatz — weniger tilgen bedeutet niedrigere Rate und besseren Cashflow (aber längere Laufzeit!). Mehr Eigenkapital senkt die Kreditrate direkt. Eine höhere Miete oder weniger Leerstand verbessert die Einnahmeseite. Im Finanzierungsrechner kannst du Sondertilgungen simulieren.`}
@@ -1326,7 +1326,7 @@ export default function Haupt() {
                               ]
                             : [t.s2b3p]),
                           ...(R.cf2OhneSt < 0 && R.cf2MitSt > 0 ? [t.s2b4] : []),
-                          tpl(t.s2b5, { a: fmtE(R.ann), b: fmtE(R.z1), c: fmtE(R.t1) }),
+                          tpl(t.s2b5, { a: fmtE(R.rateJ1), b: fmtE(R.z1Gesamt), c: fmtE(R.t1Gesamt) }),
                         ]}
                         text={
                           t.s2t1 +
@@ -1428,8 +1428,12 @@ export default function Haupt() {
                       />
                       <NeutralKPI
                         label={t.rate}
-                        value={fmtE(R.ann)}
-                        sub={`${t.zins} ${fmtE(R.z1)} + ${t.tilgK} ${fmtE(R.t1)}`}
+                        value={fmtE(R.rateJ1)}
+                        sub={`${t.zins} ${fmtE(R.z1Gesamt)} + ${t.tilgK} ${fmtE(R.t1Gesamt)}${
+                          R.kfwDa > 0 && R.rateNachTf > R.rateJ1 + 1
+                            ? ` · ${(t.kfwRateAb || "").replace("{j}", String(R.kfwTf + 1))}: ${fmtE(R.rateNachTf)}`
+                            : ""
+                        }`}
                       />
                       <NeutralKPI
                         label={t.beMiete}
@@ -1447,7 +1451,7 @@ export default function Haupt() {
                         intro={intro}
                         bullets={[
                           `Beleihungsauslauf: ${fmtP(R.bel)} — die Bank finanziert ${fmtP(R.bel)} des Kaufpreises${R.bel < 70 ? " → Topkonditionen möglich" : R.bel < 85 ? " → kleiner Zinsaufschlag üblich" : " → deutlicher Risikoaufschlag der Bank"}`,
-                          `Monatliche Rate: ${fmtE(R.ann)} (Zinsen: ${fmtE(R.z1)} + Tilgung: ${fmtE(R.t1)})`,
+                          `Monatliche Rate: ${fmtE(R.rateJ1)} (Zinsen: ${fmtE(R.z1Gesamt)} + Tilgung: ${fmtE(R.t1Gesamt)})`,
                           `${isFinite(R.lz) ? `Laufzeit: ca. ${fmt(R.lz, 1)} Jahre bei ${fmtP(+d.tilgung || 0)} Tilgung p.a.` : "Laufzeit: ∞ — bei dieser Tilgung wird das Darlehen nie vollständig abbezahlt!"}`,
                           `Darlehenssumme: ${fmtE(R.da)} (Eigenkapital ${fmtE(+d.eigenkapital || 0)} = ${fmtP(R.ekQ)} EK-Quote)`,
                           ...(R.bel > 80
@@ -1477,7 +1481,7 @@ export default function Haupt() {
                                   ? " — " + (t.s3b1m || "")
                                   : " — " + (t.s3b1h || ""),
                           }),
-                          tpl(t.s3b2, { a: fmtE(R.ann), b: fmtE(R.z1), c: fmtE(R.t1) }),
+                          tpl(t.s3b2, { a: fmtE(R.rateJ1), b: fmtE(R.z1Gesamt), c: fmtE(R.t1Gesamt) }),
                           isFinite(R.lz)
                             ? tpl(t.s3b3a, { x: fmt(R.lz, 1), p: fmtP(+d.tilgung || 0) })
                             : t.s3b3b,
