@@ -143,15 +143,41 @@ function grenzsuche(cf, lo, hi) {
  *   im Suchbereich nicht erreichbar (Kaufpreis bis 0, Eigenkapital bis zur
  *   Gesamtinvestition, Kaltmiete von 0 bis 3x aktuell).
  */
+/**
+ * Kaufpreis (ohne Garage), bei dem der Cashflow genau 0 erreicht - nach oben wie
+ * nach unten gesucht, ueber den echten Rechenkern (Abschlussanalyse 2026-10-03,
+ * Ursache 3: vorher eine Naeherungsformel im Selbsttraeger-Check, die Steuer,
+ * finanzierte Nebenkosten und KfW nicht beruecksichtigte).
+ * @param {"ohneSteuer"|"massgeblich"} metrik - cf2OhneSt oder cfMassgeblich
+ * @returns {number|null} auf 500 EUR gerundet; null, wenn nicht erreichbar
+ */
+export function kaufpreisFuerCashflowNull(d, t, metrik = "massgeblich") {
+  const feld = metrik === "ohneSteuer" ? "cf2OhneSt" : "cfMassgeblich";
+  const cf = (kp) => computeRendite({ ...d, kaufpreis: String(Math.max(0, kp)) }, t)[feld];
+  const aktuell = Math.max(0, +d.kaufpreis || 0);
+  let lo = 0;
+  let hi = Math.max(aktuell * 4, 100000);
+  if (cf(lo) < 0) return null;
+  if (cf(hi) >= 0) return null;
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    if (cf(mid) >= 0) lo = mid;
+    else hi = mid;
+  }
+  return Math.round(lo / 500) * 500;
+}
+
 export function loeseFuerCashflowNull(d, t, feld) {
   // Massgeblicher Cashflow (Jahr 1 oder schlechtestes Jahr 2-10, siehe rendite.js).
   const cf = (wert) => computeRendite({ ...d, [feld]: String(Math.max(0, wert)) }, t).cfMassgeblich;
 
   if (feld === "kaufpreis") {
+    // Derselbe Loeser wie der Selbsttraeger-Check im Renditerechner
+    // (kaufpreisFuerCashflowNull) - Rechner und Objektseite nennen damit
+    // denselben Ziel-Kaufpreis. Traegt es sich schon, bleibt es beim heutigen Preis.
     const aktuell = Math.max(0, +d.kaufpreis || 0);
-    const cfBeiReduktion = (r) => cf(aktuell - r);
-    const r = grenzsuche(cfBeiReduktion, 0, aktuell);
-    return r == null ? null : Math.round((aktuell - r) / 500) * 500;
+    if (cf(aktuell) >= 0) return Math.round(aktuell / 500) * 500;
+    return kaufpreisFuerCashflowNull(d, t, "massgeblich");
   }
 
   if (feld === "eigenkapital") {

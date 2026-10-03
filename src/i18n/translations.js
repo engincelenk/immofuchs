@@ -594,7 +594,7 @@ export const T = {
     cockEinschNurAnfangs: "Anfangs bleiben {betrag} im Monat übrig, in Jahr {j} zahlst du {betrag2} zu.",
     yearEinmalHinweis: "Jahr 1 enthält den einmaligen Steuerabzug der Renovierung ({x}). Er ist nicht im Monats-Cashflow enthalten.",
     vqErklaerung:
-      "Eigener Anteil = eingesetztes Geld ({a}) plus die Tilgung, die die Miete vor Steuer nicht gedeckt hat ({b}). Die EK-Rendite rechnet Nachschüsse nach Steuer ({c}), deshalb kann die Summe abweichen.",
+      "Eigener Anteil = Eigenkapital im Kaufpreis ({a}) plus die Tilgung, die die Miete vor Steuer nicht gedeckt hat ({b}). Alle Segmente zusammen = Nettovermögen bei Verkauf ({n}). Nicht darin enthalten: Kaufnebenkosten, Sonderumlage und Renovierung ({k}) sind Kosten, die Steuerwirkung ({s}) steckt im Gesamtergebnis.",
     planJahr: "Jahr",
     planRateJahr: "Rate/Jahr",
     statt: "statt",
@@ -1563,7 +1563,7 @@ export const T = {
     cockEinschNurAnfangs: "At first {betrag} is left over each month, in year {j} you top up {betrag2}.",
     yearEinmalHinweis: "Year 1 includes the one-off tax deduction for the renovation ({x}). It is not part of the monthly cash flow.",
     vqErklaerung:
-      "Own share = money you put in ({a}) plus the repayment the rent did not cover before tax ({b}). The equity return counts top-ups after tax ({c}), so the totals can differ.",
+      "Own share = equity in the purchase price ({a}) plus the repayment the rent did not cover before tax ({b}). All segments together = net wealth on sale ({n}). Not included: purchase costs, special levy and renovation ({k}) are costs; the tax effect ({s}) is part of the overall result.",
     planJahr: "Year",
     planRateJahr: "Payment/yr",
     statt: "instead of",
@@ -2426,7 +2426,7 @@ export const T = {
     cockEinschNurAnfangs: "Başta her ay {betrag} kalıyor, {j}. yılda {betrag2} ek ödüyorsun.",
     yearEinmalHinweis: "1. yıl, tadilatın tek seferlik vergi indirimini içerir ({x}). Aylık nakit akışına dahil değildir.",
     vqErklaerung:
-      "Kendi payınız = koyduğunuz para ({a}) artı kiranın vergi öncesi karşılamadığı anapara ödemesi ({b}). Özsermaye getirisi vergi sonrası ek ödemeleri sayar ({c}), bu yüzden toplamlar farklı olabilir.",
+      "Kendi payınız = satın alma fiyatındaki özsermaye ({a}) artı kiranın vergi öncesi karşılamadığı anapara ödemesi ({b}). Tüm dilimler birlikte = satıştaki net varlık ({n}). Dahil değil: alım yan giderleri, özel aidat ve tadilat ({k}) maliyettir; vergi etkisi ({s}) toplam sonuçta yer alır.",
     planJahr: "Yıl",
     planRateJahr: "Ödeme/yıl",
     statt: "yerine",
@@ -3357,7 +3357,7 @@ export const T = {
     cockEinschNurAnfangs: "起初每月剩余 {betrag}，第 {j} 年需要补贴 {betrag2}。",
     yearEinmalHinweis: "第 1 年包含翻新的一次性税收扣除（{x}），不计入每月现金流。",
     vqErklaerung:
-      "自有份额 = 您投入的资金（{a}）加上租金税前未覆盖的还款部分（{b}）。自有资金回报按税后追加投入（{c}）计算，因此合计可能不同。",
+      "自有份额 = 购房价格中的自有资金（{a}）加上租金税前未覆盖的还款（{b}）。所有部分合计 = 出售时的净资产（{n}）。不包括：购置附加费用、特别分摊和翻新（{k}）属于成本；税收影响（{s}）计入总体结果。",
     planJahr: "年",
     planRateJahr: "年付款",
     statt: "而非",
@@ -4282,7 +4282,7 @@ export const T = {
     cockEinschNurAnfangs: "शुरू में हर महीने {betrag} बचते हैं, वर्ष {j} में आपको {betrag2} अतिरिक्त देने होंगे।",
     yearEinmalHinweis: "पहले वर्ष में नवीनीकरण की एकमुश्त कर कटौती शामिल है ({x})। यह मासिक नकदी प्रवाह में शामिल नहीं है।",
     vqErklaerung:
-      "अपना हिस्सा = आपकी लगाई राशि ({a}) और वह किस्त जिसे किराया कर से पहले नहीं चुका सका ({b})। इक्विटी रिटर्न कर के बाद की अतिरिक्त राशि ({c}) गिनता है, इसलिए योग अलग हो सकते हैं।",
+      "अपना हिस्सा = खरीद मूल्य में इक्विटी ({a}) और वह किस्त जिसे किराया कर से पहले नहीं चुका सका ({b})। सभी हिस्से मिलकर = बिक्री पर शुद्ध संपत्ति ({n})। शामिल नहीं: खरीद लागत, विशेष शुल्क और नवीनीकरण ({k}) लागत हैं; कर प्रभाव ({s}) कुल परिणाम में है।",
     planJahr: "वर्ष",
     planRateJahr: "वार्षिक किस्त",
     statt: "की बजाय",

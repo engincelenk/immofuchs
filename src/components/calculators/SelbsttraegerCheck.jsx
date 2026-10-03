@@ -1,17 +1,25 @@
+import { useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
+import { kaufpreisFuerCashflowNull } from "../../utils/aiTools.js";
 import { fmtE, fmtP } from "../../utils/helpers.js";
 
 export function SelbsttraegerCheck({ R }) {
-  const { t } = useApp();
-  if (!R || !R.ann || R.ann === 0 || !R.da || R.da === 0) return null;
+  const { t, d } = useApp();
+  // Ziel-Kaufpreise ueber den Rechenkern (aiTools.kaufpreisFuerCashflowNull), derselbe
+  // Loeser wie "Tragfaehig" auf der Objektseite. Vorher: gKP + CF x Darlehen / Rate - falsch
+  // bei finanzierten Nebenkosten, KfW und immer bei der Variante mit Steuer.
+  const zielOhne = useMemo(() => kaufpreisFuerCashflowNull(d, t, "ohneSteuer"), [d, t]);
+  const zielMit = useMemo(() => kaufpreisFuerCashflowNull(d, t, "massgeblich"), [d, t]);
+  if (!R || !R.rateJ1 || !R.da) return null;
   // template-helper: replaces {key} placeholders
   const tpl = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
   // Verhandlungs-KP: gKP bei dem monatl. CF ohne Steuer = 0
-  const beqKP = Math.round(R.gKP + (R.cf2OhneSt * R.da) / R.ann);
-  const diffKP = R.gKP - beqKP;
-  const pctNeed = R.gKP > 0 ? (diffKP / R.gKP) * 100 : 0;
-  const beqKPMit = Math.round(R.gKP + (R.cf2MitSt * R.da) / R.ann);
-  const diffKPMit = R.gKP - beqKPMit;
+  const kaufpreis = +d.kaufpreis || 0;
+  const beqKP = zielOhne;
+  const diffKP = beqKP != null ? kaufpreis - beqKP : 0;
+  const pctNeed = kaufpreis > 0 ? (diffKP / kaufpreis) * 100 : 0;
+  const beqKPMit = zielMit;
+  const diffKPMit = beqKPMit != null ? kaufpreis - beqKPMit : 0;
   const beqJ =
     R.cf2OhneSt >= 0
       ? 1
@@ -165,7 +173,7 @@ export function SelbsttraegerCheck({ R }) {
               letterSpacing: -0.5,
             }}
           >
-            {fmtE(beqKP)}
+            {beqKP != null ? fmtE(beqKP) : "—"}
           </div>
           <div
             style={{
@@ -175,8 +183,10 @@ export function SelbsttraegerCheck({ R }) {
               marginTop: 4,
             }}
           >
-            {alreadyOhne
-              ? `✓ ${fmtE(diffKP)} ${t.stIstKPPuffer}`
+            {beqKP == null
+              ? ""
+              : alreadyOhne
+              ? `✓ ${fmtE(Math.abs(diffKP))} ${t.stIstKPPuffer}`
               : diffKP > 0
                 ? `▼ ${fmtE(diffKP)} (${fmtP(pctNeed, 1)}) ${t.stVerhandlZiel}`
                 : `✓ ${fmtE(Math.abs(diffKP))} ${t.stUnterZiel}`}
@@ -191,8 +201,8 @@ export function SelbsttraegerCheck({ R }) {
                 borderTop: "1px solid var(--cb)",
               }}
             >
-              {t.stMitStVor}: {fmtE(beqKPMit)}
-              {diffKPMit > 0 ? ` (−${fmtE(diffKPMit)})` : ` ✓`}
+              {t.stMitStVor}: {beqKPMit != null ? fmtE(beqKPMit) : "—"}
+              {beqKPMit == null ? "" : diffKPMit > 0 ? ` (−${fmtE(diffKPMit)})` : ` ✓`}
             </div>
           )}
         </div>

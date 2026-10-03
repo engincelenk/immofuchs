@@ -1,25 +1,21 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { fmtE } from "../../utils/helpers.js";
-import { immobilienEinsatz } from "../../utils/ekRendite.js";
 
-// "Wer bezahlt das Vermögen?" - Donut (Nutzer-Vorbild 2026-08-27, Screenshot
-// eines externen Referenz-Rechners). Zerlegt das Nettovermögen bei Verkauf
-// (Verkaufswert − Restschuld) in vier Quellen:
+// "Wer bezahlt das Vermögen?" - Donut (Nutzer-Vorbild 2026-08-27). Zerlegt das
+// Nettovermoegen bei Verkauf (Verkaufswert - Restschuld) so, dass die Segmente
+// exakt dazu summieren (Abschlussanalyse 2026-10-03, Ursache 3 - vorher zaehlten
+// Nebenkosten, Sonderumlage, Renovierung und Steuerersparnis mit, die kein
+// Vermoegen in der Immobilie sind):
 //
-//  - Eigener Anteil: Eigenkapital + Kaufnebenkosten (falls bar gezahlt) +
-//    Sonderumlage/Renovierung, PLUS den Teil der Tilgung, den die Miete in
-//    schwachen Jahren nicht gedeckt hat (siehe mieterTilgungJ unten).
-//  - Mieter (Tilgung): nur der Teil der jaehrlichen Tilgung, der tatsaechlich
-//    aus Mietueberschuss (Miete − nicht umlagefaehige Kosten − Zinsen)
-//    finanziert wurde, gedeckelt auf die tatsaechliche Tilgung dieses Jahres.
-//    Deckt die Miete nicht einmal die Zinsen, ist der Beitrag 0 - dann hat
-//    der Investor die gesamte Tilgung dieses Jahres selbst nachgeschossen.
-//    Bewusst NICHT einfach "kumulierte Tilgung" (verbreitete, aber
-//    irrefuehrende Vereinfachung in vielen Rendite-Rechnern).
+//  - Eigener Anteil: Eigenkapital im Kaufpreis (Gesamtkaufpreis - Darlehen) plus
+//    der Teil der Tilgung, den die Miete vor Steuer nicht gedeckt hat.
+//  - Mieter (Tilgung): der Teil der jaehrlichen Tilgung, der aus Mietueberschuss
+//    (Miete - nicht umlagefaehige Kosten - Zinsen) finanziert wurde, gedeckelt
+//    auf die Tilgung des Jahres.
 //  - Markt (Wertzuwachs): die Wertsteigerung.
-//  - Finanzamt (Steuer): kumulierte Steuerersparnis (negativ = Steuerlast,
-//    wird im Donut auf 0 gekappt statt eines negativen Segments).
+// Kosten (Nebenkosten, Sonderumlage, Renovierung) und die Steuerwirkung stehen in
+// der Erklaerzeile darunter - sie stecken im Gesamtergebnis, nicht im Vermoegen.
 export function VermoegensQuelleChart({ R, d }) {
   const { t } = useApp();
   // Klick statt Hover (Nutzer-Meldung 2026-08-27, gilt fuer alle Charts mit
@@ -45,11 +41,10 @@ export function VermoegensQuelleChart({ R, d }) {
   });
   const eigenerAnteilTilgung = tilgKum - mieterTilgKum;
 
-  // Gleiche Einsatz-Definition wie die EK-Rendite (utils/ekRendite.js): Nachschuesse nach Steuer.
-  const einsatzMitSteuer = immobilienEinsatz(d, R);
+  const eigenImKaufpreis = Math.max(0, (R.gKP || 0) - (R.da || 0));
   const nkCash = d.nkFinanzieren ? 0 : R.nbk || 0;
-  const eigenkapitalEinsatz =
-    (+d.eigenkapital || 0) + nkCash + (+d.sonder || 0) + (+d.renovierung || 0);
+  const kosten = nkCash + (+d.sonder || 0) + (+d.renovierung || 0);
+  const nettoVermoegen = (R.vw || 0) - (R.rsEnd || 0);
 
   // Markenfarben statt generischem Blau/Rot (Nutzer-Vorgabe 2026-08-27):
   // zwei Marineblau-Toene (Primary-Familie, "Anteil des Investors") und zwei
@@ -59,12 +54,11 @@ export function VermoegensQuelleChart({ R, d }) {
     {
       key: "eigenerAnteil",
       label: t.vqEigenerAnteil,
-      value: eigenkapitalEinsatz + eigenerAnteilTilgung,
+      value: eigenImKaufpreis + eigenerAnteilTilgung,
       color: "#1E3A5F",
     },
     { key: "mieterTilgung", label: t.vqMieterTilgung, value: mieterTilgKum, color: "#6E8CAE" },
     { key: "markt", label: t.vqMarkt, value: Math.max(0, R.w || 0), color: "#E8600A" },
-    { key: "finanzamt", label: t.vqFinanzamt, value: Math.max(0, R.sSt || 0), color: "#C44D00" },
   ];
   const total = segments.reduce((a, s) => a + s.value, 0);
   if (total <= 0) return null;
@@ -160,20 +154,14 @@ export function VermoegensQuelleChart({ R, d }) {
           </div>
         ))}
       </div>
-      {Math.abs(eigenkapitalEinsatz + eigenerAnteilTilgung - einsatzMitSteuer.eingezahlt) > 1 && (
-        <p style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 8, lineHeight: 1.5 }}>
-          {(t.vqErklaerung || "")
-            .replace("{a}", fmtE(eigenkapitalEinsatz))
-            .replace("{b}", fmtE(eigenerAnteilTilgung))
-            .replace("{c}", fmtE(einsatzMitSteuer.nachschuss))}
-        </p>
-      )}
-      {R.sSt < 0 && (
-        <p style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 8, lineHeight: 1.5 }}>
-          {t.vqSteuerlastHinweis ||
-            "Steuerlast statt Ersparnis über den Zeitraum — nicht im Donut dargestellt (Segment wäre negativ)."}
-        </p>
-      )}
+      <p style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 8, lineHeight: 1.5 }}>
+        {(t.vqErklaerung || "")
+          .replace("{a}", fmtE(eigenImKaufpreis))
+          .replace("{b}", fmtE(eigenerAnteilTilgung))
+          .replace("{n}", fmtE(nettoVermoegen))
+          .replace("{k}", fmtE(kosten))
+          .replace("{s}", fmtE(R.sSt || 0))}
+      </p>
     </div>
   );
 }

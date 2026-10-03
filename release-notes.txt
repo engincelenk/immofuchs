@@ -1,3 +1,16 @@
+## 2026-10-03 (1.100.79) [FRONTEND]
+
+### Abschlussanalyse Ursache 3: Rechenkern statt Kurzformeln
+
+- Selbsttraeger-Check: Ziel-Kaufpreise (ohne Steuer und mit Steuer) ueber den Rechenkern geloest
+  (aiTools.kaufpreisFuerCashflowNull) statt mit der Naeherung "Kaufpreis + Cashflow x Darlehen / Rate"; der Wert
+  "mit Steuer" ist jetzt identisch mit "Tragfaehig" auf der Objektseite (vorher z. B. 798.086 gegen 682.000 EUR).
+- "Zinsen abzugsfaehig" = Zinsen Jahr 1 aus der Jahrestabelle (Bank + KfW, monatlich verzinst) statt erster Monat x 12.
+- Donut "Wer bezahlt das Vermoegen?": Segmente summieren exakt zum Nettovermoegen bei Verkauf (Eigenkapital im
+  Kaufpreis + Tilgung aus eigener Tasche, Tilgung aus der Miete, Wertzuwachs). Nebenkosten, Sonderumlage, Renovierung
+  und Steuerwirkung stehen in der Erklaerzeile (5 Sprachen), das Segment "Finanzamt" entfaellt.
+- Matrix-Test: C8, C10, C11, C15 in 0 von 72 Szenarien.
+
 ## 2026-10-03 (1.100.78) [FRONTEND]
 
 ### Abschlussanalyse Ursache 2: befristete Effekte zaehlen fuer Ampel und Empfehlung

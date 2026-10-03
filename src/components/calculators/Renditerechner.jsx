@@ -1596,7 +1596,7 @@ export default function Haupt() {
                           status={`≈ ${fmtE(Math.round(stErsM))}${t.monAbb || "/Mon."}`}
                           tip={tpl(t.steuerErsTip, {
                             a: fmtE(R.afJ),
-                            b: fmtE(Math.round(R.z1 * 12)),
+                            b: fmtE(Math.round(R.yearRows[0]?.zinsen || 0)),
                           })}
                         />
                         {R.beJ && (
@@ -1637,7 +1637,7 @@ export default function Haupt() {
                               : { tier: "red", symbol: "⚠", color: "red" };
                             return [
                               `${stR.symbol} Steuerersparnis ${fmtE(Math.round(stErsM))}/Mon. — ${stErsM >= 150 ? "stark ab 150 €/Mon." : stErsM >= 75 ? "75–150 €/Mon. moderat" : "unter 75 €/Mon."} → ${vrd(stR)} (bei ${fmtP(st, 0)} Steuersatz)`,
-                              `Zwei absetzbare Positionen: Darlehenszinsen (${fmtE(Math.round(R.z1 * 12))}/J.) + AfA (${fmtE(R.afJ)}/J.)`,
+                              `Zwei absetzbare Positionen: Darlehenszinsen (${fmtE(Math.round(R.yearRows[0]?.zinsen || 0))}/J.) + AfA (${fmtE(R.afJ)}/J.)`,
                               `AfA-Basis: ${fmtP(+d.gebAnteil || 80, 0)} % Gebäudeanteil × ${fmtP(+d.afaSatz || 2)} p.a. = ${fmtE(R.afJ)}/Jahr`,
                               `${beR.symbol} NK-Amortisation${R.beJ ? ` Jahr ${R.beJ} — ${R.beJ <= 10 ? "≤ 10 Jahre" : R.beJ <= 15 ? "10–15 Jahre" : ">15 Jahre"} → ${vrd(beR)}` : " — Break-Even noch nicht erreicht → kritisch"}`,
                               `Faustregel: Je höher dein Steuersatz, desto mehr profitierst du — der Steuervorteil ist ein Instrument für Gutverdiener`,
@@ -1655,7 +1655,7 @@ export default function Haupt() {
                               b: fmtE(Math.round(R.sSt / R.j / 12)),
                               c: fmtP(+d.steuersatz || 0, 0),
                             }),
-                            tpl(t.s4b2, { a: fmtE(Math.round(R.z1 * 12)), b: fmtE(R.afJ) }),
+                            tpl(t.s4b2, { a: fmtE(Math.round(R.yearRows[0]?.zinsen || 0)), b: fmtE(R.afJ) }),
                             tpl(t.s4b3, {
                               a: fmtP(+d.gebAnteil || 80, 0),
                               b: fmtP(+d.afaSatz || 2),
