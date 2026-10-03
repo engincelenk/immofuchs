@@ -1,3 +1,13 @@
+## 2026-10-03 (1.100.81) [FRONTEND]
+
+### Dauerhafte Konsistenz-Matrix
+
+- Neuer Test src/utils/konsistenzMatrix.test.js: 8 Exposes x 9 Varianten (Basis, KfW, Nebenkosten finanziert,
+  Anschlusszins, grosse Renovierung, degressive AfA, Tilgung 0, Leerstand, 10 Jahre) mit App-Vorbelegungen,
+  720 Pruefungen: jede Anzeige mit eigener Rechnung gegen den Rechenkern (Rate, Zins/Tilgung, Restschuld,
+  Gesamtzinsen, Sondertilgung, Ziel-Kaufpreise, befristete Effekte, Ampel, Donut, EK-Rendite, Zeitraum).
+- Gegenprobe: zwei alte Fehler probeweise wieder eingebaut - 75 bzw. 24 Pruefungen schlagen an.
+
 ## 2026-10-03 (1.100.80) [FRONTEND]
 
 ### Abschlussanalyse Ursache 4: Cashflow immer mit Bezug (vor/nach Steuer)
