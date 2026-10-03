@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AlternativInvestment } from "./AlternativInvestment.jsx";
+import { berechneAlternativVergleich } from "../../utils/alternativInvestment.js";
 
 const OBJEKT = {
   kaufpreis: "250000",
@@ -41,6 +42,28 @@ describe("AlternativInvestment", () => {
     const zehn = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "12" }} t={{}} />);
     expect(zehn).toContain("Endvermögen nach 10 Jahren");
     expect(zehn).toContain("Der Renditerechner rechnet mit 12 Jahren");
+  });
+
+  it("Einsatz-Text folgt dem Schalter Nebenkosten mitfinanzieren", () => {
+    const bar = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} />);
+    expect(bar).toContain("Eigenkapital, Kaufnebenkosten");
+    const fin = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, nkFinanzieren: true }} t={{}} />);
+    expect(fin).toContain("kostet (Eigenkapital");
+    expect(fin).not.toContain("Eigenkapital, Kaufnebenkosten");
+    expect(fin).not.toContain("+ Kaufnebenkosten");
+  });
+
+  it("rechnet den Balken Immobilie transparent vor, die Zeilen ergeben den Balkenwert", () => {
+    const html = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} />);
+    const v = berechneAlternativVergleich(OBJEKT, {}, 10);
+    const i = v.immobilie;
+    expect(html).toContain("nach 10 Jahren:");
+    expect(html).toContain("Steuer auf den Verkaufsgewinn");
+    expect(i.verkaufswert - i.restschuld - i.steuerVerkauf + i.cashflowPositiv).toBeCloseTo(i.endvermoegen, 4);
+    expect(i.endvermoegen - v.eingezahlt).toBeCloseTo(i.gewinn, 4);
+    const lang = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "20" }} t={{}} />);
+    expect(lang).toContain("nach 20 Jahren:");
+    expect(lang).not.toContain("Steuer auf den Verkaufsgewinn");
   });
 
   it("zeigt ohne Kaufpreis nur den Hinweis, ohne zu rechnen", () => {

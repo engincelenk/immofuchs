@@ -1,3 +1,16 @@
+## 2026-10-03 (1.100.65) [FRONTEND]
+
+### Alternativ-Investment: Einsatz-Text folgt dem Schalter, Rechenweg des Immobilien-Balkens
+
+- Der Text neben "Aus eigener Tasche zu Beginn" setzt sich jetzt aus dem zusammen, was
+  wirklich drinsteckt: bei mitfinanzierten Nebenkosten nur "Eigenkapital", sonst
+  "Eigenkapital + Kaufnebenkosten", plus Renovierung/Sonderumlage falls vorhanden.
+- "So wird gerechnet" zeigt den Rechenweg des Balkens Immobilie fuer den gewaehlten
+  Horizont: Verkaufswert - Restschuld - Steuer auf den Verkaufsgewinn (nur innerhalb von
+  10 J.) + Cashflows = Endvermoegen; minus eingezahlt = Gewinn (= Gesamtergebnis mit
+  Steuer im Renditerechner). Dazu, wie die Alternativen gerechnet werden und was nicht
+  enthalten ist (Verkaufskosten, Inflation).
+
 ## 2026-10-03 (1.100.64) [FRONTEND]
 
 ### Objektseite neu geordnet: Alternativ-Investment im Raster, Abstaende einheitlich

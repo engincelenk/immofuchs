@@ -53,6 +53,18 @@ export function AlternativInvestment({ data, t }) {
 
   const imm = v.immobilie.endvermoegen;
 
+  // Woraus sich "aus eigener Tasche" zusammensetzt - passend zu den Schaltern des
+  // Objekts: mitfinanzierte Nebenkosten stecken im Darlehen, nicht im Einsatz.
+  const einsatzBestandteile = [
+    "Eigenkapital",
+    ...(data?.nkFinanzieren ? [] : ["Kaufnebenkosten"]),
+    ...(+data?.renovierung > 0 ? ["Renovierung"] : []),
+    ...(+data?.sonder > 0 ? ["Sonderumlage"] : []),
+  ];
+  const wertP = +data?.wertP || 0;
+  const inFrist = v.jahre <= 10;
+  const pro1 = (n) => String(n).replace(".", ",");
+
   async function starte() {
     if (laufend) return;
     setFehler(null);
@@ -116,8 +128,13 @@ export function AlternativInvestment({ data, t }) {
           <div style={{ fontSize: 20, fontWeight: 800, color: "var(--ct)" }}>{fmtE(v.start)}</div>
         </div>
         <div style={{ ...klein, textAlign: "right" }}>
-          Eigenkapital +<br />
-          Kaufnebenkosten
+          {einsatzBestandteile.map((b, i) => (
+            <span key={b}>
+              {i > 0 && "+ "}
+              {b}
+              {i < einsatzBestandteile.length - 1 && <br />}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -280,12 +297,42 @@ export function AlternativInvestment({ data, t }) {
       <details style={details}>
         <summary style={summary}>So wird gerechnet</summary>
         <p style={detailText}>
-          Dasselbe Geld, das die Immobilie aus eigener Tasche kostet (Eigenkapital, bar gezahlte
-          Kaufnebenkosten
+          Dasselbe Geld, das die Immobilie aus eigener Tasche kostet ({einsatzBestandteile.join(", ")}
           {v.nachschuss > 0 ? `, dazu ${fmtE(v.nachschuss)} Nachschüsse bei negativem Cashflow in ${v.jahre} Jahren` : ""}
           ), wird zu denselben Zeitpunkten stattdessen angelegt. Verglichen wird, was am Ende nach Steuern
-          übrig bleibt. Die Immobilie nutzt den Gesamtsaldo aus dem Renditerechner.
+          übrig bleibt.
         </p>
+        <div style={{ ...detailText, marginTop: 12 }}>
+          <strong style={{ color: "var(--ct)" }}>Balken „Immobilie“ nach {v.jahre} Jahren:</strong>
+          <table style={rechenTabelle}>
+            <tbody>
+              <RechenZeile
+                label={`Verkaufswert (${pro1(wertP)} % Wertsteigerung p. a.)`}
+                wert={fmtE(v.immobilie.verkaufswert)}
+              />
+              <RechenZeile label="− Restschuld der Darlehen" wert={fmtE(v.immobilie.restschuld)} />
+              {inFrist && (
+                <RechenZeile
+                  label="− Steuer auf den Verkaufsgewinn (§ 23 EStG, Verkauf innerhalb von 10 Jahren)"
+                  wert={fmtE(v.immobilie.steuerVerkauf)}
+                />
+              )}
+              <RechenZeile
+                label={`+ Cashflows nach Steuer${v.nachschuss > 0 ? " (nur Jahre mit Überschuss)" : ""}`}
+                wert={fmtE(v.immobilie.cashflowPositiv)}
+              />
+              <RechenZeile label="= Endvermögen (Balken)" wert={fmtE(imm)} fett />
+              <RechenZeile label="− aus eigener Tasche eingezahlt" wert={fmtE(v.eingezahlt)} />
+              <RechenZeile label="= Gewinn (Gesamtergebnis mit Steuer im Renditerechner)" wert={fmtE(v.immobilie.gewinn)} fett />
+            </tbody>
+          </table>
+          <p style={{ ...detailText, marginTop: 10 }}>
+            Die Alternativen bekommen dieselben Einzahlungen zu denselben Zeitpunkten. Sie wachsen mit der
+            Rendite des jeweiligen Szenarios pro Jahr, die Steuer richtet sich nach der Anlage (siehe
+            „Hinweise“). Nicht enthalten: Verkaufskosten der Immobilie (Makler, Notar), Instandhaltung über
+            die nicht umlagefähigen Kosten hinaus und Inflation – alle Werte sind nominal.
+          </p>
+        </div>
       </details>
 
       <details style={details}>
@@ -358,6 +405,25 @@ export function AlternativInvestment({ data, t }) {
         </p>
       </details>
     </section>
+  );
+}
+
+const rechenTabelle = { width: "100%", borderCollapse: "collapse", marginTop: 6, fontSize: 12.5 };
+function RechenZeile({ label, wert, fett }) {
+  const z = {
+    padding: "5px 0",
+    borderBottom: "1px solid var(--cb)",
+    fontWeight: fett ? 800 : 400,
+    color: fett ? "var(--ct)" : "var(--cl)",
+    verticalAlign: "top",
+  };
+  return (
+    <tr>
+      <td style={z}>{label}</td>
+      <td style={{ ...z, textAlign: "right", whiteSpace: "nowrap", paddingLeft: 12, fontVariantNumeric: "tabular-nums" }}>
+        {wert}
+      </td>
+    </tr>
   );
 }
 
