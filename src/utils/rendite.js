@@ -211,13 +211,20 @@ export function computeRendite(d, t) {
   const analyseMonate = jahre * 12;
   const leerstandsFaktor =
     analyseMonate > 0 ? Math.max(0, (analyseMonate - leerstandMon) / analyseMonate) : 1;
-  const gesamtInvestition = gesamtKaufpreis + sonderumlage; // inkl. Sonderumlage
   const effektivMieteMon = kaltmiete * leerstandsFaktor;
-  const bruttoRendite = gesamtInvestition > 0 ? (jahresMiete / gesamtInvestition) * 100 : 0;
+  // Einheitliche Nenner (Befund M2, docs/test-exposes/KONSISTENZPRUEFUNG_2026-10-03.md):
+  // Bruttorendite = Jahresmiete / Gesamtkaufpreis - exakt der Kehrwert des
+  // Kaufpreisfaktors und exakt das, was der erklaerende Text im Rechner sagt
+  // ("Jahresmiete / Kaufpreis"). Die Nettorendite nutzt dieselbe Gesamt-
+  // investition wie die Score-Kennzahl "anfangsrendite" in kennzahlen.js
+  // (Kaufpreis + Nebenkosten + Sonderumlage + Renovierung), sodass
+  // Renditerechner, Briefing und Objektseite denselben Wert zeigen.
+  const gesamtInvestitionNetto = gesamtKaufpreis + nebenkosten + sonderumlage + renovierung;
+  const bruttoRendite = gesamtKaufpreis > 0 ? (jahresMiete / gesamtKaufpreis) * 100 : 0;
   const nichtUmlagbarJahr = nichtUmlagbarMon * 12;
   const nettoRendite =
-    gesamtInvestition + nebenkosten > 0
-      ? ((effektivMieteMon * 12 - nichtUmlagbarJahr) / (gesamtInvestition + nebenkosten)) * 100
+    gesamtInvestitionNetto > 0
+      ? ((effektivMieteMon * 12 - nichtUmlagbarJahr) / gesamtInvestitionNetto) * 100
       : 0;
 
   // ── Mietprognose (§ 558 BGB) für die jahresweise Mietentwicklung ──
@@ -281,8 +288,17 @@ export function computeRendite(d, t) {
     // Tilgung ist bewusst nicht enthalten: sie ist keine Werbungskosten.
     const ergebnisJ = jahresMieteJ - zinsJ - kfwZinsJ - nichtUmlagbarJahr - afaJ - sofortAufwandJ;
     const steuerJ = -ergebnisJ * (steuerProz / 100);
+    // Laufende Steuerwirkung ohne den einmaligen Renovierungs-Sofortabzug
+    // (Befund H1, docs/test-exposes/KONSISTENZPRUEFUNG_2026-10-03.md): der
+    // Sofortabzug fiel nur in Jahr 1 an, ging aber ueber yearRows[0] als
+    // Dauerwert in den Monats-Cashflow nach Steuer ein und kippte Ampel und
+    // Empfehlung. steuerJ (inkl. Einmaleffekt) bleibt fuer Jahressummen und
+    // Gesamtsaldo unveraendert, denn dort ist er echtes Geld.
+    const steuerEinmalJ = sofortAufwandJ * (steuerProz / 100);
+    const steuerLaufendJ = steuerJ - steuerEinmalJ;
     const cfOhneStJ = jahresMieteJ - nichtUmlagbarJahr - zinsTilgungJ; // ohne Steuerwirkung
     const cfJ = cfOhneStJ + steuerJ; // mit Steuerwirkung
+    const cfLaufendJ = cfOhneStJ + steuerLaufendJ; // mit laufender Steuerwirkung
     summeSteuer += steuerJ;
     summeCfMitSt += cfJ;
     summeCfOhneSt += cfOhneStJ;
@@ -304,8 +320,11 @@ export function computeRendite(d, t) {
       zt: zinsTilgungJ,
       afa: afaJ,
       steuer: steuerJ,
+      steuerLaufend: steuerLaufendJ,
+      steuerEinmal: steuerEinmalJ,
       miete: jahresMieteJ,
       cf: cfJ,
+      cfLaufend: cfLaufendJ,
       cfOhneSt: cfOhneStJ,
       cfKum: summeCfMitSt,
     });
@@ -380,7 +399,9 @@ export function computeRendite(d, t) {
         darlehen
       : 0;
   const cfMonOhneSt = effektivMieteMon - nichtUmlagbarMon - rateMonJ1;
-  const cfMonMitSt = cfMonOhneSt + (yearRows[0]?.steuer || 0) / 12;
+  // Nur die laufende Steuerwirkung: ein einmaliger Sofortabzug ist kein
+  // Monatsbetrag (siehe steuerEinmalJ in der Jahresschleife).
+  const cfMonMitSt = cfMonOhneSt + (yearRows[0]?.steuerLaufend || 0) / 12;
   const cfMon = cfMonOhneSt;
   const ekQuote = gesamtKaufpreis > 0 ? (eigenkapital / gesamtKaufpreis) * 100 : 0;
 
@@ -399,6 +420,8 @@ export function computeRendite(d, t) {
     cf2: cfMon,
     cf2OhneSt: cfMonOhneSt,
     cf2MitSt: cfMonMitSt,
+    steuerLaufendMonJ1: (yearRows[0]?.steuerLaufend || 0) / 12,
+    steuerEinmalJ1: yearRows[0]?.steuerEinmal || 0,
     lz: laufzeitJahre,
     nbk: nebenkosten,
     nbkGrest: nebenkostenGrest,

@@ -1566,7 +1566,7 @@ export default function Haupt() {
                       >
                         <NebenkostenAufschluesselung t={t} R={R} />
                         <AmpelKPI
-                          label={t.steuerErs}
+                          label={t.steuerErsAvg || t.steuerErs}
                           value={fmtE(Math.round(R.sSt / R.j))}
                           color={stErsCol}
                           statusLabel={

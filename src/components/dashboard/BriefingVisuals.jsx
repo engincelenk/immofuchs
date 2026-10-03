@@ -595,7 +595,7 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
   const kaltmiete = +data?.kaltmiete || 0;
   const leerstand = kaltmiete > 0 && R.mieteEffMon != null ? kaltmiete - R.mieteEffMon : 0;
   const nichtUmlagbar = R.nuJ > 0 ? R.nuJ / 12 : 0;
-  const steuerMon = (R.yearRows?.[0]?.steuer || 0) / 12;
+  const steuerMon = R.steuerLaufendMonJ1 ?? (R.yearRows?.[0]?.steuer || 0) / 12;
   const zeigtSteuer = Math.abs(steuerMon) >= 1;
 
   // ── Block 3: was bleibt ──

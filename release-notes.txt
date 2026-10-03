@@ -1,3 +1,22 @@
+## 2026-10-03 (1.100.70) [FRONTEND]
+
+### Konsistenzpruefung Block A: Einmaleffekte raus aus dem Monats-Cashflow, einheitliche Renditen
+
+- Cashflow nach Steuer (Monat): der einmalige Sofortabzug der Renovierung (Jahr 1) geht
+  nicht mehr als Dauerwert in den Monatsbetrag ein (rendite.js: yearRows.steuerLaufend /
+  cfLaufend, R.steuerEinmalJ1). Beispiel ETW Muenchen 450.000 EUR mit Vorbelegung
+  (Renovierung 15.000 EUR): vorher +302 EUR/Mon. und Ampel gruen "investieren", jetzt
+  -223 EUR/Mon. Jahressummen, Gesamtsaldo und Verkaufsszenario bleiben unveraendert.
+  Ampel, Empfehlung, Stresstest, Objektseite ("Tragfaehig ab ...") und Break-even-Radar
+  folgen automatisch.
+- Bruttorendite = Jahresmiete / Gesamtkaufpreis (Kehrwert des Kaufpreisfaktors, passend
+  zum erklaerenden Text). Nettorendite nutzt dieselbe Gesamtinvestition wie die
+  Score-Kennzahl (Kaufpreis + Nebenkosten + Sonderumlage + Renovierung); Renditerechner,
+  Briefing und Objektseite zeigen denselben Wert.
+- Texte: Karte "Steuerersparnis" heisst "Steuerersparnis O pro Jahr" (5 Sprachen);
+  Verkaufsszenario zeigt bei negativer Steuerwirkung "Kum. Steuerlast" ohne "+-"-Vorzeichen.
+- Tests: rendite.test.js (Einmaleffekt, Nenner).
+
 ## 2026-10-03 (1.100.69) [FRONTEND] [WORKER]
 
 ### Annahme: Verkauf nach Ablauf der Spekulationsfrist - kein Steuerabzug auf den Verkaufsgewinn

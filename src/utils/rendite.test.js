@@ -99,3 +99,79 @@ describe("computeRendite: Verkauf nach Ablauf der Spekulationsfrist", () => {
     expect(R.inFrist).toBe(true);
   });
 });
+
+// ── Konsistenzpruefung 2026-10-03 (docs/test-exposes/KONSISTENZPRUEFUNG_2026-10-03.md) ──
+const s1 = {
+  kaufpreis: "450000",
+  flaeche: "65",
+  bundesland: "BY",
+  kaltmiete: "1400",
+  nichtUml: "114",
+  leerstand: "0",
+  eigenkapital: "90000",
+  zinssatz: "3.7",
+  tilgung: "2",
+  zinsbindung: "15",
+  gebAnteil: "80",
+  afaSatz: "2",
+  notar: "2",
+  makler: "3.57",
+  steuersatz: "42",
+  jahre: "20",
+  wertP: "0.6",
+  sonder: "0",
+  renovierung: "0",
+};
+
+describe("computeRendite - einmaliger Renovierungs-Sofortabzug (Befund H1)", () => {
+  const mitRen = { ...s1, renovierung: "15000" };
+
+  it("kippt den Monats-Cashflow nach Steuer nicht (Sofortabzug ist kein Monatsbetrag)", () => {
+    const ohne = computeRendite(s1, t);
+    const mit = computeRendite(mitRen, t);
+    expect(mit.cf2MitSt).toBeCloseTo(ohne.cf2MitSt, 2);
+    expect(mit.cf2MitSt).toBeLessThan(0);
+  });
+
+  it("weist den Einmaleffekt getrennt aus: Renovierung mal Steuersatz", () => {
+    const mit = computeRendite(mitRen, t);
+    expect(mit.steuerEinmalJ1).toBeCloseTo(15000 * 0.42, 2);
+    expect(computeRendite(s1, t).steuerEinmalJ1).toBe(0);
+  });
+
+  it("laesst die Jahressummen und den Gesamtsaldo unveraendert echtes Geld abbilden", () => {
+    const mit = computeRendite(mitRen, t);
+    const j1 = mit.yearRows[0];
+    expect(j1.steuer - j1.steuerLaufend).toBeCloseTo(15000 * 0.42, 2);
+    expect(j1.cf - j1.cfLaufend).toBeCloseTo(15000 * 0.42, 2);
+    const summe = mit.yearRows.reduce((a, y) => a + y.cf, 0);
+    expect(mit.sCF).toBeCloseTo(summe, 2);
+  });
+
+  it("Aufschlag auf den Monats-Cashflow entspricht der laufenden Steuer, nie dem Einmalabzug", () => {
+    const mit = computeRendite(mitRen, t);
+    expect(mit.cf2MitSt - mit.cf2OhneSt).toBeCloseTo(mit.steuerLaufendMonJ1, 6);
+  });
+});
+
+describe("computeRendite - einheitliche Rendite-Nenner (Befund M2)", () => {
+  const mitZusatz = { ...s1, sonder: "3000", renovierung: "15000" };
+
+  it("Bruttorendite ist der Kehrwert des Kaufpreisfaktors, auch mit Sonderumlage", () => {
+    const R = computeRendite(mitZusatz, t);
+    expect(R.bR).toBeCloseTo(100 / R.kpF, 8);
+    expect(R.bR).toBeCloseTo((1400 * 12) / 450000 * 100, 8);
+  });
+
+  it("Nettorendite nutzt Kaufpreis + Nebenkosten + Sonderumlage + Renovierung", () => {
+    const R = computeRendite(mitZusatz, t);
+    const soll = ((1400 - 114) * 12) / (450000 + R.nbk + 3000 + 15000) * 100;
+    expect(R.nR).toBeCloseTo(soll, 8);
+  });
+
+  it("Nettorendite stimmt mit der Score-Kennzahl anfangsrendite ueberein", async () => {
+    const { berechneKennzahlen } = await import("./kennzahlen.js");
+    const R = computeRendite(mitZusatz, t);
+    expect(berechneKennzahlen(mitZusatz, R).anfangsrendite).toBeCloseTo(R.nR, 8);
+  });
+});

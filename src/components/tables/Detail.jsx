@@ -135,9 +135,16 @@ export function Detail({ R, d }) {
           </span>
         </div>
 
+        {/* Ueber den Zeitraum kann die Steuerwirkung eine Last sein (negatives
+            sSt): dann Last statt "Ersparnis" und ohne "+-"-Vorzeichen. */}
         <div style={{ ...row, borderTop: "6px solid var(--ci)" }}>
-          <span style={{ color: "#22c55e" }}>+ {t.detCumSteuer}</span>
-          <span style={{ fontWeight: 600, color: "#22c55e" }}>+{fmtE(R.sSt || 0)}</span>
+          <span style={{ color: (R.sSt || 0) >= 0 ? "#22c55e" : "#ef4444" }}>
+            {(R.sSt || 0) >= 0 ? "+" : "−"} {(R.sSt || 0) >= 0 ? t.detCumSteuer : t.detCumSteuerLast || t.detCumSteuer}
+          </span>
+          <span style={{ fontWeight: 600, color: (R.sSt || 0) >= 0 ? "#22c55e" : "#ef4444" }}>
+            {(R.sSt || 0) >= 0 ? "+" : ""}
+            {fmtE(R.sSt || 0)}
+          </span>
         </div>
         <div
           style={{

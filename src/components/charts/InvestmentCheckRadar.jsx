@@ -15,7 +15,7 @@ export function InvestmentCheckRadar({ R }) {
 
   const kpFaktor = R.kpF;
   const cfMonatlichMit = R.yearRows || [];
-  const beIdx = cfMonatlichMit.findIndex((r) => (r.cf || 0) / 12 >= 0);
+  const beIdx = cfMonatlichMit.findIndex((r) => (r.cfLaufend ?? r.cf ?? 0) / 12 >= 0);
   const beJahr = beIdx >= 0 ? cfMonatlichMit[beIdx].j : R.j + 5;
 
   const kpis = [
