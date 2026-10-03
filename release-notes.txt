@@ -1,3 +1,18 @@
+## 2026-10-03 (1.100.78) [FRONTEND]
+
+### Abschlussanalyse Ursache 2: befristete Effekte zaehlen fuer Ampel und Empfehlung
+
+- Der Monats-Cashflow bleibt Jahr 1 (Nutzer-Vorgabe). Neu: Cashflow im ersten Jahr nach Ende der befristeten
+  Effekte - Sonderabschreibung (4 Jahre), tilgungsfreie KfW-Jahre, degressive AfA (bis Jahr 10) - als
+  rendite.js cfNachEffektenJahr/-Mon und cfMassgeblich (der niedrigere Wert).
+- Ampel, Empfehlung, Begruendung, Flaggen, Tragfaehigkeit, Kombiweg, Break-even-Miete, Hebel-Ziele und der
+  Score-Hard-Stop richten sich nach cfMassgeblich. Beispiel Neubau mit Sonder-AfA und KfW: vorher Ampel gruen
+  bei +82 EUR/Mon. im Jahr 1, ab Jahr 5 aber -302 EUR/Mon.; jetzt nicht mehr gruen.
+- Anzeige: Hinweis im Renditerechner und Zeile auf der Objektseite "Ab Jahr X, nach den befristeten Effekten";
+  die Ueberschrift der Objektseite sagt "Anfangs bleiben ... uebrig, in Jahr X zahlst du ... zu" statt "traegt sich".
+- Break-even im Investment-Check = erstes Jahr, ab dem der Cashflow dauerhaft >= 0 bleibt.
+- Ohne befristete Effekte aendert sich nichts (Jahr 1 wie bisher). Texte in 5 Sprachen.
+
 ## 2026-10-03 (1.100.77) [FRONTEND]
 
 ### Abschlussanalyse Ursache 1: KfW-Darlehen in allen Raten- und Restschuld-Anzeigen

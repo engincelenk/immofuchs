@@ -139,6 +139,9 @@ export function InvestmentBriefing({
       scoreWert: score?.verfuegbar ? score.score : null,
       scoreTier: score?.verfuegbar ? score.tier : null,
       tilgung: briefing.R.t1Gesamt,
+      spaeter: briefing.R.cfNachEffektenZeigen
+        ? { jahr: briefing.R.cfNachEffektenJahr, wert: briefing.R.cfNachEffektenMon }
+        : null,
       topRisiko: ergebnis ? risikenVon(ergebnis)[0]?.title || null : null,
     },
     t,

@@ -90,6 +90,8 @@ export const CASHFLOW_FLAGGE_EUR = -800;
 // bewusst NICHT aus investmentScore.js importiert, sondern hier ueber
 // dieselben Groessen geprueft - sonst liefe der dortige DSCR-Stop mit, der
 // hier nicht gebraucht wird (reine Cashflow-Frage, keine Finanzierungsfrage).
+// Entscheidungen (Ampel, Tragfaehigkeit, Flaggen, Empfehlung) nach (R.cfMassgeblich ?? R.cf2MitSt):
+// dem niedrigeren aus Jahr 1 und dem schlechtesten Jahr 2-10 (rendite.js).
 export function cashflowUrteil(d, R) {
   const kaltmiete = +d.kaltmiete || 0;
   const tilgung = +d.tilgung || 0;
@@ -97,8 +99,8 @@ export function cashflowUrteil(d, R) {
   if ((tilgung === 0 && R.bankDa > 0) || R.bel > 100) {
     return { stufe: "rot", key: "brfAmpelHartStop" };
   }
-  if (R.cf2MitSt >= 0) return { stufe: "gruen", key: "brfAmpelTraegtSich" };
-  if (Math.abs(R.cf2MitSt) <= kaltmiete * ZUZAHLUNG_GELB_QUOTE) {
+  if ((R.cfMassgeblich ?? R.cf2MitSt) >= 0) return { stufe: "gruen", key: "brfAmpelTraegtSich" };
+  if (Math.abs((R.cfMassgeblich ?? R.cf2MitSt)) <= kaltmiete * ZUZAHLUNG_GELB_QUOTE) {
     return { stufe: "gelb", key: "brfAmpelMitZuzahlung" };
   }
   return { stufe: "rot", key: "brfAmpelTraegtSichNicht" };
@@ -243,7 +245,7 @@ export function briefingVergleiche(d, R, opt = {}) {
   const kaufpreis = +d.kaufpreis || 0;
   const kaltmiete = +d.kaltmiete || 0;
   const flaeche = +d.flaeche || 0;
-  const cashflowNegativ = R.cf2MitSt < 0;
+  const cashflowNegativ = (R.cfMassgeblich ?? R.cf2MitSt) < 0;
   const kacheln = [];
 
   // V1 Kaufpreis/m2 vs. Richtwert. "Unter Markt" ist bei negativem Cashflow
@@ -427,7 +429,7 @@ export function briefingAlternativanlage(R, d) {
 // "tragfaehig zu machen". K.breakEvenMiete wird bewusst NICHT verwendet: es
 // rechnet vor Steuer, der Rest der Karte nach Steuer.
 export function briefingTragfaehigkeit(d, t, R, opt = {}) {
-  if (R.cf2MitSt >= 0) return null;
+  if ((R.cfMassgeblich ?? R.cf2MitSt) >= 0) return null;
   // Marktmiete kommt entweder direkt oder aus derselben Referenz wie die
   // Vergleichskacheln - eine zweite Quelle waere eine zweite Wahrheit.
   const mieteMarktQm = opt.mieteMarktQm ?? opt.ref?.mieteWohnung ?? null;
@@ -677,11 +679,11 @@ export function briefingFlaggen(d, _t, R, K, opt = {}) {
   if (R.bel > 100) {
     flaggen.push({ key: "flgBeleihung", stufe: "rot", wert: R.bel, schwelle: 100 });
   }
-  if (R.cf2MitSt < CASHFLOW_FLAGGE_EUR) {
+  if ((R.cfMassgeblich ?? R.cf2MitSt) < CASHFLOW_FLAGGE_EUR) {
     flaggen.push({
       key: "flgCashflowTief",
       stufe: "rot",
-      wert: R.cf2MitSt,
+      wert: (R.cfMassgeblich ?? R.cf2MitSt),
       schwelle: CASHFLOW_FLAGGE_EUR,
     });
   }
@@ -862,7 +864,7 @@ export function modernisierungsbedarf(d) {
 // UND den Preis so weit senken, dass es sich traegt. Nur sinnvoll, wenn V2
 // ein Mietpotenzial zeigt.
 export function briefingKombiweg(d, t, R, v2) {
-  if (R.cf2MitSt >= 0) return null;
+  if ((R.cfMassgeblich ?? R.cf2MitSt) >= 0) return null;
   if (!(v2?.erreichbarQm > 0)) return null;
   const flaeche = +d.flaeche || 0;
   const kaufpreis = +d.kaufpreis || 0;
@@ -883,7 +885,7 @@ export function briefingEmpfehlung(d, R, { ampel, vergleiche, tragfaehigkeit, ko
   const kaufpreis = +d.kaufpreis || 0;
   if (ampel.key === "brfAmpelHartStop") return { wort: "nicht", ziel: null };
 
-  if (R.cf2MitSt >= 0) {
+  if ((R.cfMassgeblich ?? R.cf2MitSt) >= 0) {
     const v1 = vergleiche.find((v) => v.id === "v1");
     if (v1 && v1.abw > TOLERANZ_PROZENT && marktpreis > 0 && marktpreis < kaufpreis) {
       return {
@@ -943,12 +945,12 @@ export function briefingBegruendung(d, R, { ampel, empfehlung } = {}) {
         ? { key: "brfBegrHartStopTilgung", werte: {} }
         : { key: "brfBegrHartStopBeleihung", werte: { beleihung: R.bel } };
   } else if (ampel?.key === "brfAmpelTraegtSich") {
-    ampelTeil = { key: "brfBegrTraegtSich", werte: { ueberschuss: R.cf2MitSt } };
+    ampelTeil = { key: "brfBegrTraegtSich", werte: { ueberschuss: (R.cfMassgeblich ?? R.cf2MitSt) } };
   } else if (ampel?.key === "brfAmpelMitZuzahlung") {
     ampelTeil = {
       key: "brfBegrMitZuzahlung",
       werte: {
-        zuzahlung: Math.abs(R.cf2MitSt),
+        zuzahlung: Math.abs((R.cfMassgeblich ?? R.cf2MitSt)),
         grenze: zuzahlungsgrenze,
         quote: ZUZAHLUNG_GELB_QUOTE * 100,
       },
@@ -956,7 +958,7 @@ export function briefingBegruendung(d, R, { ampel, empfehlung } = {}) {
   } else {
     ampelTeil = {
       key: "brfBegrTraegtSichNicht",
-      werte: { zuzahlung: Math.abs(R.cf2MitSt), grenze: zuzahlungsgrenze },
+      werte: { zuzahlung: Math.abs((R.cfMassgeblich ?? R.cf2MitSt)), grenze: zuzahlungsgrenze },
     };
   }
 

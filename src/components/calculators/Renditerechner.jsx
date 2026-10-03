@@ -1278,6 +1278,18 @@ export default function Haupt() {
                       />
                     </div>
 
+                    {R.cfNachEffektenZeigen && (
+                      <div style={{ marginTop: 4 }}>
+                        <Ins
+                          emoji="📉"
+                          text={tpl(t.cfNachEffektenHinweis || "", {
+                            j: R.cfNachEffektenJahr,
+                            cf: fmtE(R.cfNachEffektenMon),
+                          })}
+                          type="warn"
+                        />
+                      </div>
+                    )}
                     {+d.leerstand > 0 &&
                       R.bR > 0 &&
                       (+d.leerstand / ((+d.jahre || 10) * 12)) * 100 > 5 &&

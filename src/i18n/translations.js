@@ -588,6 +588,10 @@ export const T = {
     neueLaufzeit: "Neue Laufzeit",
     zinsenGespart: "Zinsen gespart",
     jahreGespart: "Laufzeit gespart",
+    cfNachEffektenHinweis:
+      "Ab Jahr {j}, nach Ende der befristeten Effekte (Sonderabschreibung, tilgungsfreie KfW-Jahre, degressive AfA), bleiben nach Steuer {cf}/Monat. Ampel und Empfehlung rechnen mit dem niedrigeren Wert.",
+    cockCfNachEffekten: "Ab Jahr {j}, nach den befristeten Effekten",
+    cockEinschNurAnfangs: "Anfangs bleiben {betrag} im Monat übrig, in Jahr {j} zahlst du {betrag2} zu.",
     yearEinmalHinweis: "Jahr 1 enthält den einmaligen Steuerabzug der Renovierung ({x}). Er ist nicht im Monats-Cashflow enthalten.",
     vqErklaerung:
       "Eigener Anteil = eingesetztes Geld ({a}) plus die Tilgung, die die Miete vor Steuer nicht gedeckt hat ({b}). Die EK-Rendite rechnet Nachschüsse nach Steuer ({c}), deshalb kann die Summe abweichen.",
@@ -1553,6 +1557,10 @@ export const T = {
     neueLaufzeit: "New term",
     zinsenGespart: "Interest saved",
     jahreGespart: "Time saved",
+    cfNachEffektenHinweis:
+      "From year {j}, after the temporary effects end (special depreciation, KfW grace years, declining-balance depreciation), {cf}/month remain after tax. Rating and recommendation use the lower value.",
+    cockCfNachEffekten: "From year {j}, after the temporary effects",
+    cockEinschNurAnfangs: "At first {betrag} is left over each month, in year {j} you top up {betrag2}.",
     yearEinmalHinweis: "Year 1 includes the one-off tax deduction for the renovation ({x}). It is not part of the monthly cash flow.",
     vqErklaerung:
       "Own share = money you put in ({a}) plus the repayment the rent did not cover before tax ({b}). The equity return counts top-ups after tax ({c}), so the totals can differ.",
@@ -2412,6 +2420,10 @@ export const T = {
     neueLaufzeit: "Yeni vade",
     zinsenGespart: "Faiz tasarrufu",
     jahreGespart: "Kazanılan süre",
+    cfNachEffektenHinweis:
+      "{j}. yıldan itibaren, geçici etkiler bittikten sonra (özel amortisman, KfW ödemesiz yıllar, azalan bakiyeli amortisman), vergi sonrası ayda {cf} kalıyor. Değerlendirme ve öneri düşük değeri kullanır.",
+    cockCfNachEffekten: "{j}. yıldan itibaren, geçici etkilerden sonra",
+    cockEinschNurAnfangs: "Başta her ay {betrag} kalıyor, {j}. yılda {betrag2} ek ödüyorsun.",
     yearEinmalHinweis: "1. yıl, tadilatın tek seferlik vergi indirimini içerir ({x}). Aylık nakit akışına dahil değildir.",
     vqErklaerung:
       "Kendi payınız = koyduğunuz para ({a}) artı kiranın vergi öncesi karşılamadığı anapara ödemesi ({b}). Özsermaye getirisi vergi sonrası ek ödemeleri sayar ({c}), bu yüzden toplamlar farklı olabilir.",
@@ -3339,6 +3351,10 @@ export const T = {
     neueLaufzeit: "新期限",
     zinsenGespart: "节省利息",
     jahreGespart: "节省年限",
+    cfNachEffektenHinweis:
+      "从第 {j} 年起，临时效应（特别折旧、KfW 免还本年份、递减折旧）结束后，税后每月剩余 {cf}。评级和建议采用较低的值。",
+    cockCfNachEffekten: "第 {j} 年起，临时效应结束后",
+    cockEinschNurAnfangs: "起初每月剩余 {betrag}，第 {j} 年需要补贴 {betrag2}。",
     yearEinmalHinweis: "第 1 年包含翻新的一次性税收扣除（{x}），不计入每月现金流。",
     vqErklaerung:
       "自有份额 = 您投入的资金（{a}）加上租金税前未覆盖的还款部分（{b}）。自有资金回报按税后追加投入（{c}）计算，因此合计可能不同。",
@@ -4260,6 +4276,10 @@ export const T = {
     neueLaufzeit: "नई अवधि",
     zinsenGespart: "ब्याज बचत",
     jahreGespart: "बचा हुआ समय",
+    cfNachEffektenHinweis:
+      "वर्ष {j} से, अस्थायी प्रभावों (विशेष मूल्यह्रास, KfW किस्त-मुक्त वर्ष, घटती दर मूल्यह्रास) के समाप्त होने के बाद, कर के बाद {cf}/माह बचते हैं। रेटिंग और सुझाव कम मान का उपयोग करते हैं।",
+    cockCfNachEffekten: "वर्ष {j} से, अस्थायी प्रभावों के बाद",
+    cockEinschNurAnfangs: "शुरू में हर महीने {betrag} बचते हैं, वर्ष {j} में आपको {betrag2} अतिरिक्त देने होंगे।",
     yearEinmalHinweis: "पहले वर्ष में नवीनीकरण की एकमुश्त कर कटौती शामिल है ({x})। यह मासिक नकदी प्रवाह में शामिल नहीं है।",
     vqErklaerung:
       "अपना हिस्सा = आपकी लगाई राशि ({a}) और वह किस्त जिसे किराया कर से पहले नहीं चुका सका ({b})। इक्विटी रिटर्न कर के बाद की अतिरिक्त राशि ({c}) गिनता है, इसलिए योग अलग हो सकते हैं।",

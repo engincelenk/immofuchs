@@ -245,7 +245,7 @@ function hardStops(d, R, K) {
   if (R.bel > 100) {
     treffer.push({ key: "hardStopBel", cap: 40 });
   }
-  if (R.cf2MitSt < -800) {
+  if ((R.cfMassgeblich ?? R.cf2MitSt) < -800) {
     treffer.push({ key: "hardStopCf", cap: 55 });
   }
   return treffer;

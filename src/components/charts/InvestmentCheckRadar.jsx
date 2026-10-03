@@ -15,7 +15,11 @@ export function InvestmentCheckRadar({ R }) {
 
   const kpFaktor = R.kpF;
   const cfMonatlichMit = R.yearRows || [];
-  const beIdx = cfMonatlichMit.findIndex((r) => (r.cfLaufend ?? r.cf ?? 0) / 12 >= 0);
+  // Break-even = erstes Jahr, ab dem der Cashflow (laufende Steuer) DAUERHAFT >= 0 bleibt -
+  // ein einzelnes gutes Jahr 1 (Sonder-AfA, tilgungsfreie KfW-Jahre) zaehlt nicht.
+  const beIdx = cfMonatlichMit.findIndex((r, i) =>
+    cfMonatlichMit.slice(i).every((x) => (x.cfLaufend ?? x.cf ?? 0) >= 0),
+  );
   const beJahr = beIdx >= 0 ? cfMonatlichMit[beIdx].j : R.j + 5;
 
   const kpis = [

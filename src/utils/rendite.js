@@ -424,6 +424,33 @@ export function computeRendite(d, t) {
   // Monatsbetrag (siehe steuerEinmalJ in der Jahresschleife).
   const cfMonMitSt = cfMonOhneSt + (yearRows[0]?.steuerLaufend || 0) / 12;
   const cfMon = cfMonOhneSt;
+  // Cashflow nach Ende der befristeten Effekte (Abschlussanalyse 2026-10-03, Ursache 2).
+  // Der Monats-Cashflow bleibt Jahr 1 (Nutzer-Vorgabe). Befristete Effekte machen
+  // Jahr 1 aber besser als die Folgejahre: Sonderabschreibung (§ 7b, 4 Jahre),
+  // tilgungsfreie KfW-Jahre und die degressive AfA (sinkt Jahr fuer Jahr, hier bis
+  // Jahr 10 betrachtet). Vergleichsjahr ist das erste Jahr nach ihrem Ende; Ampel,
+  // Empfehlung, Flaggen und Tragfaehigkeit richten sich nach dem niedrigeren Wert
+  // (cfMassgeblich). Ohne befristete Effekte gilt unveraendert Jahr 1 - das langsame
+  // Sinken des Zinsabzugs ist kein befristeter Effekt und bleibt bewusst aussen vor.
+  let sonderEnde = 0;
+  (afaPlan.sonder || []).forEach((x, i) => {
+    if (x > 0) sonderEnde = i + 1;
+  });
+  const kfwEnde = darlehenKfw > 0 ? tfJahre : 0;
+  const degressivAktiv = afaModus === "degressiv";
+  let cfNachEffektenJahr = null,
+    cfNachEffektenMon = null;
+  if (sonderEnde > 0 || kfwEnde > 0 || degressivAktiv) {
+    const ziel = degressivAktiv ? 10 : Math.max(sonderEnde, kfwEnde) + 1;
+    const x = Math.min(yearRows.length, 10, ziel);
+    if (x >= 2) {
+      cfNachEffektenJahr = x;
+      cfNachEffektenMon = yearRows[x - 1].cfLaufend / 12;
+    }
+  }
+  const cfMassgeblich =
+    cfNachEffektenMon != null ? Math.min(cfMonMitSt, cfNachEffektenMon) : cfMonMitSt;
+  const cfNachEffektenZeigen = cfNachEffektenMon != null && cfNachEffektenMon < cfMonMitSt - 50;
   const ekQuote = gesamtKaufpreis > 0 ? (eigenkapital / gesamtKaufpreis) * 100 : 0;
 
   // Schluesselnamen bewusst unveraendert (Renditerechner.jsx liest R.pQm, R.bR, …)
@@ -441,6 +468,10 @@ export function computeRendite(d, t) {
     cf2: cfMon,
     cf2OhneSt: cfMonOhneSt,
     cf2MitSt: cfMonMitSt,
+    cfMassgeblich,
+    cfNachEffektenJahr,
+    cfNachEffektenMon,
+    cfNachEffektenZeigen,
     steuerLaufendMonJ1: (yearRows[0]?.steuerLaufend || 0) / 12,
     steuerEinmalJ1: yearRows[0]?.steuerEinmal || 0,
     lz: laufzeitJahre,

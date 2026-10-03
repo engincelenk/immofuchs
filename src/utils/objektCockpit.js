@@ -20,7 +20,7 @@ function chipVorzeichen(n) {
 }
 
 export function cockpitEinschaetzung(
-  { cashflow, cashflowStufe, preis, scoreWert, scoreTier, tilgung, topRisiko },
+  { cashflow, cashflowStufe, preis, scoreWert, scoreTier, tilgung, topRisiko, spaeter = null },
   t,
 ) {
   if (cashflow == null || !isFinite(cashflow)) return null;
@@ -36,7 +36,13 @@ export function cockpitEinschaetzung(
 
   let fall;
   let vorlage;
-  if (!negativ && teuer) {
+  // Jahr 1 positiv, spaeter aber Zuzahlung (Sonder-AfA, tilgungsfreie KfW-Jahre):
+  // kein "traegt sich", sonst widerspraeche der Satz der Ampel.
+  const nurAnfangs = !negativ && spaeter && spaeter.wert < 0;
+  if (nurAnfangs) {
+    fall = "nurAnfangs";
+    vorlage = T("cockEinschNurAnfangs", "Anfangs bleiben {betrag} im Monat übrig, in Jahr {j} zahlst du {betrag2} zu.");
+  } else if (!negativ && teuer) {
     fall = "traegtTeuer";
     vorlage = T("cockEinschTraegtTeuer", "Es trägt sich, aber der Preis liegt {p} % über dem Markt.");
   } else if (!negativ) {
@@ -52,7 +58,11 @@ export function cockpitEinschaetzung(
     fall = "zuzahlung";
     vorlage = T("cockEinschZuzahlung", "Du zahlst {betrag} im Monat zu.");
   }
-  const satz = vorlage.replace("{betrag}", betrag).replace("{p}", p);
+  const satz = vorlage
+    .replace("{betrag}", betrag)
+    .replace("{p}", p)
+    .replace("{j}", spaeter ? String(spaeter.jahr) : "")
+    .replace("{betrag2}", spaeter ? fmtE(Math.abs(Math.round(spaeter.wert))) : "");
 
   const chips = [
     {

@@ -746,6 +746,13 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
             <>
               <Zeile label={L(t, "cockSteuerwirkung", "Steuerwirkung (geschätzt)")} wert={vz(steuerMon)} />
               <Zeile label={`= ${L(t, "cockCfNachSteuer", "Cashflow nach Steuer")}`} wert={wertText(R.cf2MitSt, "eurMonat")} fett linie />
+              {R.cfNachEffektenZeigen && (
+                <Zeile
+                  label={L(t, "cockCfNachEffekten", "Ab Jahr {j}, nach den befristeten Effekten").replace("{j}", String(R.cfNachEffektenJahr))}
+                  wert={wertText(R.cfNachEffektenMon, "eurMonat")}
+                  style={einzug}
+                />
+              )}
             </>
           )}
         </div>

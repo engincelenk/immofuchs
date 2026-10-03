@@ -64,7 +64,7 @@ export function loeseMaximalenKaufpreis(d, t, zielNettoRendite) {
 function zielErfuelltBei(d, t, ziel, kaufpreis) {
   const dPunkt = { ...d, kaufpreis: String(Math.max(1, kaufpreis)) };
   if (ziel.typ === "cashflowNull") {
-    return computeRendite(dPunkt, t).cf2MitSt >= 0;
+    return computeRendite(dPunkt, t).cfMassgeblich >= 0;
   }
   if (ziel.typ === "score") {
     const s = berechneScore(dPunkt, t);
@@ -144,7 +144,8 @@ function grenzsuche(cf, lo, hi) {
  *   Gesamtinvestition, Kaltmiete von 0 bis 3x aktuell).
  */
 export function loeseFuerCashflowNull(d, t, feld) {
-  const cf = (wert) => computeRendite({ ...d, [feld]: String(Math.max(0, wert)) }, t).cf2MitSt;
+  // Massgeblicher Cashflow (Jahr 1 oder schlechtestes Jahr 2-10, siehe rendite.js).
+  const cf = (wert) => computeRendite({ ...d, [feld]: String(Math.max(0, wert)) }, t).cfMassgeblich;
 
   if (feld === "kaufpreis") {
     const aktuell = Math.max(0, +d.kaufpreis || 0);
