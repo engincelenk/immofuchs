@@ -1,3 +1,14 @@
+## 2026-10-03 (1.100.67) [FRONTEND]
+
+### Schritt-Navigation: konsistente Namen, uebersetzt, Chip fuer Alternativ-Investment
+
+- Die Chips der Navigation hiessen fest deutsch ("Risiken", "Weiter") und passten nicht
+  zu den Ueberschriften. Jetzt "Worauf achten" und "Naechste Schritte" wie die
+  Ueberschriften von Schritt 4 und 5; alle Chips in 5 Sprachen uebersetzt (vorher sahen
+  EN/TR/ZH/HI deutschen Text).
+- Neuer Chip "Alternativen" (mit Stern statt Nummer) zwischen Schritt 4 und 5, springt
+  zur Karte Alternativ-Investment (id schritt-alternativ, in allen Zustaenden der Karte).
+
 ## 2026-10-03 (1.100.66) [FRONTEND]
 
 ### Alternativ-Investment: KI-Einstieg wie bei den anderen KI-Karten

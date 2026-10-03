@@ -140,7 +140,7 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
 
   if (!v) {
     return (
-      <section style={karte} aria-label="Alternativ-Investment">
+      <section id="schritt-alternativ" style={{ ...karte, scrollMarginTop: 78 }} aria-label="Alternativ-Investment">
         <strong style={titel}>Alternativ-Investment</strong>
         <p style={leise}>
           Sobald Kaufpreis und Eigenkapital eingetragen sind, zeigt diese Karte, was aus deinem Geld
@@ -216,7 +216,7 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
   // Plakativer Einstieg, bevor etwas berechnet/angezeigt wird.
   if (!gestartet) {
     return (
-      <section style={{ ...karte, ...heroKarte }} aria-label="Alternativ-Investment">
+      <section id="schritt-alternativ" style={{ ...karte, ...heroKarte, scrollMarginTop: 78 }} aria-label="Alternativ-Investment">
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
           <span aria-hidden="true" style={{ fontSize: 26, lineHeight: 1, color: "var(--ca)" }}>✦</span>
           <div>
@@ -260,7 +260,7 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
   }
 
   return (
-    <section style={karte} aria-label="Alternativ-Investment">
+    <section id="schritt-alternativ" style={{ ...karte, scrollMarginTop: 78 }} aria-label="Alternativ-Investment">
       <div>
         <strong style={titel}>Alternativ-Investment</strong>
         <p style={leise}>Dein Geld aus eigener Tasche: Immobilie oder Anlage?</p>

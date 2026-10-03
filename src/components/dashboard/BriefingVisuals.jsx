@@ -386,8 +386,11 @@ export const SCHRITTE = [
   { id: "schritt-kosten", nr: 1, kurz: "Kosten" },
   { id: "schritt-markt", nr: 2, kurz: "Markt" },
   { id: "schritt-stellschrauben", nr: 3, kurz: "Stellschrauben" },
-  { id: "schritt-risiken", nr: 4, kurz: "Risiken" },
-  { id: "schritt-weiter", nr: 5, kurz: "Weiter" },
+  { id: "schritt-risiken", nr: 4, kurz: "Worauf achten" },
+  // Ohne Nummer: die Karte Alternativ-Investment (AlternativInvestment.jsx) ist
+  // kein nummerierter Schritt, hat aber einen Chip (Zeichen statt Zahl).
+  { id: "schritt-alternativ", nr: null, key: "Alt", kurz: "Alternativen" },
+  { id: "schritt-weiter", nr: 5, kurz: "Nächste Schritte" },
 ];
 
 export function SchrittNav({ t }) {
@@ -444,9 +447,9 @@ export function SchrittNav({ t }) {
                 flexShrink: 0,
               }}
             >
-              {s.nr}
+              {s.nr ?? "✦"}
             </span>
-            {L(t, `cockSchritt${s.nr}`, s.kurz)}
+            {L(t, `cockSchritt${s.key ?? s.nr}`, s.kurz)}
           </a>
         );
       })}
