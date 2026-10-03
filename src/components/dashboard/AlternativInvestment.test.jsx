@@ -29,7 +29,7 @@ describe("AlternativInvestment", () => {
     const html = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} />);
     expect(html).toContain("KI vergleicht diese Immobilie mit Alternativ-Investments");
     expect(html).toContain("Vergleich erstellen");
-    expect(html).toContain("Nur Zahlen anzeigen");
+    expect(html).not.toContain("Nur Zahlen anzeigen");
     expect(html).not.toContain("Aus eigener Tasche zu Beginn");
     expect(html).not.toContain("Balkendiagramm");
   });

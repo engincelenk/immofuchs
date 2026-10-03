@@ -132,7 +132,7 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
   const [fehler, setFehler] = useState(null);
   const [consent, setConsent] = useState(false);
   // Wie die anderen KI-Karten: erst der plakative Einstieg, Diagramm und Zahlen
-  // erscheinen nach dem Klick (oder ueber "Nur Zahlen anzeigen").
+  // erscheinen nach dem Klick - oder, wenn die KI fehlschlaegt, trotzdem.
   const [gestartet, setGestartet] = useState(anfangGestartet);
 
   const alle = useMemo(() => berechneAlternativAlle(data, t), [data, t]);
@@ -252,9 +252,6 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
             <button type="button" onClick={starte} style={primaerKnopfStyle(true)}>
               <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
               {fehler ? "Erneut versuchen" : "Vergleich erstellen"}
-            </button>
-            <button type="button" onClick={() => setGestartet(true)} style={{ ...textLink, alignSelf: "center", fontSize: 12.5 }}>
-              Nur Zahlen anzeigen
             </button>
           </>
         )}

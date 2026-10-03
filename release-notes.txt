@@ -3,8 +3,8 @@
 ### Alternativ-Investment: KI-Einstieg wie bei den anderen KI-Karten
 
 - Die Karte beginnt plakativ: "KI vergleicht diese Immobilie mit Alternativ-Investments"
-  mit Primaerknopf "Vergleich erstellen" (und Link "Nur Zahlen anzeigen"). Diagramm und
-  Zahlen erscheinen erst nach dem Klick.
+  mit dem Primaerknopf "Vergleich erstellen" als einziger Aktion. Diagramm und Zahlen
+  erscheinen erst nach dem Klick.
 - Ablauf wie bei den anderen KI-Karten: Einwilligung, Sterne-/Balken-Ladeeffekt mit
   Phasentexten, dann Ergebnis. Die KI-Einordnung wird gleich mit erzeugt (ein Klick, ein
   Kontingent), steht zugeklappt unter dem Diagramm mit erstem Satz als Vorschau und
