@@ -394,6 +394,61 @@
       })();
     </script>
 
+    <!-- Selbstheilung nach einem Deploy (2026-10-03): Haengt ein Browser an einer
+         alten index.html (Service-Worker-Cache), verweist sie auf gehashte Bundles,
+         die es nicht mehr gibt - Ergebnis war eine leere Seite, die sich nur durch
+         manuelles Loeschen der Websitedaten beheben liess. Schlaegt das Laden eines
+         Skripts aus /assets/ fehl (oder ein Chunk-Preload, "vite:preloadError"),
+         werden Service Worker und Caches entfernt und GENAU EINMAL neu geladen.
+         sessionStorage verhindert eine Schleife; das Flag faellt nach erfolgreichem
+         Start wieder weg, damit der naechste Fall wieder heilen kann. Steht vor dem
+         Modul-Skript, damit der Listener rechtzeitig haengt. -->
+    <script>
+      (function () {
+        function heilen() {
+          try {
+            if (sessionStorage.getItem("if_shell_heal")) return;
+            sessionStorage.setItem("if_shell_heal", "1");
+          } catch (e) {
+            return;
+          }
+          var jobs = [];
+          if (navigator.serviceWorker) {
+            jobs.push(
+              navigator.serviceWorker.getRegistrations().then(function (rs) {
+                return Promise.all(rs.map(function (r) { return r.unregister(); }));
+              }),
+            );
+          }
+          if (window.caches) {
+            jobs.push(
+              caches.keys().then(function (ks) {
+                return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+              }),
+            );
+          }
+          Promise.all(jobs).catch(function () {}).then(function () { location.reload(); });
+        }
+        window.addEventListener(
+          "error",
+          function (e) {
+            var t = e.target;
+            if (t && t.tagName === "SCRIPT" && t.src && t.src.indexOf("/assets/") > -1) heilen();
+          },
+          true,
+        );
+        window.addEventListener("vite:preloadError", heilen);
+        window.addEventListener("load", function () {
+          setTimeout(function () {
+            var r = document.getElementById("root");
+            if (r && r.children.length) {
+              try { sessionStorage.removeItem("if_shell_heal"); } catch (e) {}
+            }
+          }, 4000);
+        });
+      })();
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
 
     <!-- Service Worker -->

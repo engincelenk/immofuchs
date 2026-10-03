@@ -61,7 +61,11 @@ self.addEventListener('fetch', event => {
   // fuer den Offline-Fall gedacht und gilt jetzt auch nur noch dort.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetchWithTimeout(request, navigator.onLine ? 6000 : 800)
+      // Online: gewartet wird auf das Netz, OHNE Timeout-Rueckfall auf eine
+      // gecachte index.html - sie verweist nach einem Deploy auf geloeschte
+      // Bundles (2026-10-03: leere Seite). Der Cache greift nur noch, wenn das
+      // Netz wirklich fehlschlaegt oder der Browser offline ist.
+      (navigator.onLine ? fetch(request) : fetchWithTimeout(request, 800))
         .then(response => {
           cacheResponse(CACHE_NAME, request, response.clone());
           return response;

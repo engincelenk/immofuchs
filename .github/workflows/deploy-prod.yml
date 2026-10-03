@@ -61,9 +61,17 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y lftp
 
+          # Alte gehashte Bundles bleiben stehen (kein --delete in assets/): wer nach
+          # einem Deploy noch eine gecachte index.html hat, bekommt sonst 404 und eine
+          # leere Seite. Alles andere wird weiter bereinigt (--delete), damit z. B.
+          # nicht mehr auszuliefernde Datendateien auch vom Server verschwinden.
+          # Reihenfolge: assets, Rest (ohne assets/), assets nochmals - falls die
+          # Ausschluss-Regel je versagt, stellt der letzte Schritt alles wieder her.
           lftp -c "
           set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
           open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
-          mirror -R ./dist /immofuchs --reverse --verbose --continue --delete;
+          mirror -R --verbose --continue ./dist/assets /immofuchs/assets;
+          mirror -R ./dist /immofuchs --reverse --verbose --continue --delete --exclude '^assets/';
+          mirror -R --verbose --continue ./dist/assets /immofuchs/assets;
           quit;
           "

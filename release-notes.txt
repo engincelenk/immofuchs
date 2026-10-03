@@ -1,3 +1,22 @@
+## 2026-10-03 (1.100.62) [FRONTEND] [CI]
+
+### Leere Seite nach Deploy: Selbstheilung, Service Worker, alte Bundles bleiben
+
+- Befund: der Service Worker lieferte eine gecachte index.html aus, die auf nach dem
+  Deploy geloeschte Bundles verwies (mirror --delete) - leere Seite mit 404, im
+  normalen Profil auch nach Loeschen der Websitedaten, im Inkognito-Fenster nicht.
+- index.html: faellt das Laden eines Skripts aus /assets/ (oder ein Chunk-Preload) aus,
+  werden Service Worker und Caches entfernt und genau einmal neu geladen
+  (sessionStorage-Sperre gegen Schleifen, faellt nach erfolgreichem Start weg).
+- sw.js: online wird fuer die Startseite nicht mehr nach 6 s auf die gecachte
+  index.html zurueckgefallen, nur noch bei echtem Netzfehler oder offline.
+- deploy-dev/qa/prod: assets/ wird ohne --delete gespiegelt, alte gehashte Bundles
+  bleiben also stehen; alles andere wird weiter bereinigt (damit nicht mehr
+  auszuliefernde Datendateien vom Server verschwinden). assets/ waechst dadurch,
+  bei Bedarf gelegentlich von Hand alte Dateien entfernen.
+- Hinweis: qa und prod bekommen die Workflow-Aenderung erst mit dem naechsten Merge
+  der Branches.
+
 ## 2026-10-03 (1.100.61) [FRONTEND] [CI]
 
 ### Datenpflege Oktober 2026: Pfandbrief, Wertsteigerung, KfW; GENESIS entfernt
