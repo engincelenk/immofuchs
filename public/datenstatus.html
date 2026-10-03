@@ -1,6 +1,18 @@
 <!doctype html>
 <html lang="de">
 <head>
+  <!-- Theme wie index.html (Key "if_theme", Default dunkel) - blockierend vor dem ersten Paint. -->
+  <script>
+    (function () {
+      try {
+        var v = localStorage.getItem("if_theme");
+        if (v === "light") document.documentElement.setAttribute("data-theme", "light");
+        else if (v !== "system") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ImmoFuchs — Datenstatus</title>
@@ -8,8 +20,10 @@
 <style>
   :root {
     --ca:#E8600A; --ca-dk:#C44D00; --bg:#F5F5F0; --cc:#FFFFFF;
-    --ct:#1A1A1A; --ch:#8A8A80; --cb:#E5E5DC;
+    --ct:#1A1A1A; --ch:#6C6C62; --cb:#E5E5DC; --ci:#FAFAF7; color-scheme:light;
   }
+  :root[data-theme="dark"] { --bg:#181818; --cc:#232323; --ct:#F0F0EA; --ch:#9A9A90; --cb:#3A3A38; --ci:#2A2A2A; color-scheme:dark; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --bg:#181818; --cc:#232323; --ct:#F0F0EA; --ch:#9A9A90; --cb:#3A3A38; --ci:#2A2A2A; color-scheme:dark; } }
   * { box-sizing:border-box; }
   body {
     margin:0; padding:32px 16px; background:var(--bg); color:var(--ct);
@@ -23,7 +37,7 @@
     border:1px solid var(--cb); border-radius:12px; overflow:hidden;
   }
   th, td { text-align:left; padding:10px 12px; font-size:13px; border-bottom:1px solid var(--cb); }
-  th { background:#FAFAF7; font-weight:600; color:var(--ch); text-transform:uppercase; font-size:11px; letter-spacing:.5px; }
+  th { background:var(--ci); font-weight:600; color:var(--ch); text-transform:uppercase; font-size:11px; letter-spacing:.5px; }
   tr:last-child td { border-bottom:none; }
   .sub { color:var(--ch); font-size:11px; }
   .legend { margin-top:16px; font-size:12px; color:var(--ch); }

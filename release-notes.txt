@@ -1,3 +1,15 @@
+## 2026-10-03 (1.100.82) [FRONTEND+WORKER]
+
+### Objektseite: Cashflow vor Steuer, kuerzere KI-Texte, Rechtshinweis, Rechtsseiten hell/dunkel
+
+- Impressum, Datenschutz, AGB und Datenstatus folgen dem gewaehlten Design (Hell/Dunkel/System, Default dunkel,
+  gleicher localStorage-Key "if_theme" wie die App) statt fest hell.
+- Objektseite: Kopfsatz, Cashflow-Chip ("Cashflow v. St.", 5 Sprachen) und Cashflow-Kachel ("vor Steuer") zeigen
+  den Cashflow vor Steuer - einheitlich mit Uebersicht und Selbsttraeger-Check. Ampel/Begruendung bleiben nach Steuer.
+- Alternativ-Investment: sichtbarer Rechtshinweis (unverbindliche Modellrechnung, keine Anlageberatung/Empfehlung),
+  derselbe Satz am Anfang von "Hinweise und Vereinfachungen".
+- Worker: KI-Einordnung Alternativ-Investment hoechstens 165 statt 330 Woerter, Finn-Antworten ca. 80 statt 160 Woerter.
+
 ## 2026-10-03 (1.100.81) [FRONTEND]
 
 ### Dauerhafte Konsistenz-Matrix

@@ -121,6 +121,16 @@ export function InvestmentBriefing({
   const score = useMemo(() => berechneScore(data, t), [data, t]);
 
   const cashflowHeute = briefing.R.cf2MitSt;
+  // Kopfsatz und Cashflow-Chip zeigen den Cashflow VOR Steuer (Nutzer-Vorgabe
+  // 2026-10-03: plakative KPIs vor Steuer, wie Kachel, Uebersicht und
+  // Selbsttraeger-Check). Der "spaeter"-Vergleich nimmt dasselbe Jahr wie
+  // rendite.js (Ende der befristeten Effekte), ebenfalls vor Steuer.
+  const cfKopf = briefing.R.cf2OhneSt;
+  const effektJahr = briefing.R.cfNachEffektenJahr;
+  const cfKopfSpaeter =
+    effektJahr != null && briefing.R.yearRows?.[effektJahr - 1]
+      ? briefing.R.yearRows[effektJahr - 1].cfOhneSt / 12
+      : null;
   const cashflowVorSteuer = briefing.kernzahlen.find((k) => k.key === "monatlich")?.vorSteuer ?? null;
   const groessterHebel = useMemo(
     () => cockpitGroessterHebel(data, t, briefing.spannen, cashflowHeute),
@@ -133,15 +143,14 @@ export function InvestmentBriefing({
   // den Standardhinweis, sobald die Analyse gelaufen ist.
   const einschaetzung = cockpitEinschaetzung(
     {
-      cashflow: cashflowHeute,
-      cashflowStufe: briefing.ampel?.stufe,
+      cashflow: cfKopf,
+      cashflowStufe: cfKopf < 0 ? (briefing.ampel?.stufe === "rot" ? "rot" : "gelb") : "gruen",
       preis: v1,
       scoreWert: score?.verfuegbar ? score.score : null,
       scoreTier: score?.verfuegbar ? score.tier : null,
       tilgung: briefing.R.t1Gesamt,
-      spaeter: briefing.R.cfNachEffektenZeigen
-        ? { jahr: briefing.R.cfNachEffektenJahr, wert: briefing.R.cfNachEffektenMon }
-        : null,
+      spaeter:
+        cfKopfSpaeter != null && cfKopfSpaeter < cfKopf - 50 ? { jahr: effektJahr, wert: cfKopfSpaeter } : null,
       topRisiko: ergebnis ? risikenVon(ergebnis)[0]?.title || null : null,
     },
     t,

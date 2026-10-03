@@ -40,7 +40,7 @@ describe("AlternativInvestment", () => {
       expect(html).toContain(name);
     }
     expect(html).toContain("Aus eigener Tasche zu Beginn");
-    expect(html).toContain("keine Anlageberatung");
+    expect(html).toContain("weder eine Anlageberatung noch eine Empfehlung");
     expect(html).toContain("KI-Einordnung erstellen");
   });
 

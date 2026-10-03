@@ -309,7 +309,7 @@ function KennzahlKachel({ k, t }) {
         }`.trim()
       : k.key === "cashflow" || k.key === "nettorendite"
         ? k.key === "cashflow"
-          ? L(t, "brfKernNachSteuer", "nach Steuer")
+          ? L(t, "brfKernVorSteuer", "vor Steuer")
           : L(t, "brfKernProJahr", "p. a.")
         : null;
 

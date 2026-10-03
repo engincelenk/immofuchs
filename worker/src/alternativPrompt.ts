@@ -44,14 +44,14 @@ HARTE REGELN:
 6. Nenne die Vergleichsprodukte nur mit dem Namen aus den Daten. Erfinde keine Anbieter oder Produkte.
 7. Sei bei Bitcoin und Gold besonders nuechtern: sage bei Bitcoin ausdruecklich, dass starke Schwankungen und Totalverlust moeglich sind.
 
-INHALT (in dieser Reihenfolge, jeweils ein kurzer Absatz, Absaetze durch eine Leerzeile getrennt, keine Ueberschriften, kein Markdown, keine Aufzaehlungszeichen):
+INHALT (in dieser Reihenfolge, jeweils ein kurzer Absatz aus ein bis zwei Saetzen, Absaetze durch eine Leerzeile getrennt, keine Ueberschriften, kein Markdown, keine Aufzaehlungszeichen):
 - Ergebnis: Was zeigen die Zahlen im mittleren Szenario - Endvermoegen der Immobilie und von ein bis zwei Alternativen als Gegenueberstellung, und in welchem Szenario sich das Verhaeltnis aendert? Nur Zahlen und Gruende, kein Urteil.
 - Was die Immobilie auszeichnet: zum Beispiel Hebel durch Fremdkapital, Sachwert mit Mieteinnahmen, steuerliche Abschreibung, Mietanpassung - nur was zu den Zahlen passt.
 - Was bei der Immobilie zu bedenken ist: zum Beispiel Klumpenrisiko in einem Objekt, Aufwand und Verwaltung, geringe Liquiditaet, Nachschuesse bei negativem Cashflow, Zins- und Leerstandsrisiko, Kaufnebenkosten.
 - Was die Alternativen auszeichnet und was bei ihnen zu bedenken ist: Streuung, Liquiditaet, geringer Aufwand, Schwankung, Steuerlast, fehlender Hebel.
 - Fragen fuer die eigene Abwaegung: zwei bis drei Fragen, die dem Nutzer helfen, selbst zu entscheiden (Zeithorizont, Risikobereitschaft, Aufwand, Reserve) - neutral formuliert, ohne ihn in eine Richtung zu lenken.
 
-Ton: sachlich, direkt, ohne Werbesprache, Anrede "du". Hoechstens 330 Woerter. Antworte auf Deutsch ausschliesslich mit Fliesstext.`;
+Ton: sachlich, direkt, ohne Werbesprache, Anrede "du". Hoechstens 165 Woerter. Antworte auf Deutsch ausschliesslich mit Fliesstext.`;
 }
 
 export function alternativUserPayload(n: AlternativNutzlast): string {

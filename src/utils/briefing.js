@@ -181,11 +181,14 @@ export function briefingKernkennzahlen(d, t, R, K, opt = {}) {
     eintraege.push({ key: "nettorendite", wert: K.anfangsrendite, einheit: "prozent" });
   }
 
+  // Plakative Kachel: Cashflow VOR Steuer (Nutzer-Vorgabe 2026-10-03), wie
+  // Uebersicht und Selbsttraeger-Check. Ampel und Begruendung bleiben beim
+  // massgeblichen Wert nach Steuer.
   eintraege.push({
     key: "cashflow",
-    wert: R.cf2MitSt,
+    wert: R.cf2OhneSt,
     einheit: "eurMonat",
-    art: R.cf2MitSt < 0 ? "zuzahlung" : "ueberschuss",
+    art: R.cf2OhneSt < 0 ? "zuzahlung" : "ueberschuss",
   });
 
   const ekR = ekRenditePa(R, d);

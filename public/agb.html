@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+  <!-- Theme wie index.html (Key "if_theme", Default dunkel) - blockierend vor dem ersten Paint. -->
+  <script>
+    (function () {
+      try {
+        var v = localStorage.getItem("if_theme");
+        if (v === "light") document.documentElement.setAttribute("data-theme", "light");
+        else if (v !== "system") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
@@ -8,21 +20,27 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
   <style>
+    /* Hell/Dunkel wie App.jsx ROOT_TOKENS_CSS (--lk: Linkfarbe, im Dunkelmodus aufgehellt fuer AA-Kontrast) */
+    :root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#6c6c62;--cb:#e5e5dc;--ci:#fafaf7;--lk:#c44d00;--nt-bg:#fdeee3;--nt-bd:#f6c9a8;--nt-tx:#6b3300;--bad-bg:#fbe1e1;--bad-bd:#b3261e;--bad-tx:#7a1610;color-scheme:light}
+    :root[data-theme="dark"]{--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--lk:#f0843f;--nt-bg:#3a2414;--nt-bd:#5a3a1e;--nt-tx:#f5c9a0;--bad-bg:#3a1414;--bad-bd:#6b2626;--bad-tx:#f87171;color-scheme:dark}
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]){--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--lk:#f0843f;--nt-bg:#3a2414;--nt-bd:#5a3a1e;--nt-tx:#f5c9a0;--bad-bg:#3a1414;--bad-bd:#6b2626;--bad-tx:#f87171;color-scheme:dark}}
+  </style>
+  <style>
     @import url('/fonts/dm-sans.css');
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'DM Sans',sans-serif;background:#f5f5f0;color:#1a1a1a;padding:20px;line-height:1.7}
-    .wrap{max-width:680px;margin:0 auto;background:#fff;border-radius:16px;padding:32px 24px;border:1px solid #e5e5dc}
-    h1{font-size:22px;color:#e8600a;margin-bottom:8px}
-    h2{font-size:15px;margin-top:24px;margin-bottom:8px;color:#1a1a1a}
-    p,li{font-size:13px;color:#3d3d3a;margin-bottom:8px}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);padding:20px;line-height:1.7}
+    .wrap{max-width:680px;margin:0 auto;background:var(--cc);border-radius:16px;padding:32px 24px;border:1px solid var(--cb)}
+    h1{font-size:22px;color:var(--lk);margin-bottom:8px}
+    h2{font-size:15px;margin-top:24px;margin-bottom:8px;color:var(--ct)}
+    p,li{font-size:13px;color:var(--cl);margin-bottom:8px}
     ul{padding-left:20px;margin-bottom:8px}
-    a{color:#e8600a;text-decoration:none}
-    .back{display:inline-block;margin-bottom:16px;font-size:13px;color:#e8600a}
-    .info-box{background:#fafaf7;border:1px solid #e5e5dc;border-radius:10px;padding:16px 20px;margin:12px 0;font-size:13px;line-height:1.8}
-    .notice{background:rgba(232,96,10,.06);border:1px solid rgba(232,96,10,.2);border-radius:8px;padding:12px 16px;font-size:12px;color:#7a3800;margin:16px 0}
-    .draft{background:#fbe1e1;border:1px solid #b3261e;border-radius:8px;padding:14px 16px;font-size:12.5px;color:#7a1610;margin:0 0 20px}
-    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e5e5dc;font-size:11px;color:#8a8a80;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
-    .footer a{color:#e8600a}
+    a{color:var(--lk);text-decoration:none}
+    .back{display:inline-block;margin-bottom:16px;font-size:13px;color:var(--lk)}
+    .info-box{background:var(--ci);border:1px solid var(--cb);border-radius:10px;padding:16px 20px;margin:12px 0;font-size:13px;line-height:1.8}
+    .notice{background:var(--nt-bg);border:1px solid var(--nt-bd);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--nt-tx);margin:16px 0}
+    .draft{background:var(--bad-bg);border:1px solid var(--bad-bd);border-radius:8px;padding:14px 16px;font-size:12.5px;color:var(--bad-tx);margin:0 0 20px}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--cb);font-size:11px;color:var(--ch);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .footer a{color:var(--lk)}
   </style>
 </head>
 <body>
@@ -151,7 +169,7 @@
       erstattet.
     </div>
 
-    <p style="font-size:12px;color:#8a8a80">Ende der Widerrufsbelehrung.</p>
+    <p style="font-size:12px;color:var(--ch)">Ende der Widerrufsbelehrung.</p>
 
     <h3 style="font-size:14px;margin-top:24px;margin-bottom:6px">Muster-Widerrufsformular</h3>
     <div class="info-box">
@@ -169,7 +187,7 @@
       Papier): _________________</p>
       <p style="margin-bottom:0">Datum: _________________</p>
     </div>
-    <p style="font-size:11px;color:#8a8a80">(*) Unzutreffendes streichen.</p>
+    <p style="font-size:11px;color:var(--ch)">(*) Unzutreffendes streichen.</p>
 
     <h2>8. Keine Anlage-, Steuer- oder Rechtsberatung</h2>
     <div class="notice">

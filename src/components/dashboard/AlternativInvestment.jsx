@@ -468,13 +468,11 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
         )}
       </div>
 
-      <div style={{ ...klein, lineHeight: 1.5 }}>
-        Szenariovergleich, keine Anlageberatung. Renditen sind Annahmen, keine Prognose.
-      </div>
+      <div style={{ ...klein, lineHeight: 1.5 }}>{RECHTSHINWEIS}</div>
       <details style={details}>
         <summary style={summary}>Hinweise und Vereinfachungen</summary>
         <p style={detailText}>
-          Die Renditen der Alternativen sind Annahmen für drei Szenarien, keine Prognose; vergangene
+          {RECHTSHINWEIS} Die Renditen der Alternativen sind Annahmen für drei Szenarien, keine Prognose; vergangene
           Wertentwicklung sagt nichts über die Zukunft. Die Immobilie ist unter der Annahme gerechnet,
           dass sie nach Ablauf der 10-jährigen Spekulationsfrist verkauft wird (kein Steuerabzug auf den
           Verkaufsgewinn, ohne Verkaufskosten). Vereinfacht gerechnet: nominal ohne Inflation,
@@ -486,6 +484,11 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
     </section>
   );
 }
+
+// Rechtshinweis (Nutzer-Vorgabe 2026-10-03): sichtbar unter dem Vergleich und
+// als erster Satz der "Hinweise und Vereinfachungen".
+const RECHTSHINWEIS =
+  "Die dargestellten Vergleiche sind unverbindliche Modellrechnungen auf Grundlage von Annahmen und stellen weder eine Anlageberatung noch eine Empfehlung oder Aufforderung zum Erwerb oder zur Veräußerung von Vermögenswerten dar.";
 
 const heroKarte = { background: "var(--ca-bg)", borderColor: "var(--ca-bd)", gap: 16 };
 const rechenTabelle = { width: "100%", borderCollapse: "collapse", marginTop: 6, fontSize: 12.5 };
