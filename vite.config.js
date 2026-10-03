@@ -26,15 +26,14 @@ function swVersionPlugin() {
 // duerfen (2026-10-03, Schutz vor Massenabzug): plz-kreis.txt und
 // regionalpreise.json liefert jetzt der Worker einzeln aus
 // (worker/src/routes/daten.ts, Quelle bleibt public/ fuer die Build-Skripte
-// und scripts/sync_worker_daten.mjs). miete-referenz.txt und
-// mieten-fortschreibung.json laedt die App derzeit gar nicht, germanpostcodes.csv
-// wird nirgends referenziert - alle drei haben im Auslieferungsstand nichts
-// verloren. Sie bleiben im Repo, nur dist/ bekommt sie nicht.
+// und scripts/sync_worker_daten.mjs). miete-referenz.txt laedt die App derzeit
+// gar nicht, germanpostcodes.csv wird nirgends referenziert - beide haben im
+// Auslieferungsstand nichts verloren. Sie bleiben im Repo, nur dist/ bekommt
+// sie nicht.
 const NICHT_AUSLIEFERN = [
   "plz-kreis.txt",
   "regionalpreise.json",
   "miete-referenz.txt",
-  "mieten-fortschreibung.json",
   "germanpostcodes.csv",
 ];
 function nichtAusliefernPlugin() {

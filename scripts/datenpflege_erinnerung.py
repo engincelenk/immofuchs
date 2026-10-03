@@ -11,7 +11,7 @@ Zwei Arten von Faelligkeit:
   1. Kalender (THEMEN unten): quartalsweise im Jan/Apr/Jul/Okt, halbjaehrlich
      im Jan/Jul, jaehrlich im genannten Monat.
   2. Veraltete Automatik: Werte, die der Monatsjob eigentlich selbst holt
-     (PFANDBRIEF, WERTSTEIGERUNG), deren Abruf aber haengt - erkannt am
+     (PFANDBRIEF), deren Abruf aber haengt - erkannt am
      "stand" in src/data.js.
 
 Ein Issue bleibt offen, bis es jemand schliesst. Ist ein Thema wieder faellig,
@@ -218,17 +218,6 @@ THEMEN = [
         "und ENERGIE_KLASSEN in src/data.js.",
     },
     {
-        "key": "MIETEN_FORTSCHREIBUNG",
-        "titel": "Mieten-Fortschreibung je Bundesland",
-        "monate": [2],
-        "quelle": "Destatis GENESIS 61111-0020 (Index der Nettokaltmieten, neues Kalenderjahr)",
-        "datei": "`public/mieten-fortschreibung.json`",
-        "verwendung": "Objektseite: KI-Analyse, Ortsmiete hochgerechnet auf heute",
-        "claude": "Datenpflege Mieten-Fortschreibung: Baue public/mieten-fortschreibung.json mit "
-        "python scripts/build_mieten_fortschreibung.py neu, sobald Destatis das Vorjahr in "
-        "Tabelle 61111-0020 veröffentlicht hat, und prüfe die Faktoren auf Plausibilität.",
-    },
-    {
         "key": "PLZ_DATEN",
         "titel": "PLZ-Zuordnungen und Ortsmiete",
         "monate": [3],
@@ -240,6 +229,17 @@ THEMEN = [
         "scripts/ neu (build_plz_kreis.mjs, build_miete_referenz.py). Nach Änderungen an plz-kreis.txt "
         "IMMER node scripts/sync_worker_daten.mjs ausführen und den Worker neu deployen (plz-kreis.txt "
         "wird nicht mehr statisch ausgeliefert).",
+    },
+    {
+        "key": "WERTSTEIGERUNG",
+        "titel": "Wertsteigerung (Häuserpreisindex)",
+        "monate": QUARTAL,
+        "quelle": "Destatis-Pressemitteilung zum Häuserpreisindex (destatis.de → Presse, neues Quartal ca. 3 Monate nach Quartalsende)",
+        "datei": "`src/data.js` → `WERTSTEIGERUNG`",
+        "verwendung": "Renditerechner (Vorbelegung Wertsteigerung), Landingpage „Echte Marktdaten“",
+        "claude": "Datenpflege WERTSTEIGERUNG: Lies die neueste Destatis-Pressemitteilung zum Häuserpreisindex "
+        "(destatis.de, Presse) und trage die Veränderung der Wohnimmobilienpreise insgesamt gegenüber dem "
+        "Vorjahresquartal als pA und das Quartal als stand in WERTSTEIGERUNG (src/data.js) ein.",
     },
     {
         "key": "ALTERNATIV",
@@ -291,28 +291,13 @@ def veraltete_automatik(heute):
         themen.append({
             "key": "PFANDBRIEF",
             "titel": f"Pfandbrief-Zins veraltet (Stand {pf})",
-            "quelle": "Deutsche Bundesbank, Zeitreihen-Datenbank, Reihe BBK01.WU8148 (Hypothekenpfandbriefe 10 J.)",
+            "quelle": "Deutsche Bundesbank, Reihe BBSIS.M.I.UMR.RD.EUR.MFISX.B.X100.A.R.A.A._Z._Z.A (Umlaufrendite Hypothekenpfandbriefe, Monatswerte)",
             "datei": "`src/data.js` → `PFANDBRIEF`",
             "verwendung": "Vorfälligkeitsrechner: Wiederanlagezins",
             "claude": f"Datenpflege PFANDBRIEF: Der automatische Abruf hängt, der Wert steht seit {pf}. "
-            "Trage den aktuellen Monatswert der Bundesbank-Reihe BBK01.WU8148 in PFANDBRIEF (src/data.js) ein "
-            "und prüfe, warum fetch_pfandbrief() in scripts/monthly_update.py scheitert.",
-        })
-    ws = stand_lesen(data_js, "WERTSTEIGERUNG")
-    alter = monate_seit(ws, heute)
-    # Destatis veroeffentlicht ein Quartal rund drei Monate nach seinem Ende.
-    if alter is not None and alter > 6:
-        themen.append({
-            "key": "WERTSTEIGERUNG",
-            "titel": f"Wertsteigerung veraltet (Stand {ws})",
-            "quelle": "Destatis GENESIS, Häuserpreisindex Tabelle 61262-0002",
-            "datei": "`src/data.js` → `WERTSTEIGERUNG`",
-            "verwendung": "Renditerechner (Vorbelegung Wertsteigerung), Landingpage „Echte Marktdaten“",
-            "vorher": "Prüfe, ob die GitHub-Secrets `GENESIS_USER` und `GENESIS_PASS` hinterlegt sind "
-            "(Repo → Settings → Secrets → Actions). Ohne sie kann der Monatsjob den Wert nicht holen.",
-            "claude": f"Datenpflege WERTSTEIGERUNG: Der Wert steht seit {ws}. Prüfe im Log des letzten "
-            "Monatsjobs, warum der GENESIS-Abruf nichts geschrieben hat, und trage notfalls die aktuelle "
-            "Vorjahresveränderung des Häuserpreisindex (61262-0002) von Hand ein.",
+            "Trage den aktuellen Monatswert der Bundesbank-Reihe BBSIS.M.I.UMR.RD.EUR.MFISX.B.X100.A.R.A.A._Z._Z.A "
+            "(api.statistiken.bundesbank.de) in PFANDBRIEF (src/data.js) ein und prüfe, warum "
+            "fetch_pfandbrief_zins() in scripts/monthly_update.py scheitert.",
         })
     return themen
 

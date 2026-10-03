@@ -108,17 +108,10 @@ jobs:
       # Seit 2026-08-24 ohne LLM: Bundesbank-PDF (pdfplumber) + Interhyp-
       # Zinstabelle (Playwright, da clientseitig gerendert) - kein
       # ANTHROPIC_API_KEY/Guthaben mehr noetig, siehe scripts/monthly_update.py.
-      #
-      # GENESIS_USER/GENESIS_PASS: Zugang zur Destatis-GENESIS-API fuer die
-      # Wertsteigerung (WERTSTEIGERUNG). Fehlten hier bis 2026-10-01 - das
-      # Skript lief deshalb nie gegen GENESIS. Ohne hinterlegte Secrets bleiben
-      # sie leer, das Skript meldet das und laesst den Wert stehen.
       # ANTHROPIC_API_KEY nur noch fuer den aelteren Skriptstand auf main.
       - name: 🔄 Marktdaten aktualisieren
         id: update
         env:
-          GENESIS_USER: ${{ secrets.GENESIS_USER }}
-          GENESIS_PASS: ${{ secrets.GENESIS_PASS }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/monthly_update.py
 

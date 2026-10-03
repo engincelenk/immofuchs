@@ -1,3 +1,25 @@
+## 2026-10-03 (1.100.61) [FRONTEND] [CI]
+
+### Datenpflege Oktober 2026: Pfandbrief, Wertsteigerung, KfW; GENESIS entfernt
+
+- GENESIS (Destatis-API) komplett entfernt: Abruf und Parser in monthly_update.py,
+  GENESIS_USER/GENESIS_PASS im Workflow, Hinweise in der Datenpflege-Erinnerung.
+  Wertsteigerung wird jetzt quartalsweise von Hand aus der Destatis-Pressemitteilung
+  gepflegt (neues Quartalsthema WERTSTEIGERUNG): Q2 2026 = +0,6 % (vorher Q1 1,4 %).
+- Pfandbrief-Wiederanlagezins: der Abruf stand seit Mai. Ursache: api.bundesbank.de
+  antwortet nicht mehr, die Bundesbank hat auf api.statistiken.bundesbank.de mit
+  neuer Reihen-ID umgestellt. Abruf angepasst und gegen die echte API geprueft:
+  September 2026 = 3,63 %. ACHTUNG: neue Reihe ist die Umlaufrendite ALLER
+  Hypothekenpfandbriefe (Monatswert), nicht mehr die 10-Jahres-Reihe BBK01.WU8148.
+- KfW-Kredit (Stand Oktober 2026): Richtzins 297/298 von 2,0 auf 2,2 %, Programm 124
+  von 4,2 auf 4,65 %; Hoechstbetraege, Laufzeiten und Zinsbindung unveraendert.
+  Quelle: Vergleichsportale (Stand 29.09.2026), nicht kfw.de direkt.
+- Mieten-Fortschreibung geloescht (nutzte GENESIS, wurde von der App nie geladen):
+  public/mieten-fortschreibung.json, build_mieten_fortschreibung.py,
+  utils/mietenFortschreibung.js samt Test, Datenpflege-Erinnerung.
+- Hinweis: der Monatsjob laeuft immer vom Workflow auf main - die Aenderungen an
+  monthly-update.yml und monthly_update.py wirken erst nach einem Commit auf main.
+
 ## 2026-10-03 (1.100.60) [FRONTEND]
 
 ### Alternativ-Investment: Balkendiagramm und Aufklappmenues

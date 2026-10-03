@@ -60,11 +60,15 @@ export const BL_N = {
 export const BL_O = [{ v: "", l: "–" }, ...Object.entries(BL_N).map(([v, l]) => ({ v, l }))];
 
 // ── WIEDERANLAGEZINS (PFANDBRIEF) ───────────────────────────────────────
-// Intervall: monatlich (automatisch via Bundesbank API)
-// Quelle: Deutsche Bundesbank, Zeitreihe BBK01.WU8148 (Hypothekenpfandbrief 10J)
+// Intervall: monatlich (automatisch via Bundesbank API, scripts/monthly_update.py)
+// Quelle: Deutsche Bundesbank, Reihe BBSIS.M.I.UMR.RD.EUR.MFISX.B.X100.A.R.A.A._Z._Z.A
+// (Umlaufrendite inländischer Hypothekenpfandbriefe, Monatswert). Seit 2026-10-03
+// diese Gesamtreihe statt der früheren 10-Jahres-Reihe BBK01.WU8148 (alter
+// API-Server abgeschaltet) - ein Durchschnitt über alle Laufzeiten, kein
+// laufzeitgenauer Wiederanlagezins.
 export const PFANDBRIEF = {
-  stand: "Mai 2026",
-  zins: 3.4, // % p.a. — 10-jähriger Hypothekenpfandbrief Ø
+  stand: "September 2026",
+  zins: 3.63, // % p.a. — Hypothekenpfandbriefe, Umlaufrendite Ø aller Laufzeiten
 };
 
 // ── MIETPREISPROGNOSE ────────────────────────────────────────────────────
@@ -77,19 +81,19 @@ export const MIET_P = {
 };
 
 // ── WERTSTEIGERUNG WOHNIMMOBILIEN ────────────────────────────────────────
-// Intervall: quartalsweise (automatisch via scripts/monthly_update.py)
-// Quelle: Statistisches Bundesamt, Haeuserpreisindex (GENESIS-Tabelle 61262),
-//         Veraenderung zum Vorjahresquartal.
+// Intervall: quartalsweise, von Hand (Datenpflege-Erinnerung WERTSTEIGERUNG)
+// Quelle: Statistisches Bundesamt, Pressemitteilung zum Haeuserpreisindex,
+//         Veraenderung der Wohnimmobilienpreise insgesamt zum Vorjahresquartal.
 // Wird an zwei Stellen gelesen: als Kennzahl auf der Landingpage-Datentafel
 // und als Vorbelegung des Eingabefelds "Wertsteigerung" im Renditerechner
 // (App.jsx defaults.wertP). Bewusst dieselbe Zahl - die Landingpage soll
 // nichts anderes behaupten, als der Rechner voreinstellt.
 // ACHTUNG: Das ist die aktuelle Jahresrate, keine Langfristannahme. Sie
-// schwankt spuerbar (Q4/2025: +3,0 %, Q1/2026: +1,4 %) und kann in einer
-// fallenden Marktphase negativ werden.
+// schwankt spuerbar (Q4/2025: +3,0 %, Q1/2026: +1,4 %, Q2/2026: +0,6 %) und
+// kann in einer fallenden Marktphase negativ werden.
 export const WERTSTEIGERUNG = {
-  stand: "Q1 2026",
-  pA: 1.4, // % gegenüber Vorjahresquartal
+  stand: "Q2 2026",
+  pA: 0.6, // % gegenüber Vorjahresquartal
 };
 
 // ── AFA-SÄTZE § 7 EStG ───────────────────────────────────────────────────
@@ -141,13 +145,13 @@ export const AFA = {
 // ab und werden erst bei der Zusage festgeschrieben — alles hier sind
 // Richtwerte, die der Nutzer überschreiben kann.
 export const KFW_KREDIT = {
-  stand: "August 2026",
+  stand: "Oktober 2026",
   kfn: {
     nr: "297/298",
     vermietbar: true, // Vermieter sind ausdrücklich antragsberechtigt
     maxProWE: 100000, // € je Wohneinheit
     maxProWE_qng: 150000, // € je Wohneinheit mit QNG-Zertifikat
-    zins: 2.0, // % effektiv, Richtwert
+    zins: 2.2, // % effektiv, Richtwert (297, 26–35 J., Standard 55)
     maxLaufzeit: 35,
     maxZinsbindung: 10,
     maxTilgungsfrei: 5,
@@ -160,7 +164,7 @@ export const KFW_KREDIT = {
     vermietbar: false,
     maxProWE: 100000,
     maxProWE_qng: 100000,
-    zins: 4.2, // % effektiv, Richtwert
+    zins: 4.65, // % effektiv, Richtwert (124, 10 J. Zinsbindung)
     maxLaufzeit: 35,
     maxZinsbindung: 10,
     maxTilgungsfrei: 5,

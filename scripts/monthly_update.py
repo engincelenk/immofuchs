@@ -55,16 +55,9 @@ BUNDESBANK_PDF_URL = (
 )
 INTERHYP_URL = "https://www.interhyp.de/zinsen/"
 
-# GENESIS-Online (Statistisches Bundesamt), Haeuserpreisindex nach Quartalen.
-# Liefert die Wertsteigerung fuer die Landingpage-Datentafel und zugleich die
-# Vorbelegung des Renditerechner-Eingabefelds (data.js WERTSTEIGERUNG).
-GENESIS_URL = "https://www-genesis.destatis.de/genesisWS/rest/2020/data/tablefile"
-GENESIS_TABLE = "61262-0002"
-
 # Faelligkeitspruefung: Konstante -> Pflegeintervall in Monaten. Erfasst sind
 # nur Konstanten mit einem stand-Feld in data.js. Das Skript aktualisiert
-# diese Werte nicht selbst (ausser MARKET_RATES, PFANDBRIEF und
-# WERTSTEIGERUNG), sondern meldet, was ueberfaellig ist - damit die
+# diese Werte nicht selbst (ausser MARKET_RATES und PFANDBRIEF), sondern meldet, was ueberfaellig ist - damit die
 # Intervall-Angaben in data.js nicht folgenlos bleiben.
 # Die Quartalsreihen stehen auf 6 Monate statt 3: Destatis und BDEW
 # veroeffentlichen mit rund zwei Monaten Verzug, ein Quartalswert ist also
@@ -84,12 +77,12 @@ PFLEGE_INTERVALL = {
 
 # Anzeige-Metadaten fuer public/datenstatus.html - rein informativ, steuert
 # nichts an der eigentlichen Pruefung. "automatisiert" = wird von diesem
-# Skript selbst geschrieben (MARKET_RATES/PFANDBRIEF/WERTSTEIGERUNG) oder
+# Skript selbst geschrieben (MARKET_RATES/PFANDBRIEF) oder
 # muss von Hand in data.js gepflegt werden (Rest).
 DATENSTATUS_META = {
     "MARKET_RATES": {"label": "Bauzinsen", "rechner": "Renditerechner, Kreditrechner", "automatisiert": True},
     "PFANDBRIEF": {"label": "Wiederanlagezins (Pfandbrief)", "rechner": "Vorfälligkeitsrechner", "automatisiert": True},
-    "WERTSTEIGERUNG": {"label": "Wertsteigerung Wohnimmobilien", "rechner": "Renditerechner, Landingpage", "automatisiert": True},
+    "WERTSTEIGERUNG": {"label": "Wertsteigerung Wohnimmobilien", "rechner": "Renditerechner, Landingpage", "automatisiert": False},
     "MIET_P": {"label": "Mietpreisprognose", "rechner": "Mieterhöhungsrechner", "automatisiert": False},
     "KFW_HEIZUNG": {"label": "KfW-Heizungsförderung 458 (BEG)", "rechner": "Sanierungsrechner", "automatisiert": False},
     "BAFA": {"label": "BAFA-Förderung", "rechner": "Sanierungsrechner", "automatisiert": False},
@@ -148,94 +141,6 @@ def replace_market_rates_block(data_js: str, stand: str, avg, changes: list) -> 
         return data_js
     changes.append(f"  MARKET_RATES: stand={stand}, avg={avg}")
     return data_js[: m.start()] + new_block + data_js[m.end() :]
-
-
-# ── Quelle 3: Statistisches Bundesamt (GENESIS-Online REST-API) ───────────
-
-def parse_genesis_hpi(text: str):
-    """Aus der ffcsv-Antwort die juengste Jahresveraenderungsrate des
-    Haeuserpreisindex (Wohnimmobilien insgesamt, Deutschland) rechnen.
-
-    Bewusst tolerant und im Zweifel None: lieber keinen Wert schreiben als
-    einen falschen. Erkannt wird die Reihe ueber das Merkmalslabel
-    ("insgesamt"), die Quartale ueber JAHR/QUARTAL-Spalten.
-    """
-    import csv, io as _io
-
-    reihe = {}
-    try:
-        rd = csv.DictReader(_io.StringIO(text), delimiter=";")
-        for row in rd:
-            low = {(k or "").lower(): (v or "").strip() for k, v in row.items()}
-            label = " ".join(v for k, v in low.items() if k.endswith("_label")).lower()
-            if "insgesamt" not in label:
-                continue
-            jahr = next((v for k, v in low.items() if k in ("zeit", "jahr", "time")), "")
-            quartal = next((v for k, v in low.items() if "quartal" in k or k == "zeit_label"), "")
-            wert = next((v for k, v in low.items() if k in ("value", "wert")), "")
-            j = re.search(r"(20\d{2})", str(jahr))
-            q = re.search(r"([1-4])", str(quartal))
-            w = str(wert).replace(",", ".")
-            if not (j and q):
-                continue
-            try:
-                reihe[(int(j.group(1)), int(q.group(1)))] = float(w)
-            except ValueError:
-                continue
-    except Exception as e:
-        print(f"  ✗ GENESIS-Antwort nicht lesbar: {e}")
-        return None
-
-    if len(reihe) < 5:
-        print(f"  ✗ GENESIS: nur {len(reihe)} Quartalswerte erkannt — zu wenig")
-        return None
-
-    jahr, quartal = max(reihe)
-    vorjahr = reihe.get((jahr - 1, quartal))
-    if not vorjahr:
-        print(f"  ✗ GENESIS: Vorjahresquartal Q{quartal}/{jahr - 1} fehlt")
-        return None
-    rate = round((reihe[(jahr, quartal)] / vorjahr - 1) * 100, 1)
-    return rate, f"Q{quartal} {jahr}"
-
-
-def fetch_wertsteigerung():
-    """Jahresveraenderungsrate des Haeuserpreisindex aus GENESIS-Tabelle
-    61262-0002. Zugangsdaten aus GENESIS_USER/GENESIS_PASS (GitHub-Secrets).
-
-    Fehlen die Zugangsdaten oder schlaegt der Abruf fehl, bleibt
-    WERTSTEIGERUNG unveraendert - dieselbe Fail-Safe-Logik wie bei den
-    Zinsquellen.
-
-    ACHTUNG (2026-08-25): Bei der Einfuehrung lag noch kein GENESIS-Konto
-    vor, die Funktion konnte also nicht gegen die echte API getestet werden.
-    Der erste Lauf ist zu pruefen - Wert und Quartal werden vor dem
-    Schreiben ausgegeben.
-    """
-    user, pw = os.environ.get("GENESIS_USER"), os.environ.get("GENESIS_PASS")
-    if not user or not pw:
-        print("  ⚠ GENESIS_USER/GENESIS_PASS nicht gesetzt — WERTSTEIGERUNG bleibt unveraendert")
-        return None
-    try:
-        r = requests.get(
-            GENESIS_URL,
-            params={
-                "username": user,
-                "password": pw,
-                "name": GENESIS_TABLE,
-                "area": "all",
-                "format": "ffcsv",
-                "compress": "false",
-                "language": "de",
-            },
-            headers=HEADERS,
-            timeout=60,
-        )
-        r.raise_for_status()
-        return parse_genesis_hpi(r.text)
-    except Exception as e:
-        print(f"  ✗ GENESIS-Abruf fehlgeschlagen: {e}")
-        return None
 
 
 def sammle_konstanten_status(data_js: str, now):
@@ -410,22 +315,40 @@ def fetch_interhyp_10j():
 
 # ── Pfandbrief (Wiederanlagezins Vorfaelligkeitsrechner) - unveraendert ────
 
-def fetch_pfandbrief_zins() -> float | None:
-    """Fetch current Hypothekenpfandbrief yield (10Y) from Bundesbank API.
-    Series: BBK01.WU8148 — Umlaufrendite Hypothekenpfandbriefe 10J"""
+# Die Bundesbank hat ihre Statistik-API umgestellt: api.bundesbank.de (Reihe
+# BBK01.WU8148, 10 J.) antwortet nicht mehr (2026-10-03: Verbindung scheitert,
+# der Wert stand seit Mai). Neuer Host und neue Reihen-ID. Die neue Reihe ist die
+# Umlaufrendite ALLER inlaendischen Hypothekenpfandbriefe als Monatswert, nicht
+# mehr die 10-Jahres-Reihe - ein Durchschnitt ueber die Laufzeiten.
+PFANDBRIEF_URL = (
+    "https://api.statistiken.bundesbank.de/rest/data/BBSIS/"
+    "M.I.UMR.RD.EUR.MFISX.B.X100.A.R.A.A._Z._Z.A"
+)
+
+
+def fetch_pfandbrief_zins():
+    """Juengster Monatswert der Umlaufrendite Hypothekenpfandbriefe.
+    Liefert (zins, "Monat Jahr") oder None. Der Stand ist der Monat des
+    Beobachtungswerts, nicht des Laufs: am 1. kommt der Vormonat."""
     try:
-        start = datetime.now(BERLIN).date().replace(day=1).isoformat()[:7]  # YYYY-MM
-        url = (
-            "https://api.bundesbank.de/service/data/BBK/BBK01.WU8148"
-            f"?detail=dataonly&startPeriod={start}&format=json"
+        start = f"{datetime.now(BERLIN).year - 1}-01"
+        r = requests.get(
+            PFANDBRIEF_URL,
+            params={"startPeriod": start, "format": "csv"},
+            headers={**HEADERS, "Accept": "text/csv"},
+            timeout=20,
         )
-        r = requests.get(url, headers=HEADERS, timeout=15)
         r.raise_for_status()
-        data = r.json()
-        obs = data["dataSets"][0]["series"]["0:0:0:0:0"]["observations"]
-        latest_key = max(obs.keys(), key=int)
-        value = obs[latest_key][0]
-        return round(float(value), 2) if value is not None else None
+        letzter = None
+        for zeile in r.text.splitlines():
+            m = re.match(r'^"?(\d{4})-(\d{2})"?;"?(-?\d+(?:,\d+)?)"?;', zeile)
+            if m:
+                letzter = (int(m.group(1)), int(m.group(2)), float(m.group(3).replace(",", ".")))
+        if not letzter:
+            print("  ⚠ Bundesbank API: keine Werte in der Antwort")
+            return None
+        jahr, monat, wert = letzter
+        return round(wert, 2), f"{MONTH_DE[monat - 1]} {jahr}"
     except Exception as e:
         print(f"  ⚠ Bundesbank API Fehler: {e}")
         return None
@@ -470,18 +393,17 @@ def main():
 
     data_js = replace_market_rates_block(data_js, new_stand, final_avg, changes)
 
-    # PFANDBRIEF (separate Datenreihe, unveraendert seit jeher ueber die
-    # Bundesbank-API BBK01.WU8148, die momentan Verbindungsfehler wirft)
+    # PFANDBRIEF (separate Datenreihe, Bundesbank BBSIS, siehe PFANDBRIEF_URL)
     print("\nFetching Pfandbrief yield from Bundesbank API...")
-    pfandbrief_zins = fetch_pfandbrief_zins()
-    if pfandbrief_zins:
-        print(f"  ✓ Pfandbrief 10J: {pfandbrief_zins} %")
+    pf = fetch_pfandbrief_zins()
+    if pf:
+        pfandbrief_zins, pf_stand = pf
+        print(f"  ✓ Pfandbrief ({pf_stand}): {pfandbrief_zins} %")
         data_js = replace_simple(
             data_js,
             r"(?s)export const PFANDBRIEF[^{]*\{[^}]*zins:\s*([\d.]+)",
             pfandbrief_zins, "PFANDBRIEF.zins", changes
         )
-        pf_stand = new_stand
         pf_match = re.search(r'export const PFANDBRIEF\s*=\s*\{[^}]*stand:\s*"([^"]+)"', data_js, re.DOTALL)
         if pf_match:
             old_pf_stand = pf_match.group(1)
@@ -490,24 +412,6 @@ def main():
                 data_js = data_js[: pf_match.start(1)] + pf_stand + data_js[pf_match.end(1) :]
     else:
         print("  ⚠ Pfandbrief yield nicht verfügbar — Wert unverändert")
-
-    # WERTSTEIGERUNG (Haeuserpreisindex). Speist zugleich die Vorbelegung des
-    # Renditerechner-Feldes, siehe App.jsx defaults.wertP.
-    print("\nFetching Haeuserpreisindex from GENESIS (Destatis)...")
-    ws = fetch_wertsteigerung()
-    if ws:
-        ws_rate, ws_stand = ws
-        print(f"  ✓ Wertsteigerung {ws_stand}: {ws_rate} % zum Vorjahresquartal")
-        data_js = replace_simple(
-            data_js,
-            r"(?s)export const WERTSTEIGERUNG[^{]*\{[^}]*pA:\s*(-?[\d.]+)",
-            ws_rate, "WERTSTEIGERUNG.pA", changes
-        )
-        data_js = replace_simple(
-            data_js,
-            r'(?s)export const WERTSTEIGERUNG[^{]*\{[^}]*stand:\s*"([^"]+)"',
-            ws_stand, "WERTSTEIGERUNG.stand", changes
-        )
 
     if data_js != open(DATA_JS, encoding="utf-8").read():
         open(DATA_JS, "w", encoding="utf-8").write(data_js)
