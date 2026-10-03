@@ -1,3 +1,5 @@
+import { computeRendite } from "../../utils/rendite.js";
+import { restschuldNachMonaten, monateZwischen } from "../../utils/vorfaelligkeit.js";
 import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { VFE_T } from "../../i18n/vorfaelligkeit.js";
@@ -18,15 +20,15 @@ export function Vorfaelligkeit() {
   const [view, setView] = useState("input");
 
   // Auto-Rate aus Finanzierungsrechner-Kontext
+  // Die Rate kommt aus derselben Rechnung wie im Renditerechner (inkl. Garage und
+  // finanzierter Nebenkosten) - vorher (Kaufpreis - EK) ohne beides, S1 mit
+  // Garage 20.000 EUR: 1.710 EUR statt 1.805 EUR.
   const autoRate = useMemo(() => {
     if (d.vfeMonatsRate && +d.vfeMonatsRate > 0) return +d.vfeMonatsRate;
-    const da = Math.max(0, (+d.kaufpreis || 0) - (+d.eigenkapital || 0));
-    const zP = +d.zinssatz || 0,
-      tP = +d.tilgung || 0;
-    const mz = zP / 100 / 12;
-    if (!da || !mz) return 0;
-    return (da * (zP + tP)) / 100 / 12;
-  }, [d]);
+    if (!(+d.zinssatz > 0)) return 0;
+    const bankRate = computeRendite(d, t).ann;
+    return bankRate > 0 ? bankRate : 0;
+  }, [d, t]);
 
   // Beispiel-Defaults beim ersten Öffnen setzen. Alle Datumswerte relativ zu
   // "heute" berechnet statt als fixe Kalenderdaten (Bugreport 2026-09-07):
@@ -47,16 +49,29 @@ export function Vorfaelligkeit() {
       zbEnde.setFullYear(zbEnde.getFullYear() + 5);
       set("vfeSollzinsbindungsEnde", iso(zbEnde));
     }
+    // Restschuld zum Stichtag: Darlehen laut Objekt, fortgeschrieben bis heute
+    // (Auszahlung vor 5 Jahren), nicht das volle Darlehen.
+    const R0 = computeRendite(d, t);
+    const bankDarlehen = R0.bankDa;
+    const startDarlehen =
+      bankDarlehen > 0
+        ? bankDarlehen
+        : Math.max(0, (+d.kaufpreis || 300000) - (+d.eigenkapital || 60000));
+    const zinsStart = +(d.zinssatz || MARKET_RATES.avg);
+    const rateStart = R0.ann || (startDarlehen * (zinsStart + (+d.tilgung || 1))) / 1200;
+    const auszahlungStart = d.vfeAuszahlung || iso(new Date(new Date(heute).setFullYear(heute.getFullYear() - 5)));
     if (!d.vfeRestschuld) {
-      const da = Math.max(0, (+d.kaufpreis || 300000) - (+d.eigenkapital || 60000));
-      set("vfeRestschuld", String(da || 240000));
+      const rest = restschuldNachMonaten({
+        darlehen: startDarlehen,
+        zinsProz: zinsStart,
+        rateMon: Math.round(rateStart),
+        monate: monateZwischen(auszahlungStart, d.vfeRestschuldDatum || heute),
+      });
+      set("vfeRestschuld", String(Math.round(rest) || 240000));
     }
     if (!d.vfeSollzinssatz && !d.zinssatz) set("vfeSollzinssatz", "1.85");
     if (!d.vfeMonatsRate) {
-      const da = Math.max(0, (+d.kaufpreis || 300000) - (+d.eigenkapital || 60000));
-      const zP = +(d.zinssatz || MARKET_RATES.avg),
-        tP = +(d.tilgung || 1);
-      const r = Math.round((da * (zP + tP)) / 100 / 12);
+      const r = Math.round(rateStart);
       if (r > 0) set("vfeMonatsRate", String(r));
     }
     if (!d.vfeAbloeseTermin) {
@@ -442,7 +457,12 @@ export function Vorfaelligkeit() {
                     lineHeight: 1.6,
                   }}
                 >
-                  {vt.negNote.replace("{wa}", R.wa).replace("{zp}", R.effZP)}
+                  {/* Negativ kann zwei Gruende haben: wiederangelegter Zins ueber dem Sollzins
+                      (Zinsschaden <= 0) oder Zinsschaden positiv, aber kleiner als die
+                      Ersparnisse (Risiko, Verwaltung). Der Text nennt den richtigen. */}
+                  {(R.zinsverschlSchaden > 0 ? vt.negNoteAbzug || vt.negNote : vt.negNote)
+                    .replace("{wa}", R.wa)
+                    .replace("{zp}", R.effZP)}
                 </div>
               )}
               {R.nettovfe >= 0 ? (
@@ -489,7 +509,13 @@ export function Vorfaelligkeit() {
                   >
                     {vt.explainNegTitle}
                   </div>
-                  {(vt.explainNeg || "").split("\n\n").map((para, i) => (
+                  {(
+                    (R.zinsverschlSchaden > 0 ? vt.explainNegAbzug || vt.explainNeg : vt.explainNeg) || ""
+                  )
+                    .replace("{wa}", R.wa)
+                    .replace("{zp}", R.effZP)
+                    .split("\n\n")
+                    .map((para, i) => (
                     <p
                       key={i}
                       style={{

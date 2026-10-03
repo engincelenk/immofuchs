@@ -223,7 +223,10 @@ function createDefaults() {
     letzteErhDatum: mietbeginnDefault,
     letzteErhMiete: "0",
     mietJahre: "10",
-    sanFl: "60",
+    // Leer = folgt der Wohnflaeche des Objekts (Sanier.jsx faellt auf d.flaeche zurueck).
+    // Fester Default "60" verdeckte die Flaeche aus dem Renditerechner (Befund M5,
+    // docs/test-exposes/KONSISTENZPRUEFUNG_2026-10-03.md: 65 m2 im Rendite-, 60 m2 im Sanierungsrechner).
+    sanFl: "",
     baujahr: "1981",
     sanHt: "heizoel",
     sanHa: "alt",

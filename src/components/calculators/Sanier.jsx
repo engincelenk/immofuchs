@@ -1,3 +1,4 @@
+import { verteileErsparnis } from "../../utils/sanierungErsparnis.js";
 import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import {
@@ -245,7 +246,10 @@ export default function Sanier() {
       dach: { ek: 0.08, co2: 0.07 },
       tuer: { ek: 0.02, co2: 0.02 },
       pv: {
-        ek: Math.min(((+s.pvK || 7) * SAN_NORMEN.pvErtragKWhKwp * ep) / Math.max(kH, 1), 0.25),
+        // PV spart keine Heizkosten: ihr Nutzen ist die Stromersparnis (pvStromEsp, unten).
+        // Vorher stand hier zusaetzlich ein Heizkostenanteil (bis 25 %) - der Nutzen der PV
+        // wurde doppelt gezaehlt (Befund M5, docs/test-exposes/KONSISTENZPRUEFUNG_2026-10-03.md).
+        ek: 0,
         co2: Math.min(
           ((+s.pvK || 7) * SAN_NORMEN.pvErtragKWhKwp * SAN_ENERGIE.co2F.strom) / Math.max(co2H, 1),
           0.2,
@@ -372,9 +376,7 @@ export default function Sanier() {
 
     let tK = 0,
       tFo = 0,
-      tFoLand = 0,
-      eM = 1,
-      cM = 1;
+      tFoLand = 0;
     const rows = [];
     const blBonus = LAND_BONUS_FQ[d.bundesland] || {};
     const huelleK = ALL.filter((m) => act[m.k] && HUELLE.includes(m.k)).reduce(
@@ -388,6 +390,29 @@ export default function Sanier() {
       klima: klimaOk,
       einkommensStufe: +d.sanEinkommen || 0,
       datum: new Date(),
+    });
+    // PV: Stromersparnis durch Eigenverbrauch (statt Heizkostenersparnis)
+    // min(PV-Eigenverbrauch kWh, tatsächlicher Jahresstromverbrauch kWh) × Strompreis
+    const pvK2tmp = +s.pvK || 7;
+    const pvEigenverbrauchKwh = act.pv
+      ? Math.min(
+          pvK2tmp * SAN_NORMEN.pvErtragKWhKwp * SAN_NORMEN.pvEigenverbrauchQuote,
+          fl * SAN_NORMEN.hausStromKWhM2,
+        )
+      : 0;
+    const pvStromEsp = Math.round((pvEigenverbrauchKwh * epStrom) / 50) * 50;
+
+    // Zeilen und Gesamtersparnis kommen aus einer Verteilung (utils/sanierungErsparnis.js),
+    // sodass die Zeilensumme der ausgewiesenen Gesamtersparnis entspricht.
+    const verteilung = verteileErsparnis({
+      aktiv: ALL.filter((m) => act[m.k]).map((m) => ({
+        k: m.k,
+        ek: ES[m.k]?.ek || 0,
+        co2: ES[m.k]?.co2 || 0,
+      })),
+      kH,
+      co2H,
+      fest: act.pv ? { k: "pv", wert: pvStromEsp } : null,
     });
     ALL.forEach((m) => {
       if (!act[m.k]) return;
@@ -408,10 +433,8 @@ export default function Sanier() {
       tK += m.c;
       tFo += fo;
       tFoLand += foLand;
-      const ekE = Math.round((kH * (ES[m.k]?.ek || 0)) / 50) * 50;
-      const co2E = Math.round(co2H * (ES[m.k]?.co2 || 0));
-      eM *= 1 - (ES[m.k]?.ek || 0);
-      cM *= 1 - (ES[m.k]?.co2 || 0);
+      const ekE = verteilung.zeilen[m.k].ek;
+      const co2E = verteilung.zeilen[m.k].co2;
       const capped = istHuelle
         ? hf.foerderfaehig < huelleK
         : m.k === "heizung" && hzF.foerderfaehig < m.c;
@@ -433,19 +456,8 @@ export default function Sanier() {
       });
     });
     const ne = tK - tFo - tFoLand;
-    const ekG = Math.round((kH * (1 - eM)) / 50) * 50;
-    const co2G = Math.round(co2H * (1 - cM));
+    const { ekG, co2G, eM, cM } = verteilung;
     const espEuro = ekG; // ekG bereits in €/Jahr — keine weitere Multiplikation mit epKwh
-    // PV: Stromersparnis durch Eigenverbrauch (zusätzlich zur Heizersparnis)
-    // min(PV-Eigenverbrauch kWh, tatsächlicher Jahresstromverbrauch kWh) × Strompreis
-    const pvK2tmp = +s.pvK || 7;
-    const pvEigenverbrauchKwh = act.pv
-      ? Math.min(
-          pvK2tmp * SAN_NORMEN.pvErtragKWhKwp * SAN_NORMEN.pvEigenverbrauchQuote,
-          fl * SAN_NORMEN.hausStromKWhM2,
-        )
-      : 0;
-    const pvStromEsp = Math.round((pvEigenverbrauchKwh * epStrom) / 50) * 50;
     const totalEsp = espEuro + pvStromEsp; // Gesamtersparnis für Amortisationsrechnung
     // Amortisation mit optionaler Preissteigerungs-Prognose
     let amJ = 99;

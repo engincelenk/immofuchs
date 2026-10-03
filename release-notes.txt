@@ -1,3 +1,21 @@
+## 2026-10-03 (1.100.72) [FRONTEND]
+
+### Konsistenzpruefung Block C: Vorfaelligkeit, Kredit, Sanierung
+
+- Vorfaelligkeitsrechner: automatische Rate und Vorbelegung kommen aus dem Objekt (inkl. Garage und
+  finanzierter Nebenkosten, wie im Renditerechner); die vorbelegte Restschuld ist das Darlehen
+  fortgeschrieben bis heute (Auszahlung vor 5 Jahren), nicht das volle Darlehen (S1: 320.521 EUR statt 360.000 EUR).
+  Der Erklaertext zur negativen Vorfaelligkeitsentschaedigung nennt den richtigen Grund: ist der Zinsschaden
+  positiv und nur Risiko-/Verwaltungsersparnis machen das Ergebnis negativ, steht das so da (5 Sprachen) -
+  vorher stand dort faelschlich "Bank legt zu hoeherem Zins an".
+- Kreditrechner: Tilgungsplan zeigt die tatsaechliche Jahresrate je Zeile (auch im Schlussjahr), Spaltenkoepfe
+  "Jahr" und "Rate/Jahr" statt "An" und "Rate/Mon."; "Laufzeit gespart" statt "Analysezeitraum" (5 Sprachen).
+- Sanierungsrechner: die Wohnflaeche folgt der Wohnflaeche des Objekts, bis sie im Rechner selbst ueberschrieben
+  wird (vorher fester Default 60 m2). Die Ersparnis der Photovoltaik wird nicht mehr doppelt gezaehlt (Heizkosten-
+  anteil entfaellt, Stromersparnis bleibt, Amortisation wird laenger). Zeilensumme der Ersparnis (Heizkosten, CO2)
+  entspricht der ausgewiesenen Gesamtersparnis (utils/sanierungErsparnis.js).
+- Tests: vorfaelligkeit.test.js, sanierungErsparnis.test.js.
+
 ## 2026-10-03 (1.100.71) [FRONTEND]
 
 ### Konsistenzpruefung Block B: Restschuld monatlich, eine EK-Rendite, §6-Puffer korrigiert

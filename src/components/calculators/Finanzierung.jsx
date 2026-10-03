@@ -605,7 +605,7 @@ export default function Kredit() {
                     <div
                       style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}
                     >
-                      <span>{t.jahre}</span>
+                      <span>{t.jahreGespart || t.jahre}</span>
                       <span style={{ fontWeight: 600, color: "#22c55e" }}>
                         {fmt(R.jahreGespart, 1)} J.
                       </span>
@@ -627,7 +627,7 @@ export default function Kredit() {
                 <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid var(--cb)" }}>
-                      {[t.jahre.slice(0, 2), t.rate, t.gZin, t.tilgung, t.rest].map((h) => (
+                      {[t.planJahr || t.jahre.slice(0, 2), t.planRateJahr || t.rate, t.gZin, t.tilgung, t.rest].map((h) => (
                         <th
                           key={h}
                           style={{
@@ -656,7 +656,7 @@ export default function Kredit() {
                           {r.isZB ? " ◀" : ""}
                         </td>
                         <td style={{ padding: "3px 4px", textAlign: "right" }}>
-                          {fmtE(R.ann * 12)}
+                          {fmtE(r.z + r.t)}
                         </td>
                         <td style={{ padding: "3px 4px", textAlign: "right", color: "#ef4444" }}>
                           {fmtE(r.z)}

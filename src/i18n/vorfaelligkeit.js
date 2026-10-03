@@ -39,6 +39,10 @@ export const VFE_T = {
     explainPosTitle: "💸 Was bedeutet das für dich?",
     explainPos:
       "Kurz gesagt: Wenn du deinen Kredit jetzt vorzeitig ablöst, musst du diesen Betrag an deine Bank zahlen. Er heißt Vorfälligkeitsentschädigung — also eine Gebühr dafür, dass du früher aus dem Vertrag aussteigst als vereinbart.\n\nWarum verlangt die Bank das? Sie hatte mit deinen Zinszahlungen bis zum Ende der Zinsbindung fest kalkuliert. Durch die vorzeitige Rückzahlung fallen diese Einnahmen weg — und genau diesen Verlust lässt sie sich ersetzen.\n\nOb sich eine Umschuldung trotz VFE rechnet, hängt von deinem neuen Zinssatz ab. Wenn der aktuelle Marktzins deutlich günstiger ist als dein Vertragszins, kann es sich dennoch lohnen.",
+    negNoteAbzug:
+      "ℹ️ Interessant: Rechnerisch ist deine VFE negativ. Der Zinsschaden ist zwar positiv (dein Sollzins {zp}% liegt über dem Wiederanlagezins {wa}%), aber die Ersparnisse der Bank (Risiko und Verwaltung) sind größer. Das bedeutet nicht, dass die Bank dir Geld zurückzahlt. Ein entsprechendes BGH-Urteil gibt es bisher nicht.",
+    explainNegAbzug:
+      "Das Ergebnis ist negativ — klingt erstmal gut, ist aber kein Grund zur Freude.\n\nWas steckt dahinter? Dein Zins ({zp}%) liegt nur knapp über dem Wiederanlagezins der Bank ({wa}%), der Zinsschaden ist daher klein. Davon werden die Ersparnisse der Bank abgezogen (Risikoersparnis und Verwaltungskosten). Unterm Strich bleibt rechnerisch kein Schaden.\n\nTrotzdem erstattet die Bank dir nichts. Es gibt bisher kein BGH-Urteil, das eine Rückzahlung vorschreibt. Sprich das direkt mit deiner Bank an und bestehe auf der detaillierten Berechnung.",
     explainNegTitle: "🤔 Was bedeutet das für dich?",
     explainNeg:
       "Das Ergebnis ist negativ — klingt erstmal gut, ist aber kein Grund zur Freude.\n\nWas steckt dahinter? Die Bank könnte das zurückgezahlte Geld heute zu einem höheren Zins anlegen, als du ihr schuldest. Rechnerisch entsteht ihr also gar kein Schaden — im Gegenteil, sie würde davon profitieren.\n\nTrotzdem bedeutet das nicht, dass die Bank dir etwas erstattet. Es gibt bisher kein BGH-Urteil, das eine Rückzahlung vorschreibt. Sprich das direkt mit deiner Bank an und bestehe auf der detaillierten Berechnung.",
@@ -118,6 +122,10 @@ export const VFE_T = {
     explainPosTitle: "💸 What does this mean for you?",
     explainPos:
       "In short: if you repay your loan early, you must pay this amount to your bank — the prepayment penalty. It is a fee for exiting the contract before the agreed end date.\n\nWhy does the bank charge this? It had counted on receiving your interest payments until the end of the fixed-rate period. Early repayment cuts off those earnings — and the bank passes that loss on to you.\n\nWhether refinancing makes sense despite the penalty depends on your new interest rate. If current rates are significantly lower than your contract rate, it may still be worth it.",
+    negNoteAbzug:
+      "ℹ️ Interesting: the calculated early repayment fee is negative. The interest loss is positive (your rate {zp}% is above the reinvestment rate {wa}%), but the bank's savings (risk and administration) are larger. That does not mean the bank pays you money. There is no BGH ruling requiring that.",
+    explainNegAbzug:
+      "The result is negative — sounds good at first, but it is no reason to celebrate.\n\nWhat is going on? Your rate ({zp}%) is only slightly above the bank's reinvestment rate ({wa}%), so the interest loss is small. The bank's savings (risk and administration costs) are deducted from it. Net, there is no loss for the bank.\n\nStill, the bank does not refund anything. There is currently no BGH ruling requiring a refund. Raise this directly with your bank and ask for their detailed calculation.",
     explainNegTitle: "🤔 What does this mean for you?",
     explainNeg:
       "The result is negative — sounds good at first, but unfortunately it does not mean the bank owes you money.\n\nWhat is going on? The bank could reinvest the repaid capital at a higher rate than you are paying. Mathematically, early repayment actually benefits the bank — it suffers no loss.\n\nThere is currently no BGH ruling requiring the bank to refund anything in this situation. You can still repay early without the bank demanding a penalty — but raise this directly with your bank and ask for their detailed calculation.",
@@ -196,6 +204,10 @@ export const VFE_T = {
     explainPosTitle: "💸 Bu sizin için ne anlama geliyor?",
     explainPos:
       "Kısaca: Kredinizi erken kapatırsanız bu tutarı bankanıza ödemek zorundasınız — erken ödeme cezasıdır.\n\nBanka bunu neden ister? Sabit faiz döneminin sonuna kadar faiz geliri almayı planlamıştı. Erken ödeyince bu gelir kaybolur ve banka bu kaybı sizden tahsil eder.\n\nYeni faiz oranınız sözleşme faizinizden belirgin şekilde düşükse, cezaya rağmen refinansman mantıklı olabilir.",
+    negNoteAbzug:
+      "ℹ️ İlginç: hesaplanan ön ödeme tazminatı negatif. Faiz zararı pozitif (faiziniz %{zp}, yeniden yatırım faizi %{wa}'nın üzerinde), ancak bankanın tasarrufları (risk ve yönetim) daha büyük. Bu, bankanın size para ödeyeceği anlamına gelmez. Böyle bir BGH kararı yoktur.",
+    explainNegAbzug:
+      "Sonuç negatif — kulağa hoş geliyor ama sevinmek için bir neden değil.\n\nNe oluyor? Faiziniz (%{zp}), bankanın yeniden yatırım faizinin (%{wa}) yalnızca biraz üzerinde, bu yüzden faiz zararı küçük. Bankanın tasarrufları (risk ve yönetim maliyetleri) bundan düşülür. Net olarak banka için zarar kalmaz.\n\nYine de banka bir şey iade etmez. İade öngören bir BGH kararı bulunmuyor. Bunu doğrudan bankanızla konuşun ve ayrıntılı hesabı isteyin.",
     explainNegTitle: "🤔 Bu sizin için ne anlama geliyor?",
     explainNeg:
       "Sonuç negatif — kulağa iyi geliyor ama maalesef bankanın size para ödeyeceği anlamına gelmiyor.\n\nNeden? Banka, geri ödenen parayı bugün daha yüksek faizle yatırıma dönüştürebilir. Erken ödeme bankaya zarar vermez, hatta kâr sağlar.\n\nBuna rağmen bankayı geri ödemeye zorlayan bir BGH kararı mevcut değil. Bankadan ayrıntılı hesap dökümü talep etmeniz önerilir.",
@@ -273,6 +285,10 @@ export const VFE_T = {
     explainPosTitle: "💸 这对您意味着什么？",
     explainPos:
       "简而言之：提前还清贷款需向银行支付此金额，即提前还款罚金。\n\n为什么？银行原本计划收取固定利率期内全部利息，提前还款使这些收入消失，银行通过罚金弥补损失。\n\n如果当前市场利率明显低于合同利率，即使支付罚金，再融资也可能更划算。",
+    negNoteAbzug:
+      "ℹ️ 有趣：计算出的提前还款补偿为负。利息损失为正（您的利率 {zp}% 高于再投资利率 {wa}%），但银行节省的费用（风险和管理）更大。这并不意味着银行会向您付款，目前也没有相应的BGH判决。",
+    explainNegAbzug:
+      "结果为负——听起来不错，但并不值得高兴。\n\n原因是什么？您的利率（{zp}%）仅略高于银行的再投资利率（{wa}%），利息损失很小。银行节省的费用（风险和管理成本）会从中扣除。净额上银行没有损失。\n\n但银行不会退还任何款项，目前也没有要求退款的BGH判决。请直接与银行沟通并要求提供详细计算。",
     explainNegTitle: "🤔 这对您意味着什么？",
     explainNeg:
       "结果为负值——听起来不错，但很遗憾并不意味着银行会退钱。\n\n原因：银行可将您归还的资金以高于合同利率的收益再投资，提前还款对银行实际上有利可图。\n\n目前没有BGH判决要求银行在此情况下退款。建议直接与银行沟通并索取详细计算清单。",
@@ -343,6 +359,10 @@ export const VFE_T = {
     explainPosTitle: "💸 आपके लिए इसका क्या अर्थ है?",
     explainPos:
       "सीधे शब्दों में: यदि आप अभी ऋण जल्दी चुकाते हैं तो यह राशि बैंक को देनी होगी — अग्रिम भुगतान शुल्क।\n\nबैंक यह क्यों लेता है? उसने निश्चित ब्याज अवधि तक ब्याज आय की योजना बनाई थी। समय-पूर्व चुकौती से यह आय समाप्त हो जाती है।\n\nयदि वर्तमान बाजार दर आपकी अनुबंध दर से काफी कम है तो शुल्क के बावजूद पुनर्वित्त लाभदायक हो सकता है।",
+    negNoteAbzug:
+      "ℹ️ दिलचस्प: गणना किया गया प्रीपेमेंट शुल्क ऋणात्मक है। ब्याज हानि धनात्मक है (आपकी दर {zp}% पुनर्निवेश दर {wa}% से ऊपर है), लेकिन बैंक की बचत (जोखिम और प्रशासन) अधिक है। इसका मतलब यह नहीं कि बैंक आपको पैसा देगा। ऐसा कोई BGH निर्णय नहीं है।",
+    explainNegAbzug:
+      "परिणाम ऋणात्मक है — सुनने में अच्छा लगता है, पर खुश होने का कारण नहीं।\n\nइसके पीछे क्या है? आपकी दर ({zp}%) बैंक की पुनर्निवेश दर ({wa}%) से थोड़ी ही ऊपर है, इसलिए ब्याज हानि छोटी है। इसमें से बैंक की बचत (जोखिम और प्रशासनिक लागत) घटाई जाती है। शुद्ध रूप से बैंक को कोई हानि नहीं।\n\nफिर भी बैंक कुछ वापस नहीं करता। वापसी का आदेश देने वाला कोई BGH निर्णय नहीं है। इसे सीधे अपने बैंक से उठाएँ और विस्तृत गणना माँगें।",
     explainNegTitle: "🤔 आपके लिए इसका क्या अर्थ है?",
     explainNeg:
       "परिणाम ऋणात्मक है — यह अच्छा लगता है लेकिन इसका मतलब यह नहीं कि बैंक आपको पैसे देगा।\n\nक्यों? बैंक वापस की गई राशि को आपकी ऋण दर से अधिक ब्याज पर निवेश कर सकता है — समय-पूर्व चुकौती वास्तव में बैंक के लिए लाभदायक है।\n\nकोई BGH निर्णय नहीं है जो बैंक को वापसी के लिए बाध्य करे। अपने बैंक से सीधे बात करें और विस्तृत गणना माँगें।",
