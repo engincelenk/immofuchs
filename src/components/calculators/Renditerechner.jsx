@@ -8,6 +8,7 @@ import { computeRendite } from "../../utils/rendite.js";
 import { berechneKennzahlen } from "../../utils/kennzahlen.js";
 import { berechneScore } from "../../utils/investmentScore.js";
 import { ekRenditePa } from "../../utils/briefing.js";
+import { immobilienEinsatz } from "../../utils/ekRendite.js";
 import {
   F,
   Sel,
@@ -1773,7 +1774,8 @@ export default function Haupt() {
                 // Eigenkapital - hier bleibt die bisherige 0, weil die
                 // Anzeige darunter mit einer Zahl rechnet.
                 const ekRpa = ekRenditePa(R, d) ?? 0;
-                const ekRpaOhne = ekRenditePa({ ...R, g: R.gOhne || 0 }, d) ?? 0;
+                const ekRpaOhne = ekRenditePa(R, d, { ohneSteuer: true }) ?? 0;
+                const einsatzMit = immobilienEinsatz(d, R);
                 const ekRCol = rate("ekRendite", ekRpa).color;
                 const sec7Sub = t.sec7Sub.replace(/\{j\}/g, String(R.j));
                 return (
@@ -1838,7 +1840,7 @@ export default function Haupt() {
                             tip={tpl(
                               t.ekRTip1 ||
                                 "Dein Eigenkapital ({ek}) wächst mit {p} p.a. — zum Vergleich: ETF historisch ~7%",
-                              { ek: fmtE(+d.eigenkapital || 0), p: fmtP(ekRpa, 2) },
+                              { ek: fmtE(einsatzMit.eingezahlt), p: fmtP(ekRpa, 2) },
                             )}
                           />
                           <AmpelKPI
@@ -1901,7 +1903,7 @@ export default function Haupt() {
                             "Annahme: Verkauf nach Ablauf der 10-jährigen Spekulationsfrist — kein Steuerabzug auf den Verkaufsgewinn. Bei einem Verkauf innerhalb von 10 Jahren fiele § 23 EStG an (hier nicht eingerechnet)",
                           ];
                         })()}
-                        text={`Die Tabelle rechnet transparent vor, was am Ende bleibt: Verkaufserlös minus Restschuld ergibt den Nettoerlös. Davon ziehst du ab, was du ursprünglich investiert hast — Eigenkapital, Kaufnebenkosten, Sonderumlage, Renovierung. Was übrig bleibt, plus der kumulierte Cashflow der ${R.j} Jahre, ist dein Gesamtergebnis — einmal ohne und einmal mit Steuervorteil.\n\nBesonders wichtig: Vergleiche den geschätzten Marktwert (${fmtE(R.vw)}) mit der Restschuld (${fmtE(R.rsEnd)}). Wenn die Restschuld höher ist als der Marktpreis, hast du ein Problem — du kannst die Immobilie nicht ohne Verlust verkaufen. Das kommt bei sehr hohem Beleihungsauslauf und geringen Tilgungsraten vor, vor allem wenn die Immobilienpreise fallen.\n\n${R.g >= 0 ? "Das Ergebnis ist positiv — die Immobilie hat sich gelohnt. Du hast mehr rausgeholt als reingesteckt." : "Das Ergebnis ist negativ — nach aktuellem Stand hast du mehr investiert als du am Ende zurückbekommst. Das kann sich ändern, wenn die Wertsteigerung höher ausfällt oder du die Mieteinnahmen steigern kannst."} Die EK-Rendite p.a. macht das vergleichbar: Dein eingesetztes Eigenkapital von ${fmtE(+d.eigenkapital || 0)} wächst mit ${fmtP(ekRpa, 2)} pro Jahr — ${ekRpa >= 7 ? "Das ist exzellent und schlägt historisch sogar einen ETF." : ekRpa >= 5 ? "Das ist solide. Ein ETF bringt historisch ~7%, aber ohne Hebeleffekt und ohne die Stabilität einer Sachwertanlage." : ekRpa >= 3 ? "Das ist okay, aber schwach für eine Immobilie mit Finanzierungsrisiko. Prüfe ob die Annahmen realistisch sind." : "Das ist schwach. Überleg ob Kaufpreis, Miete oder Finanzierung besser gestellt werden kann."}\n\nAnnahme: Du verkaufst erst nach Ablauf der 10-jährigen Spekulationsfrist (§ 23 EStG) — der Verkaufsgewinn ist dann bei Privatpersonen steuerfrei und wird hier nicht versteuert. Bei einem Verkauf innerhalb von 10 Jahren würde der Gewinn mit deinem Steuersatz besteuert; das ist in dieser Rechnung nicht enthalten. Denk auch an die Verkaufskosten: Makler (3–7% des Verkaufspreises), Notar, Grundbuch — die sind hier nicht eingerechnet, schmälern aber den Nettoerlös deutlich.\n\nStellschrauben: Den Anlagehorizont verlängern (mehr Jahre = mehr Tilgung + mehr Wertsteigerung). Die Wertsteigerungsannahme realistisch halten (2–3% p.a. sind historisch solide für gute Lagen). Cashflow optimieren (weniger Leerstand, regelmäßige Mietanpassungen). Sondertilgungen nutzen, um die Restschuld zu drücken.`}
+                        text={`Die Tabelle rechnet transparent vor, was am Ende bleibt: Verkaufserlös minus Restschuld ergibt den Nettoerlös. Davon ziehst du ab, was du ursprünglich investiert hast — Eigenkapital, Kaufnebenkosten, Sonderumlage, Renovierung. Was übrig bleibt, plus der kumulierte Cashflow der ${R.j} Jahre, ist dein Gesamtergebnis — einmal ohne und einmal mit Steuervorteil.\n\nBesonders wichtig: Vergleiche den geschätzten Marktwert (${fmtE(R.vw)}) mit der Restschuld (${fmtE(R.rsEnd)}). Wenn die Restschuld höher ist als der Marktpreis, hast du ein Problem — du kannst die Immobilie nicht ohne Verlust verkaufen. Das kommt bei sehr hohem Beleihungsauslauf und geringen Tilgungsraten vor, vor allem wenn die Immobilienpreise fallen.\n\n${R.g >= 0 ? "Das Ergebnis ist positiv — die Immobilie hat sich gelohnt. Du hast mehr rausgeholt als reingesteckt." : "Das Ergebnis ist negativ — nach aktuellem Stand hast du mehr investiert als du am Ende zurückbekommst. Das kann sich ändern, wenn die Wertsteigerung höher ausfällt oder du die Mieteinnahmen steigern kannst."} Die EK-Rendite p.a. macht das vergleichbar: Dein insgesamt eingesetztes Geld von ${fmtE(einsatzMit.eingezahlt)} (Eigenkapital, bar gezahlte Nebenkosten, Renovierung, Sonderumlage und eventuelle Nachschüsse) wächst mit ${fmtP(ekRpa, 2)} pro Jahr — ${ekRpa >= 7 ? "Das ist exzellent und schlägt historisch sogar einen ETF." : ekRpa >= 5 ? "Das ist solide. Ein ETF bringt historisch ~7%, aber ohne Hebeleffekt und ohne die Stabilität einer Sachwertanlage." : ekRpa >= 3 ? "Das ist okay, aber schwach für eine Immobilie mit Finanzierungsrisiko. Prüfe ob die Annahmen realistisch sind." : "Das ist schwach. Überleg ob Kaufpreis, Miete oder Finanzierung besser gestellt werden kann."}\n\nAnnahme: Du verkaufst erst nach Ablauf der 10-jährigen Spekulationsfrist (§ 23 EStG) — der Verkaufsgewinn ist dann bei Privatpersonen steuerfrei und wird hier nicht versteuert. Bei einem Verkauf innerhalb von 10 Jahren würde der Gewinn mit deinem Steuersatz besteuert; das ist in dieser Rechnung nicht enthalten. Denk auch an die Verkaufskosten: Makler (3–7% des Verkaufspreises), Notar, Grundbuch — die sind hier nicht eingerechnet, schmälern aber den Nettoerlös deutlich.\n\nStellschrauben: Den Anlagehorizont verlängern (mehr Jahre = mehr Tilgung + mehr Wertsteigerung). Die Wertsteigerungsannahme realistisch halten (2–3% p.a. sind historisch solide für gute Lagen). Cashflow optimieren (weniger Leerstand, regelmäßige Mietanpassungen). Sondertilgungen nutzen, um die Restschuld zu drücken.`}
                       />
                     )}
                     {lang !== "de" && t.s7b1 && (

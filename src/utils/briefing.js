@@ -25,6 +25,7 @@
 // Komponenten - sie sind Fachurteil, nicht kalibriert und muessen sich an
 // einer Stelle nachjustieren lassen.
 
+import { immobilienEinsatz } from "./ekRendite.js";
 import { computeRendite } from "./rendite.js";
 import { berechneKennzahlen } from "./kennzahlen.js";
 import {
@@ -140,10 +141,15 @@ export function briefingKernzahlen(d, R, K) {
 // im Renditerechner (Renditerechner.jsx) - sie wandert hierher, weil Block 3
 // und der Rechner sonst zwei Formeln fuer dieselbe Zahl haetten.
 // Ohne Eigenkapital gibt es keine Eigenkapitalrendite: null statt "unendlich".
-export function ekRenditePa(R, d) {
-  const ek = +d.eigenkapital || 0;
-  if (!(ek > 0) || !(R.j > 0)) return null;
-  return (R.g / ek / R.j) * 100;
+export function ekRenditePa(R, d, opt = {}) {
+  // Eine Definition fuer Rechner, Briefing, Objektseite und Alternativ-Karte
+  // (utils/ekRendite.js): CAGR auf das gesamte eingesetzte Eigenmittel inkl.
+  // bar gezahlter Nebenkosten, Renovierung, Sonderumlage und Nachschuessen.
+  if (!(R.j > 0)) return null;
+  const e = immobilienEinsatz(d, R, opt);
+  // Ohne Startbetrag aus eigener Tasche (Volldarlehen, Nebenkosten finanziert)
+  // gibt es keine Eigenkapitalrendite - wie bei der Alternativ-Karte.
+  return e.start > 0 ? e.rendite : null;
 }
 
 // Reihenfolge wie objektseite-neu.md §16. Die Gruppierung 3 + 2 aus §21 D1 ist

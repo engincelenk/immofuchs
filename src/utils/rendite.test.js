@@ -175,3 +175,39 @@ describe("computeRendite - einheitliche Rendite-Nenner (Befund M2)", () => {
     expect(berechneKennzahlen(mitZusatz, R).anfangsrendite).toBeCloseTo(R.nR, 8);
   });
 });
+
+describe("computeRendite - monatliche Verzinsung (Befund M1)", () => {
+  // Unabhaengige Referenz: Annuitaetendarlehen monatlich durchgerechnet.
+  const monatlich = (darlehen, zinsProz, rateMon, monate) => {
+    let rest = darlehen;
+    let zinsen = 0;
+    for (let m = 0; m < monate && rest > 0; m++) {
+      const z = (rest * zinsProz) / 1200;
+      zinsen += z;
+      rest -= Math.min(rateMon - z, rest);
+    }
+    return { rest, zinsen };
+  };
+
+  it("Restschuld und Zinsen stimmen mit der monatlichen Rechnung (Kredit-/Vorfaelligkeitsrechner) ueberein", () => {
+    const R = computeRendite(s1, t);
+    const ref = monatlich(360000, 3.7, 1710, 15 * 12);
+    const zeile = R.yearRows[14];
+    expect(zeile.rest - zeile.tilgB).toBeCloseTo(ref.rest, 2);
+    expect(R.yearRows.slice(0, 15).reduce((a, y) => a + y.zinsen, 0)).toBeCloseTo(ref.zinsen, 2);
+    expect(R.rsEnd).toBeCloseTo(monatlich(360000, 3.7, 1710, 20 * 12).rest, 2);
+  });
+
+  it("Summe der Tilgung plus Endschuld ergibt das Darlehen", () => {
+    const R = computeRendite(s1, t);
+    const tilg = R.yearRows.reduce((a, y) => a + y.tilgB, 0);
+    expect(tilg + R.rsEnd).toBeCloseTo(360000, 2);
+  });
+
+  it("Tilgungssatz 0: Restschuld bleibt konstant, Zinsen = Darlehen x Zins", () => {
+    const R = computeRendite({ ...s1, tilgung: "0" }, t);
+    expect(R.yearRows[0].tilgBank).toBeCloseTo(0, 6);
+    expect(R.yearRows[0].zinsen).toBeCloseTo(360000 * 0.037, 2);
+    expect(R.rsEnd).toBeCloseTo(360000, 2);
+  });
+});

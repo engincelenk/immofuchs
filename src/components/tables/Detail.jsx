@@ -1,5 +1,6 @@
 import { useApp } from "../../context/AppContext.jsx";
 import { fmtE, fmtP } from "../../utils/helpers.js";
+import { immobilienEinsatz } from "../../utils/ekRendite.js";
 
 export function Detail({ R, d }) {
   const { t } = useApp();
@@ -19,8 +20,14 @@ export function Detail({ R, d }) {
   const zwischensumme = nettoerloes - sumInvestition; // Nettoerlös nach Investition
   const totalOhne = zwischensumme + (R.sCFOhne || 0); // = R.gOhne
   const totalMit = R.g; // zwischensumme + sCF (sCF=sCFOhne+sSt)
-  const rendEKOhne = ek > 0 ? (totalOhne / ek) * 100 : 0;
-  const rendEKMit = ek > 0 ? (totalMit / ek) * 100 : 0;
+  // Eine Definition fuer die EK-Rendite (utils/ekRendite.js): Gewinn bezogen auf
+  // das gesamte eingesetzte Geld, p. a. als jaehrliche Wachstumsrate.
+  const einsatzOhne = immobilienEinsatz(d, R, { ohneSteuer: true });
+  const einsatzMit = immobilienEinsatz(d, R);
+  const rendEKOhne = einsatzOhne.eingezahlt > 0 ? (totalOhne / einsatzOhne.eingezahlt) * 100 : 0;
+  const rendEKMit = einsatzMit.eingezahlt > 0 ? (totalMit / einsatzMit.eingezahlt) * 100 : 0;
+  const rendEKOhnePa = einsatzOhne.rendite ?? 0;
+  const rendEKMitPa = einsatzMit.rendite ?? 0;
   const isPosOhne = totalOhne >= 0;
   const isPosMit = totalMit >= 0;
 
@@ -130,7 +137,7 @@ export function Detail({ R, d }) {
               {fmtE(totalOhne)}
             </div>
             <div style={{ fontSize: 10, color: "var(--ch)", marginTop: 1 }}>
-              {t.detEKR}: {fmtP(rendEKOhne)} ({fmtP(ek > 0 ? rendEKOhne / R.j : 0)} p.a.)
+              {t.detEKR}: {fmtP(rendEKOhne)} ({fmtP(rendEKOhnePa)} p.a.)
             </div>
           </span>
         </div>
@@ -174,7 +181,7 @@ export function Detail({ R, d }) {
               {fmtE(totalMit)}
             </div>
             <div style={{ fontSize: 10, color: "var(--ch)", marginTop: 1 }}>
-              {t.detEKR}: {fmtP(rendEKMit)} ({fmtP(ek > 0 ? rendEKMit / R.j : 0)} p.a.)
+              {t.detEKR}: {fmtP(rendEKMit)} ({fmtP(rendEKMitPa)} p.a.)
             </div>
           </span>
         </div>

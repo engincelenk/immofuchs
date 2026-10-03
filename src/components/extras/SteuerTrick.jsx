@@ -1,3 +1,4 @@
+import { berechneSteuerTrick } from "../../utils/steuerTrick.js";
 import { useState, useRef, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { STEUER_T } from "../../i18n/steuerTrick.js";
@@ -58,14 +59,11 @@ export function SteuerTrick() {
   const lohnsteuer = parseFloat(ls) || 0;
   const grenzSatz = parseFloat(String(gst).replace(",", ".")) || 0;
   const grundstueck = parseFloat(grd) || 0;
-  const valid = lohnsteuer > 0 && grenzSatz > 0 && grenzSatz < 100;
-  const sanK = valid ? lohnsteuer / (grenzSatz / 100) : 0;
-  const gebW = valid ? sanK / 0.15 : 0;
-  const gesKP = valid ? gebW + grundstueck : 0;
-  const sanKS = sanK * 0.97;
-  const gebWS = sanKS / 0.15;
-  const gesKPS = gebWS + grundstueck;
-  const grenze15 = gebW * 0.15;
+  const { valid, sanK, gebW, gesKP, sanKS, gebWS, gesKPS, grenze15 } = berechneSteuerTrick({
+    lohnsteuer,
+    grenzSatzProz: grenzSatz,
+    grundstueck,
+  });
   const fmt = (v) => v.toLocaleString("de-DE", { maximumFractionDigits: 0 });
   const fE = (v) => "€ " + fmt(v);
   const inp = {
@@ -401,6 +399,7 @@ export function SteuerTrick() {
                   { icon: "🏠", t: st.w4t, x: st.w4x },
                   { icon: "💶", t: st.w5t, x: st.w5x },
                   { icon: "👨‍💼", t: st.w6t, x: st.w6x },
+                  { icon: "📐", t: st.w7t, x: st.w7x },
                 ].map((w, i) => (
                   <div
                     key={i}

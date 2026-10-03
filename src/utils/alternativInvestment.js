@@ -17,6 +17,7 @@
 // ETF/Gold am Ende statt Vorabpauschale, kein Sparer-Pauschbetrag, keine
 // Inflation (alle Werte nominal), keine Verkaufskosten bei der Immobilie.
 
+import { immobilienEinsatz } from "./ekRendite.js";
 import { computeRendite } from "./rendite.js";
 import {
   ABGELTUNGSTEUER,
@@ -66,14 +67,12 @@ export function berechneAlternativVergleich(d, t, jahre) {
     if (cf < 0) nachschuss += -cf;
     else positivCf += cf;
   }
-  const eingezahlt = start + nachschuss;
-
-  const endvermoegen = eingezahlt + R.g;
-  // Durchschnittliche Rendite p. a. auf das eingezahlte Kapital. Naeherung:
-  // Nachschuesse werden wie der Startbetrag behandelt, daher eher
-  // vorsichtig gerechnet.
-  const vielfaches = eingezahlt > 0 ? endvermoegen / eingezahlt : null;
-  const rendite = vielfaches && vielfaches > 0 ? (Math.pow(vielfaches, 1 / jahre) - 1) * 100 : null;
+  // Einsatz, Endvermoegen und Rendite der Immobilie kommen aus ekRendite.js:
+  // dieselbe Zahl wie die EK-Rendite im Renditerechner und im Briefing.
+  const einsatz = immobilienEinsatz(d, R);
+  const eingezahlt = einsatz.eingezahlt;
+  const endvermoegen = einsatz.endvermoegen;
+  const rendite = einsatz.rendite;
 
   const immobilie = {
     gewinn: R.g,

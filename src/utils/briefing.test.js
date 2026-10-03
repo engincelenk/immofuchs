@@ -302,12 +302,23 @@ const rk = (d) => {
 };
 
 describe("ekRenditePa (§6.1)", () => {
-  it("ohne Eigenkapital null statt unendlich", () => {
-    expect(ekRenditePa({ g: 50000, j: 10 }, { eigenkapital: "0" })).toBe(null);
+  it("ohne eingesetztes Eigenmittel null statt unendlich", () => {
+    expect(ekRenditePa({ g: 50000, j: 10, nbk: 0, yearRows: [] }, { eigenkapital: "0", nkFinanzieren: true })).toBe(null);
   });
 
-  it("Gesamtsaldo je Eigenkapital und Jahr, in Prozent", () => {
-    expect(ekRenditePa({ g: 60000, j: 10 }, { eigenkapital: "60000" })).toBeCloseTo(10, 6);
+  it("jaehrliche Wachstumsrate vom Einsatz zum Endvermoegen (eine Definition, siehe ekRendite.js)", () => {
+    // 60.000 EUR eingesetzt, Gewinn 60.000 EUR nach 10 Jahren: Endvermoegen
+    // 120.000 EUR, also 2^(1/10) - 1 = 7,177 % p. a. (nicht 10 % als einfacher Durchschnitt).
+    const R = { g: 60000, j: 10, nbk: 0, yearRows: [] };
+    expect(ekRenditePa(R, { eigenkapital: "60000" })).toBeCloseTo(7.1773, 3);
+  });
+
+  it("zaehlt bar gezahlte Nebenkosten und Nachschuesse in den Einsatz", () => {
+    const R = { g: 60000, j: 2, nbk: 20000, yearRows: [{ cf: -5000, cfOhneSt: -6000 }, { cf: 3000, cfOhneSt: 2000 }] };
+    // Einsatz 60.000 + 20.000 + 5.000 Nachschuss = 85.000, Endvermoegen 145.000
+    expect(ekRenditePa(R, { eigenkapital: "60000" })).toBeCloseTo((Math.sqrt(145000 / 85000) - 1) * 100, 6);
+    // nkFinanzieren: Nebenkosten stecken im Darlehen und sind keine Barauslage
+    expect(ekRenditePa(R, { eigenkapital: "60000", nkFinanzieren: true })).toBeCloseTo((Math.sqrt(125000 / 65000) - 1) * 100, 6);
   });
 });
 
@@ -323,8 +334,8 @@ describe("briefingKernkennzahlen (§6.1)", () => {
     ]);
   });
 
-  it("ohne Eigenkapital entfaellt die EK-Rendite-Kachel", () => {
-    const d = { ...basisD, eigenkapital: "0" };
+  it("ohne eingesetztes Eigenmittel (EK 0, Nebenkosten finanziert) entfaellt die EK-Rendite-Kachel", () => {
+    const d = { ...basisD, eigenkapital: "0", nkFinanzieren: true, sonder: "0", renovierung: "0" };
     const { R, K } = rk(d);
     expect(briefingKernkennzahlen(d, {}, R, K).map((k) => k.key)).not.toContain("ekRendite");
   });

@@ -1,3 +1,24 @@
+## 2026-10-03 (1.100.71) [FRONTEND]
+
+### Konsistenzpruefung Block B: Restschuld monatlich, eine EK-Rendite, §6-Puffer korrigiert
+
+- Renditerechner verzinst jetzt monatlich (rendite.js): Restschuld und Zinsen stimmen mit
+  Kredit- und Vorfaelligkeitsrechner ueberein. Beispiel ETW Muenchen 450.000 EUR: Restschuld nach
+  15 Jahren 215.912 EUR (vorher 219.002 EUR im Renditerechner, 230.976 EUR im Zinsbindungs-Banner).
+  Der Banner der Jahrestabelle zeigt den Stand am ENDE der Zinsbindung. Zinsen, Steuer,
+  Gesamtsaldo und Score ziehen leicht nach.
+- Eine EK-Rendite (utils/ekRendite.js): jaehrliche Wachstumsrate vom gesamten Einsatz aus eigener Tasche
+  (Eigenkapital, bar gezahlte Nebenkosten, Renovierung, Sonderumlage, Nachschuesse) zum Endvermoegen.
+  Renditerechner, Briefing, Objektseite und Alternativ-Karte zeigen dieselbe Zahl. Beispiel: 18,2 % p.a.
+  (altes Gesamtsaldo/EK/Jahre) wird zu rund 5,5 %. Verkaufsszenario und Cockpit-Zeile nutzen denselben Nenner.
+  Texte "Dein Eigenkapital waechst" sprechen vom insgesamt eingesetzten Geld (5 Sprachen).
+- Steuer §6: der 3-%-Sicherheitspuffer haelt jetzt wirklich Abstand zur 15-%-Grenze (Quote 14,55 %
+  statt wieder 15,00 %); die Sanierungskosten bleiben, der empfohlene Gebaeudewert waechst.
+  Neuer Hinweis "Grobe Naeherung" (Grenzsatz, Tarifstufen, Nebenkosten-Basis) in 5 Sprachen.
+  Rechnung nach utils/steuerTrick.js ausgelagert.
+- Tests: rendite.test.js (monatlich), ekRendite.test.js, steuerTrick.test.js; vier Erwartungen in
+  kennzahlen.test.js auf die unabhaengig nachgerechneten Monatswerte umgestellt.
+
 ## 2026-10-03 (1.100.70) [FRONTEND]
 
 ### Konsistenzpruefung Block A: Einmaleffekte raus aus dem Monats-Cashflow, einheitliche Renditen

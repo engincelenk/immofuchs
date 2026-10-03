@@ -64,7 +64,10 @@ describe("berechneKennzahlen — Standardfall (identisch zu rendite.test.js base
   });
 
   it("ICR: NOI durch die reinen Zinsen (ohne Tilgung)", () => {
-    expect(K.icr).toBeCloseTo(1, 5); // 9.600 / 9.600 Zinsen Jahr 1
+    // Monatliche Verzinsung (Konsistenzpruefung 2026-10-03): Zinsen Jahr 1 sind
+    // 9.509,87 EUR (Summe der Monatszinsen), nicht 9.600 EUR (Jahreszins auf den
+    // Anfangsstand) - 9.600 / 9.509,87.
+    expect(K.icr).toBeCloseTo(1.00936, 4);
   });
 
   it("Debt Yield: NOI durch die Darlehenssumme", () => {
@@ -79,16 +82,17 @@ describe("berechneKennzahlen — Standardfall (identisch zu rendite.test.js base
   });
 
   it("Restschuld bei Zinsbindungsende (Default 10 Jahre = Betrachtungszeitraum)", () => {
-    expect(K.restschuldZB).toBeCloseTo(182370.69, 1);
-    expect(K.restschuldZBQuote).toBeCloseTo(60.79, 1);
+    // Unabhaengig nachgerechnet: 240.000 EUR, 4 %, Rate 1.200 EUR/Mon., 120 Monate.
+    expect(K.restschuldZB).toBeCloseTo(181100.08, 1);
+    expect(K.restschuldZBQuote).toBeCloseTo(60.37, 1);
   });
 });
 
 describe("berechneKennzahlen — Zinsbindung kuerzer als der Betrachtungszeitraum", () => {
   it("liefert die Restschuld zum tatsaechlichen Zinsbindungsende, nicht zum Analyseende", () => {
     const { K } = kz({ zinsbindung: "5" });
-    expect(K.restschuldZB).toBeCloseTo(214001.65, 1);
-    expect(K.restschuldZBQuote).toBeCloseTo(71.33, 1);
+    expect(K.restschuldZB).toBeCloseTo(213480.41, 1);
+    expect(K.restschuldZBQuote).toBeCloseTo(71.16, 1);
     // Andere Kennzahlen haengen nicht von der Zinsbindung ab und bleiben
     // gegenueber dem Standardfall unveraendert.
     expect(K.dscrIst).toBeCloseTo(0.6667, 3);
@@ -141,6 +145,6 @@ describe("berechneKennzahlen — Vollfinanzierung (Charakterisierung, deckt sich
     expect(K.dscrIst).toBeCloseTo(0.384, 3);
     expect(K.dscrObjekt).toBeCloseTo(0.4, 3);
     expect(K.debtYield).toBeCloseTo(1.92, 2);
-    expect(K.restschuldZBQuote).toBeCloseTo(87.99, 1);
+    expect(K.restschuldZBQuote).toBeCloseTo(87.73, 1);
   });
 });

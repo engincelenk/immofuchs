@@ -265,11 +265,26 @@ export function computeRendite(d, t) {
     const jahresMieteJ = mieteImJahr(jahr) * leerstandsFaktor * 12;
     const zinsProzJahr =
       anschlussZinsProz != null && jahr > zinsbindungJahre ? anschlussZinsProz : zinsProz;
-    const zinsJ = restschuld * (zinsProzJahr / 100);
+    // Monatliche Verzinsung (Befund M1, docs/test-exposes/KONSISTENZPRUEFUNG_2026-10-03.md):
+    // die Restschuld sinkt jeden Monat, die Zinsen laufen auf der jeweils
+    // aktuellen Restschuld - genau wie im Kreditrechner und im Vorfaelligkeits-
+    // rechner. Vorher: Jahreszins auf die Restschuld zu Jahresbeginn, das
+    // ueberschaetzte Zinsen und Restschuld (S1 nach 15 Jahren +3.091 EUR) und
+    // ergab im Bildschirm drei verschiedene "Restschuld nach Zinsbindung".
     // Nie negativ: bei Tilgungssatz 0 oder einer Annuitaet unterhalb der
-    // Jahreszinsen wuerde Math.min() sonst einen negativen Wert liefern und
-    // die Restschuld unbemerkt steigen lassen.
-    const tilgungJ = Math.min(Math.max(0, annuitaetMon * 12 - zinsJ), restschuld);
+    // Zinsen wuerde Math.min() sonst einen negativen Wert liefern und die
+    // Restschuld unbemerkt steigen lassen.
+    const zinsMonJ = zinsProzJahr / 100 / 12;
+    let zinsJ = 0,
+      tilgungJ = 0,
+      restMon = restschuld;
+    for (let m = 0; m < 12 && restMon > 0; m++) {
+      const zm = restMon * zinsMonJ;
+      const tm = Math.min(Math.max(0, annuitaetMon - zm), restMon);
+      zinsJ += zm;
+      tilgungJ += tm;
+      restMon -= tm;
+    }
     const kfwZeile = kfwPlan.rows[jahr - 1] || { zins: 0, tilgung: 0, restStart: 0 };
     const kfwZinsJ = kfwZeile.zins;
     const kfwTilgJ = kfwZeile.tilgung;

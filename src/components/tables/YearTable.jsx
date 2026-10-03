@@ -137,7 +137,7 @@ export function YearTable({ rows, zbJ }) {
             {zbJ && zbJ <= rows.length && (
               <tr style={{ fontSize: 9, background: "var(--warn-bg)" }}>
                 <td colSpan={8} style={{ padding: "4px 8px", color: "var(--warn-tx)" }}>
-                  {t.zinsbindung} {zbJ} J. — {t.chartRestschuld} {fmtE(rows[zbJ - 1]?.rest || 0)}
+                  {t.zinsbindung} {zbJ} J. — {t.chartRestschuld} {fmtE(Math.max(0, (rows[zbJ - 1]?.rest || 0) - (rows[zbJ - 1]?.tilgB || 0)))}
                 </td>
               </tr>
             )}

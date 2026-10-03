@@ -602,7 +602,8 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
   const tilgung = rate != null && R.t1 > 0 ? R.t1 : 0;
   const echterCf = cfVor + tilgung;
   const echtNegativ = echterCf < 0;
-  const ekRendite = eigenkapital > 0 ? ((cfVor * 12) / eigenkapital) * 100 : null;
+  // Nenner = "Aus eigener Tasche" (siehe oben), nicht nur das Eigenkapital.
+  const ekRendite = eigeneTasche > 0 ? ((cfVor * 12) / eigeneTasche) * 100 : null;
   const zeigtBlock3 = tilgung > 0 || ekRendite != null;
 
   const trenner = { marginTop: 18 };
