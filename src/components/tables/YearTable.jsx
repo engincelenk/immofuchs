@@ -134,6 +134,13 @@ export function YearTable({ rows, zbJ }) {
                 </tr>
               );
             })}
+            {(rows[0]?.steuerEinmal || 0) > 0 && (
+              <tr style={{ fontSize: 9 }}>
+                <td colSpan={8} style={{ padding: "4px 8px", color: "var(--ch)" }}>
+                  {(t.yearEinmalHinweis || "").replace("{x}", fmtE(rows[0].steuerEinmal))}
+                </td>
+              </tr>
+            )}
             {zbJ && zbJ <= rows.length && (
               <tr style={{ fontSize: 9, background: "var(--warn-bg)" }}>
                 <td colSpan={8} style={{ padding: "4px 8px", color: "var(--warn-tx)" }}>

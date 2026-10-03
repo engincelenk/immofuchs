@@ -588,6 +588,9 @@ export const T = {
     neueLaufzeit: "Neue Laufzeit",
     zinsenGespart: "Zinsen gespart",
     jahreGespart: "Laufzeit gespart",
+    yearEinmalHinweis: "Jahr 1 enthält den einmaligen Steuerabzug der Renovierung ({x}). Er ist nicht im Monats-Cashflow enthalten.",
+    vqErklaerung:
+      "Eigener Anteil = eingesetztes Geld ({a}) plus die Tilgung, die die Miete vor Steuer nicht gedeckt hat ({b}). Die EK-Rendite rechnet Nachschüsse nach Steuer ({c}), deshalb kann die Summe abweichen.",
     planJahr: "Jahr",
     planRateJahr: "Rate/Jahr",
     statt: "statt",
@@ -1550,6 +1553,9 @@ export const T = {
     neueLaufzeit: "New term",
     zinsenGespart: "Interest saved",
     jahreGespart: "Time saved",
+    yearEinmalHinweis: "Year 1 includes the one-off tax deduction for the renovation ({x}). It is not part of the monthly cash flow.",
+    vqErklaerung:
+      "Own share = money you put in ({a}) plus the repayment the rent did not cover before tax ({b}). The equity return counts top-ups after tax ({c}), so the totals can differ.",
     planJahr: "Year",
     planRateJahr: "Payment/yr",
     statt: "instead of",
@@ -2406,6 +2412,9 @@ export const T = {
     neueLaufzeit: "Yeni vade",
     zinsenGespart: "Faiz tasarrufu",
     jahreGespart: "Kazanılan süre",
+    yearEinmalHinweis: "1. yıl, tadilatın tek seferlik vergi indirimini içerir ({x}). Aylık nakit akışına dahil değildir.",
+    vqErklaerung:
+      "Kendi payınız = koyduğunuz para ({a}) artı kiranın vergi öncesi karşılamadığı anapara ödemesi ({b}). Özsermaye getirisi vergi sonrası ek ödemeleri sayar ({c}), bu yüzden toplamlar farklı olabilir.",
     planJahr: "Yıl",
     planRateJahr: "Ödeme/yıl",
     statt: "yerine",
@@ -3330,6 +3339,9 @@ export const T = {
     neueLaufzeit: "新期限",
     zinsenGespart: "节省利息",
     jahreGespart: "节省年限",
+    yearEinmalHinweis: "第 1 年包含翻新的一次性税收扣除（{x}），不计入每月现金流。",
+    vqErklaerung:
+      "自有份额 = 您投入的资金（{a}）加上租金税前未覆盖的还款部分（{b}）。自有资金回报按税后追加投入（{c}）计算，因此合计可能不同。",
     planJahr: "年",
     planRateJahr: "年付款",
     statt: "而非",
@@ -4248,6 +4260,9 @@ export const T = {
     neueLaufzeit: "नई अवधि",
     zinsenGespart: "ब्याज बचत",
     jahreGespart: "बचा हुआ समय",
+    yearEinmalHinweis: "पहले वर्ष में नवीनीकरण की एकमुश्त कर कटौती शामिल है ({x})। यह मासिक नकदी प्रवाह में शामिल नहीं है।",
+    vqErklaerung:
+      "अपना हिस्सा = आपकी लगाई राशि ({a}) और वह किस्त जिसे किराया कर से पहले नहीं चुका सका ({b})। इक्विटी रिटर्न कर के बाद की अतिरिक्त राशि ({c}) गिनता है, इसलिए योग अलग हो सकते हैं।",
     planJahr: "वर्ष",
     planRateJahr: "वार्षिक किस्त",
     statt: "की बजाय",

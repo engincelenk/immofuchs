@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { fmtE } from "../../utils/helpers.js";
+import { immobilienEinsatz } from "../../utils/ekRendite.js";
 
 // "Wer bezahlt das Vermögen?" - Donut (Nutzer-Vorbild 2026-08-27, Screenshot
 // eines externen Referenz-Rechners). Zerlegt das Nettovermögen bei Verkauf
@@ -44,6 +45,8 @@ export function VermoegensQuelleChart({ R, d }) {
   });
   const eigenerAnteilTilgung = tilgKum - mieterTilgKum;
 
+  // Gleiche Einsatz-Definition wie die EK-Rendite (utils/ekRendite.js): Nachschuesse nach Steuer.
+  const einsatzMitSteuer = immobilienEinsatz(d, R);
   const nkCash = d.nkFinanzieren ? 0 : R.nbk || 0;
   const eigenkapitalEinsatz =
     (+d.eigenkapital || 0) + nkCash + (+d.sonder || 0) + (+d.renovierung || 0);
@@ -157,6 +160,14 @@ export function VermoegensQuelleChart({ R, d }) {
           </div>
         ))}
       </div>
+      {Math.abs(eigenkapitalEinsatz + eigenerAnteilTilgung - einsatzMitSteuer.eingezahlt) > 1 && (
+        <p style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 8, lineHeight: 1.5 }}>
+          {(t.vqErklaerung || "")
+            .replace("{a}", fmtE(eigenkapitalEinsatz))
+            .replace("{b}", fmtE(eigenerAnteilTilgung))
+            .replace("{c}", fmtE(einsatzMitSteuer.nachschuss))}
+        </p>
+      )}
       {R.sSt < 0 && (
         <p style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 8, lineHeight: 1.5 }}>
           {t.vqSteuerlastHinweis ||

@@ -1,3 +1,18 @@
+## 2026-10-03 (1.100.74) [FRONTEND]
+
+### Konsistenzpruefung Nachtrag: Erklaerungen und Bereinigung alter Objekte
+
+- Donut "Wer bezahlt das Vermoegen?": eine Erklaerzeile nennt, woraus der "Eigene Anteil" besteht
+  (eingesetztes Geld plus Tilgung, die die Miete vor Steuer nicht gedeckt hat) und warum die EK-Rendite
+  mit Nachschuessen nach Steuer leicht abweichende Summen hat (5 Sprachen).
+- Jahrestabelle: Fussnote, wenn Jahr 1 den einmaligen Steuerabzug der Renovierung enthaelt - er steht in der
+  Spalte "CF mit St." und ist nicht im Monats-Cashflow enthalten (5 Sprachen).
+- Alte gespeicherte Objekte werden beim Laden bereinigt (utils/altObjekt.js): die frueher fest vorbelegte
+  Sanierungs-Wohnflaeche 60 m2 folgt wieder der Objekt-Wohnflaeche, und die alte Vorfaelligkeits-Vorbelegung
+  (voller Darlehensbetrag, Rate ohne Garage/Nebenkosten) wird neu berechnet. Nur exakt diese alten Vorbelegungen
+  werden geleert, eigene Eingaben bleiben unberuehrt.
+- Tests: altObjekt.test.js.
+
 ## 2026-10-03 (1.100.73) [FRONTEND]
 
 ### Konsistenzpruefung Block D: Absicherung der Querbezuege, Beschriftung Preistrend

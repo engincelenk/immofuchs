@@ -1,3 +1,4 @@
+import { bereinigeAltObjektDaten } from "./utils/altObjekt.js";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { MARKET_RATES, WERTSTEIGERUNG, AFA } from "./data.js";
 import { berechneNichtUml } from "./utils/rendite.js";
@@ -505,7 +506,8 @@ export default function App() {
   const loadObj = useCallback(
     (obj, setTab) => {
       nichtUmlTouchedRef.current = true;
-      loadObjRaw(obj, setTab);
+      // Alte Snapshots: nie bewusst gewaehlte Vorbelegungen entfernen (utils/altObjekt.js).
+      loadObjRaw({ ...obj, data: bereinigeAltObjektDaten(obj.data) }, setTab);
     },
     [loadObjRaw],
   );
