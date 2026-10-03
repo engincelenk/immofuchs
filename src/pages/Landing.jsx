@@ -1496,6 +1496,14 @@ export function Landing({ onStart, lang, setLang }) {
         .lp-hero-stern:nth-of-type(3){right:12%!important;top:22px!important}
       }
       .lp-hero-inner{max-width:980px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:24px}
+      /* Handy: der Hero fuellt den ersten Bildschirm (abzueglich Kopfzeile) und
+         verteilt den Inhalt mittig. Vorher endete er mitten im Bild, darunter stand
+         die naechste Sektion mit hellerem Hintergrund, deren Inhalt erst beim
+         Scrollen eingeblendet wird - eine leere graue Flaeche mit harter Kante. */
+      @media(max-width:699px){
+        .lp-hero{min-height:calc(100svh - 72px);display:flex;flex-direction:column;justify-content:center}
+        .lp-hero-inner{width:100%}
+      }
       .lp-hero-h1{margin:0;font-size:clamp(34px,5.2vw,64px);font-weight:800;color:var(--ct);letter-spacing:-1.2px;line-height:1.05}
       .lp-hero-sub{margin:0;max-width:720px;font-size:clamp(16px,1.6vw,19px);color:var(--cl);line-height:1.55}
       .lp-hero-ctas{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}

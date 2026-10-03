@@ -1,3 +1,12 @@
+## 2026-10-03 (1.100.76) [FRONTEND]
+
+### Startseite mobil: Hero fuellt den ersten Bildschirm
+
+- Auf dem Handy (unter 700 px) fuellt der Hero die Bildschirmhoehe abzueglich Kopfzeile und verteilt den Inhalt
+  mittig (Landing.jsx, CSS). Vorher endete er mitten im Bild; darunter stand die naechste Sektion mit hellerem
+  Hintergrund, deren Inhalt erst beim Scrollen eingeblendet wird - eine leere graue Flaeche mit harter Kante.
+  Desktop und Tablet unveraendert.
+
 ## 2026-10-03 (1.100.75) [FRONTEND]
 
 ### Finn-Button zoomt nicht mehr
