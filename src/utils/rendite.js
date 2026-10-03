@@ -323,20 +323,20 @@ export function computeRendite(d, t) {
   const restschuldEnde = restschuld + kfwPlan.restEnde;
 
   // ── Veraeusserungsgewinn nach § 23 EStG ────────────────────────────────
-  // Innerhalb der Zehnjahresfrist mindert die in Anspruch genommene AfA -
-  // einschliesslich der Sonder-AfA - die Anschaffungskosten und erhoeht
-  // damit den steuerpflichtigen Gewinn (§ 23 Abs. 3 Satz 4 EStG). Ohne
-  // diese Position erschiene die Sonder-AfA als dauerhafter Vorteil,
-  // obwohl beim Verkauf innerhalb der Frist im Wesentlichen nur der
-  // Zinsvorteil der Steuerstundung bleibt.
-  // Vereinfachung: die Frist laeuft taggenau ab Anschaffung; hier wird auf
-  // volle Jahre gerundet und ohne Verkaufsnebenkosten gerechnet.
+  // ANNAHME (Nutzer-Vorgabe 2026-10-03): Die Immobilie wird erst NACH ABLAUF der
+  // zehnjaehrigen Spekulationsfrist verkauft - der Verkaufsgewinn bleibt
+  // steuerfrei, bei JEDEM Betrachtungszeitraum. Bis dahin zog diese Stelle bei
+  // Zeitraeumen bis 10 Jahre Steuer auf den Gewinn ab (Verkaufswert minus
+  // Buchwert, mit zurueckgerechneter AfA nach § 23 Abs. 3 Satz 4 EStG).
+  // Folge: die Sonder-AfA bleibt ein dauerhafter Vorteil; bei einem Verkauf
+  // INNERHALB von 10 Jahren fiele § 23 EStG an - das ist hier nicht eingerechnet
+  // und wird in den Texten (Renditerechner, Alternativ-Karte, KI) so gesagt.
+  // Veraeusserungsgewinn und inFrist bleiben als Information erhalten.
   const kumAfa = afaPlan.afa.reduce((a, b) => a + b, 0);
   const buchwert = Math.max(0, anschaffungskosten - kumAfa);
   const veraeusserungsgewinn = verkaufswert - buchwert;
   const spekulationsfrist = jahre <= 10;
-  const steuer23 =
-    spekulationsfrist && veraeusserungsgewinn > 0 ? veraeusserungsgewinn * (steuerProz / 100) : 0;
+  const steuer23 = 0;
   // nkFinanzieren AN: Nebenkosten stecken bereits im Darlehen (oben) und sind
   // damit keine zusaetzliche Barauslage mehr - sonst wuerden sie hier ein
   // zweites Mal vom Saldo abgezogen (einmal als hoehere Restschuld/Zins- und

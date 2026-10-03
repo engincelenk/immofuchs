@@ -70,3 +70,32 @@ describe("computeRendite - Monat/Jahr an genau einer Stelle", () => {
     expect(Math.abs(R.cf2OhneSt)).toBeLessThan(R.jMiete);
   });
 });
+
+// Annahme (Nutzer-Vorgabe 2026-10-03): Verkauf erst nach Ablauf der 10-jaehrigen
+// Spekulationsfrist - keine Steuer auf den Verkaufsgewinn, bei jedem Zeitraum.
+describe("computeRendite: Verkauf nach Ablauf der Spekulationsfrist", () => {
+  const basis = {
+    kaufpreis: "250000", flaeche: "70", kaltmiete: "900", eigenkapital: "50000", zinssatz: "3.5",
+    tilgung: "2", notar: "2", makler: "3.57", bundesland: "BW", steuersatz: "30", afaSatz: "2",
+    gebAnteil: "80", wertP: "2", nichtUml: "40", leerstand: "0", sonder: "0", renovierung: "0",
+  };
+
+  it("zieht bei keinem Zeitraum Steuer auf den Verkaufsgewinn ab", () => {
+    for (const jahre of ["3", "5", "10", "15", "20"]) {
+      const R = computeRendite({ ...basis, jahre }, {});
+      expect(R.st23, `jahre=${jahre}`).toBe(0);
+    }
+  });
+
+  it("Gesamtsaldo = Verkaufswert - Restschuld + Cashflows - Einsatz (ohne Steuerabzug)", () => {
+    const R = computeRendite({ ...basis, jahre: "10" }, {});
+    const einsatz = 50000 + R.nbk;
+    expect(R.g).toBeCloseTo(R.vw - R.rsEnd + R.sCF - einsatz, 4);
+  });
+
+  it("der Veraeusserungsgewinn bleibt als Information ausgewiesen", () => {
+    const R = computeRendite({ ...basis, jahre: "10" }, {});
+    expect(R.vGewinn).toBeGreaterThan(0);
+    expect(R.inFrist).toBe(true);
+  });
+});

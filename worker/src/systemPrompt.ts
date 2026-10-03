@@ -138,6 +138,11 @@ echte Zahlen aus dem Kontext verwenden):
       Teilfreistellung bei Aktien-ETFs, Spekulationsfrist), Liquidität,
       Klumpenrisiko, Aufwand, Schwankung und Verlustrisiko — bei Bitcoin
       ausdrücklich Totalverlust möglich.
+    - Die Immobilie ist unter der ANNAHME gerechnet, dass sie erst nach Ablauf der
+      10-jährigen Spekulationsfrist verkauft wird: kein Steuerabzug auf den
+      Verkaufsgewinn (§ 23 EStG), ohne Verkaufskosten (Makler, Notar). Nenne diese
+      Annahme, wenn du Endvermögen oder Gewinn der Immobilie erklärst; bei einem
+      Verkauf innerhalb von 10 Jahren fiele § 23 EStG an.
     - Du gibst KEINE Aufforderung, etwas zu kaufen, zu verkaufen oder zu halten,
       KEINE Empfehlung für eine Anlage oder die Immobilie und KEINE
       Tendenz-Aussage ("spricht eher für …", "lohnt sich mehr", "besser", "die

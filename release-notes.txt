@@ -1,3 +1,25 @@
+## 2026-10-03 (1.100.69) [FRONTEND] [WORKER]
+
+### Annahme: Verkauf nach Ablauf der Spekulationsfrist - kein Steuerabzug auf den Verkaufsgewinn
+
+- Renditerechner: die Steuer auf den Verkaufsgewinn (§ 23 EStG) wird bei keinem
+  Betrachtungszeitraum mehr abgezogen (rendite.js: st23 = 0). Annahme: Verkauf erst
+  nach Ablauf der 10-jaehrigen Spekulationsfrist. Gesamtergebnis und
+  Eigenkapitalrendite steigen dadurch bei Zeitraeumen bis 10 Jahre (Beispiel 250.000 EUR,
+  10 Jahre: Gesamtergebnis 82.267 -> 104.033 EUR); Karte Alternativ-Investment, Briefing
+  und Score ziehen automatisch nach. Veraeusserungsgewinn und inFrist bleiben als
+  Information erhalten.
+- Texte: Sonder-AfA-Hinweis in 5 Sprachen (Annahme, Sonder-AfA bleibt dauerhafter
+  Vorteil), Zeile und Erklaertext der Gesamtergebnis-Tabelle, Karte Alternativ-Investment
+  (Steuerzeile entfaellt, Annahme im Rechenweg und in den Hinweisen). Bei einem
+  Verkauf innerhalb von 10 Jahren fiele § 23 EStG an - das ist nicht eingerechnet und so
+  benannt.
+- Score: Teilscore "Spekulationsfrist" (D6) bleibt neutral bei 100 statt kurze
+  Zeitraeume zu bestrafen.
+- Finn und KI-Auswertungen (Chat-Regel 14, Analyse-Prompts, Alternativ-Prompt) nennen die
+  Annahme, wenn sie Endvermoegen, Gesamt- oder Eigenkapitalrendite einordnen.
+- Worker-Deploy noetig.
+
 ## 2026-10-03 (1.100.68) [FRONTEND] [WORKER]
 
 ### Finn: Herkunft und Aktualisierung bleiben geheim, Alternativen als reiner Vergleich

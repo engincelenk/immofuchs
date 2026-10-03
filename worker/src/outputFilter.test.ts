@@ -52,6 +52,11 @@ describe("Finn System-Prompt: Herkunft, Rhythmus und Alternativen", () => {
     expect(p).toContain("Datenstand");
   });
 
+  it("nennt die Annahme: Verkauf nach Ablauf der Spekulationsfrist, kein Steuerabzug", () => {
+    expect(p).toContain("erst nach Ablauf der 10-jährigen Spekulationsfrist verkauft");
+    expect(p).toContain("kein Steuerabzug auf den Verkaufsgewinn");
+  });
+
   it("beschreibt den Alternativ-Vergleich ohne Empfehlung und ohne Tendenz", () => {
     expect(p).toContain("alternativVergleich");
     expect(p).toContain("einsatzAusEigenerTasche");

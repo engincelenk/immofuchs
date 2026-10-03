@@ -159,12 +159,12 @@ function dimensionD6(d, R, K, opt) {
     wertsteigerungScore = Math.max(0, Math.min(100, 100 - (Math.max(0, ueberschuss) / 3) * 100));
   }
 
-  const jahre = +d.jahre || 10;
-  let spekulationsfristScore = 100;
-  if (jahre < 10 && R.gKP > 0) {
-    const st23Quote = (R.st23 || 0) / (0.01 * R.gKP); // % des Kaufpreises
-    spekulationsfristScore = Math.max(0, Math.min(100, 100 - st23Quote));
-  }
+  // Annahme (Nutzer-Vorgabe 2026-10-03): Verkauf erst nach Ablauf der
+  // 10-jaehrigen Spekulationsfrist, also keine Steuer auf den Verkaufsgewinn
+  // (rendite.js, st23 = 0). Frueher bestrafte dieser Teilscore Zeitraeume unter
+  // 10 Jahre ueber R.st23; jetzt bleibt er neutral bei 100, damit sich die
+  // Gewichtung der uebrigen Teilscores nicht verschiebt.
+  const spekulationsfristScore = 100;
 
   return mittel([exitScore, wertsteigerungScore, spekulationsfristScore]);
 }

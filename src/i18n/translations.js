@@ -869,7 +869,7 @@ export const T = {
     nbVerlaufSub: "Jahr 1: {a} · letztes Jahr: {b}",
     nbBeste: "Günstigste Variante für deine {j} Jahre übernehmen",
     nb23Hinweis:
-      "Bei Verkauf innerhalb von 10 Jahren erhöht die genutzte Abschreibung den steuerpflichtigen Gewinn. Bei {j} Jahren Haltedauer bleibt vom Vorteil vor allem der Zinsgewinn der Steuerstundung.",
+      "Annahme: Verkauf nach Ablauf der 10-jährigen Spekulationsfrist. Dann bleibt die Sonder-AfA ein dauerhafter Steuervorteil. Bei einem Verkauf innerhalb von 10 Jahren würde sie über § 23 EStG zurückfallen und den Gewinn erhöhen.",
     kfwTitel: "Förderdarlehen (KfW)",
     kfwAktivLabel: "KfW einbeziehen",
     kfwAktivSub: "Zweites Darlehen neben dem Bankdarlehen",
@@ -1806,7 +1806,7 @@ export const T = {
     nbVerlaufSub: "Year 1: {a} · final year: {b}",
     nbBeste: "Apply the best option for your {j} years",
     nb23Hinweis:
-      "If you sell within 10 years, the depreciation you claimed increases the taxable gain. Over {j} years what mainly remains is the interest benefit of deferring tax.",
+      "Assumption: sale after the 10-year speculation period. The special depreciation then remains a permanent tax advantage. If you sold within 10 years, it would be clawed back via § 23 EStG and increase the taxable gain.",
     kfwTitel: "Subsidised loan (KfW)",
     kfwAktivLabel: "Include KfW",
     kfwAktivSub: "A second loan alongside the bank loan",
@@ -2748,7 +2748,7 @@ export const T = {
     nbVerlaufSub: "1. yıl: {a} · son yıl: {b}",
     nbBeste: "{j} yılın için en uygun seçeneği uygula",
     nb23Hinweis:
-      "10 yıl içinde satarsan kullanılan amortisman vergiye tabi kazancı artırır. {j} yıllık sürede avantaj olarak esas kalan, verginin ertelenmesinden doğan faiz kazancıdır.",
+      "Varsayım: Satış, 10 yıllık spekülasyon süresi dolduktan sonra yapılır. Bu durumda özel amortisman kalıcı bir vergi avantajı olarak kalır. 10 yıl içinde satılırsa § 23 EStG uyarınca geri alınır ve vergiye tabi kazancı artırır.",
     kfwTitel: "Teşvik kredisi (KfW)",
     kfwAktivLabel: "KfW'yi dahil et",
     kfwAktivSub: "Banka kredisinin yanında ikinci bir kredi",
@@ -3639,7 +3639,7 @@ export const T = {
     nbVerlaufSub: "第 1 年：{a} · 最后一年：{b}",
     nbBeste: "采用最适合你 {j} 年的方案",
     nb23Hinweis:
-      "若在 10 年内出售，已使用的折旧会提高应税收益。持有 {j} 年时，剩下的主要是延迟纳税带来的利息收益。",
+      "假设：在 10 年投机期届满后出售。此时特别折旧仍是长期的税收优势。若在 10 年内出售，将依 § 23 EStG 被追回并提高应税收益。",
     kfwTitel: "政策性贷款（KfW）",
     kfwAktivLabel: "计入 KfW",
     kfwAktivSub: "与银行贷款并行的第二笔贷款",
@@ -4561,7 +4561,7 @@ export const T = {
     nbVerlaufSub: "वर्ष 1: {a} · अंतिम वर्ष: {b}",
     nbBeste: "अपने {j} वर्षों के लिए सबसे अच्छा विकल्प लागू करें",
     nb23Hinweis:
-      "10 वर्ष के भीतर बेचने पर लिया गया मूल्यह्रास कर योग्य लाभ बढ़ा देता है। {j} वर्ष की अवधि में मुख्य रूप से कर टालने का ब्याज लाभ ही बचता है।",
+      "धारणा: बिक्री 10 वर्ष की सट्टा-अवधि पूरी होने के बाद होती है। तब विशेष मूल्यह्रास स्थायी कर-लाभ बना रहता है। 10 वर्ष के भीतर बेचने पर § 23 EStG के तहत यह वापस जुड़कर कर-योग्य लाभ बढ़ा देता है।",
     kfwTitel: "प्रोत्साहन ऋण (KfW)",
     kfwAktivLabel: "KfW शामिल करें",
     kfwAktivSub: "बैंक ऋण के साथ दूसरा ऋण",

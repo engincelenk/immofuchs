@@ -67,12 +67,15 @@ describe("AlternativInvestment", () => {
     const v = berechneAlternativVergleich(OBJEKT, {}, 10);
     const i = v.immobilie;
     expect(html).toContain("nach 10 Jahren:");
-    expect(html).toContain("Steuer auf den Verkaufsgewinn");
+    // Annahme: Verkauf nach Ablauf der Spekulationsfrist - keine Steuerzeile, dafuer der Hinweis.
+    expect(html).not.toContain("− Steuer auf den Verkaufsgewinn");
+    expect(html).toContain("Annahme: Die Immobilie wird erst nach Ablauf der 10-jährigen Spekulationsfrist verkauft");
+    expect(i.steuerVerkauf).toBe(0);
     expect(i.verkaufswert - i.restschuld - i.steuerVerkauf + i.cashflowPositiv).toBeCloseTo(i.endvermoegen, 4);
     expect(i.endvermoegen - v.eingezahlt).toBeCloseTo(i.gewinn, 4);
     const lang = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "20" }} t={{}} anfangGestartet />);
     expect(lang).toContain("nach 20 Jahren:");
-    expect(lang).not.toContain("Steuer auf den Verkaufsgewinn");
+    expect(lang).not.toContain("− Steuer auf den Verkaufsgewinn");
   });
 
   it("zeigt ohne Kaufpreis nur den Hinweis, ohne zu rechnen", () => {

@@ -213,7 +213,7 @@ describe("berechneScore — D6 Exit", () => {
     expect(S.dimensionen.find((x) => x.key === "d6")).toBeDefined();
   });
 
-  it("ein Verkauf innerhalb der Spekulationsfrist senkt D6 gegenueber demselben Fall nach 10 Jahren", () => {
+  it("Annahme Verkauf nach Ablauf der Spekulationsfrist: kurzer Zeitraum senkt D6 nicht mehr", () => {
     const kurz = berechneScore({ ...baseD, jahre: "3" }, {});
     const lang = berechneScore({ ...baseD, jahre: "10" }, {});
     const d6Kurz = kurz.dimensionen.find((x) => x.key === "d6").score;

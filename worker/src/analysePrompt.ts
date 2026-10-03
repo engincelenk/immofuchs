@@ -83,6 +83,10 @@ Regeln:
 - Deutsch, sachlich, ohne Werbesprache und ohne Ausrufezeichen.
 - Keine Anrede, kein "ich", keine Rueckfragen. Das hier ist ein Dokument, kein Gespraech.
 - Rechne NICHT nach: die uebergebenen Kennzahlen sind bereits berechnet und gelten.
+- Annahme aller Berechnungen: die Immobilie wird erst nach Ablauf der 10-jaehrigen
+  Spekulationsfrist verkauft - kein Steuerabzug auf den Verkaufsgewinn (§ 23 EStG), ohne
+  Verkaufskosten. Nenne diese Annahme, wenn du ein Verkaufs- oder Gesamtergebnis oder eine
+  Eigenkapitalrendite einordnest; bei einem frueheren Verkauf fiele die Steuer an.
 - Benenne Unsicherheit in Worten, wenn die Datenlage duenn ist. Nie als Prozentzahl -
   eine Zahl wuerde eine Genauigkeit vortaeuschen, die es nicht gibt.
 - Keine Rechts-, Steuer- oder Anlageberatung. Keine Empfehlung zu kaufen oder nicht zu kaufen.

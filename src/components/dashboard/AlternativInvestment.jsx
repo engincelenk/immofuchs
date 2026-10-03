@@ -161,7 +161,6 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
     ...(+data?.sonder > 0 ? ["Sonderumlage"] : []),
   ];
   const wertP = +data?.wertP || 0;
-  const inFrist = v.jahre <= 10;
   const pro1 = (n) => String(n).replace(".", ",");
 
   async function starte() {
@@ -383,12 +382,6 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
                 wert={fmtE(v.immobilie.verkaufswert)}
               />
               <RechenZeile label="− Restschuld der Darlehen" wert={fmtE(v.immobilie.restschuld)} />
-              {inFrist && (
-                <RechenZeile
-                  label="− Steuer auf den Verkaufsgewinn (§ 23 EStG, Verkauf innerhalb von 10 Jahren)"
-                  wert={fmtE(v.immobilie.steuerVerkauf)}
-                />
-              )}
               <RechenZeile
                 label={`+ Cashflows nach Steuer${v.nachschuss > 0 ? " (nur Jahre mit Überschuss)" : ""}`}
                 wert={fmtE(v.immobilie.cashflowPositiv)}
@@ -398,6 +391,11 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
               <RechenZeile label="= Gewinn (Gesamtergebnis mit Steuer im Renditerechner)" wert={fmtE(v.immobilie.gewinn)} fett />
             </tbody>
           </table>
+          <p style={{ ...detailText, marginTop: 10 }}>
+            Annahme: Die Immobilie wird erst nach Ablauf der 10-jährigen Spekulationsfrist verkauft
+            (§ 23 EStG). Der Verkaufsgewinn ist dann steuerfrei, deshalb wird hier keine Steuer darauf
+            abgezogen; bei einem früheren Verkauf fiele sie an.
+          </p>
           <p style={{ ...detailText, marginTop: 10 }}>
             Die Alternativen bekommen dieselben Einzahlungen zu denselben Zeitpunkten. Sie wachsen mit der
             Rendite des jeweiligen Szenarios pro Jahr, die Steuer richtet sich nach der Anlage (siehe
@@ -477,7 +475,9 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
         <summary style={summary}>Hinweise und Vereinfachungen</summary>
         <p style={detailText}>
           Die Renditen der Alternativen sind Annahmen für drei Szenarien, keine Prognose; vergangene
-          Wertentwicklung sagt nichts über die Zukunft. Vereinfacht gerechnet: nominal ohne Inflation,
+          Wertentwicklung sagt nichts über die Zukunft. Die Immobilie ist unter der Annahme gerechnet,
+          dass sie nach Ablauf der 10-jährigen Spekulationsfrist verkauft wird (kein Steuerabzug auf den
+          Verkaufsgewinn, ohne Verkaufskosten). Vereinfacht gerechnet: nominal ohne Inflation,
           Steuer bei ETF und Gold am Ende (Abgeltungsteuer 26,375 %, bei ETF mit 30 % Teilfreistellung),
           Bitcoin nach einem Jahr steuerfrei, Zinsen jährlich versteuert, ohne Sparer-Pauschbetrag.
           Datenstand der Rückblicke: {ALTERNATIV_STAND}.
