@@ -1,3 +1,15 @@
+## 2026-10-03 (1.100.73) [FRONTEND]
+
+### Konsistenzpruefung Block D: Absicherung der Querbezuege, Beschriftung Preistrend
+
+- Neuer Regressionstest konsistenz.test.js: fuer vier Objekte (ETW Muenchen, A-Lage, Tilgung 0, Neubau mit
+  Sonder-AfA/KfW) mit App-Vorbelegungen gelten dauerhaft: Bruttorendite = Kehrwert Kaufpreisfaktor, Nettorendite
+  Rechner = Briefing, Cashflow nach Steuer ohne Einmaleffekt, Briefing-Zeitraum = Gesamtsaldo, EK-Rendite Briefing =
+  Alternativ-Karte, Restschuld nach Zinsbindung = monatliche Rechnung; die Renovierungs-Vorbelegung kippt weder
+  Ampel noch Empfehlung.
+- Objektseite: "In 4 Jahren" heisst jetzt "In den letzten 4 Jahren" (5 Sprachen) - der Landestrend ist
+  rueckblickend (seit Q2 2022), die Wertsteigerungs-Vorbelegung im Rechner ist die Veraenderung zum Vorjahr.
+
 ## 2026-10-03 (1.100.72) [FRONTEND]
 
 ### Konsistenzpruefung Block C: Vorfaelligkeit, Kredit, Sanierung
