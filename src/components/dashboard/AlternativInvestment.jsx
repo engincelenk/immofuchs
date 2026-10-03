@@ -87,22 +87,27 @@ export function AlternativInvestment({ data, t }) {
     starte();
   }
 
+  // Skala fuer das Diagramm: laengster Wert (Immobilie oder guenstigstes
+  // Szenario einer Anlage) plus Luft rechts fuer das Betragslabel.
+  const maxWert =
+    Math.max(imm, ...v.anlagen.map((a) => Math.max(...SZENARIEN.map((s) => a.szenarien[s].endvermoegen)))) * 1.22;
+  const pct = (x) => `${Math.max(0, (x / maxWert) * 100)}%`;
+
   return (
     <section style={karte} aria-label="Alternativ-Investment">
       <div>
         <strong style={titel}>Alternativ-Investment</strong>
-        <p style={leise}>
-          Was wäre aus dem Geld geworden, das du für die Immobilie aus eigener Tasche zahlst, wenn du
-          es stattdessen angelegt hättest?
-        </p>
+        <p style={leise}>Dein Geld aus eigener Tasche: Immobilie oder Anlage?</p>
       </div>
 
       <div style={einsatzBand}>
-        <div style={{ fontSize: 12.5, color: "var(--ch)" }}>Aus eigener Tasche zu Beginn</div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: "var(--ct)" }}>{fmtE(v.start)}</div>
-        <div style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.45 }}>
-          Eigenkapital plus bar gezahlte Kaufnebenkosten
-          {v.nachschuss > 0 ? `, dazu ${fmtE(v.nachschuss)} Nachschüsse bei negativem Cashflow in ${v.jahre} Jahren` : ""}.
+        <div>
+          <div style={{ fontSize: 12.5, color: "var(--ch)" }}>Aus eigener Tasche zu Beginn</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "var(--ct)" }}>{fmtE(v.start)}</div>
+        </div>
+        <div style={{ ...klein, textAlign: "right" }}>
+          Eigenkapital +<br />
+          Kaufnebenkosten
         </div>
       </div>
 
@@ -120,57 +125,135 @@ export function AlternativInvestment({ data, t }) {
         ))}
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={tabelle}>
-          <caption style={{ ...leise, textAlign: "left", captionSide: "top", paddingBottom: 6 }}>
-            Endvermögen nach {horizont} Jahren, nach Steuer
-          </caption>
-          <thead>
-            <tr>
-              <th style={th}>Anlage</th>
-              {SZENARIEN.map((s) => (
-                <th key={s} style={{ ...th, textAlign: "right" }}>
-                  {SZENARIO_LABEL[s]}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr style={{ background: "var(--ca-bg)" }}>
-              <td style={tdName}>
-                <strong>Immobilie</strong>
-                <div style={klein}>
-                  {v.immobilie.rendite == null ? "" : `ca. ${v.immobilie.rendite.toFixed(1).replace(".", ",")} % p. a.`}
+      <div>
+        <div style={{ ...leise, margin: "0 0 18px" }}>Endvermögen nach {horizont} Jahren, nach Steuer</div>
+        <div
+          role="img"
+          aria-label={`Balkendiagramm: Endvermögen nach ${horizont} Jahren. Immobilie ${fmtE(imm)}.`}
+          style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}
+        >
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              borderLeft: "2px dashed var(--ca)",
+              pointerEvents: "none",
+              left: `calc(114px + (100% - 114px) * ${imm / maxWert})`,
+            }}
+          />
+          <div style={zeile}>
+            <div style={name}>
+              Immobilie
+              <small style={klein}>nach Verkauf &amp; Steuern</small>
+            </div>
+            <div style={spur}>
+              <div style={{ ...balken, width: pct(imm), background: "var(--ca)" }} />
+              <div style={{ ...wert, left: `calc(${pct(imm)} + 6px)` }}>{fmtE(imm)}</div>
+            </div>
+          </div>
+          {v.anlagen.map((a) => {
+            const mittel = a.szenarien.basis.endvermoegen;
+            const besser = mittel > imm;
+            const lo = a.szenarien.pess.endvermoegen;
+            const hi = a.szenarien.opt.endvermoegen;
+            return (
+              <div key={a.key} style={zeile}>
+                <div style={name}>{a.name}</div>
+                <div style={spur}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      height: 6,
+                      borderRadius: 3,
+                      background: "var(--cb)",
+                      left: pct(lo),
+                      width: `calc(${pct(Math.max(hi, lo))} - ${pct(lo)})`,
+                    }}
+                  />
+                  <div style={{ ...balken, width: pct(mittel), background: besser ? "var(--ok-tx)" : "#b9b9ad" }} />
+                  <div
+                    style={{
+                      ...wert,
+                      left: `calc(${pct(Math.max(hi, mittel))} + 6px)`,
+                      color: besser ? "var(--ok-tx)" : "var(--ct)",
+                    }}
+                  >
+                    {fmtE(mittel)}
+                  </div>
                 </div>
-              </td>
-              <td style={{ ...td, textAlign: "right", fontWeight: 800 }} colSpan={3}>
-                {fmtE(imm)}
-                <div style={klein}>nach Verkauf, Restschuld und Steuern</div>
-              </td>
-            </tr>
-            {v.anlagen.map((a) => (
-              <tr key={a.key}>
-                <td style={tdName}>{a.name}</td>
-                {SZENARIEN.map((s) => {
-                  const w = a.szenarien[s];
-                  const besser = w.endvermoegen > imm;
-                  return (
-                    <td key={s} style={{ ...td, textAlign: "right" }}>
-                      <span style={{ fontWeight: 700, color: besser ? "var(--ok-tx)" : "var(--ct)" }}>
-                        {fmtE(w.endvermoegen)}
-                      </span>
-                      <div style={klein}>
-                        {String(w.prozent).replace(".", ",")} % p. a.
-                        {besser ? " · über Immobilie" : ""}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      <div style={legende}>
+        <span><i style={{ ...punkt, background: "var(--ca)" }} />Immobilie</span>
+        <span><i style={{ ...punkt, background: "var(--ok-tx)" }} />Anlage über Immobilie (mittleres Szenario)</span>
+        <span><i style={{ ...punkt, background: "#b9b9ad" }} />darunter</span>
+        <span><i style={{ ...punkt, background: "var(--cb)" }} />Spanne vorsichtig–günstig</span>
+      </div>
+
+      <details style={details}>
+        <summary style={summary}>Zahlen als Tabelle</summary>
+        <div style={{ overflowX: "auto" }}>
+          <table style={tabelle}>
+            <thead>
+              <tr>
+                <th style={th}>Anlage</th>
+                {SZENARIEN.map((s) => (
+                  <th key={s} style={{ ...th, textAlign: "right" }}>
+                    {SZENARIO_LABEL[s]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ background: "var(--ca-bg)" }}>
+                <td style={tdName}>
+                  <strong>Immobilie</strong>
+                  <div style={klein}>
+                    {v.immobilie.rendite == null ? "" : `ca. ${v.immobilie.rendite.toFixed(1).replace(".", ",")} % p. a.`}
+                  </div>
+                </td>
+                <td style={{ ...td, textAlign: "right", fontWeight: 800 }} colSpan={3}>
+                  {fmtE(imm)}
+                </td>
+              </tr>
+              {v.anlagen.map((a) => (
+                <tr key={a.key}>
+                  <td style={tdName}>{a.name}</td>
+                  {SZENARIEN.map((s) => {
+                    const w = a.szenarien[s];
+                    return (
+                      <td key={s} style={{ ...td, textAlign: "right" }}>
+                        <span style={{ fontWeight: 700, color: w.endvermoegen > imm ? "var(--ok-tx)" : "var(--ct)" }}>
+                          {fmtE(w.endvermoegen)}
+                        </span>
+                        <div style={klein}>{String(w.prozent).replace(".", ",")} % p. a.</div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details style={details}>
+        <summary style={summary}>So wird gerechnet</summary>
+        <p style={detailText}>
+          Dasselbe Geld, das die Immobilie aus eigener Tasche kostet (Eigenkapital, bar gezahlte
+          Kaufnebenkosten
+          {v.nachschuss > 0 ? `, dazu ${fmtE(v.nachschuss)} Nachschüsse bei negativem Cashflow in ${v.jahre} Jahren` : ""}
+          ), wird zu denselben Zeitpunkten stattdessen angelegt. Verglichen wird, was am Ende nach Steuern
+          übrig bleibt. Die Immobilie nutzt den Gesamtsaldo aus dem Renditerechner.
+        </p>
+      </details>
 
       <details style={details}>
         <summary style={summary}>Annahmen, Rückblick und Risiken je Anlage</summary>
@@ -190,11 +273,11 @@ export function AlternativInvestment({ data, t }) {
         <strong style={{ fontSize: 14, color: "var(--ct)" }}>KI-Einordnung</strong>
         {ergebnis ? (
           <>
-            <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: "var(--cl)", whiteSpace: "pre-line" }}>
-              {ergebnis.text}
-            </p>
+            <details style={details} open>
+              <summary style={summary}>Einordnung für {ergebnis.jahre} Jahre</summary>
+              <p style={{ ...detailText, whiteSpace: "pre-line" }}>{ergebnis.text}</p>
+            </details>
             <div style={klein}>
-              Bezieht sich auf {ergebnis.jahre} Jahre.{" "}
               <button type="button" onClick={starte} style={textLink}>
                 Neu erstellen
               </button>
@@ -220,9 +303,6 @@ export function AlternativInvestment({ data, t }) {
         ) : (
           <>
             {fehler && <div style={fehlerBand}>{fehler}</div>}
-            <span style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.45 }}>
-              Die KI erklärt den Vergleich und nennt Vor- und Nachteile von Immobilie und Alternativen.
-            </span>
             <button type="button" onClick={starte} style={sekundaerKnopfStyle(true)}>
               <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
               {fehler ? "Erneut versuchen" : "KI-Einordnung erstellen"}
@@ -231,13 +311,19 @@ export function AlternativInvestment({ data, t }) {
         )}
       </div>
 
-      <p style={{ ...klein, margin: 0, lineHeight: 1.5 }}>
-        Szenariovergleich, keine Anlageberatung und keine Empfehlung. Die Renditen der Alternativen sind
-        Annahmen für drei Szenarien, keine Prognose; vergangene Wertentwicklung sagt nichts über die
-        Zukunft. Vereinfacht gerechnet: nominal ohne Inflation, Steuer bei ETF und Gold am Ende
-        (Abgeltungsteuer 26,375 %, bei ETF mit 30 % Teilfreistellung), Bitcoin nach einem Jahr steuerfrei,
-        Zinsen jährlich versteuert, ohne Sparer-Pauschbetrag. Datenstand der Rückblicke: {ALTERNATIV_STAND}.
-      </p>
+      <div style={{ ...klein, lineHeight: 1.5 }}>
+        Szenariovergleich, keine Anlageberatung. Renditen sind Annahmen, keine Prognose.
+      </div>
+      <details style={details}>
+        <summary style={summary}>Hinweise und Vereinfachungen</summary>
+        <p style={detailText}>
+          Die Renditen der Alternativen sind Annahmen für drei Szenarien, keine Prognose; vergangene
+          Wertentwicklung sagt nichts über die Zukunft. Vereinfacht gerechnet: nominal ohne Inflation,
+          Steuer bei ETF und Gold am Ende (Abgeltungsteuer 26,375 %, bei ETF mit 30 % Teilfreistellung),
+          Bitcoin nach einem Jahr steuerfrei, Zinsen jährlich versteuert, ohne Sparer-Pauschbetrag.
+          Datenstand der Rückblicke: {ALTERNATIV_STAND}.
+        </p>
+      </details>
     </section>
   );
 }
@@ -254,8 +340,12 @@ const karte = {
 };
 const titel = { fontSize: 16, color: "var(--ct)" };
 const leise = { margin: "4px 0 0", fontSize: 12.5, lineHeight: 1.5, color: "var(--ch)" };
-const klein = { fontSize: 11.5, lineHeight: 1.4, color: "var(--ch)", fontWeight: 400 };
+const klein = { display: "block", fontSize: 11.5, lineHeight: 1.4, color: "var(--ch)", fontWeight: 400 };
 const einsatzBand = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 10,
   background: "var(--ci)",
   border: "1px solid var(--cb)",
   borderRadius: 12,
@@ -278,6 +368,14 @@ const th = { textAlign: "left", fontSize: 11.5, fontWeight: 700, color: "var(--c
 const td = { padding: "8px", borderBottom: "1px solid var(--cb)", verticalAlign: "top", color: "var(--ct)" };
 const tdName = { ...td, fontWeight: 600, minWidth: 120 };
 const details = { background: "var(--ci)", border: "1px solid var(--cb)", borderRadius: 12, padding: "10px 14px" };
+const zeile = { position: "relative", display: "grid", gridTemplateColumns: "104px 1fr", alignItems: "center", gap: 10 };
+const name = { fontSize: 12.5, fontWeight: 600, lineHeight: 1.25, color: "var(--ct)" };
+const spur = { position: "relative", height: 26 };
+const balken = { position: "absolute", left: 0, top: 3, height: 20, borderRadius: "0 6px 6px 0" };
+const wert = { position: "absolute", top: 4, background: "var(--cc)", padding: "0 3px", marginLeft: -3, borderRadius: 3, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", color: "var(--ct)" };
+const legende = { display: "flex", flexWrap: "wrap", gap: 12, fontSize: 11.5, color: "var(--ch)" };
+const punkt = { display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1 };
+const detailText = { margin: "10px 0 0", fontSize: 12.5, lineHeight: 1.55, color: "var(--cl)" };
 const summary = { cursor: "pointer", fontSize: 13, fontWeight: 700, color: "var(--ct)" };
 const textLink = { background: "none", border: "none", padding: 0, color: "var(--ca-dk)", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5 };
 const consentBand = { background: "var(--ci)", border: "1px solid var(--cb)", borderRadius: 10, padding: "10px 12px" };

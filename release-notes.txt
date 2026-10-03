@@ -1,3 +1,14 @@
+## 2026-10-03 (1.100.60) [FRONTEND]
+
+### Alternativ-Investment: Balkendiagramm und Aufklappmenues
+
+- Karte zeigt das Endvermoegen als horizontales Balkendiagramm: Immobilie in Orange
+  mit gestrichelter Referenzlinie, Anlagen im mittleren Szenario (gruen, wenn ueber
+  der Immobilie), Spanne vorsichtig bis guenstig als heller Streifen.
+- Erklaerungstexte in Aufklappmenues: Zahlen als Tabelle, So wird gerechnet,
+  Annahmen/Rueckblick/Risiken, Hinweise und Vereinfachungen. Die KI-Einordnung
+  klappt nach dem Erstellen auf. Sichtbar bleibt nur der Kurz-Disclaimer.
+
 ## 2026-10-03 (1.100.59) [FRONTEND] [WORKER]
 
 ### Alternativ-Investment auf der Objektseite, Regionaldaten nicht mehr als Datei abrufbar
