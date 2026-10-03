@@ -1,3 +1,10 @@
+## 2026-10-03 (1.100.75) [FRONTEND]
+
+### Finn-Button zoomt nicht mehr
+
+- Das Maskottchen unten rechts pulsiert nicht mehr (die Dauer-Animation von 100 auf 107 % entfaellt, MascotFab.jsx).
+  Das kurze Leuchtband alle 20 Sekunden bleibt.
+
 ## 2026-10-03 (1.100.74) [FRONTEND]
 
 ### Konsistenzpruefung Nachtrag: Erklaerungen und Bereinigung alter Objekte

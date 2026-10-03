@@ -117,8 +117,7 @@ export function MascotFab({
           Template-Literal, der Build laeuft trotzdem durch und es kracht erst
           zur Laufzeit (Vorfall 2026-07-22). */}
       <style>{`
-        .if-mascot-motion{display:block;position:relative;width:64px;height:70px;transform-origin:50% 85%;animation:ifFabPuls 8s ease-in-out infinite}
-        @keyframes ifFabPuls{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+        .if-mascot-motion{display:block;position:relative;width:64px;height:70px}
         .if-mascot-fab-img{display:block}
 
         /* Stromfluss: ein Leuchtband wandert durch die Figur. Die Effektebene
@@ -147,7 +146,6 @@ export function MascotFab({
           100%{transform:translateY(-150%);opacity:0}
         }
         @media (prefers-reduced-motion: reduce){
-          .if-mascot-motion{animation:none}
           .if-mascot-band{animation:none;opacity:0}
         }
       `}</style>
