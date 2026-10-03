@@ -1,3 +1,25 @@
+## 2026-10-03 (1.100.68) [FRONTEND] [WORKER]
+
+### Finn: Herkunft und Aktualisierung bleiben geheim, Alternativen als reiner Vergleich
+
+- Finn und alle KI-Auswertungen nennen weder Quelle noch Aktualisierungsrhythmus von
+  Daten ("monatlich", "Datenstand", "Stand ..."): Regel 13 im Chat-Prompt erweitert,
+  gleiche Erweiterung in den Analyse-Prompts (Briefing, Handout, Rechner) und im
+  Alternativ-Prompt. Neues Sicherheitsnetz im Worker (outputFilter.ts) streicht Saetze
+  mit Quellenangabe oder Rhythmus aus Chat-Antworten und der Alternativ-Einordnung;
+  KfW-/BAFA-/Produktnamen bleiben erlaubt.
+- An die KI gehen nur noch neutrale Rueckblick-Texte (rueckblickKi/beispielKi); die
+  Anzeige in der Karte bleibt unveraendert.
+- Alternativen: Finn berät als Vergleich - keine Aufforderung zum Kauf, keine
+  Tendenz-Aussage, keine Empfehlung, keine rechtsgueltige Beratung, Entscheidung liegt
+  beim Nutzer. Neuer Prompt-Abschnitt (Regel 14) mit Beraterhaltung: Hebel, Steuer je
+  Anlage, Liquiditaet, Klumpenrisiko, Schwankung, bei Bitcoin Totalverlust. Der
+  Alternativ-Prompt ist entsprechend verschaerft (kein "besser", "lohnt sich mehr").
+- Finn kennt auf der Objektseite jetzt Einsatz aus eigener Tasche, Nebenkosten-Schalter,
+  Wertsteigerung, Renovierung, Sonderumlage und den Alternativ-Vergleich; zwei neue
+  Fragevorschlaege in 5 Sprachen.
+- Worker-Deploy noetig.
+
 ## 2026-10-03 (1.100.67) [FRONTEND]
 
 ### Schritt-Navigation: konsistente Namen, uebersetzt, Chip fuer Alternativ-Investment

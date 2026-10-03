@@ -172,8 +172,9 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
       const zahlen = alternativZahlenFuerKi(v);
       zahlen.anlagen = zahlen.anlagen.map((a, i) => ({
         ...a,
-        beispiel: ALTERNATIV_ANLAGEN_DATEN[i].beispiel,
-        historie: ALTERNATIV_ANLAGEN_DATEN[i].historie,
+        // Nur die neutralen Felder (ohne Quellen/Rhythmus) gehen an die KI.
+        beispiel: ALTERNATIV_ANLAGEN_DATEN[i].beispielKi ?? ALTERNATIV_ANLAGEN_DATEN[i].beispiel,
+        historie: ALTERNATIV_ANLAGEN_DATEN[i].rueckblickKi,
         risiko: ALTERNATIV_ANLAGEN_DATEN[i].risiko,
       }));
       const res = await rufeAlternativAnalyseAuf(zahlen);

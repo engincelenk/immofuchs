@@ -11,7 +11,7 @@ import { validateExposeExtractRequest, validateRequest, MAX_VERLAUF_TEXT_LEN } f
 import { buildSystemPrompt } from "../systemPrompt";
 import { buildUserPayload } from "../promptBuilder";
 import { callModel, callVisionModel } from "../modelRouter";
-import { filterOutput } from "../outputFilter";
+import { filterOutput, entferneHerkunftUndRhythmus } from "../outputFilter";
 import { EXPOSE_JSON_SCHEMA, EXPOSE_SYSTEM_PROMPT } from "../exposePrompt";
 import {
   nutzerPayload,
@@ -181,7 +181,8 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
     return c.json({ error: "model_call_failed" }, 502);
   }
 
-  const antwort = filterOutput(rawAnswer, req.lang);
+  // Herkunfts-/Rhythmus-Saetze streichen (Regel 13 im System-Prompt, hier das Netz).
+  const antwort = entferneHerkunftUndRhythmus(filterOutput(rawAnswer, req.lang), req.lang);
   const tier = extractTier(req.kontext);
 
   // Kontingent der Testphase erst nach der erfolgreichen Antwort erhoehen -

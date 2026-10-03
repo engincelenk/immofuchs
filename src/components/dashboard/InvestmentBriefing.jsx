@@ -27,6 +27,7 @@ import { AlternativInvestment } from "./AlternativInvestment.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
+import { berechneAlternativVergleich, alternativZahlenFuerKi, HORIZONTE } from "../../utils/alternativInvestment.js";
 import { useApp } from "../../context/AppContext.jsx";
 import { rate } from "../../utils/bands.js";
 import { tpl } from "../../utils/helpers.js";
@@ -43,6 +44,15 @@ import {
   SchrittRisiken,
   SchrittStellschrauben,
 } from "./BriefingVisuals.jsx";
+
+// Zahlen fuer Finn: Einsatz aus eigener Tasche und der Alternativ-Vergleich (nur
+// gerechnete Werte, keine Quellen oder Stichtage).
+function alternativKontext(data, t) {
+  const jahre = HORIZONTE.includes(+data?.jahre) ? +data.jahre : 10;
+  const v = berechneAlternativVergleich(data, t, jahre);
+  if (!v) return {};
+  return { einsatzAusEigenerTasche: Math.round(v.start), alternativVergleich: alternativZahlenFuerKi(v) };
+}
 
 export function InvestmentBriefing({
   objekt,
@@ -159,6 +169,8 @@ export function InvestmentBriefing({
     at.objSuggested1,
     at.objSuggested2,
     at.objSuggested3,
+    at.objSuggested13,
+    at.objSuggested14,
     at.objSuggested4,
     at.objSuggested5,
     at.objSuggested6,
@@ -304,6 +316,9 @@ export function InvestmentBriefing({
             abweichungKaufpreisQmVomMarktProzent: v1?.abw != null ? Math.round(v1.abw) : null,
             abweichungMieteVomMarktProzent: v2?.abw != null ? Math.round(v2.abw) : null,
             bewertung: { tier: nrTier },
+            // Vergleich Immobilie vs. Alternativen fuer Finn (Regel 14 im System-Prompt):
+            // Zeitraum des Renditerechners, wenn 10/15/20 Jahre, sonst 10.
+            ...alternativKontext(data, t),
           })
         }
         contextLabel={at.contextObjekt}

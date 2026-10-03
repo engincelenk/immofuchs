@@ -12,6 +12,7 @@ import { hasConsent } from "../consent";
 import { getTrialCount, incrementTrialUsage } from "../db";
 import { TRIAL_LIMITS, trialTag } from "../trialLimits";
 import { callLageModel } from "../modelRouter";
+import { entferneHerkunftUndRhythmus } from "../outputFilter";
 import {
   alternativSystemPrompt,
   alternativUserPayload,
@@ -107,7 +108,8 @@ alternativRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c)
       maxTokens: ALTERNATIV_MAX_TOKENS,
       temperature: ALTERNATIV_TEMPERATURE,
     });
-    return c.json({ text: antwort.trim() });
+    // Herkunft/Rhythmus der Daten darf nicht ausgegeben werden (siehe outputFilter.ts).
+    return c.json({ text: entferneHerkunftUndRhythmus(antwort, "de") });
   } catch (err) {
     const grund = err instanceof Error ? err.message : "unknown_error";
     console.error("alternativ_model_call_failed", JSON.stringify({ grund }));

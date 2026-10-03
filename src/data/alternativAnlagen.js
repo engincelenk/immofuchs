@@ -44,6 +44,10 @@ const BUND_TEXT = String(BUND).replace(".", ",");
 export const ABGELTUNGSTEUER = 0.26375;
 export const TEILFREISTELLUNG_AKTIENFONDS = 0.3;
 
+// Felder rueckblickKi/beispielKi: dieselben Aussagen OHNE Quellen, Stichtage und
+// Aktualisierungsrhythmus. Nur diese gehen an die KI (Nutzer-Vorgabe 2026-10-03:
+// Finn nennt weder Herkunft noch Rhythmus der Daten). `historie`/`beispiel`
+// bleiben fuer die Anzeige in der Karte.
 export const ALTERNATIV_ANLAGEN_DATEN = [
   {
     key: "msciWorld",
@@ -53,6 +57,7 @@ export const ALTERNATIV_ANLAGEN_DATEN = [
     szenarien: { pess: 3, basis: 6, opt: 8 },
     historie:
       "Letzte 5 Jahre ca. 12,3 % p. a. in EUR (justETF, 31.08.2026); seit 2000 ca. 7,5 % p. a. in USD (MSCI-Index, 31.08.2026).",
+    rueckblickKi: "Letzte 5 Jahre ca. 12,3 % p. a. in Euro; langfristig seit dem Jahr 2000 ca. 7,5 % p. a. (in US-Dollar).",
     risiko: "Schwankung ca. 11 % p. a.; größter Rückgang seit Auflage ca. −34 %.",
   },
   {
@@ -62,6 +67,7 @@ export const ALTERNATIV_ANLAGEN_DATEN = [
     steuer: "etf",
     szenarien: { pess: 3, basis: 6, opt: 8 },
     historie: "Letzte 5 Jahre ca. 12,0 % p. a. in EUR (justETF, 31.08.2026).",
+    rueckblickKi: "Letzte 5 Jahre ca. 12,0 % p. a. in Euro.",
     risiko: "Schwankung ca. 10–14 % p. a.; größter Rückgang seit Auflage ca. −33 %.",
   },
   {
@@ -71,6 +77,7 @@ export const ALTERNATIV_ANLAGEN_DATEN = [
     steuer: "etf",
     szenarien: { pess: 2.5, basis: 6.5, opt: 8.5 },
     historie: "Letzte 5 Jahre ca. 13,9 % p. a. in EUR (justETF, 31.08.2026).",
+    rueckblickKi: "Letzte 5 Jahre ca. 13,9 % p. a. in Euro.",
     risiko:
       "Nur US-Großunternehmen, hohe Konzentration auf wenige Titel; größter Rückgang seit Auflage ca. −34 %.",
   },
@@ -82,6 +89,7 @@ export const ALTERNATIV_ANLAGEN_DATEN = [
     szenarien: { pess: 0, basis: 3.5, opt: 6 },
     historie:
       "In EUR ca. 12,3 % p. a. über 10 Jahre und ca. 10,9 % p. a. über 20 Jahre (Gesamtanstieg +218 % bzw. +685 %, goldavenue.com, 10/2026); letzte 5 Jahre ca. 18,9 % p. a. (justETF).",
+    rueckblickKi: "In Euro ca. 12,3 % p. a. über 10 Jahre, ca. 10,9 % p. a. über 20 Jahre und ca. 18,9 % p. a. über die letzten 5 Jahre.",
     risiko:
       "Schwankung ca. 25 % p. a.; keine laufenden Erträge. Physisches Gold (Barren/Münzen) ist nach einem Jahr steuerfrei, kostet aber Aufschlag und Lagerung.",
   },
@@ -93,6 +101,7 @@ export const ALTERNATIV_ANLAGEN_DATEN = [
     szenarien: { pess: -10, basis: 5, opt: 20 },
     historie:
       "In USD ca. 70 % p. a. über 10 Jahre (2016–2026) und ca. 25 % p. a. über 5 Jahre (Fidelity Digital Assets, bestbrokers.com); 2026 bisher ca. −3,6 % (Stand 27.09.2026).",
+    rueckblickKi: "In US-Dollar ca. 70 % p. a. über 10 Jahre und ca. 25 % p. a. über 5 Jahre; im laufenden Jahr bisher leicht im Minus.",
     risiko:
       "Schwankung ca. 54 % p. a.; Rückgänge von über 70 % kamen mehrfach vor (2011: −94 %, 2016–2026: −78 %). Totalverlust ist möglich.",
   },
@@ -102,6 +111,8 @@ export const ALTERNATIV_ANLAGEN_DATEN = [
     beispiel: `Staatsanleihe Deutschland, Rendite aktuell ca. ${BUND_TEXT} % (${BUNDESANLEIHE_10J.stand})`,
     steuer: "laufend",
     szenarien: { pess: rund1(BUND - 1), basis: rund1(BUND), opt: rund1(BUND + 0.4) },
+    beispielKi: `Staatsanleihe Deutschland, Rendite aktuell ca. ${BUND_TEXT} %`,
+    rueckblickKi: `Rendite zehnjähriger Bundesanleihen aktuell ca. ${BUND_TEXT} %.`,
     historie: `Umlaufrendite zehnjähriger Bundeswertpapiere laut Bundesbank: ${BUND_TEXT} % (Stand ${BUNDESANLEIHE_10J.stand}, monatlich automatisch aktualisiert).`,
     risiko:
       "Kursverluste bei steigenden Zinsen, wenn vor Laufzeitende verkauft wird; bei Halten bis Ende der Laufzeit planbar.",
@@ -114,6 +125,7 @@ export const ALTERNATIV_ANLAGEN_DATEN = [
     szenarien: { pess: 1.5, basis: 2.5, opt: 3.5 },
     historie:
       "Bestes unbefristetes Tagesgeld ca. 2,5 %, Festgeld 1 Jahr bis ca. 3,4 % (onvista, 02.10.2026). Hohe Aktionszinsen gelten meist nur für wenige Monate.",
+    rueckblickKi: "Bestes unbefristetes Tagesgeld ca. 2,5 %, Festgeld mit 1 Jahr Laufzeit bis ca. 3,4 %; hohe Aktionszinsen gelten meist nur wenige Monate.",
     risiko: "Kaum Schwankung, aber Zinsen können sinken und liegen oft nahe an der Inflation.",
   },
 ];

@@ -51,9 +51,16 @@ describe("pruefeNutzlast", () => {
 describe("Alternativ-Prompt", () => {
   it("verbietet Empfehlungen und neue Zahlen", () => {
     const p = alternativSystemPrompt();
-    expect(p).toContain("KEINE Kauf-, Verkaufs- oder Anlageempfehlung");
+    expect(p).toContain("KEINE Aufforderung, etwas zu kaufen, zu verkaufen oder zu halten");
+    expect(p).toContain("KEINE Tendenz-Aussage");
     expect(p).toContain("AUSSCHLIESSLICH die Zahlen");
     expect(p).toContain("Totalverlust");
+    expect(p).toContain("keine rechtsgueltige");
+  });
+  it("verbietet Herkunft und Aktualisierungsrhythmus der Daten", () => {
+    const p = alternativSystemPrompt();
+    expect(p).toContain("Nenne NIEMALS, woher Zahlen");
+    expect(p).toContain("wie oft, wann zuletzt oder seit wann Daten aktualisiert werden");
   });
   it("uebergibt Zahlen und Annahmen in der Nutzlast", () => {
     const u = alternativUserPayload(pruefeNutzlast(gueltig())!);

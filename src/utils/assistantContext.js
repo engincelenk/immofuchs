@@ -52,7 +52,21 @@ export const ASSISTANT_FIELDS = {
   // Objektseite: dieselben Eingaben wie der Renditerechner, bewusst ohne
   // Adresse/Ort - die Kennzahlen (Score, Cashflow, Marktabweichung) kommen
   // fertig gerechnet aus briefing.js.
-  objekt: ["kaufpreis", "flaeche", "kaltmiete", "eigenkapital", "zinssatz", "tilgung", "jahre"],
+  objekt: [
+    "kaufpreis",
+    "flaeche",
+    "kaltmiete",
+    "eigenkapital",
+    "zinssatz",
+    "tilgung",
+    "jahre",
+    // Fuer den Vergleich mit Alternativen (Finn Regel 14): Wertsteigerung,
+    // Nebenkosten-Schalter und Einmalposten bestimmen den Einsatz.
+    "wertP",
+    "nkFinanzieren",
+    "renovierung",
+    "sonder",
+  ],
   // Objekt-Uebersicht (Merkliste): die Objekte selbst gehen als
   // vergleichsObjekte mit (max. 5, ohne Namen/Adresse), hier keine Felder.
   objekte: [],
