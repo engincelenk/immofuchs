@@ -1290,19 +1290,23 @@ const eintragenLink = {
 const MODBEDARF_LABEL = { gering: "Gering", mittel: "Mittel", hoch: "Hoch" };
 const MODBEDARF_FARBE = { gering: "gruen", mittel: "gelb", hoch: "rot" };
 
-function modGrundText(key, m) {
+function modGrundText(key, m, t) {
   if (key === "baujahr") {
-    return m.baujahr < 1979
-      ? `Baujahr ${m.baujahr} (vor 1979)`
-      : `Baujahr ${m.baujahr} (1979–1994)`;
+    return (m.baujahr < 1979
+      ? L(t, "brfModBaujahrAlt", "Baujahr {j} (vor 1979)")
+      : L(t, "brfModBaujahrMittel", "Baujahr {j} (1979–1994)")
+    ).replace("{j}", m.baujahr);
   }
   if (key === "heizungsalter") {
-    return m.heizungsalter === "alt" ? "Heizung ist alt" : "Heizung mittleren Alters";
+    return m.heizungsalter === "alt"
+      ? L(t, "brfModHeizungAlt", "Heizung ist alt")
+      : L(t, "brfModHeizungMittel", "Heizung mittleren Alters");
   }
   if (key === "energieklasse") {
-    return ["F", "G", "H"].includes(m.energieklasse)
-      ? `Energieeffizienzklasse ${m.energieklasse} (niedrig)`
-      : `Energieeffizienzklasse ${m.energieklasse}`;
+    return (["F", "G", "H"].includes(m.energieklasse)
+      ? L(t, "brfModEnergieNiedrig", "Energieeffizienzklasse {k} (niedrig)")
+      : L(t, "brfModEnergie", "Energieeffizienzklasse {k}")
+    ).replace("{k}", m.energieklasse);
   }
   return "";
 }
@@ -1352,7 +1356,7 @@ export function SchrittRisiken({
   const hatAnalyse = risiken.length + staerken.length + hebel.length > 0;
   const modText =
     m?.verfuegbar && m.gruende.length > 0
-      ? m.gruende.map((g) => modGrundText(g, m)).join(", ")
+      ? m.gruende.map((g) => modGrundText(g, m, t)).join(", ")
       : null;
 
   return (
@@ -1550,6 +1554,7 @@ export function sekundaerKnopfStyle(breit = true) {
 // der Vorlage (Variante E) ist das EINE Karte, keine zwei nebeneinander.
 const LAGE_KURZTEXT_SCHWELLE = 260;
 const LAGE_PHASEN = ["Standort einordnen …", "Mit Region vergleichen …", "Text formulieren …"];
+const lagePhasen = (t) => LAGE_PHASEN.map((p, i) => L(t, `brfLagePhase${i + 1}`, p));
 
 export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent, onStarten, onConsentJa, onConsentAbbrechen, t }) {
   const [ausgeklappt, setAusgeklappt] = useState(false);
@@ -1583,7 +1588,7 @@ export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <strong style={{ fontSize: 15, color: "var(--ct)" }}>{L(t, "brfLageTitel2", "Lage-Analyse")}</strong>
           {ergebnis && (
-            <button type="button" onClick={onStarten} aria-label="Lage-Analyse neu erstellen" style={neuBerechnenKnopf}>
+            <button type="button" onClick={onStarten} aria-label={L(t, "brfLageNeuAria", "Lage-Analyse neu erstellen")} style={neuBerechnenKnopf}>
               ↻
             </button>
           )}
@@ -1642,7 +1647,7 @@ export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent
         ) : laufend ? (
           <KiLadeeffekt
             ariaLabel={L(t, "brfLageStarten", "Lage-Analyse erstellen")}
-            phasen={LAGE_PHASEN}
+            phasen={lagePhasen(t)}
           />
         ) : fehler ? (
           <>

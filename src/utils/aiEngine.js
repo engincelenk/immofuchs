@@ -175,30 +175,39 @@ const FELD_NAME = {
   wertP: "Wertsteigerung",
 };
 
-export function geaenderteFelder(ergebnis, data) {
+// Feldname in der App-Sprache (Schluessel aiFeld_<feld> in objektseite.js),
+// Rueckfall Deutsch.
+const feldName = (f, t) => (t && t[`aiFeld_${f}`]) || FELD_NAME[f] || f;
+
+export function geaenderteFelder(ergebnis, data, t) {
   if (!ergebnis?.basis || !ergebnis.produktId) return [];
   const jetzt = zahlenSnapshot(data, ergebnis.produktId);
   return relevanteFelder(ergebnis.produktId)
     .filter((f) => (ergebnis.basis[f] ?? null) !== (jetzt[f] ?? null))
-    .map((f) => FELD_NAME[f] || f);
+    .map((f) => feldName(f, t));
 }
 
 // Das Veraltet-Band soll benennen WAS sich geaendert hat, nicht nur DASS -
 // sonst muss der Nutzer Kontingent ausgeben, um herauszufinden, ob sich
 // Kontingent lohnt. Bei einem Feld mit Delta, ab drei nur noch gezaehlt.
-export function veraltetText(ergebnis, data, locale = "de-DE") {
-  const felder = geaenderteFelder(ergebnis, data);
+export function veraltetText(ergebnis, data, locale = "de-DE", t) {
+  const felder = geaenderteFelder(ergebnis, data, t);
   if (felder.length === 0) return "";
   const zahl = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n.toLocaleString(locale) : String(v ?? "–");
   };
   if (felder.length === 1) {
-    const key = relevanteFelder(ergebnis.produktId).find((f) => (FELD_NAME[f] || f) === felder[0]);
+    const key = relevanteFelder(ergebnis.produktId).find((f) => feldName(f, t) === felder[0]);
     return `${felder[0]} ${zahl(ergebnis.basis[key])} → ${zahl(data?.[key])}`;
   }
-  if (felder.length === 2) return `${felder[0]} und ${felder[1]} geändert`;
-  return `${felder[0]}, ${felder[1]} und ${felder.length - 2} weitere geändert`;
+  const vorlage = (k, fb) => (t && t[k]) || fb;
+  if (felder.length === 2)
+    return vorlage("aiZweiGeaendert", "{a} und {b} geändert").replace("{a}", felder[0]).replace("{b}", felder[1]);
+  return vorlage("aiMehrGeaendert", "{a}, {b} und {n} weitere geändert")
+    .replace("{a}", felder[0])
+    .replace("{b}", felder[1])
+    .replace("{n}", String(felder.length - 2));
 }
 
 // Schreibt ein Ergebnis in die resultData-Form, die toServerPayload erwartet.

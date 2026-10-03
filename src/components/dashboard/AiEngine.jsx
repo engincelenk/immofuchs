@@ -34,6 +34,14 @@ import {
   veraltetText,
 } from "../../utils/aiEngine.js";
 import { HandoutFragen } from "./HandoutFragen.jsx";
+import { tpl } from "../../utils/helpers.js";
+
+// Uebersetzung mit deutschem Rueckfall; `t` kommt aus useApp() (ohne Provider,
+// z. B. in Tests, bleibt es Deutsch).
+const tx = (t, key, fallback, werte) => tpl((t && t[key]) || fallback, werte);
+const useT = () => useApp()?.t || {};
+// Produktbeschriftungen aus aiEngine.js (AI_PRODUKTE) je Sprache.
+const pText = (t, produkt, feld) => tx(t, `aiProd_${produkt.id}_${feld}`, produkt[feld]);
 
 // Marineblau ist in der App die "Denk-Farbe" fuer KI. Sie markiert hier
 // ausschliesslich modellgenerierten Fliesstext - nie gerechnete Zahlen.
@@ -68,6 +76,7 @@ export function AiEngine({
   onConsentJa,
   onConsentAbbrechen,
 }) {
+  const t = useT();
   const [bestaetigung, setBestaetigung] = useState(null);
 
   const zustandVon = (produkt) => {
@@ -127,7 +136,7 @@ export function AiEngine({
                   locale={locale}
                   onStarten={() => starten(produkt)}
                   onVoraussetzung={() => onExpose()}
-                  gesperrtText={gesperrtText(produkt, data, referenzMiete)}
+                  gesperrtText={gesperrtText(produkt, data, referenzMiete, t)}
                   // Bestaetigung erscheint jetzt INNERHALB genau der Karte,
                   // deren "↻ Neu" sie ausgeloest hat (Nutzer-Befund
                   // 2026-09-16: der frueher gemeinsame Dialog ganz unten in
@@ -156,17 +165,17 @@ export function AiEngine({
 // Warum ein Produkt gesperrt ist, in einem Satz. Der Grund muss VOR dem
 // Klick stehen: Kontingent für eine Fehlermeldung auszugeben wäre der
 // schlimmste denkbare Vertrauensbruch in einem limitierten Produkt.
-function gesperrtText(produkt, data, referenzMiete) {
+function gesperrtText(produkt, data, referenzMiete, t) {
   if (produkt.braucht === "grundlage")
-    return "Braucht zuerst Objektdaten — trage sie ein oder lade ein Exposé hoch.";
+    return tx(t, "aiGesperrtGrundlage", "Braucht zuerst Objektdaten — trage sie ein oder lade ein Exposé hoch.");
   if (produkt.braucht === "ort") {
-    if (!data?.bundesland) return "Wähle ein Bundesland, dann lässt sich der Ort vergleichen.";
+    if (!data?.bundesland) return tx(t, "aiGesperrtBundesland", "Wähle ein Bundesland, dann lässt sich der Ort vergleichen.");
     // undefined heisst "laedt noch" - das ist etwas anderes als "gibt es
     // nicht" und darf nicht so aussehen.
-    if (referenzMiete === undefined) return "Ortsdaten werden geladen …";
-    return "Für diesen Ort liegt keine Mietreferenz vor.";
+    if (referenzMiete === undefined) return tx(t, "aiGesperrtLaedt", "Ortsdaten werden geladen …");
+    return tx(t, "aiGesperrtKeineReferenz", "Für diesen Ort liegt keine Mietreferenz vor.");
   }
-  return "Noch nicht möglich.";
+  return tx(t, "aiGesperrtNoch", "Noch nicht möglich.");
 }
 
 function ProduktZeile({
@@ -204,14 +213,14 @@ function ProduktZeile({
     <div style={{ ...karte, ...(zustand === "veraltet" ? { borderColor: "var(--warn-bd)" } : {}) }}>
       {zustand === "veraltet" && (
         <div style={veraltetBand}>
-          ⟳ Veraltet · {veraltetText(ergebnis, data, locale)}
+          {tx(t, "aiVeraltet", "⟳ Veraltet")} · {veraltetText(ergebnis, data, locale, t)}
         </div>
       )}
 
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "var(--ct)" }}>
-            {produkt.titel}
+            {pText(t, produkt, "titel")}
           </span>
         </span>
         {!proAktiv && (
@@ -223,7 +232,7 @@ function ProduktZeile({
           <button
             type="button"
             onClick={onStarten}
-            aria-label="Neu erstellen"
+            aria-label={tx(t, "aiNeuErstellen", "Neu erstellen")}
             style={neuIconKnopf}
           >
             ↻
@@ -238,15 +247,18 @@ function ProduktZeile({
       {zeigtConsent && (
         <div style={consentBand}>
           <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-            Für die Auswertung werden die Kennzahlen dieses Objekts an unseren KI-Dienstleister
-            übertragen — ohne Adresse und ohne Namen. Einverstanden?
+            {tx(
+              t,
+              "aiConsent",
+              "Für die Auswertung werden die Kennzahlen dieses Objekts an unseren KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?",
+            )}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button type="button" onClick={onConsentJa} style={consentJa}>
-              Einverstanden, starten
+              {tx(t, "aiConsentJa", "Einverstanden, starten")}
             </button>
             <button type="button" onClick={onConsentAbbrechen} style={consentNein}>
-              Abbrechen
+              {tx(t, "aiAbbrechen", "Abbrechen")}
             </button>
           </div>
         </div>
@@ -254,9 +266,9 @@ function ProduktZeile({
 
       {zustand === "offen" && (
         <div style={aktionsZeile}>
-          <span style={nutzenZeile}>{produkt.kurz}</span>
+          <span style={nutzenZeile}>{pText(t, produkt, "kurz")}</span>
           <button type="button" onClick={onStarten} style={knopf}>
-            {produkt.aktion}
+            {pText(t, produkt, "aktion")}
           </button>
         </div>
       )}
@@ -290,7 +302,7 @@ function ProduktZeile({
               color: "var(--ch)",
             }}
           >
-            {summaryVon(ergebnis) || "Ergebnis liegt vor."}
+            {summaryVon(ergebnis) || tx(t, "aiErgebnisLiegtVor", "Ergebnis liegt vor.")}
           </p>
 
           {/* Das Handout ist kein Text zum Lesen, sondern eine Liste zum
@@ -320,13 +332,13 @@ function ProduktZeile({
                 lineHeight: 1.5,
               }}
             >
-              Diese Auswertung wurde mit einer früheren Version erstellt.{" "}
+              {tx(t, "aiFruehereVersion", "Diese Auswertung wurde mit einer früheren Version erstellt.")}{" "}
               <button
                 type="button"
                 onClick={onStarten}
                 style={{ ...textLink, fontSize: 12.5, color: "var(--info-tx)", textDecoration: "underline" }}
               >
-                Neu berechnen
+                {tx(t, "aiNeuBerechnen", "Neu berechnen")}
               </button>
             </div>
           ) : (
@@ -347,7 +359,7 @@ function ProduktZeile({
                 aria-expanded={aufgeklappt}
                 style={textLink}
               >
-                Grundlage {aufgeklappt ? "▲" : "▼"}
+                {tx(t, "aiGrundlage", "Grundlage")} {aufgeklappt ? "▲" : "▼"}
               </button>
             </div>
           )}
@@ -373,7 +385,7 @@ function ProduktZeile({
 // Grundlage, auf der die Auswertung fusst - dieselbe Angabe, an der auch die
 // Veraltet-Erkennung haengt (istVeraltet()/veraltetText()). Nur der Rahmen
 // hat sich geaendert: Aufklapp-Sektion in der Karte statt eigenes Sheet.
-function GrundlageUndQuellen({ ergebnis, data: _data, t: _t, produkt: _produkt }) {
+function GrundlageUndQuellen({ ergebnis, data: _data, t, produkt: _produkt }) {
   const basis = ergebnis?.basis;
   const calculations = calculationsVon(ergebnis);
   const scenarios = scenariosVon(ergebnis);
@@ -453,8 +465,8 @@ function GrundlageUndQuellen({ ergebnis, data: _data, t: _t, produkt: _produkt }
         </div>
       )}
 
-      <VariantenBlock varianten={ergebnis?.varianten} titel="Durchgerechnete Varianten" />
-      <ZahlenBlock zahlen={ergebnis?.zahlen} titel="Gerechnete Werte" />
+      <VariantenBlock varianten={ergebnis?.varianten} titel={tx(t, "aiVarianten", "Durchgerechnete Varianten")} />
+      <ZahlenBlock zahlen={ergebnis?.zahlen} titel={tx(t, "aiGerechneteWerte", "Gerechnete Werte")} />
       {basis && Object.keys(basis).length > 0 && (
         <div
           style={{
@@ -477,8 +489,10 @@ function GrundlageUndQuellen({ ergebnis, data: _data, t: _t, produkt: _produkt }
 // Herkunfts-Punkt vor jeder Insight/Risk/Opportunity-Zeile: dezent, mit
 // Tooltip + aria-label statt allein per Farbe unterscheidbar (WCAG).
 function BasisPunkt({ basis }) {
+  const t = useT();
   const FARBE = { expose: "var(--cl)", berechnet: "var(--ok-tx)", annahme: "var(--cl)", ki: KI };
-  const label = BASIS_LABEL[basis] || BASIS_LABEL.ki;
+  const schluessel = BASIS_LABEL[basis] ? basis : "ki";
+  const label = tx(t, `aiBasis_${schluessel}`, BASIS_LABEL[schluessel]);
   return (
     <span
       title={label}
@@ -499,6 +513,7 @@ const TON_LABEL = { risk: "Risiko", opportunity: "Chance" };
 const TON_FARBE = { risk: "var(--bad-tx)", opportunity: "var(--ok-tx)" };
 
 function InsightZeile({ insight, ton }) {
+  const t = useT();
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "7px 0" }}>
       <span style={{ marginTop: 6 }}>
@@ -516,7 +531,7 @@ function InsightZeile({ insight, ton }) {
                 color: TON_FARBE[ton],
               }}
             >
-              {TON_LABEL[ton]}
+              {tx(t, `aiTon_${ton}`, TON_LABEL[ton])}
             </span>
           )}
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>{insight.title}</span>
@@ -576,6 +591,7 @@ function ErkenntnisseEbene2({ ergebnis }) {
 // Aufmerksamkeit. Keine erfundene Restzeit, keine Prozentzahl - das waere
 // vorgetaeuschte Genauigkeit.
 const PHASEN = ["Kennzahlen lesen …", "Mit Marktwerten vergleichen …", "Einschätzung formulieren …"];
+const phasenStandard = (t) => PHASEN.map((p, i) => tx(t, `aiPhase${i + 1}`, p));
 
 // KI-Sterne + Schimmer (Nutzerwunsch 2026-09-09): der reine Phasentext war
 // korrekt, aber leblos - 5-30 s ohne jede Bewegung im Bild fuehlten sich
@@ -603,7 +619,9 @@ const KI_LADEEFFEKT_CSS = `
 // jetzt auch bei "Worauf achten" und der Lage-Analyse (BriefingVisuals.jsx)
 // statt des dort bisherigen reinen Textes "Wird berechnet …" - eigene
 // Phasentexte je Aufrufer statt eines festen PHASEN-Arrays.
-export function KiLadeeffekt({ ariaLabel, phasen = PHASEN, intervalMs = 4000, loop = false }) {
+export function KiLadeeffekt({ ariaLabel, phasen: phasenProp, intervalMs = 4000, loop = false }) {
+  const tStd = useT();
+  const phasen = phasenProp || phasenStandard(tStd);
   const [phase, setPhase] = useState(0);
   useEffect(() => {
     setPhase(0);
@@ -656,27 +674,29 @@ export function KiLadeeffekt({ ariaLabel, phasen = PHASEN, intervalMs = 4000, lo
 }
 
 function Laeuft({ produkt }) {
-  return <KiLadeeffekt ariaLabel={`${produkt.titel} wird erstellt`} />;
+  const t = useT();
+  return <KiLadeeffekt ariaLabel={tx(t, "aiWirdErstellt", "{titel} wird erstellt", { titel: pText(t, produkt, "titel") })} />;
 }
 
 function Bestaetigung({ produkt, ersetzt, onAbbrechen, onJa }) {
+  const t = useT();
   return (
     <div style={bestaetigungKarte}>
-      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>Neu erstellen?</div>
+      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{tx(t, "aiNeuFrage", "Neu erstellen?")}</div>
       <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--cl)", marginBottom: 16 }}>
-        Das ersetzt die Auswertung vom {ersetzt}.
+        {tx(t, "aiErsetzt", "Das ersetzt die Auswertung vom {datum}.", { datum: ersetzt })}
       </div>
       <button type="button" onClick={onJa} style={knopfPrimaer}>
-        Ja, neu erstellen
+        {tx(t, "aiJaNeu", "Ja, neu erstellen")}
       </button>
       <button
         type="button"
         onClick={onAbbrechen}
         style={{ ...textLink, display: "block", width: "100%", textAlign: "center", marginTop: 4, minHeight: 44 }}
       >
-        Abbrechen
+        {tx(t, "aiAbbrechen", "Abbrechen")}
       </button>
-      <span style={{ position: "absolute", left: -9999 }}>{produkt.titel}</span>
+      <span style={{ position: "absolute", left: -9999 }}>{pText(t, produkt, "titel")}</span>
     </div>
   );
 }
@@ -691,6 +711,7 @@ function Bestaetigung({ produkt, ersetzt, onAbbrechen, onJa }) {
 // In der Karte nur der groesste Hebel (max=1), die volle Liste im Sheet -
 // vier Zeilen je Produkt wuerden den Reiter wieder strecken.
 export function VariantenBlock({ varianten, max, titel }) {
+  const t = useT();
   if (!Array.isArray(varianten) || varianten.length === 0) return null;
   const sichtbar = max ? varianten.slice(0, max) : varianten;
   return (
@@ -729,7 +750,7 @@ export function VariantenBlock({ varianten, max, titel }) {
       ))}
       {!max && (
         <div style={{ fontSize: 11, color: "var(--cl)", marginTop: 8, lineHeight: 1.45 }}>
-          Gerechnet, nicht geschätzt — aus derselben Engine wie die Kennzahlen.
+          {tx(t, "aiGerechnetNichtGeschaetzt", "Gerechnet, nicht geschätzt — aus derselben Engine wie die Kennzahlen.")}
         </div>
       )}
     </div>

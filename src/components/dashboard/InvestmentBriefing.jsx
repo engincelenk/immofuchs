@@ -200,7 +200,7 @@ export function InvestmentBriefing({
 
       {veraltet && (
         <div style={veraltetBand}>
-          ⟳ {t.brfVeraltet || "Veraltet"} · {veraltetText(ergebnis, data, locale)}
+          ⟳ {t.brfVeraltet || "Veraltet"} · {veraltetText(ergebnis, data, locale, t)}
         </div>
       )}
 
@@ -269,7 +269,7 @@ export function InvestmentBriefing({
             ohne eigene Schritt-Nummer. Bis 2026-10-03 hing die Karte ausserhalb
             des Rasters unter dem Cockpit (mobil 92 px Luecke). */}
         <div className="cockpit-voll">
-          <AlternativInvestment data={data} t={t} />
+          <AlternativInvestment data={data} t={t} lang={lang} />
         </div>
 
         <section id="schritt-weiter" aria-labelledby="schritt-weiter-titel" className="cockpit-s5" style={{ marginTop: 0 }}>

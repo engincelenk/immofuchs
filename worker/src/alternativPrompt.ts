@@ -1,3 +1,5 @@
+import type { Lang } from "./types";
+import { sprachRegel } from "./systemPrompt";
 // Prompt fuer /api/v1/alternativ (Karte "Alternativ-Investment" der
 // Objektseite). Wie lagePrompt.ts ein eigener, kleiner Aufruf mit Fliesstext
 // statt des strukturierten Analyse-Schemas.
@@ -32,7 +34,7 @@ export interface AlternativNutzlast {
   anlagen: AlternativAnlageInfo[];
 }
 
-export function alternativSystemPrompt(): string {
+export function alternativSystemPrompt(lang: Lang = "de"): string {
   return `Du bist Teil von ImmoFuchs, einer App fuer Immobilieninvestoren in Deutschland. Der Nutzer sieht einen Rechenvergleich: Was wuerde aus dem Geld, das er fuer die Anschaffung einer Immobilie aus eigener Tasche zahlt (Eigenkapital, Kaufnebenkosten, Nachschuesse bei negativem Cashflow), wenn er es stattdessen in eine Alternative anlegt? Deine Aufgabe: erklaere diesen Vergleich fachkundig, verstaendlich und ehrlich wie ein erfahrener Berater und stelle Vor- und Nachteile der Immobilie und der Alternativen einander gegenueber. Es ist ein VERGLEICH und keine rechtsgueltige Beratung.
 
 HARTE REGELN:
@@ -51,7 +53,9 @@ INHALT (in dieser Reihenfolge, jeweils ein kurzer Absatz aus ein bis zwei Saetze
 - Was die Alternativen auszeichnet und was bei ihnen zu bedenken ist: Streuung, Liquiditaet, geringer Aufwand, Schwankung, Steuerlast, fehlender Hebel.
 - Fragen fuer die eigene Abwaegung: zwei bis drei Fragen, die dem Nutzer helfen, selbst zu entscheiden (Zeithorizont, Risikobereitschaft, Aufwand, Reserve) - neutral formuliert, ohne ihn in eine Richtung zu lenken.
 
-Ton: sachlich, direkt, ohne Werbesprache, Anrede "du". Hoechstens 165 Woerter. Antworte auf Deutsch ausschliesslich mit Fliesstext.`;
+Ton: sachlich, direkt, ohne Werbesprache, Anrede "du". Hoechstens 165 Woerter. Antworte ausschliesslich mit Fliesstext.
+
+${sprachRegel(lang)}`;
 }
 
 export function alternativUserPayload(n: AlternativNutzlast): string {

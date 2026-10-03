@@ -54,7 +54,8 @@ function useAuswahl(fragen, schluessel) {
 }
 
 export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
-  const { lang } = useApp();
+  const { lang, t = {} } = useApp();
+  const tx = (key, fallback) => t[key] || fallback;
   const account = useAccountCtx();
   const schluessel = useMemo(
     () => objektHandoutSchluessel(objekt?.id, erstellt),
@@ -158,7 +159,7 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
         setZeigeUpgrade(true);
         return;
       }
-      setFehler("Das Handout ist gerade nicht erreichbar. Versuch es später noch einmal.");
+      setFehler(tx("hoFehler", "Das Handout ist gerade nicht erreichbar. Versuch es später noch einmal."));
     }
   };
 
@@ -173,33 +174,33 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
           Produkt und sollen nicht hinter einem Klick verschwinden). */}
       <div style={fortschrittZeile}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, flexGrow: 1, minWidth: 0 }}>
-          <strong style={{ fontSize: 13.5, color: "var(--ct)" }}>Fragen für den Termin</strong>
+          <strong style={{ fontSize: 13.5, color: "var(--ct)" }}>{tx("hoFragenTermin", "Fragen für den Termin")}</strong>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={meterTrack}>
               <span style={{ display: "block", height: 6, borderRadius: 3, background: "var(--ca)", width: `${anteil}%` }} />
             </div>
             <span style={{ fontSize: 12.5, color: "var(--cl)", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
-              {auswahl.size} von {alleIds.length} gewählt
+              {tx("hoGewaehlt", "{a} von {b} gewählt").replace("{a}", auswahl.size).replace("{b}", alleIds.length)}
             </span>
           </div>
         </div>
         <button type="button" onClick={() => setOffen((o) => !o)} aria-expanded={offen} style={knopf}>
-          {offen ? "Fragen ausblenden" : "Fragen auswählen"}
+          {offen ? tx("hoAusblenden", "Fragen ausblenden") : tx("hoAuswaehlen", "Fragen auswählen")}
         </button>
       </div>
 
       {offen && alleIds.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <button type="button" onClick={toggleAlle} style={textLink}>
-            {alleGewaehlt ? "Auswahl aufheben" : "Alle wählen"}
+            {alleGewaehlt ? tx("hoAuswahlAufheben", "Auswahl aufheben") : tx("hoAlleWaehlen", "Alle wählen")}
           </button>
         </div>
       )}
 
       {offen && (
         <>
-          <Block titel="An den Makler" fragen={anMakler} auswahl={auswahl} onToggle={toggle} />
-          <Block titel="Vor Ort prüfen" fragen={vorOrt} auswahl={auswahl} onToggle={toggle} />
+          <Block titel={tx("hoAnMakler", "An den Makler")} fragen={anMakler} auswahl={auswahl} onToggle={toggle} />
+          <Block titel={tx("hoVorOrt", "Vor Ort prüfen")} fragen={vorOrt} auswahl={auswahl} onToggle={toggle} />
         </>
       )}
 
@@ -224,11 +225,11 @@ export function HandoutFragen({ objekt, data, fragen, kernaussage, erstellt }) {
         >
           {/* Kein Kronen-Symbol wie im Finn-Handout: die Produktkarte traegt
               fuer Nutzer ohne Abo bereits den "Pro"-Chip in der Kopfzeile. */}
-          PDF für die Besichtigung
+          {tx("hoPdf", "PDF für die Besichtigung")}
         </button>
         {auswahl.size === 0 && (
           <span style={{ display: "block", marginTop: 6, fontSize: 12.5, color: "var(--cl)" }}>
-            Mindestens eine Frage auswählen.
+            {tx("hoMindestensEine", "Mindestens eine Frage auswählen.")}
           </span>
         )}
       </div>

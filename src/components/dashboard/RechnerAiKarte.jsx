@@ -39,7 +39,8 @@ import { rufeAnalyseAuf, analyseFehlertext, erteileConsent } from "../../utils/a
 // Datenverlust, das Ergebnis liegt weiterhin unter resultData.ai.<produktId>
 // am Server).
 export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahlen, standortFakten }) {
-  const { aktivesObjekt, updateObj, isProSavedObjects, t } = useApp();
+  const { aktivesObjekt, updateObj, isProSavedObjects, t, lang } = useApp();
+  const tx = (key, fallback) => (t && t[key]) || fallback;
   const [ergebnis, setErgebnis] = useState(null);
   // Snapshot der `kennzahlen`, wie sie beim letzten Lauf ans Modell gingen -
   // fuer den Veraltet-Hinweis. Bewusst NICHT istVeraltet()/veraltetText()
@@ -70,7 +71,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
     setConsent(false);
     setLaufend(true);
     try {
-      const res = await rufeAnalyseAuf({ produkt: produktId, kennzahlen, zahlen, standortFakten });
+      const res = await rufeAnalyseAuf({ produkt: produktId, kennzahlen, zahlen, standortFakten, lang });
       if (!res.ok) {
         if (res.art === "consent") setConsent(true);
         else setFehler(analyseFehlertext(res.art, t));
@@ -147,7 +148,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
     >
       {veraltet && (
         <div style={veraltetBand}>
-          ⟳ Veraltet · Eingaben haben sich seit der letzten Auswertung geändert
+          {tx("aiVeraltet", "⟳ Veraltet")} · {tx("raikVeraltet", "Eingaben haben sich seit der letzten Auswertung geändert")}
         </div>
       )}
       {fehler && <div style={fehlerBand}>{fehler}</div>}
@@ -162,7 +163,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
           </span>
           {ergebnis && (
             <span style={{ display: "block", fontSize: 11, color: "var(--cl)", marginTop: 4 }}>
-              KI-generiert · {alter(ergebnis)}
+              {tx("raikKiGeneriert", "KI-generiert")} · {alter(ergebnis)}
             </span>
           )}
         </span>
@@ -172,15 +173,17 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
       {consent && (
         <div style={consentBand}>
           <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-            Für die Auswertung werden diese Zahlen an unseren KI-Dienstleister übertragen — ohne
-            Adresse und ohne Namen. Einverstanden?
+            {tx(
+              "raikConsent",
+              "Für die Auswertung werden diese Zahlen an unseren KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?",
+            )}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button type="button" onClick={einwilligenUndStarten} style={consentJa}>
-              Einverstanden, starten
+              {tx("aiConsentJa", "Einverstanden, starten")}
             </button>
             <button type="button" onClick={() => setConsent(false)} style={consentNein}>
-              Abbrechen
+              {tx("aiAbbrechen", "Abbrechen")}
             </button>
           </div>
         </div>
@@ -190,12 +193,12 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
         <div style={aktionsZeile}>
           <span style={nutzenZeile}>{kurz}</span>
           <button type="button" onClick={klickStarten} style={knopf}>
-            Analysieren
+            {tx("raikAnalysieren", "Analysieren")}
           </button>
         </div>
       )}
 
-      {laufend && <Laeuft titel={titel} />}
+      {laufend && <Laeuft titel={titel} t={t} />}
 
       {ergebnis && !laufend && (
         <>
@@ -209,7 +212,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
               }}
             />
             <span style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ct)" }}>
-              {summaryVon(ergebnis) || "Ergebnis liegt vor."}
+              {summaryVon(ergebnis) || tx("aiErgebnisLiegtVor", "Ergebnis liegt vor.")}
             </span>
           </div>
 
@@ -225,13 +228,13 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
                 lineHeight: 1.5,
               }}
             >
-              Diese Auswertung wurde mit einer früheren Version erstellt.{" "}
+              {tx("aiFruehereVersion", "Diese Auswertung wurde mit einer früheren Version erstellt.")}{" "}
               <button
                 type="button"
                 onClick={klickStarten}
                 style={{ ...textLink, fontSize: 12.5, color: "var(--info-tx)", textDecoration: "underline" }}
               >
-                Neu berechnen
+                {tx("aiNeuBerechnen", "Neu berechnen")}
               </button>
             </div>
           ) : (
@@ -264,13 +267,13 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
                 aria-expanded={aufgeklappt}
                 style={textLink}
               >
-                Grundlage & Quellen {aufgeklappt ? "▲" : "▼"}
+                {tx("raikGrundlageQuellen", "Grundlage & Quellen")} {aufgeklappt ? "▲" : "▼"}
               </button>
             ) : (
               <span />
             )}
             <button type="button" onClick={klickStarten} style={{ ...textLink, color: "var(--cl)" }}>
-              ↻ Neu
+              {tx("altNeu", "↻ Neu")}
             </button>
           </div>
 
@@ -282,7 +285,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
                 </div>
               )}
               {ergebnis?.zahlen?.length > 0 && (
-                <ZahlenBlock zahlen={ergebnis.zahlen} titel="Gerechnete Werte" />
+                <ZahlenBlock zahlen={ergebnis.zahlen} titel={tx("aiGerechneteWerte", "Gerechnete Werte")} />
               )}
             </div>
           )}
@@ -291,9 +294,9 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
 
       {bestaetigen && (
         <div style={bestaetigungKarte}>
-          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>Neu erstellen?</div>
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{tx("aiNeuFrage", "Neu erstellen?")}</div>
           <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--cl)", marginBottom: 16 }}>
-            Das ersetzt die Auswertung vom {alter(ergebnis)}.
+            {tx("aiErsetzt", "Das ersetzt die Auswertung vom {datum}.").replace("{datum}", alter(ergebnis))}
           </div>
           <button
             type="button"
@@ -303,7 +306,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
             }}
             style={knopfPrimaer}
           >
-            Ja, neu erstellen
+            {tx("aiJaNeu", "Ja, neu erstellen")}
           </button>
           <button
             type="button"
@@ -317,13 +320,13 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
               minHeight: 44,
             }}
           >
-            Abbrechen
+            {tx("aiAbbrechen", "Abbrechen")}
           </button>
         </div>
       )}
 
       <div style={{ fontSize: 11, color: "var(--cl)", lineHeight: 1.5, marginTop: 12 }}>
-        Text ist KI-generiert und ersetzt keine Beratung.
+        {tx("raikDisclaimer", "Text ist KI-generiert und ersetzt keine Beratung.")}
       </div>
     </div>
   );
@@ -421,11 +424,11 @@ const RAIK_LADEEFFEKT_CSS = `
 }
 `;
 
-function Laeuft({ titel }) {
+function Laeuft({ titel, t }) {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setPhase((p) => Math.min(p + 1, PHASEN.length - 1)), 2500);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setPhase((p) => Math.min(p + 1, PHASEN.length - 1)), 2500);
+    return () => clearInterval(timer);
   }, []);
   return (
     <div aria-busy="true" style={{ marginTop: 8 }}>
@@ -445,7 +448,7 @@ function Laeuft({ titel }) {
             ✦
           </span>
         ))}
-        <span style={{ fontSize: 12.5, color: "var(--cl)" }}>{PHASEN[phase]}</span>
+        <span style={{ fontSize: 12.5, color: "var(--cl)" }}>{(t && t[`raikPhase${phase + 1}`]) || PHASEN[phase]}</span>
       </div>
       {[100, 72, 42].map((breite) => (
         <div
@@ -455,7 +458,7 @@ function Laeuft({ titel }) {
         />
       ))}
       <span style={{ position: "absolute", left: -9999 }} aria-live="polite">
-        {titel} wird erstellt
+        {((t && t.aiWirdErstellt) || "{titel} wird erstellt").replace("{titel}", titel)}
       </span>
     </div>
   );

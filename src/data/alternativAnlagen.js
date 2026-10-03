@@ -44,6 +44,11 @@ const BUND_TEXT = String(BUND).replace(".", ",");
 export const ABGELTUNGSTEUER = 0.26375;
 export const TEILFREISTELLUNG_AKTIENFONDS = 0.3;
 
+// Uebersetzte Anzeige-Texte (name, beispiel, historie, risiko) liegen in
+// src/i18n/objektseite.js unter altName_/altBeispiel_/altHistorie_/altRisiko_<key>.
+// Bei der Datenpflege dort dieselben Zahlen nachziehen - objektseite.test.js
+// prueft, dass jede Sprache dieselben Zahlen nennt wie der deutsche Text.
+//
 // Felder rueckblickKi/beispielKi: dieselben Aussagen OHNE Quellen, Stichtage und
 // Aktualisierungsrhythmus. Nur diese gehen an die KI (Nutzer-Vorgabe 2026-10-03:
 // Finn nennt weder Herkunft noch Rhythmus der Daten). `historie`/`beispiel`
@@ -108,6 +113,9 @@ export const ALTERNATIV_ANLAGEN_DATEN = [
   {
     key: "bundesanleihe",
     name: "Bundesanleihe (10 Jahre)",
+    // Fuer die Uebersetzungen (objektseite.js altBeispiel_/altHistorie_bundesanleihe).
+    renditeText: BUND_TEXT,
+    stand: BUNDESANLEIHE_10J.stand,
     beispiel: `Staatsanleihe Deutschland, Rendite aktuell ca. ${BUND_TEXT} % (${BUNDESANLEIHE_10J.stand})`,
     steuer: "laufend",
     szenarien: { pess: rund1(BUND - 1), basis: rund1(BUND), opt: rund1(BUND + 0.4) },

@@ -12,6 +12,7 @@ import { hasConsent } from "../consent";
 import { getTrialCount, incrementTrialUsage } from "../db";
 import { TRIAL_LIMITS, trialTag } from "../trialLimits";
 import { callLageModel } from "../modelRouter";
+import { leseLang, tokenFaktor } from "../systemPrompt";
 import { entferneHerkunftUndRhythmus } from "../outputFilter";
 import {
   alternativSystemPrompt,
@@ -104,12 +105,13 @@ alternativRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c)
   }
 
   try {
-    const antwort = await callLageModel(c.env, alternativSystemPrompt(), alternativUserPayload(nutzlast), {
-      maxTokens: ALTERNATIV_MAX_TOKENS,
+    const lang = leseLang(body?.lang);
+    const antwort = await callLageModel(c.env, alternativSystemPrompt(lang), alternativUserPayload(nutzlast), {
+      maxTokens: ALTERNATIV_MAX_TOKENS * tokenFaktor(lang),
       temperature: ALTERNATIV_TEMPERATURE,
     });
     // Herkunft/Rhythmus der Daten darf nicht ausgegeben werden (siehe outputFilter.ts).
-    return c.json({ text: entferneHerkunftUndRhythmus(antwort, "de") });
+    return c.json({ text: entferneHerkunftUndRhythmus(antwort, lang) });
   } catch (err) {
     const grund = err instanceof Error ? err.message : "unknown_error";
     console.error("alternativ_model_call_failed", JSON.stringify({ grund }));

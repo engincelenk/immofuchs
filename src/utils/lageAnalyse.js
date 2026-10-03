@@ -9,7 +9,7 @@
 import { apiFetch } from "./apiBase.js";
 import { getSessionId } from "./assistantSession.js";
 
-export async function rufeLageAnalyseAuf({ ort, bundesland, kreis }) {
+export async function rufeLageAnalyseAuf({ ort, bundesland, kreis, lang = "de" }) {
   try {
     const res = await apiFetch("/lage", {
       method: "POST",
@@ -19,7 +19,7 @@ export async function rufeLageAnalyseAuf({ ort, bundesland, kreis }) {
       // Einwilligung, NICHT an der angemeldeten Server-Session. Bug-Fix
       // 2026-09-23: fehlte hier, /api/v1/lage bekam die Einwilligung dadurch
       // nie zu Gesicht.
-      body: JSON.stringify({ ort, bundesland, kreis: kreis || undefined, sessionId: getSessionId() }),
+      body: JSON.stringify({ ort, bundesland, kreis: kreis || undefined, lang, sessionId: getSessionId() }),
     });
     if (!res.ok) {
       const daten = await res.json().catch(() => ({}));

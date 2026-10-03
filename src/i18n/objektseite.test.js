@@ -31,3 +31,41 @@ describe("Objektseiten-Schluessel in T gemischt", () => {
     }
   });
 });
+
+// Alternativ-Investment (Nachtrag 2026-10-03): die Rueckblick-/Risiko-Texte
+// tragen Zahlen aus der monatlichen Datenpflege. Uebersetzung und Datendatei
+// duerfen nicht auseinanderlaufen.
+import { ALTERNATIV_ANLAGEN_DATEN } from "../data/alternativAnlagen.js";
+
+describe("Alternativ-Investment: Uebersetzungen der Anlagedaten", () => {
+  // Zahlen sprachneutral vergleichen: Dezimalkomma = Dezimalpunkt,
+  // Tausenderpunkt/-komma vor genau drei Ziffern entfernt.
+  const zahlen = (s) =>
+    (String(s)
+      .replace(/(\d)[.,](\d{3})(?!\d)/g, "$1$2")
+      .match(/\d+(?:[.,]\d+)?/g) || [])
+      .map((z) => z.replace(",", "."))
+      .sort()
+      .join(" ");
+
+  it("deutsche Texte entsprechen der Datendatei", () => {
+    for (const a of ALTERNATIV_ANLAGEN_DATEN) {
+      expect(OBJ_T.de[`altName_${a.key}`], a.key).toBe(a.name);
+      expect(OBJ_T.de[`altRisiko_${a.key}`], a.key).toBe(a.risiko);
+      if (a.key === "bundesanleihe") continue; // {rendite}/{stand} statt fester Zahlen
+      expect(OBJ_T.de[`altHistorie_${a.key}`], a.key).toBe(a.historie);
+      expect(OBJ_T.de[`altBeispiel_${a.key}`], a.key).toBe(a.beispiel);
+    }
+  });
+
+  it("jede Sprache nennt dieselben Zahlen wie der deutsche Text", () => {
+    for (const a of ALTERNATIV_ANLAGEN_DATEN) {
+      for (const feld of ["altHistorie_", "altRisiko_", "altBeispiel_"]) {
+        const k = feld + a.key;
+        for (const s of Object.keys(OBJ_T)) {
+          expect(zahlen(OBJ_T[s][k]), `${s}.${k}`).toBe(zahlen(OBJ_T.de[k]));
+        }
+      }
+    }
+  });
+});

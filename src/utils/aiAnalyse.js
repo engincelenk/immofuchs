@@ -24,6 +24,7 @@ export async function rufeAnalyseAuf({
   varianten,
   befunde,
   standortFakten,
+  lang = "de",
 }) {
   try {
     const res = await apiFetch("/analyse", {
@@ -36,6 +37,8 @@ export async function rufeAnalyseAuf({
         ...(befunde && befunde.length > 0 ? { befunde } : {}),
         ...(standortFakten && standortFakten.length > 0 ? { standortFakten } : {}),
         kennzahlen,
+        // App-Sprache: der Worker laesst das Modell in dieser Sprache antworten.
+        lang,
         // Die KI-Session des Geraets, NICHT eine Objekt-ID - der Worker
         // prueft daran die Einwilligung (siehe assistantSession.js). Gilt
         // fuer alle KI-Produkte gemeinsam, Objekt wie Rechner.

@@ -15,6 +15,7 @@ import {
   unterlagenLaden,
 } from "../../utils/objektUnterlagen.js";
 import { koordinateFuer, ladePlzGeo } from "../../utils/plzGeo.js";
+import { useApp } from "../../context/AppContext.jsx";
 
 const FEHLER_TEXT = {
   zu_gross: `Die Datei ist größer als ${Math.round(MAX_DATEI_BYTES / 1024 / 1024)} MB.`,
@@ -221,6 +222,8 @@ export function ObjektUnterlagen({ objektId }) {
 // dekorativen Kartenflaeche in EINER gemeinsamen Karte steht. Inhalt und
 // Verhalten bleiben identisch, nur die Aussenhuelle entfaellt.
 export function ObjektLage({ data, titel, eingebettet = false }) {
+  const t = useApp()?.t || {};
+  const tx = (key, fallback) => t[key] || fallback;
   const [koord, setKoord] = useState(null);
   const strasse = [data?.strasse, data?.hausnummer].filter(Boolean).join(" ");
   const ortsteil = [data?.plz, data?.ort].filter(Boolean).join(" ");
@@ -261,7 +264,7 @@ export function ObjektLage({ data, titel, eingebettet = false }) {
           marginBottom: eingebettet ? 4 : 8,
         }}
       >
-        Lage
+        {tx("lageTitel", "Lage")}
       </div>
 
       <div
@@ -285,15 +288,24 @@ export function ObjektLage({ data, titel, eingebettet = false }) {
           rel="noopener noreferrer"
           style={eingebettet ? { ...kartenLinkStil, minHeight: 28, padding: 0, border: "none", background: "none" } : kartenLinkStil}
         >
-          {eingebettet ? "In Google Maps öffnen ↗" : (<><span aria-hidden="true">📍</span> In Google Maps öffnen</>)}
+          {eingebettet ? (
+            `${tx("lageMaps", "In Google Maps öffnen")} ↗`
+          ) : (
+            <>
+              <span aria-hidden="true">📍</span> {tx("lageMaps", "In Google Maps öffnen")}
+            </>
+          )}
         </a>
       </div>
 
       {koord && !genau && (
         <div style={{ fontSize: 11, color: "var(--cl)", marginTop: eingebettet ? 4 : 8, lineHeight: 1.5 }}>
           {eingebettet
-            ? "Pin = Mitte der Postleitzahl"
-            : "Der Pin zeigt die Mitte der Postleitzahl. Für die genaue Lage wähle die Adresse beim Bearbeiten aus der Adresssuche."}
+            ? tx("lagePinKurz", "Pin = Mitte der Postleitzahl")
+            : tx(
+                "lagePinLang",
+                "Der Pin zeigt die Mitte der Postleitzahl. Für die genaue Lage wähle die Adresse beim Bearbeiten aus der Adresssuche.",
+              )}
         </div>
       )}
     </>

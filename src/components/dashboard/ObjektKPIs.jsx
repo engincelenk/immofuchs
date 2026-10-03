@@ -25,17 +25,17 @@ export function ObjektKPIs({ kennzahlen, t }) {
 
   const felder = [
     { label: t?.kaufpreis || "Kaufpreis", value: eur(kennzahlen.kaufpreis) },
-    { label: "Miete / Monat", value: eur(kennzahlen.mieteMon) },
+    { label: t?.kpiMieteMon || "Miete / Monat", value: eur(kennzahlen.mieteMon) },
     {
-      label: "Faktor",
+      label: t?.kpiFaktor || "Faktor",
       value: Number.isFinite(kennzahlen.faktor)
         ? `${kennzahlen.faktor.toFixed(1).replace(".", ",")} x`
         : "–",
     },
-    { label: "Rate / Monat", value: eur(kennzahlen.rateMon) },
-    { label: "Kosten / Monat", value: eur(kennzahlen.kostenMon) },
+    { label: t?.kpiRateMon || "Rate / Monat", value: eur(kennzahlen.rateMon) },
+    { label: t?.kpiKostenMon || "Kosten / Monat", value: eur(kennzahlen.kostenMon) },
     {
-      label: "Cashflow v. St.",
+      label: t?.kpiCashflowVSt || "Cashflow v. St.",
       value: `${cf >= 0 ? "+" : ""}${eur(cf)}`,
       color: cf >= 0 ? "#2F6B4F" : "#B3402A",
     },

@@ -8,7 +8,7 @@
 import type { Context } from "hono";
 import type { AssistantResponse, Env, ExposeExtractResponse, Tier } from "../types";
 import { validateExposeExtractRequest, validateRequest, MAX_VERLAUF_TEXT_LEN } from "../validator";
-import { buildSystemPrompt } from "../systemPrompt";
+import { buildSystemPrompt, leseLang, sprachRegel, tokenFaktor } from "../systemPrompt";
 import { buildUserPayload } from "../promptBuilder";
 import { callModel, callVisionModel } from "../modelRouter";
 import { filterOutput, entferneHerkunftUndRhythmus } from "../outputFilter";
@@ -482,6 +482,8 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   // Der Freitext-Hinweis geht mit an das Modell - deshalb hart begrenzt, damit
   // er nicht als Traeger fuer Prompt-Injection oder als Datenkanal dient.
   const hinweis = typeof b.hinweis === "string" ? b.hinweis.slice(0, 500) : "";
+  // App-Sprache des Nutzers (seit 2026-10-03), Rueckfall Deutsch.
+  const lang = leseLang(b.lang);
 
   // Durchgerechnete Varianten fuer das Produkt "hebel". Sie stammen aus der
   // Rendite-/Score-Engine des Clients - hier wird nur die Form geprueft.
@@ -518,8 +520,10 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
   try {
     roh = await callModel(
       env,
-      "de",
-      systemPromptFuer(produkt as AnalyseProdukt),
+      lang,
+      `${systemPromptFuer(produkt as AnalyseProdukt)}
+
+${sprachRegel(lang)}`,
       nutzerPayload(
         kennzahlen as Record<string, unknown>,
         hinweis,
@@ -528,7 +532,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
         befunde,
         standortFakten,
       ),
-      produkt === "briefing" ? BRIEFING_MAX_TOKENS : ANALYSE_MAX_TOKENS,
+      (produkt === "briefing" ? BRIEFING_MAX_TOKENS : ANALYSE_MAX_TOKENS) * tokenFaktor(lang),
     );
   } catch (err) {
     // Kontingent zurueckgeben: der Nutzer hat kein Ergebnis bekommen.
@@ -591,7 +595,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
             ergebnis.recommendation ?? "",
           ]
   ).join(" ");
-  if (filterOutput(gesamttext, "de") !== gesamttext) {
+  if (filterOutput(gesamttext, lang) !== gesamttext) {
     await limiter.decrement();
     return c.json({ error: "unbrauchbare_antwort" }, 502);
   }

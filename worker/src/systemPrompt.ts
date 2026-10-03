@@ -4,13 +4,33 @@ import type { Lang } from "./types";
 // reine Code-Aenderung. Aktueller Stand: docs/finn-regeln-2026-07-23.md
 // (Finn als Fach-Experte, der Begriffe/Felder erklaert und wie ein
 // Steuerberater/Anwalt beraet - immer mit Nicht-offiziell-Hinweis).
-const LANG_NAMES: Record<Lang, string> = {
+export const LANG_NAMES: Record<Lang, string> = {
   de: "Deutsch",
   en: "Englisch",
   tr: "Türkisch",
   zh: "Chinesisch (vereinfacht)",
   hi: "Hindi",
 };
+
+// Sprache der Objektseiten-KI (Analyse, Handout, Lage, Alternativ-Investment).
+// Bis 2026-10-03 stand dort fest "Antworte auf Deutsch" - jetzt schickt der
+// Client die App-Sprache mit; alles Unbekannte faellt auf Deutsch zurueck.
+const LANG_SET: ReadonlySet<string> = new Set(Object.keys(LANG_NAMES));
+export function leseLang(v: unknown): Lang {
+  return typeof v === "string" && LANG_SET.has(v) ? (v as Lang) : "de";
+}
+
+// Anweisung ans Modell. JSON-Schluessel und Enum-Werte bleiben ein
+// technischer Vertrag mit dem Parser und werden nie uebersetzt.
+export function sprachRegel(lang: Lang): string {
+  return `SPRACHE: Schreibe ALLE Texte deiner Antwort auf ${LANG_NAMES[lang]}. JSON-Schluessel und vorgegebene Enum-Werte (z. B. Kategorien) bleiben unveraendert wie im Schema. Fachbegriffe des deutschen Rechts (z. B. § 23 EStG) darfst du nennen, erklaere sie dann kurz in dieser Sprache.`;
+}
+
+// Devanagari braucht beim Modell deutlich mehr Tokens je Wort; ohne Zuschlag
+// wuerde eine Hindi-Antwort mitten im Satz bzw. im JSON abgeschnitten.
+export function tokenFaktor(lang: Lang): number {
+  return lang === "hi" ? 2 : 1;
+}
 
 export function buildSystemPrompt(lang: Lang): string {
   return `Du bist Finn, der ImmoFuchs-Assistent und ein ausgewiesener Experte für

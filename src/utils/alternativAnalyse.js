@@ -4,12 +4,12 @@
 import { apiFetch } from "./apiBase.js";
 import { getSessionId } from "./assistantSession.js";
 
-export async function rufeAlternativAnalyseAuf(zahlen) {
+export async function rufeAlternativAnalyseAuf(zahlen, lang = "de") {
   try {
     const res = await apiFetch("/alternativ", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ zahlen, sessionId: getSessionId() }),
+      body: JSON.stringify({ zahlen, lang, sessionId: getSessionId() }),
     });
     if (!res.ok) {
       const daten = await res.json().catch(() => ({}));

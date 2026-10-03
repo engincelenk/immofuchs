@@ -1,3 +1,19 @@
+## 2026-10-03 (1.100.83) [FRONTEND+WORKER]
+
+### Objektseite in allen 5 Sprachen, KI antwortet in der App-Sprache
+
+- Bisher fest deutsche Texte uebersetzt (DE/EN/TR/ZH/HI, rund 250 Schluessel in src/i18n/objektseite.js):
+  Alternativ-Investment komplett inkl. Anlagenamen, Rueckblick- und Risikotexten, KI-Karten der Objektseite und
+  der Rechner (Einwilligung, Ladephasen, Neu erstellen, Herkunfts-Punkte), Objektkopf, Objekt bearbeiten,
+  Besichtigungsfragen, Lage-Block, Modernisierungsgruende, Objektkarte der Liste.
+- KI in der App-Sprache: Investment-Briefing, Besichtigungshandout, Rechner-Auswertungen, Lage-Analyse und
+  KI-Einordnung Alternativ-Investment schicken die Sprache mit; der Worker ersetzt das feste "Antworte auf Deutsch"
+  (JSON-Schluessel bleiben unveraendert), Hindi mit doppeltem Token-Spielraum. Unbekannte Sprache -> Deutsch.
+- Schutz: objektseite.test.js prueft deutsche Anlagetexte gegen alternativAnlagen.js und dieselben Zahlen in
+  jeder Sprache; worker/src/sprache.test.ts prueft die Sprachweitergabe.
+- Bewusst Deutsch geblieben: Zahlenformat (de-DE), die KI-Nutzlast in briefing.js (liest nur das Modell),
+  Fragenkatalog des Handouts (finnFragenkatalog.js) und die nicht mehr gerenderte Uebersicht (Ueberblick.jsx).
+
 ## 2026-10-03 (1.100.82) [FRONTEND+WORKER]
 
 ### Objektseite: Cashflow vor Steuer, kuerzere KI-Texte, Rechtshinweis, Rechtsseiten hell/dunkel

@@ -368,7 +368,7 @@ async function callGemini(
 // bereits berechneter Zahlen wie beim Chat/Briefing - ein zweites, noch
 // schwaecheres Modell wuerde das Erfindungsrisiko nur erhoehen, nicht
 // absichern.
-const LAGE_MAX_TOKENS = 600;
+export const LAGE_MAX_TOKENS = 600;
 const LAGE_TEMPERATURE = 0.2; // niedrig: Fakten statt Kreativitaet
 
 export async function callLageModel(

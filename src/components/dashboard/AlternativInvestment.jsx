@@ -11,16 +11,23 @@ import { berechneAlternativAlle, alternativZahlenFuerKi, HORIZONTE } from "../..
 import { ALTERNATIV_ANLAGEN_DATEN, ALTERNATIV_STAND, SZENARIO_LABEL } from "../../data/alternativAnlagen.js";
 import { rufeAlternativAnalyseAuf } from "../../utils/alternativAnalyse.js";
 import { analyseFehlertext, erteileConsent } from "../../utils/aiAnalyse.js";
-import { fmtE } from "../../utils/helpers.js";
+import { fmtE, tpl } from "../../utils/helpers.js";
 import { KiLadeeffekt } from "./AiEngine.jsx";
 import { primaerKnopfStyle, sekundaerKnopfStyle, useErstSichtbar } from "./BriefingVisuals.jsx";
 
-const PHASEN = [
-  "Zahlen zusammenstellen …",
-  "Immobilie gegen Anlagen rechnen …",
-  "Vor- und Nachteile abwägen …",
-  "Text formulieren …",
+// Uebersetzung mit deutschem Rueckfall (Muster wie BriefingVisuals.jsx L()),
+// Platzhalter {x} ueber tpl().
+const L = (t, key, fallback, werte) => tpl((t && t[key]) || fallback, werte);
+
+const phasen = (t) => [
+  L(t, "altPhase1", "Zahlen zusammenstellen …"),
+  L(t, "altPhase2", "Immobilie gegen Anlagen rechnen …"),
+  L(t, "altPhase3", "Vor- und Nachteile abwägen …"),
+  L(t, "altPhase4", "Text formulieren …"),
 ];
+
+const anlageName = (t, a) => L(t, `altName_${a.key}`, a.name);
+const szenarioLabel = (t, s) => L(t, `altSzenario_${s}`, SZENARIO_LABEL[s]);
 
 const SZENARIEN = ["pess", "basis", "opt"];
 
@@ -34,7 +41,7 @@ function ersterSatz(text) {
 // Diagramm im Bild ist (useErstSichtbar braucht ein Element, das beim ersten
 // Rendern schon da ist - die Karte zeigt das Diagramm aber erst nach dem Klick).
 // Beim Horizontwechsel wird die Komponente ueber den key neu gemountet.
-function Balkendiagramm({ v, horizont, imm }) {
+function Balkendiagramm({ v, horizont, imm, t }) {
   const [diagrammRef, gesehen] = useErstSichtbar();
   const wachsen = (i) => ({
     className: gesehen ? "bv-wachsen" : undefined,
@@ -49,7 +56,10 @@ function Balkendiagramm({ v, horizont, imm }) {
     <div
       ref={diagrammRef}
       role="img"
-      aria-label={`Balkendiagramm: Endvermögen nach ${horizont} Jahren. Immobilie ${fmtE(imm)}.`}
+      aria-label={L(t, "altDiagrammAria", "Balkendiagramm: Endvermögen nach {jahre} Jahren. Immobilie {wert}.", {
+        jahre: horizont,
+        wert: fmtE(imm),
+      })}
       style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}
     >
       <div
@@ -65,8 +75,8 @@ function Balkendiagramm({ v, horizont, imm }) {
       />
       <div style={zeile}>
         <div style={name}>
-          Immobilie
-          <small style={klein}>nach Verkauf &amp; Steuern</small>
+          {L(t, "altImmobilie", "Immobilie")}
+          <small style={klein}>{L(t, "altNachVerkauf", "nach Verkauf & Steuern")}</small>
         </div>
         <div style={spur}>
           <div
@@ -83,7 +93,7 @@ function Balkendiagramm({ v, horizont, imm }) {
         const hi = a.szenarien.opt.endvermoegen;
         return (
           <div key={a.key} style={zeile}>
-            <div style={name}>{a.name}</div>
+            <div style={name}>{anlageName(t, a)}</div>
             <div style={spur}>
               <div
                 style={{
@@ -122,7 +132,7 @@ function Balkendiagramm({ v, horizont, imm }) {
   );
 }
 
-export function AlternativInvestment({ data, t, anfangGestartet = false }) {
+export function AlternativInvestment({ data, t, lang = "de", anfangGestartet = false }) {
   // Start mit dem Zeitraum aus dem Renditerechner, wenn er einer der drei
   // Horizonte ist - dann steht hier dieselbe Zahl wie dort.
   const rechnerJahre = +data?.jahre || 0;
@@ -140,11 +150,14 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
 
   if (!v) {
     return (
-      <section id="schritt-alternativ" style={{ ...karte, scrollMarginTop: 78 }} aria-label="Alternativ-Investment">
-        <strong style={titel}>Alternativ-Investment</strong>
+      <section id="schritt-alternativ" style={{ ...karte, scrollMarginTop: 78 }} aria-label={L(t, "altTitel", "Alternativ-Investment")}>
+        <strong style={titel}>{L(t, "altTitel", "Alternativ-Investment")}</strong>
         <p style={leise}>
-          Sobald Kaufpreis und Eigenkapital eingetragen sind, zeigt diese Karte, was aus deinem Geld
-          bei einer Anlage in ETF, Gold, Bitcoin oder Zinsprodukten geworden wäre.
+          {L(
+            t,
+            "altLeer",
+            "Sobald Kaufpreis und Eigenkapital eingetragen sind, zeigt diese Karte, was aus deinem Geld bei einer Anlage in ETF, Gold, Bitcoin oder Zinsprodukten geworden wäre.",
+          )}
         </p>
       </section>
     );
@@ -155,10 +168,10 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
   // Woraus sich "aus eigener Tasche" zusammensetzt - passend zu den Schaltern des
   // Objekts: mitfinanzierte Nebenkosten stecken im Darlehen, nicht im Einsatz.
   const einsatzBestandteile = [
-    "Eigenkapital",
-    ...(data?.nkFinanzieren ? [] : ["Kaufnebenkosten"]),
-    ...(+data?.renovierung > 0 ? ["Renovierung"] : []),
-    ...(+data?.sonder > 0 ? ["Sonderumlage"] : []),
+    L(t, "altTeilEk", "Eigenkapital"),
+    ...(data?.nkFinanzieren ? [] : [L(t, "altTeilNk", "Kaufnebenkosten")]),
+    ...(+data?.renovierung > 0 ? [L(t, "altTeilRenovierung", "Renovierung")] : []),
+    ...(+data?.sonder > 0 ? [L(t, "altTeilSonder", "Sonderumlage")] : []),
   ];
   const wertP = +data?.wertP || 0;
   const pro1 = (n) => String(n).replace(".", ",");
@@ -176,7 +189,7 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
         historie: ALTERNATIV_ANLAGEN_DATEN[i].rueckblickKi,
         risiko: ALTERNATIV_ANLAGEN_DATEN[i].risiko,
       }));
-      const res = await rufeAlternativAnalyseAuf(zahlen);
+      const res = await rufeAlternativAnalyseAuf(zahlen, lang);
       if (!res.ok) {
         if (res.art === "consent") {
           setConsent(true);
@@ -216,42 +229,48 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
   // Plakativer Einstieg, bevor etwas berechnet/angezeigt wird.
   if (!gestartet) {
     return (
-      <section id="schritt-alternativ" style={{ ...karte, ...heroKarte, scrollMarginTop: 78 }} aria-label="Alternativ-Investment">
+      <section id="schritt-alternativ" style={{ ...karte, ...heroKarte, scrollMarginTop: 78 }} aria-label={L(t, "altTitel", "Alternativ-Investment")}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
           <span aria-hidden="true" style={{ fontSize: 26, lineHeight: 1, color: "var(--ca)" }}>✦</span>
           <div>
             <strong style={{ fontSize: 18, lineHeight: 1.25, color: "var(--ct)" }}>
-              KI vergleicht diese Immobilie mit Alternativ-Investments
+              {L(t, "altHeroTitel", "KI vergleicht diese Immobilie mit Alternativ-Investments")}
             </strong>
             <p style={{ ...leise, marginTop: 6 }}>
-              Dein Geld aus eigener Tasche – lieber in die Immobilie oder in MSCI World, S&amp;P 500, Gold,
-              Bitcoin, Anleihen oder Tagesgeld? Nach Steuer, über 10, 15 oder 20 Jahre.
+              {L(
+                t,
+                "altHeroText",
+                "Dein Geld aus eigener Tasche – lieber in die Immobilie oder in MSCI World, S&P 500, Gold, Bitcoin, Anleihen oder Tagesgeld? Nach Steuer, über 10, 15 oder 20 Jahre.",
+              )}
             </p>
           </div>
         </div>
         {consent ? (
           <div style={consentBand}>
             <div style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
-              Für die Einordnung werden die berechneten Vergleichszahlen dieses Objekts, ohne Adresse und
-              ohne Namen, an unseren KI-Dienstleister übertragen.
+              {L(
+                t,
+                "altConsent",
+                "Für die Einordnung werden die berechneten Vergleichszahlen dieses Objekts, ohne Adresse und ohne Namen, an unseren KI-Dienstleister übertragen.",
+              )}
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" onClick={einwilligenUndStarten} style={consentJa}>
-                Einverstanden, starten
+                {L(t, "altConsentJa", "Einverstanden, starten")}
               </button>
               <button type="button" onClick={() => setConsent(false)} style={consentNein}>
-                Abbrechen
+                {L(t, "altAbbrechen", "Abbrechen")}
               </button>
             </div>
           </div>
         ) : laufend ? (
-          <KiLadeeffekt ariaLabel="Vergleich wird erstellt" phasen={PHASEN} />
+          <KiLadeeffekt ariaLabel={L(t, "altVergleichLaeuft", "Vergleich wird erstellt")} phasen={phasen(t)} />
         ) : (
           <>
             {fehler && <div style={fehlerBand}>{fehler}</div>}
             <button type="button" onClick={starte} style={primaerKnopfStyle(true)}>
               <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
-              {fehler ? "Erneut versuchen" : "Vergleich erstellen"}
+              {fehler ? L(t, "altErneut", "Erneut versuchen") : L(t, "altVergleichErstellen", "Vergleich erstellen")}
             </button>
           </>
         )}
@@ -260,15 +279,15 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
   }
 
   return (
-    <section id="schritt-alternativ" style={{ ...karte, scrollMarginTop: 78 }} aria-label="Alternativ-Investment">
+    <section id="schritt-alternativ" style={{ ...karte, scrollMarginTop: 78 }} aria-label={L(t, "altTitel", "Alternativ-Investment")}>
       <div>
-        <strong style={titel}>Alternativ-Investment</strong>
-        <p style={leise}>Dein Geld aus eigener Tasche: Immobilie oder Anlage?</p>
+        <strong style={titel}>{L(t, "altTitel", "Alternativ-Investment")}</strong>
+        <p style={leise}>{L(t, "altUntertitel", "Dein Geld aus eigener Tasche: Immobilie oder Anlage?")}</p>
       </div>
 
       <div style={einsatzBand}>
         <div>
-          <div style={{ fontSize: 12.5, color: "var(--ch)" }}>Aus eigener Tasche zu Beginn</div>
+          <div style={{ fontSize: 12.5, color: "var(--ch)" }}>{L(t, "altEinsatz", "Aus eigener Tasche zu Beginn")}</div>
           <div style={{ fontSize: 20, fontWeight: 800, color: "var(--ct)" }}>{fmtE(v.start)}</div>
         </div>
         <div style={{ ...klein, textAlign: "right" }}>
@@ -282,7 +301,7 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
         </div>
       </div>
 
-      <div role="group" aria-label="Zeithorizont" style={{ display: "flex", gap: 6 }}>
+      <div role="group" aria-label={L(t, "altZeithorizont", "Zeithorizont")} style={{ display: "flex", gap: 6 }}>
         {HORIZONTE.map((h) => (
           <button
             key={h}
@@ -291,43 +310,54 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
             onClick={() => setHorizont(h)}
             style={segment(h === horizont)}
           >
-            {h} Jahre
+            {L(t, "altJahre", "{n} Jahre", { n: h })}
           </button>
         ))}
       </div>
 
       <div>
-        <div style={{ ...leise, margin: "0 0 18px" }}>Endvermögen nach {horizont} Jahren, nach Steuer</div>
-        <Balkendiagramm key={horizont} v={v} horizont={horizont} imm={imm} />
+        <div style={{ ...leise, margin: "0 0 18px" }}>
+          {L(t, "altEndvermoegenNach", "Endvermögen nach {n} Jahren, nach Steuer", { n: horizont })}
+        </div>
+        <Balkendiagramm key={horizont} v={v} horizont={horizont} imm={imm} t={t} />
       </div>
 
       <div style={{ ...klein, lineHeight: 1.5 }}>
-        Immobilie: Gewinn <strong style={{ color: "var(--ct)" }}>{fmtE(v.immobilie.gewinn)}</strong> bei{" "}
-        {fmtE(v.eingezahlt)} eingezahlt.{" "}
+        {L(t, "altGewinnVor", "Immobilie: Gewinn")}{" "}
+        <strong style={{ color: "var(--ct)" }}>{fmtE(v.immobilie.gewinn)}</strong>{" "}
+        {L(t, "altGewinnNach", "bei {betrag} eingezahlt.", { betrag: fmtE(v.eingezahlt) })}{" "}
         {horizont === rechnerJahre
-          ? "Entspricht dem „Gesamtergebnis mit Steuer“ im Renditerechner."
+          ? L(t, "altGleichRechner", "Entspricht dem „Gesamtergebnis mit Steuer“ im Renditerechner.")
           : rechnerJahre > 0
-            ? `Der Renditerechner rechnet mit ${rechnerJahre} Jahren – dort steht deshalb ein anderer Wert.`
+            ? L(
+                t,
+                "altAndererZeitraum",
+                "Der Renditerechner rechnet mit {n} Jahren – dort steht deshalb ein anderer Wert.",
+                { n: rechnerJahre },
+              )
             : ""}
       </div>
 
       <div style={legende}>
-        <span><i style={{ ...punkt, background: "var(--ca)" }} />Immobilie</span>
-        <span><i style={{ ...punkt, background: "var(--ok-tx)" }} />Anlage über Immobilie (mittleres Szenario)</span>
-        <span><i style={{ ...punkt, background: "#b9b9ad" }} />darunter</span>
-        <span><i style={{ ...punkt, background: "var(--cb)" }} />Spanne vorsichtig–günstig</span>
+        <span><i style={{ ...punkt, background: "var(--ca)" }} />{L(t, "altImmobilie", "Immobilie")}</span>
+        <span>
+          <i style={{ ...punkt, background: "var(--ok-tx)" }} />
+          {L(t, "altLegendeDarueber", "Anlage über Immobilie (mittleres Szenario)")}
+        </span>
+        <span><i style={{ ...punkt, background: "#b9b9ad" }} />{L(t, "altLegendeDarunter", "darunter")}</span>
+        <span><i style={{ ...punkt, background: "var(--cb)" }} />{L(t, "altLegendeSpanne", "Spanne vorsichtig–günstig")}</span>
       </div>
 
       <details style={details}>
-        <summary style={summary}>Zahlen als Tabelle</summary>
+        <summary style={summary}>{L(t, "altTabelle", "Zahlen als Tabelle")}</summary>
         <div style={{ overflowX: "auto" }}>
           <table style={tabelle}>
             <thead>
               <tr>
-                <th style={th}>Anlage</th>
+                <th style={th}>{L(t, "altAnlage", "Anlage")}</th>
                 {SZENARIEN.map((s) => (
                   <th key={s} style={{ ...th, textAlign: "right" }}>
-                    {SZENARIO_LABEL[s]}
+                    {szenarioLabel(t, s)}
                   </th>
                 ))}
               </tr>
@@ -335,9 +365,11 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
             <tbody>
               <tr style={{ background: "var(--ca-bg)" }}>
                 <td style={tdName}>
-                  <strong>Immobilie</strong>
+                  <strong>{L(t, "altImmobilie", "Immobilie")}</strong>
                   <div style={klein}>
-                    {v.immobilie.rendite == null ? "" : `ca. ${v.immobilie.rendite.toFixed(1).replace(".", ",")} % p. a.`}
+                    {v.immobilie.rendite == null
+                      ? ""
+                      : L(t, "altRenditeCaPa", "ca. {p} % p. a.", { p: v.immobilie.rendite.toFixed(1).replace(".", ",") })}
                   </div>
                 </td>
                 <td style={{ ...td, textAlign: "right", fontWeight: 800 }} colSpan={3}>
@@ -346,7 +378,7 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
               </tr>
               {v.anlagen.map((a) => (
                 <tr key={a.key}>
-                  <td style={tdName}>{a.name}</td>
+                  <td style={tdName}>{anlageName(t, a)}</td>
                   {SZENARIEN.map((s) => {
                     const w = a.szenarien[s];
                     return (
@@ -354,7 +386,7 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
                         <span style={{ fontWeight: 700, color: w.endvermoegen > imm ? "var(--ok-tx)" : "var(--ct)" }}>
                           {fmtE(w.endvermoegen)}
                         </span>
-                        <div style={klein}>{String(w.prozent).replace(".", ",")} % p. a.</div>
+                        <div style={klein}>{L(t, "altProzentPa", "{p} % p. a.", { p: String(w.prozent).replace(".", ",") })}</div>
                       </td>
                     );
                   })}
@@ -366,54 +398,79 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
       </details>
 
       <details style={details}>
-        <summary style={summary}>So wird gerechnet</summary>
+        <summary style={summary}>{L(t, "altSoGerechnet", "So wird gerechnet")}</summary>
         <p style={detailText}>
-          Dasselbe Geld, das die Immobilie aus eigener Tasche kostet ({einsatzBestandteile.join(", ")}
-          {v.nachschuss > 0 ? `, dazu ${fmtE(v.nachschuss)} Nachschüsse bei negativem Cashflow in ${v.jahre} Jahren` : ""}
-          ), wird zu denselben Zeitpunkten stattdessen angelegt. Verglichen wird, was am Ende nach Steuern
-          übrig bleibt.
+          {L(
+            t,
+            "altSoText",
+            "Dasselbe Geld, das die Immobilie aus eigener Tasche kostet ({teile}), wird zu denselben Zeitpunkten stattdessen angelegt. Verglichen wird, was am Ende nach Steuern übrig bleibt.",
+            {
+              teile:
+                einsatzBestandteile.join(", ") +
+                (v.nachschuss > 0
+                  ? L(t, "altSoNachschuss", ", dazu {betrag} Nachschüsse bei negativem Cashflow in {n} Jahren", {
+                      betrag: fmtE(v.nachschuss),
+                      n: v.jahre,
+                    })
+                  : ""),
+            },
+          )}
         </p>
         <div style={{ ...detailText, marginTop: 12 }}>
-          <strong style={{ color: "var(--ct)" }}>Balken „Immobilie“ nach {v.jahre} Jahren:</strong>
+          <strong style={{ color: "var(--ct)" }}>
+            {L(t, "altBalkenNach", "Balken „Immobilie“ nach {n} Jahren:", { n: v.jahre })}
+          </strong>
           <table style={rechenTabelle}>
             <tbody>
               <RechenZeile
-                label={`Verkaufswert (${pro1(wertP)} % Wertsteigerung p. a.)`}
+                label={L(t, "altVerkaufswert", "Verkaufswert ({p} % Wertsteigerung p. a.)", { p: pro1(wertP) })}
                 wert={fmtE(v.immobilie.verkaufswert)}
               />
-              <RechenZeile label="− Restschuld der Darlehen" wert={fmtE(v.immobilie.restschuld)} />
+              <RechenZeile label={L(t, "altRestschuld", "− Restschuld der Darlehen")} wert={fmtE(v.immobilie.restschuld)} />
               <RechenZeile
-                label={`+ Cashflows nach Steuer${v.nachschuss > 0 ? " (nur Jahre mit Überschuss)" : ""}`}
+                label={
+                  L(t, "altCashflows", "+ Cashflows nach Steuer") +
+                  (v.nachschuss > 0 ? L(t, "altNurUeberschuss", " (nur Jahre mit Überschuss)") : "")
+                }
                 wert={fmtE(v.immobilie.cashflowPositiv)}
               />
-              <RechenZeile label="= Endvermögen (Balken)" wert={fmtE(imm)} fett />
-              <RechenZeile label="− aus eigener Tasche eingezahlt" wert={fmtE(v.eingezahlt)} />
-              <RechenZeile label="= Gewinn (Gesamtergebnis mit Steuer im Renditerechner)" wert={fmtE(v.immobilie.gewinn)} fett />
+              <RechenZeile label={L(t, "altEndvermoegen", "= Endvermögen (Balken)")} wert={fmtE(imm)} fett />
+              <RechenZeile label={L(t, "altEingezahlt", "− aus eigener Tasche eingezahlt")} wert={fmtE(v.eingezahlt)} />
+              <RechenZeile
+                label={L(t, "altGewinnZeile", "= Gewinn (Gesamtergebnis mit Steuer im Renditerechner)")}
+                wert={fmtE(v.immobilie.gewinn)} fett />
             </tbody>
           </table>
           <p style={{ ...detailText, marginTop: 10 }}>
-            Annahme: Die Immobilie wird erst nach Ablauf der 10-jährigen Spekulationsfrist verkauft
-            (§ 23 EStG). Der Verkaufsgewinn ist dann steuerfrei, deshalb wird hier keine Steuer darauf
-            abgezogen; bei einem früheren Verkauf fiele sie an.
+            {L(
+              t,
+              "altAnnahmeVerkauf",
+              "Annahme: Die Immobilie wird erst nach Ablauf der 10-jährigen Spekulationsfrist verkauft (§ 23 EStG). Der Verkaufsgewinn ist dann steuerfrei, deshalb wird hier keine Steuer darauf abgezogen; bei einem früheren Verkauf fiele sie an.",
+            )}
           </p>
           <p style={{ ...detailText, marginTop: 10 }}>
-            Die Alternativen bekommen dieselben Einzahlungen zu denselben Zeitpunkten. Sie wachsen mit der
-            Rendite des jeweiligen Szenarios pro Jahr, die Steuer richtet sich nach der Anlage (siehe
-            „Hinweise“). Nicht enthalten: Verkaufskosten der Immobilie (Makler, Notar), Instandhaltung über
-            die nicht umlagefähigen Kosten hinaus und Inflation – alle Werte sind nominal.
+            {L(
+              t,
+              "altAlternativenText",
+              "Die Alternativen bekommen dieselben Einzahlungen zu denselben Zeitpunkten. Sie wachsen mit der Rendite des jeweiligen Szenarios pro Jahr, die Steuer richtet sich nach der Anlage (siehe „Hinweise“). Nicht enthalten: Verkaufskosten der Immobilie (Makler, Notar), Instandhaltung über die nicht umlagefähigen Kosten hinaus und Inflation – alle Werte sind nominal.",
+            )}
           </p>
         </div>
       </details>
 
       <details style={details}>
-        <summary style={summary}>Annahmen, Rückblick und Risiken je Anlage</summary>
+        <summary style={summary}>{L(t, "altJeAnlage", "Annahmen, Rückblick und Risiken je Anlage")}</summary>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
           {ALTERNATIV_ANLAGEN_DATEN.map((a) => (
             <div key={a.key} style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--cl)" }}>
-              <strong style={{ color: "var(--ct)" }}>{a.name}</strong>
-              <div style={klein}>{a.beispiel}</div>
-              <div>Rückblick: {a.historie}</div>
-              <div>Risiko: {a.risiko}</div>
+              <strong style={{ color: "var(--ct)" }}>{anlageName(t, a)}</strong>
+              <div style={klein}>{L(t, `altBeispiel_${a.key}`, a.beispiel, { rendite: a.renditeText, stand: a.stand })}</div>
+              <div>
+                {L(t, "altRueckblick", "Rückblick:")} {L(t, `altHistorie_${a.key}`, a.historie, { rendite: a.renditeText, stand: a.stand })}
+              </div>
+              <div>
+                {L(t, "altRisiko", "Risiko:")} {L(t, `altRisiko_${a.key}`, a.risiko)}
+              </div>
             </div>
           ))}
         </div>
@@ -428,57 +485,60 @@ export function AlternativInvestment({ data, t, anfangGestartet = false }) {
               <summary style={summary}>
                 <span>
                   <span aria-hidden="true" style={{ color: "var(--ca)", marginRight: 6 }}>✦</span>
-                  KI-Einordnung · {ergebnis.jahre} Jahre
+                  {L(t, "altKiEinordnungJahre", "KI-Einordnung · {n} Jahre", { n: ergebnis.jahre })}
                 </span>
               </summary>
               <p style={{ ...detailText, whiteSpace: "pre-line" }}>{ergebnis.text}</p>
             </details>
             <div style={{ ...klein, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
               <span>{ersterSatz(ergebnis.text)}</span>
-              <button type="button" onClick={starte} style={{ ...textLink, flexShrink: 0 }} aria-label="KI-Einordnung neu erstellen">
-                ↻ Neu
+              <button type="button" onClick={starte} style={{ ...textLink, flexShrink: 0 }} aria-label={L(t, "altKiNeuAria", "KI-Einordnung neu erstellen")}>
+                {L(t, "altNeu", "↻ Neu")}
               </button>
             </div>
           </>
         ) : consent ? (
           <div style={consentBand}>
             <div style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
-              Für die Einordnung werden die berechneten Vergleichszahlen dieses Objekts, ohne Adresse und
-              ohne Namen, an unseren KI-Dienstleister übertragen.
+              {L(
+                t,
+                "altConsent",
+                "Für die Einordnung werden die berechneten Vergleichszahlen dieses Objekts, ohne Adresse und ohne Namen, an unseren KI-Dienstleister übertragen.",
+              )}
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" onClick={einwilligenUndStarten} style={consentJa}>
-                Einverstanden, starten
+                {L(t, "altConsentJa", "Einverstanden, starten")}
               </button>
               <button type="button" onClick={() => setConsent(false)} style={consentNein}>
-                Abbrechen
+                {L(t, "altAbbrechen", "Abbrechen")}
               </button>
             </div>
           </div>
         ) : laufend ? (
-          <KiLadeeffekt ariaLabel="KI-Einordnung wird erstellt" phasen={PHASEN} />
+          <KiLadeeffekt ariaLabel={L(t, "altKiLaeuft", "KI-Einordnung wird erstellt")} phasen={phasen(t)} />
         ) : (
           <>
             {fehler && <div style={fehlerBand}>{fehler}</div>}
             <button type="button" onClick={starte} style={sekundaerKnopfStyle(true)}>
               <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
-              {fehler ? "Erneut versuchen" : "KI-Einordnung erstellen"}
+              {fehler ? L(t, "altErneut", "Erneut versuchen") : L(t, "altKiErstellen", "KI-Einordnung erstellen")}
             </button>
           </>
         )}
       </div>
 
-      <div style={{ ...klein, lineHeight: 1.5 }}>{RECHTSHINWEIS}</div>
+      <div style={{ ...klein, lineHeight: 1.5 }}>{L(t, "altRechtshinweis", RECHTSHINWEIS)}</div>
       <details style={details}>
-        <summary style={summary}>Hinweise und Vereinfachungen</summary>
+        <summary style={summary}>{L(t, "altHinweise", "Hinweise und Vereinfachungen")}</summary>
         <p style={detailText}>
-          {RECHTSHINWEIS} Die Renditen der Alternativen sind Annahmen für drei Szenarien, keine Prognose; vergangene
-          Wertentwicklung sagt nichts über die Zukunft. Die Immobilie ist unter der Annahme gerechnet,
-          dass sie nach Ablauf der 10-jährigen Spekulationsfrist verkauft wird (kein Steuerabzug auf den
-          Verkaufsgewinn, ohne Verkaufskosten). Vereinfacht gerechnet: nominal ohne Inflation,
-          Steuer bei ETF und Gold am Ende (Abgeltungsteuer 26,375 %, bei ETF mit 30 % Teilfreistellung),
-          Bitcoin nach einem Jahr steuerfrei, Zinsen jährlich versteuert, ohne Sparer-Pauschbetrag.
-          Datenstand der Rückblicke: {ALTERNATIV_STAND}.
+          {L(t, "altRechtshinweis", RECHTSHINWEIS)}{" "}
+          {L(
+            t,
+            "altHinweiseText",
+            "Die Renditen der Alternativen sind Annahmen für drei Szenarien, keine Prognose; vergangene Wertentwicklung sagt nichts über die Zukunft. Die Immobilie ist unter der Annahme gerechnet, dass sie nach Ablauf der 10-jährigen Spekulationsfrist verkauft wird (kein Steuerabzug auf den Verkaufsgewinn, ohne Verkaufskosten). Vereinfacht gerechnet: nominal ohne Inflation, Steuer bei ETF und Gold am Ende (Abgeltungsteuer 26,375 %, bei ETF mit 30 % Teilfreistellung), Bitcoin nach einem Jahr steuerfrei, Zinsen jährlich versteuert, ohne Sparer-Pauschbetrag. Datenstand der Rückblicke: {stand}.",
+            { stand: ALTERNATIV_STAND },
+          )}
         </p>
       </details>
     </section>

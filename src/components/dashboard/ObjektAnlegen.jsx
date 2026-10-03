@@ -94,6 +94,12 @@ const ENERGIEKLASSE_OPTIONEN = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"].ma
   label: k,
 }));
 
+// Beschriftungen je Sprache (objektseite.js oaFeld_<key>, oaOpt_<key>_<wert>),
+// Rueckfall die deutschen Labels unten.
+const feldLabel = (t, f) => (t && t[`oaFeld_${f.key}`]) || f.label;
+const optionLabel = (t, f, o) => (t && t[`oaOpt_${f.key}_${o.wert}`]) || o.label;
+const oa = (t, key, fallback) => (t && t[key]) || fallback;
+
 const FELDER = [
   { key: "name", label: "Name des Objekts", typ: "text" },
   { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", pflicht: true, maxBreite: 220 },
@@ -264,10 +270,10 @@ function ObjektFormular({
 
   const fehlt = [
     ...FELDER.filter((f) => f.pflicht && String(werte[f.key] ?? "").trim() === "").map(
-      (f) => f.label,
+      (f) => feldLabel(t, f),
     ),
-    ...(String(werte.plz ?? "").trim() === "" ? ["PLZ"] : []),
-    ...(String(werte.ort ?? "").trim() === "" ? ["Ort"] : []),
+    ...(String(werte.plz ?? "").trim() === "" ? [oa(t, "oaPlz", "PLZ")] : []),
+    ...(String(werte.ort ?? "").trim() === "" ? [oa(t, "oaOrt", "Ort")] : []),
   ];
   const vollstaendig =
     fehlt.length === 0 &&
@@ -338,8 +344,8 @@ function ObjektFormular({
     const ort = String(werte.ort || "").trim();
     const kp = +werte.kaufpreis || 0;
     if (ort && kp > 0) return `${ort} · ${Math.round(kp).toLocaleString("de-DE")} €`;
-    if (ort) return `Objekt in ${ort}`;
-    return "Neues Objekt";
+    if (ort) return oa(t, "oaObjektIn", "Objekt in {ort}").replace("{ort}", ort);
+    return oa(t, "oaNeuesObjekt", "Neues Objekt");
   })();
 
   const absenden = async () => {
@@ -366,10 +372,10 @@ function ObjektFormular({
                 ObjektAnlegenWizard.jsx ExposePanel): im Dark Mode war dunkles
                 Navy auf der Karte kaum lesbar. */}
             <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--primary-tx)" }}>
-              Exposé hochladen
+              {oa(t, "oaExposeHochladen", "Exposé hochladen")}
             </span>
             <span style={{ display: "block", fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>
-              PDF, Foto oder Screenshot hinein, Felder automatisch gefüllt
+              {oa(t, "oaExposeSub", "PDF, Foto oder Screenshot hinein, Felder automatisch gefüllt")}
             </span>
           </span>
         </button>
@@ -383,7 +389,7 @@ function ObjektFormular({
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ flex: 1, height: 1, background: "var(--cb)" }} />
-        <span style={{ fontSize: 12, color: "var(--ch)" }}>oder von Hand</span>
+        <span style={{ fontSize: 12, color: "var(--ch)" }}>{oa(t, "oaOderHand", "oder von Hand")}</span>
         <span style={{ flex: 1, height: 1, background: "var(--cb)" }} />
       </div>
 
@@ -416,10 +422,10 @@ function ObjektFormular({
           <Fragment key={f.key}>
             <label style={{ display: "block" }}>
               <span style={beschriftungStil}>
-                {f.label}
-                {f.einheit ? ` (${f.einheit})` : ""}
+                {feldLabel(t, f)}
+                {f.einheit ? ` (${f.einheit === "€/Monat" ? oa(t, "oaEinheitMonat", f.einheit) : f.einheit})` : ""}
                 {!f.pflicht && (
-                  <span style={{ color: "var(--ch)", fontWeight: 400 }}> · optional</span>
+                  <span style={{ color: "var(--ch)", fontWeight: 400 }}> · {oa(t, "oaOptional", "optional")}</span>
                 )}
               </span>
               {f.typ === "auswahl" ? (
@@ -431,7 +437,7 @@ function ObjektFormular({
                   <option value="">–</option>
                   {f.optionen.map((o) => (
                     <option key={o.wert} value={o.wert}>
-                      {o.label}
+                      {optionLabel(t, f, o)}
                     </option>
                   ))}
                 </select>
@@ -466,9 +472,9 @@ function ObjektFormular({
 
         <label style={{ display: "block" }}>
           <span style={beschriftungStil}>
-            Bundesland
+            {oa(t, "oaBundesland", "Bundesland")}
             {bundesland && (
-              <span style={{ color: "var(--ch)", fontWeight: 400 }}> · aus der PLZ übernommen</span>
+              <span style={{ color: "var(--ch)", fontWeight: 400 }}> · {oa(t, "oaAusPlz", "aus der PLZ übernommen")}</span>
             )}
           </span>
           <select
@@ -504,7 +510,7 @@ function ObjektFormular({
               marginBottom: 6,
             }}
           >
-            <span>Cashflow / Monat (vor Steuer)</span>
+            <span>{oa(t, "oaCashflowVorSteuer", "Cashflow / Monat (vor Steuer)")}</span>
             <span
               style={{
                 color: kz.cashflowMon >= 0 ? "#2F6B4F" : "#B3402A",
@@ -548,23 +554,22 @@ function ObjektFormular({
           }}
         >
           {speichertLaeuft
-            ? "Wird angelegt …"
+            ? oa(t, "oaWirdAngelegt", "Wird angelegt …")
             : bearbeiten
-              ? "Änderungen speichern"
-              : "Objekt anlegen"}
+              ? oa(t, "oaSpeichern", "Änderungen speichern")
+              : oa(t, "oaAnlegen", "Objekt anlegen")}
         </button>
       </div>
       {!vollstaendig && (
         <div style={{ fontSize: 12, color: "var(--ch)", textAlign: "center", lineHeight: 1.5 }}>
           {fehlt.length > 0
-            ? `Es fehlt noch: ${fehlt.join(", ")}.`
-            : "Kaufpreis, Wohnfläche und Kaltmiete müssen größer als null sein."}
+            ? oa(t, "oaFehltNoch", "Es fehlt noch: {felder}.").replace("{felder}", fehlt.join(", "))
+            : oa(t, "oaGroesserNull", "Kaufpreis, Wohnfläche und Kaltmiete müssen größer als null sein.")}
         </div>
       )}
       {!bearbeiten && (
         <div style={{ fontSize: 11.5, color: "var(--ch)", textAlign: "center", lineHeight: 1.5 }}>
-          Führt danach direkt in den Renditerechner - dort ergänzt du alles
-          Weitere.
+          {oa(t, "oaFuehrtWeiter", "Führt danach direkt in den Renditerechner - dort ergänzt du alles Weitere.")}
         </div>
       )}
     </div>

@@ -272,6 +272,7 @@ export function ObjektDetail({ objekt, onBack }) {
         varianten,
         befunde,
         standortFakten,
+        lang,
       });
       if (!res.ok) {
         // 412 ist kein Fehler, sondern eine offene Frage: die Einwilligung in
@@ -373,6 +374,7 @@ export function ObjektDetail({ objekt, onBack }) {
         ort: basis.ort,
         bundesland: basis.bundesland,
         kreis: kreisFuerPlz(basis.plz),
+        lang,
       });
       if (!res.ok) {
         if (res.art === "consent") {
@@ -437,7 +439,7 @@ export function ObjektDetail({ objekt, onBack }) {
           "Variante E" - .back{display:none} mobil). Auf dem Handy ersetzt
           die App-eigene untere Tableiste die Rueckwaerts-Navigation. */}
       <button onClick={onBack} className="cockpit-nur-desktop" style={backBtnStyle}>
-        ← Zurück
+        {t.objZurueck || "← Zurück"}
       </button>
 
       {/* Kopf: Titel+Adresse links, Bearbeiten+Primaerknopf rechts - der
@@ -448,18 +450,18 @@ export function ObjektDetail({ objekt, onBack }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, margin: "4px 2px 16px" }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>
-            {objekt.title || "Objekt"}
+            {objekt.title || t.objObjekt || "Objekt"}
           </div>
           <div style={{ fontSize: 13.5, color: "var(--ch)", marginTop: 4 }}>
-            {[objekt.plz, objekt.ort].filter(Boolean).join(" ") || "Ohne Adresse"}
-            {objekt.source === "expose-scan" && " · aus Exposé"}
+            {[objekt.plz, objekt.ort].filter(Boolean).join(" ") || t.objOhneAdresse || "Ohne Adresse"}
+            {objekt.source === "expose-scan" && ` · ${t.objAusExpose || "aus Exposé"}`}
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => setBearbeiten(true)}
-            aria-label="Objekt bearbeiten"
+            aria-label={t.objBearbeiten || "Objekt bearbeiten"}
             style={{
               width: 44,
               height: 44,
@@ -490,10 +492,10 @@ export function ObjektDetail({ objekt, onBack }) {
       <Sheet
         open={bearbeiten}
         onClose={() => setBearbeiten(false)}
-        label="Objekt bearbeiten"
+        label={t.objBearbeiten || "Objekt bearbeiten"}
         size="min(720px, 100vw)"
       >
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>Objekt bearbeiten</div>
+        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>{t.objBearbeiten || "Objekt bearbeiten"}</div>
         <ObjektAnlegen
           t={t}
           bearbeiten
