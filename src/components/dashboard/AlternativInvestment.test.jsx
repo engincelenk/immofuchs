@@ -25,8 +25,17 @@ const OBJEKT = {
 };
 
 describe("AlternativInvestment", () => {
-  it("zeigt alle Anlagen, den Einsatz und den Disclaimer", () => {
+  it("zeigt zuerst nur den plakativen KI-Einstieg, ohne Diagramm und Zahlen", () => {
     const html = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} />);
+    expect(html).toContain("KI vergleicht diese Immobilie mit Alternativ-Investments");
+    expect(html).toContain("Vergleich erstellen");
+    expect(html).toContain("Nur Zahlen anzeigen");
+    expect(html).not.toContain("Aus eigener Tasche zu Beginn");
+    expect(html).not.toContain("Balkendiagramm");
+  });
+
+  it("zeigt alle Anlagen, den Einsatz und den Disclaimer", () => {
+    const html = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} anfangGestartet />);
     for (const name of ["MSCI World ETF", "FTSE All-World ETF", "S&amp;P 500 ETF", "Gold", "Bitcoin", "Bundesanleihe", "Tages-/Festgeld"]) {
       expect(html).toContain(name);
     }
@@ -36,32 +45,32 @@ describe("AlternativInvestment", () => {
   });
 
   it("startet mit dem Zeitraum des Renditerechners und nennt den Gewinn", () => {
-    const html = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "15" }} t={{}} />);
+    const html = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "15" }} t={{}} anfangGestartet />);
     expect(html).toContain("Endvermögen nach 15 Jahren");
     expect(html).toContain("Entspricht dem „Gesamtergebnis mit Steuer“ im Renditerechner.");
-    const zehn = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "12" }} t={{}} />);
+    const zehn = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "12" }} t={{}} anfangGestartet />);
     expect(zehn).toContain("Endvermögen nach 10 Jahren");
     expect(zehn).toContain("Der Renditerechner rechnet mit 12 Jahren");
   });
 
   it("Einsatz-Text folgt dem Schalter Nebenkosten mitfinanzieren", () => {
-    const bar = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} />);
+    const bar = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} anfangGestartet />);
     expect(bar).toContain("Eigenkapital, Kaufnebenkosten");
-    const fin = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, nkFinanzieren: true }} t={{}} />);
+    const fin = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, nkFinanzieren: true }} t={{}} anfangGestartet />);
     expect(fin).toContain("kostet (Eigenkapital");
     expect(fin).not.toContain("Eigenkapital, Kaufnebenkosten");
     expect(fin).not.toContain("+ Kaufnebenkosten");
   });
 
   it("rechnet den Balken Immobilie transparent vor, die Zeilen ergeben den Balkenwert", () => {
-    const html = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} />);
+    const html = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} anfangGestartet />);
     const v = berechneAlternativVergleich(OBJEKT, {}, 10);
     const i = v.immobilie;
     expect(html).toContain("nach 10 Jahren:");
     expect(html).toContain("Steuer auf den Verkaufsgewinn");
     expect(i.verkaufswert - i.restschuld - i.steuerVerkauf + i.cashflowPositiv).toBeCloseTo(i.endvermoegen, 4);
     expect(i.endvermoegen - v.eingezahlt).toBeCloseTo(i.gewinn, 4);
-    const lang = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "20" }} t={{}} />);
+    const lang = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "20" }} t={{}} anfangGestartet />);
     expect(lang).toContain("nach 20 Jahren:");
     expect(lang).not.toContain("Steuer auf den Verkaufsgewinn");
   });

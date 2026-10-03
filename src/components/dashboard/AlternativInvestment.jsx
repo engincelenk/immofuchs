@@ -13,13 +13,116 @@ import { rufeAlternativAnalyseAuf } from "../../utils/alternativAnalyse.js";
 import { analyseFehlertext, erteileConsent } from "../../utils/aiAnalyse.js";
 import { fmtE } from "../../utils/helpers.js";
 import { KiLadeeffekt } from "./AiEngine.jsx";
-import { sekundaerKnopfStyle, useErstSichtbar } from "./BriefingVisuals.jsx";
+import { primaerKnopfStyle, sekundaerKnopfStyle, useErstSichtbar } from "./BriefingVisuals.jsx";
 
-const PHASEN = ["Zahlen zusammenstellen …", "Vor- und Nachteile abwägen …", "Text formulieren …"];
+const PHASEN = [
+  "Zahlen zusammenstellen …",
+  "Immobilie gegen Anlagen rechnen …",
+  "Vor- und Nachteile abwägen …",
+  "Text formulieren …",
+];
 
 const SZENARIEN = ["pess", "basis", "opt"];
 
-export function AlternativInvestment({ data, t }) {
+// Erster Satz als Vorschau der zugeklappten KI-Einordnung.
+function ersterSatz(text) {
+  const m = /^[^.!?]*[.!?](?=\s|$)/.exec((text || "").trim());
+  return m ? m[0] : (text || "").trim().slice(0, 140);
+}
+
+// Balkendiagramm als eigene Komponente: die Balken wachsen erst, wenn das
+// Diagramm im Bild ist (useErstSichtbar braucht ein Element, das beim ersten
+// Rendern schon da ist - die Karte zeigt das Diagramm aber erst nach dem Klick).
+// Beim Horizontwechsel wird die Komponente ueber den key neu gemountet.
+function Balkendiagramm({ v, horizont, imm }) {
+  const [diagrammRef, gesehen] = useErstSichtbar();
+  const wachsen = (i) => ({
+    className: gesehen ? "bv-wachsen" : undefined,
+    style: { transformOrigin: "left center", transform: gesehen ? undefined : "scaleX(0)", "--bv-d": `${i * 70}ms` },
+  });
+  // Skala: laengster Wert (Immobilie oder guenstigstes Szenario einer Anlage)
+  // plus Luft rechts fuer das Betragslabel.
+  const maxWert =
+    Math.max(imm, ...v.anlagen.map((a) => Math.max(...SZENARIEN.map((s) => a.szenarien[s].endvermoegen)))) * 1.22;
+  const pct = (x) => `${Math.max(0, (x / maxWert) * 100)}%`;
+  return (
+    <div
+      ref={diagrammRef}
+      role="img"
+      aria-label={`Balkendiagramm: Endvermögen nach ${horizont} Jahren. Immobilie ${fmtE(imm)}.`}
+      style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          borderLeft: "2px dashed var(--ca)",
+          pointerEvents: "none",
+          left: `calc(114px + (100% - 114px) * ${imm / maxWert})`,
+        }}
+      />
+      <div style={zeile}>
+        <div style={name}>
+          Immobilie
+          <small style={klein}>nach Verkauf &amp; Steuern</small>
+        </div>
+        <div style={spur}>
+          <div
+            className={wachsen(0).className}
+            style={{ ...balken, ...wachsen(0).style, width: pct(imm), background: "var(--ca)" }}
+          />
+          <div style={{ ...wert, left: `calc(${pct(imm)} + 6px)` }}>{fmtE(imm)}</div>
+        </div>
+      </div>
+      {v.anlagen.map((a, i) => {
+        const mittel = a.szenarien.basis.endvermoegen;
+        const besser = mittel > imm;
+        const lo = a.szenarien.pess.endvermoegen;
+        const hi = a.szenarien.opt.endvermoegen;
+        return (
+          <div key={a.key} style={zeile}>
+            <div style={name}>{a.name}</div>
+            <div style={spur}>
+              <div
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  height: 6,
+                  borderRadius: 3,
+                  background: "var(--cb)",
+                  left: pct(lo),
+                  width: `calc(${pct(Math.max(hi, lo))} - ${pct(lo)})`,
+                }}
+              />
+              <div
+                className={wachsen(i + 1).className}
+                style={{
+                  ...balken,
+                  ...wachsen(i + 1).style,
+                  width: pct(mittel),
+                  background: besser ? "var(--ok-tx)" : "#b9b9ad",
+                }}
+              />
+              <div
+                style={{
+                  ...wert,
+                  left: `calc(${pct(Math.max(hi, mittel))} + 6px)`,
+                  color: besser ? "var(--ok-tx)" : "var(--ct)",
+                }}
+              >
+                {fmtE(mittel)}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function AlternativInvestment({ data, t, anfangGestartet = false }) {
   // Start mit dem Zeitraum aus dem Renditerechner, wenn er einer der drei
   // Horizonte ist - dann steht hier dieselbe Zahl wie dort.
   const rechnerJahre = +data?.jahre || 0;
@@ -28,13 +131,9 @@ export function AlternativInvestment({ data, t }) {
   const [laufend, setLaufend] = useState(false);
   const [fehler, setFehler] = useState(null);
   const [consent, setConsent] = useState(false);
-  // Balken wachsen wie in "Wie es zum Markt passt" (bv-wachsen, scaleX), sobald
-  // das Diagramm im Bild ist; beim Horizontwechsel neu (key am Container).
-  const [diagrammRef, gesehen] = useErstSichtbar();
-  const wachsen = (i) => ({
-    className: gesehen ? "bv-wachsen" : undefined,
-    style: { transformOrigin: "left center", transform: gesehen ? undefined : "scaleX(0)", "--bv-d": `${i * 70}ms` },
-  });
+  // Wie die anderen KI-Karten: erst der plakative Einstieg, Diagramm und Zahlen
+  // erscheinen nach dem Klick (oder ueber "Nur Zahlen anzeigen").
+  const [gestartet, setGestartet] = useState(anfangGestartet);
 
   const alle = useMemo(() => berechneAlternativAlle(data, t), [data, t]);
   const v = alle[horizont];
@@ -83,13 +182,18 @@ export function AlternativInvestment({ data, t }) {
           setConsent(true);
           return;
         }
+        // Die Zahlen liegen auch ohne KI vor: bei einem Fehler zeigt die Karte
+        // sie trotzdem und bietet die Einordnung erneut an.
         setFehler(analyseFehlertext(res.art, t));
+        setGestartet(true);
         return;
       }
       setErgebnis({ text: res.text, jahre: v.jahre });
+      setGestartet(true);
     } catch (err) {
       console.error("[Alternativ] Unerwarteter Fehler:", err);
       setFehler(analyseFehlertext("fehler", t));
+      setGestartet(true);
     } finally {
       setLaufend(false);
     }
@@ -109,11 +213,54 @@ export function AlternativInvestment({ data, t }) {
     starte();
   }
 
-  // Skala fuer das Diagramm: laengster Wert (Immobilie oder guenstigstes
-  // Szenario einer Anlage) plus Luft rechts fuer das Betragslabel.
-  const maxWert =
-    Math.max(imm, ...v.anlagen.map((a) => Math.max(...SZENARIEN.map((s) => a.szenarien[s].endvermoegen)))) * 1.22;
-  const pct = (x) => `${Math.max(0, (x / maxWert) * 100)}%`;
+  // Plakativer Einstieg, bevor etwas berechnet/angezeigt wird.
+  if (!gestartet) {
+    return (
+      <section style={{ ...karte, ...heroKarte }} aria-label="Alternativ-Investment">
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <span aria-hidden="true" style={{ fontSize: 26, lineHeight: 1, color: "var(--ca)" }}>✦</span>
+          <div>
+            <strong style={{ fontSize: 18, lineHeight: 1.25, color: "var(--ct)" }}>
+              KI vergleicht diese Immobilie mit Alternativ-Investments
+            </strong>
+            <p style={{ ...leise, marginTop: 6 }}>
+              Dein Geld aus eigener Tasche – lieber in die Immobilie oder in MSCI World, S&amp;P 500, Gold,
+              Bitcoin, Anleihen oder Tagesgeld? Nach Steuer, über 10, 15 oder 20 Jahre.
+            </p>
+          </div>
+        </div>
+        {consent ? (
+          <div style={consentBand}>
+            <div style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
+              Für die Einordnung werden die berechneten Vergleichszahlen dieses Objekts, ohne Adresse und
+              ohne Namen, an unseren KI-Dienstleister übertragen.
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" onClick={einwilligenUndStarten} style={consentJa}>
+                Einverstanden, starten
+              </button>
+              <button type="button" onClick={() => setConsent(false)} style={consentNein}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        ) : laufend ? (
+          <KiLadeeffekt ariaLabel="Vergleich wird erstellt" phasen={PHASEN} />
+        ) : (
+          <>
+            {fehler && <div style={fehlerBand}>{fehler}</div>}
+            <button type="button" onClick={starte} style={primaerKnopfStyle(true)}>
+              <span aria-hidden="true" style={{ marginRight: 6 }}>✦</span>
+              {fehler ? "Erneut versuchen" : "Vergleich erstellen"}
+            </button>
+            <button type="button" onClick={() => setGestartet(true)} style={{ ...textLink, alignSelf: "center", fontSize: 12.5 }}>
+              Nur Zahlen anzeigen
+            </button>
+          </>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section style={karte} aria-label="Alternativ-Investment">
@@ -154,80 +301,7 @@ export function AlternativInvestment({ data, t }) {
 
       <div>
         <div style={{ ...leise, margin: "0 0 18px" }}>Endvermögen nach {horizont} Jahren, nach Steuer</div>
-        <div
-          key={horizont}
-          ref={diagrammRef}
-          role="img"
-          aria-label={`Balkendiagramm: Endvermögen nach ${horizont} Jahren. Immobilie ${fmtE(imm)}.`}
-          style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}
-        >
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              borderLeft: "2px dashed var(--ca)",
-              pointerEvents: "none",
-              left: `calc(114px + (100% - 114px) * ${imm / maxWert})`,
-            }}
-          />
-          <div style={zeile}>
-            <div style={name}>
-              Immobilie
-              <small style={klein}>nach Verkauf &amp; Steuern</small>
-            </div>
-            <div style={spur}>
-              <div
-                className={wachsen(0).className}
-                style={{ ...balken, ...wachsen(0).style, width: pct(imm), background: "var(--ca)" }}
-              />
-              <div style={{ ...wert, left: `calc(${pct(imm)} + 6px)` }}>{fmtE(imm)}</div>
-            </div>
-          </div>
-          {v.anlagen.map((a, i) => {
-            const mittel = a.szenarien.basis.endvermoegen;
-            const besser = mittel > imm;
-            const lo = a.szenarien.pess.endvermoegen;
-            const hi = a.szenarien.opt.endvermoegen;
-            return (
-              <div key={a.key} style={zeile}>
-                <div style={name}>{a.name}</div>
-                <div style={spur}>
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 10,
-                      height: 6,
-                      borderRadius: 3,
-                      background: "var(--cb)",
-                      left: pct(lo),
-                      width: `calc(${pct(Math.max(hi, lo))} - ${pct(lo)})`,
-                    }}
-                  />
-                  <div
-                    className={wachsen(i + 1).className}
-                    style={{
-                      ...balken,
-                      ...wachsen(i + 1).style,
-                      width: pct(mittel),
-                      background: besser ? "var(--ok-tx)" : "#b9b9ad",
-                    }}
-                  />
-                  <div
-                    style={{
-                      ...wert,
-                      left: `calc(${pct(Math.max(hi, mittel))} + 6px)`,
-                      color: besser ? "var(--ok-tx)" : "var(--ct)",
-                    }}
-                  >
-                    {fmtE(mittel)}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <Balkendiagramm key={horizont} v={v} horizont={horizont} imm={imm} />
       </div>
 
       <div style={{ ...klein, lineHeight: 1.5 }}>
@@ -350,16 +424,23 @@ export function AlternativInvestment({ data, t }) {
       </details>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <strong style={{ fontSize: 14, color: "var(--ct)" }}>KI-Einordnung</strong>
         {ergebnis ? (
           <>
-            <details style={details} open>
-              <summary style={summary}>Einordnung für {ergebnis.jahre} Jahre</summary>
+            {/* Zugeklappt, aber mit erstem Satz als Vorschau: die Einordnung wird
+                zusammen mit dem Vergleich erzeugt und soll nicht erschlagen. */}
+            <details style={{ ...details, borderColor: "var(--ca-bd)", background: "var(--ca-bg)" }}>
+              <summary style={summary}>
+                <span>
+                  <span aria-hidden="true" style={{ color: "var(--ca)", marginRight: 6 }}>✦</span>
+                  KI-Einordnung · {ergebnis.jahre} Jahre
+                </span>
+              </summary>
               <p style={{ ...detailText, whiteSpace: "pre-line" }}>{ergebnis.text}</p>
             </details>
-            <div style={klein}>
-              <button type="button" onClick={starte} style={textLink}>
-                Neu erstellen
+            <div style={{ ...klein, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+              <span>{ersterSatz(ergebnis.text)}</span>
+              <button type="button" onClick={starte} style={{ ...textLink, flexShrink: 0 }} aria-label="KI-Einordnung neu erstellen">
+                ↻ Neu
               </button>
             </div>
           </>
@@ -408,6 +489,7 @@ export function AlternativInvestment({ data, t }) {
   );
 }
 
+const heroKarte = { background: "var(--ca-bg)", borderColor: "var(--ca-bd)", gap: 16 };
 const rechenTabelle = { width: "100%", borderCollapse: "collapse", marginTop: 6, fontSize: 12.5 };
 function RechenZeile({ label, wert, fett }) {
   const z = {

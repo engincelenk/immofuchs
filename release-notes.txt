@@ -1,3 +1,17 @@
+## 2026-10-03 (1.100.66) [FRONTEND]
+
+### Alternativ-Investment: KI-Einstieg wie bei den anderen KI-Karten
+
+- Die Karte beginnt plakativ: "KI vergleicht diese Immobilie mit Alternativ-Investments"
+  mit Primaerknopf "Vergleich erstellen" (und Link "Nur Zahlen anzeigen"). Diagramm und
+  Zahlen erscheinen erst nach dem Klick.
+- Ablauf wie bei den anderen KI-Karten: Einwilligung, Sterne-/Balken-Ladeeffekt mit
+  Phasentexten, dann Ergebnis. Die KI-Einordnung wird gleich mit erzeugt (ein Klick, ein
+  Kontingent), steht zugeklappt unter dem Diagramm mit erstem Satz als Vorschau und
+  "↻ Neu". Schlaegt die KI fehl, werden die Zahlen trotzdem gezeigt und die Einordnung
+  kann erneut angefordert werden.
+- Balkendiagramm als eigene Komponente (Balken wachsen erst, wenn sie im Bild sind).
+
 ## 2026-10-03 (1.100.65) [FRONTEND]
 
 ### Alternativ-Investment: Einsatz-Text folgt dem Schalter, Rechenweg des Immobilien-Balkens
