@@ -57,7 +57,8 @@ INTERHYP_URL = "https://www.interhyp.de/zinsen/"
 
 # Faelligkeitspruefung: Konstante -> Pflegeintervall in Monaten. Erfasst sind
 # nur Konstanten mit einem stand-Feld in data.js. Das Skript aktualisiert
-# diese Werte nicht selbst (ausser MARKET_RATES und PFANDBRIEF), sondern meldet, was ueberfaellig ist - damit die
+# diese Werte nicht selbst (ausser MARKET_RATES, PFANDBRIEF und
+# BUNDESANLEIHE_10J), sondern meldet, was ueberfaellig ist - damit die
 # Intervall-Angaben in data.js nicht folgenlos bleiben.
 # Die Quartalsreihen stehen auf 6 Monate statt 3: Destatis und BDEW
 # veroeffentlichen mit rund zwei Monaten Verzug, ein Quartalswert ist also
@@ -66,6 +67,7 @@ INTERHYP_URL = "https://www.interhyp.de/zinsen/"
 PFLEGE_INTERVALL = {
     "MARKET_RATES": 1,
     "PFANDBRIEF": 1,
+    "BUNDESANLEIHE_10J": 1,
     "WERTSTEIGERUNG": 6,
     "MIET_P": 6,
     "KFW_HEIZUNG": 3,
@@ -77,11 +79,12 @@ PFLEGE_INTERVALL = {
 
 # Anzeige-Metadaten fuer public/datenstatus.html - rein informativ, steuert
 # nichts an der eigentlichen Pruefung. "automatisiert" = wird von diesem
-# Skript selbst geschrieben (MARKET_RATES/PFANDBRIEF) oder
+# Skript selbst geschrieben (MARKET_RATES/PFANDBRIEF/BUNDESANLEIHE_10J) oder
 # muss von Hand in data.js gepflegt werden (Rest).
 DATENSTATUS_META = {
     "MARKET_RATES": {"label": "Bauzinsen", "rechner": "Renditerechner, Kreditrechner", "automatisiert": True},
     "PFANDBRIEF": {"label": "Wiederanlagezins (Pfandbrief)", "rechner": "Vorfälligkeitsrechner", "automatisiert": True},
+    "BUNDESANLEIHE_10J": {"label": "Bundesanleihe 10 Jahre", "rechner": "Objektseite: Alternativ-Investment", "automatisiert": True},
     "WERTSTEIGERUNG": {"label": "Wertsteigerung Wohnimmobilien", "rechner": "Renditerechner, Landingpage", "automatisiert": False},
     "MIET_P": {"label": "Mietpreisprognose", "rechner": "Mieterhöhungsrechner", "automatisiert": False},
     "KFW_HEIZUNG": {"label": "KfW-Heizungsförderung 458 (BEG)", "rechner": "Sanierungsrechner", "automatisiert": False},
@@ -392,6 +395,20 @@ def main():
     changes = []
 
     data_js = replace_market_rates_block(data_js, new_stand, final_avg, changes)
+
+    # BUNDESANLEIHE_10J (Karte Alternativ-Investment): derselbe Bundesbank-Wert,
+    # der oben in den Bauzins eingeht, hier ohne Aufschlag.
+    if bbk_10j is not None:
+        data_js = replace_simple(
+            data_js,
+            r"(?s)export const BUNDESANLEIHE_10J[^{]*\{[^}]*rendite:\s*([\d.]+)",
+            bbk_10j, "BUNDESANLEIHE_10J.rendite", changes
+        )
+        data_js = replace_simple(
+            data_js,
+            r'(?s)export const BUNDESANLEIHE_10J[^{]*\{[^}]*stand:\s*"([^"]+)"',
+            new_stand, "BUNDESANLEIHE_10J.stand", changes
+        )
 
     # PFANDBRIEF (separate Datenreihe, Bundesbank BBSIS, siehe PFANDBRIEF_URL)
     print("\nFetching Pfandbrief yield from Bundesbank API...")

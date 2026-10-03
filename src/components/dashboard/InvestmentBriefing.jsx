@@ -78,6 +78,7 @@ export function InvestmentBriefing({
   onLageConsentJa,
   onLageConsentAbbrechen,
   onBearbeiten = null,
+  onNkFinanzieren = null,
 }) {
   const { lang } = useApp();
   const [bestaetigen, setBestaetigen] = useState(false);
@@ -202,6 +203,7 @@ export function InvestmentBriefing({
             data={data}
             cashflowVorSteuer={cashflowVorSteuer}
             onEintragen={onBearbeiten}
+            onNkFinanzieren={onNkFinanzieren}
             t={t}
           />
         </div>

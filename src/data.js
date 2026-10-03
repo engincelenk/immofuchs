@@ -71,6 +71,18 @@ export const PFANDBRIEF = {
   zins: 3.63, // % p.a. — Hypothekenpfandbriefe, Umlaufrendite Ø aller Laufzeiten
 };
 
+// ── BUNDESANLEIHE 10 JAHRE ──────────────────────────────────────────────
+// Intervall: monatlich (automatisch via scripts/monthly_update.py)
+// Quelle: Deutsche Bundesbank, rendbund-data.pdf, Spalte "10 Jahre" (letzte
+// Tageszeile) - dieselbe Abfrage, die auch den Bauzins (MARKET_RATES) speist.
+// Verwendet: Karte Alternativ-Investment (src/data/alternativAnlagen.js),
+// Szenario-Mitte und Rueckblick der Bundesanleihe. Liegt hier und nicht in
+// alternativAnlagen.js, weil der Monatsjob nur src/data.js committet.
+export const BUNDESANLEIHE_10J = {
+  stand: "September 2026",
+  rendite: 3.61, // % p.a., Umlaufrendite 10-jaehriger Bundeswertpapiere
+};
+
 // ── MIETPREISPROGNOSE ────────────────────────────────────────────────────
 // Intervall: quartalsweise
 // Quelle: Stat. Bundesamt, IW-Institut

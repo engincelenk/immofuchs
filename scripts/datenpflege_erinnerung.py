@@ -299,6 +299,19 @@ def veraltete_automatik(heute):
             "(api.statistiken.bundesbank.de) in PFANDBRIEF (src/data.js) ein und prüfe, warum "
             "fetch_pfandbrief_zins() in scripts/monthly_update.py scheitert.",
         })
+    ba = stand_lesen(data_js, "BUNDESANLEIHE_10J")
+    alter = monate_seit(ba, heute)
+    if alter is not None and alter >= 2:
+        themen.append({
+            "key": "BUNDESANLEIHE_10J",
+            "titel": f"Bundesanleihe-Rendite veraltet (Stand {ba})",
+            "quelle": "Deutsche Bundesbank, rendbund-data.pdf, Spalte 10 Jahre",
+            "datei": "`src/data.js` → `BUNDESANLEIHE_10J`",
+            "verwendung": "Objektseite: Alternativ-Investment (Bundesanleihe)",
+            "claude": f"Datenpflege BUNDESANLEIHE_10J: Der automatische Abruf hängt, der Wert steht seit {ba}. "
+            "Trage die aktuelle Umlaufrendite 10-jähriger Bundeswertpapiere (Bundesbank) in BUNDESANLEIHE_10J "
+            "(src/data.js) ein und prüfe fetch_bundesbank_10j() in scripts/monthly_update.py.",
+        })
     return themen
 
 

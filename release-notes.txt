@@ -1,3 +1,24 @@
+## 2026-10-03 (1.100.63) [FRONTEND] [CI]
+
+### Objektseite: Kostenblock stimmig, Nebenkosten-Schalter, Alternativ-Investment, Bundesanleihe automatisch
+
+- Kostenblock "Einmalig: Was du zahlst": unter "Finanziert durch" fehlten die bar
+  gezahlten Kaufnebenkosten (Darlehen + Eigenkapital ergab nicht die
+  Gesamtinvestition). Neu: Zeilen "Kaufnebenkosten / Renovierung / Sonderumlage aus
+  Eigenmitteln" und die Summe "Aus eigener Tasche" - dieselbe Zahl wie der Einsatz
+  der Karte Alternativ-Investment.
+- Schalter "Nebenkosten mitfinanzieren" jetzt auch auf der Objektseite (Block 1).
+  Gespeichert am Objekt; ist das Objekt im Rechner geoeffnet, wird der Rechner
+  mitgesetzt. "Im Renditerechner oeffnen" uebernimmt den neuen Stand.
+- Alternativ-Investment: Balken wachsen wie in "Wie es zum Markt passt" (bv-wachsen,
+  gestaffelt, beim Horizontwechsel neu). Startauswahl = Zeitraum des
+  Renditerechners (wenn 10/15/20 J.); darunter "Gewinn ... = Gesamtergebnis mit
+  Steuer im Renditerechner" bzw. Hinweis, wenn der Rechner einen anderen Zeitraum hat.
+- Bundesanleihe automatisch: neue Konstante BUNDESANLEIHE_10J in data.js, vom
+  Monatsjob aus dem Bundesbank-PDF (Spalte 10 Jahre) geschrieben; Szenarien der Karte
+  leiten sich davon ab (Mitte = aktuell, -1 / +0,4 Punkte). Erinnerung meldet einen
+  Abruf, der laenger als 2 Monate haengt.
+
 ## 2026-10-03 (1.100.62) [FRONTEND] [CI]
 
 ### Leere Seite nach Deploy: Selbstheilung, Service Worker, alte Bundles bleiben

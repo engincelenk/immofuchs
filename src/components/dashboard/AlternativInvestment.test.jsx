@@ -34,6 +34,15 @@ describe("AlternativInvestment", () => {
     expect(html).toContain("KI-Einordnung erstellen");
   });
 
+  it("startet mit dem Zeitraum des Renditerechners und nennt den Gewinn", () => {
+    const html = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "15" }} t={{}} />);
+    expect(html).toContain("Endvermögen nach 15 Jahren");
+    expect(html).toContain("Entspricht dem „Gesamtergebnis mit Steuer“ im Renditerechner.");
+    const zehn = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "12" }} t={{}} />);
+    expect(zehn).toContain("Endvermögen nach 10 Jahren");
+    expect(zehn).toContain("Der Renditerechner rechnet mit 12 Jahren");
+  });
+
   it("zeigt ohne Kaufpreis nur den Hinweis, ohne zu rechnen", () => {
     const html = renderToStaticMarkup(<AlternativInvestment data={{}} t={{}} />);
     expect(html).toContain("Sobald Kaufpreis und Eigenkapital eingetragen sind");

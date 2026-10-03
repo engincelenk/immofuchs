@@ -13,18 +13,28 @@ import { rufeAlternativAnalyseAuf } from "../../utils/alternativAnalyse.js";
 import { analyseFehlertext, erteileConsent } from "../../utils/aiAnalyse.js";
 import { fmtE } from "../../utils/helpers.js";
 import { KiLadeeffekt } from "./AiEngine.jsx";
-import { sekundaerKnopfStyle } from "./BriefingVisuals.jsx";
+import { sekundaerKnopfStyle, useErstSichtbar } from "./BriefingVisuals.jsx";
 
 const PHASEN = ["Zahlen zusammenstellen …", "Vor- und Nachteile abwägen …", "Text formulieren …"];
 
 const SZENARIEN = ["pess", "basis", "opt"];
 
 export function AlternativInvestment({ data, t }) {
-  const [horizont, setHorizont] = useState(10);
+  // Start mit dem Zeitraum aus dem Renditerechner, wenn er einer der drei
+  // Horizonte ist - dann steht hier dieselbe Zahl wie dort.
+  const rechnerJahre = +data?.jahre || 0;
+  const [horizont, setHorizont] = useState(() => (HORIZONTE.includes(rechnerJahre) ? rechnerJahre : 10));
   const [ergebnis, setErgebnis] = useState(null);
   const [laufend, setLaufend] = useState(false);
   const [fehler, setFehler] = useState(null);
   const [consent, setConsent] = useState(false);
+  // Balken wachsen wie in "Wie es zum Markt passt" (bv-wachsen, scaleX), sobald
+  // das Diagramm im Bild ist; beim Horizontwechsel neu (key am Container).
+  const [diagrammRef, gesehen] = useErstSichtbar();
+  const wachsen = (i) => ({
+    className: gesehen ? "bv-wachsen" : undefined,
+    style: { transformOrigin: "left center", transform: gesehen ? undefined : "scaleX(0)", "--bv-d": `${i * 70}ms` },
+  });
 
   const alle = useMemo(() => berechneAlternativAlle(data, t), [data, t]);
   const v = alle[horizont];
@@ -128,6 +138,8 @@ export function AlternativInvestment({ data, t }) {
       <div>
         <div style={{ ...leise, margin: "0 0 18px" }}>Endvermögen nach {horizont} Jahren, nach Steuer</div>
         <div
+          key={horizont}
+          ref={diagrammRef}
           role="img"
           aria-label={`Balkendiagramm: Endvermögen nach ${horizont} Jahren. Immobilie ${fmtE(imm)}.`}
           style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}
@@ -149,11 +161,14 @@ export function AlternativInvestment({ data, t }) {
               <small style={klein}>nach Verkauf &amp; Steuern</small>
             </div>
             <div style={spur}>
-              <div style={{ ...balken, width: pct(imm), background: "var(--ca)" }} />
+              <div
+                className={wachsen(0).className}
+                style={{ ...balken, ...wachsen(0).style, width: pct(imm), background: "var(--ca)" }}
+              />
               <div style={{ ...wert, left: `calc(${pct(imm)} + 6px)` }}>{fmtE(imm)}</div>
             </div>
           </div>
-          {v.anlagen.map((a) => {
+          {v.anlagen.map((a, i) => {
             const mittel = a.szenarien.basis.endvermoegen;
             const besser = mittel > imm;
             const lo = a.szenarien.pess.endvermoegen;
@@ -173,7 +188,15 @@ export function AlternativInvestment({ data, t }) {
                       width: `calc(${pct(Math.max(hi, lo))} - ${pct(lo)})`,
                     }}
                   />
-                  <div style={{ ...balken, width: pct(mittel), background: besser ? "var(--ok-tx)" : "#b9b9ad" }} />
+                  <div
+                    className={wachsen(i + 1).className}
+                    style={{
+                      ...balken,
+                      ...wachsen(i + 1).style,
+                      width: pct(mittel),
+                      background: besser ? "var(--ok-tx)" : "#b9b9ad",
+                    }}
+                  />
                   <div
                     style={{
                       ...wert,
@@ -188,6 +211,16 @@ export function AlternativInvestment({ data, t }) {
             );
           })}
         </div>
+      </div>
+
+      <div style={{ ...klein, lineHeight: 1.5 }}>
+        Immobilie: Gewinn <strong style={{ color: "var(--ct)" }}>{fmtE(v.immobilie.gewinn)}</strong> bei{" "}
+        {fmtE(v.eingezahlt)} eingezahlt.{" "}
+        {horizont === rechnerJahre
+          ? "Entspricht dem „Gesamtergebnis mit Steuer“ im Renditerechner."
+          : rechnerJahre > 0
+            ? `Der Renditerechner rechnet mit ${rechnerJahre} Jahren – dort steht deshalb ein anderer Wert.`
+            : ""}
       </div>
 
       <div style={legende}>

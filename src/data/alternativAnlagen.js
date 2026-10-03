@@ -13,11 +13,21 @@
 //
 // Recherche 2026-10-03: justETF-Profile (Stand 31.08.2026, Wertentwicklung in
 // EUR), MSCI (Index-Factsheet, USD), goldavenue.com / gold.de (Gold in EUR),
-// onvista / zinsen.net (Tagesgeld, Festgeld, Bundesanleihe), Fidelity Digital
+// onvista (Tagesgeld, Festgeld), Bundesbank (Bundesanleihe, automatisch), Fidelity Digital
 // Assets / bestbrokers (Bitcoin, USD). Die Werte stammen aus Zusammenfassungen
 // der Quellseiten und sind vor einer Aenderung der Szenarien gegenzupruefen.
 
+import { BUNDESANLEIHE_10J } from "../data.js";
+
 export const ALTERNATIV_STAND = "03.10.2026";
+
+// Bundesanleihe: die Szenarien haengen am monatlich automatisch gepflegten
+// Wert (BUNDESANLEIHE_10J in src/data.js). Mitte = aktuelle Rendite, vorsichtig
+// 1 Punkt darunter (Wiederanlage bei sinkenden Zinsen), guenstig 0,4 Punkte
+// darueber - dieselben Abstaende wie bei der Einfuehrung am 2026-10-03.
+const rund1 = (x) => Math.round(x * 10) / 10;
+const BUND = BUNDESANLEIHE_10J.rendite;
+const BUND_TEXT = String(BUND).replace(".", ",");
 
 // Steuerlogik je Anlage (siehe alternativInvestment.js):
 //   "etf"     Abgeltungsteuer 26,375 % auf den Gewinn bei Verkauf, davon 30 %
@@ -89,11 +99,10 @@ export const ALTERNATIV_ANLAGEN_DATEN = [
   {
     key: "bundesanleihe",
     name: "Bundesanleihe (10 Jahre)",
-    beispiel: "Staatsanleihe Deutschland, Rendite aktuell ca. 3,6 % (16.09.2026)",
+    beispiel: `Staatsanleihe Deutschland, Rendite aktuell ca. ${BUND_TEXT} % (${BUNDESANLEIHE_10J.stand})`,
     steuer: "laufend",
-    szenarien: { pess: 2.5, basis: 3.6, opt: 4.0 },
-    historie:
-      "Rendite zehnjähriger Bundesanleihen stieg 2026 von unter 3 % auf 3,61 % (Stand 16.09.2026).",
+    szenarien: { pess: rund1(BUND - 1), basis: rund1(BUND), opt: rund1(BUND + 0.4) },
+    historie: `Umlaufrendite zehnjähriger Bundeswertpapiere laut Bundesbank: ${BUND_TEXT} % (Stand ${BUNDESANLEIHE_10J.stand}, monatlich automatisch aktualisiert).`,
     risiko:
       "Kursverluste bei steigenden Zinsen, wenn vor Laufzeitende verkauft wird; bei Halten bis Ende der Laufzeit planbar.",
   },

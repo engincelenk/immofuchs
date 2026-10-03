@@ -62,7 +62,7 @@ const AMPEL_TEXT = {
 };
 
 export function ObjektDetail({ objekt, onBack }) {
-  const { d, set, setTabExt, t, lang, updateObj } = useApp();
+  const { d, set, setTabExt, t, lang, updateObj, aktivesObjekt } = useApp();
   const account = useAccountCtx();
   const locale = lang === "de" ? "de-DE" : "de-DE";
   const [bearbeiten, setBearbeiten] = useState(false);
@@ -127,7 +127,15 @@ export function ObjektDetail({ objekt, onBack }) {
   // Ueberblick und Stellschrauben arbeiten auf den Daten DIESES Objekts,
   // nicht auf dem globalen Rechner-State - sonst zeigte das Objekt die Zahlen
   // eines fremden Rechnerstands.
-  const basis = hasFullInput ? gespeichert : d;
+  // Sofort sichtbare Aenderungen von dieser Seite aus (Schalter
+  // "Nebenkosten mitfinanzieren"): updateObj() persistiert, der Prop `objekt`
+  // aendert sich dadurch aber nicht - dieselbe Ueberlagerung wie bei
+  // lokaleAiErgebnisse.
+  const [datenUeberlagerung, setDatenUeberlagerung] = useState(null);
+  const basis = useMemo(() => {
+    const roh = hasFullInput ? gespeichert : d;
+    return datenUeberlagerung ? { ...roh, ...datenUeberlagerung } : roh;
+  }, [hasFullInput, gespeichert, d, datenUeberlagerung]);
   const kennzahlenGespeichert = useMemo(
     () => berechneObjektKennzahlen(basis, t),
     [basis, t],
@@ -337,6 +345,23 @@ export function ObjektDetail({ objekt, onBack }) {
     if (produktId) starteProdukt(produktId);
   }
 
+  // Schalter "Nebenkosten mitfinanzieren" (Block 1 der Kostenuebersicht):
+  // dieselbe Option wie im Renditerechner/Kreditrechner (d.nkFinanzieren).
+  // Gespeichert wird am Objekt; ist dieses Objekt gerade im Rechner geoeffnet
+  // (oder zeigt die Seite ohnehin den Rechnerstand), wird auch der Rechner-
+  // State gesetzt, damit beide Seiten dieselben Zahlen zeigen.
+  async function setzeNkFinanzieren(an) {
+    setDatenUeberlagerung((alt) => ({ ...(alt || {}), nkFinanzieren: an }));
+    if (!hasFullInput || aktivesObjekt?.id === objekt.id) set("nkFinanzieren", an);
+    if (hasFullInput) {
+      try {
+        await updateObj(objekt.id, objekt.title || "Objekt", { ...basis, nkFinanzieren: an });
+      } catch (err) {
+        console.error("[Objekt] Nebenkosten-Schalter nicht gespeichert:", err);
+      }
+    }
+  }
+
   // Baustein "Lage": eigener, kleiner Ablauf statt starteProdukt() - andere
   // Route (/api/v1/lage), andere Nutzlast (ort/bundesland/kreis statt
   // kennzahlen), keine produktId aus der AI_PRODUKTE-Registry.
@@ -396,7 +421,9 @@ export function ObjektDetail({ objekt, onBack }) {
   }
 
   function inRechner(rechnerTab) {
-    const { tab: _legacy, ...data } = gespeichert;
+    // Mit Ueberlagerung, sonst kaeme ein gerade umgelegter Schalter
+    // (Nebenkosten mitfinanzieren) nicht im Rechner an.
+    const { tab: _legacy, ...data } = datenUeberlagerung ? { ...gespeichert, ...datenUeberlagerung } : gespeichert;
     Object.entries(data).forEach(([k, v]) => set(k, v));
     // Zweites Argument = Rundweg-Zustand in App.jsx (aktivesObjekt): traegt
     // die Ruecksprungleiste "<- Objekt: {Name}" UND sorgt dafuer, dass
@@ -523,6 +550,7 @@ export function ObjektDetail({ objekt, onBack }) {
         proAktiv={account?.zugang !== "keiner"}
         onExpose={oeffneExpose}
         onRenditerechner={() => inRechner("haupt")}
+        onNkFinanzieren={setzeNkFinanzieren}
       />
 
       {/* Alternativ-Investment: dasselbe Geld in ETF, Gold, Bitcoin usw.

@@ -15,6 +15,7 @@ import { berechneVollstaendigkeit } from "../../utils/objektKennzahlen.js";
 import { hebelTexteVon, risikenVon, staerkenVon } from "../../utils/aiEngine.js";
 import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { KiLadeeffekt } from "./AiEngine.jsx";
+import { Toggle } from "../ui/atoms.jsx";
 import {
   cockpitCashflowJahr,
   cockpitDiff,
@@ -241,7 +242,7 @@ function bewegungReduziert() {
 // aufgehen - die Animation war vorbei, bevor man das Element sah (Nutzer-
 // Rueckmeldung 2026-09-30). Ohne IntersectionObserver oder bei "Bewegung
 // reduzieren" gilt das Element sofort als gesehen.
-function useErstSichtbar() {
+export function useErstSichtbar() {
   const ref = useRef(null);
   const sofort = typeof IntersectionObserver === "undefined" || bewegungReduziert();
   const [gesehen, setGesehen] = useState(sofort);
@@ -555,7 +556,7 @@ function Zeile({ label, wert, style, linie, fett }) {
   );
 }
 
-export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, t }) {
+export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, onNkFinanzieren, t }) {
   const kennzahlen = briefing?.kernkennzahlen;
   const cash = kennzahlen?.find((k) => k.key === "cashflow");
   const R = briefing?.R;
@@ -573,6 +574,14 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
   const kfwDarlehen = R.kfwDa > 0 ? R.kfwDa : null;
   const eigenkapital = +data?.eigenkapital || 0;
   const rate = R.rateJ1 > 0 ? R.rateJ1 : null;
+  // Was aus eigener Tasche kommt: Eigenkapital plus alles, was bar und nicht
+  // ueber das Darlehen bezahlt wird. Dieselbe Formel wie der Einsatz der Karte
+  // Alternativ-Investment (alternativInvestment.js) und wie rendite.js beim
+  // Gesamtsaldo - damit Darlehen + eigene Tasche = Gesamtinvestition ergibt.
+  // Bis 2026-10-03 fehlten hier die bar gezahlten Nebenkosten (Nutzer-Befund).
+  const nkFinanziert = !!data?.nkFinanzieren;
+  const nkBar = !nkFinanziert && nebenkosten != null ? nebenkosten : 0;
+  const eigeneTasche = eigenkapital + nkBar + renovierung + sonderumlage;
   const zeigtBlock1 = kaufpreis != null || bankDarlehen != null || eigenkapital > 0 || !!onEintragen;
 
   // ── Block 2: laufend ──
@@ -637,6 +646,16 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "var(--ch)" }}>
               {L(t, "cockFinanziertDurch", "Finanziert durch")}
             </div>
+            {onNkFinanzieren && nebenkosten != null && (
+              <div style={{ marginTop: 10 }}>
+                <Toggle
+                  checked={nkFinanziert}
+                  onChange={onNkFinanzieren}
+                  label={L(t, "nkFinanzierenLabel", "Nebenkosten mitfinanzieren")}
+                  sub={L(t, "nkFinanzierenSub", "Kaufnebenkosten fließen mit ins Darlehen (wie im Bank-Finanzierungsangebot)")}
+                />
+              </div>
+            )}
             <div style={zeilen}>
               {bankDarlehen != null && (
                 <>
@@ -663,6 +682,23 @@ export function SchrittKosten({ briefing, data, cashflowVorSteuer, onEintragen, 
                   <span style={{ color: "var(--ch)" }}>—</span>
                 )}
               </div>
+              {nkBar > 0 && (
+                <Zeile label={L(t, "cockNkEigen", "Kaufnebenkosten aus Eigenmitteln")} wert={wertText(nkBar, "eurMonat")} />
+              )}
+              {renovierung > 0 && (
+                <Zeile label={L(t, "cockRenEigen", "Renovierung aus Eigenmitteln")} wert={wertText(renovierung, "eurMonat")} />
+              )}
+              {sonderumlage > 0 && (
+                <Zeile label={L(t, "cockSonderEigen", "Sonderumlage aus Eigenmitteln")} wert={wertText(sonderumlage, "eurMonat")} />
+              )}
+              {eigeneTasche > 0 && (
+                <Zeile
+                  label={`= ${L(t, "cockEigeneTasche", "Aus eigener Tasche")}`}
+                  wert={wertText(eigeneTasche, "eurMonat")}
+                  fett
+                  linie
+                />
+              )}
             </div>
           </div>
         </div>
