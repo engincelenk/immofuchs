@@ -242,7 +242,7 @@ export function Ueberblick({
         >
           {[
             {
-              l: "Cashflow / Monat",
+              l: "Cashflow / Monat (vor Steuer)",
               tip: ERKLAERUNG.cashflow,
               v: `${cf >= 0 ? "+" : ""}${eur(cf, locale)}`,
               c: cf >= 0 ? "#2F6B4F" : "#B3402A",

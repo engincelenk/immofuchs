@@ -35,7 +35,7 @@ export function ObjektKPIs({ kennzahlen, t }) {
     { label: "Rate / Monat", value: eur(kennzahlen.rateMon) },
     { label: "Kosten / Monat", value: eur(kennzahlen.kostenMon) },
     {
-      label: "Cashflow",
+      label: "Cashflow v. St.",
       value: `${cf >= 0 ? "+" : ""}${eur(cf)}`,
       color: cf >= 0 ? "#2F6B4F" : "#B3402A",
     },

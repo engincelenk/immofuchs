@@ -30,7 +30,7 @@ export function InvestmentCheckRadar({ R }) {
       fmt: (v) => fmt(v, 1) + "×",
     },
     { key: "nettoR", label: t.nettoR, value: R.nR, fmt: (v) => fmtP(v) },
-    { key: "cfMit", label: t.cashflow || "Cashflow", value: R.cf2MitSt, fmt: (v) => fmtE(v) },
+    { key: "cfMit", label: t.cfMitSt || t.cashflow || "Cashflow", value: R.cf2MitSt, fmt: (v) => fmtE(v) },
     { key: "bel", label: t.bel, value: R.bel, fmt: (v) => fmtP(v) },
     { key: "ekQuote", label: t.ekQuote || "EK-Quote", value: R.ekQ, fmt: (v) => fmtP(v) },
     { key: "nkAmort", label: t.chartBreakEven || "Break-even", value: beJahr, fmt: (v) => `J${v}` },

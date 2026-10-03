@@ -1603,7 +1603,7 @@ export function Merkliste() {
                 }}
               >
                 {t[`mlSort${s}`] ||
-                  { ampel: "Ampel", cashflow: "Cashflow", faktor: "Faktor" }[s]}
+                  { ampel: "Ampel", cashflow: "Cashflow v. St.", faktor: "Faktor" }[s]}
               </button>
             );
           })}

@@ -1,3 +1,12 @@
+## 2026-10-03 (1.100.80) [FRONTEND]
+
+### Abschlussanalyse Ursache 4: Cashflow immer mit Bezug (vor/nach Steuer)
+
+- Objektkarte "Cashflow v. St.", Ueberblick, Objektvergleich und "Objekt anlegen" "Cashflow / Monat (vor Steuer)",
+  Sortierung "Cashflow v. St." - dort steht der Cashflow vor Steuer.
+- Objektseite: Chip "Cashflow n. St." (5 Sprachen), Investment-Check-Achse "CF/Mon. mit Steuervorteil" - dort steht
+  der Cashflow nach Steuer. Vorher hiessen beide nur "Cashflow" (-424 EUR gegen -227 EUR fuer dasselbe Objekt).
+
 ## 2026-10-03 (1.100.79) [FRONTEND]
 
 ### Abschlussanalyse Ursache 3: Rechenkern statt Kurzformeln

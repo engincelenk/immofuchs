@@ -504,7 +504,7 @@ function ObjektFormular({
               marginBottom: 6,
             }}
           >
-            <span>Cashflow / Monat</span>
+            <span>Cashflow / Monat (vor Steuer)</span>
             <span
               style={{
                 color: kz.cashflowMon >= 0 ? "#2F6B4F" : "#B3402A",

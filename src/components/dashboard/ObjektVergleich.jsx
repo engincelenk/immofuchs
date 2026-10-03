@@ -12,7 +12,7 @@ const ZEILEN = [
   { key: "faktor", label: "Faktor", einheit: "x", besser: "klein", nachkomma: 1 },
   { key: "nettoRendite", label: "Nettorendite", einheit: "%", besser: "gross", nachkomma: 1 },
   { key: "rateMon", label: "Rate / Monat", einheit: "€", besser: "klein" },
-  { key: "cashflowMon", label: "Cashflow / Monat", einheit: "€", besser: "gross" },
+  { key: "cashflowMon", label: "Cashflow / Monat (vor Steuer)", einheit: "€", besser: "gross" },
   { key: "score", label: "Bewertung", einheit: "/100", besser: "gross" },
 ];
 
