@@ -166,6 +166,9 @@ head_sampling_rate = 1
 
 [env.dev.vars]
 ASSISTANT_ENABLED = "true"
+# Jahresabo -> danach Monatsplan (AGB Ziffer 6, § 309 Nr. 9 BGB). Nur dev, bis es mit einem
+# Stripe-Testkauf geprueft ist; in qa/prod erst danach auf "true" setzen.
+YEARLY_AUTO_MONTHLY = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://dev.immofuchs.info,https://admin-dev.immofuchs.info"
 # Ohne diesen Wert faellt frontendBase() (routes/auth.ts) auf die Origin des
 # eingehenden Requests zurueck - nach Login landet man dann auf der nackten

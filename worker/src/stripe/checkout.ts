@@ -182,7 +182,66 @@ export async function createSubscriptionCheckout(
 // Paddle.
 export async function cancelAtPeriodEnd(env: Env, stripeSubscriptionId: string): Promise<void> {
   const stripe = getStripeClient(env);
+  // Haengt eine Schedule (Jahres- zu Monatsplan) an der Subscription, laesst
+  // Stripe direkte Aenderungen nicht zu - erst loesen, dann kuendigen.
+  await releaseScheduleIfAny(env, stripeSubscriptionId);
   await stripe.subscriptions.update(stripeSubscriptionId, { cancel_at_period_end: true });
+}
+
+// ── Jahresplan -> danach Monatsplan (AGB Ziffer 6) ─────────────────────────
+// Eine stillschweigende Verlaengerung um jeweils ein weiteres Jahr ist gegenueber
+// Verbrauchern nach § 309 Nr. 9 BGB unwirksam. Deshalb bekommt ein Jahresabo
+// eine Stripe Subscription Schedule: Phase 1 = das laufende Jahr zum Jahrespreis,
+// Phase 2 = ein Monat zum Monatspreis, danach "release" - die Subscription
+// laeuft dann als normales Monatsabo weiter (jederzeit zum Monatsende kuendbar).
+// Best effort und per Flag YEARLY_AUTO_MONTHLY abgesichert: schlaegt es fehl,
+// bleibt das Abo wie bisher ein Jahresabo, der Aufrufer protokolliert nur.
+function idOf(v: unknown): string | null {
+  if (typeof v === "string") return v;
+  if (v && typeof v === "object" && "id" in v && typeof (v as { id: unknown }).id === "string") {
+    return (v as { id: string }).id;
+  }
+  return null;
+}
+
+export async function ensureYearlyToMonthlySchedule(env: Env, stripeSubscriptionId: string): Promise<boolean> {
+  if (env.YEARLY_AUTO_MONTHLY !== "true") return false;
+  if (!env.STRIPE_PRICE_ID_YEARLY || !env.STRIPE_PRICE_ID_MONTHLY) return false;
+  const stripe = getStripeClient(env);
+  const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+  const priceId = sub.items.data[0]?.price?.id;
+  if (priceId !== env.STRIPE_PRICE_ID_YEARLY || sub.schedule || sub.cancel_at_period_end) return false;
+
+  const schedule = await stripe.subscriptionSchedules.create({ from_subscription: stripeSubscriptionId });
+  const p0 = schedule.phases[0];
+  if (!p0) throw new Error("stripe_schedule_phase_missing");
+  const discounts = (p0.discounts ?? [])
+    .map((d) => idOf((d as { coupon?: unknown }).coupon))
+    .filter((id): id is string => !!id)
+    .map((coupon) => ({ coupon }));
+  const defaultPm = idOf(p0.default_payment_method);
+  await stripe.subscriptionSchedules.update(schedule.id, {
+    end_behavior: "release",
+    phases: [
+      {
+        items: p0.items.map((i) => ({ price: idOf(i.price) as string, quantity: i.quantity ?? 1 })),
+        start_date: p0.start_date,
+        end_date: p0.end_date,
+        ...(discounts.length > 0 ? { discounts } : {}),
+        ...(defaultPm ? { default_payment_method: defaultPm } : {}),
+      },
+      { items: [{ price: env.STRIPE_PRICE_ID_MONTHLY, quantity: 1 }], iterations: 1 },
+    ],
+  });
+  return true;
+}
+
+export async function releaseScheduleIfAny(env: Env, stripeSubscriptionId: string): Promise<void> {
+  const stripe = getStripeClient(env);
+  const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+  const scheduleId = idOf(sub.schedule);
+  if (!scheduleId) return;
+  await stripe.subscriptionSchedules.release(scheduleId);
 }
 
 // Sofortige Kuendigung (Art. 17 Konto-Loeschung - "loeschen" ist ein
@@ -200,6 +259,12 @@ export async function revokeScheduledCancellation(
 ): Promise<void> {
   const stripe = getStripeClient(env);
   await stripe.subscriptions.update(stripeSubscriptionId, { cancel_at_period_end: false });
+  // Nach der Kuendigung war die Schedule geloest - bei einem Jahresabo wieder anlegen.
+  try {
+    await ensureYearlyToMonthlySchedule(env, stripeSubscriptionId);
+  } catch (err) {
+    console.error("yearly_schedule_failed", err instanceof Error ? err.message : "unknown");
+  }
 }
 
 // Tarifwechsel monatlich <-> jaehrlich (gleiche Grundannahme wie bisher:
@@ -212,6 +277,7 @@ export async function changeSubscriptionPlan(
   plan: Plan,
 ): Promise<void> {
   const stripe = getStripeClient(env);
+  await releaseScheduleIfAny(env, stripeSubscriptionId);
   const current = await stripe.subscriptions.retrieve(stripeSubscriptionId);
   const itemId = current.items.data[0]?.id;
   if (!itemId) throw new Error("stripe_subscription_item_missing");
@@ -219,6 +285,13 @@ export async function changeSubscriptionPlan(
     items: [{ id: itemId, price: priceIdFor(env, plan) }],
     proration_behavior: "none",
   });
+  if (plan === "yearly") {
+    try {
+      await ensureYearlyToMonthlySchedule(env, stripeSubscriptionId);
+    } catch (err) {
+      console.error("yearly_schedule_failed", err instanceof Error ? err.message : "unknown");
+    }
+  }
 }
 
 // Customer-Portal-Session (Rechnungsuebersicht, Zahlungsmethoden-Aenderung -
@@ -237,14 +310,36 @@ export async function createPortalSession(
   return { url: session.url };
 }
 
-// Self-Service-Rueckerstattung: volle Rueckerstattung der zuletzt bezahlten
-// Rechnung dieser Subscription, ausgeloest innerhalb 14 Tagen ab
-// first_purchase_at (vom aufrufenden Endpunkt geprueft, nicht hier).
-export async function refundLatestInvoice(env: Env, invoiceId: string): Promise<void> {
+// Widerruf (§ 355 BGB): was fuer die erste Rechnung tatsaechlich bezahlt wurde.
+// Quelle ist Stripe (nach Gutschein/Rabatt), nicht der Listenpreis.
+export async function getPaidAmountCents(
+  env: Env,
+  invoiceId: string,
+): Promise<{ amountPaid: number; paymentIntentId: string | null }> {
   const stripe = getStripeClient(env);
   const invoice = await stripe.invoices.retrieve(invoiceId);
   const paymentIntentId =
-    typeof invoice.payment_intent === "string" ? invoice.payment_intent : invoice.payment_intent?.id;
-  if (!paymentIntentId) throw new Error("stripe_refund_payment_intent_missing");
-  await stripe.refunds.create({ payment_intent: paymentIntentId });
+    typeof invoice.payment_intent === "string" ? invoice.payment_intent : (invoice.payment_intent?.id ?? null);
+  return { amountPaid: invoice.amount_paid ?? 0, paymentIntentId };
+}
+
+// Teilrueckerstattung (Betrag abzueglich Wertersatz) und anschliessend sofortige
+// Beendigung der Subscription. Erst erstatten, dann beenden: scheitert die
+// Erstattung, bleibt das Abo unveraendert und der Nutzer kann es erneut versuchen.
+export async function withdrawSubscription(
+  env: Env,
+  stripeSubscriptionId: string,
+  refund: { paymentIntentId: string | null; amountCents: number },
+): Promise<void> {
+  const stripe = getStripeClient(env);
+  if (refund.amountCents > 0) {
+    if (!refund.paymentIntentId) throw new Error("stripe_refund_payment_intent_missing");
+    await stripe.refunds.create({
+      payment_intent: refund.paymentIntentId,
+      amount: refund.amountCents,
+      reason: "requested_by_customer",
+      metadata: { grund: "widerruf" },
+    });
+  }
+  await stripe.subscriptions.cancel(stripeSubscriptionId);
 }

@@ -10,6 +10,7 @@ import { dispatchNotification } from "../notifications";
 import { PAST_DUE_GRACE_MS } from "../entitlement";
 import { getStripeClient } from "./client";
 import { mapStripeSubscription } from "./subscriptionMapping";
+import { ensureYearlyToMonthlySchedule } from "./checkout";
 
 export async function verifyStripeSignature(
   env: Env,
@@ -188,6 +189,16 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription, 
         eventCreated,
       )
       .run();
+
+    // Jahresabo: nach dem ersten Jahr in den Monatsplan wechseln (AGB Ziffer 6).
+    // Best effort - ein Fehler hier darf den Kauf nicht scheitern lassen.
+    if (plan === "yearly") {
+      try {
+        await ensureYearlyToMonthlySchedule(env, stripeSubscriptionId);
+      } catch (err) {
+        console.error("yearly_schedule_failed", err instanceof Error ? err.message : "unknown");
+      }
+    }
 
     // Nur bei 'active' (echte, sofortige Zahlung) - nicht bei 'trialing', da
     // dort noch nichts abgebucht wurde.

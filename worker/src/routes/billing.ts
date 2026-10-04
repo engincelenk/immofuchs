@@ -10,7 +10,8 @@ import {
   cancelAtPeriodEnd,
   cancelImmediately,
   revokeScheduledCancellation,
-  refundLatestInvoice,
+  getPaidAmountCents,
+  withdrawSubscription,
   createPortalSession,
   changeSubscriptionPlan,
 } from "../stripe/checkout";
@@ -20,10 +21,9 @@ import { getInvoiceSummary } from "../stripe/transactions";
 import { getStripeClient } from "../stripe/client";
 import { getActiveSubscription, getLatestSubscriptionForUser, resetTestUserSubscription, ADMIN_TEST_SUBSCRIPTION_PREFIX } from "../db";
 import { dispatchNotification } from "../notifications";
+import { berechneWiderruf } from "../stripe/withdrawal";
 
 export const billingRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
-
-const REFUND_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 billingRoutes.post("/checkout", requireAuth, requireCsrfOrigin, async (c) => {
   // Guard (Spec-v3.0 Kap. 3.0): Zahlungs-/Trial-Start ist erst nach
@@ -239,25 +239,76 @@ billingRoutes.get("/invoices/:invoiceId/pdf", requireAuth, async (c) => {
   }
 });
 
-billingRoutes.post("/refund", requireAuth, requireCsrfOrigin, async (c) => {
+// ═══ Widerruf (§ 355 BGB, Verbraucher, 14 Tage) ═══
+// Vorschau: ob der Widerruf noch moeglich ist und was erstattet wuerde. Gleiche
+// Rechnung wie beim Absenden (withdrawalQuote), damit Vorschau und Ergebnis
+// nicht auseinanderlaufen.
+async function withdrawalQuote(c: { env: Env; var: AuthVars }) {
   const sub = await getActiveSubscription(c.env.DB, c.var.userId);
-  if (!sub || !sub.stripe_subscription_id) return c.json({ error: "no_active_subscription" }, 404);
-  if (Date.now() - sub.first_purchase_at > REFUND_WINDOW_MS) {
-    return c.json({ error: "refund_window_expired" }, 400);
+  if (!sub || !sub.stripe_subscription_id) return { sub: null as null };
+  let amountPaid = 0;
+  let paymentIntentId: string | null = null;
+  if (sub.latest_invoice_id) {
+    const paid = await getPaidAmountCents(c.env, sub.latest_invoice_id);
+    amountPaid = paid.amountPaid;
+    paymentIntentId = paid.paymentIntentId;
   }
-  if (!sub.latest_invoice_id) return c.json({ error: "no_transaction_on_file" }, 400);
+  const quote = berechneWiderruf({
+    bezahltCent: amountPaid,
+    plan: sub.plan === "yearly" ? "yearly" : "monthly",
+    vertragsschluss: sub.first_purchase_at,
+    jetzt: Date.now(),
+  });
+  return { sub, quote, amountPaid, paymentIntentId };
+}
+
+billingRoutes.get("/withdraw-preview", requireAuth, async (c) => {
   try {
-    await refundLatestInvoice(c.env, sub.latest_invoice_id);
-    await cancelImmediately(c.env, sub.stripe_subscription_id);
-    await c.env.DB.prepare(
-      "UPDATE subscriptions SET status = 'canceled', updated_at = ? WHERE id = ?",
-    )
-      .bind(Date.now(), sub.id)
-      .run();
-    return c.json({ ok: true });
+    const q = await withdrawalQuote(c);
+    if (!q.sub) return c.json({ eligible: false, reason: "no_active_subscription" });
+    return c.json({
+      eligible: q.quote.imFrist,
+      daysLeft: q.quote.tageUebrig,
+      daysUsed: q.quote.tageGenutzt,
+      paidCents: q.amountPaid,
+      compensationCents: q.quote.wertersatzCent,
+      refundCents: q.quote.erstattungCent,
+      currency: "eur",
+    });
   } catch (err) {
-    console.error("billing_refund_failed", err instanceof Error ? err.message : "unknown");
-    return c.json({ error: "refund_failed" }, 502);
+    console.error("billing_withdraw_preview_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "withdraw_preview_failed" }, 502);
+  }
+});
+
+billingRoutes.post("/withdraw", requireAuth, requireCsrfOrigin, async (c) => {
+  try {
+    const q = await withdrawalQuote(c);
+    if (!q.sub) return c.json({ error: "no_active_subscription" }, 404);
+    if (!q.quote.imFrist) return c.json({ error: "withdrawal_window_expired" }, 400);
+    await withdrawSubscription(c.env, q.sub.stripe_subscription_id!, {
+      paymentIntentId: q.paymentIntentId,
+      amountCents: q.quote.erstattungCent,
+    });
+    await c.env.DB.prepare("UPDATE subscriptions SET status = 'canceled', cancel_at_period_end = 0, updated_at = ? WHERE id = ?")
+      .bind(Date.now(), q.sub.id)
+      .run();
+    const eur = (cent: number) =>
+      (cent / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+    await dispatchNotification(c.env, {
+      event: "withdrawal_confirmed",
+      recipientEmail: c.var.user.email,
+      recipientUserId: c.var.userId,
+      payload: {
+        erstattung: eur(q.quote.erstattungCent),
+        wertersatz: eur(q.quote.wertersatzCent),
+        tage: q.quote.tageGenutzt,
+      },
+    });
+    return c.json({ ok: true, refundCents: q.quote.erstattungCent, compensationCents: q.quote.wertersatzCent });
+  } catch (err) {
+    console.error("billing_withdraw_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "withdraw_failed" }, 502);
   }
 });
 

@@ -1,3 +1,16 @@
+## 2026-10-04 (1.100.88) [FRONTEND+WORKER]
+
+### Widerrufsfunktion und Jahresabo mit Wechsel in den Monatsplan
+
+- Widerruf: Im Konto (Abonnement) erscheint innerhalb von 14 Tagen nach Vertragsschluss "Vertrag widerrufen". Bestaetigungsseite
+  mit Vorschau (bezahlt - anteiliger Wertersatz = Erstattung, wie AGB Ziffer 7), Worker-Routen GET /billing/withdraw-preview und
+  POST /billing/withdraw (Teilerstattung ueber Stripe, Abo sofort beendet, Bestaetigungs-Mail). Rechenkern
+  stripe/withdrawal.ts mit Tests. Die alte, ungenutzte Route POST /billing/refund (volle Erstattung) entfernt.
+- Jahresabo: nach dem ersten Jahr automatisch Monatsplan (6,99 EUR), jederzeit kuendbar - ueber eine Stripe Subscription Schedule
+  (stripe/checkout.ts), angelegt beim Erstkauf, geloest bei Kuendigung/Tarifwechsel, neu angelegt bei Reaktivierung.
+  Abgesichert ueber YEARLY_AUTO_MONTHLY (nur dev auf "true", qa/prod aus bis zum Stripe-Testkauf). Erinnerungsmail angepasst.
+- AGB Ziffer 6 (Laufzeit/Verlaengerung) und 7 (Widerrufs-Button) entsprechend angepasst.
+
 ## 2026-10-04 (1.100.87) [FRONTEND]
 
 ### Letzte Uebersetzungsreste, rechtssicherer Bestell-Button

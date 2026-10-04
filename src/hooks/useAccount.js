@@ -481,6 +481,22 @@ export function useAccount() {
     return res.json();
   }, [refresh]);
 
+  // Widerruf (14 Tage, § 355 BGB): Vorschau mit Wertersatz/Erstattung und das
+  // verbindliche Absenden. Der Worker rechnet beides identisch (stripe/withdrawal.ts).
+  const withdrawPreview = useCallback(async () => {
+    const res = await apiFetch("/billing/withdraw-preview");
+    if (!res.ok) throw new Error("withdraw_preview_failed");
+    return res.json();
+  }, []);
+
+  const withdrawSubscription = useCallback(async () => {
+    const res = await apiFetch("/billing/withdraw", { method: "POST" });
+    if (!res.ok) throw new Error("withdraw_failed");
+    const body = await res.json();
+    await refresh();
+    return body;
+  }, [refresh]);
+
   const reactivateSubscription = useCallback(async () => {
     const res = await apiFetch("/billing/reactivate", { method: "POST" });
     if (!res.ok) throw new Error("reactivate_failed");
@@ -683,6 +699,8 @@ export function useAccount() {
     logoutAllDevices,
     startCheckout,
     cancelSubscription,
+    withdrawPreview,
+    withdrawSubscription,
     reactivateSubscription,
     changePlan,
     listInvoices,

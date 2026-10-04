@@ -49,6 +49,7 @@ export async function handleScheduled(env: Env): Promise<void> {
         payload: {
           periodEndDate: new Date(sub.current_period_end).toLocaleDateString("de-DE"),
           amount: preisText(sub.plan),
+          wechselZuMonatlich: env.YEARLY_AUTO_MONTHLY === "true" && sub.plan === "yearly",
         },
       });
       await markRenewalReminderSent(env.DB, sub.id);

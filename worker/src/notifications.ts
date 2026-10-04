@@ -12,6 +12,7 @@ export type NotificationEvent =
   | "renewal_reminder"
   | "cancellation_confirmed"
   | "reactivation_confirmed"
+  | "withdrawal_confirmed"
   | "account_deleted"
   | "payment_failed"
   | "payment_succeeded"
@@ -76,6 +77,8 @@ function renderPush(intent: NotificationIntent): { title: string; body: string }
       return { title: "Kündigung bestätigt", body: `Pro bleibt aktiv bis ${intent.payload.periodEndDate}` };
     case "reactivation_confirmed":
       return { title: "Kündigung zurückgenommen", body: "Dein Abo läuft wie gewohnt weiter." };
+    case "withdrawal_confirmed":
+      return { title: "Widerruf bestätigt", body: "Dein Vertrag wurde widerrufen und beendet." };
     case "account_deleted":
       return { title: "Konto gelöscht", body: "Dein ImmoFuchs-Konto wurde gelöscht." };
     case "payment_failed":
@@ -99,6 +102,13 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
     case "renewal_reminder": {
       const datum = String(intent.payload.periodEndDate ?? "");
       const betrag = String(intent.payload.amount ?? preisText("yearly"));
+      if (intent.payload.wechselZuMonatlich) {
+        return {
+          subject: "Dein ImmoFuchs-Pro-Jahresabo wechselt in den Monatsplan",
+          html: `<p>Dein Jahresabo endet am ${datum}. Danach läuft ImmoFuchs Pro als Monatsabo weiter (${preisText("monthly")}), jederzeit zum Monatsende kündbar.</p>
+                 <p>Falls du das nicht möchtest, kannst du im Konto-Bereich jederzeit kündigen.</p>`,
+        };
+      }
       return {
         subject: "Dein ImmoFuchs-Pro-Abo verlängert sich bald",
         html: `<p>Dein Jahresabo verlängert sich am ${datum} automatisch (${betrag}).</p>
@@ -117,6 +127,18 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       return {
         subject: "Deine Kündigung wurde zurückgenommen",
         html: `<p>Dein ImmoFuchs-Pro-Abo läuft wie gewohnt weiter.</p>`,
+      };
+    }
+    case "withdrawal_confirmed": {
+      const erstattung = String(intent.payload.erstattung ?? "");
+      const wertersatz = String(intent.payload.wertersatz ?? "");
+      const tage = String(intent.payload.tage ?? "");
+      return {
+        subject: "Dein Widerruf ist bestätigt",
+        html: `<p>Wir bestätigen den Eingang deines Widerrufs. Dein ImmoFuchs-Pro-Vertrag ist beendet, der Pro-Zugang endet jetzt.</p>
+               <p>Wertersatz für die bis zum Widerruf erbrachte Leistung (${tage} Tage): ${wertersatz}<br>
+               Erstattung: ${erstattung}</p>
+               <p>Die Erstattung erfolgt auf das bei der Zahlung verwendete Zahlungsmittel; sie kann je nach Bank einige Tage dauern.</p>`,
       };
     }
     case "account_deleted": {

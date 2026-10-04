@@ -238,6 +238,10 @@ export interface Env {
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_PRICE_ID_MONTHLY?: string;
   STRIPE_PRICE_ID_YEARLY?: string;
+  // "true": Jahresabos wechseln nach der ersten Laufzeit automatisch in den Monatsplan
+  // (AGB Ziffer 6, § 309 Nr. 9 BGB) - ueber eine Stripe Subscription Schedule, siehe
+  // stripe/checkout.ts ensureYearlyToMonthlySchedule. Default aus.
+  YEARLY_AUTO_MONTHLY?: string;
   // Taeglicher D1<->Stripe-Abgleich (stripe/reconcile.ts): "log" (Default, nur
   // melden), "apply" (korrigieren) oder "off".
   STRIPE_RECONCILE_MODE?: string;

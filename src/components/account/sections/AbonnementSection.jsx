@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatPeriodEndDate, formatPlanLabel } from "../../../utils/accountEntitlement.js";
 import { errorBannerStyle, primaryBtnStyle, warnBannerStyle } from "../../checkout/checkoutStyles.js";
 import { CancelFlow } from "../CancelFlow.jsx";
+import { WithdrawFlow } from "../WithdrawFlow.jsx";
 import { SectionTitle } from "./SectionTitle.jsx";
 import {
   actionBtnStyle,
@@ -28,6 +29,7 @@ const STATUS_KEYS = {
 export function AbonnementSection({ t, account, onUpgrade, onBack }) {
   const subscription = account.me.subscription;
   const [showCancel, setShowCancel] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
   const [busy, setBusy] = useState(null);
   const [notice, setNotice] = useState(null); // {kind:"ok"|"error", text}
 
@@ -37,6 +39,12 @@ export function AbonnementSection({ t, account, onUpgrade, onBack }) {
   // ausgesprochener Kuendigung oder offener Zahlung waere das Ergebnis fuer
   // den Nutzer nicht absehbar.
   const canChangePlan = subscription?.status === "active" || isTrial;
+  // Widerrufsfunktion nur innerhalb der 14 Tage ab Vertragsschluss (Richtlinie
+  // (EU) 2023/2673); nach Fristende bleibt die normale Kuendigung.
+  const canWithdraw =
+    !!subscription?.firstPurchaseAt &&
+    Date.now() - subscription.firstPurchaseAt <= 14 * 24 * 60 * 60 * 1000 &&
+    subscription.status !== "canceled";
 
   async function run(key, fn) {
     setBusy(key);
@@ -59,6 +67,18 @@ export function AbonnementSection({ t, account, onUpgrade, onBack }) {
       result.ok
         ? { kind: "ok", text: t.aboChangePlanSuccess }
         : { kind: "error", text: t.aboChangePlanError },
+    );
+  }
+
+  if (showWithdraw) {
+    return (
+      <div style={{ maxWidth: 480 }}>
+        <SectionTitle title={t.navAbonnement} onBack={onBack} backLabel={t.wizardBack} />
+        <p style={sectionIntroStyle}>{t.aboIntro}</p>
+        <div style={blockCardStyle}>
+          <WithdrawFlow t={t} account={account} onDone={() => setShowWithdraw(false)} />
+        </div>
+      </div>
     );
   }
 
@@ -165,6 +185,11 @@ export function AbonnementSection({ t, account, onUpgrade, onBack }) {
               ) : (
                 <button onClick={() => setShowCancel(true)} style={actionBtnStyle}>
                   {t.accountCancel}
+                </button>
+              )}
+              {canWithdraw && (
+                <button onClick={() => setShowWithdraw(true)} style={actionBtnStyle}>
+                  {t.withdrawCta}
                 </button>
               )}
             </div>
