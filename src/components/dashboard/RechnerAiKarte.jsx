@@ -64,7 +64,9 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
   // als zweites Sicherheitsnetz gegen einen falsch verdrahteten Aufrufer.
   if (!aktivesObjekt?.id) return null;
 
-  const veraltet = ergebnis != null && basisSnapshot !== JSON.stringify(kennzahlen ?? {});
+  const veraltet =
+    ergebnis != null &&
+    (basisSnapshot !== JSON.stringify(kennzahlen ?? {}) || (ergebnis.lang || "de") !== lang);
 
   async function starten() {
     setFehler(null);
@@ -81,7 +83,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
         produktId,
         res.ergebnis,
         data,
-        zahlen && zahlen.length > 0 ? { zahlen } : {},
+        { ...(zahlen && zahlen.length > 0 ? { zahlen } : {}), lang },
       );
       setErgebnis(neu);
       setBasisSnapshot(JSON.stringify(kennzahlen ?? {}));
@@ -148,7 +150,9 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
     >
       {veraltet && (
         <div style={veraltetBand}>
-          {tx("aiVeraltet", "⟳ Veraltet")} · {tx("raikVeraltet", "Eingaben haben sich seit der letzten Auswertung geändert")}
+          {tx("aiVeraltet", "⟳ Veraltet")} · {(ergebnis.lang || "de") !== lang
+            ? tx("aiAndereSprache", "In einer anderen Sprache erstellt – neu erstellen für die aktuelle Sprache")
+            : tx("raikVeraltet", "Eingaben haben sich seit der letzten Auswertung geändert")}
         </div>
       )}
       {fehler && <div style={fehlerBand}>{fehler}</div>}

@@ -7,13 +7,13 @@
 import { berechneObjektKennzahlen, rangiereObjekte } from "../../utils/objektKennzahlen.js";
 
 const ZEILEN = [
-  { key: "kaufpreis", label: "Kaufpreis", einheit: "€", besser: "klein" },
-  { key: "mieteMon", label: "Miete / Monat", einheit: "€", besser: "gross" },
-  { key: "faktor", label: "Faktor", einheit: "x", besser: "klein", nachkomma: 1 },
-  { key: "nettoRendite", label: "Nettorendite", einheit: "%", besser: "gross", nachkomma: 1 },
-  { key: "rateMon", label: "Rate / Monat", einheit: "€", besser: "klein" },
-  { key: "cashflowMon", label: "Cashflow / Monat (vor Steuer)", einheit: "€", besser: "gross" },
-  { key: "score", label: "Bewertung", einheit: "/100", besser: "gross" },
+  { key: "kaufpreis", tk: "kaufpreis", label: "Kaufpreis", einheit: "€", besser: "klein" },
+  { key: "mieteMon", tk: "kpiMieteMon", label: "Miete / Monat", einheit: "€", besser: "gross" },
+  { key: "faktor", tk: "kpiFaktor", label: "Faktor", einheit: "x", besser: "klein", nachkomma: 1 },
+  { key: "nettoRendite", tk: "brfKernnettorendite", label: "Nettorendite", einheit: "%", besser: "gross", nachkomma: 1 },
+  { key: "rateMon", tk: "kpiRateMon", label: "Rate / Monat", einheit: "€", besser: "klein" },
+  { key: "cashflowMon", tk: "oaCashflowVorSteuer", label: "Cashflow / Monat (vor Steuer)", einheit: "€", besser: "gross" },
+  { key: "score", tk: "vgBewertung", label: "Bewertung", einheit: "/100", besser: "gross" },
 ];
 
 // Klartext zum Investment-Score-Tier (investmentScore.js) - ein Scoring statt
@@ -44,7 +44,7 @@ export function ObjektVergleich({ objekte, t, onFinnFrage }) {
 
   const spalten = objekte.map((o) => {
     const daten = o.inputData || o.data || {};
-    return { name: o.name || o.title || "Objekt", kz: berechneObjektKennzahlen(daten, t) };
+    return { name: o.name || o.title || (t && t.objObjekt) || "Objekt", kz: berechneObjektKennzahlen(daten, t) };
   });
 
   // Rangfolge aus derselben Funktion wie die Merkliste (objektseite-neu.md
@@ -92,15 +92,15 @@ export function ObjektVergleich({ objekte, t, onFinnFrage }) {
               {e.objekt.name || e.objekt.title || "Objekt"}
             </span>
             <span style={{ fontSize: 11, color: "var(--ch)", whiteSpace: "nowrap" }}>
-              {e.rangierbar ? TIER_WORT[e.kz.tier] || "" : "Daten unvollständig"}
+              {e.rangierbar ? (t && t[`vgTier_${e.kz.tier}`]) || TIER_WORT[e.kz.tier] || "" : (t && t.mlUnvollstaendig) || "Daten unvollständig"}
             </span>
           </div>
         ))}
       </div>
 
       <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5 }}>
-        Der jeweils günstigere Wert ist hervorgehoben. Bei Kaufpreis, Faktor und Rate ist
-        weniger besser, bei Miete, Rendite und Cashflow mehr.
+        {(t && t.vgHinweis) ||
+          "Der jeweils günstigere Wert ist hervorgehoben. Bei Kaufpreis, Faktor und Rate ist weniger besser, bei Miete, Rendite und Cashflow mehr."}
       </div>
 
       {ZEILEN.map((z) => {
@@ -136,7 +136,7 @@ export function ObjektVergleich({ objekte, t, onFinnFrage }) {
                 marginBottom: 8,
               }}
             >
-              {z.label}
+              {(t && t[z.tk]) || z.label}
             </div>
             {spalten.map((s, i) => {
               const v = werte[i];
@@ -205,7 +205,7 @@ export function ObjektVergleich({ objekte, t, onFinnFrage }) {
             fontFamily: "inherit",
           }}
         >
-          <span aria-hidden="true">✦</span> Welches ist das bessere Investment? — Finn fragen
+          <span aria-hidden="true">✦</span> {(t && t.vgFinnFrage) || "Welches ist das bessere Investment? — Finn fragen"}
         </button>
       )}
     </div>

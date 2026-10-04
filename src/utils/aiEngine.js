@@ -150,7 +150,15 @@ export function ergebnisFuer(objekt, produktId) {
 // true, wenn sich seit dem Ergebnis mindestens eine der tragenden Zahlen
 // geaendert hat. Bewusst nur diese: eine geaenderte Hausnummer macht eine
 // Renditeeinschaetzung nicht falsch.
-export function istVeraltet(ergebnis, data) {
+// `lang` (optional, seit 2026-10-04): in welcher App-Sprache die Auswertung
+// erstellt wurde. Aeltere Ergebnisse ohne Angabe gelten als deutsch. Ohne
+// uebergebene aktuelle Sprache wird nicht auf Sprache geprueft.
+export function sprachwechsel(ergebnis, lang) {
+  return !!lang && !!ergebnis && (ergebnis.lang || "de") !== lang;
+}
+
+export function istVeraltet(ergebnis, data, lang) {
+  if (sprachwechsel(ergebnis, lang)) return true;
   if (!ergebnis?.basis || !ergebnis.produktId) return false;
   const felder = relevanteFelder(ergebnis.produktId);
   if (felder.length === 0) return false;
@@ -190,9 +198,13 @@ export function geaenderteFelder(ergebnis, data, t) {
 // Das Veraltet-Band soll benennen WAS sich geaendert hat, nicht nur DASS -
 // sonst muss der Nutzer Kontingent ausgeben, um herauszufinden, ob sich
 // Kontingent lohnt. Bei einem Feld mit Delta, ab drei nur noch gezaehlt.
-export function veraltetText(ergebnis, data, locale = "de-DE", t) {
+export function veraltetText(ergebnis, data, locale = "de-DE", t, lang) {
   const felder = geaenderteFelder(ergebnis, data, t);
-  if (felder.length === 0) return "";
+  if (felder.length === 0) {
+    return sprachwechsel(ergebnis, lang)
+      ? (t && t.aiAndereSprache) || "In einer anderen Sprache erstellt – neu erstellen für die aktuelle Sprache"
+      : "";
+  }
   const zahl = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n.toLocaleString(locale) : String(v ?? "–");

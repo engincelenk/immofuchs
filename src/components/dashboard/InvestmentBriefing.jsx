@@ -94,7 +94,7 @@ export function InvestmentBriefing({
   const { lang } = useApp();
   const [bestaetigen, setBestaetigen] = useState(false);
   const ergebnis = ergebnisFuer(objekt, "briefing");
-  const veraltet = ergebnis ? istVeraltet(ergebnis, data) : false;
+  const veraltet = ergebnis ? istVeraltet(ergebnis, data, lang) : false;
 
   // Regionale Referenz erst NUTZEN, wenn regionalpreise.json geladen ist -
   // vorher liefert regionalPreis() ohnehin null (Modul-State, siehe
@@ -200,7 +200,7 @@ export function InvestmentBriefing({
 
       {veraltet && (
         <div style={veraltetBand}>
-          ⟳ {t.brfVeraltet || "Veraltet"} · {veraltetText(ergebnis, data, locale, t)}
+          ⟳ {t.brfVeraltet || "Veraltet"} · {veraltetText(ergebnis, data, locale, t, lang)}
         </div>
       )}
 

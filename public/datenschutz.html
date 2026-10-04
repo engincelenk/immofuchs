@@ -96,7 +96,7 @@
     <p>Die Adresssuche beim Anlegen eines Objekts nutzt den Dienst Photon der komoot GmbH, Potsdam (auf Basis von OpenStreetMap). Übertragen wird der eingegebene Suchtext; nach einem Exposé-Upload startet die Suche automatisch mit der aus dem Exposé gelesenen Adresse. Zurück erhalten wir Adressvorschläge mit Koordinaten. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.</p>
 
     <h2>7. Zahlungen</h2>
-    <p>Abschluss und Abrechnung von ImmoFuchs Pro wickelt Stripe Payments Europe, Ltd., Dublin, Irland ab. Deine Zahlungsdaten (z. B. Kartennummer) gibst du direkt bei Stripe ein; wir erhalten sie nicht. Für die Rechnung fragen wir im Bezahlvorgang deinen Namen (ggf. Firma), deine Anschrift, dein Land und ggf. eine Steuer-Identifikationsnummer ab und übermitteln sie an Stripe; in unserer Datenbank speichern wir sie nicht. Wir speichern eine Kunden- und Abo-Kennung, Tarif, Laufzeit und Zahlungsstatus. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO; Rechnungsdaten bewahren wir wegen gesetzlicher Pflichten bis zu 10 Jahre auf (Art. 6 Abs. 1 lit. c DSGVO, § 147 AO, § 257 HGB).</p>
+    <p>Abschluss und Abrechnung von ImmoFuchs Pro wickelt Stripe Payments Europe, Ltd., Dublin, Irland ab. Deine Zahlungsdaten (z. B. Kartennummer) gibst du direkt bei Stripe ein; wir erhalten sie nicht. Für die Rechnung fragen wir im Bezahlvorgang deinen Namen (ggf. Firma), deine Anschrift, dein Land und ggf. eine Steuer-Identifikationsnummer ab und übermitteln sie an Stripe; in unserer Datenbank speichern wir sie nicht. Wir speichern eine Kunden- und Abo-Kennung, Tarif, Laufzeit und Zahlungsstatus. Beim Bezahlvorgang lädt die App das Zahlungsformular von Stripe (Stripe.js); Stripe kann dabei zur Betrugsprävention Informationen über dein Gerät erfassen und Cookies oder ähnliche Technologien einsetzen (§ 25 Abs. 2 Nr. 2 TDDDG). Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO; Rechnungsdaten bewahren wir wegen gesetzlicher Pflichten bis zu 10 Jahre auf (Art. 6 Abs. 1 lit. c DSGVO, § 147 AO, § 257 HGB).</p>
 
     <h2>8. E-Mail-Versand</h2>
     <p>Anmeldelinks, Bestätigungen und Hinweise zu deinem Abo (z. B. eine Erinnerung vor der Verlängerung) versenden wir über den E-Mail-Dienst Resend (Resend, Inc., USA) bzw. – soweit eingerichtet – über den E-Mail-Versand von Cloudflare (siehe Abschnitt 2). Übermittelt werden deine E-Mail-Adresse und der Inhalt der Nachricht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.</p>
@@ -116,7 +116,7 @@
       <tr><td>if_entitlement</td><td>Merkt sich kurz, ob du Pro nutzt</td><td>5 Minuten</td></tr>
       <tr><td>if_oauth_state</td><td>Schutz bei der Anmeldung mit Google oder Apple</td><td>10 Minuten</td></tr>
       <tr><td>if_delete_reauth</td><td>Bestätigung beim Löschen des Kontos</td><td>10 Minuten</td></tr>
-      <tr><td>localStorage</td><td>Deine Rechner-Eingaben, Sprache, Design, Cookie-Auswahl, Zinsalarm-Einstellung</td><td>bis du sie löschst</td></tr>
+      <tr><td>localStorage</td><td>Deine Rechner-Eingaben, Sprache, Design, Cookie-Auswahl, Zinsalarm-Einstellung, ein kurzer Merker zur Pro-Berechtigung und eine zufällige Kennung für die KI-Funktionen (Einwilligung)</td><td>bis du sie löschst</td></tr>
     </table>
 
     <h2>12. Schriftarten</h2>
@@ -126,7 +126,7 @@
     <p>Die angezeigten Bauzinsen laden wir von unserem eigenen Server; dabei werden keine Daten an Dritte übertragen. Links zu externen Diensten (z. B. „In Google Maps öffnen“) werden erst aufgerufen, wenn du sie anklickst; ab dann gilt die Datenschutzerklärung des jeweiligen Anbieters.</p>
 
     <h2>14. Übermittlung in Drittländer</h2>
-    <p>Einige Dienstleister sitzen in den USA oder können Daten dorthin übertragen (Cloudflare, Google, Resend, Stripe). Soweit diese nach dem EU-US Data Privacy Framework zertifiziert sind, erfolgt die Übermittlung auf Grundlage des Angemessenheitsbeschlusses der EU-Kommission (Art. 45 DSGVO), sonst auf Grundlage von Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO). Mit den Dienstleistern, die Daten in unserem Auftrag verarbeiten, haben wir Verträge zur Auftragsverarbeitung nach Art. 28 DSGVO geschlossen.</p>
+    <p>Einige Dienstleister sitzen in den USA oder können Daten dorthin übertragen (Cloudflare, Google, Resend, Stripe). Soweit diese nach dem EU-US Data Privacy Framework zertifiziert sind, erfolgt die Übermittlung auf Grundlage des Angemessenheitsbeschlusses der EU-Kommission (Art. 45 DSGVO), sonst auf Grundlage von Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO). Mit Dienstleistern, die Daten in unserem Auftrag verarbeiten, schließen wir Verträge zur Auftragsverarbeitung nach Art. 28 DSGVO bzw. nutzen deren Auftragsverarbeitungsbedingungen. Stripe verarbeitet Zahlungsdaten teilweise in eigener Verantwortung; hierfür gilt die Datenschutzerklärung von Stripe.</p>
 
     <h2>15. Deine Rechte</h2>
     <p>Du hast das Recht auf:</p>
@@ -141,6 +141,8 @@
       <li>Beschwerde bei einer Datenschutz-Aufsichtsbehörde (Art. 77 DSGVO)</li>
     </ul>
     <p>Für Anfragen: <a href="mailto:info@immofuchs.info">info@immofuchs.info</a></p>
+    <p>Die für uns zuständige Aufsichtsbehörde ist der Landesbeauftragte für den Datenschutz und die Informationsfreiheit Baden-Württemberg, Lautenbachstraße 7, 70173 Stuttgart (<a href="https://www.baden-wuerttemberg.datenschutz.de" target="_blank" rel="noopener">baden-wuerttemberg.datenschutz.de</a>). Du kannst dich auch an jede andere Aufsichtsbehörde wenden.</p>
+    <p>Für Konto, Anmeldung, gespeicherte Objekte und Zahlungen ist die Bereitstellung deiner Daten für den Vertrag erforderlich; ohne sie können wir diese Funktionen nicht anbieten. Die Nutzung der KI-Funktionen und der Webanalyse ist freiwillig.</p>
 
     <h2>16. Verschlüsselung</h2>
     <p>Alle Verbindungen zu ImmoFuchs sind per TLS verschlüsselt. Passwörter speichern wir nur als Hash.</p>

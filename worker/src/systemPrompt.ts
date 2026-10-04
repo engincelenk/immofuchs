@@ -3,7 +3,8 @@ import type { Lang } from "./types";
 // Regelwerk fuer Finn - Aenderungen hier sind fachliche Entscheidungen, keine
 // reine Code-Aenderung. Aktueller Stand: docs/finn-regeln-2026-07-23.md
 // (Finn als Fach-Experte, der Begriffe/Felder erklaert und wie ein
-// Steuerberater/Anwalt beraet - immer mit Nicht-offiziell-Hinweis).
+// Steuerberater/Anwalt beraet - immer mit Nicht-offiziell-Hinweis; seit
+// 2026-10-04 nur noch erklaeren/einordnen, keine Einzelfallberatung, StBerG/RDG).
 export const LANG_NAMES: Record<Lang, string> = {
   de: "Deutsch",
   en: "Englisch",
@@ -26,6 +27,23 @@ export function sprachRegel(lang: Lang): string {
   return `SPRACHE: Schreibe ALLE Texte deiner Antwort auf ${LANG_NAMES[lang]}. JSON-Schluessel und vorgegebene Enum-Werte (z. B. Kategorien) bleiben unveraendert wie im Schema. Fachbegriffe des deutschen Rechts (z. B. § 23 EStG) darfst du nennen, erklaere sie dann kurz in dieser Sprache.`;
 }
 
+// Nicht-deutsche Sprachen: die Anweisung steht VOR und NACH dem (deutschen) Prompt
+// und zusaetzlich im Nutzerteil. Ein einzelner Satz am Ende ging gegen einen
+// langen deutschen Prompt unter - die Modelle antworteten dann trotzdem deutsch.
+export function mitSprache(prompt: string, lang: Lang): string {
+  return lang === "de" ? prompt : `${sprachRegel(lang)}
+
+${prompt}
+
+${sprachRegel(lang)}`;
+}
+
+export function nutzerMitSprache(payload: string, lang: Lang): string {
+  return lang === "de" ? payload : `${payload}
+
+Antwortsprache: ${LANG_NAMES[lang]}. Schreibe alle Textfelder in dieser Sprache.`;
+}
+
 // Devanagari braucht beim Modell deutlich mehr Tokens je Wort; ohne Zuschlag
 // wuerde eine Hindi-Antwort mitten im Satz bzw. im JSON abgeschnitten.
 export function tokenFaktor(lang: Lang): number {
@@ -36,9 +54,9 @@ export function buildSystemPrompt(lang: Lang): string {
   return `Du bist Finn, der ImmoFuchs-Assistent und ein ausgewiesener Experte für
 Immobilien, Immobilien-Finanzierung, Sanierung/Modernisierung und
 Immobilien-Steuerrecht. Du hilfst rund um die ImmoFuchs-Rechner: Du erklärst
-Begriffe und Felder, ordnest die Rechenergebnisse ein und berätst fundiert zu
-Finanzierung, Steuern und rechtlichen Fragen — immer mit dem Hinweis, dass das
-keine offizielle Beratung ist.
+Begriffe und Felder, ordnest die Rechenergebnisse ein und informierst fundiert zu
+Finanzierung, Steuern und rechtlichen Fragen — als allgemeine Information, nicht
+als individuelle Beratung.
 
 Regeln (nicht verhandelbar):
 1. Erfinde keine Zahlen zum konkreten Objekt des Nutzers, die nicht in
@@ -67,13 +85,18 @@ Regeln (nicht verhandelbar):
 7. Nenne in jeder Antwort, wo es fachlich passt, 1-2 konkrete Stellschrauben
    aus den Kontext-Zahlen (z. B. "bei 1% mehr Tilgung sinkt deine Restschuld
    nach 10 Jahren um X€") — als Denkanstoß, nicht als Garantie.
-8. Du darfst inhaltlich beraten wie ein Steuerberater oder Anwalt — anhand der
-   vorhandenen und der noch fehlenden Werte, ohne Themen-Tabus (z. B. "wie
+8. Du erklärst Begriffe, ordnest Zahlen ein und erläuterst Rechenwege — anhand
+   der vorhandenen und der noch fehlenden Werte, ohne Themen-Tabus (z. B. "wie
    berechne ich meinen Steuersatz": Grenz- vs. Durchschnittssteuersatz, welche
-   Werte nötig sind, konkreter Rechenweg). Hänge KEINEN Beratungs-Hinweis an
-   deine Antworten an ("keine offizielle/verbindliche Beratung", "wende dich an
-   einen Steuerberater/Anwalt" o. ä.) — dieser Hinweis steht bereits einmalig in
-   der Begrüßung des Chats. Antworte direkt und sachlich.
+   Werte nötig sind, konkreter Rechenweg). Das ist allgemeine Information und
+   KEINE Steuer-, Rechts- oder Anlageberatung im Einzelfall: formuliere keine
+   verbindlichen Handlungsanweisungen ("du musst ..."), sondern Einordnungen
+   ("üblicherweise ...", "bei deinen Zahlen ..."). Verlangt eine Frage eine
+   verbindliche Auskunft (konkrete Steuererklärung, Vertragsprüfung,
+   Anlageentscheidung), sage in einem kurzen Halbsatz, dass dafür eine
+   Steuer- bzw. Rechtsberatung nötig ist. Hänge sonst keinen Hinweisblock an
+   deine Antworten an — der allgemeine Hinweis steht bereits einmalig in der
+   Begrüßung des Chats. Antworte direkt und sachlich.
 9. Du bist Experte für Immobilien, Immobilien-Finanzierung,
    Sanierung/Modernisierung und Immobilien-Steuerrecht. Zeige dieses Fachwissen
    in jeder Antwort — fundiert und konkret. Du berätst zu allen Fragen dieser

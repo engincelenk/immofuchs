@@ -1292,8 +1292,8 @@ export default function Sanier() {
                   value={fmtE(R.totalEsp)}
                   sub={
                     R.pvStromEsp > 0
-                      ? `Heizung ${fmtE(R.espEuro)} + PV-Strom ${fmtE(R.pvStromEsp)}`
-                      : `bei ${fmt(R.epKwh, 2)} €/kWh (${R.htIsStrom ? t.str : t.sHTyp})`
+                      ? (t.saHeizungPv || "Heizung {a} + PV-Strom {b}").replace("{a}", fmtE(R.espEuro)).replace("{b}", fmtE(R.pvStromEsp))
+                      : (t.saBeiKwh || "bei {p} €/kWh ({typ})").replace("{p}", fmt(R.epKwh, 2)).replace("{typ}", R.htIsStrom ? t.str : t.sHTyp)
                   }
                   accent
                 />
@@ -1460,21 +1460,21 @@ export default function Sanier() {
                       // iSFP, Boni) steckt bereits in foerderungGesamt.
                       const z = [
                         {
-                          label: "Förderquote Gebäudehülle/Lüftung (BAFA)",
+                          label: t.saFoerderBafa || "Förderquote Gebäudehülle/Lüftung (BAFA)",
                           wert: `${BAFA.basisfoerderung} %${d.sanIsfp ? ` + ${BAFA.isfpBonus} % iSFP` : ""}`,
                         },
                         {
-                          label: `Max. förderfähige Kosten Gebäudehülle (${R.we} WE)`,
+                          label: (t.saMaxHuelle || "Max. förderfähige Kosten Gebäudehülle ({n} WE)").replace("{n}", R.we),
                           wert: `${staffelGrenze(d.sanIsfp ? BAFA.hoechstgrenzeIsfp : BAFA.hoechstgrenze, R.we).toLocaleString("de-DE")} €`,
                         },
                       ];
                       if (act.heizung) {
                         z.push({
-                          label: "Förderquote Heizungstausch (KfW 458)",
+                          label: t.saFoerderKfw || "Förderquote Heizungstausch (KfW 458)",
                           wert: `${KFW_HEIZUNG.grundfoerderung} %${R.selbst ? `, Selbstnutzer bis ${KFW_HEIZUNG.maxFoerderung} %` : ""}`,
                         });
                         z.push({
-                          label: `Max. förderfähige Kosten Heizung (${R.we} WE)`,
+                          label: (t.saMaxHeizung || "Max. förderfähige Kosten Heizung ({n} WE)").replace("{n}", R.we),
                           wert: `${staffelGrenze(KFW_HEIZUNG.hoechstgrenze, R.we, heizungGrenzeErste()).toLocaleString("de-DE")} €`,
                         });
                       }
@@ -1493,11 +1493,11 @@ export default function Sanier() {
                             const aufwandJeQm = (kaufpreis + R.ne) / flaeche;
                             const abweichung = (aufwandJeQm / regRef.kaufWohnung - 1) * 100;
                             z.push({
-                              label: "Regionaler Kaufpreis-Richtwert",
+                              label: t.saRichtwert || "Regionaler Kaufpreis-Richtwert",
                               wert: `${fmt(regRef.kaufWohnung, 2)} €/m²`,
                             });
                             z.push({
-                              label: "Gesamtaufwand nach Sanierung je m² (Kaufpreis + Nettokosten)",
+                              label: t.saGesamtQm || "Gesamtaufwand nach Sanierung je m² (Kaufpreis + Nettokosten)",
                               wert: `${fmt(aufwandJeQm, 2)} €/m²`,
                             });
                             z.push({

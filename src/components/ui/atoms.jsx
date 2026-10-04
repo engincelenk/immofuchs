@@ -3,6 +3,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import { Tip } from "./Tip.jsx";
 
 export function Dot({ color }) {
+  const t = useApp()?.t || {};
   return (
     <span
       style={{
@@ -15,7 +16,13 @@ export function Dot({ color }) {
         flexShrink: 0,
         verticalAlign: "middle",
       }}
-      title={color === "#22c55e" ? "Gut" : color === "#f59e0b" ? "Mittelmäßig" : "Kritisch"}
+      title={
+        color === "#22c55e"
+          ? t.mlBadgeGut || "Gut"
+          : color === "#f59e0b"
+            ? t.mlBadgeMittel || "Mittelmäßig"
+            : t.mlBadgeKritisch || "Kritisch"
+      }
     />
   );
 }

@@ -18,7 +18,7 @@ import { hasConsent } from "../consent";
 import { getTrialCount, incrementTrialUsage } from "../db";
 import { TRIAL_LIMITS, trialTag } from "../trialLimits";
 import { callLageModel, LAGE_MAX_TOKENS } from "../modelRouter";
-import { leseLang, tokenFaktor } from "../systemPrompt";
+import { leseLang, mitSprache, nutzerMitSprache, tokenFaktor } from "../systemPrompt";
 import { lageSystemPrompt, lageUserPayload } from "../lagePrompt";
 import { ermittleZugang } from "../entitlement";
 
@@ -71,8 +71,8 @@ lageRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c) => {
   try {
     const antwort = await callLageModel(
       c.env,
-      lageSystemPrompt(lang),
-      lageUserPayload(ort, kreis, bundesland),
+      mitSprache(lageSystemPrompt(lang), lang),
+      nutzerMitSprache(lageUserPayload(ort, kreis, bundesland), lang),
       { maxTokens: LAGE_MAX_TOKENS * tokenFaktor(lang) },
     );
     return c.json({ text: antwort });

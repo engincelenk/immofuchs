@@ -388,12 +388,12 @@ export function SteuerTrick() {
                   {
                     icon: "🪤",
                     t: st.w1t,
-                    x: `${st.w1t}: Die Grenze beträgt exakt ${fE(grenze15)} (15 % von ${fE(gebW)}). Wird sie um 1 € überschritten, entfällt der Sofortabzug komplett — Abschreibung über 50 Jahre.`,
+                    x: `${st.w1t}: ${(st.w1x || "Die Grenze beträgt exakt {g} (15 % von {b}). Wird sie um 1 € überschritten, entfällt der Sofortabzug komplett — Abschreibung über 50 Jahre.").replace("{g}", fE(grenze15)).replace("{b}", fE(gebW))}`,
                   },
                   {
                     icon: "🔄",
                     t: st.w2t,
-                    x: `Statt ${fE(lohnsteuer)} ans Finanzamt fließen ${fE(sanK)} an Handwerker. Kurzfristig mehr Liquiditätsbedarf — das Geld steckt als Substanz im Objekt.`,
+                    x: (st.w2x || "Statt {l} ans Finanzamt fließen {k} an Handwerker. Kurzfristig mehr Liquiditätsbedarf — das Geld steckt als Substanz im Objekt.").replace("{l}", fE(lohnsteuer)).replace("{k}", fE(sanK)),
                   },
                   { icon: "📅", t: st.w3t, x: st.w3x },
                   { icon: "🏠", t: st.w4t, x: st.w4x },

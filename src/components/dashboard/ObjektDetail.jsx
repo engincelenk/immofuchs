@@ -288,6 +288,7 @@ export function ObjektDetail({ objekt, onBack }) {
       const neu = ergebnisAnlegen(produktId, res.ergebnis, basis, {
         ...(varianten.length > 0 ? { varianten } : {}),
         ...(zahlen.length > 0 ? { zahlen } : {}),
+        lang,
       });
       // Basis fuer den Merge ist die bereits ueberlagerte Ansicht, nicht das
       // stale objekt - sonst wuerde ein zweiter Produktaufruf im selben

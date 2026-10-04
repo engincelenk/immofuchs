@@ -9,7 +9,7 @@ import { rate, scoreKpi, BANDS } from "../../utils/bands.js";
 // d wird seit der Zentralisierung der Monat/Jahr-Umrechnung (B4, 2026-09)
 // nicht mehr gebraucht - der Kaufpreisfaktor kommt als R.kpF aus rendite.js.
 export function InvestmentCheckRadar({ R }) {
-  const { t, lang } = useApp();
+  const { t } = useApp();
   const [sel, setSel] = useState(null);
   const [scalesOpen, setScalesOpen] = useState(false);
 
@@ -167,7 +167,7 @@ export function InvestmentCheckRadar({ R }) {
           <b>
             {kpis[sel].label}: {kpis[sel].fmt(kpis[sel].value)}
           </b>{" "}
-          — {lang === "de" ? bandScaleText(kpis[sel].key) : bandScaleText(kpis[sel].key)}
+          — {bandScaleText(kpis[sel].key, t)}
         </div>
       )}
 
@@ -223,7 +223,7 @@ export function InvestmentCheckRadar({ R }) {
                       }}
                     />
                   </td>
-                  <td style={{ padding: "6px", color: "var(--ch)" }}>{bandScaleText(k.key)}</td>
+                  <td style={{ padding: "6px", color: "var(--ch)" }}>{bandScaleText(k.key, t)}</td>
                 </tr>
               ))}
             </tbody>
@@ -234,21 +234,24 @@ export function InvestmentCheckRadar({ R }) {
   );
 }
 
-function bandScaleText(kpi) {
+function bandScaleText(kpi, t = {}) {
+  const gr = t.radGruen || "grün";
+  const ge = t.radGelb || "gelb";
+  const ro = t.radRot || "rot";
   const b = BANDS[kpi];
   if (!b) return "";
   const u =
     b.unit === "eur"
       ? "€"
       : b.unit === "jahre"
-        ? " J."
+        ? ` ${t.radJahre || "J."}`
         : b.unit === "x"
           ? "×"
           : b.unit === "%"
             ? "%"
             : "";
-  if (b.yellow == null) return b.dir === "up" ? `≥${b.green}${u} grün` : `≤${b.green}${u} grün`;
+  if (b.yellow == null) return b.dir === "up" ? `≥${b.green}${u} ${gr}` : `≤${b.green}${u} ${gr}`;
   return b.dir === "up"
-    ? `≥${b.green}${u} grün · ${b.yellow}–${b.green}${u} gelb · <${b.yellow}${u} rot`
-    : `≤${b.green}${u} grün · ${b.green}–${b.yellow}${u} gelb · >${b.yellow}${u} rot`;
+    ? `≥${b.green}${u} ${gr} · ${b.yellow}–${b.green}${u} ${ge} · <${b.yellow}${u} ${ro}`
+    : `≤${b.green}${u} ${gr} · ${b.green}–${b.yellow}${u} ${ge} · >${b.yellow}${u} ${ro}`;
 }

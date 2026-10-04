@@ -945,7 +945,7 @@ export default function App() {
           <div className="hdr-inner">
             <button
               onClick={goHome}
-              title="Zur Startseite"
+              title={t.appZurStartseite || "Zur Startseite"}
               className="hdr-brand-btn"
               style={{
                 display: "flex",
@@ -1029,7 +1029,7 @@ export default function App() {
                 fontFamily: "inherit",
               }}
             >
-              ← Objekt: {aktivesObjekt.name}
+              {(t.appZurueckObjekt || "← Objekt: {name}").replace("{name}", aktivesObjekt.name)}
             </button>
           )}
           {tab === "haupt" && (
@@ -1125,7 +1125,7 @@ export default function App() {
                 padding: 0,
               }}
             >
-              ← Startseite
+              {t.appStartseite || "← Startseite"}
             </button>
             <span style={{ opacity: 0.4 }}>·</span>
             <a
@@ -1176,7 +1176,7 @@ export default function App() {
                 padding: 0,
               }}
             >
-              Cookie-Einstellungen
+              {t.appCookie || "Cookie-Einstellungen"}
             </button>
           </div>
         </div>

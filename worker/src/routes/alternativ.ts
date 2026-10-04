@@ -12,7 +12,7 @@ import { hasConsent } from "../consent";
 import { getTrialCount, incrementTrialUsage } from "../db";
 import { TRIAL_LIMITS, trialTag } from "../trialLimits";
 import { callLageModel } from "../modelRouter";
-import { leseLang, tokenFaktor } from "../systemPrompt";
+import { leseLang, mitSprache, nutzerMitSprache, tokenFaktor } from "../systemPrompt";
 import { entferneHerkunftUndRhythmus } from "../outputFilter";
 import {
   alternativSystemPrompt,
@@ -106,7 +106,7 @@ alternativRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c)
 
   try {
     const lang = leseLang(body?.lang);
-    const antwort = await callLageModel(c.env, alternativSystemPrompt(lang), alternativUserPayload(nutzlast), {
+    const antwort = await callLageModel(c.env, mitSprache(alternativSystemPrompt(lang), lang), nutzerMitSprache(alternativUserPayload(nutzlast), lang), {
       maxTokens: ALTERNATIV_MAX_TOKENS * tokenFaktor(lang),
       temperature: ALTERNATIV_TEMPERATURE,
     });

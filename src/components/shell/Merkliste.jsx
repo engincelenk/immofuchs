@@ -124,11 +124,11 @@ const TRIAL_OBJECT_LIMIT_GESAMT = 5;
 // lokale Konstante statt der IC-SVGs aus App.jsx - die sind dort nicht
 // exportiert.
 const RECHNER_TYP_INFO = {
-  kredit: { icon: "🏦", label: "Kreditrechner" },
-  miete: { icon: "📈", label: "Mieterhöhungsrechner" },
-  sanier: { icon: "🔧", label: "Sanierungsrechner" },
-  vfe: { icon: "⚖️", label: "Vorfälligkeitsrechner" },
-  steuer6: { icon: "🧾", label: "Steueroptimierung §6" },
+  kredit: { icon: "🏦", label: "Kreditrechner", key: "mlTypKredit" },
+  miete: { icon: "📈", label: "Mieterhöhungsrechner", key: "mlTypMiete" },
+  sanier: { icon: "🔧", label: "Sanierungsrechner", key: "sanierFull" },
+  vfe: { icon: "⚖️", label: "Vorfälligkeitsrechner", key: "mlTypVfe" },
+  steuer6: { icon: "🧾", label: "Steueroptimierung §6", key: "mlTypSteuer6" },
 };
 const LOCAL_STORAGE_KEY = "if_saved_v1";
 const PRO_MIRROR_KEY = "if_saved_pro_mirror_v1"; // Offline-Spiegelung (4.17)
@@ -721,7 +721,9 @@ export function SaveBtn({ tab }) {
         >
           <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
         </svg>
-        {amObjektGespeichert ? "Gespeichert ✓" : "Am Objekt speichern"}
+        {amObjektGespeichert
+          ? (T[lang] || T.de).mlGespeichertHaken || "Gespeichert ✓"
+          : (T[lang] || T.de).mlAmObjektSpeichern || "Am Objekt speichern"}
       </button>
     );
   }
@@ -1206,10 +1208,10 @@ export function Merkliste() {
     <Sheet
       open={anlegenOffen}
       onClose={() => setAnlegenOffen(false)}
-      label="Objekt anlegen"
+      label={t.oaAnlegen || "Objekt anlegen"}
       size="min(720px, 100vw)"
     >
-      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Objekt anlegen</div>
+      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>{t.oaAnlegen || "Objekt anlegen"}</div>
       {/* Kein onExpose mehr hier (2026-09-07): der Exposé-Weg beim Anlegen
           eines NEUEN Objekts laeuft jetzt lokal in ObjektAnlegen selbst (eigene
           Extraktion mit autoSave:false, siehe useAssistant.js), statt das
@@ -1245,9 +1247,8 @@ export function Merkliste() {
           {t.emptyTitle || "Noch keine Objekte gespeichert"}
         </div>
         <div style={{ fontSize: 14, color: "var(--ch)", lineHeight: 1.5, maxWidth: 340, margin: "0 auto" }}>
-          Lege dein erstes Objekt mit fünf Angaben an — Kaufpreis, Wohnfläche,
-          Kaltmiete, Eigenkapital und einem Namen. Rendite und Cashflow siehst du
-          sofort danach.
+          {t.mlLeerText ||
+            "Lege dein erstes Objekt mit fünf Angaben an — Kaufpreis, Wohnfläche, Kaltmiete, Eigenkapital und einem Namen. Rendite und Cashflow siehst du sofort danach."}
         </div>
         <button
           type="button"
@@ -1266,7 +1267,7 @@ export function Merkliste() {
             fontFamily: "inherit",
           }}
         >
-          + Objekt anlegen
+          {t.mlAnlegenKnopf || "+ Objekt anlegen"}
         </button>
         {anlegenSheet}
         {exposeSheet}
@@ -1385,8 +1386,8 @@ export function Merkliste() {
             whiteSpace: "nowrap",
           }}
         >
-          <span className="objekt-anlegen-lang">+ Objekt anlegen</span>
-          <span className="objekt-anlegen-kurz">+ Anlegen</span>
+          <span className="objekt-anlegen-lang">{t.mlAnlegenKnopf || "+ Objekt anlegen"}</span>
+          <span className="objekt-anlegen-kurz">{t.mlAnlegenKurz || "+ Anlegen"}</span>
         </button>
       </div>
       {/* Reiter: erst sichtbar, sobald es mindestens ein Rechner-Ergebnis gibt - vorher
@@ -1394,12 +1395,12 @@ export function Merkliste() {
       {hatRechnerErgebnisse && (
         <div
           role="tablist"
-          aria-label="Objektart"
+          aria-label={t.mlObjektart || "Objektart"}
           style={{ display: "flex", gap: 20, borderBottom: "1px solid var(--cb)", marginBottom: 14 }}
         >
           {[
-            ["objekte", "Objekte", anzahlObjekte],
-            ["rechner", "Rechner-Ergebnisse", anzahlRechner],
+            ["objekte", t.merklisteZaehlerObjekte || "Objekte", anzahlObjekte],
+            ["rechner", t.merklisteZaehlerErgebnisse || "Rechner-Ergebnisse", anzahlRechner],
           ].map(([id, label, anzahl]) => (
             <button
               key={id}
@@ -1431,9 +1432,11 @@ export function Merkliste() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={
-            listArt === "rechner" ? "Suche nach Name…" : "Suche nach Name oder Ort…"
+            listArt === "rechner"
+              ? t.mlSucheRechner || "Suche nach Name…"
+              : t.mlSucheObjekt || "Suche nach Name oder Ort…"
           }
-          aria-label="Gespeicherte Eintraege durchsuchen"
+          aria-label={t.mlSucheAria || "Gespeicherte Einträge durchsuchen"}
           style={{
             // Basis 260px: auf dem Handy passt daneben kein Umschalter mehr,
             // die Zeile bricht um und das Suchfeld bekommt die volle Breite -
@@ -1498,7 +1501,7 @@ export function Merkliste() {
               aria-pressed={onlyGut}
               style={onlyGut ? searchChipActiveStyle : searchChipStyle}
             >
-              Score „Gut“
+              {t.mlScoreGut || "Score „Gut“"}
             </button>
             <button
               type="button"
@@ -1506,7 +1509,10 @@ export function Merkliste() {
               aria-pressed={sortByScore}
               style={sortByScore ? searchChipActiveStyle : searchChipStyle}
             >
-              Sortierung: {sortByScore ? "Score" : "Neueste"}
+              {(t.mlSortierungWert || "Sortierung: {w}").replace(
+                "{w}",
+                sortByScore ? t.mlSortScore || "Score" : t.mlSortNeueste || "Neueste",
+              )}
             </button>
           </>
         )}
@@ -1559,10 +1565,10 @@ export function Merkliste() {
           style={{ textAlign: "center", padding: "32px 20px", color: "var(--ch)", fontSize: 13 }}
         >
           {wirdGefiltert
-            ? "Keine Treffer für deine Suche."
+            ? t.mlKeineTreffer || "Keine Treffer für deine Suche."
             : listArt === "rechner"
-              ? "Noch keine Rechner-Ergebnisse gespeichert."
-              : "Noch keine Objekte gespeichert."}
+              ? t.mlNochKeineRechner || "Noch keine Rechner-Ergebnisse gespeichert."
+              : t.mlNochKeineObjekte || "Noch keine Objekte gespeichert."}
         </div>
       ) : null}
       {filtered.length > 0 && ansichtEffektiv === "orte" && (
@@ -1619,7 +1625,12 @@ export function Merkliste() {
         // zurueck in den Rechner (ladeRechnerErgebnis).
         const istRechnerErgebnis = obj.kennzahlen?.art === "rechnerErgebnis";
         const rechnerInfo = istRechnerErgebnis
-          ? RECHNER_TYP_INFO[obj.kennzahlen?.rechnerTyp] || { icon: "🧮", label: "Rechner-Ergebnis" }
+          ? (() => {
+              const info = RECHNER_TYP_INFO[obj.kennzahlen?.rechnerTyp];
+              return info
+                ? { icon: info.icon, label: t[info.key] || info.label }
+                : { icon: "🧮", label: t.merklisteZaehlerErgebnis || "Rechner-Ergebnis" };
+            })()
           : null;
         const oeffnenAktion = () =>
           istRechnerErgebnis ? ladeRechnerErgebnis(obj) : openDetail(obj);
@@ -1763,7 +1774,7 @@ export function Merkliste() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {scoreBadgeText(obj.scoreLabel)}
+                        {scoreBadgeText(obj.scoreLabel, t)}
                       </span>
                     )}
                     <VollstaendigkeitsRing prozent={vollstaendigkeit} />
@@ -1813,7 +1824,7 @@ export function Merkliste() {
                     fontFamily: "inherit",
                   }}
                 >
-                  Im Rechner öffnen →
+                  {t.mlImRechnerOeffnen || "Im Rechner öffnen →"}
                 </button>
               ) : (
                 <>
@@ -1857,7 +1868,7 @@ export function Merkliste() {
               )}
               <button
                 onClick={() => setConfirmDel(obj.id)}
-                aria-label="Objekt löschen"
+                aria-label={t.mlObjektLoeschen || "Objekt löschen"}
                 style={{
                   height: 44,
                   width: 44,

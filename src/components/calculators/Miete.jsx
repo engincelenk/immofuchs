@@ -463,11 +463,13 @@ export default function Miete() {
                     // (siehe R oben) - nur ausserhalb davon haengt der Wert an
                     // isK15(), das erst nach dem Laden zuverlaessig ist.
                     ...(!k15Geladen && !(d.bundesland === "BE" || d.bundesland === "HH") && !isK15(d.ort)
-                      ? [{ label: "Kappungsgrenze", wert: "wird geladen …" }]
+                      ? [{ label: t.kapp || "Kappungsgrenze", wert: t.miLaedt || "wird geladen …" }]
                       : [
                           {
-                            label: "Kappungsgrenze",
-                            wert: R.k15 ? "15 % (angespannter Wohnungsmarkt)" : "20 % (Regelfall)",
+                            label: t.kapp || "Kappungsgrenze",
+                            wert: R.k15
+                              ? t.miKapp15 || "15 % (angespannter Wohnungsmarkt)"
+                              : t.miKapp20 || "20 % (Regelfall)",
                           },
                         ]),
                     ...regZeilen,

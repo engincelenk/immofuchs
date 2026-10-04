@@ -77,12 +77,13 @@ export function AiEngine({
   onConsentAbbrechen,
 }) {
   const t = useT();
+  const { lang } = useApp();
   const [bestaetigung, setBestaetigung] = useState(null);
 
   const zustandVon = (produkt) => {
     if (laufend === produkt.id) return "laeuft";
     const e = ergebnisFuer(objekt, produkt.id);
-    if (e) return istVeraltet(e, data) ? "veraltet" : "fertig";
+    if (e) return istVeraltet(e, data, lang) ? "veraltet" : "fertig";
     // Das Handout braucht Grundlagen ueber das Objekt - entweder aus dem
     // Exposé-Scan oder aus manuell eingepflegten Daten (UX-Review 2026-09-07:
     // vorher zwingend an ein Exposé-Scan-Ergebnis gekoppelt, obwohl ein
@@ -197,7 +198,7 @@ function ProduktZeile({
   onConsentJa,
   onConsentAbbrechen,
 }) {
-  const { t } = useApp();
+  const { t, lang } = useApp();
   const gesperrt = zustand === "gesperrt";
   // Das Handout liefert seit 2026-09-08 eine Fragenliste statt Abschnitten
   // (worker/src/analyseOutput.ts). Aeltere, vor der Umstellung gespeicherte
@@ -213,7 +214,7 @@ function ProduktZeile({
     <div style={{ ...karte, ...(zustand === "veraltet" ? { borderColor: "var(--warn-bd)" } : {}) }}>
       {zustand === "veraltet" && (
         <div style={veraltetBand}>
-          {tx(t, "aiVeraltet", "⟳ Veraltet")} · {veraltetText(ergebnis, data, locale, t)}
+          {tx(t, "aiVeraltet", "⟳ Veraltet")} · {veraltetText(ergebnis, data, locale, t, lang)}
         </div>
       )}
 

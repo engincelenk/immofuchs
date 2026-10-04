@@ -1,3 +1,21 @@
+## 2026-10-04 (1.100.86) [FRONTEND+WORKER]
+
+### Uebersetzungen vervollstaendigt, Rechtstexte nachgeschaerft, Finn nur noch Information
+
+- Fest deutsche bzw. nur deutsch/englische Texte in allen 5 Sprachen: Meine Objekte (Reiter, Suche, Sortierung, Score-Filter,
+  Leerzustand, Knoepfe, Rechner-Typen, Score-Badges), Fusszeile (Startseite, Cookie-Einstellungen), "Schliessen" der Sheets,
+  Objektvergleich, Laufzeithinweis und Mietvergleich im Renditerechner (vorher Englisch fuer TR/ZH/HI), Foerder-/Kappungsgrenzen-
+  Zeilen im Sanierungs- und Mietrechner, Steuertrick-Warnungen, Radar-Legende.
+- KI-Auswertungen merken sich die Erstellungssprache; aeltere deutsche Auswertungen (und solche in einer anderen Sprache) werden
+  als "in anderer Sprache erstellt" markiert und lassen sich neu erstellen.
+- Worker: Sprachanweisung steht bei nicht-deutschen Sprachen vor und nach dem Prompt und im Nutzerteil (vorher antwortete das
+  Modell teils trotzdem deutsch).
+- Finn: Regel 8 statt "beraten wie ein Steuerberater oder Anwalt" jetzt "erklaeren und einordnen, keine Einzelfallberatung",
+  Verweis auf Steuer-/Rechtsberatung bei verbindlichen Fragen (StBerG/RDG).
+- AGB: Verbraucher/Unternehmer, Bestellvorgang/Korrektur/Vertragstext (§ 312i BGB), Haftungsklausel § 10 praezisiert.
+  Datenschutz: Auftragsverarbeitung vorsichtiger formuliert, Stripe-Cookies, localStorage-Zeile, Aufsichtsbehoerde,
+  Pflicht zur Bereitstellung.
+
 ## 2026-10-04 (1.100.85) [FRONTEND]
 
 ### Rechtstexte scharf geschaltet, Alternativ-Karte ohne doppelte Vorschau

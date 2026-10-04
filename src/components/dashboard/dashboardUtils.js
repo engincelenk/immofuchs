@@ -9,9 +9,9 @@ export function scoreBadgeColor(label) {
   return "#6c6c62";
 }
 
-export function scoreBadgeText(label) {
-  if (label === "gut") return "Gut";
-  if (label === "grenzwertig") return "Grenzwertig";
-  if (label === "kritisch") return "Kritisch";
+export function scoreBadgeText(label, t) {
+  if (label === "gut") return (t && t.mlBadgeGut) || "Gut";
+  if (label === "grenzwertig") return (t && t.mlBadgeGrenzwertig) || "Grenzwertig";
+  if (label === "kritisch") return (t && t.mlBadgeKritisch) || "Kritisch";
   return label || "—";
 }

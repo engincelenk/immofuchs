@@ -8,7 +8,7 @@
 import type { Context } from "hono";
 import type { AssistantResponse, Env, ExposeExtractResponse, Tier } from "../types";
 import { validateExposeExtractRequest, validateRequest, MAX_VERLAUF_TEXT_LEN } from "../validator";
-import { buildSystemPrompt, leseLang, sprachRegel, tokenFaktor } from "../systemPrompt";
+import { buildSystemPrompt, leseLang, mitSprache, nutzerMitSprache, tokenFaktor } from "../systemPrompt";
 import { buildUserPayload } from "../promptBuilder";
 import { callModel, callVisionModel } from "../modelRouter";
 import { filterOutput, entferneHerkunftUndRhythmus } from "../outputFilter";
@@ -521,16 +521,17 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
     roh = await callModel(
       env,
       lang,
-      `${systemPromptFuer(produkt as AnalyseProdukt)}
-
-${sprachRegel(lang)}`,
-      nutzerPayload(
-        kennzahlen as Record<string, unknown>,
-        hinweis,
-        varianten,
-        zahlen,
-        befunde,
-        standortFakten,
+      mitSprache(systemPromptFuer(produkt as AnalyseProdukt), lang),
+      nutzerMitSprache(
+        nutzerPayload(
+          kennzahlen as Record<string, unknown>,
+          hinweis,
+          varianten,
+          zahlen,
+          befunde,
+          standortFakten,
+        ),
+        lang,
       ),
       (produkt === "briefing" ? BRIEFING_MAX_TOKENS : ANALYSE_MAX_TOKENS) * tokenFaktor(lang),
     );

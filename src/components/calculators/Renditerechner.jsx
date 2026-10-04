@@ -1436,7 +1436,7 @@ export default function Haupt() {
                       <NeutralKPI
                         label={t.darlehen}
                         value={fmtE(R.da)}
-                        sub={`EK-Quote: ${fmtP(R.ekQ)}`}
+                        sub={`${t.ekQuote || "EK-Quote"}: ${fmtP(R.ekQ)}`}
                       />
                       <NeutralKPI
                         label={t.rate}
@@ -1527,9 +1527,9 @@ export default function Haupt() {
                           margin: "0 0 8px",
                         }}
                       >
-                        {lang === "de"
-                          ? `Bei ${fmt(+d.tilgung || 0, 1)} % Tilgung läuft dein Darlehen noch ca. ${isFinite(R.lz) ? fmt(R.lz, 0) : "∞"} Jahre — Sondertilgungen können das deutlich verkürzen.`
-                          : `At ${fmt(+d.tilgung || 0, 1)} % repayment your loan runs approx. ${isFinite(R.lz) ? fmt(R.lz, 0) : "∞"} years — extra repayments can cut that short.`}
+                        {(t.rrLaufzeitHinweis || "Bei {t} % Tilgung läuft dein Darlehen noch ca. {j} Jahre — Sondertilgungen können das deutlich verkürzen.")
+                          .replace("{t}", fmt(+d.tilgung || 0, 1))
+                          .replace("{j}", isFinite(R.lz) ? fmt(R.lz, 0) : "∞")}
                       </p>
                       <button
                         onClick={() => setTabExt("kredit")}
@@ -1741,13 +1741,11 @@ export default function Haupt() {
                           margin: "0 0 8px",
                         }}
                       >
-                        {lang === "de"
-                          ? gapPct > 0.5
-                            ? `Deine Miete liegt ${fmt(gapPct, 0)} % unter der Vergleichsmiete (${fmtE(Math.round(vglQm * (+d.flaeche || 0)))}/Mon.) — § 558 erlaubt eine schrittweise Angleichung.`
-                            : `Deine Miete liegt auf Vergleichsniveau — prüfe wann die nächste Anpassung möglich ist.`
-                          : gapPct > 0.5
-                            ? `Your rent is ${fmt(gapPct, 0)} % below the reference rent (${fmtE(Math.round(vglQm * (+d.flaeche || 0)))}/mo.) — § 558 allows a step-by-step adjustment.`
-                            : `Your rent is at reference level — check when the next increase is due.`}
+                        {gapPct > 0.5
+                          ? (t.rrMieteUnter || "Deine Miete liegt {p} % unter der Vergleichsmiete ({m}/Mon.) — § 558 erlaubt eine schrittweise Angleichung.")
+                              .replace("{p}", fmt(gapPct, 0))
+                              .replace("{m}", fmtE(Math.round(vglQm * (+d.flaeche || 0))))
+                          : t.rrMieteGleich || "Deine Miete liegt auf Vergleichsniveau — prüfe wann die nächste Anpassung möglich ist."}
                       </p>
                       <button
                         onClick={() => setTabExt("miete")}
@@ -1894,7 +1892,7 @@ export default function Haupt() {
                             lineHeight: 1.5,
                           }}
                         >
-                          Kein Eigenkapital eingesetzt — EK-Rendite ist hier nicht anwendbar.
+                          {t.rrKeinEk || "Kein Eigenkapital eingesetzt — EK-Rendite ist hier nicht anwendbar."}
                         </div>
                       )}
                     </div>

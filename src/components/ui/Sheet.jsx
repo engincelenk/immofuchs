@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useApp } from "../../context/AppContext.jsx";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 import { useScrollLock } from "../../hooks/useScrollLock.js";
 
@@ -64,6 +65,7 @@ export function Sheet({
   bleed = false,
   children,
 }) {
+  const schliessenText = useApp()?.t?.close || "Schließen";
   const panelRef = useRef(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
@@ -283,7 +285,7 @@ export function Sheet({
         {grabber && (
           <button
             onClick={onClose}
-            aria-label="Schließen"
+            aria-label={schliessenText}
             style={{
               display: "flex",
               justifyContent: "center",
@@ -314,7 +316,7 @@ export function Sheet({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Schließen"
+            aria-label={schliessenText}
             style={{
               position: "absolute",
               top: 10,
