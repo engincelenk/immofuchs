@@ -8,7 +8,7 @@
 // nicht in einem Tooltip.
 import { useMemo, useState } from "react";
 import { berechneAlternativAlle, alternativZahlenFuerKi, HORIZONTE } from "../../utils/alternativInvestment.js";
-import { ALTERNATIV_ANLAGEN_DATEN, ALTERNATIV_STAND, SZENARIO_LABEL } from "../../data/alternativAnlagen.js";
+import { ALTERNATIV_ANLAGEN_DATEN } from "../../data/alternativAnlagen.js";
 import { rufeAlternativAnalyseAuf } from "../../utils/alternativAnalyse.js";
 import { analyseFehlertext, erteileConsent } from "../../utils/aiAnalyse.js";
 import { fmtE, tpl } from "../../utils/helpers.js";
@@ -27,7 +27,6 @@ const phasen = (t) => [
 ];
 
 const anlageName = (t, a) => L(t, `altName_${a.key}`, a.name);
-const szenarioLabel = (t, s) => L(t, `altSzenario_${s}`, SZENARIO_LABEL[s]);
 
 const SZENARIEN = ["pess", "basis", "opt"];
 
@@ -173,8 +172,6 @@ export function AlternativInvestment({ data, t, lang = "de", anfangGestartet = f
     ...(+data?.renovierung > 0 ? [L(t, "altTeilRenovierung", "Renovierung")] : []),
     ...(+data?.sonder > 0 ? [L(t, "altTeilSonder", "Sonderumlage")] : []),
   ];
-  const wertP = +data?.wertP || 0;
-  const pro1 = (n) => String(n).replace(".", ",");
 
   async function starte() {
     if (laufend) return;
@@ -322,6 +319,8 @@ export function AlternativInvestment({ data, t, lang = "de", anfangGestartet = f
         <Balkendiagramm key={horizont} v={v} horizont={horizont} imm={imm} t={t} />
       </div>
 
+      <div style={{ ...klein, lineHeight: 1.5 }}>{L(t, "altRechtshinweis", RECHTSHINWEIS)}</div>
+
       <div style={{ ...klein, lineHeight: 1.5 }}>
         {L(t, "altGewinnVor", "Immobilie: Gewinn")}{" "}
         <strong style={{ color: "var(--ct)" }}>{fmtE(v.immobilie.gewinn)}</strong>{" "}
@@ -349,113 +348,24 @@ export function AlternativInvestment({ data, t, lang = "de", anfangGestartet = f
       </div>
 
       <details style={details}>
-        <summary style={summary}>{L(t, "altTabelle", "Zahlen als Tabelle")}</summary>
-        <div style={{ overflowX: "auto" }}>
-          <table style={tabelle}>
-            <thead>
-              <tr>
-                <th style={th}>{L(t, "altAnlage", "Anlage")}</th>
-                {SZENARIEN.map((s) => (
-                  <th key={s} style={{ ...th, textAlign: "right" }}>
-                    {szenarioLabel(t, s)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ background: "var(--ca-bg)" }}>
-                <td style={tdName}>
-                  <strong>{L(t, "altImmobilie", "Immobilie")}</strong>
-                  <div style={klein}>
-                    {v.immobilie.rendite == null
-                      ? ""
-                      : L(t, "altRenditeCaPa", "ca. {p} % p. a.", { p: v.immobilie.rendite.toFixed(1).replace(".", ",") })}
-                  </div>
-                </td>
-                <td style={{ ...td, textAlign: "right", fontWeight: 800 }} colSpan={3}>
-                  {fmtE(imm)}
-                </td>
-              </tr>
-              {v.anlagen.map((a) => (
-                <tr key={a.key}>
-                  <td style={tdName}>{anlageName(t, a)}</td>
-                  {SZENARIEN.map((s) => {
-                    const w = a.szenarien[s];
-                    return (
-                      <td key={s} style={{ ...td, textAlign: "right" }}>
-                        <span style={{ fontWeight: 700, color: w.endvermoegen > imm ? "var(--ok-tx)" : "var(--ct)" }}>
-                          {fmtE(w.endvermoegen)}
-                        </span>
-                        <div style={klein}>{L(t, "altProzentPa", "{p} % p. a.", { p: String(w.prozent).replace(".", ",") })}</div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
-
-      <details style={details}>
         <summary style={summary}>{L(t, "altSoGerechnet", "So wird gerechnet")}</summary>
         <p style={detailText}>
           {L(
             t,
-            "altSoText",
-            "Dasselbe Geld, das die Immobilie aus eigener Tasche kostet ({teile}), wird zu denselben Zeitpunkten stattdessen angelegt. Verglichen wird, was am Ende nach Steuern übrig bleibt.",
+            "altSoKurz",
+            "Dasselbe Geld, das die Immobilie aus eigener Tasche kostet ({teile}{nachschuss}), wird zu denselben Zeitpunkten stattdessen angelegt. Verglichen wird, was am Ende nach Steuern übrig bleibt; die Immobilie ist nach Ablauf der 10-jährigen Spekulationsfrist verkauft gerechnet.",
             {
-              teile:
-                einsatzBestandteile.join(", ") +
-                (v.nachschuss > 0
+              teile: einsatzBestandteile.join(", "),
+              nachschuss:
+                v.nachschuss > 0
                   ? L(t, "altSoNachschuss", ", dazu {betrag} Nachschüsse bei negativem Cashflow in {n} Jahren", {
                       betrag: fmtE(v.nachschuss),
                       n: v.jahre,
                     })
-                  : ""),
+                  : "",
             },
           )}
         </p>
-        <div style={{ ...detailText, marginTop: 12 }}>
-          <strong style={{ color: "var(--ct)" }}>
-            {L(t, "altBalkenNach", "Balken „Immobilie“ nach {n} Jahren:", { n: v.jahre })}
-          </strong>
-          <table style={rechenTabelle}>
-            <tbody>
-              <RechenZeile
-                label={L(t, "altVerkaufswert", "Verkaufswert ({p} % Wertsteigerung p. a.)", { p: pro1(wertP) })}
-                wert={fmtE(v.immobilie.verkaufswert)}
-              />
-              <RechenZeile label={L(t, "altRestschuld", "− Restschuld der Darlehen")} wert={fmtE(v.immobilie.restschuld)} />
-              <RechenZeile
-                label={
-                  L(t, "altCashflows", "+ Cashflows nach Steuer") +
-                  (v.nachschuss > 0 ? L(t, "altNurUeberschuss", " (nur Jahre mit Überschuss)") : "")
-                }
-                wert={fmtE(v.immobilie.cashflowPositiv)}
-              />
-              <RechenZeile label={L(t, "altEndvermoegen", "= Endvermögen (Balken)")} wert={fmtE(imm)} fett />
-              <RechenZeile label={L(t, "altEingezahlt", "− aus eigener Tasche eingezahlt")} wert={fmtE(v.eingezahlt)} />
-              <RechenZeile
-                label={L(t, "altGewinnZeile", "= Gewinn (Gesamtergebnis mit Steuer im Renditerechner)")}
-                wert={fmtE(v.immobilie.gewinn)} fett />
-            </tbody>
-          </table>
-          <p style={{ ...detailText, marginTop: 10 }}>
-            {L(
-              t,
-              "altAnnahmeVerkauf",
-              "Annahme: Die Immobilie wird erst nach Ablauf der 10-jährigen Spekulationsfrist verkauft (§ 23 EStG). Der Verkaufsgewinn ist dann steuerfrei, deshalb wird hier keine Steuer darauf abgezogen; bei einem früheren Verkauf fiele sie an.",
-            )}
-          </p>
-          <p style={{ ...detailText, marginTop: 10 }}>
-            {L(
-              t,
-              "altAlternativenText",
-              "Die Alternativen bekommen dieselben Einzahlungen zu denselben Zeitpunkten. Sie wachsen mit der Rendite des jeweiligen Szenarios pro Jahr, die Steuer richtet sich nach der Anlage (siehe „Hinweise“). Nicht enthalten: Verkaufskosten der Immobilie (Makler, Notar), Instandhaltung über die nicht umlagefähigen Kosten hinaus und Inflation – alle Werte sind nominal.",
-            )}
-          </p>
-        </div>
       </details>
 
       <details style={details}>
@@ -528,19 +438,6 @@ export function AlternativInvestment({ data, t, lang = "de", anfangGestartet = f
         )}
       </div>
 
-      <div style={{ ...klein, lineHeight: 1.5 }}>{L(t, "altRechtshinweis", RECHTSHINWEIS)}</div>
-      <details style={details}>
-        <summary style={summary}>{L(t, "altHinweise", "Hinweise und Vereinfachungen")}</summary>
-        <p style={detailText}>
-          {L(t, "altRechtshinweis", RECHTSHINWEIS)}{" "}
-          {L(
-            t,
-            "altHinweiseText",
-            "Die Renditen der Alternativen sind Annahmen für drei Szenarien, keine Prognose; vergangene Wertentwicklung sagt nichts über die Zukunft. Die Immobilie ist unter der Annahme gerechnet, dass sie nach Ablauf der 10-jährigen Spekulationsfrist verkauft wird (kein Steuerabzug auf den Verkaufsgewinn, ohne Verkaufskosten). Vereinfacht gerechnet: nominal ohne Inflation, Steuer bei ETF und Gold am Ende (Abgeltungsteuer 26,375 %, bei ETF mit 30 % Teilfreistellung), Bitcoin nach einem Jahr steuerfrei, Zinsen jährlich versteuert, ohne Sparer-Pauschbetrag. Datenstand der Rückblicke: {stand}.",
-            { stand: ALTERNATIV_STAND },
-          )}
-        </p>
-      </details>
     </section>
   );
 }
@@ -551,25 +448,6 @@ const RECHTSHINWEIS =
   "Die dargestellten Vergleiche sind unverbindliche Modellrechnungen auf Grundlage von Annahmen und stellen weder eine Anlageberatung noch eine Empfehlung oder Aufforderung zum Erwerb oder zur Veräußerung von Vermögenswerten dar.";
 
 const heroKarte = { background: "var(--ca-bg)", borderColor: "var(--ca-bd)", gap: 16 };
-const rechenTabelle = { width: "100%", borderCollapse: "collapse", marginTop: 6, fontSize: 12.5 };
-function RechenZeile({ label, wert, fett }) {
-  const z = {
-    padding: "5px 0",
-    borderBottom: "1px solid var(--cb)",
-    fontWeight: fett ? 800 : 400,
-    color: fett ? "var(--ct)" : "var(--cl)",
-    verticalAlign: "top",
-  };
-  return (
-    <tr>
-      <td style={z}>{label}</td>
-      <td style={{ ...z, textAlign: "right", whiteSpace: "nowrap", paddingLeft: 12, fontVariantNumeric: "tabular-nums" }}>
-        {wert}
-      </td>
-    </tr>
-  );
-}
-
 const karte = {
   background: "var(--cc)",
   border: "1px solid var(--cb)",
@@ -604,10 +482,6 @@ const segment = (aktiv) => ({
   cursor: "pointer",
   fontFamily: "inherit",
 });
-const tabelle = { width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 13 };
-const th = { textAlign: "left", fontSize: 11.5, fontWeight: 700, color: "var(--ch)", padding: "6px 8px", borderBottom: "1px solid var(--cb)" };
-const td = { padding: "8px", borderBottom: "1px solid var(--cb)", verticalAlign: "top", color: "var(--ct)" };
-const tdName = { ...td, fontWeight: 600, minWidth: 120 };
 const details = { background: "var(--ci)", border: "1px solid var(--cb)", borderRadius: 12, padding: "10px 14px" };
 const zeile = { position: "relative", display: "grid", gridTemplateColumns: "104px 1fr", alignItems: "center", gap: 10 };
 const name = { fontSize: 12.5, fontWeight: 600, lineHeight: 1.25, color: "var(--ct)" };

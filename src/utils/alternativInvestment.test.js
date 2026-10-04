@@ -85,7 +85,7 @@ describe("berechneAlternativVergleich", () => {
     const z = alternativZahlenFuerKi(berechneAlternativVergleich(OBJEKT, {}, 10));
     expect(z.horizontJahre).toBe(10);
     expect(Number.isInteger(z.einsatzStart)).toBe(true);
-    expect(z.anlagen.length).toBe(7);
+    expect(z.anlagen.length).toBe(5);
     expect(alternativZahlenFuerKi(null)).toBeNull();
   });
 });

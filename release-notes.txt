@@ -1,3 +1,14 @@
+## 2026-10-04 (1.100.84) [FRONTEND+WORKER]
+
+### Alternativ-Investment: schlanker
+
+- Vergleich auf einen Aktien-ETF reduziert: S&P 500 (MSCI World und FTSE All-World entfallen), dazu Gold, Bitcoin,
+  Bundesanleihe, Tages-/Festgeld.
+- Entfernt: "Zahlen als Tabelle", "Hinweise und Vereinfachungen", die Rechenzeilen unter "So wird gerechnet"
+  (jetzt zwei Saetze). Rechtshinweis steht sichtbar direkt unter dem Balkendiagramm.
+- KI-Einordnung: nur noch zwei kurze Absaetze (Ergebnis, Fragen zur Abwaegung), hoechstens 80 Woerter, ohne den
+  Satz zu Verkaufszeitpunkt/Spekulationsfrist.
+
 ## 2026-10-03 (1.100.83) [FRONTEND+WORKER]
 
 ### Objektseite in allen 5 Sprachen, KI antwortet in der App-Sprache

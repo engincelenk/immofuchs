@@ -57,10 +57,11 @@ describe("Alternativ-Prompt", () => {
     expect(p).toContain("Totalverlust");
     expect(p).toContain("keine rechtsgueltige");
   });
-  it("nennt die Annahme Verkauf nach Ablauf der Spekulationsfrist", () => {
+  it("laesst die Annahme zum Verkaufszeitpunkt weg (steht in der Karte) und bleibt kurz", () => {
     const p = alternativSystemPrompt();
-    expect(p).toContain("Verkauf erst nach Ablauf der 10-jaehrigen Spekulationsfrist");
-    expect(p).toContain("kein Steuerabzug auf den Verkaufsgewinn");
+    expect(p).not.toContain("Verkauf erst nach Ablauf");
+    expect(p).toContain("Nenne keine Annahmen zu Verkaufszeitpunkt");
+    expect(p).toContain("Hoechstens 80 Woerter");
   });
   it("verbietet Herkunft und Aktualisierungsrhythmus der Daten", () => {
     const p = alternativSystemPrompt();

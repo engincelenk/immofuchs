@@ -36,7 +36,7 @@ describe("AlternativInvestment", () => {
 
   it("zeigt alle Anlagen, den Einsatz und den Disclaimer", () => {
     const html = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} anfangGestartet />);
-    for (const name of ["MSCI World ETF", "FTSE All-World ETF", "S&amp;P 500 ETF", "Gold", "Bitcoin", "Bundesanleihe", "Tages-/Festgeld"]) {
+    for (const name of ["S&amp;P 500 ETF", "Gold", "Bitcoin", "Bundesanleihe", "Tages-/Festgeld"]) {
       expect(html).toContain(name);
     }
     expect(html).toContain("Aus eigener Tasche zu Beginn");
@@ -66,16 +66,16 @@ describe("AlternativInvestment", () => {
     const html = renderToStaticMarkup(<AlternativInvestment data={OBJEKT} t={{}} anfangGestartet />);
     const v = berechneAlternativVergleich(OBJEKT, {}, 10);
     const i = v.immobilie;
-    expect(html).toContain("nach 10 Jahren:");
-    // Annahme: Verkauf nach Ablauf der Spekulationsfrist - keine Steuerzeile, dafuer der Hinweis.
+    // Gekuerzte Rechenerklaerung (2026-10-04): keine Rechenzeilen mehr, nur der Hinweis auf die Annahme.
     expect(html).not.toContain("− Steuer auf den Verkaufsgewinn");
-    expect(html).toContain("Annahme: Die Immobilie wird erst nach Ablauf der 10-jährigen Spekulationsfrist verkauft");
+    expect(html).not.toContain("Zahlen als Tabelle");
+    expect(html).not.toContain("Hinweise und Vereinfachungen");
+    expect(html).toContain("nach Ablauf der 10-jährigen Spekulationsfrist verkauft gerechnet");
     expect(i.steuerVerkauf).toBe(0);
     expect(i.verkaufswert - i.restschuld - i.steuerVerkauf + i.cashflowPositiv).toBeCloseTo(i.endvermoegen, 4);
     expect(i.endvermoegen - v.eingezahlt).toBeCloseTo(i.gewinn, 4);
     const lang = renderToStaticMarkup(<AlternativInvestment data={{ ...OBJEKT, jahre: "20" }} t={{}} anfangGestartet />);
-    expect(lang).toContain("nach 20 Jahren:");
-    expect(lang).not.toContain("− Steuer auf den Verkaufsgewinn");
+    expect(lang).toContain("nach 20 Jahren");
   });
 
   it("zeigt ohne Kaufpreis nur den Hinweis, ohne zu rechnen", () => {

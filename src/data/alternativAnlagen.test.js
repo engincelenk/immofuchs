@@ -26,9 +26,9 @@ describe("Alternativ-Daten fuer die KI", () => {
   });
 
   it("die Anzeige-Texte der Karte bleiben unveraendert mit Quelle (nur UI, nicht fuer die KI)", () => {
-    const msci = ALTERNATIV_ANLAGEN_DATEN.find((a) => a.key === "msciWorld");
-    expect(msci.historie).toMatch(/justETF/);
-    expect(msci.rueckblickKi).not.toBe(msci.historie);
+    const sp = ALTERNATIV_ANLAGEN_DATEN.find((a) => a.key === "sp500");
+    expect(sp.historie).toMatch(/justETF/);
+    expect(sp.rueckblickKi).not.toBe(sp.historie);
   });
 });
 

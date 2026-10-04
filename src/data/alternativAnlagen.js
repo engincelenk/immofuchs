@@ -55,27 +55,6 @@ export const TEILFREISTELLUNG_AKTIENFONDS = 0.3;
 // bleiben fuer die Anzeige in der Karte.
 export const ALTERNATIV_ANLAGEN_DATEN = [
   {
-    key: "msciWorld",
-    name: "MSCI World ETF",
-    beispiel: "z. B. iShares Core MSCI World (IE00B4L5Y983), Kosten 0,20 % p. a.",
-    steuer: "etf",
-    szenarien: { pess: 3, basis: 6, opt: 8 },
-    historie:
-      "Letzte 5 Jahre ca. 12,3 % p. a. in EUR (justETF, 31.08.2026); seit 2000 ca. 7,5 % p. a. in USD (MSCI-Index, 31.08.2026).",
-    rueckblickKi: "Letzte 5 Jahre ca. 12,3 % p. a. in Euro; langfristig seit dem Jahr 2000 ca. 7,5 % p. a. (in US-Dollar).",
-    risiko: "Schwankung ca. 11 % p. a.; größter Rückgang seit Auflage ca. −34 %.",
-  },
-  {
-    key: "ftseAllWorld",
-    name: "FTSE All-World ETF",
-    beispiel: "z. B. Vanguard FTSE All-World (IE00B3RBWM25), Kosten 0,14 % p. a.",
-    steuer: "etf",
-    szenarien: { pess: 3, basis: 6, opt: 8 },
-    historie: "Letzte 5 Jahre ca. 12,0 % p. a. in EUR (justETF, 31.08.2026).",
-    rueckblickKi: "Letzte 5 Jahre ca. 12,0 % p. a. in Euro.",
-    risiko: "Schwankung ca. 10–14 % p. a.; größter Rückgang seit Auflage ca. −33 %.",
-  },
-  {
     key: "sp500",
     name: "S&P 500 ETF",
     beispiel: "z. B. iShares Core S&P 500 (IE00B5BMR087), Kosten 0,07 % p. a.",
