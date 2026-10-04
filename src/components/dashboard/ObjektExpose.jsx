@@ -22,6 +22,7 @@ import { ExposeUploadProgress } from "../assistant/ExposeUploadProgress.jsx";
 import { ExposeResultCard } from "../assistant/ExposeResultCard.jsx";
 import { FinnHandoutPanel } from "../assistant/FinnHandoutPanel.jsx";
 import { EXPOSE_T, handoutAnsage } from "../../i18n/expose.js";
+import { T } from "../../i18n/translations.js";
 import {
   MAX_PDF_PAGES,
   UPLOAD_FEHLER,
@@ -36,6 +37,7 @@ const CONSENT_KEY = "if_expose_consent";
 export function ObjektExpose({ open, onClose, lang = "de" }) {
   const { d, set } = useApp() || {};
   const xt = EXPOSE_T[lang] || EXPOSE_T.de;
+  const tt = T[lang] || T.de;
   const {
     messages,
     status,
@@ -140,15 +142,15 @@ export function ObjektExpose({ open, onClose, lang = "de" }) {
   const fehlertext = exposeFehler ? xt[exposeFehler] : null;
 
   return (
-    <Sheet open={open} onClose={onClose} label="Exposé-Scan" size="min(720px, 100vw)">
-      <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Exposé-Scan</div>
+    <Sheet open={open} onClose={onClose} label={tt.aiProd_expose_titel || "Exposé-Scan"} size="min(720px, 100vw)">
+      <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>{tt.aiProd_expose_titel || "Exposé-Scan"}</div>
       <div style={{ fontSize: 13.5, color: "var(--cl)", lineHeight: 1.5, marginBottom: 16 }}>
-        PDF oder Fotos des Exposés hochladen — die Felder werden daraus gefüllt.
+        {tt.exIntro || "PDF oder Fotos des Exposés hochladen — die Felder werden daraus gefüllt."}
       </div>
 
       {!moeglich && (
         <div style={{ fontSize: 13.5, color: "var(--cl)", lineHeight: 1.5 }}>
-          Der Exposé-Scan ist hier gerade nicht verfügbar.
+          {tt.exNichtVerfuegbar || "Der Exposé-Scan ist hier gerade nicht verfügbar."}
         </div>
       )}
 
@@ -178,7 +180,7 @@ export function ObjektExpose({ open, onClose, lang = "de" }) {
                   {xt.consentOk || "Verstanden"}
                 </button>
                 <button type="button" onClick={() => setConsentOffen(false)} style={knopfZweit}>
-                  Abbrechen
+                  {tt.aiAbbrechen || "Abbrechen"}
                 </button>
               </div>
             </div>
@@ -210,7 +212,7 @@ export function ObjektExpose({ open, onClose, lang = "de" }) {
 
           {pdf && (
             <div style={{ fontSize: 12.5, color: "var(--cl)", marginBottom: 12 }}>
-              PDF ausgewählt: {pdf.name}
+              {(tt.wzPdfGewaehlt || "PDF ausgewählt: {name}").replace("{name}", pdf.name)}
             </div>
           )}
 
@@ -223,7 +225,7 @@ export function ObjektExpose({ open, onClose, lang = "de" }) {
           {!laeuft && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
               <button type="button" onClick={dateiDialog} style={knopfZweit}>
-                📄 Datei auswählen
+                {tt.wzDateiWaehlen || "📄 Datei auswählen"}
               </button>
               {(bilder.length > 0 || pdf) && (
                 <button type="button" onClick={starten} style={knopfPrimaer}>

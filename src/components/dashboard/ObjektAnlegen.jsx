@@ -538,7 +538,7 @@ function ObjektFormular({
             border: "1px solid var(--cb)",
           }}
         >
-          Abbrechen
+          {oa(t, "aiAbbrechen", "Abbrechen")}
         </button>
         <button
           type="button"

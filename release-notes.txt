@@ -1,3 +1,10 @@
+## 2026-10-05 (1.100.89) [FRONTEND]
+
+### Letzte deutsche Reste im Objekt-Formular und Exposé-Upload
+
+- "Adresse suchen", PLZ, Ort, "Abbrechen", "PDF ausgewaehlt", "Datei auswaehlen", Suchstatus/-fehler der Adresssuche und der
+  Exposé-Scan-Dialog (Titel, Einleitung, Nicht-verfuegbar-Hinweis) in EN/TR/ZH/HI.
+
 ## 2026-10-04 (1.100.88) [FRONTEND+WORKER]
 
 ### Widerrufsfunktion und Jahresabo mit Wechsel in den Monatsplan

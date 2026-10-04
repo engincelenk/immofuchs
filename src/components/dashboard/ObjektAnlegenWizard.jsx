@@ -26,6 +26,7 @@ import { MIN_ZEICHEN, sucheAdressen } from "../../utils/adressSuche.js";
 import { useApp } from "../../context/AppContext.jsx";
 import { useAssistant } from "../../hooks/useAssistant.js";
 import { EXPOSE_T } from "../../i18n/expose.js";
+import { T } from "../../i18n/translations.js";
 import {
   MAX_PDF_PAGES,
   UPLOAD_FEHLER,
@@ -46,6 +47,7 @@ export const CONSENT_KEY = "if_expose_consent";
 export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) {
   const { lang } = useApp() || {};
   const xt = EXPOSE_T[lang] || EXPOSE_T.de;
+  const tt = T[lang] || T.de;
   const {
     messages,
     status,
@@ -196,7 +198,7 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
                   {xt.consentOk || "Verstanden"}
                 </button>
                 <button type="button" onClick={() => setConsentOffen(false)} style={exKnopfZweit}>
-                  Abbrechen
+                  {tt.aiAbbrechen || "Abbrechen"}
                 </button>
               </div>
             </div>
@@ -226,7 +228,7 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
           )}
           {pdf && (
             <div style={{ fontSize: 12.5, color: "var(--ch)", marginBottom: 10 }}>
-              PDF ausgewählt: {pdf.name}
+              {(tt.wzPdfGewaehlt || "PDF ausgewählt: {name}").replace("{name}", pdf.name)}
             </div>
           )}
           {auswahlFehler && (
@@ -237,7 +239,7 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
           {!laeuft && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" onClick={dateiDialog} style={exKnopfZweit}>
-                📄 Datei auswählen
+                {tt.wzDateiWaehlen || "📄 Datei auswählen"}
               </button>
               {(bilder.length > 0 || pdf) && (
                 <button type="button" onClick={starten} style={exKnopfPrimaer}>
@@ -266,6 +268,8 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
 // Entprellt (350 ms) und erst ab drei Zeichen, damit nicht jeder Tastendruck
 // eine Anfrage ausloest.
 export function AdressSuche({ onTreffer, autoSuche }) {
+  const { lang } = useApp() || {};
+  const tt = T[lang] || T.de;
   const [text, setText] = useState("");
   const [treffer, setTreffer] = useState([]);
   const [offen, setOffen] = useState(false);
@@ -374,7 +378,7 @@ export function AdressSuche({ onTreffer, autoSuche }) {
   return (
     <div ref={box} style={{ position: "relative" }}>
       <label style={{ display: "block" }}>
-        <span style={beschriftungStil}>Adresse suchen</span>
+        <span style={beschriftungStil}>{tt.wzAdresseSuchen || "Adresse suchen"}</span>
         <input
           type="text"
           value={text}
@@ -386,8 +390,8 @@ export function AdressSuche({ onTreffer, autoSuche }) {
       {(laedt || fehler) && (
         <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 5, lineHeight: 1.45 }}>
           {laedt
-            ? "Suche läuft …"
-            : "Die Adresssuche ist gerade nicht erreichbar — trage die Felder unten von Hand ein."}
+            ? tt.wzSucheLaeuft || "Suche läuft …"
+            : tt.wzAdresssucheFehler || "Die Adresssuche ist gerade nicht erreichbar — trage die Felder unten von Hand ein."}
         </div>
       )}
       {offen && (
@@ -437,6 +441,8 @@ export function AdressSuche({ onTreffer, autoSuche }) {
 // ui/PLZSearch.jsx, aber auf lokalem Formular-State statt dem globalen
 // d-State - deshalb hier eine eigene, schlanke Fassung.
 export function PlzOrtFelder({ plz, ort, onPlz, onOrt, onTreffer }) {
+  const { lang } = useApp() || {};
+  const tt = T[lang] || T.de;
   const [vorschlaege, setVorschlaege] = useState([]);
   const [offen, setOffen] = useState(false);
   const box = useRef(null);
@@ -475,7 +481,7 @@ export function PlzOrtFelder({ plz, ort, onPlz, onOrt, onTreffer }) {
   return (
     <div style={{ display: "flex", gap: 10 }}>
       <label style={{ display: "block", width: 120, flexShrink: 0 }}>
-        <span style={beschriftungStil}>PLZ</span>
+        <span style={beschriftungStil}>{tt.oaPlz || "PLZ"}</span>
         <input
           type="text"
           inputMode="numeric"
@@ -491,7 +497,7 @@ export function PlzOrtFelder({ plz, ort, onPlz, onOrt, onTreffer }) {
       </label>
       <div ref={box} style={{ position: "relative", flex: 1, minWidth: 0 }}>
         <label style={{ display: "block" }}>
-          <span style={beschriftungStil}>Ort</span>
+          <span style={beschriftungStil}>{tt.oaOrt || "Ort"}</span>
           <input
             type="text"
             value={ort}
