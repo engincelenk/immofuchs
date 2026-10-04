@@ -752,7 +752,7 @@ export function Vorfaelligkeit() {
                   }}
                   zahlen={[
                     {
-                      label: `Pfandbrief-Wiederanlagezins (Stand ${PFANDBRIEF.stand})`,
+                      label: (t.vfePfandZins || "Pfandbrief-Wiederanlagezins (Stand {stand})").replace("{stand}", PFANDBRIEF.stand),
                       wert: `${String(PFANDBRIEF.zins).replace(".", ",")} %`,
                     },
                   ]}

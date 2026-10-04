@@ -1,3 +1,12 @@
+## 2026-10-04 (1.100.87) [FRONTEND]
+
+### Letzte Uebersetzungsreste, rechtssicherer Bestell-Button
+
+- Fusszeilen-Links (Impressum/Datenschutz/AGB mit Hinweis "(DE)", da die Seiten deutsch sind), Abo-Plan im Konto,
+  "Gerechnet mit ... % Zins" beim Objekt anlegen, Zins-Angaben der KI-Karten in Finanzierungs- und Vorfaelligkeitsrechner
+  in allen 5 Sprachen.
+- Bestell-Button im Bezahlvorgang: "Jetzt zahlungspflichtig bestellen" (§ 312j Abs. 3 BGB) in allen 5 Sprachen.
+
 ## 2026-10-04 (1.100.86) [FRONTEND+WORKER]
 
 ### Uebersetzungen vervollstaendigt, Rechtstexte nachgeschaerft, Finn nur noch Information

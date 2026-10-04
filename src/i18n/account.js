@@ -134,7 +134,7 @@ export const ACCOUNT_T = {
 
     // ═══ Zahlungsschritt (Inline-Checkout) ═══
     paymentMethodTitle: "Zahlung abschließen",
-    paymentPayCta: "Jetzt bezahlen",
+    paymentPayCta: "Jetzt zahlungspflichtig bestellen",
     paymentRetryCta: "Erneut versuchen",
     paymentInlineFallback:
       "Das eingebettete Zahlungsfenster ließ sich nicht laden. Die sichere Zahlung öffnet sich stattdessen in einem eigenen Fenster.",
@@ -515,7 +515,7 @@ export const ACCOUNT_T = {
     redirectingToCheckout: "Redirecting to checkout …",
 
     paymentMethodTitle: "Complete payment",
-    paymentPayCta: "Pay now",
+    paymentPayCta: "Order with obligation to pay",
     paymentRetryCta: "Try again",
     paymentInlineFallback:
       "The embedded payment window could not be loaded. Secure payment will open in a separate window instead.",
@@ -887,7 +887,7 @@ export const ACCOUNT_T = {
     redirectingToCheckout: "Kasaya yönlendiriliyor …",
 
     paymentMethodTitle: "Ödemeyi tamamla",
-    paymentPayCta: "Şimdi öde",
+    paymentPayCta: "Ödeme yükümlülüğüyle sipariş ver",
     paymentRetryCta: "Tekrar dene",
     paymentInlineFallback:
       "Gömülü ödeme penceresi yüklenemedi. Güvenli ödeme bunun yerine ayrı bir pencerede açılacak.",
@@ -1257,7 +1257,7 @@ export const ACCOUNT_T = {
     redirectingToCheckout: "正在跳转至结算页 …",
 
     paymentMethodTitle: "完成支付",
-    paymentPayCta: "立即支付",
+    paymentPayCta: "确认订购并支付",
     paymentRetryCta: "重试",
     paymentInlineFallback: "嵌入式支付窗口无法加载。安全支付将改为在单独的窗口中打开。",
     paymentEncrypted: "加密且安全的支付",
@@ -1628,7 +1628,7 @@ export const ACCOUNT_T = {
     redirectingToCheckout: "चेकआउट पर भेजा जा रहा है …",
 
     paymentMethodTitle: "भुगतान पूरा करें",
-    paymentPayCta: "अभी भुगतान करें",
+    paymentPayCta: "भुगतान दायित्व के साथ ऑर्डर करें",
     paymentRetryCta: "फिर से कोशिश करें",
     paymentInlineFallback:
       "एम्बेडेड भुगतान विंडो लोड नहीं हो सकी। सुरक्षित भुगतान इसके बजाय एक अलग विंडो में खुलेगा।",

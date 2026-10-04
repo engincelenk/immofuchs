@@ -1137,7 +1137,7 @@ export default function App() {
                 textDecoration: "none",
               }}
             >
-              Impressum
+              {t.appImpressum || "Impressum"}
             </a>
             <span style={{ opacity: 0.4 }}>·</span>
             <a
@@ -1149,7 +1149,7 @@ export default function App() {
                 textDecoration: "none",
               }}
             >
-              Datenschutz
+              {t.appDatenschutz || "Datenschutz"}
             </a>
             <span style={{ opacity: 0.4 }}>·</span>
             <a
@@ -1161,7 +1161,7 @@ export default function App() {
                 textDecoration: "none",
               }}
             >
-              AGB
+              {t.appAgb || "AGB"}
             </a>
             <span style={{ opacity: 0.4 }}>·</span>
             <button

@@ -538,7 +538,7 @@ export default function Kredit() {
                   }}
                   zahlen={[
                     {
-                      label: `Marktdurchschnitt Zinssatz (Stand ${MARKET_RATES.stand})`,
+                      label: (t.finMarktZins || "Marktdurchschnitt Zinssatz (Stand {stand})").replace("{stand}", MARKET_RATES.stand),
                       wert: `${String(MARKET_RATES.avg).replace(".", ",")} %`,
                     },
                   ]}

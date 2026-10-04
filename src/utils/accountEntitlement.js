@@ -5,10 +5,12 @@
 // Datei ohne Mock-Server testbar ist.
 
 const PLAN_LABELS = { monthly: "Monatlich", yearly: "Jährlich" };
+const PLAN_KEYS = { monthly: "planMonthly", yearly: "planYearly" };
 
-export function formatPlanLabel(subscription) {
+export function formatPlanLabel(subscription, t) {
   if (!subscription) return null;
-  return PLAN_LABELS[subscription.plan] || subscription.plan;
+  const key = PLAN_KEYS[subscription.plan];
+  return (t && key && t[key]) || PLAN_LABELS[subscription.plan] || subscription.plan;
 }
 
 export function formatPeriodEndDate(subscription, locale = "de-DE") {

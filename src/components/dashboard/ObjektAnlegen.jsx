@@ -522,7 +522,7 @@ function ObjektFormular({
             </span>
           </div>
           <div style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.5 }}>
-            {annahmenText(entwurf)} Du kannst sie danach jederzeit anpassen.
+            {annahmenText(entwurf, t)} {oa(t, "oaAnpassenHinweis", "Du kannst sie danach jederzeit anpassen.")}
           </div>
         </div>
       )}

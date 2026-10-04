@@ -156,9 +156,12 @@ export function herkunftZaehlung(herkunft) {
 
 // Was in der Annahmen-Zeile unter dem Ergebnis steht. Bewusst kurz: die drei
 // Groessen, die das Ergebnis am staerksten bewegen.
-export function annahmenText(data) {
+export function annahmenText(data, t) {
   const zins = String(data?.zinssatz ?? MARKET_RATES.avg).replace(".", ",");
   const tilg = String(data?.tilgung ?? STANDARD_ANNAHMEN.tilgung).replace(".", ",");
   const grEst = String(data?.grEst ?? "5").replace(".", ",");
-  return `Gerechnet mit ${zins} % Zins, ${tilg} % Tilgung und ${grEst} % Grunderwerbsteuer.`;
+  return ((t && t.anGerechnetMit) || "Gerechnet mit {zins} % Zins, {tilg} % Tilgung und {gr} % Grunderwerbsteuer.")
+    .replace("{zins}", zins)
+    .replace("{tilg}", tilg)
+    .replace("{gr}", grEst);
 }
