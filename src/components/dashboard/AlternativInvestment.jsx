@@ -30,12 +30,6 @@ const anlageName = (t, a) => L(t, `altName_${a.key}`, a.name);
 
 const SZENARIEN = ["pess", "basis", "opt"];
 
-// Erster Satz als Vorschau der zugeklappten KI-Einordnung.
-function ersterSatz(text) {
-  const m = /^[^.!?]*[.!?](?=\s|$)/.exec((text || "").trim());
-  return m ? m[0] : (text || "").trim().slice(0, 140);
-}
-
 // Balkendiagramm als eigene Komponente: die Balken wachsen erst, wenn das
 // Diagramm im Bild ist (useErstSichtbar braucht ein Element, das beim ersten
 // Rendern schon da ist - die Karte zeigt das Diagramm aber erst nach dem Klick).
@@ -400,8 +394,7 @@ export function AlternativInvestment({ data, t, lang = "de", anfangGestartet = f
               </summary>
               <p style={{ ...detailText, whiteSpace: "pre-line" }}>{ergebnis.text}</p>
             </details>
-            <div style={{ ...klein, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
-              <span>{ersterSatz(ergebnis.text)}</span>
+            <div style={{ ...klein, display: "flex", justifyContent: "flex-end" }}>
               <button type="button" onClick={starte} style={{ ...textLink, flexShrink: 0 }} aria-label={L(t, "altKiNeuAria", "KI-Einordnung neu erstellen")}>
                 {L(t, "altNeu", "↻ Neu")}
               </button>

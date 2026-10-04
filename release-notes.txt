@@ -1,3 +1,15 @@
+## 2026-10-04 (1.100.85) [FRONTEND]
+
+### Rechtstexte scharf geschaltet, Alternativ-Karte ohne doppelte Vorschau
+
+- AGB: Entwurfs-Hinweise (Kasten oben, Hinweis an der Widerrufsbelehrung) entfernt; Leistungsumfang um Objektseite,
+  Lage-Analyse, Anlagevergleich, Handout und die fuenf Sprachen ergaenzt; Kontingente und Haftungs-/Hinweistext (§ 8)
+  zum Anlagevergleich ergaenzt; veralteter Link zur EU-Streitbeilegungsplattform (eingestellt 07/2025) entfernt.
+- Datenschutz: KI-Abschnitt um Anlagevergleich und uebergebene App-Sprache ergaenzt, Rechnungsangaben (gehen nur an
+  Stripe), E-Mail-Versand (Resend bzw. Cloudflare). Stand-Datum in allen Rechtsseiten 4. Oktober 2026.
+- noindex von Impressum, Datenschutz und AGB entfernt.
+- Alternativ-Investment: die doppelte Satz-Vorschau unter der aufgeklappten KI-Einordnung entfernt ("Neu" bleibt).
+
 ## 2026-10-04 (1.100.84) [FRONTEND+WORKER]
 
 ### Alternativ-Investment: schlanker
