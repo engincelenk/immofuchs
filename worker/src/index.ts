@@ -22,6 +22,7 @@ import { devicesRoutes } from "./routes/devices";
 import { exportRoutes } from "./routes/export";
 import { adminRoutes } from "./routes/admin";
 import { lageRoutes } from "./routes/lage";
+import { publicContractRoutes } from "./routes/publicContract";
 import { handleScheduled } from "./scheduled";
 
 export { SessionRateLimiter } from "./sessionRateLimiter";
@@ -69,6 +70,8 @@ app.route("/api/v1/export", exportRoutes);
 app.route("/api/v1/admin", adminRoutes);
 app.route("/api/v1/lage", lageRoutes);
 app.route("/api/v1/alternativ", alternativRoutes);
+// Ohne Anmeldung: Kuendigungsbutton, Widerrufsfunktion, Kontaktformular
+app.route("/api/v1/public", publicContractRoutes);
 
 export default {
   fetch: app.fetch,

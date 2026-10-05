@@ -77,9 +77,9 @@ export function PricingStep({
       />
 
       <div style={{ fontSize: 11.5, color: "var(--ch)", margin: "10px 2px 16px" }}>
-        {t.summaryRenewalNote.replace(
+        {(plan === "yearly" ? t.summaryRenewalYearly : t.summaryRenewalMonthly).replace(
           "{price}",
-          plan === "yearly" ? t.planYearlyPrice : t.planMonthlyPrice,
+          t.planMonthlyPrice,
         )}
       </div>
 

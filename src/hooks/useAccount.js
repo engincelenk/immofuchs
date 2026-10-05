@@ -489,8 +489,12 @@ export function useAccount() {
     return res.json();
   }, []);
 
-  const withdrawSubscription = useCallback(async () => {
-    const res = await apiFetch("/billing/withdraw", { method: "POST" });
+  const withdrawSubscription = useCallback(async (name) => {
+    const res = await apiFetch("/billing/withdraw", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
     if (!res.ok) throw new Error("withdraw_failed");
     const body = await res.json();
     await refresh();

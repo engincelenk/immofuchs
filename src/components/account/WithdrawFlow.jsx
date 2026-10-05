@@ -13,6 +13,9 @@ export function WithdrawFlow({ t, account, onDone }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [done, setDone] = useState(null);
+  const [name, setName] = useState(account.me?.name || "");
+  const [nameError, setNameError] = useState(false);
+  const sub = account.me?.subscription;
 
   useEffect(() => {
     let alive = true;
@@ -26,10 +29,16 @@ export function WithdrawFlow({ t, account, onDone }) {
   }, [account]);
 
   async function handleConfirm() {
+    // § 356a Abs. 2 BGB: Name, Vertrag und Kommunikationsmittel gehoeren zur Erklaerung.
+    if (name.trim().length < 2) {
+      setNameError(true);
+      return;
+    }
+    setNameError(false);
     setBusy(true);
     setError(false);
     try {
-      const res = await account.withdrawSubscription();
+      const res = await account.withdrawSubscription(name.trim());
       setDone(res);
     } catch {
       setError(true);
@@ -56,7 +65,7 @@ export function WithdrawFlow({ t, account, onDone }) {
       <div>
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>{t.withdrawDoneTitle}</div>
         <p style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.6, marginBottom: 18 }}>
-          {t.withdrawDoneBody.replace("{refund}", eur(done.refundCents))}
+          {t.withdrawDoneBody.replace("{time}", done.receivedAt || "").replace("{refund}", eur(done.refundCents))}
         </p>
         <button onClick={onDone} style={{ ...btn, width: "100%" }}>
           {t.withdrawClose}
@@ -82,7 +91,45 @@ export function WithdrawFlow({ t, account, onDone }) {
               .replace("{compensation}", eur(preview.compensationCents))
               .replace("{refund}", eur(preview.refundCents))}
           </p>
-          <p style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.6, marginBottom: 18 }}>
+          <div
+            style={{
+              fontSize: 12.5,
+              color: "var(--cl)",
+              background: "var(--ci)",
+              border: "1px solid var(--cb)",
+              borderRadius: 10,
+              padding: "10px 12px",
+              marginBottom: 12,
+              lineHeight: 1.6,
+            }}
+          >
+            {t.withdrawContract
+              .replace("{plan}", sub?.plan === "yearly" ? t.planYearly : t.planMonthly)
+              .replace("{email}", account.me?.email || "")}
+          </div>
+          <label style={{ display: "block", fontSize: 13, fontWeight: 700, marginBottom: 4 }} htmlFor="wd-name">
+            {t.withdrawName}
+          </label>
+          <input
+            id="wd-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            maxLength={120}
+            style={{
+              width: "100%",
+              fontSize: 16,
+              fontFamily: "inherit",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid var(--cb)",
+              background: "var(--ci)",
+              color: "var(--ct)",
+              marginBottom: 6,
+            }}
+          />
+          {nameError && <div style={{ fontSize: 12, color: "var(--ca-dk)", marginBottom: 8 }}>{t.withdrawNameRequired}</div>}
+          <p style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.6, margin: "10px 0 18px" }}>
             {t.withdrawNote}
           </p>
           {error && <div style={{ fontSize: 12, color: "var(--ca-dk)", marginBottom: 10 }}>{t.withdrawError}</div>}

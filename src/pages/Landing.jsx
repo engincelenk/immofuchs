@@ -1414,8 +1414,20 @@ export function Landing({ onStart, lang, setLang }) {
               >
                 {l.dse}
               </a>
+              <a href="/agb.html" style={{ ...navLink, fontSize: 13, textDecoration: "none" }}>
+                {l.agbLink}
+              </a>
+              <a href="/kuendigen.html" style={{ ...navLink, fontSize: 13, textDecoration: "none" }}>
+                {l.kuendigenLink}
+              </a>
+              <a href="/widerruf.html" style={{ ...navLink, fontSize: 13, textDecoration: "none" }}>
+                {l.widerrufLink}
+              </a>
+              <a href="/kontakt.html" style={{ ...navLink, fontSize: 13, textDecoration: "none" }}>
+                {l.kontaktLink}
+              </a>
               <button onClick={() => window.ccReopen?.()} style={{ ...navLink, fontSize: 13 }}>
-                Cookie-Einstellungen
+                {l.cookieLink}
               </button>
             </div>
           </div>

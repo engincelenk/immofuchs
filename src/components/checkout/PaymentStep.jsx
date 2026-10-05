@@ -289,9 +289,7 @@ export function PaymentStep({
                 Chinesischen etwa "、" statt ", ". Der Suffix bringt seinen
                 fuehrenden Abstand selbst mit, wo die Sprache einen braucht. */}
             {t.paymentTermsPrefix}{" "}
-            <LegalLink href="/agb.html">{t.paymentTermsAgb}</LegalLink>
-            {t.paymentTermsSep}
-            <LegalLink href="/datenschutz.html">{t.paymentTermsPrivacy}</LegalLink>{" "}
+            <LegalLink href="/agb.html">{t.paymentTermsAgb}</LegalLink>{" "}
             {t.paymentTermsAnd}{" "}
             <LegalLink href="/agb.html#widerruf">{t.paymentTermsWithdrawal}</LegalLink>
             {t.paymentTermsSuffix}
@@ -305,6 +303,12 @@ export function PaymentStep({
             {t.paymentWithdrawalConsent}
           </ConsentRow>
         </div>
+        {/* Datenschutz ist keine Vertragsbedingung, der man zustimmt: nur ein Hinweis,
+            bewusst ausserhalb der Checkboxen (Vermischung mit AGB/Widerruf gilt als Fehler). */}
+        <p style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.5, margin: "8px 0 0" }}>
+          {t.paymentPrivacyPrefix} <LegalLink href="/datenschutz.html">{t.paymentPrivacyLink}</LegalLink>
+          {t.paymentPrivacySuffix}
+        </p>
 
         {/* Erneut-Versuchen nur nach einem Fehlschlag beim Erzeugen der
             Kasse: fail() setzt stage zurueck auf "consent", das Formular ist

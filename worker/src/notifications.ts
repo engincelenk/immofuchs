@@ -12,6 +12,8 @@ export type NotificationEvent =
   | "renewal_reminder"
   | "cancellation_confirmed"
   | "reactivation_confirmed"
+  | "withdrawal_received"
+  | "withdrawal_expired"
   | "withdrawal_confirmed"
   | "account_deleted"
   | "payment_failed"
@@ -77,8 +79,12 @@ function renderPush(intent: NotificationIntent): { title: string; body: string }
       return { title: "Kündigung bestätigt", body: `Pro bleibt aktiv bis ${intent.payload.periodEndDate}` };
     case "reactivation_confirmed":
       return { title: "Kündigung zurückgenommen", body: "Dein Abo läuft wie gewohnt weiter." };
+    case "withdrawal_received":
+      return { title: "Widerruf eingegangen", body: "Wir haben deinen Widerruf erhalten." };
+    case "withdrawal_expired":
+      return { title: "Widerrufsfrist abgelaufen", body: "Dein Widerruf kam nach Ablauf der 14 Tage." };
     case "withdrawal_confirmed":
-      return { title: "Widerruf bestätigt", body: "Dein Vertrag wurde widerrufen und beendet." };
+      return { title: "Vertrag beendet", body: "Dein Vertrag wurde beendet, die Erstattung ist veranlasst." };
     case "account_deleted":
       return { title: "Konto gelöscht", body: "Dein ImmoFuchs-Konto wurde gelöscht." };
     case "payment_failed":
@@ -115,12 +121,38 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
                <p>Falls du das nicht möchtest, kannst du im Konto-Bereich jederzeit kündigen.</p>`,
       };
     }
+    // § 312k Abs. 4 BGB: Inhalt der Erklaerung, Datum UND Uhrzeit des Zugangs und der
+    // Zeitpunkt, zu dem der Vertrag endet - sofort, elektronisch, in Textform.
     case "cancellation_confirmed": {
       const datum = String(intent.payload.periodEndDate ?? "");
+      const eingang = String(intent.payload.receivedAt ?? "");
+      const vertrag = String(intent.payload.contract ?? "ImmoFuchs Pro");
+      const name = String(intent.payload.name ?? "");
+      const email = String(intent.payload.email ?? "");
       return {
         subject: "Deine Kündigung ist bestätigt",
-        html: `<p>Dein Abo endet am ${datum}, bis dahin bleibt ImmoFuchs Pro aktiv.</p>
-               <p>Du kannst die Kündigung bis dahin jederzeit im Konto-Bereich zurücknehmen.</p>`,
+        html: `<p>Wir bestätigen deine Kündigung.</p>
+               <p><strong>Inhalt der Kündigung:</strong> Kündigung des Vertrags „${vertrag}“ zum Ende der laufenden Abrechnungsperiode${name ? `<br><strong>Name:</strong> ${name}` : ""}<br><strong>E-Mail:</strong> ${email}<br><strong>Zugang der Kündigung:</strong> ${eingang}<br><strong>Der Vertrag endet am:</strong> ${datum}</p>
+               <p>Bis dahin bleibt ImmoFuchs Pro aktiv. Du kannst die Kündigung bis dahin jederzeit im Konto-Bereich zurücknehmen.</p>`,
+      };
+    }
+    // § 356a Abs. 4 BGB: bestaetigt AUSSCHLIESSLICH den Eingang, nicht die Wirksamkeit.
+    case "withdrawal_received": {
+      const eingang = String(intent.payload.receivedAt ?? "");
+      const vertrag = String(intent.payload.contract ?? "ImmoFuchs Pro");
+      const name = String(intent.payload.name ?? "");
+      const email = String(intent.payload.email ?? "");
+      return {
+        subject: "Eingang deines Widerrufs",
+        html: `<p>Wir bestätigen den <strong>Eingang</strong> deiner Widerrufserklärung. Diese Mail bestätigt ausschließlich den Eingang; die Prüfung von Wirksamkeit und Umfang folgt.</p>
+               <p><strong>Inhalt:</strong> Widerruf des Vertrags „${vertrag}“${name ? `<br><strong>Name:</strong> ${name}` : ""}<br><strong>E-Mail:</strong> ${email}<br><strong>Eingang:</strong> ${eingang}</p>`,
+      };
+    }
+    case "withdrawal_expired": {
+      return {
+        subject: "Dein Widerruf: Frist abgelaufen",
+        html: `<p>Die Widerrufsfrist von 14 Tagen war bei Eingang deiner Erklärung bereits abgelaufen, ein Widerruf ist deshalb nicht mehr möglich.</p>
+               <p>Du kannst dein Abo weiterhin jederzeit kündigen – über „Verträge hier kündigen“ in der Fußzeile der Website oder im Konto-Bereich.</p>`,
       };
     }
     case "reactivation_confirmed": {
@@ -134,8 +166,8 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       const wertersatz = String(intent.payload.wertersatz ?? "");
       const tage = String(intent.payload.tage ?? "");
       return {
-        subject: "Dein Widerruf ist bestätigt",
-        html: `<p>Wir bestätigen den Eingang deines Widerrufs. Dein ImmoFuchs-Pro-Vertrag ist beendet, der Pro-Zugang endet jetzt.</p>
+        subject: "Dein Vertrag ist beendet – Erstattung veranlasst",
+        html: `<p>Auf deinen Widerruf hin ist dein ImmoFuchs-Pro-Vertrag beendet, der Pro-Zugang endet jetzt.</p>
                <p>Wertersatz für die bis zum Widerruf erbrachte Leistung (${tage} Tage): ${wertersatz}<br>
                Erstattung: ${erstattung}</p>
                <p>Die Erstattung erfolgt auf das bei der Zahlung verwendete Zahlungsmittel; sie kann je nach Bank einige Tage dauern.</p>`,

@@ -192,9 +192,11 @@ export function OrderSummary({
 
       {showRenewal && (
         <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 10 }}>
-          {t.summaryRenewalNote.replace(
+          {/* Jahresplan: 12 Monate, danach Monatsplan (AGB Ziffer 6, § 309 Nr. 9 BGB) - der
+              Hinweis nennt deshalb den MONATSpreis, nicht den Jahrespreis. */}
+          {(plan === "yearly" ? t.summaryRenewalYearly : t.summaryRenewalMonthly).replace(
             "{price}",
-            plan === "yearly" ? t.planYearlyPrice : t.planMonthlyPrice,
+            t.planMonthlyPrice,
           )}
         </div>
       )}

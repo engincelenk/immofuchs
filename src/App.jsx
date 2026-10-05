@@ -1164,6 +1164,27 @@ export default function App() {
               {t.appAgb || "AGB"}
             </a>
             <span style={{ opacity: 0.4 }}>·</span>
+            <a
+              href="/kuendigen.html"
+              style={{ color: "var(--ca)", fontSize: 10, fontFamily: "inherit", textDecoration: "none" }}
+            >
+              {t.appKuendigen || "Verträge hier kündigen"}
+            </a>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <a
+              href="/widerruf.html"
+              style={{ color: "var(--ca)", fontSize: 10, fontFamily: "inherit", textDecoration: "none" }}
+            >
+              {t.appWiderrufen || "Vertrag widerrufen"}
+            </a>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <a
+              href="/kontakt.html"
+              style={{ color: "var(--ca)", fontSize: 10, fontFamily: "inherit", textDecoration: "none" }}
+            >
+              {t.appKontakt || "Kontakt"}
+            </a>
+            <span style={{ opacity: 0.4 }}>·</span>
             <button
               onClick={() => window.ccReopen?.()}
               style={{

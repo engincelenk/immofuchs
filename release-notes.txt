@@ -1,3 +1,19 @@
+## 2026-10-05 (1.100.90) [FRONTEND+WORKER]
+
+### Kuendigungs-/Widerrufsbutton ohne Login, Kontaktformular, Checkout-Texte (Rechtspruefung)
+
+- Neue oeffentliche Seiten ohne Anmeldung, in 5 Sprachen: /kuendigen.html ("Verträge hier kündigen", § 312k BGB),
+  /widerruf.html ("Vertrag widerrufen" / "Widerruf bestätigen", § 356a BGB), /kontakt.html (Kontaktformular, § 5 DDG Nr. 2).
+  Links in Fusszeile der App, Landingpage und Rechtsseiten. Worker: POST /api/v1/public/{cancel,withdraw,contact}
+  (Origin-Pruefung, Ratenbegrenzung, Honeypot, gleiche Antwort egal ob Vertrag existiert). Migration 0035 (contract_declarations).
+- Bestaetigungs-Mails: Kuendigung mit Inhalt, Datum UND Uhrzeit des Zugangs und Vertragsende (§ 312k Abs. 4);
+  Widerruf: Eingangsbestaetigung (nur Eingang, mit Datum/Uhrzeit) und separate Abschlussmail. Gemeinsame Logik
+  worker/src/contractActions.ts fuer Konto und oeffentliche Seiten.
+- Konto: Widerruf mit Namensfeld, Vertrags-/E-Mail-Angabe, Bestaetigungsknopf "Widerruf bestätigen".
+- Checkout: Checkbox "Ich verlange ausdruecklich ... Wertersatz ..." (§ 357a Abs. 2 BGB), Datenschutz nur noch als Hinweis
+  ausserhalb der Checkbox, Verlaengerungs-/Kuendigungshinweise passen zum Jahresplan (12 Monate, danach monatlich).
+- Impressum (Kontaktformular), Datenschutz (Abschnitt 17), AGB Ziffer 6/7 ergaenzt.
+
 ## 2026-10-05 (1.100.89) [FRONTEND]
 
 ### Letzte deutsche Reste im Objekt-Formular und Exposé-Upload

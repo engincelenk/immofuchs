@@ -7,11 +7,9 @@ import type { Env } from "../types";
 import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
 import {
   createSubscriptionCheckout,
-  cancelAtPeriodEnd,
   cancelImmediately,
   revokeScheduledCancellation,
   getPaidAmountCents,
-  withdrawSubscription,
   createPortalSession,
   changeSubscriptionPlan,
 } from "../stripe/checkout";
@@ -22,6 +20,7 @@ import { getStripeClient } from "../stripe/client";
 import { getActiveSubscription, getLatestSubscriptionForUser, resetTestUserSubscription, ADMIN_TEST_SUBSCRIPTION_PREFIX } from "../db";
 import { dispatchNotification } from "../notifications";
 import { berechneWiderruf } from "../stripe/withdrawal";
+import { cleanName, formatZeitpunkt, kuendigen, widerrufen } from "../contractActions";
 
 export const billingRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
 
@@ -132,24 +131,16 @@ billingRoutes.post("/cancel", requireAuth, requireCsrfOrigin, async (c) => {
   if (!sub || sub.status === "canceled" || !sub.stripe_subscription_id) {
     return c.json({ error: "no_active_subscription" }, 404);
   }
-  try {
-    await cancelAtPeriodEnd(c.env, sub.stripe_subscription_id);
-    await c.env.DB.prepare(
-      "UPDATE subscriptions SET status = 'cancel_scheduled', cancel_at_period_end = 1, updated_at = ? WHERE id = ?",
-    )
-      .bind(Date.now(), sub.id)
-      .run();
-    await dispatchNotification(c.env, {
-      event: "cancellation_confirmed",
-      recipientEmail: c.var.user.email,
-      recipientUserId: c.var.userId,
-      payload: { periodEndDate: new Date(sub.current_period_end).toLocaleDateString("de-DE") },
-    });
-    return c.json({ ok: true, periodEnd: sub.current_period_end });
-  } catch (err) {
-    console.error("billing_cancel_failed", err instanceof Error ? err.message : "unknown");
-    return c.json({ error: "cancel_failed" }, 502);
-  }
+  const res = await kuendigen(c.env, {
+    email: c.var.user.email,
+    name: "",
+    receivedAt: Date.now(),
+    channel: "account",
+    user: c.var.user,
+    sub,
+  });
+  if (!res.ok) return c.json({ error: res.error }, 502);
+  return c.json({ ok: true, periodEnd: sub.current_period_end });
 });
 
 billingRoutes.post("/reactivate", requireAuth, requireCsrfOrigin, async (c) => {
@@ -282,34 +273,30 @@ billingRoutes.get("/withdraw-preview", requireAuth, async (c) => {
 });
 
 billingRoutes.post("/withdraw", requireAuth, requireCsrfOrigin, async (c) => {
-  try {
-    const q = await withdrawalQuote(c);
-    if (!q.sub) return c.json({ error: "no_active_subscription" }, 404);
-    if (!q.quote.imFrist) return c.json({ error: "withdrawal_window_expired" }, 400);
-    await withdrawSubscription(c.env, q.sub.stripe_subscription_id!, {
-      paymentIntentId: q.paymentIntentId,
-      amountCents: q.quote.erstattungCent,
-    });
-    await c.env.DB.prepare("UPDATE subscriptions SET status = 'canceled', cancel_at_period_end = 0, updated_at = ? WHERE id = ?")
-      .bind(Date.now(), q.sub.id)
-      .run();
-    const eur = (cent: number) =>
-      (cent / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
-    await dispatchNotification(c.env, {
-      event: "withdrawal_confirmed",
-      recipientEmail: c.var.user.email,
-      recipientUserId: c.var.userId,
-      payload: {
-        erstattung: eur(q.quote.erstattungCent),
-        wertersatz: eur(q.quote.wertersatzCent),
-        tage: q.quote.tageGenutzt,
-      },
-    });
-    return c.json({ ok: true, refundCents: q.quote.erstattungCent, compensationCents: q.quote.wertersatzCent });
-  } catch (err) {
-    console.error("billing_withdraw_failed", err instanceof Error ? err.message : "unknown");
-    return c.json({ error: "withdraw_failed" }, 502);
-  }
+  const sub = await getActiveSubscription(c.env.DB, c.var.userId);
+  if (!sub || !sub.stripe_subscription_id) return c.json({ error: "no_active_subscription" }, 404);
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const name = cleanName(body?.name);
+  // § 356a Abs. 2 BGB: der Name gehoert zu den Pflichtangaben der Widerrufserklaerung.
+  if (name.length < 2) return c.json({ error: "invalid_name" }, 400);
+  const receivedAt = Date.now();
+  const res = await widerrufen(c.env, {
+    email: c.var.user.email,
+    name,
+    receivedAt,
+    channel: "account",
+    user: c.var.user,
+    sub,
+  });
+  if (!res.ok) return c.json({ error: res.error }, 502);
+  if (!res.gefunden) return c.json({ error: "no_active_subscription" }, 404);
+  if ("fristAbgelaufen" in res) return c.json({ error: "withdrawal_window_expired" }, 400);
+  return c.json({
+    ok: true,
+    refundCents: res.erstattungCent,
+    compensationCents: res.wertersatzCent,
+    receivedAt: formatZeitpunkt(receivedAt),
+  });
 });
 
 // QA: Testkonto-Reset (2026-08-18) - NUR fuer is_test_user-Konten, damit sich
