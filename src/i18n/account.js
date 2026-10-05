@@ -109,6 +109,9 @@ export const ACCOUNT_T = {
 
     planProTagline: "Für ernsthafte Investoren",
     planProCta: "Plan wählen",
+    planCtaCurrent: "Dein aktueller Plan",
+    planCtaSwitchYearly: "Im Konto auf Jahresabo wechseln",
+    planCtaMonthlyLater: "Folgt nach dem ersten Jahr",
     // Reaktiviert 25.08.2026 als Ribbon-Text der Jahreskarte (Referenz-
     // Screenshot: "EMPFOHLEN") - seit der Free-Kachel-Entfernung 2026-08-18
     // ungenutzt, vorher "Am beliebtesten".
@@ -516,6 +519,9 @@ export const ACCOUNT_T = {
 
     planProTagline: "For serious investors",
     planProCta: "Choose plan",
+    planCtaCurrent: "Your current plan",
+    planCtaSwitchYearly: "Switch to yearly in your account",
+    planCtaMonthlyLater: "Follows after the first year",
     planPopular: "Recommended",
     planPerMonth: "/mo",
     planSaveBadge: "save {percent}%",
@@ -909,6 +915,9 @@ export const ACCOUNT_T = {
 
     planProTagline: "Ciddi yatırımcılar için",
     planProCta: "Planı seç",
+    planCtaCurrent: "Mevcut planın",
+    planCtaSwitchYearly: "Hesabından yıllığa geç",
+    planCtaMonthlyLater: "İlk yıldan sonra devreye girer",
     planPopular: "Önerilen",
     planPerMonth: "/ay",
     planSaveBadge: "%{percent} tasarruf",
@@ -1300,6 +1309,9 @@ export const ACCOUNT_T = {
 
     planProTagline: "为认真的投资者而设",
     planProCta: "选择方案",
+    planCtaCurrent: "您当前的方案",
+    planCtaSwitchYearly: "在账户中切换为年度订阅",
+    planCtaMonthlyLater: "首年之后自动转入",
     planPopular: "推荐",
     planPerMonth: "/月",
     planSaveBadge: "省 {percent}%",
@@ -1692,6 +1704,9 @@ export const ACCOUNT_T = {
 
     planProTagline: "गंभीर निवेशकों के लिए",
     planProCta: "प्लान चुनें",
+    planCtaCurrent: "आपका वर्तमान प्लान",
+    planCtaSwitchYearly: "खाते में वार्षिक प्लान पर जाएं",
+    planCtaMonthlyLater: "पहले वर्ष के बाद लागू",
     planPopular: "अनुशंसित",
     planPerMonth: "/माह",
     planSaveBadge: "{percent}% की बचत",

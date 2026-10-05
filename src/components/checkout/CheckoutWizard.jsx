@@ -51,6 +51,13 @@ export function CheckoutWizard({ onClose, entryPoint = "pricing", initialPlan = 
   const account = useAccountCtx();
   const isDesktop = useIsDesktop();
   const dialogRef = useRef(null);
+  // Sicherung: wer beim Oeffnen schon bezahlt hat, bekommt keinen zweiten Kauf (Doppelbuchung).
+  // Bewusst nur der Zustand beim Mount - nach einem Kauf im Wizard wird zugang ebenfalls "pro",
+  // dann soll die Bestaetigung stehen bleiben.
+  const warBeimOeffnenPro = useRef(account?.zugang === "pro");
+  useEffect(() => {
+    if (warBeimOeffnenPro.current && entryPoint !== "login") onClose();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // Native In-App-Kauf (RevenueCat) statt Stripe-Checkout, siehe
   // docs/app-store-google-play-setup.md. isNativePlatform() aendert sich zur
   // Laufzeit nie, useMemo mit leerer Dependency-Liste reicht.

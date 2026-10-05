@@ -43,7 +43,7 @@ const VERTRAUEN = [
   { title: "trustDsgvoTitle", sub: "trustDsgvoSub", Icon: IconSchloss },
 ];
 
-export function PricingSection({ lang, onChoosePlan }) {
+export function PricingSection({ lang, onChoosePlan, aktuellerPlan = null }) {
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const locale = LANG_LOCALE[lang] || "de-DE";
 
@@ -106,7 +106,14 @@ export function PricingSection({ lang, onChoosePlan }) {
             perMonth={t.planPerMonth}
             note={monthlyNote}
             trialBadge={t.pricingTrialBadge}
-            ctaLabel={t.planProCta}
+            ctaLabel={
+              aktuellerPlan === "monthly"
+                ? t.planCtaCurrent
+                : aktuellerPlan === "yearly"
+                  ? t.planCtaMonthlyLater
+                  : t.planProCta
+            }
+            disabled={Boolean(aktuellerPlan)}
             onCta={() => onChoosePlan("monthly")}
           />
           <PlanCard
@@ -120,7 +127,14 @@ export function PricingSection({ lang, onChoosePlan }) {
             badge={t.planSaveBadge.replace("{percent}", String(YEARLY_SAVINGS_PERCENT))}
             note={yearlyNote}
             trialBadge={t.pricingTrialBadge}
-            ctaLabel={t.planProCta}
+            ctaLabel={
+              aktuellerPlan === "yearly"
+                ? t.planCtaCurrent
+                : aktuellerPlan === "monthly"
+                  ? t.planCtaSwitchYearly
+                  : t.planProCta
+            }
+            disabled={aktuellerPlan === "yearly"}
             onCta={() => onChoosePlan("yearly")}
           />
         </div>
@@ -145,6 +159,7 @@ function PlanCard({
   ctaLabel,
   onCta,
   highlighted,
+  disabled = false,
 }) {
   return (
     <div
@@ -206,6 +221,7 @@ function PlanCard({
 
       <button
         onClick={onCta}
+        disabled={disabled}
         style={{
           width: "100%",
           marginTop: 16,
@@ -220,9 +236,10 @@ function PlanCard({
           // zweitrangige Wahl, dabei sind es zwei gleichwertige Laufzeiten -
           // hervorgehoben wird die Jahreskarte bereits ueber Rahmen und
           // Ribbon.
-          background: "var(--ca)",
-          color: "#fff",
-          border: "1px solid var(--ca)",
+          background: disabled ? "var(--cb)" : "var(--ca)",
+          color: disabled ? "var(--ch)" : "#fff",
+          border: disabled ? "1px solid var(--cb)" : "1px solid var(--ca)",
+          ...(disabled ? { cursor: "not-allowed" } : {}),
         }}
       >
         {ctaLabel}

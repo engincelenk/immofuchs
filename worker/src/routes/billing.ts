@@ -32,6 +32,12 @@ billingRoutes.post("/checkout", requireAuth, requireCsrfOrigin, async (c) => {
   const plan = body?.plan === "yearly" ? "yearly" : body?.plan === "monthly" ? "monthly" : null;
   if (!plan) return c.json({ error: "invalid_plan" }, 400);
 
+  // Doppelbuchung verhindern: wer ein laufendes, gekuendigtes oder offenes Abo hat, kauft nicht
+  // erneut - Laufzeitwechsel, Reaktivierung und Zahlungsprobleme laufen ueber /change-plan,
+  // /reactivate und /portal.
+  const bestehend = await getActiveSubscription(c.env.DB, c.var.userId);
+  if (bestehend) return c.json({ error: "already_subscribed" }, 409);
+
   // Stufe F (Gutscheine ueber Stripe Coupons/Promotion Codes): Code wird HIER
   // server-seitig gegen Stripe aufgeloest, nie vom Client vertrauenswuerdig
   // entgegengenommen - sonst koennte jeder Klient einen beliebigen

@@ -1,3 +1,12 @@
+## 2026-10-05 (1.100.97) [FRONTEND+WORKER]
+
+### Kein Checkout fuer Nutzer mit bezahltem Abo
+
+- Startseite: "Plan waehlen" oeffnet bei bezahltem Abo das Konto (Abonnement) statt des Checkouts. Preiskarten: eigener Plan "Dein aktueller Plan",
+  Monatsabo sieht auf der Jahreskarte "Im Konto auf Jahresabo wechseln", Jahresabo sieht auf der Monatskarte "Folgt nach dem ersten Jahr" (deaktiviert).
+- CheckoutWizard schliesst sich selbst, wenn das Konto beim Oeffnen schon bezahlt hat.
+- Worker: POST /billing/checkout antwortet mit 409 already_subscribed bei laufendem, gekuendigtem oder offenem Abo (Schutz vor Doppelbuchung).
+
 ## 2026-10-05 (1.100.96) [FRONTEND]
 
 ### Miete damals vorbelegt, Kaufpreisfaktor als Kennzahl, Jahr ohne Pfeile, Speichern-Leiste
