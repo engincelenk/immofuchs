@@ -31,6 +31,12 @@ export function FinnBubble({
         bottom: "calc(100% + 10px)",
         left: isRight ? "auto" : 14,
         right: isRight ? 0 : "auto",
+        // Absolut an den schmalen Fuchs gehaengt, wuerde die Blase dessen Breite als
+        // verfuegbare Breite nehmen und den Text Wort fuer Wort umbrechen. max-content
+        // richtet sie nach der Textlaenge aus (bis maxWidth), minWidth verhindert
+        // zu schmale Zeilen bei kurzen Texten.
+        width: "max-content",
+        minWidth: "min(190px, calc(100vw - 48px))",
         maxWidth: "min(250px, calc(100vw - 48px))",
         // Warmer Hinweiston statt des frueheren Fast-Schwarz: die Blase war
         // der einzige dunkle Fleck in einer sonst hellen Oberflaeche
@@ -85,7 +91,7 @@ export function FinnBubble({
       <style>{`
         .if-finn-bubble{opacity:0;transform:translateY(4px) scale(.96);transition:opacity .18s ease,transform .18s ease}
         .if-finn-bubble-show{opacity:1;transform:translateY(0) scale(1)}
-        .if-finn-bubble-text{flex:1;min-width:0;text-align:left;background:none;border:none;color:inherit;font-family:inherit;font-size:12.5px;font-weight:600;line-height:1.4;padding:9px 4px 9px 13px;cursor:pointer}
+        .if-finn-bubble-text{flex:1;min-width:0;text-align:left;background:none;border:none;color:inherit;font-family:inherit;font-size:12.5px;font-weight:600;line-height:1.4;padding:9px 4px 9px 13px;cursor:pointer;text-wrap:balance}
         .if-finn-bubble-x{flex:none;background:none;border:none;color:var(--ca);font-family:inherit;font-size:11px;line-height:1;padding:9px 10px 9px 4px;cursor:pointer}
         .if-finn-bubble-x:hover{color:var(--ca-dk)}
         .if-finn-bubble-text:focus-visible,.if-finn-bubble-x:focus-visible{outline:2px solid var(--ca);outline-offset:-2px;border-radius:8px}

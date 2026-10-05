@@ -206,6 +206,8 @@ export interface BriefingErgebnis {
   tragfaehigkeit: string;
   zeitraum: string;
   stresstest: string;
+  // Ein Begruendungssatz zur Modernisierungszeile (seit 2026-10-05, aeltere Ergebnisse: leer).
+  modernisierung: string;
 }
 
 const MAX_URTEIL = 220;
@@ -215,6 +217,7 @@ const MAX_MARKT = 250;
 const MAX_TRAGFAEHIGKEIT = 300;
 const MAX_ZEITRAUM = 250;
 const MAX_STRESSTEST = 250;
+const MAX_MODERNISIERUNG = 220;
 
 function briefingListe(roh: unknown): AnalyseInsight[] {
   if (!Array.isArray(roh)) return [];
@@ -252,6 +255,7 @@ export function parseBriefingOutput(roh: string): BriefingErgebnis | null {
     tragfaehigkeit: text(d.tragfaehigkeit, MAX_TRAGFAEHIGKEIT),
     zeitraum: text(d.zeitraum, MAX_ZEITRAUM),
     stresstest: text(d.stresstest, MAX_STRESSTEST),
+    modernisierung: text(d.modernisierung, MAX_MODERNISIERUNG),
   };
 }
 

@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fmt, fmtE } from "../../utils/helpers.js";
 import { berechneVollstaendigkeit } from "../../utils/objektKennzahlen.js";
-import { hebelTexteVon, risikenVon, staerkenVon } from "../../utils/aiEngine.js";
+import { hebelTexteVon, modernisierungTextVon, risikenVon, staerkenVon } from "../../utils/aiEngine.js";
 import { ObjektLage } from "./ObjektUnterlagen.jsx";
 import { KiLadeeffekt } from "./AiEngine.jsx";
 import { Toggle } from "../ui/atoms.jsx";
@@ -1334,6 +1334,16 @@ function Chip({ farbe, text }) {
   );
 }
 
+// Erster Satz eines KI-Textes als Begruendung unter der Ueberschrift.
+function ersterSatz(text) {
+  const t = String(text || "").trim();
+  if (!t) return "";
+  const m = /^[\s\S]*?[.!?](?=\s|$)/.exec(t);
+  return (m ? m[0] : t).slice(0, 220);
+}
+
+const begruendungStil = { fontSize: 12.5, lineHeight: 1.45, color: "var(--ch)", marginTop: 2, fontWeight: 400 };
+
 export function SchrittRisiken({
   ergebnis,
   modernisierungsbedarf: m,
@@ -1354,6 +1364,7 @@ export function SchrittRisiken({
   const staerken = ergebnis ? staerkenVon(ergebnis) : [];
   const hebel = ergebnis ? hebelTexteVon(ergebnis) : [];
   const hatAnalyse = risiken.length + staerken.length + hebel.length > 0;
+  const modernisierungText = ergebnis ? modernisierungTextVon(ergebnis) : "";
   const modText =
     m?.verfuegbar && m.gruende.length > 0
       ? m.gruende.map((g) => modGrundText(g, m, t)).join(", ")
@@ -1390,15 +1401,19 @@ export function SchrittRisiken({
         {risiken.map((r) => (
           <div key={r.title} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <Chip farbe="rot" text={L(t, "brfRisikoChip", "Risiko")} />
-            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)" }}>{r.title}</span>
+            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)", minWidth: 0 }}>
+              {r.title}
+              {ersterSatz(r.text) && <span style={{ display: "block", ...begruendungStil }}>{ersterSatz(r.text)}</span>}
+            </span>
           </div>
         ))}
         {staerken.map((s) => (
           <div key={s.title} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <Chip farbe="gruen" text={L(t, "brfStaerkeChip", "Stärke")} />
-            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)", minWidth: 0 }}>
               {s.title}
               {s.value && <span style={{ color: "var(--ca)" }}> · {s.value}</span>}
+              {ersterSatz(s.text) && <span style={{ display: "block", ...begruendungStil }}>{ersterSatz(s.text)}</span>}
             </span>
           </div>
         ))}
@@ -1408,7 +1423,10 @@ export function SchrittRisiken({
               farbe={m?.stufe ? MODBEDARF_FARBE[m.stufe] : "gelb"}
               text={L(t, `brfModStufe${m?.stufe}`, MODBEDARF_LABEL[m?.stufe] || "Modernisierung")}
             />
-            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)" }}>{modText}</span>
+            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)", minWidth: 0 }}>
+              {modText}
+              {modernisierungText && <span style={{ display: "block", ...begruendungStil }}>{modernisierungText}</span>}
+            </span>
           </div>
         )}
       </div>

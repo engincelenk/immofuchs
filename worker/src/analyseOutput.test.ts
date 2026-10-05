@@ -409,6 +409,12 @@ describe("parseBriefingOutput", () => {
     expect(e.stresstest).toContain("Stressfall");
   });
 
+  it("liest den Begruendungssatz zur Modernisierung, aeltere Ergebnisse ohne das Feld ergeben einen leeren String", () => {
+    const mit = parseBriefingOutput(JSON.stringify({ ...JSON.parse(BRIEFING), modernisierung: "Baujahr 1981 und eine alte Gasheizung sprechen fuer hohen Bedarf." }))!;
+    expect(mit.modernisierung).toContain("Baujahr 1981");
+    expect(parseBriefingOutput(BRIEFING)!.modernisierung).toBe("");
+  });
+
   it("kommt mit Markdown-Zaun und Vorrede zurecht", () => {
     expect(parseBriefingOutput("Gerne!\n```json\n" + BRIEFING + "\n```")?.urteil).toBeTruthy();
   });

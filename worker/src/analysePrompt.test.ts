@@ -70,6 +70,14 @@ describe("nutzerPayload", () => {
 // investment-briefing.md). Die Tests halten die Regeln fest, an denen die
 // drei Vorgaenger gescheitert sind: widerspruechliche Urteile, dreifach
 // genannte Befunde, Rauschen als Hebel verkauft.
+describe("systemPromptFuer - briefing: Begruendungssaetze", () => {
+  it("fordert einen eigenstaendigen ersten Begruendungssatz und das Feld modernisierung", () => {
+    const p = systemPromptFuer("briefing");
+    expect(p).toContain('"modernisierung"');
+    expect(p).toContain("BEGINNT mit einem eigenstaendigen Begruendungssatz");
+  });
+});
+
 describe("systemPromptFuer - briefing", () => {
   it("bindet das Urteil an die gesetzte Ampel", () => {
     const p = systemPromptFuer("briefing");

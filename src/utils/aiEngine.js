@@ -328,6 +328,7 @@ export const marktVon = (ergebnis) => briefingTextVon(ergebnis, "markt");
 export const tragfaehigkeitTextVon = (ergebnis) => briefingTextVon(ergebnis, "tragfaehigkeit");
 export const zeitraumTextVon = (ergebnis) => briefingTextVon(ergebnis, "zeitraum");
 export const stresstestTextVon = (ergebnis) => briefingTextVon(ergebnis, "stresstest");
+export const modernisierungTextVon = (ergebnis) => briefingTextVon(ergebnis, "modernisierung");
 
 export function alter(ergebnis, locale = "de-DE") {
   if (!ergebnis?.erstellt) return "";

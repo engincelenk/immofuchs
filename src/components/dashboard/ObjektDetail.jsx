@@ -241,6 +241,17 @@ export function ObjektDetail({ objekt, onBack }) {
         // Kein Score mehr im Prompt (Spec §7.2, Regel E3): die Ampel ist
         // regelbasiert ohne Score, und das Briefing-Schema verbietet dem
         // Modell, einen Score zu nennen (worker/src/analysePrompt.ts).
+        // Modernisierungsbedarf wie auf der Karte (briefing.js modernisierungsbedarf), damit der
+        // KI-Begruendungssatz zur selben Stufe passt wie der Chip.
+        ...(briefing?.modernisierungsbedarf?.verfuegbar
+          ? {
+              modernisierungsbedarf: briefing.modernisierungsbedarf.stufe,
+              modernisierungsgruende: briefing.modernisierungsbedarf.gruende.join(", ") || "keine",
+              ...(briefing.modernisierungsbedarf.energieklasse
+                ? { energieeffizienzklasse: briefing.modernisierungsbedarf.energieklasse }
+                : {}),
+            }
+          : {}),
         ...(K.dscrIst != null ? { dscrIst: K.dscrIst } : {}),
         ...(K.icr != null ? { icr: K.icr } : {}),
         // Quelle bewusst R.ekQ (rendite.js), nicht K.ekQ - berechneKennzahlen()

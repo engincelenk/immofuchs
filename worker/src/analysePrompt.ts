@@ -142,7 +142,8 @@ const BRIEFING_FORM = `Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Mark
   "markt": "hoechstens 250 Zeichen: Einordnung der Vergleichswerte",
   "tragfaehigkeit": "hoechstens 300 Zeichen: nur wenn der Cashflow negativ ist, sonst leerer String",
   "zeitraum": "hoechstens 250 Zeichen: Einordnung des Jahres-Bildes",
-  "stresstest": "hoechstens 250 Zeichen: Einordnung der Szenarien"
+  "stresstest": "hoechstens 250 Zeichen: Einordnung der Szenarien",
+  "modernisierung": "hoechstens 200 Zeichen: EIN Satz, der begruendet, warum der Modernisierungsbedarf so ausfaellt; leerer String, wenn kein modernisierungsbedarf mitgeliefert ist"
 }
 staerken/risiken/hebel duerfen leer bleiben, wenn nichts davon belegbar ist - eine fehlende
 Erkenntnis ist besser als eine erfundene. Kein Feld enthaelt Rohzahlen-Listen: die Zahlen
@@ -189,6 +190,12 @@ Zu den einzelnen Feldern:
   untereinander und ohne Wiederholung der Kernzahlen.
 - markt: was die Vergleichswerte (Kaufpreis, Miete, Mietrendite, Preisniveau, Preistrend)
   zusammengenommen bedeuten.
+- staerken/risiken/hebel, Feld "text": der text BEGINNT mit einem eigenstaendigen Begruendungssatz
+  (warum ist das so?), der auch allein verstaendlich ist - die Karte zeigt nur diesen ersten
+  Satz unter der Ueberschrift. Danach darf eine Vertiefung folgen.
+- modernisierung: ein Satz, der den mitgelieferten "modernisierungsbedarf" (gering/mittel/hoch)
+  mit den genannten Gruenden (Baujahr, Heizung, Energieklasse) begruendet. Keine Kosten nennen,
+  keine Zahlen erfinden. Ist kein modernisierungsbedarf mitgeliefert, bleibt das Feld ein leerer String.
 - tragfaehigkeit: nur wenn Wege zur Tragfaehigkeit mitgeliefert sind - was die genannten
   Groessenordnungen praktisch heissen, einschliesslich der Realismus-Hinweise. Ist der
   Cashflow nicht negativ, bleibt das Feld ein leerer String.

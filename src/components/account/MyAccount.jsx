@@ -130,12 +130,15 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
   //    also "Mein Konto" komplett - auch nach erfolgreichem Kauf. Und
   //    showUpgrade wurde nie zurueckgesetzt. Jetzt fuehrt Schliessen zurueck
   //    in den Abo-Bereich, wo dann direkt das frisch gebuchte Abo steht.
-  if (showUpgrade) return <CheckoutWizard onClose={() => setShowUpgrade(false)} />;
+  // 3. (2026-10-05) Der Wizard ersetzte das Konto frueher komplett (early return) -
+  //    dahinter schien dann die App-Seite (Objekte) durch. Jetzt bleibt das Konto
+  //    mit dem Abo-Bereich gerendert, der Wizard liegt als Fenster darueber
+  //    (Fokus-Trap-Stack und Scroll-Sperre vertragen das Verschachteln).
   const sections = visibleSections(account.me.role);
   const active = sections.find((s) => s.key === activeKey) || sections[0];
   const ActiveSection = SECTION_COMPONENTS[active.key];
 
-  return createPortal(
+  const kontoFenster = createPortal(
     <div
       role="presentation"
       // scrollbar-gutter:stable haelt den Platz fuer den Scrollbalken immer
@@ -492,6 +495,13 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
       </div>
     </div>,
     document.body,
+  );
+
+  return (
+    <>
+      {kontoFenster}
+      {showUpgrade && <CheckoutWizard onClose={() => setShowUpgrade(false)} />}
+    </>
   );
 }
 

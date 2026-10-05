@@ -1,3 +1,16 @@
+## 2026-10-05 (1.100.92) [FRONTEND+WORKER]
+
+### Begruendungssaetze unter "Worauf achten", Checkout als Fenster ueber dem Konto, Finn-Blase
+
+- Worauf achten: unter jedem Risiko/jeder Staerke steht direkt der erste Satz des KI-Textes als Begruendung; die Zeile
+  "Modernisierungsbedarf" bekommt einen eigenen KI-Satz (neues Briefing-Feld "modernisierung", Parser, Prompt-Regel: text beginnt
+  mit einem eigenstaendigen Begruendungssatz; Modernisierungsstufe/-gruende gehen in die Kennzahlen). Aeltere Auswertungen zeigen den
+  Modernisierungssatz erst nach "Neu berechnen".
+- Konto: "Upgrade" im Abo-Bereich oeffnet den Checkout als Fenster UEBER dem Konto (statt es zu ersetzen) - dahinter bleibt der
+  Abo-Bereich, nicht mehr die Objektseite.
+- Finn-Blase: Breite nach Textlaenge (max-content, 190-250 px) statt der schmalen Fuchsbreite, text-wrap: balance - kein
+  Wort-fuer-Wort-Umbruch mehr.
+
 ## 2026-10-05 (1.100.91) [FRONTEND]
 
 ### Fokus-Linie im Konto-Menue, Fusszeilen aufgeraeumt
