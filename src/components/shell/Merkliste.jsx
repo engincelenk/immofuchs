@@ -887,6 +887,15 @@ export function Merkliste() {
   // direkt in den objektlosen Scan - der Scan ist dort oben bereits die erste
   // Kachel (ObjektAnlegen.jsx, Weg 1).
   useEffect(() => {
+    const handler = () => {
+      setDetailObj(null);
+      setAnlegenOffen(false);
+      setExposeOffen(false);
+    };
+    window.addEventListener("if:objekte-liste", handler);
+    return () => window.removeEventListener("if:objekte-liste", handler);
+  }, []);
+  useEffect(() => {
     const handler = () => setAnlegenOffen(true);
     window.addEventListener("if:objekt-anlegen-oeffnen", handler);
     return () => window.removeEventListener("if:objekt-anlegen-oeffnen", handler);

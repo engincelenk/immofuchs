@@ -617,6 +617,13 @@ export default function App() {
         // Die Funktion gab es hier schon fuer das Logo in der Kopfzeile, sie
         // war nur nicht aus dem Kontobereich erreichbar.
         goHome,
+        // "Meine Objekte" aus dem Kontomenue: immer die Objektliste, auch aus einer Detailansicht
+        // oder einem Rechner heraus (Merkliste hoert auf if:objekte-liste).
+        zeigeObjekte: () => {
+          startApp("saved");
+          setAktivesObjekt(null);
+          setTimeout(() => window.dispatchEvent(new CustomEvent("if:objekte-liste")), 60);
+        },
       }}
     >
       <style>

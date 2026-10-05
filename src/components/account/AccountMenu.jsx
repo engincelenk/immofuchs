@@ -34,6 +34,7 @@ export function AccountMenu({
   anchorRef,
   open,
   onSelect,
+  onObjekte,
   onLogout,
   onClose,
   logoutBusy = false,
@@ -67,6 +68,7 @@ export function AccountMenu({
         lang={lang}
         showSections={variant === "full"}
         onSelect={onSelect}
+        onObjekte={onObjekte}
         onLogout={onLogout}
         logoutBusy={logoutBusy}
         // Im Browser sitzt das Menue als kleines Popover am Knopf und darf

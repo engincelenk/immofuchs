@@ -65,7 +65,7 @@ const PILL_FADE_MASK =
 // Schliessen: dort steht die Bereichsliste ohnehin dauerhaft in der
 // Seitenleiste, eine "vorige Stufe" gibt es nicht.
 export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) {
-  const { lang, setLang, goHome } = useApp();
+  const { lang, setLang, goHome, zeigeObjekte } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
   const { resolvedTheme } = useTheme();
@@ -337,6 +337,15 @@ export function MyAccount({ onClose, onBackToMenu, initialSection = "profil" }) 
             setMenuOpen(false);
             setActiveKey(key);
           }}
+          onObjekte={
+            zeigeObjekte
+              ? () => {
+                  setMenuOpen(false);
+                  onClose();
+                  zeigeObjekte();
+                }
+              : undefined
+          }
           onLogout={handleLogout}
           logoutBusy={logoutBusy}
         />

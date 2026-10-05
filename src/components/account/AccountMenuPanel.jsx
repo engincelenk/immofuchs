@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LANGS } from "../../i18n/translations.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
-import { IconChevronRight, IconLanguage, IconLogout, IconTheme } from "./accountIcons.jsx";
+import { IconChevronRight, IconHome, IconLanguage, IconLogout, IconTheme } from "./accountIcons.jsx";
 import { visibleSections } from "./accountSections.js";
 import { PlanChip } from "./PlanChip.jsx";
 
@@ -28,6 +28,7 @@ export function AccountMenuPanel({
   onLogout,
   logoutBusy = false,
   compactRows = false,
+  onObjekte = null,
 }) {
   const sections = showSections ? visibleSections(me?.role) : [];
   const currentLang = LANGS.find((l) => l.v === lang);
@@ -81,6 +82,20 @@ export function AccountMenuPanel({
           </span>
         </span>
       </div>
+
+      {/* "Meine Objekte" ist das Zuhause der App: immer ein Klick entfernt, auch in der
+          kompakten Variante innerhalb von "Mein Konto". */}
+      {onObjekte && (
+        <div style={{ padding: "4px 0", borderBottom: "1px solid var(--cb)" }}>
+          <MenuRow
+            compact={compactRows}
+            icon={<IconHome size={20} />}
+            label={t.menuMeineObjekte}
+            onClick={onObjekte}
+            trailing={<IconChevronRight size={17} />}
+          />
+        </div>
+      )}
 
       {sections.length > 0 && (
         <div style={{ padding: "4px 0" }}>

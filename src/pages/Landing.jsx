@@ -496,6 +496,7 @@ export function Landing({ onStart, lang, setLang }) {
     isProSavedObjects,
     savedObjectsFreeLimit,
     setTabExt: (id) => starteRechner(id),
+    zeigeObjekte: () => onStart("saved"),
   };
 
   // Bugfix 2026-08-18 ("Links im Menü funktionieren nicht"): aus der
@@ -702,6 +703,10 @@ export function Landing({ onStart, lang, setLang }) {
                   setMenuOpen(false);
                   setSectionKey(key);
                   setOpenMode("account");
+                }}
+                onObjekte={() => {
+                  setMenuOpen(false);
+                  onStart("saved");
                 }}
                 onLogout={async () => {
                   setMenuOpen(false);

@@ -1,3 +1,9 @@
+## 2026-10-05 (1.100.98) [FRONTEND]
+
+### "Meine Objekte" im Kontomenue
+
+- Das Avatar-Menue (Startseite, App-Kopf, Konto-Fenster) hat ganz oben "Meine Objekte": fuehrt immer in die Objektliste, auch aus Detailansicht, Rechner oder Konto heraus. 5 Sprachen.
+
 ## 2026-10-05 (1.100.97) [FRONTEND+WORKER]
 
 ### Kein Checkout fuer Nutzer mit bezahltem Abo

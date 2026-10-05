@@ -41,7 +41,7 @@ const PurchaseConfirmModal = lazyWithReload(
 // ist damit unabhaengig davon montiert, von welchem Einstiegspunkt aus der
 // Nutzer den Wizard urspruenglich geoeffnet hatte.
 export function ProHeaderButton() {
-  const { lang, goHome } = useApp();
+  const { lang, goHome, zeigeObjekte } = useApp();
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const account = useAccountCtx();
   // Was geoeffnet ist, wird beim Oeffnen einmal festgelegt und NICHT bei jedem
@@ -166,6 +166,10 @@ export function ProHeaderButton() {
           setMenuOpen(false);
           setSectionKey(key);
           setOpenMode("account");
+        }}
+        onObjekte={() => {
+          setMenuOpen(false);
+          zeigeObjekte?.();
         }}
         onLogout={async () => {
           setMenuOpen(false);
