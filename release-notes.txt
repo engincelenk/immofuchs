@@ -1,3 +1,11 @@
+## 2026-10-05 (1.100.94) [FRONTEND+WORKER]
+
+### Kaltmiete bleibt beim Wechsel in den Renditerechner erhalten, Wohneinheiten aus Bezeichnung abgeleitet
+
+- Objekt -> "Im Renditerechner oeffnen" und Objekt laden: die gespeicherte Kaltmiete ist jetzt fuehrend. Vorher rechnete der
+  Renditerechner sie aus dem alten €/m²-Wert (Vorbelegung 15) x Wohnflaeche neu (5.975 wurde 6.000).
+- Expose-Scan: Wohneinheiten werden auch aus Bezeichnungen wie "Achtfamilienhaus" oder aus der Mieterliste abgeleitet.
+
 ## 2026-10-05 (1.100.93) [FRONTEND+WORKER]
 
 ### Expose-Scan liest Miete, Modernisierungen und Kernfakten; Bauteil-Logik auf Objektseite und in den Rechnern

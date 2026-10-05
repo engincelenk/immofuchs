@@ -62,7 +62,7 @@ const AMPEL_TEXT = {
 };
 
 export function ObjektDetail({ objekt, onBack }) {
-  const { d, set, setTabExt, t, lang, updateObj, aktivesObjekt } = useApp();
+  const { d, set, setTabExt, t, lang, updateObj, aktivesObjekt, mietQuelleRef } = useApp();
   const account = useAccountCtx();
   const locale = lang === "de" ? "de-DE" : "de-DE";
   const [bearbeiten, setBearbeiten] = useState(false);
@@ -465,6 +465,10 @@ export function ObjektDetail({ objekt, onBack }) {
     // Mit Ueberlagerung, sonst kaeme ein gerade umgelegter Schalter
     // (Nebenkosten mitfinanzieren) nicht im Rechner an.
     const { tab: _legacy, ...data } = datenUeberlagerung ? { ...gespeichert, ...datenUeberlagerung } : gespeichert;
+    // Die gespeicherte Kaltmiete ist fuehrend: ohne das rechnet der Renditerechner sie
+    // sofort aus dem alten €/m²-Wert (Vorbelegung 15) x Wohnflaeche neu - aus 5.975 wurden 6.000
+    // (Nutzer-Test 2026-10-05).
+    if (mietQuelleRef && +data.kaltmiete > 0) mietQuelleRef.current = "kalt";
     Object.entries(data).forEach(([k, v]) => set(k, v));
     // Zweites Argument = Rundweg-Zustand in App.jsx (aktivesObjekt): traegt
     // die Ruecksprungleiste "<- Objekt: {Name}" UND sorgt dafuer, dass

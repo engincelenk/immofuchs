@@ -506,6 +506,8 @@ export default function App() {
   const loadObj = useCallback(
     (obj, setTab) => {
       nichtUmlTouchedRef.current = true;
+      // Gespeicherte Kaltmiete fuehrt, mieteQm wird daraus abgeleitet (nicht umgekehrt).
+      if (+obj?.data?.kaltmiete > 0) mietQuelleRef.current = "kalt";
       // Alte Snapshots: nie bewusst gewaehlte Vorbelegungen entfernen (utils/altObjekt.js).
       loadObjRaw({ ...obj, data: bereinigeAltObjektDaten(obj.data) }, setTab);
     },

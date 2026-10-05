@@ -211,6 +211,9 @@ Regeln:
   Sind die Betraege pro Jahr angegeben, auf den Monat umrechnen.
 - "wohneinheiten" ist die Zahl der Wohnungen im GESAMTEN Haus ("umfasst 12
   Wohneinheiten"), nicht die Zimmerzahl der angebotenen Wohnung.
+  Steht die Zahl nicht als Zahl da, leite sie ab: "Zweifamilienhaus" = 2, "Dreifamilienhaus" = 3,
+  "Achtfamilienhaus" = 8, "Mehrfamilienhaus mit 10 Wohnungen" = 10; sonst zaehle die Wohnungen
+  der Mieterliste / Mietaufstellung (ohne Gewerbe).
 - "stellplatz_anzahl" ist die Anzahl der zur Wohnung gehoerenden Stellplaetze.
 - "gewerbeeinheiten" ist die Zahl der Gewerbeeinheiten im Haus (Laden, Buero, Lager,
   Lagerhalle), "wohneinheiten" zaehlt nur Wohnungen.
