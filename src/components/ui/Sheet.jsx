@@ -105,6 +105,16 @@ export function Sheet({
     if (mounted && visible) initialFocusRef?.current?.focus();
   }, [mounted, visible, initialFocusRef]);
 
+  // Touch-Geraete: den Fokus auf das Sheet selbst setzen statt auf ein Bedienelement.
+  // Sonst landet er programmatisch auf dem Griff oben, und der globale orange
+  // :focus-visible-Rahmen erscheint (je nach letzter Eingabe, "manchmal"), vom Sheet
+  // oben abgeschnitten als Linie unter dem Griff. Tastaturnutzer behalten den
+  // Erstfokus auf dem ersten Element (useFocusTrap).
+  useEffect(() => {
+    if (!(mounted && visible && isModal) || initialFocusRef?.current) return;
+    if (window.matchMedia?.("(pointer: coarse)").matches) panelRef.current?.focus({ preventScroll: true });
+  }, [mounted, visible, isModal, initialFocusRef]);
+
   // Anchored: live nachfuehren bei Scroll/Resize (behebt, dass das
   // Desktop-Dropdown in einer sticky Kopfzeile beim Scrollen vom Avatar
   // abdriftete - die Position wurde vorher nur einmal beim Rendern
@@ -267,6 +277,7 @@ export function Sheet({
       <div
         ref={panelRef}
         role="dialog"
+        tabIndex={-1}
         aria-modal={isModal ? "true" : undefined}
         aria-label={label}
         aria-labelledby={labelledBy}
@@ -280,10 +291,12 @@ export function Sheet({
           fontFamily: "'DM Sans', sans-serif",
           overflowY: "auto",
           boxSizing: "border-box",
+          outline: "none",
         }}
       >
         {grabber && (
           <button
+            data-focus-skip
             onClick={onClose}
             aria-label={schliessenText}
             style={{
