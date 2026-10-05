@@ -1,3 +1,10 @@
+## 2026-10-05 (1.100.95) [FRONTEND]
+
+### Bauteil-Zahlen zentral in data.js
+
+- Nutzungsdauern (BBSR), Energieanteil, Kostenbasis je Bauteil und die Obergrenze der Ersparnis stehen jetzt als BAUTEILE /
+  MAX_ERSPARNIS_ERLEDIGT in src/data.js; utils/bauteile.js enthaelt nur noch die Logik. Rechenergebnisse unveraendert.
+
 ## 2026-10-05 (1.100.94) [FRONTEND+WORKER]
 
 ### Kaltmiete bleibt beim Wechsel in den Renditerechner erhalten, Wohneinheiten aus Bezeichnung abgeleitet

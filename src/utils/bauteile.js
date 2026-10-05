@@ -13,41 +13,14 @@
 //   Restlebensdauer = Nutzungsdauer - (heute - effektives Jahr)
 //   Status          = ueberfaellig (Rest <= 0), im_zeitraum (Rest <= Haltedauer), gut
 //
-// Nutzungsdauern: BBSR-Tabelle "Nutzungsdauern von Bauteilen fuer
-// Lebenszyklusanalysen nach BNB" (Kostengruppe 300, Einzelbauteile) bzw. die
-// Gewerkeebene der Kostengruppe 400 (technische Anlagen). Kennnummern stehen am
-// Eintrag. Bei "≥ 50" ist 50 eingesetzt.
-import { SAN_TIERS } from "../data.js";
+// Nutzungsdauern (BBSR) und Kostenbasis: siehe BAUTEILE in data.js.
+import { BAUTEILE, BAUTEIL_REFERENZ_FLAECHE, MAX_ERSPARNIS_ERLEDIGT } from "../data.js";
 
-export const BAUTEILE = [
-  // KG 420 Waermeversorgungsanlagen
-  { key: "heizung", lebensdauer: 20, quelle: "BBSR KG 420", sanKey: "heizung", ek: 0.35, standard: true },
-  // 334.212 Fenster (Rahmen und Fluegel): Kunststoff, Nadelholz behandelt
-  { key: "fenster", lebensdauer: 40, quelle: "BBSR 334.212", sanKey: "fenster", ek: 0.12, standard: true },
-  // 335.641 Waermedaemmverbundsystem
-  { key: "fassade", lebensdauer: 40, quelle: "BBSR 335.641", sanKey: "fassade", ek: 0.2, standard: true },
-  // 363.512 Deckungen: Ziegel (≥ 50)
-  { key: "dach", lebensdauer: 50, quelle: "BBSR 363.512", sanKey: "dach", ek: 0.08, standard: true },
-  // KG 440 Starkstromanlagen
-  { key: "elektrik", lebensdauer: 25, quelle: "BBSR KG 440", sanKey: null, ek: 0, standard: true },
-  // KG 410 Abwasser-, Wasser-, Gasanlagen
-  { key: "leitungen", lebensdauer: 25, quelle: "BBSR KG 410", sanKey: null, ek: 0, standard: true },
-  // KG 410 (Sanitaerobjekte)
-  { key: "bad", lebensdauer: 25, quelle: "BBSR KG 410", sanKey: null, ek: 0, standard: false },
-  // 334.114 Standardtueren: Kunststoff
-  { key: "tuer", lebensdauer: 40, quelle: "BBSR 334.114", sanKey: "tuer", ek: 0.02, standard: false },
-  // Daemmung Kellerdecke / oberste Geschossdecke (Daemmstoffe ≥ 50)
-  { key: "kellerdecke", lebensdauer: 50, quelle: "BBSR KG 350 (Daemmung ≥ 50)", sanKey: "keller", ek: 0.05, standard: false },
-  { key: "ogdecke", lebensdauer: 50, quelle: "BBSR KG 360 (Daemmung ≥ 50)", sanKey: "ogdecke", ek: 0.06, standard: false },
-];
+// Die Zahlen (Nutzungsdauer, Kostenbasis, Obergrenze) stehen zentral in data.js.
+export { BAUTEILE, MAX_ERSPARNIS_ERLEDIGT };
 
 export const BAUTEIL_KEYS = BAUTEILE.map((b) => b.key);
 const BAUTEIL = Object.fromEntries(BAUTEILE.map((b) => [b.key, b]));
-
-// Hoechstens so viel Heizwaerme-Ersparnis wird erledigten Massnahmen gutgeschrieben -
-// sonst rechnet z. B. ein Haus von 1970 mit neuer Heizung, alten Fenstern von 1999
-// und teilgedaemmter Fassade sich in Klasse B, was kein Ausweis bestaetigen wuerde.
-export const MAX_ERSPARNIS_ERLEDIGT = 0.4;
 
 // Liest die Liste robust: aus der Datenbank kommt sie als Array, aus alten
 // Eingaben oder Formularen gelegentlich als JSON-String.
@@ -190,29 +163,13 @@ export function ersparnisErledigt(d, jetzt = new Date().getFullYear()) {
 
 // Grobe Kosten fuer ein faelliges Bauteil: Standard-Ausfuehrung aus SAN_TIERS
 // (dieselben Preise wie der Sanierungsrechner), Mengen linear aus der Wohnflaeche
-// skaliert - Referenz sind die Standardmengen des Sanierungsrechners fuer 140 m²
-// (12 Fenster, 137 m² Fassade, 80 m² Dach, 60 m² Keller-/Geschossdecke).
+// skaliert (Mengen und Preise: BAUTEILE[].kosten in data.js).
 // Elektrik, Leitungen, Bad: keine Preisbasis im Projekt -> null (nicht geschaetzt).
 export function kostenSchaetzung(key, flaeche) {
-  const f = Math.max(0.3, (+flaeche || 140) / 140);
-  switch (key) {
-    case "fenster":
-      return Math.round(12 * f * SAN_TIERS.fenster.s.p);
-    case "fassade":
-      return Math.round(SAN_TIERS.fassade.s.p * f);
-    case "dach":
-      return Math.round(SAN_TIERS.dach.s.p * f);
-    case "heizung":
-      return SAN_TIERS.heizung.s.p;
-    case "tuer":
-      return SAN_TIERS.tuer.s.p;
-    case "kellerdecke":
-      return Math.round(60 * f * 37);
-    case "ogdecke":
-      return Math.round(60 * f * 35);
-    default:
-      return null;
-  }
+  const k = BAUTEIL[key]?.kosten;
+  if (!k) return null;
+  const f = Math.max(0.3, (+flaeche || BAUTEIL_REFERENZ_FLAECHE) / BAUTEIL_REFERENZ_FLAECHE);
+  return Math.round(k.menge * (k.skaliert ? f : 1) * k.preis);
 }
 
 // Absehbarer Investitionsbedarf innerhalb der Haltedauer (ueberfaellig + im_zeitraum).
@@ -222,7 +179,11 @@ export function investitionsbedarf(d, jetzt) {
     .filter((b) => b.status !== "gut")
     .map((b) => ({ ...b, kosten: kostenSchaetzung(b.key, flaeche) }));
   const summe = posten.reduce((a, p) => a + (p.kosten || 0), 0);
-  return { posten, summe, ohneSchaetzung: posten.filter((p) => p.kosten == null).map((p) => p.key) };
+  return {
+    posten,
+    summe,
+    ohneSchaetzung: posten.filter((p) => p.kosten == null).map((p) => p.key),
+  };
 }
 
 // Kurze Klartext-Zeile je Bauteil fuer die KI-Nutzlast (deutsch, nur das Modell liest).
@@ -238,7 +199,11 @@ const NAME_DE = {
   kellerdecke: "Kellerdecke (Daemmung)",
   ogdecke: "Oberste Geschossdecke (Daemmung)",
 };
-const STATUS_DE = { gut: "gut", im_zeitraum: "endet in der Haltedauer", ueberfaellig: "Nutzungsdauer ueberschritten" };
+const STATUS_DE = {
+  gut: "gut",
+  im_zeitraum: "endet in der Haltedauer",
+  ueberfaellig: "Nutzungsdauer ueberschritten",
+};
 
 export function bauteileFuerKi(d, jetzt) {
   return bewerteBauteile(d, jetzt).map((b) => {

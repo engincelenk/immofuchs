@@ -405,3 +405,123 @@ export const LAND_BONUS_FQ = {
 };
 
 export const LAND_BONUS_CAP = 5000;
+
+// ── Bauteile: Nutzungsdauer, Energieanteil, Kostenbasis (zentral) ────────────
+// Genutzt von utils/bauteile.js (effektives Alter, Status, Investitionsbedarf) und
+// dem Sanierungsrechner. Nutzungsdauern: BBSR-Tabelle "Nutzungsdauern von Bauteilen
+// fuer Lebenszyklusanalysen nach BNB" (KG 300 Einzelbauteile, KG 400 Gewerkeebene);
+// Kennnummer je Eintrag, bei "≥ 50" ist 50 eingesetzt.
+//   lebensdauer  Nutzungsdauer in Jahren
+//   sanKey       Massnahme im Sanierungsrechner (null = dort nicht vorhanden)
+//   ek           Anteil an der Heizwaerme-Ersparnis einer erledigten Massnahme
+//   standard     wird beim Investitionsbedarf ohne Zusatzangabe mitgerechnet
+//   kosten       Kostenbasis fuer die Schaetzung: menge x preis, Referenz 140 m²
+//                (skaliert = linear mit der Wohnflaeche); null = keine Preisbasis
+export const BAUTEILE = [
+  // KG 420 Waermeversorgungsanlagen
+  {
+    key: "heizung",
+    lebensdauer: 20,
+    quelle: "BBSR KG 420",
+    sanKey: "heizung",
+    ek: 0.35,
+    standard: true,
+    kosten: { menge: 1, preis: SAN_TIERS.heizung.s.p, skaliert: false },
+  },
+  // 334.212 Fenster (Rahmen und Fluegel): Kunststoff, Nadelholz behandelt
+  {
+    key: "fenster",
+    lebensdauer: 40,
+    quelle: "BBSR 334.212",
+    sanKey: "fenster",
+    ek: 0.12,
+    standard: true,
+    kosten: { menge: 12, preis: SAN_TIERS.fenster.s.p, skaliert: true },
+  },
+  // 335.641 Waermedaemmverbundsystem
+  {
+    key: "fassade",
+    lebensdauer: 40,
+    quelle: "BBSR 335.641",
+    sanKey: "fassade",
+    ek: 0.2,
+    standard: true,
+    kosten: { menge: 1, preis: SAN_TIERS.fassade.s.p, skaliert: true },
+  },
+  // 363.512 Deckungen: Ziegel (≥ 50)
+  {
+    key: "dach",
+    lebensdauer: 50,
+    quelle: "BBSR 363.512",
+    sanKey: "dach",
+    ek: 0.08,
+    standard: true,
+    kosten: { menge: 1, preis: SAN_TIERS.dach.s.p, skaliert: true },
+  },
+  // KG 440 Starkstromanlagen
+  {
+    key: "elektrik",
+    lebensdauer: 25,
+    quelle: "BBSR KG 440",
+    sanKey: null,
+    ek: 0,
+    standard: true,
+    kosten: null,
+  },
+  // KG 410 Abwasser-, Wasser-, Gasanlagen
+  {
+    key: "leitungen",
+    lebensdauer: 25,
+    quelle: "BBSR KG 410",
+    sanKey: null,
+    ek: 0,
+    standard: true,
+    kosten: null,
+  },
+  // KG 410 (Sanitaerobjekte)
+  {
+    key: "bad",
+    lebensdauer: 25,
+    quelle: "BBSR KG 410",
+    sanKey: null,
+    ek: 0,
+    standard: false,
+    kosten: null,
+  },
+  // 334.114 Standardtueren: Kunststoff
+  {
+    key: "tuer",
+    lebensdauer: 40,
+    quelle: "BBSR 334.114",
+    sanKey: "tuer",
+    ek: 0.02,
+    standard: false,
+    kosten: { menge: 1, preis: SAN_TIERS.tuer.s.p, skaliert: false },
+  },
+  // Daemmung Kellerdecke / oberste Geschossdecke (Daemmstoffe ≥ 50)
+  {
+    key: "kellerdecke",
+    lebensdauer: 50,
+    quelle: "BBSR KG 350 (Daemmung ≥ 50)",
+    sanKey: "keller",
+    ek: 0.05,
+    standard: false,
+    kosten: { menge: 60, preis: 37, skaliert: true },
+  },
+  {
+    key: "ogdecke",
+    lebensdauer: 50,
+    quelle: "BBSR KG 360 (Daemmung ≥ 50)",
+    sanKey: "ogdecke",
+    ek: 0.06,
+    standard: false,
+    kosten: { menge: 60, preis: 35, skaliert: true },
+  },
+];
+
+// Hoechstens so viel Heizwaerme-Ersparnis wird erledigten Massnahmen gutgeschrieben -
+// sonst rechnet z. B. ein Haus von 1970 mit neuer Heizung, alten Fenstern von 1999
+// und teilgedaemmter Fassade sich in Klasse B, was kein Ausweis bestaetigen wuerde.
+export const MAX_ERSPARNIS_ERLEDIGT = 0.4;
+// Referenzflaeche der Standardmengen in BAUTEILE[].kosten.
+export const BAUTEIL_REFERENZ_FLAECHE = 140;
