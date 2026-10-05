@@ -103,8 +103,22 @@ const oa = (t, key, fallback) => (t && t[key]) || fallback;
 
 const FELDER = [
   { key: "name", label: "Name des Objekts", typ: "text" },
-  { key: "kaufpreis", label: "Kaufpreis", typ: "zahl", einheit: "€", pflicht: true, maxBreite: 220 },
-  { key: "flaeche", label: "Wohnfläche", typ: "zahl", einheit: "m²", pflicht: true, maxBreite: 160 },
+  {
+    key: "kaufpreis",
+    label: "Kaufpreis",
+    typ: "zahl",
+    einheit: "€",
+    pflicht: true,
+    maxBreite: 220,
+  },
+  {
+    key: "flaeche",
+    label: "Wohnfläche",
+    typ: "zahl",
+    einheit: "m²",
+    pflicht: true,
+    maxBreite: 160,
+  },
   {
     key: "kaltmiete",
     label: "Kaltmiete",
@@ -210,7 +224,9 @@ function ObjektFormular({
   // Exposé vorbefuellt. Beim Bearbeiten aus den gespeicherten Werten.
   const ZUSATZ_KEYS = ["wohneinheiten", "gewerbemiete", "modernisierungen", "kernfakten"];
   const [zusatz, setZusatz] = useState(() =>
-    Object.fromEntries(ZUSATZ_KEYS.filter((k) => startwerte?.[k] != null).map((k) => [k, startwerte[k]])),
+    Object.fromEntries(
+      ZUSATZ_KEYS.filter((k) => startwerte?.[k] != null).map((k) => [k, startwerte[k]]),
+    ),
   );
   const [exposeOffen, setExposeOffen] = useState(false);
   // Fertiger Anfragetext fuer AdressSuche.autoSuche (Nutzer-Vorgabe
@@ -277,8 +293,8 @@ function ObjektFormular({
   };
 
   const fehlt = [
-    ...FELDER.filter((f) => f.pflicht && String(werte[f.key] ?? "").trim() === "").map(
-      (f) => feldLabel(t, f),
+    ...FELDER.filter((f) => f.pflicht && String(werte[f.key] ?? "").trim() === "").map((f) =>
+      feldLabel(t, f),
     ),
     ...(String(werte.plz ?? "").trim() === "" ? [oa(t, "oaPlz", "PLZ")] : []),
     ...(String(werte.ort ?? "").trim() === "" ? [oa(t, "oaOrt", "Ort")] : []),
@@ -380,7 +396,14 @@ function ObjektFormular({
             {/* var(--primary-tx) statt #1E3A5F (Bugreport 2026-09-09, wie
                 ObjektAnlegenWizard.jsx ExposePanel): im Dark Mode war dunkles
                 Navy auf der Karte kaum lesbar. */}
-            <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--primary-tx)" }}>
+            <span
+              style={{
+                display: "block",
+                fontSize: 15,
+                fontWeight: 700,
+                color: "var(--primary-tx)",
+              }}
+            >
               {oa(t, "oaExposeHochladen", "Exposé hochladen")}
             </span>
             <span style={{ display: "block", fontSize: 12.5, color: "var(--ch)", marginTop: 2 }}>
@@ -398,7 +421,9 @@ function ObjektFormular({
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ flex: 1, height: 1, background: "var(--cb)" }} />
-        <span style={{ fontSize: 12, color: "var(--ch)" }}>{oa(t, "oaOderHand", "oder von Hand")}</span>
+        <span style={{ fontSize: 12, color: "var(--ch)" }}>
+          {oa(t, "oaOderHand", "oder von Hand")}
+        </span>
         <span style={{ flex: 1, height: 1, background: "var(--cb)" }} />
       </div>
 
@@ -432,9 +457,14 @@ function ObjektFormular({
             <label style={{ display: "block" }}>
               <span style={beschriftungStil}>
                 {feldLabel(t, f)}
-                {f.einheit ? ` (${f.einheit === "€/Monat" ? oa(t, "oaEinheitMonat", f.einheit) : f.einheit})` : ""}
+                {f.einheit
+                  ? ` (${f.einheit === "€/Monat" ? oa(t, "oaEinheitMonat", f.einheit) : f.einheit})`
+                  : ""}
                 {!f.pflicht && (
-                  <span style={{ color: "var(--ch)", fontWeight: 400 }}> · {oa(t, "oaOptional", "optional")}</span>
+                  <span style={{ color: "var(--ch)", fontWeight: 400 }}>
+                    {" "}
+                    · {oa(t, "oaOptional", "optional")}
+                  </span>
                 )}
               </span>
               {f.typ === "auswahl" ? (
@@ -483,7 +513,10 @@ function ObjektFormular({
           <span style={beschriftungStil}>
             {oa(t, "oaBundesland", "Bundesland")}
             {bundesland && (
-              <span style={{ color: "var(--ch)", fontWeight: 400 }}> · {oa(t, "oaAusPlz", "aus der PLZ übernommen")}</span>
+              <span style={{ color: "var(--ch)", fontWeight: 400 }}>
+                {" "}
+                · {oa(t, "oaAusPlz", "aus der PLZ übernommen")}
+              </span>
             )}
           </span>
           <select
@@ -499,7 +532,11 @@ function ObjektFormular({
           </select>
         </label>
 
-        <ObjektZusatz t={t} werte={zusatz} onChange={(k, v) => setZusatz((p) => ({ ...p, [k]: v }))} />
+        <ObjektZusatz
+          t={t}
+          werte={zusatz}
+          onChange={(k, v) => setZusatz((p) => ({ ...p, [k]: v }))}
+        />
       </div>
 
       {/* Sofortiges Ergebnis mit offengelegten Annahmen */}
@@ -533,54 +570,86 @@ function ObjektFormular({
             </span>
           </div>
           <div style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.5 }}>
-            {annahmenText(entwurf, t)} {oa(t, "oaAnpassenHinweis", "Du kannst sie danach jederzeit anpassen.")}
+            {annahmenText(entwurf, t)}{" "}
+            {oa(t, "oaAnpassenHinweis", "Du kannst sie danach jederzeit anpassen.")}
           </div>
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <button
-          type="button"
-          onClick={onAbbrechen}
-          style={{
-            ...knopfStil,
-            background: "transparent",
-            color: "var(--ch)",
-            border: "1px solid var(--cb)",
-          }}
-        >
-          {oa(t, "aiAbbrechen", "Abbrechen")}
-        </button>
-        <button
-          type="button"
-          disabled={!vollstaendig || speichertLaeuft}
-          onClick={absenden}
-          style={{
-            ...knopfStil,
-            flex: 2,
-            background: vollstaendig && !speichertLaeuft ? "var(--ca)" : "var(--cb)",
-            color: vollstaendig && !speichertLaeuft ? "#fff" : "var(--ch)",
-            border: "none",
-            cursor: vollstaendig && !speichertLaeuft ? "pointer" : "not-allowed",
-          }}
-        >
-          {speichertLaeuft
-            ? oa(t, "oaWirdAngelegt", "Wird angelegt …")
-            : bearbeiten
-              ? oa(t, "oaSpeichern", "Änderungen speichern")
-              : oa(t, "oaAnlegen", "Objekt anlegen")}
-        </button>
-      </div>
-      {!vollstaendig && (
-        <div style={{ fontSize: 12, color: "var(--ch)", textAlign: "center", lineHeight: 1.5 }}>
-          {fehlt.length > 0
-            ? oa(t, "oaFehltNoch", "Es fehlt noch: {felder}.").replace("{felder}", fehlt.join(", "))
-            : oa(t, "oaGroesserNull", "Kaufpreis, Wohnfläche und Kaltmiete müssen größer als null sein.")}
+      {/* Beim Bearbeiten liegt der Formularteil in einem langen Sheet: die Leiste klebt unten,
+          damit "Aenderungen speichern" nach dem Ausfuellen sofort sichtbar ist. */}
+      <div
+        style={
+          bearbeiten
+            ? {
+                position: "sticky",
+                bottom: 0,
+                zIndex: 2,
+                background: "var(--cc)",
+                borderTop: "1px solid var(--cb)",
+                padding: "10px 0",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }
+            : { display: "flex", flexDirection: "column", gap: 16 }
+        }
+      >
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            onClick={onAbbrechen}
+            style={{
+              ...knopfStil,
+              background: "transparent",
+              color: "var(--ch)",
+              border: "1px solid var(--cb)",
+            }}
+          >
+            {oa(t, "aiAbbrechen", "Abbrechen")}
+          </button>
+          <button
+            type="button"
+            disabled={!vollstaendig || speichertLaeuft}
+            onClick={absenden}
+            style={{
+              ...knopfStil,
+              flex: 2,
+              background: vollstaendig && !speichertLaeuft ? "var(--ca)" : "var(--cb)",
+              color: vollstaendig && !speichertLaeuft ? "#fff" : "var(--ch)",
+              border: "none",
+              cursor: vollstaendig && !speichertLaeuft ? "pointer" : "not-allowed",
+            }}
+          >
+            {speichertLaeuft
+              ? oa(t, "oaWirdAngelegt", "Wird angelegt …")
+              : bearbeiten
+                ? oa(t, "oaSpeichern", "Änderungen speichern")
+                : oa(t, "oaAnlegen", "Objekt anlegen")}
+          </button>
         </div>
-      )}
+        {!vollstaendig && (
+          <div style={{ fontSize: 12, color: "var(--ch)", textAlign: "center", lineHeight: 1.5 }}>
+            {fehlt.length > 0
+              ? oa(t, "oaFehltNoch", "Es fehlt noch: {felder}.").replace(
+                  "{felder}",
+                  fehlt.join(", "),
+                )
+              : oa(
+                  t,
+                  "oaGroesserNull",
+                  "Kaufpreis, Wohnfläche und Kaltmiete müssen größer als null sein.",
+                )}
+          </div>
+        )}
+      </div>
       {!bearbeiten && (
         <div style={{ fontSize: 11.5, color: "var(--ch)", textAlign: "center", lineHeight: 1.5 }}>
-          {oa(t, "oaFuehrtWeiter", "Führt danach direkt in den Renditerechner - dort ergänzt du alles Weitere.")}
+          {oa(
+            t,
+            "oaFuehrtWeiter",
+            "Führt danach direkt in den Renditerechner - dort ergänzt du alles Weitere.",
+          )}
         </div>
       )}
     </div>

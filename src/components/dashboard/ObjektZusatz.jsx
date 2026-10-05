@@ -3,27 +3,71 @@
 // Kernfakten. Alles freiwillig und eingeklappt - der Exposé-Scan fuellt es vor.
 // Ausgewertet in utils/bauteile.js (effektives Alter je Bauteil) und
 // briefing.wohnKaltmiete (Gewerbe raus aus Mietvergleichen).
+import { useEffect, useState } from "react";
 import { BAUTEIL_KEYS, leseKernfakten, leseModernisierungen } from "../../utils/bauteile.js";
 import { beschriftungStil, eingabeStil } from "./ObjektAnlegenWizard.jsx";
+
+// Einfaches Textfeld ohne Pfeile: nur Ziffern, vierstellig. Eigener Text-State, weil die
+// Liste unvollstaendige Jahre ("19") zu null normalisiert und das Feld sonst waehrend des
+// Tippens geleert wuerde.
+function JahrFeld({ wert, onWert, label }) {
+  const [text, setText] = useState(wert == null ? "" : String(wert));
+  useEffect(() => {
+    if (wert != null && String(wert) !== text) setText(String(wert));
+  }, [wert]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      maxLength={4}
+      aria-label={label}
+      placeholder={label}
+      value={text}
+      onChange={(e) => {
+        const ziffern = e.target.value.replace(/D/g, "").slice(0, 4);
+        setText(ziffern);
+        onWert(ziffern.length === 4 ? +ziffern : null);
+      }}
+      style={{ ...eingabeStil, width: 96, flex: "0 0 96px" }}
+    />
+  );
+}
 
 const tx = (t, key, fallback) => (t && t[key]) || fallback;
 
 export function ObjektZusatz({ t, werte, onChange }) {
   const liste = leseModernisierungen(werte.modernisierungen);
   const fakten = leseKernfakten(werte.kernfakten);
-  const anzahl = liste.length + fakten.length + (+werte.gewerbemiete > 0 ? 1 : 0) + (+werte.wohneinheiten > 1 ? 1 : 0);
+  const anzahl =
+    liste.length +
+    fakten.length +
+    (+werte.gewerbemiete > 0 ? 1 : 0) +
+    (+werte.wohneinheiten > 1 ? 1 : 0);
   const setListe = (neu) => onChange("modernisierungen", neu);
-  const aendern = (i, feld, wert) => setListe(liste.map((m, j) => (j === i ? { ...m, [feld]: wert } : m)));
-  const jahrJetzt = new Date().getFullYear();
+  const aendern = (i, feld, wert) =>
+    setListe(liste.map((m, j) => (j === i ? { ...m, [feld]: wert } : m)));
 
   return (
-    <details open={anzahl > 0} style={{ border: "1px solid var(--cb)", borderRadius: 12, padding: "10px 14px", background: "var(--ci)" }}>
+    <details
+      open={anzahl > 0}
+      style={{
+        border: "1px solid var(--cb)",
+        borderRadius: 12,
+        padding: "10px 14px",
+        background: "var(--ci)",
+      }}
+    >
       <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 700, color: "var(--ct)" }}>
         {tx(t, "ozTitel", "Weitere Angaben (optional)")}
         {anzahl > 0 && <span style={{ fontWeight: 400, color: "var(--ch)" }}> · {anzahl}</span>}
       </summary>
       <p style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.5, margin: "8px 0 4px" }}>
-        {tx(t, "ozHinweis", "Modernisierungen verbessern die Einschätzung von Sanierungsbedarf, Rücklage und Bewertung. Ohne Angaben rechnet ImmoFuchs mit dem Baujahr.")}
+        {tx(
+          t,
+          "ozHinweis",
+          "Modernisierungen verbessern die Einschätzung von Sanierungsbedarf, Rücklage und Bewertung. Ohne Angaben rechnet ImmoFuchs mit dem Baujahr.",
+        )}
       </p>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
@@ -39,7 +83,9 @@ export function ObjektZusatz({ t, werte, onChange }) {
           />
         </label>
         <label style={{ display: "block", flex: "1 1 200px" }}>
-          <span style={beschriftungStil}>{tx(t, "ozGewerbemiete", "davon Gewerbemiete (€/Monat)")}</span>
+          <span style={beschriftungStil}>
+            {tx(t, "ozGewerbemiete", "davon Gewerbemiete (€/Monat)")}
+          </span>
           <input
             type="number"
             inputMode="decimal"
@@ -51,12 +97,25 @@ export function ObjektZusatz({ t, werte, onChange }) {
         </label>
       </div>
 
-      <div style={{ ...beschriftungStil, marginTop: 14 }}>{tx(t, "ozModernisierungen", "Modernisierungen")}</div>
+      <div style={{ ...beschriftungStil, marginTop: 14 }}>
+        {tx(t, "ozModernisierungen", "Modernisierungen")}
+      </div>
       {liste.length === 0 && (
-        <div style={{ fontSize: 12.5, color: "var(--ch)", marginBottom: 6 }}>{tx(t, "ozKeine", "Noch keine Modernisierung erfasst.")}</div>
+        <div style={{ fontSize: 12.5, color: "var(--ch)", marginBottom: 6 }}>
+          {tx(t, "ozKeine", "Noch keine Modernisierung erfasst.")}
+        </div>
       )}
       {liste.map((m, i) => (
-        <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            gap: 6,
+            alignItems: "center",
+            marginBottom: 6,
+            flexWrap: "wrap",
+          }}
+        >
           <select
             aria-label={tx(t, "ozBauteil", "Bauteil")}
             value={m.bauteil}
@@ -69,16 +128,10 @@ export function ObjektZusatz({ t, werte, onChange }) {
               </option>
             ))}
           </select>
-          <input
-            type="number"
-            inputMode="numeric"
-            aria-label={tx(t, "ozJahr", "Jahr")}
-            placeholder={tx(t, "ozJahr", "Jahr")}
-            min="1900"
-            max={jahrJetzt}
-            value={m.jahr ?? ""}
-            onChange={(e) => aendern(i, "jahr", e.target.value === "" ? null : +e.target.value)}
-            style={{ ...eingabeStil, width: 96, flex: "0 0 96px" }}
+          <JahrFeld
+            label={tx(t, "ozJahr", "Jahr")}
+            wert={m.jahr}
+            onWert={(v) => aendern(i, "jahr", v)}
           />
           <select
             aria-label={tx(t, "ozUmfang", "Umfang")}
@@ -93,7 +146,16 @@ export function ObjektZusatz({ t, werte, onChange }) {
             type="button"
             onClick={() => setListe(liste.filter((_, j) => j !== i))}
             aria-label={tx(t, "ozEntfernen", "Entfernen")}
-            style={{ minWidth: 44, minHeight: 44, border: "1px solid var(--cb)", borderRadius: 10, background: "var(--cc)", color: "var(--ct)", cursor: "pointer", fontFamily: "inherit" }}
+            style={{
+              minWidth: 44,
+              minHeight: 44,
+              border: "1px solid var(--cb)",
+              borderRadius: 10,
+              background: "var(--cc)",
+              color: "var(--ct)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
           >
             ✕
           </button>
@@ -102,23 +164,46 @@ export function ObjektZusatz({ t, werte, onChange }) {
       <button
         type="button"
         onClick={() => setListe([...liste, { bauteil: "fenster", jahr: null, umfang: "komplett" }])}
-        style={{ background: "none", border: "none", padding: "6px 0", color: "var(--ca)", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 13.5 }}
+        style={{
+          background: "none",
+          border: "none",
+          padding: "6px 0",
+          color: "var(--ca)",
+          fontWeight: 700,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          fontSize: 13.5,
+        }}
       >
         {tx(t, "ozHinzufuegen", "+ Modernisierung hinzufügen")}
       </button>
 
       {fakten.length > 0 && (
         <>
-          <div style={{ ...beschriftungStil, marginTop: 12 }}>{tx(t, "ozKernfakten", "Kernfakten aus dem Exposé")}</div>
+          <div style={{ ...beschriftungStil, marginTop: 12 }}>
+            {tx(t, "ozKernfakten", "Kernfakten aus dem Exposé")}
+          </div>
           <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
             {fakten.map((f, i) => (
               <li key={i} style={{ fontSize: 13, color: "var(--cl)", lineHeight: 1.5 }}>
                 {f}{" "}
                 <button
                   type="button"
-                  onClick={() => onChange("kernfakten", fakten.filter((_, j) => j !== i))}
+                  onClick={() =>
+                    onChange(
+                      "kernfakten",
+                      fakten.filter((_, j) => j !== i),
+                    )
+                  }
                   aria-label={tx(t, "ozEntfernen", "Entfernen")}
-                  style={{ background: "none", border: "none", color: "var(--ch)", cursor: "pointer", fontFamily: "inherit", padding: "0 4px" }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--ch)",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    padding: "0 4px",
+                  }}
                 >
                   ✕
                 </button>

@@ -1,3 +1,12 @@
+## 2026-10-05 (1.100.96) [FRONTEND]
+
+### Miete damals vorbelegt, Kaufpreisfaktor als Kennzahl, Jahr ohne Pfeile, Speichern-Leiste
+
+- "Miete damals" (Rendite- und Mieterhoehungsrechner) folgt der Kaltmiete, bis der Nutzer sie selbst aendert.
+- Renditerechner: Kaufpreisfaktor als Ampel-Kennzahl mit Spanne (bis 25x gut, 25-30x okay, ueber 30x kritisch), 5 Sprachen.
+- Modernisierungen: Jahr ist ein einfaches Ziffernfeld ohne Pfeile.
+- Objekt bearbeiten: Speichern-Leiste klebt unten im Sheet.
+
 ## 2026-10-05 (1.100.95) [FRONTEND]
 
 ### Bauteil-Zahlen zentral in data.js

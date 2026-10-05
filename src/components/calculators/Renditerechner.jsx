@@ -1,3 +1,4 @@
+import { useMieteDamalsVorbelegung } from "../../hooks/useMieteDamalsVorbelegung.js";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { BL_N, BL_O, AFA, WERTSTEIGERUNG } from "../../data.js";
@@ -150,6 +151,7 @@ export default function Haupt() {
   // Liegt im Context (App.jsx), damit auch die Expose-Uebernahme die
   // Sync-Richtung setzen kann - siehe Kommentar dort.
   const lastEditedRef = mietQuelleRef;
+  useMieteDamalsVorbelegung(d, set);
   // Grund- und Gebaeudeanteil ergaenzen sich immer auf 100% - beim Editieren
   // des einen wird der andere gegengerechnet.
   // Geklemmt auf 0-100 % (Nutzer-Befund 2026-09-27): ohne diese Grenze liess
@@ -1110,6 +1112,24 @@ export default function Haupt() {
                         }
                         tip={R.nR >= 3.5 ? t.nrGreenTip : R.nR >= 2.5 ? t.nrYellowTip : t.nrRedTip}
                       />
+                      {R.kpF > 0 && isFinite(R.kpF) && (
+                        <AmpelKPI
+                          label={t.kpFaktor}
+                          value={fmt(R.kpF, 1) + "×"}
+                          color={rate("kpFaktor", R.kpF).color}
+                          statusLabel={
+                            R.kpF <= 25 ? t.badgeGut : R.kpF <= 30 ? t.badgeOkay : t.badgeKrit
+                          }
+                          status={
+                            R.kpF <= 25
+                              ? "✓ " + tpl(t.kpfGut, { g: 25 })
+                              : R.kpF <= 30
+                                ? "~ " + tpl(t.kpfOkay, { g: 25, y: 30 })
+                                : "⚠ " + tpl(t.kpfTeuer, { y: 30 })
+                          }
+                          tip={tpl(t.kpfTip, { g: 25, y: 30 })}
+                        />
+                      )}
                     </div>
                     {R.bR > 0 && R.nR > 0 && R.bR - R.nR > 2 && (
                       <div style={{ marginTop: 8 }}>

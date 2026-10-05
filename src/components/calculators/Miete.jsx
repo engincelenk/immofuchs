@@ -1,3 +1,4 @@
+import { useMieteDamalsVorbelegung } from "../../hooks/useMieteDamalsVorbelegung.js";
 import { wohnKaltmiete } from "../../utils/briefing.js";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useApp } from "../../context/AppContext.jsx";
@@ -54,6 +55,7 @@ function RegionalmieteHinweis({ regGeladen, d, t }) {
 export default function Miete() {
   const { d, set, t, tip, lang, aktivesObjekt } = useApp();
   const [view, setView] = useState("input");
+  useMieteDamalsVorbelegung(d, set);
   // plzData.js laedt die Kappungsgrenzen-Liste selbst beim Modulimport, legt
   // aber keinen Ladezustand nach aussen - nur isK15() (liefert bis dahin
   // false = 20 %, siehe dortiger Kommentar). Fuer die KI-Karte muss aber

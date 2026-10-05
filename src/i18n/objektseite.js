@@ -2346,3 +2346,40 @@ const NACHTRAG_C = {
 for (const sprache of Object.keys(NACHTRAG_C)) {
   if (OBJ_T[sprache]) Object.assign(OBJ_T[sprache], NACHTRAG_C[sprache]);
 }
+
+// ── Nachtrag D 2026-10-05: Kaufpreisfaktor als Kennzahl im Renditerechner ─────
+const NACHTRAG_D = {
+  de: {
+    kpfGut: "Solide: bis {g}×",
+    kpfOkay: "Teuer: {g}–{y}×",
+    kpfTeuer: "Sehr teuer: über {y}×",
+    kpfTip: "Kaufpreisfaktor = Kaufpreis ÷ Jahreskaltmiete. Bewertung: bis {g}× gut, {g}–{y}× okay, über {y}× kritisch.",
+  },
+  en: {
+    kpfGut: "Solid: up to {g}×",
+    kpfOkay: "Expensive: {g}–{y}×",
+    kpfTeuer: "Very expensive: above {y}×",
+    kpfTip: "Price multiple = purchase price ÷ annual net rent. Rating: up to {g}× good, {g}–{y}× okay, above {y}× critical.",
+  },
+  tr: {
+    kpfGut: "Sağlam: {g}× değerine kadar",
+    kpfOkay: "Pahalı: {g}–{y}×",
+    kpfTeuer: "Çok pahalı: {y}× üzeri",
+    kpfTip: "Satın alma çarpanı = satın alma fiyatı ÷ yıllık net kira. Değerlendirme: {g}× değerine kadar iyi, {g}–{y}× orta, {y}× üzeri kritik.",
+  },
+  zh: {
+    kpfGut: "稳健：不超过 {g}×",
+    kpfOkay: "偏贵：{g}–{y}×",
+    kpfTeuer: "非常贵：高于 {y}×",
+    kpfTip: "购买价格倍数 = 购买价格 ÷ 年净租金。评级：不超过 {g}× 良好，{g}–{y}× 一般，高于 {y}× 风险较高。",
+  },
+  hi: {
+    kpfGut: "ठोस: {g}× तक",
+    kpfOkay: "महंगा: {g}–{y}×",
+    kpfTeuer: "बहुत महंगा: {y}× से ऊपर",
+    kpfTip: "खरीद मूल्य गुणक = खरीद मूल्य ÷ वार्षिक शुद्ध किराया। मूल्यांकन: {g}× तक अच्छा, {g}–{y}× ठीक, {y}× से ऊपर गंभीर।",
+  },
+};
+for (const sprache of Object.keys(NACHTRAG_D)) {
+  if (OBJ_T[sprache]) Object.assign(OBJ_T[sprache], NACHTRAG_D[sprache]);
+}
