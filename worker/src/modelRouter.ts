@@ -130,7 +130,7 @@ async function callWorkersAI(
 // Spec: docs/plans/expose-screenshot-upload-spec.md, Abschnitt 11.5/11.6.
 // Bewusst OHNE Workers-AI-Fallback: Llama 3.3 kann keine Bilder verarbeiten.
 // Schlaegt Gemini fehl, gibt es keinen Ausweichpfad, nur einen Fehlerzustand.
-const VISION_MAX_TOKENS = 4096; // ein voller Datensatz nach Schema, nicht ein Chat-Absatz
+const VISION_MAX_TOKENS = 8192; // ein voller Datensatz nach Schema, nicht ein Chat-Absatz
 const VISION_TEMPERATURE = 0; // Extraktion, nicht Formulierung - so wenig Streuung wie moeglich
 const VISION_TIMEOUT_MS = 60000; // 15 Bilder brauchen deutlich laenger als ein Text-Call
 

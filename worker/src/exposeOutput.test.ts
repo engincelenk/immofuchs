@@ -252,3 +252,55 @@ describe("parseExposeOutput - neue Felder", () => {
     expect(r.kosten.ruecklage_monatlich).toBe(45.83);
   });
 });
+
+// Regressionsfall Expose Benningen (Nutzer-Test 2026-10-05): Mehrfamilienhaus mit
+// Mieterliste, Modernisierung 1999, Heizung 2024. Vorher fehlten Monatsmiete,
+// Modernisierungen und Kernfakten im Schema.
+describe("parseExposeOutput - Mehrfamilienhaus, Modernisierung, Kernfakten", () => {
+  const roh = JSON.stringify({
+    objekt: { kaufpreis: 1100000, wohnflaeche: 400, baujahr: 1970, wohneinheiten: 8, gewerbeeinheiten: 1 },
+    kosten: { kaltmiete: 5975, kaltmiete_jahr: 70000, gewerbemiete: 1000 },
+    modernisierung: {
+      letzte_modernisierung_jahr: 2024,
+      massnahmen: [
+        { bauteil: "fenster", jahr: 1999, umfang: "komplett" },
+        { bauteil: "Fassade", jahr: "1999", umfang: "teilweise" },
+        { bauteil: "elektrik", jahr: 1999 },
+        { bauteil: "heizung", jahr: 2024, umfang: "komplett" },
+        { bauteil: "pool", jahr: 2010 },
+        { bauteil: "fenster", jahr: 1999, umfang: "komplett" },
+      ],
+    },
+    kernfakten: ["8 Wohneinheiten und 1 Lagerhalle", "Mieter zahlen pünktlich", "", 42],
+  });
+
+  it("uebernimmt Monatsmiete, Jahresmiete, Gewerbeanteil und Einheiten", () => {
+    const e = parseExposeOutput(roh);
+    expect(e.kosten.kaltmiete).toBe(5975);
+    expect(e.kosten.kaltmiete_jahr).toBe(70000);
+    expect(e.kosten.gewerbemiete).toBe(1000);
+    expect(e.objekt.wohneinheiten).toBe(8);
+    expect(e.objekt.gewerbeeinheiten).toBe(1);
+  });
+
+  it("normalisiert Modernisierungen (Bauteil-Liste, Jahr als Zahl, Dubletten raus)", () => {
+    const e = parseExposeOutput(roh);
+    expect(e.modernisierung.letzte_modernisierung_jahr).toBe(2024);
+    expect(e.modernisierung.massnahmen).toEqual([
+      { bauteil: "fenster", jahr: 1999, umfang: "komplett" },
+      { bauteil: "fassade", jahr: 1999, umfang: "teilweise" },
+      { bauteil: "elektrik", jahr: 1999, umfang: "komplett" },
+      { bauteil: "heizung", jahr: 2024, umfang: "komplett" },
+    ]);
+  });
+
+  it("Kernfakten: nur Text, leere raus", () => {
+    expect(parseExposeOutput(roh).kernfakten).toEqual(["8 Wohneinheiten und 1 Lagerhalle", "Mieter zahlen pünktlich"]);
+  });
+
+  it("fehlende Gruppen ergeben leere Listen statt Absturz", () => {
+    const e = parseExposeOutput(JSON.stringify({ objekt: { kaufpreis: 1 } }));
+    expect(e.modernisierung.massnahmen).toEqual([]);
+    expect(e.kernfakten).toEqual([]);
+  });
+});

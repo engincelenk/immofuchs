@@ -108,6 +108,7 @@ export interface ExposeObjekt {
   // Anzahl Wohneinheiten im Haus: Basis fuer den eigenen Anteil an einer
   // Sonderumlage.
   wohneinheiten: number | null;
+  gewerbeeinheiten: number | null;
   vermietet: boolean | null;
   // Mietbeginn bzw. Datum, ab dem die aktuelle Miete gilt. Speist zusammen mit
   // der Kaltmiete den Mieterhoehungsrechner (§ 558 BGB).
@@ -147,6 +148,8 @@ export interface ExposeKosten {
   kaufnebenkosten: number | null;
   gesamtkosten: number | null;
   kaltmiete: number | null;
+  kaltmiete_jahr: number | null;
+  gewerbemiete: number | null;
   nebenkosten_miete: number | null;
 }
 
@@ -160,11 +163,24 @@ export interface ExposeBild {
   bildbeschreibung: string | null;
 }
 
+export interface ExposeMassnahme {
+  bauteil: string;
+  jahr: number | null;
+  umfang: "komplett" | "teilweise";
+}
+
+export interface ExposeModernisierung {
+  letzte_modernisierung_jahr: number | null;
+  massnahmen: ExposeMassnahme[];
+}
+
 export interface ExposeExtractResponse {
   objekt: ExposeObjekt;
   ausstattung: ExposeAusstattung;
   energie: ExposeEnergie;
   kosten: ExposeKosten;
+  modernisierung: ExposeModernisierung;
+  kernfakten: string[];
   kontext: ExposeKontext;
   bild: ExposeBild;
   confidence: Record<string, ConfidenceWert>;

@@ -1,5 +1,6 @@
 import type {
   ConfidenceWert,
+  ExposeMassnahme,
   ExposeAbweichung,
   ExposeExtractResponse,
   ExposeWarnung,
@@ -13,7 +14,11 @@ import type {
 // einer Renditerechnung (Spec 6, Schritt 3).
 
 const MAX_TEXT_LEN = 400;
-const MAX_BESCHREIBUNG_LEN = 1500;
+const MAX_BESCHREIBUNG_LEN = 4000;
+const MAX_MASSNAHMEN = 12;
+const MAX_KERNFAKTEN = 10;
+const MAX_KERNFAKT_LEN = 140;
+const BAUTEILE = new Set(["heizung", "fenster", "fassade", "dach", "elektrik", "leitungen", "bad", "tuer", "kellerdecke", "ogdecke"]);
 const MAX_WARNUNGEN = 20;
 const MAX_ABWEICHUNGEN = 10;
 const MAX_QUELLE_LEN = 60;
@@ -26,6 +31,7 @@ export function parseExposeOutput(raw: string): ExposeExtractResponse {
   const energie = obj(data.energie);
   const kosten = obj(data.kosten);
   const kontext = obj(data.kontext);
+  const modernisierung = obj(data.modernisierung);
   const bild = obj(data.bild);
 
   return {
@@ -46,6 +52,7 @@ export function parseExposeOutput(raw: string): ExposeExtractResponse {
       baujahr: zahl(objekt.baujahr),
       zustand: text(objekt.zustand),
       wohneinheiten: zahl(objekt.wohneinheiten),
+      gewerbeeinheiten: zahl(objekt.gewerbeeinheiten),
       vermietet: bool(objekt.vermietet),
       // Bewusst als Text, nicht ueber `zahl`: der Client parst das Datum
       // selbst (mapDatum in utils/exposeMapping.js) und erwartet die
@@ -76,8 +83,15 @@ export function parseExposeOutput(raw: string): ExposeExtractResponse {
       kaufnebenkosten: zahl(kosten.kaufnebenkosten),
       gesamtkosten: zahl(kosten.gesamtkosten),
       kaltmiete: zahl(kosten.kaltmiete),
+      kaltmiete_jahr: zahl(kosten.kaltmiete_jahr),
+      gewerbemiete: zahl(kosten.gewerbemiete),
       nebenkosten_miete: zahl(kosten.nebenkosten_miete),
     },
+    modernisierung: {
+      letzte_modernisierung_jahr: jahrOderNull(modernisierung.letzte_modernisierung_jahr),
+      massnahmen: massnahmen(modernisierung.massnahmen),
+    },
+    kernfakten: kernfakten(data.kernfakten),
     kontext: {
       objektbeschreibung: text(kontext.objektbeschreibung, MAX_BESCHREIBUNG_LEN),
       lagebeschreibung: text(kontext.lagebeschreibung, MAX_BESCHREIBUNG_LEN),
@@ -90,6 +104,41 @@ export function parseExposeOutput(raw: string): ExposeExtractResponse {
     warnungen: warnungen(data.warnungen),
     abweichungen: abweichungen(data.abweichungen),
   };
+}
+
+function jahrOderNull(value: unknown): number | null {
+  const j = zahl(value);
+  if (j == null) return null;
+  const t = Math.trunc(j);
+  return t >= 1800 && t <= 2100 ? t : null;
+}
+
+// Modernisierungen: nur bekannte Bauteile, Jahr plausibel oder null, Umfang
+// komplett/teilweise. Doppelte (Bauteil+Jahr) werden zusammengefasst.
+function massnahmen(value: unknown): ExposeMassnahme[] {
+  if (!Array.isArray(value)) return [];
+  const raus: ExposeMassnahme[] = [];
+  const gesehen = new Set<string>();
+  for (const roh of value) {
+    const e = obj(roh);
+    const bauteil = typeof e.bauteil === "string" ? e.bauteil.trim().toLowerCase() : "";
+    if (!BAUTEILE.has(bauteil)) continue;
+    const jahr = jahrOderNull(e.jahr);
+    const key = `${bauteil}:${jahr ?? "?"}`;
+    if (gesehen.has(key)) continue;
+    gesehen.add(key);
+    raus.push({ bauteil, jahr, umfang: e.umfang === "teilweise" ? "teilweise" : "komplett" });
+    if (raus.length >= MAX_MASSNAHMEN) break;
+  }
+  return raus;
+}
+
+function kernfakten(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((v) => text(v, MAX_KERNFAKT_LEN))
+    .filter((v): v is string => v !== null)
+    .slice(0, MAX_KERNFAKTEN);
 }
 
 function parseJson(raw: string): Record<string, unknown> {

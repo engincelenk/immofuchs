@@ -30,6 +30,7 @@ import { kuerzelFuerBundesland } from "../../utils/adressSuche.js";
 import { EXPOSE_T } from "../../i18n/expose.js";
 import { useApp } from "../../context/AppContext.jsx";
 import { baueZeilen, uebernehmeZeilen } from "../../utils/exposeMapping.js";
+import { ObjektZusatz } from "./ObjektZusatz.jsx";
 import {
   AdressSuche,
   ExposePanel,
@@ -205,6 +206,12 @@ function ObjektFormular({
   // restlichen Exposé-Werte beim Speichern verloren, weil der Entwurf unten
   // nur die sichtbaren Felder zusammensetzt.
   const [exposeExtra, setExposeExtra] = useState({});
+  // Optionale Zusatzangaben (ObjektZusatz.jsx): sichtbar und editierbar, vom
+  // Exposé vorbefuellt. Beim Bearbeiten aus den gespeicherten Werten.
+  const ZUSATZ_KEYS = ["wohneinheiten", "gewerbemiete", "modernisierungen", "kernfakten"];
+  const [zusatz, setZusatz] = useState(() =>
+    Object.fromEntries(ZUSATZ_KEYS.filter((k) => startwerte?.[k] != null).map((k) => [k, startwerte[k]])),
+  );
   const [exposeOffen, setExposeOffen] = useState(false);
   // Fertiger Anfragetext fuer AdressSuche.autoSuche (Nutzer-Vorgabe
   // 2026-09-26): sobald ein Expose Strasse/Hausnummer/PLZ/Ort liefert, sucht
@@ -243,6 +250,7 @@ function ObjektFormular({
         exposeKeys.push(k);
         if (k === "bundesland") setBundesland(v);
         else if (sichtbar.has(k)) setzenMit(k, v, HERKUNFT.EXPOSE);
+        else if (ZUSATZ_KEYS.includes(k)) setZusatz((p) => ({ ...p, [k]: v }));
         else extra[k] = v;
         if (k === "strasse" || k === "hausnummer" || k === "plz" || k === "ort") adresse[k] = v;
       },
@@ -301,6 +309,7 @@ function ObjektFormular({
         ...annahmen,
         ...(startwerte || {}),
         ...exposeExtra,
+        ...zusatz,
         bundesland,
         plz: String(werte.plz || "").trim(),
         ort: String(werte.ort || "").trim(),
@@ -489,6 +498,8 @@ function ObjektFormular({
             ))}
           </select>
         </label>
+
+        <ObjektZusatz t={t} werte={zusatz} onChange={(k, v) => setZusatz((p) => ({ ...p, [k]: v }))} />
       </div>
 
       {/* Sofortiges Ergebnis mit offengelegten Annahmen */}

@@ -1,3 +1,24 @@
+## 2026-10-05 (1.100.93) [FRONTEND+WORKER]
+
+### Expose-Scan liest Miete, Modernisierungen und Kernfakten; Bauteil-Logik auf Objektseite und in den Rechnern
+
+- Expose-Scan (Worker): exakte Monatskaltmiete als Summe aller Einheiten (nie gerundet, Konflikte -> Abweichungen),
+  Jahreskaltmiete, Gewerbemiete, Gewerbeeinheiten, Modernisierungen je Bauteil (Jahr, komplett/teilweise) und bis zu
+  10 Kernfakten. Wohneinheiten werden jetzt uebernommen. Ausgabe-Budget fuer das Vision-Modell auf 8192 Tokens.
+- Objekt anlegen/bearbeiten: neuer, eingeklappter Bereich "Weitere Angaben (optional)" - Wohneinheiten, Gewerbemiete,
+  Modernisierungen (Bauteil, Jahr, Umfang) und Kernfakten; vom Expose vorbefuellt, alles freiwillig.
+- Neue Bauteil-Logik (utils/bauteile.js): effektives Jahr je Bauteil, Nutzungsdauern nach BBSR (Fenster/Fassade/Tuer 40,
+  Dach/Decken 50, Heizung 20, Leitungen/Elektrik/Bad 25 J.), "teilweise" zaehlt halb; Status ueberfaellig / endet in der
+  Haltedauer / gut.
+- Objektseite "Worauf achten": erneuerte Bauteile als Staerke, faellige Bauteile mit Begruendung im Modernisierungsbedarf,
+  grober Investitionsbedarf in der Haltedauer mit Knopf "In die Renovierungskosten uebernehmen" (ohne Doppelzaehlung).
+  Score-Baualter und Ruecklage-Hinweis nutzen das effektive Baujahr; Gewerbemiete zaehlt nicht in die Wohnmiete/m2.
+- KI-Analyse und Handout bekommen Bauteile, Kernfakten, Wohneinheiten und Gewerbemiete; Finn ebenfalls.
+- Sanierungsrechner: faellige Bauteile vorgewaehlt, Status je Massnahme, Ausgangsverbrauch um erledigte Massnahmen
+  reduziert, GEG-47-Hinweis entfaellt bei erneuertem Dach/oberster Geschossdecke.
+- Mieterhoehungsrechner: rechnet nur mit der Wohnmiete, Hinweis auf den Gewerbeanteil.
+- Alle neuen Texte in DE/EN/TR/ZH/HI.
+
 ## 2026-10-05 (1.100.92) [FRONTEND+WORKER]
 
 ### Begruendungssaetze unter "Worauf achten", Checkout als Fenster ueber dem Konto, Finn-Blase

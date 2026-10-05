@@ -19,6 +19,7 @@
 import { computeRendite } from "./rendite.js";
 import { berechneKennzahlen } from "./kennzahlen.js";
 import { scoreKpi } from "./bands.js";
+import { effektivesBaujahr } from "./bauteile.js";
 
 // Gewichte aus Abschnitt 2.1 der Neubau-Spec. Summe 100 bei voller
 // Datenlage - jede Dimension ohne jeden Sub-Score faellt aus der Gewichtung
@@ -107,7 +108,8 @@ function dimensionD4(d) {
   const heizungAlterScore = HEIZUNG_ALTER_SCORE[d.sanHa] ?? null;
   const energieScore = KLASSE_SCORE[energieKlasse(d.sanIstVerbrauch)] ?? null;
 
-  const baujahr = +d.baujahr || 0;
+  // Mit erfassten Modernisierungen: effektives Baujahr (bauteile.js), sonst Baujahr.
+  const baujahr = effektivesBaujahr(d) || +d.baujahr || 0;
   const flaeche = +d.flaeche || 0;
   let ruecklageScore = null;
   if (baujahr > 0 && flaeche > 0) {
@@ -129,7 +131,8 @@ function dimensionD4(d) {
 // gibt es keinen Sub-Score, D5 faellt aus der Gewichtung (Renormierung).
 function dimensionD5(d, opt) {
   const flaeche = +d.flaeche || 0;
-  const kaltmiete = +d.kaltmiete || 0;
+  // Nur Wohnmiete gegen die ortsuebliche Wohnmiete (Gewerbe raus, siehe briefing.wohnKaltmiete).
+  const kaltmiete = Math.max(0, (+d.kaltmiete || 0) - Math.max(0, +d.gewerbemiete || 0));
   const ref = opt?.ref;
   if (!(flaeche > 0) || !(kaltmiete > 0) || !(ref?.mieteWohnung > 0)) return null;
   const eigenQm = kaltmiete / flaeche;

@@ -66,13 +66,20 @@ export const ASSISTANT_FIELDS = {
     "nkFinanzieren",
     "renovierung",
     "sonder",
+    // Mehrfamilienhaus und Modernisierungen (2026-10-05): Finn kennt Einheiten,
+    // Gewerbeanteil, erneuerte Bauteile und Kernfakten aus dem Exposé.
+    "baujahr",
+    "wohneinheiten",
+    "gewerbemiete",
+    "modernisierungen",
+    "kernfakten",
   ],
   // Objekt-Uebersicht (Merkliste): die Objekte selbst gehen als
   // vergleichsObjekte mit (max. 5, ohne Namen/Adresse), hier keine Felder.
   objekte: [],
   finanzierung: ["kaufpreis", "eigenkapital", "zinssatz", "tilgung", "zinsbindung"],
   miete: ["vergleichsmiete", "letzteErhDatum", "letzteErhMiete", "mietJahre"],
-  sanierung: ["baujahr", "sanFl", "sanHt", "sanHa", "sanPe", "sanIsfp"],
+  sanierung: ["baujahr", "sanFl", "sanHt", "sanHa", "sanPe", "sanIsfp", "wohneinheiten", "modernisierungen"],
   vorfaelligkeit: [
     "vfeAuszahlung",
     "vfeSollzinsbindungsEnde",

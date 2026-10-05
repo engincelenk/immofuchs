@@ -12,6 +12,8 @@ import { EXPOSE_JSON_SCHEMA, EXPOSE_SYSTEM_PROMPT } from "../../worker/src/expos
 // die ist dort mit eigenen Tests belegt.
 
 function schemaFelder(gruppe) {
+  // gruppe null: Feld liegt auf oberster Ebene (z. B. kernfakten).
+  if (gruppe === null) return Object.keys(EXPOSE_JSON_SCHEMA.properties);
   return Object.keys(EXPOSE_JSON_SCHEMA.properties[gruppe]?.properties ?? {});
 }
 

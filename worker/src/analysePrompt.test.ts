@@ -366,3 +366,14 @@ describe("systemPromptFuer - die fuenf Rechner-Produkte", () => {
     }
   });
 });
+
+describe("Expose-Prompt: Miete, Modernisierung, Kernfakten", () => {
+  it("legt die Miete als exakte Monatssumme fest und verbietet Runden", async () => {
+    const { EXPOSE_SYSTEM_PROMPT } = await import("./exposePrompt");
+    expect(EXPOSE_SYSTEM_PROMPT).toContain("PRO MONAT");
+    expect(EXPOSE_SYSTEM_PROMPT).toContain("Runde NIE");
+    expect(EXPOSE_SYSTEM_PROMPT).toContain("kaltmiete=5975");
+    expect(EXPOSE_SYSTEM_PROMPT).toContain('"massnahmen"');
+    expect(EXPOSE_SYSTEM_PROMPT).toContain('"kernfakten"');
+  });
+});

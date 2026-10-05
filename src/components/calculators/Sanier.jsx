@@ -1,4 +1,5 @@
 import { verteileErsparnis } from "../../utils/sanierungErsparnis.js";
+import { BAUTEILE, bewerteBauteile, ersparnisErledigt, hatModernisierungen } from "../../utils/bauteile.js";
 import { useState, useMemo, useEffect } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import {
@@ -122,17 +123,33 @@ export default function Sanier() {
   // d.kaufpreis/d.ort/d.bundesland aus dem geteilten Objekt-State (falls im
   // Renditerechner-Tab desselben Objekts bereits gesetzt).
   const regGeladen = useRegionaldaten(d.bundesland, d.plz);
-  const [act, setAct] = useState({
-    fenster: false,
-    fassade: false,
-    heizung: false,
-    dach: false,
-    tuer: false,
-    pv: false,
-    keller: false,
-    ogdecke: false,
-    batterie: false,
-    lueftung: false,
+  // Mit erfassten Modernisierungen (Objekt/Exposé, bauteile.js): faellige Bauteile
+  // (Nutzungsdauer ueberschritten oder in der Haltedauer endend) sind vorgewaehlt,
+  // erneuerte nicht. Ohne Angaben bleibt alles abgewaehlt wie bisher.
+  const bauteilStatus = useMemo(() => {
+    const m = {};
+    if (!hatModernisierungen(d)) return m;
+    for (const b of bewerteBauteile(d)) {
+      const sanKey = BAUTEILE.find((x) => x.key === b.key)?.sanKey;
+      if (sanKey) m[sanKey] = b;
+    }
+    return m;
+  }, [d]);
+  const [act, setAct] = useState(() => {
+    const start = {
+      fenster: false,
+      fassade: false,
+      heizung: false,
+      dach: false,
+      tuer: false,
+      pv: false,
+      keller: false,
+      ogdecke: false,
+      batterie: false,
+      lueftung: false,
+    };
+    for (const [k, b] of Object.entries(bauteilStatus)) start[k] = b.status !== "gut";
+    return start;
   });
   const [tier, setTier] = useState({
     fenster: "s",
@@ -170,10 +187,13 @@ export default function Sanier() {
   // (Expose Ingersheim: Baujahr 1996 → D, Ausweis 77,4 → C).
   const getEkl = (bj) => {
     const ist = +d.sanIstVerbrauch || 0;
+    // Schaetzung aus dem Baujahr abzueglich bereits erledigter Massnahmen (bauteile.js).
     const hk =
       ist >= VERBRAUCH_GRENZEN.min && ist <= VERBRAUCH_GRENZEN.max
         ? ist
-        : (SAN_NORMEN.hkBaujahr.find((r) => (+bj || 1981) <= r.bis)?.hk ?? 50);
+        : Math.round(
+            (SAN_NORMEN.hkBaujahr.find((r) => (+bj || 1981) <= r.bis)?.hk ?? 50) * (1 - ersparnisErledigt(d)),
+          );
     return ENERGIE_KLASSEN.find((r) => hk <= r.bis)?.kl ?? "H";
   };
 
@@ -186,7 +206,10 @@ export default function Sanier() {
     const hkEntry =
       SAN_NORMEN.hkBaujahr.find((e) => bj <= e.bis) ||
       SAN_NORMEN.hkBaujahr[SAN_NORMEN.hkBaujahr.length - 1];
-    const hkSchaetzung = hkEntry.hk;
+    // Erledigte Massnahmen (Fenster, Fassade, Dach, Heizung ...) senken den Ausgangsbedarf -
+    // dieselben Anteile wie die Ersparnis neuer Massnahmen (ES.*.ek), gedeckelt.
+    const erledigtF = ersparnisErledigt(d);
+    const hkSchaetzung = Math.round(hkEntry.hk * (1 - erledigtF));
     // Steht ein Wert aus dem Energieausweis zur Verfuegung, schlaegt er die
     // Schaetzung aus dem Baujahr. Die Tabelle hkBaujahr arbeitet mit groben
     // Baualtersklassen: fuer Baujahr 1996 nimmt sie 120 kWh/m²a an, reale
@@ -479,7 +502,10 @@ export default function Sanier() {
     const gegReq = [];
     if (bj < 2002 && ha === "alt" && (ht === "heizoel" || ht === "gas"))
       gegReq.push({ law: "§ 72 GEG", text: t.sanTip4, sev: "warn" });
-    if (bj < 1984)
+    // § 47 GEG (oberste Geschossdecke) entfaellt, wenn Dach oder oberste Geschossdecke
+    // nachweislich erneuert sind (Modernisierung, bauteile.js).
+    const dachErneuert = ["dach", "ogdecke"].some((k) => bauteilStatus[k]?.herkunft === "modernisiert");
+    if (bj < 1984 && !dachErneuert)
       gegReq.push({ law: "§ 47 GEG", text: t.sanMassN8 + " — " + t.sHTyp, sev: "info" });
     if (bj < 1978)
       gegReq.push({ law: "§ 71 GEG", text: t.sanMassN3 + ": 65% " + t.str, sev: "info" });
@@ -526,7 +552,7 @@ export default function Sanier() {
       sk_auto,
       kH_auto,
     };
-  }, [d, s, act, tier, t]);
+  }, [d, s, act, tier, t, bauteilStatus]);
 
   const htO = [
     { v: "gas", l: t.gas },
@@ -845,6 +871,24 @@ export default function Sanier() {
                   <span style={{ fontSize: 16 }}>{m.em}</span>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{m.n}</div>
+                    {bauteilStatus[m.k] && (
+                      <div
+                        style={{
+                          fontSize: 10.5,
+                          marginTop: 1,
+                          color: bauteilStatus[m.k].status === "gut" ? "var(--ok-tx)" : "var(--warn-tx)",
+                        }}
+                      >
+                        {(bauteilStatus[m.k].status === "gut"
+                          ? t.btSanErledigt || "erneuert {j} · hält bis ca. {e}"
+                          : bauteilStatus[m.k].status === "im_zeitraum"
+                            ? t.btSanBald || "Nutzungsdauer endet ca. {e}"
+                            : t.btSanFaellig || "fällig · Nutzungsdauer seit ca. {e} überschritten"
+                        )
+                          .replace("{j}", bauteilStatus[m.k].jahr ?? "?")
+                          .replace("{e}", bauteilStatus[m.k].endeJahr)}
+                      </div>
+                    )}
                     {act[m.k] && (
                       <div style={{ fontSize: 10, color: "var(--ch)", marginTop: 1 }}>{m.det}</div>
                     )}
@@ -1413,9 +1457,10 @@ export default function Sanier() {
                   <Ins emoji="👨‍🔧" text={t.sanTip2} type="good" />
                 )}
                 <Ins emoji="📝" text={t.sanTip3} type="warn" />
-                {(+d.baujahr || 1981) < 1977 && (
-                  <Ins emoji="⚠️" text={`${t.sBJ} ${d.baujahr || 1981}: GEG § 47`} type="warn" />
-                )}
+                {(+d.baujahr || 1981) < 1977 &&
+                  !["dach", "ogdecke"].some((k) => bauteilStatus[k]?.herkunft === "modernisiert") && (
+                    <Ins emoji="⚠️" text={`${t.sBJ} ${d.baujahr || 1981}: GEG § 47`} type="warn" />
+                  )}
                 {d.sanHa === "alt" &&
                   (d.sanHt === "heizoel" || d.sanHt === "gas" || d.sanHt === "kohle") && (
                     <Ins emoji="🔥" text={t.sanTip4} type="bad" />

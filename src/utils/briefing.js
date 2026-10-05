@@ -36,6 +36,7 @@ import {
 } from "./investmentScore.js";
 import { loeseFuerCashflowNull } from "./aiTools.js";
 import { fmt } from "./helpers.js";
+import { bewerteBauteile, effektivesBaujahr, hatModernisierungen, investitionsbedarf } from "./bauteile.js";
 
 // Re-Export: energieKlasse()/RUECKLAGE_MINDEST leben jetzt fachlich in
 // investmentScore.js (D4), briefingFlaggen() unten braucht dieselbe
@@ -281,7 +282,7 @@ export function briefingVergleiche(d, R, opt = {}) {
   // diesen Zusatz war das Mietpotenzial bisher fachlich falsch dargestellt
   // (Problem 7 der Spec).
   if (flaeche > 0 && kaltmiete > 0 && ref?.mieteWohnung > 0) {
-    const eigen = kaltmiete / flaeche;
+    const eigen = wohnKaltmiete(d) / flaeche;
     const abw = abweichung(eigen, ref.mieteWohnung);
     const status = vergleichStatus(
       abw,
@@ -729,7 +730,9 @@ export function briefingFlaggen(d, _t, R, K, opt = {}) {
   // Ohne Baujahr KEINE Flagge - lieber keine Aussage als eine geratene
   // Schwelle (§6.5).
   if (baujahr > 0 && flaeche > 0) {
-    const mindest = RUECKLAGE_MINDEST.find((s) => baujahr <= s.bisBaujahr)?.euroQmMonat ?? null;
+    // Mit erfassten Modernisierungen zaehlt das effektive Baujahr (bauteile.js).
+    const bjRuecklage = effektivesBaujahr(d) || baujahr;
+    const mindest = RUECKLAGE_MINDEST.find((s) => bjRuecklage <= s.bisBaujahr)?.euroQmMonat ?? null;
     const istQm = nichtUml / flaeche;
     if (mindest != null && istQm < mindest) {
       flaggen.push({
@@ -744,7 +747,7 @@ export function briefingFlaggen(d, _t, R, K, opt = {}) {
   // Gleiche Grenze wie Vergleichskachel V2, damit nicht zwei Stellen
   // unterschiedlich definieren, was "ueber Markt" heisst.
   if (ref?.mieteWohnung > 0 && flaeche > 0 && kaltmiete > 0) {
-    const eigenQm = kaltmiete / flaeche;
+    const eigenQm = wohnKaltmiete(d) / flaeche;
     const grenze = ref.mieteWohnung * (1 + TOLERANZ_PROZENT / 100);
     if (eigenQm > grenze) {
       flaggen.push({
@@ -821,6 +824,16 @@ export function briefingSpannen(d, t, ref) {
   };
 }
 
+// Wohnmiete fuer Vergleiche mit der ortsueblichen WOHNmiete (V2, Flagge "ueber
+// Markt", D5): bei Mehrfamilienhaeusern mit Gewerbe (Lager, Laden) steckt die
+// Gewerbemiete in d.kaltmiete und wuerde die Miete je m² Wohnflaeche kuenstlich
+// anheben. In der Rendite bleibt die Gesamtmiete - das ist echtes Einkommen.
+export function wohnKaltmiete(d) {
+  const gesamt = +d?.kaltmiete || 0;
+  const gewerbe = Math.max(0, +d?.gewerbemiete || 0);
+  return Math.max(0, gesamt - gewerbe);
+}
+
 // ── Modernisierungsbedarf ────────────────────────────────────────────────────
 // Regelbasiert, keine KI (Baustein 4, Nutzer-Entscheidung 2026-09-23) -
 // dieselbe Fachlogik wie D4 in investmentScore.js (Heizungsalter,
@@ -834,7 +847,41 @@ const MODBEDARF_PUNKTE = {
   energieklasse: (k) => (["F", "G", "H"].includes(k) ? 2 : ["D", "E"].includes(k) ? 1 : 0),
 };
 
+// Mit erfassten Modernisierungen (d.modernisierungen) urteilt die Stufe nach
+// Bauteilen statt nach dem Baujahr: ueberfaellig 2 Punkte, endet in der
+// Haltedauer 1, gut 0 - dieselben Stufengrenzen wie unten. Gruende sind dann
+// "bt:<bauteil>"-Schluessel (BriefingVisuals.modGrundText).
+function modernisierungsbedarfBauteile(d) {
+  const liste = bewerteBauteile(d);
+  if (liste.length === 0) return null;
+  const klasse = d.energieeffizienzklasse || energieKlasse(d.sanIstVerbrauch);
+  const punkte = liste.map((b) => (b.status === "ueberfaellig" ? 2 : b.status === "im_zeitraum" ? 1 : 0));
+  const kp = klasse ? MODBEDARF_PUNKTE.energieklasse(klasse) : null;
+  const alle = kp == null ? punkte : [...punkte, kp];
+  const quote = alle.reduce((a, x) => a + x, 0) / (alle.length * 2);
+  const stufe = quote >= 0.66 ? "hoch" : quote >= 0.33 ? "mittel" : "gering";
+  const gruende = [
+    ...liste.filter((b) => b.status !== "gut").map((b) => `bt:${b.key}`),
+    ...(kp ? ["energieklasse"] : []),
+  ];
+  return {
+    verfuegbar: true,
+    stufe,
+    gruende,
+    baujahr: +d.baujahr || null,
+    heizungsalter: d.sanHa || null,
+    energieklasse: klasse || null,
+    bauteile: liste,
+    staerken: liste.filter((b) => b.status === "gut" && b.herkunft !== "baujahr"),
+    investition: investitionsbedarf(d),
+  };
+}
+
 export function modernisierungsbedarf(d) {
+  if (hatModernisierungen(d)) {
+    const neu = modernisierungsbedarfBauteile(d);
+    if (neu) return neu;
+  }
   const baujahr = +d.baujahr || 0;
   const heizungsalter = d.sanHa || null;
   const klasse = d.energieeffizienzklasse || energieKlasse(d.sanIstVerbrauch);

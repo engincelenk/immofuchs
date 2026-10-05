@@ -18,6 +18,7 @@ import { berechneKennzahlen } from "../../utils/kennzahlen.js";
 import { berechneBriefing, briefingZahlen } from "../../utils/briefing.js";
 import { getSessionId } from "../../utils/assistantSession.js";
 import { rufeAnalyseAuf, analyseFehlertext, erteileConsent } from "../../utils/aiAnalyse.js";
+import { bauteileFuerKi, leseKernfakten } from "../../utils/bauteile.js";
 import { rufeLageAnalyseAuf } from "../../utils/lageAnalyse.js";
 import {
   regionalFakten,
@@ -241,6 +242,12 @@ export function ObjektDetail({ objekt, onBack }) {
         // Kein Score mehr im Prompt (Spec §7.2, Regel E3): die Ampel ist
         // regelbasiert ohne Score, und das Briefing-Schema verbietet dem
         // Modell, einen Score zu nennen (worker/src/analysePrompt.ts).
+        // Bauteile mit effektivem Alter (bauteile.js) und Kernfakten aus dem Exposé - damit
+        // die KI Modernisierungen als Staerke und faellige Bauteile als Risiko begruenden kann.
+        ...(bauteileFuerKi(basis).length > 0 ? { bauteile: bauteileFuerKi(basis).join("; ") } : {}),
+        ...(leseKernfakten(basis.kernfakten).length > 0 ? { kernfakten: leseKernfakten(basis.kernfakten).join("; ") } : {}),
+        ...(+basis.wohneinheiten > 1 ? { wohneinheiten: +basis.wohneinheiten } : {}),
+        ...(+basis.gewerbemiete > 0 ? { gewerbemieteMonat: +basis.gewerbemiete } : {}),
         // Modernisierungsbedarf wie auf der Karte (briefing.js modernisierungsbedarf), damit der
         // KI-Begruendungssatz zur selben Stufe passt wie der Chip.
         ...(briefing?.modernisierungsbedarf?.verfuegbar
@@ -362,6 +369,27 @@ export function ObjektDetail({ objekt, onBack }) {
   // Gespeichert wird am Objekt; ist dieses Objekt gerade im Rechner geoeffnet
   // (oder zeigt die Seite ohnehin den Rechnerstand), wird auch der Rechner-
   // State gesetzt, damit beide Seiten dieselben Zahlen zeigen.
+  // Investitionsbedarf aus der Bauteil-Logik (bauteile.js) in die
+  // Renovierungskosten uebernehmen - ausdruecklich per Knopf, nie still.
+  // investitionUebernommen merkt sich den Betrag, damit ein zweiter Klick nichts doppelt addiert.
+  async function uebernimmInvestition(betrag) {
+    const bisher = +basis.renovierung || 0;
+    const schon = +basis.investitionUebernommen || 0;
+    const neu = { renovierung: String(Math.round(bisher - schon + betrag)), investitionUebernommen: String(betrag) };
+    setDatenUeberlagerung((alt) => ({ ...(alt || {}), ...neu }));
+    if (!hasFullInput || aktivesObjekt?.id === objekt.id) {
+      set("renovierung", neu.renovierung);
+      set("investitionUebernommen", neu.investitionUebernommen);
+    }
+    if (hasFullInput) {
+      try {
+        await updateObj(objekt.id, objekt.title || "Objekt", { ...basis, ...neu });
+      } catch (err) {
+        console.error("[Objekt] Investitionsbedarf nicht gespeichert:", err);
+      }
+    }
+  }
+
   async function setzeNkFinanzieren(an) {
     setDatenUeberlagerung((alt) => ({ ...(alt || {}), nkFinanzieren: an }));
     if (!hasFullInput || aktivesObjekt?.id === objekt.id) set("nkFinanzieren", an);
@@ -564,6 +592,7 @@ export function ObjektDetail({ objekt, onBack }) {
         onExpose={oeffneExpose}
         onRenditerechner={() => inRechner("haupt")}
         onNkFinanzieren={setzeNkFinanzieren}
+        onInvestitionUebernehmen={uebernimmInvestition}
       />
 
       {/* Platz fuer die fixierte Leiste unten (nur mobil, siehe COCKPIT_CSS) -

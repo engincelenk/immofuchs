@@ -1290,7 +1290,32 @@ const eintragenLink = {
 const MODBEDARF_LABEL = { gering: "Gering", mittel: "Mittel", hoch: "Hoch" };
 const MODBEDARF_FARBE = { gering: "gruen", mittel: "gelb", hoch: "rot" };
 
+// Bauteil-Name und Statuszeile (bauteile.js) - "Elektrik 1999 · Nutzungsdauer 25 J. überschritten".
+function bauteilName(t, key) {
+  return L(t, `bt_${key}`, key);
+}
+function bauteilZeile(b, t) {
+  const jahr = b.herkunft === "modernisiert" ? (b.jahr ?? L(t, "btJahrUnbekannt", "Jahr unbekannt")) : b.jahr;
+  const was =
+    b.herkunft === "heizungsalter"
+      ? L(t, "btAusHeizungsalter", "laut Heizungsalter")
+      : b.herkunft === "baujahr"
+        ? L(t, "btStandBaujahr", "Stand Baujahr {j}").replace("{j}", jahr)
+        : `${b.umfang === "teilweise" ? L(t, "btTeilweise", "teilweise") + " " : ""}${jahr}`;
+  const status =
+    b.status === "ueberfaellig"
+      ? L(t, "btUeberfaellig", "Nutzungsdauer ({n} J.) überschritten")
+      : b.status === "im_zeitraum"
+        ? L(t, "btImZeitraum", "Nutzungsdauer endet ca. {e}")
+        : L(t, "btGut", "hält bis ca. {e}");
+  return `${bauteilName(t, b.key)} ${was} · ${status.replace("{n}", b.lebensdauer).replace("{e}", b.endeJahr)}`;
+}
+
 function modGrundText(key, m, t) {
+  if (key.startsWith("bt:")) {
+    const b = m.bauteile?.find((x) => x.key === key.slice(3));
+    return b ? bauteilZeile(b, t) : "";
+  }
   if (key === "baujahr") {
     return (m.baujahr < 1979
       ? L(t, "brfModBaujahrAlt", "Baujahr {j} (vor 1979)")
@@ -1347,6 +1372,8 @@ const begruendungStil = { fontSize: 12.5, lineHeight: 1.45, color: "var(--ch)", 
 export function SchrittRisiken({
   ergebnis,
   modernisierungsbedarf: m,
+  data = null,
+  onInvestitionUebernehmen = null,
   t,
   laufend,
   fehlerText,
@@ -1367,8 +1394,13 @@ export function SchrittRisiken({
   const modernisierungText = ergebnis ? modernisierungTextVon(ergebnis) : "";
   const modText =
     m?.verfuegbar && m.gruende.length > 0
-      ? m.gruende.map((g) => modGrundText(g, m, t)).join(", ")
+      ? m.gruende.map((g) => modGrundText(g, m, t)).join(m.bauteile ? "; " : ", ")
       : null;
+  // Staerken aus der Bauteil-Logik (erneuert, lange Restlebensdauer) - regelbasiert,
+  // unabhaengig von der KI-Analyse.
+  const bauteilStaerken = m?.staerken || [];
+  const inv = m?.investition;
+  const invUebernommen = +data?.investitionUebernommen > 0 && +data.investitionUebernommen === inv?.summe;
 
   return (
     <section id="schritt-risiken" aria-labelledby="schritt-risiken-titel" className="bv bv-auf cockpit-s4" style={{ ...karte, marginTop: 0, scrollMarginTop: 78 }}>
@@ -1417,6 +1449,15 @@ export function SchrittRisiken({
             </span>
           </div>
         ))}
+        {bauteilStaerken.map((b) => (
+          <div key={`bt-${b.key}`} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <Chip farbe="gruen" text={L(t, "brfStaerkeChip", "Stärke")} />
+            <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)", minWidth: 0 }}>
+              {L(t, "btErneuert", "{bt} erneuert").replace("{bt}", bauteilName(t, b.key))}
+              <span style={{ display: "block", ...begruendungStil }}>{bauteilZeile(b, t)}</span>
+            </span>
+          </div>
+        ))}
         {modText && (
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <Chip
@@ -1426,6 +1467,33 @@ export function SchrittRisiken({
             <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: "var(--ct)", minWidth: 0 }}>
               {modText}
               {modernisierungText && <span style={{ display: "block", ...begruendungStil }}>{modernisierungText}</span>}
+              {inv?.posten?.length > 0 && (
+                <span style={{ display: "block", ...begruendungStil }}>
+                  {inv.summe > 0
+                    ? L(t, "btInvestition", "Absehbarer Investitionsbedarf in {j} Jahren: ca. {b} (grob, Standardausführung, Mengen aus der Wohnfläche geschätzt).")
+                        .replace("{j}", String(+data?.jahre || 10))
+                        .replace("{b}", fmtE(inv.summe))
+                    : ""}
+                  {inv.ohneSchaetzung.length > 0
+                    ? ` ${L(t, "btOhneSchaetzung", "Ohne Kostenschätzung: {liste}.").replace(
+                        "{liste}",
+                        inv.ohneSchaetzung.map((k) => bauteilName(t, k)).join(", "),
+                      )}`
+                    : ""}
+                </span>
+              )}
+              {inv?.summe > 0 && onInvestitionUebernehmen && (
+                <button
+                  type="button"
+                  disabled={invUebernommen}
+                  onClick={() => onInvestitionUebernehmen(inv.summe)}
+                  style={{ ...textLink, display: "block", marginTop: 6, opacity: invUebernommen ? 0.6 : 1 }}
+                >
+                  {invUebernommen
+                    ? L(t, "btUebernommen", "In die Renovierungskosten übernommen ✓")
+                    : L(t, "btUebernehmen", "In die Renovierungskosten übernehmen")}
+                </button>
+              )}
             </span>
           </div>
         )}

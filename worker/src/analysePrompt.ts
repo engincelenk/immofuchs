@@ -193,6 +193,13 @@ Zu den einzelnen Feldern:
 - staerken/risiken/hebel, Feld "text": der text BEGINNT mit einem eigenstaendigen Begruendungssatz
   (warum ist das so?), der auch allein verstaendlich ist - die Karte zeigt nur diesen ersten
   Satz unter der Ueberschrift. Danach darf eine Vertiefung folgen.
+- "bauteile" (falls mitgeliefert) nennt je Bauteil, wann es erneuert wurde, die Nutzungsdauer und
+  ob sie noch reicht. Erneuerte Bauteile mit langer Restlebensdauer sind STAERKEN (z.B. "Heizung
+  2024 erneuert"), Bauteile mit ueberschrittener oder in der Haltedauer endender Nutzungsdauer sind
+  RISIKEN. "kernfakten" (falls mitgeliefert) sind belegte Angaben aus dem Exposé - nutze sie fuer
+  staerken/risiken, wenn sie wirtschaftlich zaehlen (Mieterschaft, Einheitenmix, Hausmeister).
+  "gewerbemieteMonat" ist der Gewerbeanteil der Kaltmiete: weise auf die Abhaengigkeit hin, wenn er
+  einen nennenswerten Anteil ausmacht.
 - modernisierung: ein Satz, der den mitgelieferten "modernisierungsbedarf" (gering/mittel/hoch)
   mit den genannten Gruenden (Baujahr, Heizung, Energieklasse) begruendet. Keine Kosten nennen,
   keine Zahlen erfinden. Ist kein modernisierungsbedarf mitgeliefert, bleibt das Feld ein leerer String.
@@ -251,6 +258,11 @@ erstellten Auswertungen zu genau diesem Objekt. Leite deine Fragen DARAUS ab, st
 allgemeine Checkliste zu wiederholen: Was in den Befunden unsicher, auffaellig oder
 begruendungsbeduerftig ist, gehoert vor Ort geklaert. Wiederhole die Befunde nicht, sondern
 mache Fragen daraus.
+
+Sind "bauteile" (Modernisierungen mit Jahr und Status) oder "kernfakten" mitgeliefert, nutze sie:
+frage nach Nachweisen zu erneuerten Bauteilen (Rechnungen, Jahr), nach dem genauen Umfang bei
+"teilweise" erneuerten oder Jahr unbekannten Bauteilen und nach den Plaenen fuer Bauteile, deren
+Nutzungsdauer ueberschritten ist oder in der Haltedauer endet.
 
 Jede Frage ist eine einzelne, konkrete Frage - kein Themenblock, keine Aufzaehlung mehrerer
 Fragen in einem Eintrag. Formuliere sie so, wie man sie beim Termin tatsaechlich stellt.

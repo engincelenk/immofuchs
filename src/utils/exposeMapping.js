@@ -8,6 +8,7 @@
 // 2. Uebernommen wird nichts automatisch. Die Karte liefert Vorschlaege, der
 //    Nutzer bestaetigt (Spec 8, Punkt 6/7: kein stilles Ueberschreiben).
 
+import { leseKernfakten, leseModernisierungen } from "./bauteile.js";
 import { VERBRAUCH_GRENZEN } from "../data.js";
 import { PLZ_DB } from "../data/plzData.js";
 import { fmt } from "./helpers.js";
@@ -156,7 +157,16 @@ export const FELD_DEFS = [
   // Anzahl Wohneinheiten im Haus: Basis fuer den eigenen Anteil an einer
   // Sonderumlage. Kein Ziel, weil `sonder` ein Euro-Betrag ist und sich daraus
   // allein nicht bestimmen laesst.
-  { key: "wohneinheiten", gruppe: "objekt", typ: "zahl" },
+  // Seit 2026-10-05 uebernommen (vorher nur Anzeige - im Objekt stand dann 1,
+  // was u. a. die foerderfaehigen Kosten im Sanierungsrechner je Wohneinheit verfaelschte).
+  {
+    key: "wohneinheiten",
+    gruppe: "objekt",
+    typ: "zahl",
+    ziele: ["wohneinheiten"],
+    transform: (wert) => (+wert >= 1 ? String(Math.round(+wert)) : null),
+  },
+  { key: "gewerbeeinheiten", gruppe: "objekt", typ: "zahl" },
   {
     key: "vermietet",
     gruppe: "objekt",
@@ -242,19 +252,53 @@ export const FELD_DEFS = [
   { key: "kaufnebenkosten", gruppe: "kosten", typ: "zahl", einheit: "€", immerPruefen: true },
   { key: "gesamtkosten", gruppe: "kosten", typ: "zahl", einheit: "€" },
   { key: "kaltmiete", gruppe: "kosten", typ: "zahl", einheit: "€", ziele: ["kaltmiete"] },
+  { key: "kaltmiete_jahr", gruppe: "kosten", typ: "zahl", einheit: "€" },
+  // Gewerbeanteil der Kaltmiete (Lager, Laden): bleibt in der Rendite, faellt aber aus
+  // den Vergleichen mit der ortsueblichen Wohnmiete heraus (briefing.wohnKaltmiete).
+  {
+    key: "gewerbemiete",
+    gruppe: "kosten",
+    typ: "zahl",
+    einheit: "€",
+    ziele: ["gewerbemiete"],
+    transform: (wert) => (+wert > 0 ? String(+wert) : null),
+  },
   { key: "nebenkosten_miete", gruppe: "kosten", typ: "zahl", einheit: "€" },
 
+  { key: "letzte_modernisierung_jahr", gruppe: "modernisierung", typ: "zahl", ohneTrenner: true },
+  {
+    key: "massnahmen",
+    gruppe: "modernisierung",
+    typ: "liste",
+    ziele: ["modernisierungen"],
+    transform: (wert) => {
+      const liste = leseModernisierungen(wert);
+      return liste.length > 0 ? liste : null;
+    },
+  },
+  {
+    key: "kernfakten",
+    gruppe: null,
+    typ: "liste",
+    ziele: ["kernfakten"],
+    transform: (wert) => {
+      const liste = leseKernfakten(wert);
+      return liste.length > 0 ? liste : null;
+    },
+  },
   { key: "objektbeschreibung", gruppe: "kontext", typ: "text" },
   { key: "lagebeschreibung", gruppe: "kontext", typ: "text" },
 ];
 
-export const GRUPPEN = ["objekt", "ausstattung", "energie", "kosten", "kontext"];
+export const GRUPPEN = ["objekt", "ausstattung", "energie", "kosten", "modernisierung", "kontext"];
 
 // Hausgeld hat bewusst KEIN Ziel: `nichtUml` im Renditerechner ist nur der
 // nicht umlagefaehige Anteil des Hausgelds, nicht das Hausgeld selbst. Eine
 // 1:1-Uebernahme wuerde die Kosten deutlich zu hoch ansetzen.
 
 function holeWert(ergebnis, def) {
+  // gruppe null: Feld liegt auf oberster Ebene (kernfakten).
+  if (def.gruppe === null) return ergebnis?.[def.key] ?? null;
   const gruppe = ergebnis?.[def.gruppe];
   return gruppe ? (gruppe[def.key] ?? null) : null;
 }
@@ -262,6 +306,20 @@ function holeWert(ergebnis, def) {
 function formatiere(def, wert, t) {
   if (wert === null || wert === undefined || wert === "") return null;
   if (def.typ === "bool") return wert ? t.ja : t.nein;
+  if (def.typ === "liste") {
+    if (!Array.isArray(wert) || wert.length === 0) return null;
+    if (def.key === "massnahmen") {
+      return leseModernisierungen(wert)
+        .map(
+          (m) =>
+            `${t.bauteile?.[m.bauteil] || m.bauteil} ${m.jahr ?? t.jahrUnbekannt ?? "?"}${
+              m.umfang === "teilweise" ? ` (${t.teilweise || "teilweise"})` : ""
+            }`,
+        )
+        .join(", ");
+    }
+    return wert.join(" · ");
+  }
   if (def.typ === "zahl") {
     // Ohne feste Vorgabe richtet sich die Genauigkeit nach dem Wert: 3 Zimmer
     // bleiben "3", 80,05 m² bleiben "80,05" statt auf "80" gerundet zu werden.
@@ -288,7 +346,8 @@ export function baueZeilen(ergebnis, d, t) {
 
   return FELD_DEFS.map((def) => {
     const wert = holeWert(ergebnis, def);
-    const gefunden = wert !== null && wert !== undefined && wert !== "";
+    const gefunden =
+      wert !== null && wert !== undefined && wert !== "" && !(Array.isArray(wert) && wert.length === 0);
     const warnung = warnungen.find((w) => w.feld === def.key)?.hinweis ?? null;
     const conf = confidence[def.key] ?? (gefunden ? "unsicher" : "nicht_gefunden");
 
@@ -342,6 +401,10 @@ function zielFuer(def, wert, gefunden, ergebnis) {
 // `ergebnis` wird fuer Felder gebraucht, die einen zweiten Wert nachziehen.
 export function uebernehmeZeilen(zeilen, auswahl, set, ergebnis) {
   let anzahl = 0;
+  // Nachvollziehbarkeit (Nutzer-Test 2026-10-05: woher kam eine Kaltmiete von 6.000?):
+  // das Scan-Ergebnis bleibt kompakt am Objekt gespeichert - ohne Beschreibungstexte
+  // und Bilddaten, aber mit allen Zahlen, Widerspruechen und Warnungen.
+  if (ergebnis) set("exposeScan", exposeScanKompakt(ergebnis));
   for (const zeile of zeilen) {
     if (!zeile.uebernehmbar || !auswahl.has(zeile.key)) continue;
     for (const ziel of zeile.ziele) set(ziel, zeile.neuerWert);
@@ -382,6 +445,18 @@ export function uebernehmeZeilen(zeilen, auswahl, set, ergebnis) {
 // Wohnflaeche die Kaltmiete neu berechnen.
 export function enthaeltKaltmiete(zeilen, auswahl) {
   return zeilen.some((z) => z.key === "kaltmiete" && z.uebernehmbar && auswahl.has(z.key));
+}
+
+export function exposeScanKompakt(ergebnis, jetzt = new Date()) {
+  return {
+    zeitpunkt: jetzt.toISOString(),
+    objekt: ergebnis?.objekt ?? null,
+    kosten: ergebnis?.kosten ?? null,
+    modernisierung: ergebnis?.modernisierung ?? null,
+    kernfakten: ergebnis?.kernfakten ?? [],
+    abweichungen: ergebnis?.abweichungen ?? [],
+    warnungen: ergebnis?.warnungen ?? [],
+  };
 }
 
 // Kopfzeile der Karte: "18 von 22 Feldern gefunden · 3 zu pruefen" (Spec 8).

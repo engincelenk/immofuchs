@@ -90,6 +90,7 @@ export function InvestmentBriefing({
   onLageConsentAbbrechen,
   onBearbeiten = null,
   onNkFinanzieren = null,
+  onInvestitionUebernehmen = null,
 }) {
   const { lang } = useApp();
   const [bestaetigen, setBestaetigen] = useState(false);
@@ -247,6 +248,8 @@ export function InvestmentBriefing({
         <SchrittRisiken
           ergebnis={ergebnis}
           modernisierungsbedarf={briefing.modernisierungsbedarf}
+          data={data}
+          onInvestitionUebernehmen={onInvestitionUebernehmen}
           t={t}
           laufend={laufend}
           fehlerText={fehlerText}

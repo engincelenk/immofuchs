@@ -28,6 +28,7 @@ const GRUPPEN_LABEL = {
   ausstattung: "gruppeAusstattung",
   energie: "gruppeEnergie",
   kosten: "gruppeKosten",
+  modernisierung: "gruppeModernisierung",
   kontext: "gruppeKontext",
 };
 

@@ -1,3 +1,4 @@
+import { wohnKaltmiete } from "../../utils/briefing.js";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { isK15 } from "../../data/plzData.js";
@@ -95,7 +96,9 @@ export default function Miete() {
     }
   }, [regGeladen, d.bundesland, d.ort, d.plz, d.vergleichsmiete]);
   const R = useMemo(() => {
-    const mi = +d.kaltmiete || 0,
+    // § 558 BGB gilt nur fuer Wohnraum: bei Gewerbeanteil (d.gewerbemiete, z. B. Lagerhalle)
+    // rechnet die Mieterhoehung nur mit der Wohnmiete.
+    const mi = wohnKaltmiete(d),
       qm = +d.flaeche || 1,
       vQ = +d.vergleichsmiete || 0,
       j = +d.mietJahre || 10;
@@ -121,6 +124,15 @@ export default function Miete() {
             onChange={(v) => set("kaltmiete", v)}
             tip={tip("kaltmiete")}
           />
+          {+d.gewerbemiete > 0 && (
+            <Ins
+              emoji="🏬"
+              text={(t.miGewerbeHinweis || "Davon Gewerbe {g} €/Mon. – die Mieterhöhung (§ 558 BGB) rechnet nur mit der Wohnmiete {w} €/Mon.")
+                .replace("{g}", fmt(+d.gewerbemiete, 0))
+                .replace("{w}", fmt(wohnKaltmiete(d), 0))}
+              type="info"
+            />
+          )}
           <Row>
             <F
               label={t.flaeche}
@@ -398,7 +410,7 @@ export default function Miete() {
                 <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>{t.advTitle}</div>
                 {(() => {
                   const nx = R.rows && R.rows[0];
-                  const mi = +d.kaltmiete || 0;
+                  const mi = wohnKaltmiete(d);
                   const vm = +d.vergleichsmiete || 0;
                   const lD = d.letzteErhDatum ? new Date(d.letzteErhDatum) : null;
                   const jetzt = new Date();

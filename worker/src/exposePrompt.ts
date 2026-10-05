@@ -38,6 +38,7 @@ export const EXPOSE_JSON_SCHEMA = {
       baujahr: N,
       zustand: S,
       wohneinheiten: N,
+      gewerbeeinheiten: N,
       vermietet: B,
       vermietet_seit: S,
     }),
@@ -65,8 +66,21 @@ export const EXPOSE_JSON_SCHEMA = {
       kaufnebenkosten: N,
       gesamtkosten: N,
       kaltmiete: N,
+      kaltmiete_jahr: N,
+      gewerbemiete: N,
       nebenkosten_miete: N,
     }),
+    modernisierung: gruppe({
+      letzte_modernisierung_jahr: N,
+      massnahmen: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: { bauteil: { type: "string" }, jahr: N, umfang: S },
+        },
+      },
+    }),
+    kernfakten: { type: "array", items: { type: "string" } },
     kontext: gruppe({ objektbeschreibung: S, lagebeschreibung: S }),
     bild: gruppe({ titelbild_index: N, bildbeschreibung: S }),
     confidence: { type: "object" },
@@ -102,7 +116,8 @@ const SCHEMA = `{
     "nutzflaeche": number|null,
     "plz": string|null, "ort": string|null, "strasse": string|null, "hausnummer": string|null,
     "stockwerk": string|null, "baujahr": number|null, "zustand": string|null,
-    "wohneinheiten": number|null, "vermietet": boolean|null, "vermietet_seit": string|null
+    "wohneinheiten": number|null, "gewerbeeinheiten": number|null,
+    "vermietet": boolean|null, "vermietet_seit": string|null
   },
   "ausstattung": {
     "balkon_terrasse": boolean|null, "einbaukueche": boolean|null, "stellplatz": string|null,
@@ -118,8 +133,15 @@ const SCHEMA = `{
     "hausgeld": number|null, "hausgeld_nicht_umlagefaehig": number|null,
     "ruecklage_monatlich": number|null, "provision_kaeufer_prozent": number|null,
     "kaufnebenkosten": number|null, "gesamtkosten": number|null,
-    "kaltmiete": number|null, "nebenkosten_miete": number|null
+    "kaltmiete": number|null, "kaltmiete_jahr": number|null, "gewerbemiete": number|null,
+    "nebenkosten_miete": number|null
   },
+  "modernisierung": {
+    "letzte_modernisierung_jahr": number|null,
+    "massnahmen": [ { "bauteil": "heizung"|"fenster"|"fassade"|"dach"|"elektrik"|"leitungen"|"bad"|"tuer"|"kellerdecke"|"ogdecke",
+                      "jahr": number|null, "umfang": "komplett"|"teilweise" } ]
+  },
+  "kernfakten": [ string ],
   "kontext": { "objektbeschreibung": string|null, "lagebeschreibung": string|null },
   "bild": { "titelbild_index": number|null, "bildbeschreibung": string|null },
   "confidence": { "<feldname>": "sicher"|"unsicher"|"nicht_gefunden" },
@@ -190,6 +212,41 @@ Regeln:
 - "wohneinheiten" ist die Zahl der Wohnungen im GESAMTEN Haus ("umfasst 12
   Wohneinheiten"), nicht die Zimmerzahl der angebotenen Wohnung.
 - "stellplatz_anzahl" ist die Anzahl der zur Wohnung gehoerenden Stellplaetze.
+- "gewerbeeinheiten" ist die Zahl der Gewerbeeinheiten im Haus (Laden, Buero, Lager,
+  Lagerhalle), "wohneinheiten" zaehlt nur Wohnungen.
+- MIETE - "kaltmiete" ist die aktuelle IST-Nettokaltmiete PRO MONAT fuer das GESAMTE
+  angebotene Objekt (bei einem Mehrfamilienhaus: Summe aller Einheiten, Wohnen UND
+  Gewerbe). Reihenfolge der Quellen:
+  1. Gibt es eine Aufstellung je Einheit (Mieterliste, "Wohnung 1: ... 350 EUR kalt"),
+     addiere alle Einheiten EXAKT - nicht runden. Beispiel: Wohnungen zusammen
+     4.975 EUR/Monat + Lagerhalle 700 EUR + 300 EUR ergibt kaltmiete=5975.
+  2. Sonst eine ausdruecklich monatliche Gesamtangabe.
+  3. Sonst eine Jahresangabe ("Mieteinnahmen p.a.", "Jahresnettokaltmiete") geteilt
+     durch 12 (auf Cent genau, z.B. 70000/12 = 5833.33).
+  Runde NIE auf glatte Betraege und schaetze nicht. "kaltmiete_jahr" ist die im Expose
+  genannte JAHRES-Kaltmiete (unveraendert, so wie angegeben). "gewerbemiete" ist der
+  monatliche Anteil der Gewerbeeinheiten an "kaltmiete" (null, wenn es kein Gewerbe gibt).
+  Widersprechen sich Angaben (z.B. "70.000 EUR p.a." vs. Summe der Einheiten 71.700
+  EUR p.a.), nimm die Einzelaufstellung und trage den Widerspruch in "abweichungen" ein.
+  Soll-/Zielmieten oder Mietpotenzial gehoeren NICHT in "kaltmiete".
+- MODERNISIERUNG - "massnahmen" listet jede erkennbare Erneuerung eines Bauteils mit
+  Jahr. Zulaessige Werte fuer "bauteil": heizung, fenster, fassade (Daemmung/WDVS),
+  dach (Eindeckung oder Daemmung), elektrik, leitungen (Wasser/Abwasser), bad,
+  tuer (Haustuer), kellerdecke, ogdecke (oberste Geschossdecke). Andere Bauteile weglassen.
+  "jahr": das Jahr der Massnahme. Steht die Massnahme im selben Satz/Absatz wie eine
+  Jahresangabe ("1999 umfassend modernisiert: ... Kunststofffenster ... Elektrik"),
+  gilt dieses Jahr fuer jede dort genannte Massnahme. Ohne erkennbares Jahr: null.
+  "umfang": "teilweise", wenn das Expose es so sagt ("teilweise gedaemmt",
+  "ueberwiegend erneuert" zaehlt als "komplett"), sonst "komplett".
+  "letzte_modernisierung_jahr" ist die Angabe "Letzte Modernisierung/Sanierung", falls
+  vorhanden. Eine erneuerte Heizung mit Jahr gehoert zusaetzlich nach
+  "ausstattung.baujahr_waermeerzeuger".
+- KERNFAKTEN - "kernfakten" sind bis zu 10 kurze, belegte Aussagen aus dem Expose, die
+  fuer einen Kapitalanleger zaehlen und in keinem anderen Feld stehen (je hoechstens 120
+  Zeichen), z.B. "8 Wohneinheiten und 1 Lagerhalle", "Mieter zahlen puenktlich",
+  "Hausmeisterdienst durch einen Bewohner", "Grundstueck ca. 563 m2",
+  "Bodentiefe Fenster in den oberen Wohnungen". Keine Werbefloskeln
+  ("attraktive Investitionsmoeglichkeit"), keine Wiederholung von Kaufpreis/Flaeche.
 - Wenn ein Feld nicht auffindbar ist: null setzen, confidence "nicht_gefunden"
 - Wenn ein Feld nur indirekt ableitbar ist (z.B. Stockwerk aus dem Titel):
   Wert trotzdem setzen, aber confidence "unsicher"

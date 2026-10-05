@@ -38,6 +38,8 @@ function ergebnis(overrides = {}) {
       kaufnebenkosten: 28433,
       ...(overrides.kosten ?? {}),
     },
+    ...(overrides.modernisierung ? { modernisierung: overrides.modernisierung } : {}),
+    ...(overrides.kernfakten ? { kernfakten: overrides.kernfakten } : {}),
     kontext: {},
     bild: {},
     confidence: { kaufpreis: "sicher", wohnflaeche: "sicher", ...(overrides.confidence ?? {}) },
@@ -389,14 +391,15 @@ describe("Uebernahme der neuen Felder", () => {
     expect(gesetzt.hausnummer).toBe("2");
   });
 
-  it("laesst Nutzflaeche und Wohneinheiten als reine Anzeige stehen", () => {
+  it("laesst Nutzflaeche als reine Anzeige stehen, uebernimmt Wohneinheiten (seit 2026-10-05)", () => {
     const zeilen = baueZeilen(
       ergebnis({ objekt: { nutzflaeche: 8, wohneinheiten: 22 } }),
       {},
       t,
     );
     expect(zeile(zeilen, "nutzflaeche").uebernehmbar).toBe(false);
-    expect(zeile(zeilen, "wohneinheiten").uebernehmbar).toBe(false);
+    expect(zeile(zeilen, "wohneinheiten").uebernehmbar).toBe(true);
+    expect(zeile(zeilen, "wohneinheiten").neuerWert).toBe("22");
   });
 });
 
@@ -416,5 +419,49 @@ describe("Mietbeginn ohne Kaltmiete-Uebernahme", () => {
     uebernehmeZeilen(zeilen, auswahl, (k, v) => (gesetzt[k] = v), erg);
     expect(gesetzt.letzteErhDatum).toBe("2025-10-01");
     expect(gesetzt.letzteErhMiete).toBeUndefined();
+  });
+});
+
+// Regressionsfall Expose Benningen (Nutzer-Test 2026-10-05).
+describe("Uebernahme Mehrfamilienhaus, Modernisierungen, Kernfakten", () => {
+  const benningen = ergebnis({
+    objekt: { kaufpreis: 1100000, wohnflaeche: 400, baujahr: 1970, wohneinheiten: 8, gewerbeeinheiten: 1 },
+    kosten: { kaltmiete: 5975, kaltmiete_jahr: 70000, gewerbemiete: 1000 },
+    modernisierung: {
+      letzte_modernisierung_jahr: 2024,
+      massnahmen: [
+        { bauteil: "fenster", jahr: 1999, umfang: "komplett" },
+        { bauteil: "fassade", jahr: 1999, umfang: "teilweise" },
+      ],
+    },
+    kernfakten: ["8 Wohneinheiten und 1 Lagerhalle"],
+  });
+
+  it("schreibt Miete, Gewerbeanteil, Einheiten, Modernisierungen, Kernfakten und den Scan-Nachweis", () => {
+    const zeilen = baueZeilen(benningen, {}, t);
+    const auswahl = new Set(zeilen.filter((z) => z.uebernehmbar).map((z) => z.key));
+    const d = {};
+    uebernehmeZeilen(zeilen, auswahl, (k, v) => (d[k] = v), benningen);
+    expect(d.kaltmiete).toBe("5975");
+    expect(d.gewerbemiete).toBe("1000");
+    expect(d.wohneinheiten).toBe("8");
+    expect(d.modernisierungen).toEqual([
+      { bauteil: "fenster", jahr: 1999, umfang: "komplett" },
+      { bauteil: "fassade", jahr: 1999, umfang: "teilweise" },
+    ]);
+    expect(d.kernfakten).toEqual(["8 Wohneinheiten und 1 Lagerhalle"]);
+    expect(d.exposeScan.kosten.kaltmiete_jahr).toBe(70000);
+    expect(d.exposeScan.objekt.wohneinheiten).toBe(8);
+  });
+
+  it("zeigt die Modernisierungen lesbar an", () => {
+    const z = zeile(baueZeilen(benningen, {}, t), "massnahmen");
+    expect(z.anzeige).toContain("1999");
+    expect(z.anzeige).toContain("(");
+  });
+
+  it("leere Listen gelten als nicht gefunden", () => {
+    const z = zeile(baueZeilen(ergebnis({ kernfakten: [] }), {}, t), "kernfakten");
+    expect(z.gefunden).toBe(false);
   });
 });
