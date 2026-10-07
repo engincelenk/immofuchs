@@ -141,6 +141,15 @@ export function triggerTestEmails() {
   return post("/admin/test-emails");
 }
 
+// Kaufsperre (worker/src/checkoutGate.ts)
+export function fetchCheckoutGate() {
+  return request("/admin/checkout-gate");
+}
+
+export function setCheckoutGate(open) {
+  return post("/admin/checkout-gate", { open });
+}
+
 export function fetchFeedback(page) {
   const params = new URLSearchParams();
   if (page) params.set("page", String(page));

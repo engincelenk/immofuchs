@@ -43,7 +43,7 @@ const VERTRAUEN = [
   { title: "trustDsgvoTitle", sub: "trustDsgvoSub", Icon: IconSchloss },
 ];
 
-export function PricingSection({ lang, onChoosePlan, aktuellerPlan = null }) {
+export function PricingSection({ lang, onChoosePlan, aktuellerPlan = null, checkoutOpen = true }) {
   const t = ACCOUNT_T[lang] || ACCOUNT_T.de;
   const locale = LANG_LOCALE[lang] || "de-DE";
 
@@ -111,9 +111,11 @@ export function PricingSection({ lang, onChoosePlan, aktuellerPlan = null }) {
                 ? t.planCtaCurrent
                 : aktuellerPlan === "yearly"
                   ? t.planCtaMonthlyLater
-                  : t.planProCta
+                  : checkoutOpen
+                    ? t.planProCta
+                    : t.planCtaSoon
             }
-            disabled={Boolean(aktuellerPlan)}
+            disabled={Boolean(aktuellerPlan) || !checkoutOpen}
             onCta={() => onChoosePlan("monthly")}
           />
           <PlanCard
@@ -132,9 +134,11 @@ export function PricingSection({ lang, onChoosePlan, aktuellerPlan = null }) {
                 ? t.planCtaCurrent
                 : aktuellerPlan === "monthly"
                   ? t.planCtaSwitchYearly
-                  : t.planProCta
+                  : checkoutOpen
+                    ? t.planProCta
+                    : t.planCtaSoon
             }
-            disabled={aktuellerPlan === "yearly"}
+            disabled={aktuellerPlan === "yearly" || !checkoutOpen}
             onCta={() => onChoosePlan("yearly")}
           />
         </div>

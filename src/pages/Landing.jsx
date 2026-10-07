@@ -1335,7 +1335,9 @@ export function Landing({ onStart, lang, setLang }) {
         // Wer bereits bezahlt, hat im Checkout nichts zu kaufen: Laufzeitwechsel laufen ueber das
         // Konto (Abonnement), nie ueber einen zweiten Kauf.
         aktuellerPlan={account?.zugang === "pro" ? account.me?.subscription?.plan || "monthly" : null}
+        checkoutOpen={Boolean(account?.checkoutOpen)}
         onChoosePlan={(plan) => {
+          if (!account?.checkoutOpen) return;
           if (account?.zugang === "pro") {
             setSectionKey("abo");
             setOpenMode("account");

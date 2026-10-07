@@ -81,7 +81,10 @@ export function ProHeaderButton() {
   // zurueck, war formal "Pro" - und der angefangene Kauf wurde nicht wieder
   // aufgenommen. Nur wer wirklich BEZAHLT hat, hat nichts mehr zu kaufen.
   const resumesCheckout =
-    Boolean(account?.pendingCheckout) && account?.isLoggedIn && account?.zugang !== "pro";
+    Boolean(account?.pendingCheckout) &&
+    account?.isLoggedIn &&
+    account?.zugang !== "pro" &&
+    Boolean(account?.checkoutOpen);
   const { dismissLoginSuccess } = account || {};
   useEffect(() => {
     if (!resumesCheckout) return;

@@ -6,6 +6,7 @@
 // dieses Pakets, siehe Paket 6 "Admin Panel".
 import { Hono } from "hono";
 import type { Env } from "../types";
+import { envCheckoutDefault, getCheckoutOverride, isCheckoutPublic, setCheckoutOverride } from "../checkoutGate";
 import {
   requireAuth,
   requireAdmin,
@@ -695,6 +696,33 @@ adminRoutes.post(
 adminRoutes.get("/dashboard", requireAuth, requireAdminRead, async (c) => {
   const stats = await getAdminDashboardStats(c.env.DB);
   return c.json(stats);
+});
+
+// Kaufsperre (worker/src/checkoutGate.ts): Status ablesen und umschalten.
+// "open" ist der wirksame Wert; "source" sagt, ob er aus dem Schalter (db) oder
+// aus der Variable CHECKOUT_ENABLED (env) stammt.
+adminRoutes.get("/checkout-gate", requireAuth, requireAdminRead, async (c) => {
+  const override = await getCheckoutOverride(c.env.DB);
+  return c.json({
+    open: override ?? envCheckoutDefault(c.env),
+    source: override === null ? "env" : "db",
+  });
+});
+
+adminRoutes.post("/checkout-gate", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (typeof body?.open !== "boolean") return c.json({ error: "invalid_body" }, 400);
+  const before = await isCheckoutPublic(c.env);
+  await setCheckoutOverride(c.env.DB, body.open);
+  await logAdminAction(c.env.DB, {
+    adminUserId: c.var.userId,
+    adminEmail: c.var.user.email,
+    action: "checkout_gate.set",
+    targetType: "setting",
+    targetId: "checkout_public",
+    details: { from: before, to: body.open },
+  });
+  return c.json({ open: body.open, source: "db" });
 });
 
 // Letzte Aktivitaeten (Admin-MVP Abschnitt 3). Read-Only, feste Obergrenze -

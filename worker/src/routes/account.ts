@@ -29,6 +29,8 @@ import { syncCustomerFromUser } from "../stripe/customerSync";
 import { TRIAL_DAUER_MS, TRIAL_LIMITS, TRIAL_MERKLISTE_GESAMT, trialTag } from "../trialLimits";
 import { buildClearSessionCookie, extractSessionId, logout } from "../auth/session";
 
+import { isCheckoutOpenFor } from "../checkoutGate";
+
 export const accountRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
 
 accountRoutes.get("/me", requireAuth, async (c) => {
@@ -55,6 +57,8 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     email: c.var.user.email,
     name: c.var.user.name,
     role: c.var.user.role,
+    // Kaufsperre (checkoutGate.ts): Admins und Testuser duerfen immer kaufen.
+    checkoutOpen: await isCheckoutOpenFor(c.env, c.var.user),
     emailVerified: Boolean(c.var.user.email_verified_at),
     hasUsedTrial: Boolean(c.var.user.trial_used_at),
     // Zugang und Testphase (Preispolitik 2026-08-20): `zugang` unterscheidet

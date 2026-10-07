@@ -22,12 +22,21 @@ import { dispatchNotification } from "../notifications";
 import { berechneWiderruf } from "../stripe/withdrawal";
 import { cleanName, formatZeitpunkt, kuendigen, widerrufen } from "../contractActions";
 
+import { isCheckoutOpenFor, isCheckoutPublic } from "../checkoutGate";
+
 export const billingRoutes = new Hono<{ Bindings: Env; Variables: AuthVars }>();
+
+// Oeffentlich: das Frontend braucht den Status auch fuer nicht angemeldete
+// Besucher (Preiskarten). Fuer eingeloggte Admins gilt zusaetzlich /me.checkoutOpen.
+billingRoutes.get("/checkout-status", async (c) => c.json({ open: await isCheckoutPublic(c.env) }));
 
 billingRoutes.post("/checkout", requireAuth, requireCsrfOrigin, async (c) => {
   // Guard (Spec-v3.0 Kap. 3.0): Zahlungs-/Trial-Start ist erst nach
   // bestaetigter E-Mail erlaubt (Betrugspraevention, Rechnungsstellung).
   if (!c.var.user.email_verified_at) return c.json({ error: "email_not_verified" }, 403);
+  // Kaufsperre (checkoutGate.ts): vor allem anderen, damit auch kein Gutschein-
+  // oder Stripe-Aufruf mehr ausgeloest wird.
+  if (!(await isCheckoutOpenFor(c.env, c.var.user))) return c.json({ error: "checkout_closed" }, 503);
   const body = await c.req.json().catch(() => null);
   const plan = body?.plan === "yearly" ? "yearly" : body?.plan === "monthly" ? "monthly" : null;
   if (!plan) return c.json({ error: "invalid_plan" }, 400);

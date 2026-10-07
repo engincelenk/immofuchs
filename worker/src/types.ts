@@ -258,6 +258,8 @@ export interface Env {
   // (AGB Ziffer 6, § 309 Nr. 9 BGB) - ueber eine Stripe Subscription Schedule, siehe
   // stripe/checkout.ts ensureYearlyToMonthlySchedule. Default aus.
   YEARLY_AUTO_MONTHLY?: string;
+  // "false": Kauf nur fuer Admin-Konten (checkoutGate.ts). Fehlt die Variable, ist der Kauf offen.
+  CHECKOUT_ENABLED?: string;
   // Empfaenger des oeffentlichen Kontaktformulars (Default info@immofuchs.info).
   CONTACT_EMAIL?: string;
   // Taeglicher D1<->Stripe-Abgleich (stripe/reconcile.ts): "log" (Default, nur

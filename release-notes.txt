@@ -1,3 +1,15 @@
+## 2026-10-07 (1.100.99) [FRONTEND+WORKER+MIGRATION]
+
+### Prod-Kaufsperre mit Admin-Ausnahme
+
+- Worker: Variable CHECKOUT_ENABLED = "false" (nur Top-Level/Prod in wrangler.toml; dev und qa bleiben offen) sperrt POST /billing/checkout
+  mit 503 checkout_closed. Admin-Konten duerfen weiter kaufen, so lassen sich Login und Kauf auf Prod testen.
+- Neu: oeffentlicher GET /billing/checkout-status, /me liefert checkoutOpen. Freischalten ohne Redeploy: Variable im Cloudflare-Dashboard auf "true" setzen.
+- Testuser (is_test_user) duerfen wie Admins trotz Sperre kaufen.
+- Admin Panel (Dashboard): Button "Kauf freigeben / sperren" mit Bestaetigung und Audit-Log-Eintrag (checkout_gate.set). Der Schalter liegt in der neuen
+  Tabelle app_settings (Migration 0036, auf Prod einmalig ausfuehren) und schlaegt die Variable CHECKOUT_ENABLED - ein Deploy setzt ihn nicht zurueck.
+- Frontend: Preiskarten zeigen "Demnaechst verfuegbar" (deaktiviert), auch der Wiederaufnahme-Pfad nach Google-/Apple-Login respektiert die Sperre. 5 Sprachen.
+
 ## 2026-10-05 (1.100.98) [FRONTEND]
 
 ### "Meine Objekte" im Kontomenue

@@ -15,6 +15,10 @@ crons = ["0 6 * * *"]
 # nicht ueber diese Datei (Aenderung hier braucht einen Redeploy). Siehe README.
 [vars]
 ASSISTANT_ENABLED = "true"
+# Prod-Kaufsperre: nur Admin-Konten koennen kaufen (worker/src/checkoutGate.ts).
+# Zum Freischalten im Cloudflare-Dashboard auf "true" setzen bzw. entfernen.
+# Gilt nur hier (Prod); dev/qa haben eigene [vars] und bleiben offen.
+CHECKOUT_ENABLED = "false"
 # Kommagetrennt: lokaler Dev-Server + dev.immofuchs.info (automatisches
 # CI-Deployment aus Immofuchs-dev, siehe .github/workflows/deploy-dev.yml) +
 # die echte Produktions-Domain, damit CORS schon vorbereitet ist, sobald das

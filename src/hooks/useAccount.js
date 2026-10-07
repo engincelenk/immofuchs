@@ -57,6 +57,21 @@ export function useAccount() {
   // Kauf-Bestaetigung wieder auf der Abo-Seite stand.
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [me, setMe] = useState(null); // Rohantwort von /api/v1/me, oder null (nicht eingeloggt)
+  // Kaufsperre (worker/src/checkoutGate.ts): oeffentlicher Status fuer Besucher ohne Konto.
+  // Bis zur Antwort gilt der Kauf als gesperrt, damit nichts kurz aufblitzt und wieder verschwindet.
+  const [publicCheckoutOpen, setPublicCheckoutOpen] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch("/billing/checkout-status")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (!cancelled) setPublicCheckoutOpen(Boolean(json?.open));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [error, setError] = useState(null);
   // E1 (Spec-v3.0 Kap. 2.2): OAuth-Callback lehnt bei bereits anders
   // registrierter E-Mail ab statt zu verknuepfen (Kap. 0.1) und haengt die
@@ -670,6 +685,8 @@ export function useAccount() {
     initialLoading: loading && !hasLoadedOnce,
     me,
     isLoggedIn: Boolean(me),
+    // Eingeloggt gilt die Antwort von /me (Admins duerfen immer kaufen), sonst der oeffentliche Status.
+    checkoutOpen: me ? Boolean(me.checkoutOpen) : publicCheckoutOpen,
     isPro: Boolean(me?.isPro),
     // Zugangsstufe und Testphase (Preispolitik 2026-08-20). `zugang` ist
     // "pro" | "trial" | "keiner" - isPro allein kann die Testphase nicht
