@@ -314,7 +314,7 @@
     var h = location.hostname;
     if (h === "localhost" || h === "127.0.0.1") return "http://localhost:8787";
     if (h === "dev.immofuchs.info") return "https://api-dev.immofuchs.info";
-    if (h === "qa.immofuchs.info") return "https://immofuchs-assistant-qa.engincelenk.workers.dev";
+    if (h === "qa.immofuchs.info") return "https://api-qa.immofuchs.info";
     return "https://api.immofuchs.info";
   })();
 

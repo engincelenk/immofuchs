@@ -1,3 +1,14 @@
+## 2026-10-07 (1.100.100) [INFRA]
+
+### QA und Prod bekommen eigene Worker-Konfiguration
+
+- Cloudflare: D1-Datenbanken immofuchs-qa und immofuchs-prod angelegt, IDs in worker/wrangler.toml eingetragen (noch ohne Migrationen).
+- wrangler.toml: Custom Domains api-qa.immofuchs.info (qa) und api.immofuchs.info (prod), APP_BASE_URL und MAGIC_LINK_FROM_EMAIL je Umgebung.
+  Prod-ALLOWED_ORIGIN auf immofuchs.info und www.immofuchs.info verengt (vorher inkl. localhost, dev, qa, admin.immofuchs.info).
+- deploy-qa.yml / deploy-prod.yml: VITE_ASSISTANT_URL auf die neuen API-Domains (Cookie bleibt same-site), getrennte GitHub-Secrets
+  VITE_STRIPE_PUBLISHABLE_KEY_QA / _PROD, Rauchtest nach dem Upload wie bei dev.
+- index.html (CSP connect-src) um api-qa.immofuchs.info ergaenzt, public/vertrag.js zeigt qa auf api-qa.immofuchs.info.
+
 ## 2026-10-07 (1.100.99) [FRONTEND+WORKER+MIGRATION]
 
 ### Prod-Kaufsperre mit Admin-Ausnahme

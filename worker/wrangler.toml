@@ -19,6 +19,12 @@ ASSISTANT_ENABLED = "true"
 # Zum Freischalten im Cloudflare-Dashboard auf "true" setzen bzw. entfernen.
 # Gilt nur hier (Prod); dev/qa haben eigene [vars] und bleiben offen.
 CHECKOUT_ENABLED = "false"
+# Ziel fuer Magic-Link-/OAuth-Redirects und Absender der Auth-Mails (Prod). Ohne
+# APP_BASE_URL landet man nach dem Login auf der nackten Worker-Domain (siehe
+# Befund 2026-08-04 bei [env.dev.vars]). send.immofuchs.info ist bei Resend
+# bereits als Sending-Domain verifiziert.
+APP_BASE_URL = "https://immofuchs.info"
+MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
 # Kommagetrennt: lokaler Dev-Server + dev.immofuchs.info (automatisches
 # CI-Deployment aus Immofuchs-dev, siehe .github/workflows/deploy-dev.yml) +
 # die echte Produktions-Domain, damit CORS schon vorbereitet ist, sobald das
@@ -26,7 +32,7 @@ CHECKOUT_ENABLED = "false"
 # Punkt). Das allein schaltet noch nichts "live" - dafuer muss das Frontend
 # tatsaechlich dorthin deployt werden, siehe Go-Live-Gate im Sprint-Plan
 # (DSGVO/AVV) fuer echte Nutzerdaten.
-ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://dev.immofuchs.info,https://qa.immofuchs.info,https://immofuchs.info,https://admin.immofuchs.info"
+ALLOWED_ORIGIN = "https://immofuchs.info,https://www.immofuchs.info"
 # ═══ Limits 2026-08-03: auf das Maximum kalibriert, das die kostenlosen
 # Kontingente von Gemini und Workers AI tatsaechlich hergeben (siehe
 # release-notes.txt) - NICHT einfach hochgesetzt. Dieser Worker bedient
@@ -90,25 +96,28 @@ FINN_PRO_MAX_TOKENS = "700"
 # GLOBAL_DAILY_LIMIT werden nur noch Pro-Anfragen bedient.
 FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
 
+# Custom Domain des Prod-Workers: Frontend (immofuchs.info) und API liegen so
+# "same-site", sonst kommt das SameSite=Lax-Session-Cookie nie an (vgl. dev).
+[[routes]]
+pattern = "api.immofuchs.info"
+custom_domain = true
+zone_name = "immofuchs.info"
+
 # Workers AI Binding (Llama 3.3, primaerer Pfad fuer DE/EN) - kein API-Key noetig,
 # nur ueber das Cloudflare-Konto freigeschaltet.
 [ai]
 binding = "AI"
 
 # ═══ D1 (Kommerzialisierung) ═══
-# ACHTUNG (Platzhalter, siehe docs/kommerzialisierung-setup.md): database_id
-# ist noch nicht real - vor dem ersten Deploy je Umgebung ausfuehren:
-#   npx wrangler d1 create immofuchs-prod
-#   npx wrangler d1 create immofuchs-qa --env qa
-#   npx wrangler d1 create immofuchs-dev --env dev
-# und die zurueckgegebene database_id hier eintragen. Migrationen danach je
+# Angelegt am 2026-10-07 (immofuchs-prod, immofuchs-qa; dev schon frueher).
+# Migrationen je
 # Umgebung separat anwenden (npm run db:migrate:<env> in worker/), NIE eine
 # Migration direkt gegen prod, ohne sie vorher gegen dev verifiziert zu haben
 # (Definition of Done, Abschnitt 11 der Spec).
 [[d1_databases]]
 binding = "DB"
 database_name = "immofuchs-prod"
-database_id = "REPLACE_WITH_PROD_D1_DATABASE_ID"
+database_id = "09781d0c-cc60-47f8-97f9-5e26afa7cd1c"
 migrations_dir = "migrations"
 
 # Durable Object fuer den Session-Rate-Limit-Zaehler (ersetzt die urspruengliche
@@ -247,9 +256,16 @@ new_sqlite_classes = ["SessionRateLimiter"]
 [env.qa]
 name = "immofuchs-assistant-qa"
 
+[[env.qa.routes]]
+pattern = "api-qa.immofuchs.info"
+custom_domain = true
+zone_name = "immofuchs.info"
+
 [env.qa.vars]
 ASSISTANT_ENABLED = "true"
-ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://qa.immofuchs.info,https://admin-qa.immofuchs.info"
+ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://qa.immofuchs.info"
+APP_BASE_URL = "https://qa.immofuchs.info"
+MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
 OBJECTS_SOFT_CAP = "500"
 FINN_PRO_DAILY_LIMIT = "50"
 FINN_FREE_MAX_TOKENS = "350"
@@ -269,7 +285,7 @@ binding = "AI"
 [[env.qa.d1_databases]]
 binding = "DB"
 database_name = "immofuchs-qa"
-database_id = "REPLACE_WITH_QA_D1_DATABASE_ID"
+database_id = "6ca47997-a551-4be3-8471-8c2f291a12cf"
 migrations_dir = "migrations"
 
 [[env.qa.durable_objects.bindings]]
