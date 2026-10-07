@@ -3,12 +3,11 @@
 User-agent: *
 Allow: /
 Disallow: /api/
-Disallow: /assets/
 Crawl-delay: 1
 
 Sitemap: https://immofuchs.info/sitemap.xml
 
-# Letztes Update: 2026-06-10
+# Letztes Update: 2026-10-03 (/assets/ nicht mehr gesperrt: Googlebot braucht JS/CSS zum Rendern der SPA)
 
 # ── AI TRAINING CRAWLER BLOCKIEREN ──────────────────────────────────────────
 
@@ -70,4 +69,70 @@ Disallow: /
 
 # Scrapy (generischer Scraper)
 User-agent: Scrapy
+Disallow: /
+
+# ── WEITERE KI-AGENTEN / SCRAPER (2026-10-03) ───────────────────────────────
+
+# OpenAI (Nutzer-Browsing im Chat)
+User-agent: ChatGPT-User
+Disallow: /
+
+# Anthropic (Suche)
+User-agent: Claude-SearchBot
+Disallow: /
+
+# Anthropic (Nutzer-Abruf)
+User-agent: Claude-User
+Disallow: /
+
+# Perplexity (Nutzer-Abruf)
+User-agent: Perplexity-User
+Disallow: /
+
+# Apple Intelligence Training
+User-agent: Applebot-Extended
+Disallow: /
+
+# Meta
+User-agent: meta-externalagent
+Disallow: /
+
+# Meta
+User-agent: meta-externalfetcher
+Disallow: /
+
+# Daten-Sammler
+User-agent: Timpibot
+Disallow: /
+
+# Daten-Sammler
+User-agent: PetalBot
+Disallow: /
+
+# Daten-Sammler
+User-agent: AI2Bot
+Disallow: /
+
+# Daten-Sammler
+User-agent: Ai2Bot-Dolma
+Disallow: /
+
+# Daten-Sammler
+User-agent: img2dataset
+Disallow: /
+
+# SEO-Scraper
+User-agent: SemrushBot
+Disallow: /
+
+# SEO-Scraper
+User-agent: AhrefsBot
+Disallow: /
+
+# SEO-Scraper
+User-agent: MJ12bot
+Disallow: /
+
+# SEO-Scraper
+User-agent: DotBot
 Disallow: /

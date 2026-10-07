@@ -1,0 +1,31 @@
+{
+  "name": "immofuchs-assistant-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker fuer den ImmoFuchs KI-Assistenten (Sprint 1, Phase 0) - siehe docs/plans/2026-07-19-ki-assistent-konzept.md Abschnitt 2.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "db:migrate:dev": "wrangler d1 migrations apply immofuchs-dev --env dev --remote",
+    "db:migrate:qa": "wrangler d1 migrations apply immofuchs-qa --env qa --remote",
+    "db:migrate:prod": "wrangler d1 migrations apply immofuchs-prod --remote",
+    "db:migrate:dev:local": "wrangler d1 migrations apply immofuchs-dev --env dev",
+    "db:migrate:qa:local": "wrangler d1 migrations apply immofuchs-qa --env qa",
+    "db:migrate:prod:local": "wrangler d1 migrations apply immofuchs-prod"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "jose": "^5.9.0",
+    "stripe": "^17.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260714.1",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.0.0"
+  }
+}

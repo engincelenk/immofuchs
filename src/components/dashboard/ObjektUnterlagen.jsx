@@ -1,0 +1,425 @@
+// Phase E - Objektunterlagen und Lage.
+//
+// Die Dateien bleiben lokal (siehe utils/objektUnterlagen.js). Der Hinweis
+// darauf steht sichtbar ueber der Liste, nicht im Kleingedruckten: bei
+// Kaufvertraegen und Teilungserklaerungen ist genau das die Information, die
+// der Nutzer braucht, bevor er etwas hochlaedt.
+import { useEffect, useRef, useState } from "react";
+import {
+  ERLAUBTE_TYPEN,
+  MAX_DATEI_BYTES,
+  formatGroesse,
+  unterlageLoeschen,
+  unterlageOeffnen,
+  unterlageSpeichern,
+  unterlagenLaden,
+} from "../../utils/objektUnterlagen.js";
+import { koordinateFuer, ladePlzGeo } from "../../utils/plzGeo.js";
+import { useApp } from "../../context/AppContext.jsx";
+
+const FEHLER_TEXT = {
+  zu_gross: `Die Datei ist größer als ${Math.round(MAX_DATEI_BYTES / 1024 / 1024)} MB.`,
+  typ_nicht_erlaubt: "Erlaubt sind PDF-Dateien und Bilder.",
+  indexeddb_nicht_verfuegbar:
+    "Dein Browser erlaubt hier keine lokale Ablage — im privaten Modus ist sie oft abgeschaltet.",
+};
+
+export function ObjektUnterlagen({ objektId }) {
+  const [dateien, setDateien] = useState([]);
+  const [fehler, setFehler] = useState(null);
+  const [laedt, setLaedt] = useState(false);
+  const eingabeRef = useRef(null);
+
+  useEffect(() => {
+    let aktiv = true;
+    unterlagenLaden(objektId).then((liste) => {
+      if (aktiv) setDateien(liste);
+    });
+    return () => {
+      aktiv = false;
+    };
+  }, [objektId]);
+
+  async function hinzufuegen(e) {
+    const datei = e.target.files?.[0];
+    e.target.value = "";
+    if (!datei) return;
+    setFehler(null);
+    setLaedt(true);
+    try {
+      const neu = await unterlageSpeichern(objektId, datei);
+      setDateien((p) => [neu, ...p]);
+    } catch (err) {
+      setFehler(FEHLER_TEXT[err.message] || "Die Datei konnte nicht gespeichert werden.");
+    } finally {
+      setLaedt(false);
+    }
+  }
+
+  async function oeffnen(id) {
+    const url = await unterlageOeffnen(id);
+    if (!url) return;
+    window.open(url, "_blank", "noopener");
+    // Der Browser hat den Blob nach dem Oeffnen gelesen; danach freigeben,
+    // sonst bleibt er fuer die Lebensdauer der Seite im Speicher.
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  async function loeschen(id) {
+    await unterlageLoeschen(id);
+    setDateien((p) => p.filter((d) => d.id !== id));
+  }
+
+  return (
+    <div
+      style={{
+        background: "var(--cc)",
+        border: "1px solid var(--cb)",
+        borderRadius: 12,
+        padding: "14px 16px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          color: "var(--cl)",
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          fontWeight: 600,
+          marginBottom: 8,
+        }}
+      >
+        Objektunterlagen
+      </div>
+      <div style={{ fontSize: 12.5, color: "var(--cl)", lineHeight: 1.5, marginBottom: 12 }}>
+        Unterlagen bleiben lokal in diesem Browser und werden nicht hochgeladen.
+        Auf einem anderen Gerät sind sie deshalb nicht sichtbar.
+      </div>
+
+      <input
+        ref={eingabeRef}
+        type="file"
+        accept={ERLAUBTE_TYPEN.join(",")}
+        onChange={hinzufuegen}
+        style={{ display: "none" }}
+      />
+      <button
+        type="button"
+        disabled={laedt}
+        onClick={() => eingabeRef.current?.click()}
+        style={{
+          height: 40,
+          padding: "0 16px",
+          borderRadius: 10,
+          border: "1.5px solid var(--ca)",
+          background: "transparent",
+          color: "var(--ca)",
+          fontSize: 13.5,
+          fontWeight: 600,
+          cursor: laedt ? "wait" : "pointer",
+          fontFamily: "inherit",
+        }}
+      >
+        {laedt ? "Wird gespeichert …" : "+ Unterlage hinzufügen"}
+      </button>
+
+      {fehler && (
+        <div style={{ marginTop: 8, fontSize: 13.5, color: "#B3402A", lineHeight: 1.45 }}>
+          {fehler}
+        </div>
+      )}
+
+      {dateien.length === 0 ? (
+        <div style={{ marginTop: 12, fontSize: 13.5, color: "var(--ch)" }}>
+          Noch keine Unterlagen hinterlegt — Exposé, Kaufvertrag oder Teilungserklärung
+          gehören typischerweise hierher.
+        </div>
+      ) : (
+        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+          {dateien.map((f) => (
+            <div
+              key={f.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "9px 11px",
+                borderRadius: 10,
+                background: "var(--ci)",
+                border: "1px solid var(--cb)",
+              }}
+            >
+              <span aria-hidden="true" style={{ fontSize: 17 }}>
+                {f.typ === "application/pdf" ? "📄" : "🖼️"}
+              </span>
+              <button
+                type="button"
+                onClick={() => oeffnen(f.id)}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  textAlign: "left",
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    color: "var(--ct)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {f.name}
+                </span>
+                <span style={{ display: "block", fontSize: 11, color: "var(--cl)" }}>
+                  {formatGroesse(f.groesse)}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => loeschen(f.id)}
+                aria-label={`${f.name} löschen`}
+                style={{
+                  width: 40,
+                  height: 40,
+                  flexShrink: 0,
+                  borderRadius: 8,
+                  border: "1px solid var(--cb)",
+                  background: "transparent",
+                  color: "var(--ch)",
+                  fontSize: 15,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Lage am Objekt: Adresse plus Sprung in die Kartenanwendung.
+//
+// Bis 2026-09-07 mit eingebetteter OpenStreetMap-Kachel (UX-Review: entfernt -
+// die Karte kostete einen Request und 190px Hoehe fuer denselben Nutzen, den
+// die beiden Links darunter bereits bieten). Die Koordinatenermittlung bleibt
+// bestehen, weil "genau" vs. "nur PLZ-Mitte" weiterhin den Hinweistext unten
+// steuert.
+// `eingebettet` (objekt-detailseite-redesign.md, Variante E §5-Karte "Lage"):
+// ohne eigene Kartenhuelle/Aussenabstand, weil die Adresse dort neben einer
+// dekorativen Kartenflaeche in EINER gemeinsamen Karte steht. Inhalt und
+// Verhalten bleiben identisch, nur die Aussenhuelle entfaellt.
+export function ObjektLage({ data, titel, eingebettet = false }) {
+  const t = useApp()?.t || {};
+  const tx = (key, fallback) => t[key] || fallback;
+  const [koord, setKoord] = useState(null);
+  const strasse = [data?.strasse, data?.hausnummer].filter(Boolean).join(" ");
+  const ortsteil = [data?.plz, data?.ort].filter(Boolean).join(" ");
+  const adresse = [strasse || titel, ortsteil].filter(Boolean).join(", ");
+
+  // Genaue Koordinaten schlagen die PLZ-Mitte: sie stammen aus der
+  // Adresssuche und treffen die Hausnummer.
+  const genau = data?.lat != null && data?.lon != null;
+
+  useEffect(() => {
+    let lebt = true;
+    if (genau) {
+      setKoord({ lat: +data.lat, lon: +data.lon });
+      return undefined;
+    }
+    if (!data?.plz) return undefined;
+    ladePlzGeo().then((map) => {
+      if (lebt) setKoord(koordinateFuer(data.plz, map));
+    });
+    return () => {
+      lebt = false;
+    };
+  }, [genau, data?.lat, data?.lon, data?.plz]);
+
+  if (!adresse) return null;
+
+  const suche = encodeURIComponent(adresse);
+
+  const inhalt = (
+    <>
+      <div
+        style={{
+          fontSize: 11,
+          color: "var(--cl)",
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          fontWeight: 600,
+          marginBottom: eingebettet ? 4 : 8,
+        }}
+      >
+        {tx("lageTitel", "Lage")}
+      </div>
+
+      <div
+        style={{
+          fontSize: 13.5,
+          color: "var(--ct)",
+          fontWeight: eingebettet ? 600 : 400,
+          marginBottom: eingebettet ? 6 : 12,
+        }}
+      >
+        {adresse}
+      </div>
+
+      {/* Nur noch EIN Kartenlink (2026-09-08): zwei Knoepfe fuer dasselbe Ziel
+          zwangen zu einer Entscheidung, die niemanden interessiert - wer die
+          Lage sehen will, will sie sehen, nicht den Anbieter waehlen. */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${suche}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={eingebettet ? { ...kartenLinkStil, minHeight: 28, padding: 0, border: "none", background: "none" } : kartenLinkStil}
+        >
+          {eingebettet ? (
+            `${tx("lageMaps", "In Google Maps öffnen")} ↗`
+          ) : (
+            <>
+              <span aria-hidden="true">📍</span> {tx("lageMaps", "In Google Maps öffnen")}
+            </>
+          )}
+        </a>
+      </div>
+
+      {koord && !genau && (
+        <div style={{ fontSize: 11, color: "var(--cl)", marginTop: eingebettet ? 4 : 8, lineHeight: 1.5 }}>
+          {eingebettet
+            ? tx("lagePinKurz", "Pin = Mitte der Postleitzahl")
+            : tx(
+                "lagePinLang",
+                "Der Pin zeigt die Mitte der Postleitzahl. Für die genaue Lage wähle die Adresse beim Bearbeiten aus der Adresssuche.",
+              )}
+        </div>
+      )}
+    </>
+  );
+
+  if (eingebettet) return inhalt;
+
+  return (
+    <div
+      style={{
+        background: "var(--cc)",
+        border: "1px solid var(--cb)",
+        borderRadius: 12,
+        padding: "14px 16px",
+      }}
+    >
+      {inhalt}
+    </div>
+  );
+}
+
+const kartenLinkStil = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  height: 40,
+  padding: "0 16px",
+  borderRadius: 10,
+  border: "1.5px solid var(--cb)",
+  color: "var(--ct)",
+  fontSize: 13.5,
+  fontWeight: 600,
+  textDecoration: "none",
+};
+
+// Kartenansicht der Objektliste (Phase E, Toggle "Liste | Karte").
+//
+// Bewusst eine Ortsgruppierung statt einer Karte mit Pins: Die PLZ-Datenbank
+// des Projekts (data/plzData.js) fuehrt nur PLZ, Ort und Bundesland - keine
+// Koordinaten. Pins muesste man per Geocoding-Dienst nachladen, also mit einem
+// externen Request je Objekt. Eine Gruppierung nach Ort mit Sprung in die
+// Kartenanwendung liefert denselben Nutzen ohne Datenabfluss.
+export function ObjektOrte({ objekte, onOeffnen }) {
+  const nachOrt = new Map();
+  for (const o of objekte) {
+    const d = o.inputData || o.data || {};
+    const ort = [d.plz, d.ort].filter(Boolean).join(" ") || "Ohne Ortsangabe";
+    if (!nachOrt.has(ort)) nachOrt.set(ort, []);
+    nachOrt.get(ort).push(o);
+  }
+  const gruppen = [...nachOrt.entries()].sort((a, b) => b[1].length - a[1].length);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {gruppen.map(([ort, liste]) => (
+        <div
+          key={ort}
+          style={{
+            background: "var(--cc)",
+            border: "1px solid var(--cb)",
+            borderRadius: 12,
+            padding: "14px 16px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{ort}</span>
+            <span style={{ fontSize: 12.5, color: "var(--cl)" }}>
+              {liste.length} {liste.length === 1 ? "Objekt" : "Objekte"}
+            </span>
+          </div>
+          {liste.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => onOeffnen(o)}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "7px 0",
+                background: "none",
+                border: "none",
+                borderTop: "1px solid var(--cb)",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 13.5,
+                color: "var(--ct)",
+              }}
+            >
+              {o.name}
+              {o.scoreLabel && (
+                <span style={{ color: "var(--ch)", fontWeight: 400 }}> · {o.scoreLabel}</span>
+              )}
+            </button>
+          ))}
+          {ort !== "Ohne Ortsangabe" && (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ort)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-block",
+                marginTop: 8,
+                fontSize: 13.5,
+                fontWeight: 600,
+                color: "var(--ca)",
+                textDecoration: "none",
+              }}
+            >
+              📍 Auf der Karte öffnen
+            </a>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}

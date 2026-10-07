@@ -1,0 +1,62 @@
+name: 🗓️ Datenpflege-Erinnerung
+
+# Legt am 1. jedes Monats fuer jedes faellige Datenthema ein eigenes Issue an,
+# zugewiesen an den Repo-Besitzer (GitHub schickt dann eine Mail). Jedes Issue
+# enthaelt Quelle, Datei und einen fertigen Satz fuer Claude. Kalender und Texte:
+# scripts/datenpflege_erinnerung.py auf Immofuchs-dev - Aenderungen an den Themen
+# brauchen also nur einen Commit auf dev.
+#
+# Geplante Laeufe startet GitHub nur von main - diese Datei liegt deshalb auch
+# auf main (mit [skip ci]), checkt aber immer Immofuchs-dev aus. QA und PROD
+# spielen keine Rolle (Nutzer-Vorgabe 2026-10-01).
+#
+# Ersetzt das fruehere Sammel-Issue "Datenpflege ueberfaellig" im Monatsjob,
+# das nur im PROD-Zweig lief und nie ankam.
+#
+# Ausprobieren: Actions -> Datenpflege-Erinnerung -> Run workflow. Standard ist
+# "trocken" (nur Log-Ausgabe, keine Issues); mit testmonat laesst sich ein
+# anderer Monat durchspielen.
+
+on:
+  schedule:
+    # 08:17 Uhr deutscher Zeit am 1. und (als Ersatz, falls GitHub den Lauf
+    # verwirft) am 2. - doppelte Issues verhindert das Skript selbst.
+    - cron: "17 8 1,2 * *"
+      timezone: "Europe/Berlin"
+  workflow_dispatch:
+    inputs:
+      trocken:
+        description: "Nur anzeigen, keine Issues anlegen"
+        type: boolean
+        default: true
+      testmonat:
+        description: "Monat simulieren (1-12, leer = aktueller Monat)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  erinnern:
+    name: Faellige Datenpflege melden
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Immofuchs-dev auschecken
+        uses: actions/checkout@v5
+        with:
+          ref: Immofuchs-dev
+
+      - name: 🐍 Python einrichten
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: 🗓️ Erinnerungen anlegen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Bei geplanten Laeufen ist inputs leer -> scharf, aktueller Monat
+          TROCKEN: ${{ github.event_name == 'workflow_dispatch' && inputs.trocken && 'ja' || 'nein' }}
+          TESTMONAT: ${{ inputs.testmonat }}
+        run: python scripts/datenpflege_erinnerung.py

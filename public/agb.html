@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <!-- Theme wie index.html (Key "if_theme", Default dunkel) - blockierend vor dem ersten Paint. -->
+  <script>
+    (function () {
+      try {
+        var v = localStorage.getItem("if_theme");
+        if (v === "light") document.documentElement.setAttribute("data-theme", "light");
+        else if (v !== "system") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGB – Immofuchs</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+  <style>
+    /* Hell/Dunkel wie App.jsx ROOT_TOKENS_CSS (--lk: Linkfarbe, im Dunkelmodus aufgehellt fuer AA-Kontrast) */
+    :root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#6c6c62;--cb:#e5e5dc;--ci:#fafaf7;--lk:#c44d00;--nt-bg:#fdeee3;--nt-bd:#f6c9a8;--nt-tx:#6b3300;--bad-bg:#fbe1e1;--bad-bd:#b3261e;--bad-tx:#7a1610;color-scheme:light}
+    :root[data-theme="dark"]{--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--lk:#f0843f;--nt-bg:#3a2414;--nt-bd:#5a3a1e;--nt-tx:#f5c9a0;--bad-bg:#3a1414;--bad-bd:#6b2626;--bad-tx:#f87171;color-scheme:dark}
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]){--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--lk:#f0843f;--nt-bg:#3a2414;--nt-bd:#5a3a1e;--nt-tx:#f5c9a0;--bad-bg:#3a1414;--bad-bd:#6b2626;--bad-tx:#f87171;color-scheme:dark}}
+  </style>
+  <style>
+    @import url('/fonts/dm-sans.css');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ct);padding:20px;line-height:1.7}
+    .wrap{max-width:680px;margin:0 auto;background:var(--cc);border-radius:16px;padding:32px 24px;border:1px solid var(--cb)}
+    h1{font-size:22px;color:var(--lk);margin-bottom:8px}
+    h2{font-size:15px;margin-top:24px;margin-bottom:8px;color:var(--ct)}
+    p,li{font-size:13px;color:var(--cl);margin-bottom:8px}
+    ul{padding-left:20px;margin-bottom:8px}
+    a{color:var(--lk);text-decoration:none}
+    .back{display:inline-block;margin-bottom:16px;font-size:13px;color:var(--lk)}
+    .info-box{background:var(--ci);border:1px solid var(--cb);border-radius:10px;padding:16px 20px;margin:12px 0;font-size:13px;line-height:1.8}
+    .notice{background:var(--nt-bg);border:1px solid var(--nt-bd);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--nt-tx);margin:16px 0}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--cb);font-size:11px;color:var(--ch);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .footer a{color:var(--lk)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/" class="back">← Zurück zum Rechner</a>
+    <h1>Allgemeine Geschäftsbedingungen</h1>
+    <p>Stand: 5. Oktober 2026</p>
+
+    <h2>1. Geltungsbereich und Anbieter</h2>
+    <p>Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für die Nutzung der Website
+    immofuchs.info sowie für das kostenpflichtige Abonnement „ImmoFuchs&nbsp;Pro“.</p>
+    <div class="info-box">
+      <strong>Engin Celenk</strong><br>
+      Kontakt per E-Mail: <a href="mailto:info@immofuchs.info">info@immofuchs.info</a><br>
+      Vollständige Anbieterangaben: <a href="/impressum.html">Impressum</a>
+    </div>
+    <p>Das Angebot richtet sich an Verbraucher im Sinne von §&nbsp;13 BGB. Die Nutzung durch
+    Unternehmer ist möglich; für sie gelten die Regelungen zum Widerrufsrecht (Ziffer&nbsp;7) nicht.</p>
+
+    <h2>2. Vertragsgegenstand</h2>
+    <p>ImmoFuchs stellt webbasierte Rechner und Auswertungen rund um Immobilieninvestitionen
+    bereit (Rendite, Finanzierung, Mieterhöhung, Sanierung, Steueroptimierung nach §&nbsp;6,
+    Vorfälligkeitsentschädigung). Dazu gehören die Objektseite mit Investment-Briefing,
+    Marktvergleich, Lage-Analyse, Vergleich mit alternativen Geldanlagen und Besichtigungshandout,
+    der Exposé-Scan sowie der KI-gestützte Assistent „Finn“. Die Anwendung steht in Deutsch,
+    Englisch, Türkisch, Chinesisch und Hindi zur Verfügung; rechtsverbindlich ist die deutsche
+    Fassung.</p>
+    <ul>
+      <li><strong>Kostenlose Testphase:</strong> Nach der Registrierung stehen die Funktionen
+      sieben Tage lang kostenlos zur Verfügung. Rechner und PDF-Export sind dabei unbegrenzt
+      nutzbar; für den KI-Assistenten, den Exposé-Scan, Handouts, die Lage-Analyse und den
+      Vergleich mit alternativen Geldanlagen gelten Tageskontingente, für gespeicherte Objekte
+      ein Gesamtkontingent. Die Testphase erfordert
+      <strong>keine Zahlungsdaten</strong> und geht nicht automatisch in ein
+      kostenpflichtiges Abonnement über. Nach ihrem Ende ist ImmoFuchs&nbsp;Pro erforderlich,
+      um weiterzurechnen.</li>
+      <li><strong>ImmoFuchs&nbsp;Pro:</strong> unbegrenzte Nutzung aller Rechner, erweiterter
+      Umfang des KI-Assistenten sowie dauerhaft gespeicherte, geräteübergreifend synchronisierte
+      Objekte. Voraussetzung ist ein Nutzerkonto.</li>
+    </ul>
+    <p>Der konkrete Leistungsumfang ergibt sich aus der jeweils aktuellen Leistungsübersicht in
+    der Anwendung.</p>
+
+    <h2>3. Nutzerkonto</h2>
+    <p>Für ImmoFuchs&nbsp;Pro ist ein Nutzerkonto erforderlich. Die Anmeldung ist wahlweise über
+    Google, Apple, einen per E-Mail zugesandten Anmeldelink oder über E-Mail-Adresse und
+    Passwort möglich. Zugangsdaten
+    sind vertraulich zu behandeln und nicht an Dritte weiterzugeben. Bei Verdacht auf Missbrauch
+    ist der Anbieter unverzüglich zu informieren.</p>
+    <p>Pro Person darf grundsätzlich ein Konto geführt werden. Der Anbieter kann Konten sperren
+    oder löschen, wenn sie missbräuchlich, automatisiert oder rechtswidrig genutzt werden.</p>
+
+    <h2>4. Vertragsschluss</h2>
+    <p>Die Darstellung der Abonnements stellt kein bindendes Angebot dar. Mit dem Absenden der
+    Bestellung im Bezahlvorgang gibt die nutzende Person ein verbindliches Angebot ab. Der
+    Vertrag kommt mit der Bestätigung des Abonnements zustande.</p>
+    <p>Der Bestellvorgang umfasst: Anmeldung oder Registrierung, Wahl des Plans, Eingabe der
+    Rechnungsangaben und Zahlungsdaten sowie das Absenden der Bestellung. Vor dem Absenden kann
+    jede Eingabe angezeigt und mit den üblichen Mitteln des Browsers oder über die Schaltfläche
+    „Zurück“ geändert werden; Eingabefehler lassen sich so vor Abgabe der Bestellung erkennen und
+    berichtigen. Vertragssprache ist Deutsch. Der Vertragstext (diese AGB und die
+    Bestelldaten) wird vom Anbieter nicht für den Zugriff durch die nutzende Person gespeichert;
+    die AGB sind jederzeit unter dieser Adresse abrufbar, die Bestellbestätigung und die
+    Rechnung werden per E-Mail zugesandt.</p>
+
+    <h2>5. Preise und Zahlungsabwicklung</h2>
+    <p>ImmoFuchs&nbsp;Pro kostet 6,99&nbsp;€ pro Monat oder 59,99&nbsp;€ pro Jahr. Alle Preise
+    sind Endpreise. Gemäß § 19 UStG wird keine Umsatzsteuer berechnet und ausgewiesen
+    (Kleinunternehmerregelung).</p>
+    <p>Vertragspartner für den Abschluss des Abonnements ist ImmoFuchs. Die technische
+    Zahlungsabwicklung erfolgt über <strong>Stripe</strong> als Zahlungsdienstleister; Stripe
+    tritt dabei nicht als Verkäufer auf. Für den Bezahlvorgang gelten ergänzend die
+    Nutzungsbedingungen von Stripe. Zur Verfügung stehen je nach Verfügbarkeit Kreditkarte
+    sowie weitere von Stripe unterstützte Zahlungsarten.</p>
+    <p>Rechnungen werden automatisch per E-Mail versandt und sind im Kontobereich abrufbar.</p>
+
+    <h2>6. Laufzeit und Kündigung</h2>
+    <p>Das Abonnement läuft je nach gewähltem Plan zunächst einen Monat (Monatsplan) oder ein Jahr
+    (Jahresplan). Der Monatsplan verlängert sich jeweils um einen weiteren Monat. Der Jahresplan
+    wechselt nach Ablauf des ersten Jahres automatisch in den Monatsplan zum dann geltenden
+    Monatspreis (derzeit 6,99&nbsp;€ pro Monat) und verlängert sich danach monatlich; auf den
+    Wechsel weisen wir vorab per E-Mail hin. Beide Pläne können nach Ablauf der ersten Laufzeit
+    jederzeit mit Wirkung zum Ende des laufenden Abrechnungsmonats gekündigt werden; wer vor Ablauf des
+    ersten Jahres kündigt, behält den Zugang bis zum Ende des bezahlten Jahres.</p>
+    <p>Die Kündigung ist auch ohne Anmeldung möglich: über „Verträge hier kündigen“ in der Fußzeile
+    der Website. Dort genügen die E-Mail-Adresse des Kontos und die Bestätigung mit „Jetzt kündigen“;
+    wir bestätigen die Kündigung sofort per E-Mail mit Inhalt, Datum und Uhrzeit des Zugangs und dem
+    Zeitpunkt, zu dem der Vertrag endet.</p>
+    <p>Die Kündigung ist jederzeit zum Ende der laufenden Abrechnungsperiode über die
+    Kündigungsschaltfläche im Kontobereich möglich (§&nbsp;312k BGB). Bis zum Ende der bereits
+    bezahlten Periode bleibt der Pro-Zugang bestehen. Eine ausgesprochene Kündigung kann bis
+    zum Periodenende zurückgenommen werden.</p>
+    <p>Bei fehlgeschlagener Zahlung bleibt der Zugang für drei Tage bestehen; danach ruht er
+    bis zum Ausgleich.</p>
+
+    <h2 id="widerruf">7. Widerrufsrecht</h2>
+
+    <h3 style="font-size:14px;margin-top:16px;margin-bottom:6px">Widerrufsrecht</h3>
+    <p>Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu
+    widerrufen.</p>
+    <p>Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsschlusses.</p>
+    <p>Um Ihr Widerrufsrecht auszuüben, müssen Sie uns</p>
+    <div class="info-box">
+      Engin Celenk<br>
+      Hohenzollernstr. 43<br>
+      74385 Pleidelsheim<br>
+      E-Mail: <a href="mailto:info@immofuchs.info">info@immofuchs.info</a>
+    </div>
+    <p>mittels einer eindeutigen Erklärung (z.&nbsp;B. ein mit der Post versandter Brief oder eine
+    E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen, informieren. Sie können dafür
+    das beigefügte Muster-Widerrufsformular verwenden, das jedoch nicht vorgeschrieben ist.</p>
+    <p>Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über die Ausübung
+    des Widerrufsrechts vor Ablauf der Widerrufsfrist absenden.</p>
+
+    <h3 style="font-size:14px;margin-top:16px;margin-bottom:6px">Folgen des Widerrufs</h3>
+    <p>Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir von Ihnen
+    erhalten haben, unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen,
+    an dem die Mitteilung über Ihren Widerruf dieses Vertrags bei uns eingegangen ist. Für diese
+    Rückzahlung verwenden wir dasselbe Zahlungsmittel, das Sie bei der ursprünglichen Transaktion
+    eingesetzt haben, es sei denn, mit Ihnen wurde ausdrücklich etwas anderes vereinbart; in
+    keinem Fall werden Ihnen wegen dieser Rückzahlung Entgelte berechnet.</p>
+    <p>Haben Sie verlangt, dass die Dienstleistung während der Widerrufsfrist beginnen soll, so
+    haben Sie uns einen angemessenen Betrag zu zahlen, der dem Anteil der bis zu dem Zeitpunkt,
+    zu dem Sie uns von der Ausübung des Widerrufsrechts hinsichtlich dieses Vertrags
+    unterrichten, bereits erbrachten Dienstleistungen im Vergleich zum Gesamtumfang der im
+    Vertrag vorgesehenen Dienstleistungen entspricht.</p>
+
+    <div class="info-box">
+      <strong>Konkret bei ImmoFuchs&nbsp;Pro:</strong> Der Wertersatz berechnet sich tageweise aus
+      dem Preis Ihres gewählten Plans (6,99&nbsp;€/Monat bzw. 59,99&nbsp;€/Jahr), geteilt durch die
+      Anzahl der Tage der jeweiligen Abrechnungsperiode (30 bzw. 365), multipliziert mit der
+      Anzahl der Tage von Vertragsschluss bis zum Zugang Ihres Widerrufs. Beispiel Monatsplan:
+      Widerruf nach 5 Tagen → 5/30 × 6,99&nbsp;€ ≈ 1,17&nbsp;€ Wertersatz, der restliche Betrag wird
+      erstattet.
+    </div>
+
+    <p style="font-size:12px;color:var(--ch)">Ende der Widerrufsbelehrung.</p>
+    <p>Neben der Erklärung per E-Mail oder Brief können Verbraucher den Widerruf, solange die
+    Widerrufsfrist läuft, auch über die Schaltfläche „Vertrag widerrufen“ in der Fußzeile der Website
+    (ohne Anmeldung, mit Name und E-Mail-Adresse des Kontos) oder im Bereich „Abonnement“ ihres
+    Kontos erklären und mit „Widerruf bestätigen“ absenden. Wir bestätigen den Eingang des Widerrufs
+    unverzüglich per E-Mail mit Inhalt sowie Datum und Uhrzeit des Eingangs; der Wertersatz wird dabei
+    wie oben beschrieben mit der Erstattung verrechnet.</p>
+
+    <h3 style="font-size:14px;margin-top:24px;margin-bottom:6px">Muster-Widerrufsformular</h3>
+    <div class="info-box">
+      <p style="margin-bottom:10px">(Wenn Sie den Vertrag widerrufen wollen, füllen Sie bitte
+      dieses Formular aus und senden Sie es zurück.)</p>
+      <p style="margin-bottom:4px">An: Engin Celenk, Hohenzollernstr. 43, 74385 Pleidelsheim,
+      E-Mail: info@immofuchs.info</p>
+      <p style="margin-bottom:4px">Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*)
+      abgeschlossenen Vertrag über die Erbringung der folgenden Dienstleistung: ImmoFuchs&nbsp;Pro
+      – Abonnement (Monats- bzw. Jahresplan)</p>
+      <p style="margin-bottom:4px">Bestellt am (*): _________________</p>
+      <p style="margin-bottom:4px">Name des/der Verbraucher(s): _________________</p>
+      <p style="margin-bottom:4px">Anschrift des/der Verbraucher(s): _________________</p>
+      <p style="margin-bottom:4px">Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf
+      Papier): _________________</p>
+      <p style="margin-bottom:0">Datum: _________________</p>
+    </div>
+    <p style="font-size:11px;color:var(--ch)">(*) Unzutreffendes streichen.</p>
+
+    <h2>8. Keine Anlage-, Steuer- oder Rechtsberatung</h2>
+    <div class="notice">
+      Sämtliche Berechnungen, Bewertungen, Objektscores und Hinweise – einschließlich der
+      Antworten des KI-Assistenten und der Vergleich mit alternativen Geldanlagen – dienen
+      ausschließlich der unverbindlichen Orientierung.
+      Sie stellen <strong>keine Anlageberatung, keine Steuerberatung und keine Rechtsberatung</strong>
+      dar und ersetzen keine individuelle fachkundige Beratung. Entscheidungen über den Kauf,
+      die Finanzierung, die Vermietung oder die Sanierung einer Immobilie trifft die nutzende
+      Person eigenverantwortlich.
+    </div>
+    <p>Die Ergebnisse beruhen auf den eingegebenen Angaben sowie auf allgemeinen Annahmen und
+    Datenständen. Für ihre Richtigkeit, Vollständigkeit und Aktualität wird keine Gewähr
+    übernommen. Der KI-Assistent und die übrigen KI-Funktionen können fehlerhafte Angaben erzeugen;
+    Ergebnisse sind vor einer Verwendung eigenständig zu prüfen.</p>
+    <p>Der Vergleich mit alternativen Geldanlagen besteht aus unverbindlichen Modellrechnungen auf
+    Grundlage von Annahmen. Er stellt weder eine Anlageberatung noch eine Empfehlung oder
+    Aufforderung zum Erwerb oder zur Veräußerung von Vermögenswerten dar; die gezeigten Renditen
+    sind keine Prognose, und frühere Wertentwicklungen sind kein verlässlicher Indikator für die
+    künftige Entwicklung.</p>
+
+    <h2>9. Verfügbarkeit und Änderungen</h2>
+    <p>Der Anbieter bemüht sich um eine hohe Verfügbarkeit, schuldet jedoch keine
+    ununterbrochene Erreichbarkeit. Wartungsarbeiten, Störungen bei Dienstleistern oder höhere
+    Gewalt können zu vorübergehenden Einschränkungen führen.</p>
+    <p>Der Leistungsumfang kann weiterentwickelt werden. Wesentliche Änderungen zum Nachteil
+    zahlender Nutzerinnen und Nutzer werden mit angemessener Frist angekündigt; in diesem Fall
+    besteht ein Sonderkündigungsrecht.</p>
+
+    <h2>10. Haftung</h2>
+    <p>Der Anbieter haftet unbeschränkt bei Vorsatz und grober Fahrlässigkeit sowie bei der
+    Verletzung von Leben, Körper oder Gesundheit und nach dem Produkthaftungsgesetz. Bei einfach
+    fahrlässiger Verletzung wesentlicher Vertragspflichten ist die Haftung auf den
+    vertragstypischen, vorhersehbaren Schaden begrenzt. Im Übrigen ist die Haftung
+    ausgeschlossen.</p>
+    <p>Unbeschadet von Absatz 1 gilt: Für Vermögensschäden, die auf Entscheidungen beruhen, welche
+    auf Grundlage der bereitgestellten Berechnungen getroffen wurden, haftet der Anbieter nur
+    nach den Voraussetzungen des Absatzes 1; die Hinweise in Ziffer 8 bleiben unberührt.
+    Die Haftung wegen arglistig verschwiegener Mängel, aus übernommenen Garantien und nach
+    zwingenden gesetzlichen Vorschriften (z.&nbsp;B. Datenschutzrecht) bleibt unberührt.</p>
+
+    <h2>11. Datenschutz</h2>
+    <p>Informationen zur Verarbeitung personenbezogener Daten enthält die
+    <a href="/datenschutz.html">Datenschutzerklärung</a>.</p>
+
+    <h2>12. Schlussbestimmungen</h2>
+    <p>Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts.
+    Zwingende Verbraucherschutzvorschriften des Staates, in dem die verbrauchende Person ihren
+    gewöhnlichen Aufenthalt hat, bleiben unberührt.</p>
+    <p>Sollte eine Bestimmung dieser AGB unwirksam sein, bleibt die Wirksamkeit der übrigen
+    Bestimmungen unberührt.</p>
+    <p>Zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
+    ist der Anbieter nicht verpflichtet und nicht bereit.</p>
+
+    <div class="footer">
+      <span>© 2026 immofuchs.info</span>
+      <div style="display:flex;gap:6px 16px;flex-wrap:wrap">
+        <a href="/">Rechner</a>
+        <a href="/impressum.html">Impressum</a>
+        <a href="/datenschutz.html">Datenschutz</a>
+        <a href="/kuendigen.html">Verträge hier kündigen</a>
+        <a href="/widerruf.html">Vertrag widerrufen</a>
+        <a href="/kontakt.html">Kontakt</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

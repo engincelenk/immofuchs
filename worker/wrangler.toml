@@ -1,0 +1,297 @@
+name = "immofuchs-assistant"
+main = "src/index.ts"
+compatibility_date = "2026-07-19"
+compatibility_flags = ["nodejs_compat"]
+
+# Verlängerungs-Erinnerung (Spec 4.11, S4-4), taeglich 06:00 UTC - der
+# scheduled()-Handler filtert selbst auf die 7-Tage-Vorlauffrist, der Cron
+# muss also nicht exakt an einem bestimmten Tag treffen.
+[triggers]
+crons = ["0 6 * * *"]
+
+# Nicht-geheime Konfiguration. ASSISTANT_ENABLED ist der Kill-Switch aus
+# Konzept 2.8 - fuer "Umschalten ohne Redeploy" ueber das Cloudflare-Dashboard
+# (Workers & Pages -> immofuchs-assistant -> Settings -> Variables) aendern,
+# nicht ueber diese Datei (Aenderung hier braucht einen Redeploy). Siehe README.
+[vars]
+ASSISTANT_ENABLED = "true"
+# Prod-Kaufsperre: nur Admin-Konten koennen kaufen (worker/src/checkoutGate.ts).
+# Zum Freischalten im Cloudflare-Dashboard auf "true" setzen bzw. entfernen.
+# Gilt nur hier (Prod); dev/qa haben eigene [vars] und bleiben offen.
+CHECKOUT_ENABLED = "false"
+# Ziel fuer Magic-Link-/OAuth-Redirects und Absender der Auth-Mails (Prod). Ohne
+# APP_BASE_URL landet man nach dem Login auf der nackten Worker-Domain (siehe
+# Befund 2026-08-04 bei [env.dev.vars]). send.immofuchs.info ist bei Resend
+# bereits als Sending-Domain verifiziert.
+APP_BASE_URL = "https://immofuchs.info"
+MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
+# Kommagetrennt: lokaler Dev-Server + dev.immofuchs.info (automatisches
+# CI-Deployment aus Immofuchs-dev, siehe .github/workflows/deploy-dev.yml) +
+# die echte Produktions-Domain, damit CORS schon vorbereitet ist, sobald das
+# Frontend live auf immofuchs.info zeigt (kein Redeploy noetig an diesem
+# Punkt). Das allein schaltet noch nichts "live" - dafuer muss das Frontend
+# tatsaechlich dorthin deployt werden, siehe Go-Live-Gate im Sprint-Plan
+# (DSGVO/AVV) fuer echte Nutzerdaten.
+ALLOWED_ORIGIN = "https://immofuchs.info,https://www.immofuchs.info"
+# ═══ Limits 2026-08-03: auf das Maximum kalibriert, das die kostenlosen
+# Kontingente von Gemini und Workers AI tatsaechlich hergeben (siehe
+# release-notes.txt) - NICHT einfach hochgesetzt. Dieser Worker bedient
+# QA UND PROD gleichzeitig (beide zeigen auf "immofuchs-assistant", siehe
+# deploy-qa.yml/deploy-prod.yml), teilen sich also EIN Kontingent:
+#   - Gemini "gemini-2.5-flash-lite" Free-Tier: 1.000 Requests/Tag,
+#     15/Minute, PRO PROJEKT/KEY - Text-Chat UND Expose-Extraktion nutzen
+#     dasselbe Modell und damit denselben Topf.
+#   - Workers AI Free-Tier: 10.000 Neuronen/Tag, KONTOWEIT (gilt fuer alle
+#     Worker im Account inkl. Dev), nur als Fallback wenn Gemini scheitert.
+#     Eine Text-Antwort verbraucht ca. 400-600 Neuronen -> ca. 20-25
+#     Fallback-Antworten/Tag sind das realistische Maximum, danach schlaegt
+#     auch der Fallback fehl (das war der urspruengliche "Kurzer Aussetzer"-
+#     Verdacht, bevor sich das invalid_verlauf-Problem herausstellte).
+# GLOBAL_DAILY_LIMIT (Text) + EXPOSE_GLOBAL_DAILY_LIMIT (Bild) bleiben in
+# Summe unter 1.000, damit an einem normalen Tag nicht in den Workers-AI-
+# Fallback gerutscht wird, dessen Kapazitaet viel kleiner ist.
+DAILY_REQUEST_LIMIT = "50"
+# Zweite/dritte Schranke gegen sessionId-Rotation (siehe docs/code-review-2026-07-23.md).
+# Ueber das Dashboard ohne Redeploy anpassbar, wie ASSISTANT_ENABLED.
+IP_DAILY_LIMIT = "100"
+GLOBAL_DAILY_LIMIT = "800"
+# Text-Chat-Modell fuer Gemini. Ohne Eintrag nimmt der Worker
+# "gemini-2.5-flash-lite" (siehe modelRouter.ts). Ueber das Dashboard
+# umstellbar, ohne Redeploy - wichtig bei Googles kurzen Deprecation-Zyklen
+# (der Vorgaenger "gemini-2.0-flash-lite" wurde zum 01.06.2026 abgeschaltet).
+# GEMINI_MODEL = "gemini-2.5-flash-lite"
+# ── Expose-/Screenshot-Extraktion (/api/expose-extract) ──
+# Eigener Kill-Switch, unabhaengig von ASSISTANT_ENABLED: Bild-Calls sind
+# teurer und riskanter als Text-Chat und muessen isoliert abschaltbar sein
+# (Spec 11.4). Hier bewusst "false" - auf Prod/QA laeuft bis Sprint 2 nur der
+# Platzhalter-Endpunkt, der soll dort nicht erreichbar sein. Umschalten
+# spaeter ueber das Dashboard, ohne Redeploy.
+EXPOSE_EXTRACT_ENABLED = "true"
+# Deutlich niedriger als beim Text-Chat (Spec 6/11.3): Extraktionen pro
+# Session/Tag, IP und Global anteilig - siehe Limits-Kommentar oben.
+EXPOSE_DAILY_LIMIT = "8"
+EXPOSE_IP_DAILY_LIMIT = "20"
+EXPOSE_GLOBAL_DAILY_LIMIT = "150"
+# Vision-Modell fuer die Extraktion. Ohne Eintrag nimmt der Worker
+# "gemini-2.0-flash-lite" (siehe modelRouter.ts) - dasselbe Modell wie der
+# Text-Chat. Ueber das Dashboard umstellbar, ohne Redeploy, falls sich die
+# Extraktionsqualitaet als zu schwach erweist.
+# EXPOSE_GEMINI_MODEL = "gemini-2.0-flash"
+
+# ═══ Kommerzialisierung (2026-08-03, Sprints 0-5b) ═══
+# Kostenloser Exposé-Scan / Konto-Kauf: freiwillige 14-Tage-Geld-zurueck-Frist
+# und 3-Tage-Dunning-Kulanzfrist sind Code-Konstanten (siehe subscriptions.ts),
+# nicht hier - reine Geschaeftslogik, kein Infrastruktur-Flag.
+# Soft-Cap gegen Objekt-Flut (4.9): 500 ist eine Produktentscheidung, kein
+# Sicherheitslimit - ueber das Dashboard ohne Redeploy anpassbar.
+OBJECTS_SOFT_CAP = "500"
+# Pro: taegliches Limit (4.0a/4.18.3, Sprint 5).
+FINN_PRO_DAILY_LIMIT = "50"
+# Die Kontingente der Testphase stehen nicht mehr hier, sondern in
+# src/trialLimits.ts: sie haengen am Nutzer (Migration 0025), nicht an der
+# Umgebung, und das Frontend liest dieselben Zahlen ueber /me.
+FINN_FREE_MAX_TOKENS = "350"
+FINN_PRO_MAX_TOKENS = "700"
+# Pro-Reservierung im globalen Kontingent (4.18.4/S5-5): ab diesem Anteil von
+# GLOBAL_DAILY_LIMIT werden nur noch Pro-Anfragen bedient.
+FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
+
+# Custom Domain des Prod-Workers: Frontend (immofuchs.info) und API liegen so
+# "same-site", sonst kommt das SameSite=Lax-Session-Cookie nie an (vgl. dev).
+[[routes]]
+pattern = "api.immofuchs.info"
+custom_domain = true
+zone_name = "immofuchs.info"
+
+# Workers AI Binding (Llama 3.3, primaerer Pfad fuer DE/EN) - kein API-Key noetig,
+# nur ueber das Cloudflare-Konto freigeschaltet.
+[ai]
+binding = "AI"
+
+# ═══ D1 (Kommerzialisierung) ═══
+# Angelegt am 2026-10-07 (immofuchs-prod, immofuchs-qa; dev schon frueher).
+# Migrationen je
+# Umgebung separat anwenden (npm run db:migrate:<env> in worker/), NIE eine
+# Migration direkt gegen prod, ohne sie vorher gegen dev verifiziert zu haben
+# (Definition of Done, Abschnitt 11 der Spec).
+[[d1_databases]]
+binding = "DB"
+database_name = "immofuchs-prod"
+database_id = "09781d0c-cc60-47f8-97f9-5e26afa7cd1c"
+migrations_dir = "migrations"
+
+# Durable Object fuer den Session-Rate-Limit-Zaehler (ersetzt die urspruengliche
+# KV-Loesung - KV war "eventually consistent" und hat das Tageslimit beim
+# Live-Test nicht zuverlaessig durchgesetzt, siehe Sprint-Plan / release-notes.txt).
+# Ein DO pro sessionId verarbeitet Anfragen strikt nacheinander, dadurch garantiert
+# korrekter Zaehler ohne Konsistenzproblem.
+[[durable_objects.bindings]]
+name = "RATE_LIMITER_DO"
+class_name = "SessionRateLimiter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionRateLimiter"]
+
+# Secrets NIE hier eintragen (siehe Konzept 2.10). Stattdessen:
+#   npx wrangler secret put GEMINI_API_KEY
+# Fuer lokale Entwicklung: worker/.dev.vars (siehe .dev.vars.example), nicht eingecheckt.
+
+# ═══ Separater Dev-Worker (2026-07-21) ═══
+# Eigene, von Prod komplett unabhaengige Worker-Instanz nur fuer
+# dev.immofuchs.info - deploybar per `npx wrangler deploy --env dev`.
+# Braucht ein eigenes Secret: `npx wrangler secret put GEMINI_API_KEY --env dev`
+# (nicht automatisch vom Prod-Secret uebernommen - Secrets sind nie auslesbar,
+# auch nicht fuer einen Kopiervorgang). main/compatibility_date/compatibility_flags
+# werden vom Top-Level geerbt, muessen hier nicht wiederholt werden.
+[env.dev]
+name = "immofuchs-assistant-dev"
+
+# Custom Domain (Spec 5.1, S0-1) loest das SameSite=Lax-Cookie-Problem:
+# Frontend (dev.immofuchs.info) und Worker lagen vorher auf komplett
+# unterschiedlichen Domains, das Session-Cookie kam beim Frontend nie an
+# (verifiziert 2026-08-04). Nutzerentscheidung 2026-08-04: DNS-Zone
+# immofuchs.info zu Cloudflare umgezogen (Nameserver-Wechsel), damit ist
+# api-dev.immofuchs.info als Custom Domain fuer diesen Worker moeglich.
+# workers_dev bewusst weiterhin aktiv (statt nur custom_domain-Route), bis
+# das Frontend (deploy-dev.yml, VITE_ASSISTANT_URL) umgestellt UND der
+# komplette Login-Flow gegen die neue Domain verifiziert ist - sonst waere
+# bei einem Fehler in der Custom-Domain-Konfiguration der Worker fuer alle
+# Aufrufer unerreichbar, nicht nur fuer den Login-Testfall.
+workers_dev = true
+
+[[env.dev.routes]]
+pattern = "api-dev.immofuchs.info"
+custom_domain = true
+zone_name = "immofuchs.info"
+
+# Log-Retention (2026-09-17). Ohne sie ist `wrangler tail` die EINZIGE
+# Fehlerquelle - und der zeigt nur, was waehrend des Mitschnitts passiert.
+# Genau daran ist die Suche nach der Ursache von "Die Auswertung ist gerade
+# nicht erreichbar" gescheitert: Der Fehler tritt beim Nutzer auf, der Log
+# laeuft hier, und beides zur selben Zeit hinzubekommen ist Glueckssache.
+# Mit Retention steht der Grund (analyse_model_call_failed bzw.
+# [FALLBACK_ALERT] mit Googles Originaltext) nachtraeglich im Dashboard.
+# Bewusst nur fuer dev - qa/prod bleiben unangetastet (Nutzer-Vorgabe).
+[env.dev.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.dev.vars]
+ASSISTANT_ENABLED = "true"
+# Jahresabo -> danach Monatsplan (AGB Ziffer 6, § 309 Nr. 9 BGB). Nur dev, bis es mit einem
+# Stripe-Testkauf geprueft ist; in qa/prod erst danach auf "true" setzen.
+YEARLY_AUTO_MONTHLY = "true"
+ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://dev.immofuchs.info,https://admin-dev.immofuchs.info"
+# Ohne diesen Wert faellt frontendBase() (routes/auth.ts) auf die Origin des
+# eingehenden Requests zurueck - nach Login landet man dann auf der nackten
+# Worker-Domain statt zurueck im Frontend (Befund 2026-08-04, 1.6.3).
+APP_BASE_URL = "https://dev.immofuchs.info"
+# Absender fuer alle Auth-Mails (Ergaenzung 05.08.). Bewusst die Subdomain
+# send.immofuchs.info: sie ist bei Resend als eigene Sending-Domain registriert
+# (DKIM/SPF/MX liegen dort), waehrend die Wurzeldomain unveraendert auf IONOS
+# zeigt - ein zweiter SPF-Record an der Wurzel haette den bestehenden
+# IONOS-Versand ungueltig gemacht (nur ein SPF-Record je Domain zulaessig).
+# Kein Secret, weil nicht vertraulich - der Wert steht in jeder gesendeten Mail.
+MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
+# QA-Testkonten (is_test_user=1) behalten ihre echten test.*@immofuchs.info-
+# Adressen fuer Login/Entitlement, aber Mails an sie landen hier statt an
+# nicht existierende Postfaecher - siehe notifications.ts. Nur dev, kein Wert
+# in qa/prod (Top-Level-[vars]), damit sich dort nichts aendert.
+TEST_EMAIL_REDIRECT_TO = "useforai@web.de"
+OBJECTS_SOFT_CAP = "500"
+FINN_PRO_DAILY_LIMIT = "50"
+FINN_FREE_MAX_TOKENS = "350"
+FINN_PRO_MAX_TOKENS = "700"
+FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
+# Gleiche Kalibrierung wie oben im Top-Level-[vars]-Block (siehe Kommentar
+# dort) - dev hat einen eigenen GEMINI_API_KEY/eigenes Projekt, damit ein
+# eigenes 1.000/Tag-Kontingent, aber teilt sich den kontoweiten Workers-AI-
+# Fallback-Topf (10.000 Neuronen/Tag) mit dem QA/Prod-Worker.
+DAILY_REQUEST_LIMIT = "50"
+IP_DAILY_LIMIT = "100"
+GLOBAL_DAILY_LIMIT = "800"
+# Auf dev eingeschaltet - hier wird der Endpunkt entwickelt und per curl getestet.
+EXPOSE_EXTRACT_ENABLED = "true"
+EXPOSE_DAILY_LIMIT = "8"
+EXPOSE_IP_DAILY_LIMIT = "20"
+EXPOSE_GLOBAL_DAILY_LIMIT = "150"
+
+# Cloudflare Email Sending (Ergaenzung 05.08.) - erst einkommentieren, NACHDEM
+# die Domain freigeschaltet ist:
+#   npx wrangler email sending enable immofuchs.info
+#   npx wrangler email sending dns get immofuchs.info   # SPF/DKIM pruefen
+# Reihenfolge ist wichtig: Ist das Binding gesetzt, aber die Domain nicht
+# freigeschaltet, schlaegt jeder Versand hart fehl (siehe email.ts) - dann
+# waeren Registrierung und Magic-Link wieder blockiert. Ohne Binding greift
+# stattdessen Resend bzw. der Log-Fallback.
+# [[env.dev.send_email]]
+# name = "EMAIL"
+
+[env.dev.ai]
+binding = "AI"
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "immofuchs-dev"
+database_id = "bc9794e1-2722-438e-95a3-06637ae4361a"
+migrations_dir = "migrations"
+
+[[env.dev.durable_objects.bindings]]
+name = "RATE_LIMITER_DO"
+class_name = "SessionRateLimiter"
+
+[[env.dev.migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionRateLimiter"]
+
+# ═══ QA-Umgebung (neu, Kommerzialisierung 2026-08) ═══
+# Bisher teilten sich QA und Prod EINEN physischen Worker (siehe deploy-qa.yml,
+# das bewusst auf die Prod-Worker-URL zeigte) - fuer Zahlungen/Konten braucht
+# QA aber eine eigene D1-Datenbank und einen eigenen Stripe-Testmodus-Kontext,
+# sonst wuerden QA-Tests echte Prod-Nutzerdaten/-Abos beruehren. Deshalb ab
+# jetzt ein eigener, von Prod komplett unabhaengiger Worker, analog zu
+# [env.dev]. Frontend-CI (deploy-qa.yml) muss VITE_ASSISTANT_URL entsprechend
+# auf "immofuchs-assistant-qa" umstellen - siehe kommerzialisierung-setup.md.
+[env.qa]
+name = "immofuchs-assistant-qa"
+
+[[env.qa.routes]]
+pattern = "api-qa.immofuchs.info"
+custom_domain = true
+zone_name = "immofuchs.info"
+
+[env.qa.vars]
+ASSISTANT_ENABLED = "true"
+ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://qa.immofuchs.info"
+APP_BASE_URL = "https://qa.immofuchs.info"
+MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
+OBJECTS_SOFT_CAP = "500"
+FINN_PRO_DAILY_LIMIT = "50"
+FINN_FREE_MAX_TOKENS = "350"
+FINN_PRO_MAX_TOKENS = "700"
+FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
+DAILY_REQUEST_LIMIT = "50"
+IP_DAILY_LIMIT = "100"
+GLOBAL_DAILY_LIMIT = "800"
+EXPOSE_EXTRACT_ENABLED = "true"
+EXPOSE_DAILY_LIMIT = "8"
+EXPOSE_IP_DAILY_LIMIT = "20"
+EXPOSE_GLOBAL_DAILY_LIMIT = "150"
+
+[env.qa.ai]
+binding = "AI"
+
+[[env.qa.d1_databases]]
+binding = "DB"
+database_name = "immofuchs-qa"
+database_id = "6ca47997-a551-4be3-8471-8c2f291a12cf"
+migrations_dir = "migrations"
+
+[[env.qa.durable_objects.bindings]]
+name = "RATE_LIMITER_DO"
+class_name = "SessionRateLimiter"
+
+[[env.qa.migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionRateLimiter"]

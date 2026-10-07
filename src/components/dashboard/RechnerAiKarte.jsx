@@ -1,0 +1,613 @@
+import { useEffect, useState } from "react";
+import { useApp } from "../../context/AppContext.jsx";
+import {
+  ergebnisAnlegen,
+  mitErgebnis,
+  alter,
+  altesSchema,
+  summaryVon,
+  keyInsightsVon,
+  risksVon,
+  opportunitiesVon,
+  recommendationVon,
+  BASIS_LABEL,
+} from "../../utils/aiEngine.js";
+import { ZahlenBlock } from "./AiEngine.jsx";
+import { rufeAnalyseAuf, analyseFehlertext, erteileConsent } from "../../utils/aiAnalyse.js";
+
+// Generische KI-Karte fuer EIN Produkt an einem der fuenf Nicht-Rendite-
+// Rechner (Kredit/Miete/Sanierung/Vorfaelligkeit/Steueroptimierung §6).
+//
+// Design/Zustaende sind an ProduktZeile in AiEngine.jsx angelehnt (offen /
+// laeuft mit KI-Sterne-Ladeeffekt / fertig / veraltet, "Grundlage & Quellen"
+// zum Aufklappen, "↻ Neu"), aber schlanker: EIN Produkt statt einer Liste,
+// kein Gruppenblock "Vorbereiten", kein Handout-Sonderfall. AiEngine.jsx
+// selbst bleibt unangetastet (siehe Projekt-Vorgabe) - `ProduktZeile`,
+// `Laeuft`, `kurzfassung()` & Co. sind dort nicht exportiert, ihr Kern ist
+// deshalb hier bewusst klein neu geschrieben statt dupliziert-und-importiert.
+// Wiederverwendet werden NUR die produkt-neutralen, exportierten Bausteine:
+// `ergebnisAnlegen`/`mitErgebnis`/`alter` (aiEngine.js) und `ZahlenBlock`
+// (AiEngine.jsx) fuer den "Gerechnete Werte"-Block.
+//
+// Persistenz-Besonderheit (siehe Abschlussbericht): `aktivesObjekt` traegt
+// bislang nur {id, name(, art, rechnerTyp)} - NICHT die am Server bereits
+// gespeicherten resultData/kennzahlen dieses Objekts (anders als das volle
+// `objekt` in ObjektDetail.jsx). Das Ergebnis lebt deshalb bewusst im
+// Komponenten-State dieser Karte: es ueberlebt jeden Re-Render, solange die
+// Karte gemountet bleibt (Rechner-Tab-Wechsel/Reload mounten neu und zeigen
+// dann wieder "offen", bis erneut ausgewertet wird - das entspricht keinem
+// Datenverlust, das Ergebnis liegt weiterhin unter resultData.ai.<produktId>
+// am Server).
+export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahlen, standortFakten }) {
+  const { aktivesObjekt, updateObj, isProSavedObjects, t, lang } = useApp();
+  const tx = (key, fallback) => (t && t[key]) || fallback;
+  const [ergebnis, setErgebnis] = useState(null);
+  // Snapshot der `kennzahlen`, wie sie beim letzten Lauf ans Modell gingen -
+  // fuer den Veraltet-Hinweis. Bewusst NICHT istVeraltet()/veraltetText()
+  // aus aiEngine.js: deren RELEVANTE_FELDER kennt nur die vier Objekt-
+  // Produkte und faellt fuer jede andere produktId auf die Feldliste von
+  // "analyse" zurueck (kaufpreis/kaltmiete/eigenkapital/zinssatz/tilgung/
+  // flaeche) - fuer z. B. "vfe" (Restschuld/Zinsbindung/Wiederanlagezins)
+  // waere das eine falsche, teils sogar irrefuehrende Erkennung. Der eigene
+  // Vergleich unten ist dumm, aber ehrlich: er kennt genau die Werte, die
+  // tatsaechlich an DIESES Produkt gingen.
+  const [basisSnapshot, setBasisSnapshot] = useState(null);
+  const [laufend, setLaufend] = useState(false);
+  const [fehler, setFehler] = useState(null);
+  const [consent, setConsent] = useState(false);
+  const [bestaetigen, setBestaetigen] = useState(false);
+  const [aufgeklappt, setAufgeklappt] = useState(false);
+
+  // Ohne Objekt-ID gibt es kein Speicherziel - die Karte ist ohnehin nur
+  // sichtbar, wenn der Aufrufer ein aktivesObjekt mit passendem
+  // art/rechnerTyp geprueft hat (siehe die 5 Rechner-Dateien), das dient nur
+  // als zweites Sicherheitsnetz gegen einen falsch verdrahteten Aufrufer.
+  if (!aktivesObjekt?.id) return null;
+
+  const veraltet =
+    ergebnis != null &&
+    (basisSnapshot !== JSON.stringify(kennzahlen ?? {}) || (ergebnis.lang || "de") !== lang);
+
+  async function starten() {
+    setFehler(null);
+    setConsent(false);
+    setLaufend(true);
+    try {
+      const res = await rufeAnalyseAuf({ produkt: produktId, kennzahlen, zahlen, standortFakten, lang });
+      if (!res.ok) {
+        if (res.art === "consent") setConsent(true);
+        else setFehler(analyseFehlertext(res.art, t));
+        return;
+      }
+      const neu = ergebnisAnlegen(
+        produktId,
+        res.ergebnis,
+        data,
+        { ...(zahlen && zahlen.length > 0 ? { zahlen } : {}), lang },
+      );
+      setErgebnis(neu);
+      setBasisSnapshot(JSON.stringify(kennzahlen ?? {}));
+      // Gleiches Muster wie am Objekt (ObjektDetail.starteProdukt): Ablage
+      // unter resultData.ai.<produktId> via updateObj(). Anders als dort
+      // MUESSEN art/rechnerTyp hier explizit mitgegeben werden: Merkliste.jsx
+      // (useSavedObjects.updateObj, Pro-Zweig) ersetzt resultData bei einem
+      // uebergebenen extra.resultData VOLLSTAENDIG durch
+      // {...toResultData(kz), letzteAnsicht, ...extra.resultData} - ohne
+      // art/rechnerTyp in genau diesem Objekt wuerde ein "rechnerErgebnis"
+      // nach dem ersten KI-Lauf serverseitig wieder wie ein normales
+      // Rendite-Objekt aussehen. aktivesObjekt.art/.rechnerTyp sind an dieser
+      // Stelle bereits durch die Sichtbarkeits-Bedingung des Aufrufers
+      // garantiert gesetzt (siehe die 5 Rechner-Dateien).
+      // Eigener catch, gleiche Begruendung wie in ObjektDetail.starteProdukt:
+      // das Ergebnis steht oben schon im State und ist bezahlt. Ein
+      // fehlgeschlagenes Speichern ist kein Modellausfall und darf nicht als
+      // solcher gemeldet werden.
+      try {
+        await updateObj(aktivesObjekt.id, aktivesObjekt.name || "Objekt", data, {
+          resultData: mitErgebnis(
+            { art: aktivesObjekt.art, rechnerTyp: aktivesObjekt.rechnerTyp },
+            neu,
+          ),
+        });
+      } catch (speicherErr) {
+        console.error(`[KI ${produktId}] Speichern fehlgeschlagen:`, speicherErr);
+        setFehler(analyseFehlertext("nichtGespeichert", t));
+      }
+    } catch {
+      setFehler(analyseFehlertext("fehler", t));
+    } finally {
+      setLaufend(false);
+    }
+  }
+
+  async function einwilligenUndStarten() {
+    setConsent(false);
+    const ok = await erteileConsent();
+    if (!ok) {
+      setFehler(analyseFehlertext("fehler", t));
+      return;
+    }
+    starten();
+  }
+
+  function klickStarten() {
+    // Existiert schon ein Ergebnis, kostet ein erneuter Lauf Kontingent -
+    // dieselbe Rueckfrage wie in AiEngine.jsx (Bestaetigung).
+    if (ergebnis) {
+      setBestaetigen(true);
+      return;
+    }
+    starten();
+  }
+
+  return (
+    <div
+      style={{
+        ...karte,
+        marginTop: 12,
+        ...(veraltet ? { borderColor: "var(--warn-bd)" } : {}),
+      }}
+    >
+      {veraltet && (
+        <div style={veraltetBand}>
+          {tx("aiVeraltet", "⟳ Veraltet")} · {(ergebnis.lang || "de") !== lang
+            ? tx("aiAndereSprache", "In einer anderen Sprache erstellt – neu erstellen für die aktuelle Sprache")
+            : tx("raikVeraltet", "Eingaben haben sich seit der letzten Auswertung geändert")}
+        </div>
+      )}
+      {fehler && <div style={fehlerBand}>{fehler}</div>}
+
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+        <span aria-hidden="true" style={{ flexShrink: 0, color: KI, fontSize: 13.5 }}>
+          ✦
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--ct)" }}>
+            {titel}
+          </span>
+          {ergebnis && (
+            <span style={{ display: "block", fontSize: 11, color: "var(--cl)", marginTop: 4 }}>
+              {tx("raikKiGeneriert", "KI-generiert")} · {alter(ergebnis)}
+            </span>
+          )}
+        </span>
+        {!isProSavedObjects && <span style={preisChip}>Pro</span>}
+      </div>
+
+      {consent && (
+        <div style={consentBand}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+            {tx(
+              "raikConsent",
+              "Für die Auswertung werden diese Zahlen an unseren KI-Dienstleister übertragen — ohne Adresse und ohne Namen. Einverstanden?",
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={einwilligenUndStarten} style={consentJa}>
+              {tx("aiConsentJa", "Einverstanden, starten")}
+            </button>
+            <button type="button" onClick={() => setConsent(false)} style={consentNein}>
+              {tx("aiAbbrechen", "Abbrechen")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!ergebnis && !laufend && !consent && (
+        <div style={aktionsZeile}>
+          <span style={nutzenZeile}>{kurz}</span>
+          <button type="button" onClick={klickStarten} style={knopf}>
+            {tx("raikAnalysieren", "Analysieren")}
+          </button>
+        </div>
+      )}
+
+      {laufend && <Laeuft titel={titel} t={t} />}
+
+      {ergebnis && !laufend && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <span
+              style={{
+                width: 3,
+                flexShrink: 0,
+                borderRadius: 2,
+                background: veraltet ? "var(--warn-bd)" : KI,
+              }}
+            />
+            <span style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ct)" }}>
+              {summaryVon(ergebnis) || tx("aiErgebnisLiegtVor", "Ergebnis liegt vor.")}
+            </span>
+          </div>
+
+          {altesSchema(ergebnis) ? (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "var(--info-bg)",
+                color: "var(--info-tx)",
+                fontSize: 12.5,
+                lineHeight: 1.5,
+              }}
+            >
+              {tx("aiFruehereVersion", "Diese Auswertung wurde mit einer früheren Version erstellt.")}{" "}
+              <button
+                type="button"
+                onClick={klickStarten}
+                style={{ ...textLink, fontSize: 12.5, color: "var(--info-tx)", textDecoration: "underline" }}
+              >
+                {tx("aiNeuBerechnen", "Neu berechnen")}
+              </button>
+            </div>
+          ) : (
+            <>
+              {keyInsightsVon(ergebnis).map((i, idx) => (
+                <ErkenntnisZeile key={i.title} i={i} erste={idx === 0} />
+              ))}
+              {risksVon(ergebnis).map((r) => (
+                <ErkenntnisZeile key={r.title} i={r} ton="risk" />
+              ))}
+              {opportunitiesVon(ergebnis).map((o) => (
+                <ErkenntnisZeile key={o.title} i={o} ton="opportunity" />
+              ))}
+            </>
+          )}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              marginTop: 12,
+            }}
+          >
+            {ergebnis?.zahlen?.length > 0 || recommendationVon(ergebnis) ? (
+              <button
+                type="button"
+                onClick={() => setAufgeklappt((o) => !o)}
+                aria-expanded={aufgeklappt}
+                style={textLink}
+              >
+                {tx("raikGrundlageQuellen", "Grundlage & Quellen")} {aufgeklappt ? "▲" : "▼"}
+              </button>
+            ) : (
+              <span />
+            )}
+            <button type="button" onClick={klickStarten} style={{ ...textLink, color: "var(--cl)" }}>
+              {tx("altNeu", "↻ Neu")}
+            </button>
+          </div>
+
+          {aufgeklappt && (ergebnis?.zahlen?.length > 0 || recommendationVon(ergebnis)) && (
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--cb)" }}>
+              {recommendationVon(ergebnis) && (
+                <div style={{ marginBottom: 16, fontSize: 12.5, color: "var(--ct)", lineHeight: 1.6 }}>
+                  {recommendationVon(ergebnis)}
+                </div>
+              )}
+              {ergebnis?.zahlen?.length > 0 && (
+                <ZahlenBlock zahlen={ergebnis.zahlen} titel={tx("aiGerechneteWerte", "Gerechnete Werte")} />
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {bestaetigen && (
+        <div style={bestaetigungKarte}>
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{tx("aiNeuFrage", "Neu erstellen?")}</div>
+          <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--cl)", marginBottom: 16 }}>
+            {tx("aiErsetzt", "Das ersetzt die Auswertung vom {datum}.").replace("{datum}", alter(ergebnis))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setBestaetigen(false);
+              starten();
+            }}
+            style={knopfPrimaer}
+          >
+            {tx("aiJaNeu", "Ja, neu erstellen")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setBestaetigen(false)}
+            style={{
+              ...textLink,
+              display: "block",
+              width: "100%",
+              textAlign: "center",
+              marginTop: 4,
+              minHeight: 44,
+            }}
+          >
+            {tx("aiAbbrechen", "Abbrechen")}
+          </button>
+        </div>
+      )}
+
+      <div style={{ fontSize: 11, color: "var(--cl)", lineHeight: 1.5, marginTop: 12 }}>
+        {tx("raikDisclaimer", "Text ist KI-generiert und ersetzt keine Beratung.")}
+      </div>
+    </div>
+  );
+}
+
+// Marineblau ist in der App die "Denk-Farbe" fuer KI (siehe ObjektDetail.jsx,
+// AiEngine.jsx) - hier ausschliesslich fuer die Glyphe und den modellgenerierten
+// Text, nie fuer gerechnete Zahlen.
+const KI = "#1E3A5F";
+
+// "Risiko"/"Chance"-Label vor Risks/Opportunities - dieselben Farben wie
+// TON_FARBE in AiEngine.jsx (dort nicht exportiert, deshalb hier dupliziert,
+// siehe Kommentar am Dateianfang zu ProduktZeile/InsightZeile).
+const TON_LABEL = { risk: "Risiko", opportunity: "Chance" };
+const TON_FARBE = { risk: "var(--bad-tx)", opportunity: "var(--ok-tx)" };
+
+// Eine Zeile aus keyInsights/risks/opportunities - bislang inline nur fuer
+// keyInsights geschrieben, jetzt fuer alle drei Listen wiederverwendet (siehe
+// Formular oben), sonst fehlten risks/opportunities in dieser Karte komplett,
+// obwohl der Worker sie fuer alle acht Produkte liefert.
+function ErkenntnisZeile({ i, erste, ton }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        marginTop: erste ? 12 : 0,
+        padding: "7px 0",
+        borderTop: erste ? "none" : "1px solid var(--cb)",
+      }}
+    >
+      <span
+        title={BASIS_LABEL[i.basis] || BASIS_LABEL.ki}
+        aria-label={BASIS_LABEL[i.basis] || BASIS_LABEL.ki}
+        style={{
+          marginTop: 6,
+          width: 7,
+          height: 7,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: i.basis === "berechnet" ? "var(--ok-tx)" : i.basis === "ki" ? KI : "var(--cl)",
+        }}
+      />
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "baseline" }}>
+          {ton && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 0.4,
+                textTransform: "uppercase",
+                color: TON_FARBE[ton],
+              }}
+            >
+              {TON_LABEL[ton]}
+            </span>
+          )}
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ct)" }}>{i.title}</span>
+          {i.value && (
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ca)" }}>{i.value}</span>
+          )}
+        </span>
+        <span style={{ display: "block", fontSize: 12.5, color: "var(--cl)", marginTop: 2, lineHeight: 1.5 }}>
+          {i.text}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+// Phasentext + KI-Sterne/Glow-Balken-Ladeeffekt (Nutzer-Entscheidung
+// 2026-09-18, siehe Loader-Vergleich-Artifact): durchgehend orangene Balken
+// mit Leucht-Schatten statt eines durchlaufenden Glanzbands, Sterne pulsieren
+// einzeln statt synchron. Vier statt drei Phasentexte im 2,5s- statt 4s-Takt -
+// mehr Bewegung ueber die typische 5-30s-Laufzeit. Eigene Klassennamen
+// (raik-*), aus demselben Grund wie zuvor nicht aus AiEngine.jsx importiert:
+// die Komponente ist dort nicht exportiert.
+const PHASEN = [
+  "Kennzahlen lesen …",
+  "Marktdaten abgleichen …",
+  "Mietpotenzial ermitteln …",
+  "KI-Analyse fertigstellen …",
+];
+
+const RAIK_LADEEFFEKT_CSS = `
+@keyframes raik-stern-puls{0%{opacity:.4;transform:scale(.8);filter:drop-shadow(0 0 2px rgba(232,96,10,.2))}100%{opacity:1;transform:scale(1.15);filter:drop-shadow(0 0 8px rgba(232,96,10,.7))}}
+@keyframes raik-balken-schimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.raik-stern{display:inline-block;animation:raik-stern-puls 1.8s ease-in-out infinite alternate}
+.raik-balken{background-image:linear-gradient(90deg,var(--ci) 0%,var(--ca) 35%,#ffb27a 50%,var(--ca) 65%,var(--ci) 100%);
+  background-size:200% 100%;animation:raik-balken-schimmer 2s linear infinite;box-shadow:0 0 12px rgba(232,96,10,.22)}
+@media(prefers-reduced-motion: reduce){
+  .raik-stern{animation:none;opacity:.9}
+  .raik-balken{animation:none;background-image:none;box-shadow:none}
+}
+`;
+
+function Laeuft({ titel, t }) {
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setPhase((p) => Math.min(p + 1, PHASEN.length - 1)), 2500);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div aria-busy="true" style={{ marginTop: 8 }}>
+      <style>{RAIK_LADEEFFEKT_CSS}</style>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        {[0, 300, 600].map((verzoegerung, i) => (
+          <span
+            key={verzoegerung}
+            className="raik-stern"
+            aria-hidden="true"
+            style={{
+              color: "var(--ca)",
+              fontSize: i === 1 ? 17 : 14,
+              animationDelay: `${verzoegerung}ms`,
+            }}
+          >
+            ✦
+          </span>
+        ))}
+        <span style={{ fontSize: 12.5, color: "var(--cl)" }}>{(t && t[`raikPhase${phase + 1}`]) || PHASEN[phase]}</span>
+      </div>
+      {[100, 72, 42].map((breite) => (
+        <div
+          key={breite}
+          className="raik-balken"
+          style={{ height: 14, width: `${breite}%`, borderRadius: 7, marginBottom: 10 }}
+        />
+      ))}
+      <span style={{ position: "absolute", left: -9999 }} aria-live="polite">
+        {((t && t.aiWirdErstellt) || "{titel} wird erstellt").replace("{titel}", titel)}
+      </span>
+    </div>
+  );
+}
+
+// ── Stile ───────────────────────────────────────────────────────────────────
+// Werte 1:1 aus AiEngine.jsx uebernommen (dort nicht exportiert), damit beide
+// Karten optisch nicht auseinanderlaufen.
+const karte = {
+  background: "var(--cc)",
+  border: "1px solid var(--cb)",
+  borderRadius: 12,
+  padding: "14px 16px",
+};
+
+const aktionsZeile = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: 8,
+  marginTop: 8,
+};
+
+const nutzenZeile = {
+  flex: "1 1 140px",
+  minWidth: 140,
+  fontSize: 12.5,
+  lineHeight: 1.45,
+  color: "var(--cl)",
+};
+
+const preisChip = {
+  flexShrink: 0,
+  fontSize: 11,
+  fontWeight: 600,
+  color: "var(--cl)",
+  background: "var(--cro)",
+  borderRadius: 6,
+  padding: "3px 7px",
+  whiteSpace: "nowrap",
+};
+
+const veraltetBand = {
+  background: "var(--warn-bg)",
+  border: "1px solid var(--warn-bd)",
+  color: "var(--warn-tx)",
+  borderRadius: 8,
+  padding: "6px 10px",
+  fontSize: 11,
+  fontWeight: 600,
+  lineHeight: 1.4,
+  marginBottom: 8,
+};
+
+const fehlerBand = {
+  background: "var(--bad-bg)",
+  border: "1px solid var(--bad-bd)",
+  color: "var(--bad-tx)",
+  borderRadius: 10,
+  padding: "10px 12px",
+  fontSize: 13.5,
+  lineHeight: 1.5,
+  marginBottom: 12,
+};
+
+const consentBand = {
+  background: "var(--ci)",
+  border: "1px solid var(--cb)",
+  borderRadius: 12,
+  padding: "14px 16px",
+  marginTop: 12,
+};
+
+const consentJa = {
+  display: "inline-flex",
+  alignItems: "center",
+  height: 44,
+  padding: "0 16px",
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 13.5,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+const consentNein = {
+  ...consentJa,
+  background: "var(--cc)",
+  color: "var(--ct)",
+  border: "1.5px solid var(--cb)",
+  fontWeight: 600,
+};
+
+const textLink = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  color: "var(--ca)",
+  fontSize: 13.5,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  minHeight: 44,
+  textAlign: "left",
+};
+
+const knopf = {
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
+  height: 44,
+  padding: "0 16px",
+  borderRadius: 10,
+  border: "1.5px solid var(--cb)",
+  background: "var(--cc)",
+  color: "var(--ct)",
+  fontSize: 13.5,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+const knopfPrimaer = {
+  width: "100%",
+  height: 44,
+  borderRadius: 10,
+  border: "none",
+  background: "var(--ca)",
+  color: "#fff",
+  fontSize: 15,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+const bestaetigungKarte = {
+  position: "relative",
+  background: "var(--ci)",
+  border: "1px solid var(--cb)",
+  borderRadius: 12,
+  padding: "16px",
+  marginTop: 12,
+};

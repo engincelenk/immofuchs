@@ -3,7 +3,8 @@
 ImmoFuchs Monthly Data Update
 Runs on the 1st of each month via GitHub Actions.
 Updates src/data.js (MARKET_RATES), src/i18n/translations.js (ratesTip
-Stand-Datum) und public/zinsen.json (Live-Datenquelle der Landingpage).
+Stand-Datum). public/zinsen.json entfiel 2026-10-01 - die App liest den
+Bauzins nur noch aus MARKET_RATES, der anschliessende Deploy baut neu.
 
 Bauzinsen-Ermittlung (2026-08-24 umgestellt, kein LLM mehr noetig):
   1. Deutsche Bundesbank: Rendite 10J Bundeswertpapier + 0,75 Aufschlag
@@ -21,8 +22,18 @@ einen simplen requests.get() - das liess Claude fast jeden Monat
 monatelang Mai-Zinsen trotz laufendem Job).
 """
 
-import os, re, json
+import os, re
 from datetime import date, datetime
+
+# Deutsche Zeit (MEZ/MESZ) statt Runner-Uhr (UTC): der Job laeuft am 1. um 01:07 Uhr
+# deutscher Zeit - im Sommer ist das 23:07 UTC am VORTAG, mit UTC wuerde hier der
+# Vormonat eingetragen. Fallback auf UTC, falls die Zeitzonen-Datenbank fehlt (Windows
+# ohne tzdata) - auf dem GitHub-Runner (Ubuntu) ist sie vorhanden.
+try:
+    from zoneinfo import ZoneInfo
+    BERLIN = ZoneInfo("Europe/Berlin")
+except Exception:  # pragma: no cover
+    BERLIN = None
 
 import requests
 import pdfplumber
@@ -32,7 +43,7 @@ from playwright.sync_api import sync_playwright
 REPO_ROOT       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_JS         = os.path.join(REPO_ROOT, "src", "data.js")
 TRANSLATIONS_JS = os.path.join(REPO_ROOT, "src", "i18n", "translations.js")
-ZINSEN_JSON     = os.path.join(REPO_ROOT, "public", "zinsen.json")
+DATENSTATUS_HTML = os.path.join(REPO_ROOT, "public", "datenstatus.html")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; ImmoFuchsBot/1.0; +https://immofuchs.info)"
@@ -43,6 +54,45 @@ BUNDESBANK_PDF_URL = (
     "ea383861edaaf9516c5e1a3e20fa93f0/472B63F073F071307366337C94F8C870/rendbund-data.pdf"
 )
 INTERHYP_URL = "https://www.interhyp.de/zinsen/"
+
+# Faelligkeitspruefung: Konstante -> Pflegeintervall in Monaten. Erfasst sind
+# nur Konstanten mit einem stand-Feld in data.js. Das Skript aktualisiert
+# diese Werte nicht selbst (ausser MARKET_RATES, PFANDBRIEF und
+# BUNDESANLEIHE_10J), sondern meldet, was ueberfaellig ist - damit die
+# Intervall-Angaben in data.js nicht folgenlos bleiben.
+# Die Quartalsreihen stehen auf 6 Monate statt 3: Destatis und BDEW
+# veroeffentlichen mit rund zwei Monaten Verzug, ein Quartalswert ist also
+# regulaer bis zu ~5 Monate alt. Bei 3 Monaten wuerde die Pruefung jeden
+# Monat Alarm schlagen, ohne dass etwas zu tun waere.
+PFLEGE_INTERVALL = {
+    "MARKET_RATES": 1,
+    "PFANDBRIEF": 1,
+    "BUNDESANLEIHE_10J": 1,
+    "WERTSTEIGERUNG": 6,
+    "MIET_P": 6,
+    "KFW_HEIZUNG": 3,
+    "BAFA": 3,
+    "SAN_ENERGIE": 6,
+    "KFW_KREDIT": 3,
+    "SAN_TIERS": 6,
+}
+
+# Anzeige-Metadaten fuer public/datenstatus.html - rein informativ, steuert
+# nichts an der eigentlichen Pruefung. "automatisiert" = wird von diesem
+# Skript selbst geschrieben (MARKET_RATES/PFANDBRIEF/BUNDESANLEIHE_10J) oder
+# muss von Hand in data.js gepflegt werden (Rest).
+DATENSTATUS_META = {
+    "MARKET_RATES": {"label": "Bauzinsen", "rechner": "Renditerechner, Kreditrechner", "automatisiert": True},
+    "PFANDBRIEF": {"label": "Wiederanlagezins (Pfandbrief)", "rechner": "Vorfälligkeitsrechner", "automatisiert": True},
+    "BUNDESANLEIHE_10J": {"label": "Bundesanleihe 10 Jahre", "rechner": "Objektseite: Alternativ-Investment", "automatisiert": True},
+    "WERTSTEIGERUNG": {"label": "Wertsteigerung Wohnimmobilien", "rechner": "Renditerechner, Landingpage", "automatisiert": False},
+    "MIET_P": {"label": "Mietpreisprognose", "rechner": "Mieterhöhungsrechner", "automatisiert": False},
+    "KFW_HEIZUNG": {"label": "KfW-Heizungsförderung 458 (BEG)", "rechner": "Sanierungsrechner", "automatisiert": False},
+    "BAFA": {"label": "BAFA-Förderung", "rechner": "Sanierungsrechner", "automatisiert": False},
+    "SAN_ENERGIE": {"label": "Energiepreise & CO₂-Faktoren", "rechner": "Sanierungsrechner", "automatisiert": False},
+    "KFW_KREDIT": {"label": "KfW-Förderkredit-Konditionen", "rechner": "Kreditrechner", "automatisiert": False},
+    "SAN_TIERS": {"label": "Sanierungs-Maßnahmenkosten", "rechner": "Sanierungsrechner", "automatisiert": False},
+}
 
 # ── Month name tables ──────────────────────────────────────────────────────
 MONTH_DE = ["Januar","Februar","März","April","Mai","Juni",
@@ -94,6 +144,117 @@ def replace_market_rates_block(data_js: str, stand: str, avg, changes: list) -> 
         return data_js
     changes.append(f"  MARKET_RATES: stand={stand}, avg={avg}")
     return data_js[: m.start()] + new_block + data_js[m.end() :]
+
+
+def sammle_konstanten_status(data_js: str, now):
+    """Liest fuer jede Konstante in PFLEGE_INTERVALL den stand-Wert aus data.js
+    und berechnet ihr Alter in Monaten. Aendert nichts - reine Auswertung,
+    Basis fuer die Faelligkeitsmeldung UND fuer public/datenstatus.html."""
+    monate = {m: i + 1 for i, m in enumerate(MONTH_DE)}
+    status = []
+    for name, intervall in PFLEGE_INTERVALL.items():
+        m = re.search(
+            r"export const " + name + r"\s*=\s*\{[^}]*?stand:\s*\"([^\"]+)\"",
+            data_js,
+            re.DOTALL,
+        )
+        if not m:
+            continue
+        stand = m.group(1)
+        q = re.match(r"Q([1-4])\s+(20\d{2})", stand)
+        mo = re.match(r"(\w+)\s+(20\d{2})", stand)
+        if q:
+            jahr, monat = int(q.group(2)), int(q.group(1)) * 3
+        elif mo and mo.group(1) in monate:
+            jahr, monat = int(mo.group(2)), monate[mo.group(1)]
+        else:
+            continue
+        alter = (now.year - jahr) * 12 + (now.month - monat)
+        status.append({
+            "name": name,
+            "stand": stand,
+            "alter": alter,
+            "intervall": intervall,
+            "ueberfaellig": alter > intervall,
+            "bald_faellig": alter == intervall,
+            **DATENSTATUS_META.get(name, {"label": name, "rechner": "—", "automatisiert": False}),
+        })
+    return status
+
+
+def render_datenstatus_html(status: list, now) -> str:
+    """Baut public/datenstatus.html - Ampel-Uebersicht aller gepflegten
+    Konstanten, im ImmoFuchs-Look (Tokens aus CLAUDE.md)."""
+    rows = ""
+    for s in sorted(status, key=lambda x: (-x["alter"] / max(x["intervall"], 1))):
+        ampel = "🔴" if s["ueberfaellig"] else "🟡" if s["bald_faellig"] else "🟢"
+        auto = "automatisch" if s["automatisiert"] else "manuell"
+        rows += f"""
+        <tr>
+          <td>{ampel}</td>
+          <td>{s['label']}<br><span class="sub">{s['name']}</span></td>
+          <td>{s['rechner']}</td>
+          <td>{s['stand']}</td>
+          <td>{s['alter']} / {s['intervall']} Monate</td>
+          <td>{auto}</td>
+        </tr>"""
+
+    return f"""<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ImmoFuchs — Datenstatus</title>
+<link href="/fonts/dm-sans.css" rel="stylesheet">
+<style>
+  :root {{
+    --ca:#E8600A; --ca-dk:#C44D00; --bg:#F5F5F0; --cc:#FFFFFF;
+    --ct:#1A1A1A; --ch:#8A8A80; --cb:#E5E5DC;
+  }}
+  * {{ box-sizing:border-box; }}
+  body {{
+    margin:0; padding:32px 16px; background:var(--bg); color:var(--ct);
+    font-family:'DM Sans', sans-serif;
+  }}
+  .wrap {{ max-width:900px; margin:0 auto; }}
+  h1 {{ font-size:22px; margin:0 0 4px; }}
+  .meta {{ color:var(--ch); font-size:13px; margin-bottom:24px; }}
+  table {{
+    width:100%; border-collapse:collapse; background:var(--cc);
+    border:1px solid var(--cb); border-radius:12px; overflow:hidden;
+  }}
+  th, td {{ text-align:left; padding:10px 12px; font-size:13px; border-bottom:1px solid var(--cb); }}
+  th {{ background:#FAFAF7; font-weight:600; color:var(--ch); text-transform:uppercase; font-size:11px; letter-spacing:.5px; }}
+  tr:last-child td {{ border-bottom:none; }}
+  .sub {{ color:var(--ch); font-size:11px; }}
+  .legend {{ margin-top:16px; font-size:12px; color:var(--ch); }}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>📊 ImmoFuchs Datenstatus</h1>
+    <div class="meta">Letzter Lauf: {now.strftime('%d.%m.%Y %H:%M')} Uhr · scripts/monthly_update.py</div>
+    <table>
+      <thead>
+        <tr><th></th><th>Konstante</th><th>Rechner</th><th>Stand</th><th>Alter</th><th>Pflege</th></tr>
+      </thead>
+      <tbody>{rows}
+      </tbody>
+    </table>
+    <div class="legend">🟢 aktuell · 🟡 diesen Monat fällig · 🔴 überfällig — automatisch gepflegte Werte werden von diesem Skript geschrieben, manuelle muss ein Mensch in src/data.js aktualisieren.</div>
+  </div>
+</body>
+</html>
+"""
+
+
+def pruefe_faelligkeit(status: list):
+    """Formatiert die ueberfaelligen Eintraege aus sammle_konstanten_status
+    fuer Log-Ausgabe und GitHub-Issue-Text. Aendert nichts."""
+    return [
+        f"  ⚠ {s['name']} ({s['label']}): Stand {s['stand']} — {s['alter']} Monate alt (Intervall {s['intervall']})"
+        for s in status if s["ueberfaellig"]
+    ]
 
 
 # ── Quelle 1: Deutsche Bundesbank (PDF, taeglich aktualisiert) ─────────────
@@ -157,29 +318,47 @@ def fetch_interhyp_10j():
 
 # ── Pfandbrief (Wiederanlagezins Vorfaelligkeitsrechner) - unveraendert ────
 
-def fetch_pfandbrief_zins() -> float | None:
-    """Fetch current Hypothekenpfandbrief yield (10Y) from Bundesbank API.
-    Series: BBK01.WU8148 — Umlaufrendite Hypothekenpfandbriefe 10J"""
+# Die Bundesbank hat ihre Statistik-API umgestellt: api.bundesbank.de (Reihe
+# BBK01.WU8148, 10 J.) antwortet nicht mehr (2026-10-03: Verbindung scheitert,
+# der Wert stand seit Mai). Neuer Host und neue Reihen-ID. Die neue Reihe ist die
+# Umlaufrendite ALLER inlaendischen Hypothekenpfandbriefe als Monatswert, nicht
+# mehr die 10-Jahres-Reihe - ein Durchschnitt ueber die Laufzeiten.
+PFANDBRIEF_URL = (
+    "https://api.statistiken.bundesbank.de/rest/data/BBSIS/"
+    "M.I.UMR.RD.EUR.MFISX.B.X100.A.R.A.A._Z._Z.A"
+)
+
+
+def fetch_pfandbrief_zins():
+    """Juengster Monatswert der Umlaufrendite Hypothekenpfandbriefe.
+    Liefert (zins, "Monat Jahr") oder None. Der Stand ist der Monat des
+    Beobachtungswerts, nicht des Laufs: am 1. kommt der Vormonat."""
     try:
-        start = date.today().replace(day=1).isoformat()[:7]  # YYYY-MM
-        url = (
-            "https://api.bundesbank.de/service/data/BBK/BBK01.WU8148"
-            f"?detail=dataonly&startPeriod={start}&format=json"
+        start = f"{datetime.now(BERLIN).year - 1}-01"
+        r = requests.get(
+            PFANDBRIEF_URL,
+            params={"startPeriod": start, "format": "csv"},
+            headers={**HEADERS, "Accept": "text/csv"},
+            timeout=20,
         )
-        r = requests.get(url, headers=HEADERS, timeout=15)
         r.raise_for_status()
-        data = r.json()
-        obs = data["dataSets"][0]["series"]["0:0:0:0:0"]["observations"]
-        latest_key = max(obs.keys(), key=int)
-        value = obs[latest_key][0]
-        return round(float(value), 2) if value is not None else None
+        letzter = None
+        for zeile in r.text.splitlines():
+            m = re.match(r'^"?(\d{4})-(\d{2})"?;"?(-?\d+(?:,\d+)?)"?;', zeile)
+            if m:
+                letzter = (int(m.group(1)), int(m.group(2)), float(m.group(3).replace(",", ".")))
+        if not letzter:
+            print("  ⚠ Bundesbank API: keine Werte in der Antwort")
+            return None
+        jahr, monat, wert = letzter
+        return round(wert, 2), f"{MONTH_DE[monat - 1]} {jahr}"
     except Exception as e:
         print(f"  ⚠ Bundesbank API Fehler: {e}")
         return None
 
 
 def main():
-    now   = datetime.now()
+    now   = datetime.now(BERLIN)
     m_idx = now.month - 1   # 0-based
     year  = now.year
     new_stand = f"{MONTH_DE[m_idx]} {year}"
@@ -208,7 +387,7 @@ def main():
         final_avg = round((bbk_adjusted + interhyp_avg) / 2, 2)
         print(f"\n=> Zins (Ø aus Bundesbank+0,75={bbk_adjusted} und Interhyp-Ø={interhyp_avg}): {final_avg} %")
     else:
-        print("\n⚠ Mindestens eine Quelle nicht verfuegbar — MARKET_RATES/zinsen.json bleiben unveraendert.")
+        print("\n⚠ Mindestens eine Quelle nicht verfuegbar — MARKET_RATES bleibt unveraendert.")
 
     # ── 2. data.js aktualisieren ────────────────────────────────────────────
     print("\nApplying updates to data.js...")
@@ -217,18 +396,31 @@ def main():
 
     data_js = replace_market_rates_block(data_js, new_stand, final_avg, changes)
 
-    # PFANDBRIEF (separate Datenreihe, unveraendert seit jeher ueber die
-    # Bundesbank-API BBK01.WU8148, die momentan Verbindungsfehler wirft)
+    # BUNDESANLEIHE_10J (Karte Alternativ-Investment): derselbe Bundesbank-Wert,
+    # der oben in den Bauzins eingeht, hier ohne Aufschlag.
+    if bbk_10j is not None:
+        data_js = replace_simple(
+            data_js,
+            r"(?s)export const BUNDESANLEIHE_10J[^{]*\{[^}]*rendite:\s*([\d.]+)",
+            bbk_10j, "BUNDESANLEIHE_10J.rendite", changes
+        )
+        data_js = replace_simple(
+            data_js,
+            r'(?s)export const BUNDESANLEIHE_10J[^{]*\{[^}]*stand:\s*"([^"]+)"',
+            new_stand, "BUNDESANLEIHE_10J.stand", changes
+        )
+
+    # PFANDBRIEF (separate Datenreihe, Bundesbank BBSIS, siehe PFANDBRIEF_URL)
     print("\nFetching Pfandbrief yield from Bundesbank API...")
-    pfandbrief_zins = fetch_pfandbrief_zins()
-    if pfandbrief_zins:
-        print(f"  ✓ Pfandbrief 10J: {pfandbrief_zins} %")
+    pf = fetch_pfandbrief_zins()
+    if pf:
+        pfandbrief_zins, pf_stand = pf
+        print(f"  ✓ Pfandbrief ({pf_stand}): {pfandbrief_zins} %")
         data_js = replace_simple(
             data_js,
             r"(?s)export const PFANDBRIEF[^{]*\{[^}]*zins:\s*([\d.]+)",
             pfandbrief_zins, "PFANDBRIEF.zins", changes
         )
-        pf_stand = new_stand
         pf_match = re.search(r'export const PFANDBRIEF\s*=\s*\{[^}]*stand:\s*"([^"]+)"', data_js, re.DOTALL)
         if pf_match:
             old_pf_stand = pf_match.group(1)
@@ -279,46 +471,31 @@ def main():
     else:
         print("  translations.js — keine Änderungen")
 
-    # ── 4. public/zinsen.json (Live-Quelle der Landingpage) ────────────────
-    print("\nUpdating public/zinsen.json...")
-    zinsen = json.loads(open(ZINSEN_JSON, encoding="utf-8").read())
-    zinsen_changed = []
-
-    if final_avg is not None:
-        new_zinsen_stand = f"{year}-{now.month:02d}"
-        new_hinweis = (
-            "Bauzinsen (10J): Durchschnitt aus Bundesbank-Rendite Bundeswertpapiere und "
-            "Interhyp-Konditionsvergleich. Automatisiert aktualisiert (scripts/monthly_update.py). "
-            f"Stand: {new_stand}."
-        )
-        for key, new_val in (
-            ("stand", new_zinsen_stand),
-            ("hinweis", new_hinweis),
-            ("avg", final_avg),
-            ("bundesanleihe_10j", bbk_10j),
-        ):
-            if zinsen.get(key) != new_val:
-                zinsen_changed.append(f"  {key}: {zinsen.get(key)} → {new_val}")
-                zinsen[key] = new_val
-        # alte, namentliche Quellenliste entfaellt (2026-08-24 umgestellt)
-        if "quellen" in zinsen:
-            del zinsen["quellen"]
-            zinsen_changed.append("  quellen[]: entfernt (keine namentlichen Quellen mehr)")
-        # Topzins entfaellt (2026-08-24 Folge-Anpassung) - nur noch eine Zinsangabe
-        if "top" in zinsen:
-            del zinsen["top"]
-            zinsen_changed.append("  top: entfernt (keine separate Topzins-Angabe mehr)")
-
-    if zinsen_changed:
-        open(ZINSEN_JSON, "w", encoding="utf-8").write(json.dumps(zinsen, indent=2, ensure_ascii=False) + "\n")
-        print(f"✓ zinsen.json — {len(zinsen_changed)} Änderungen:")
-        for c in zinsen_changed:
-            print(c)
+    # ── 5. Faelligkeitspruefung + Datenstatus-Seite (meldet nur, aendert
+    #      an data.js nichts) ────────────────────────────────────────────────
+    status = sammle_konstanten_status(open(DATA_JS, encoding="utf-8").read(), now)
+    faellig = pruefe_faelligkeit(status)
+    if faellig:
+        print("\nHandpflege ueberfaellig:")
+        for f in faellig:
+            print(f)
     else:
-        print("  zinsen.json — keine Änderungen")
+        print("\nHandpflege: alle Werte innerhalb ihres Intervalls")
 
-    # ── Summary ────────────────────────────────────────────────────────────
-    total = len(changes) + len(i18n_changed) + len(zinsen_changed)
+    print("\nSchreibe public/datenstatus.html...")
+    open(DATENSTATUS_HTML, "w", encoding="utf-8").write(render_datenstatus_html(status, now))
+    print("  ✓ datenstatus.html aktualisiert")
+
+    # An den Workflow melden, ob ein Faelligkeits-Issue noetig ist. Ohne
+    # GITHUB_OUTPUT (z.B. lokaler Lauf) wird das einfach uebersprungen.
+    gh_output = os.environ.get("GITHUB_OUTPUT")
+    if gh_output:
+        with open(gh_output, "a", encoding="utf-8") as f:
+            f.write("overdue<<EOF_OVERDUE\n")
+            f.write("\n".join(faellig))
+            f.write("\nEOF_OVERDUE\n")
+
+    total = len(changes) + len(i18n_changed)
     print(f"\n=== Abgeschlossen — {total} Änderungen gesamt ===")
 
 

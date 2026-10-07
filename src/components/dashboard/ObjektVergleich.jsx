@@ -1,0 +1,213 @@
+// Phase E des Konzepts - der Objektvergleich, den die Analyse-Vorlage nicht hat.
+//
+// Zwei Objekte nebeneinander zu legen ist die eigentliche Kaufentscheidung.
+// Mobile-Randbedingung 2 (Konzept 3.11): Zwei Spalten sind auf 375 px
+// unlesbar, deshalb ein ZEILEN-DIFF - pro Kennzahl eine Zeile mit allen
+// Werten und hervorgehobenem Besten.
+import { berechneObjektKennzahlen, rangiereObjekte } from "../../utils/objektKennzahlen.js";
+
+const ZEILEN = [
+  { key: "kaufpreis", tk: "kaufpreis", label: "Kaufpreis", einheit: "€", besser: "klein" },
+  { key: "mieteMon", tk: "kpiMieteMon", label: "Miete / Monat", einheit: "€", besser: "gross" },
+  { key: "faktor", tk: "kpiFaktor", label: "Faktor", einheit: "x", besser: "klein", nachkomma: 1 },
+  { key: "nettoRendite", tk: "brfKernnettorendite", label: "Nettorendite", einheit: "%", besser: "gross", nachkomma: 1 },
+  { key: "rateMon", tk: "kpiRateMon", label: "Rate / Monat", einheit: "€", besser: "klein" },
+  { key: "cashflowMon", tk: "oaCashflowVorSteuer", label: "Cashflow / Monat (vor Steuer)", einheit: "€", besser: "gross" },
+  { key: "score", tk: "vgBewertung", label: "Bewertung", einheit: "/100", besser: "gross" },
+];
+
+// Klartext zum Investment-Score-Tier (investmentScore.js) - ein Scoring statt
+// zwei (Nutzer-Entscheidung 2026-09-22, hebt Entscheidung E1 auf): die
+// Rangfolge-Kopfzeile zeigt jetzt dasselbe Urteil wie der Score-Badge auf der
+// Objektseite, nicht mehr die separate, DSCR-lose Ampel aus briefing.js.
+const TIER_WORT = {
+  green: "solide",
+  yellow: "gemischt",
+  orange: "schwach",
+  red: "kritisch",
+};
+
+function zeigeWert(wert, zeile) {
+  if (!Number.isFinite(wert)) return "–";
+  if (zeile.nachkomma != null) {
+    return `${wert.toFixed(zeile.nachkomma).replace(".", ",")} ${zeile.einheit}`;
+  }
+  // Euro-Betraege bewusst IMMER de-DE-formatiert (Punkt als Tausendertrenner),
+  // unabhaengig von der UI-Sprache (Nutzer-Vorgabe 2026-09-10) - "locale" kam
+  // vorher hier durch und lieferte bei z.B. Englisch ein Komma statt Punkt.
+  if (zeile.einheit === "€") return `${Math.round(wert).toLocaleString("de-DE")} €`;
+  return `${Math.round(wert)}${zeile.einheit}`;
+}
+
+export function ObjektVergleich({ objekte, t, onFinnFrage }) {
+  if (!objekte || objekte.length < 2) return null;
+
+  const spalten = objekte.map((o) => {
+    const daten = o.inputData || o.data || {};
+    return { name: o.name || o.title || (t && t.objObjekt) || "Objekt", kz: berechneObjektKennzahlen(daten, t) };
+  });
+
+  // Rangfolge aus derselben Funktion wie die Merkliste (objektseite-neu.md
+  // §8) - zwei Ansichten duerfen nicht zwei Reihenfolgen zeigen.
+  const rangliste = rangiereObjekte(objekte, t, "ampel");
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div
+        style={{
+          background: "var(--cc)",
+          border: "1px solid var(--cb)",
+          borderRadius: 12,
+          padding: "12px 14px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: "var(--ch)",
+            textTransform: "uppercase",
+            letterSpacing: 0.6,
+            fontWeight: 600,
+            marginBottom: 8,
+          }}
+        >
+          Rangfolge
+        </div>
+        {rangliste.map((e) => (
+          <div
+            key={e.objekt.id || e.objekt.name}
+            style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "3px 0" }}
+          >
+            <span
+              style={{
+                width: 18,
+                fontSize: 14,
+                fontWeight: 800,
+                color: e.rang ? "var(--ct)" : "var(--ch)",
+              }}
+            >
+              {e.rang ?? "–"}
+            </span>
+            <span style={{ fontSize: 13, color: "var(--ct)", minWidth: 0, flex: 1 }}>
+              {e.objekt.name || e.objekt.title || "Objekt"}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--ch)", whiteSpace: "nowrap" }}>
+              {e.rangierbar ? (t && t[`vgTier_${e.kz.tier}`]) || TIER_WORT[e.kz.tier] || "" : (t && t.mlUnvollstaendig) || "Daten unvollständig"}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5 }}>
+        {(t && t.vgHinweis) ||
+          "Der jeweils günstigere Wert ist hervorgehoben. Bei Kaufpreis, Faktor und Rate ist weniger besser, bei Miete, Rendite und Cashflow mehr."}
+      </div>
+
+      {ZEILEN.map((z) => {
+        const werte = spalten.map((s) => {
+          const v = s.kz?.[z.key];
+          return Number.isFinite(v) ? v : null;
+        });
+        const gueltig = werte.filter((v) => v != null);
+        const bestWert =
+          gueltig.length > 1
+            ? z.besser === "gross"
+              ? Math.max(...gueltig)
+              : Math.min(...gueltig)
+            : null;
+
+        return (
+          <div
+            key={z.key}
+            style={{
+              background: "var(--cc)",
+              border: "1px solid var(--cb)",
+              borderRadius: 12,
+              padding: "12px 14px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                color: "var(--ch)",
+                textTransform: "uppercase",
+                letterSpacing: 0.6,
+                fontWeight: 600,
+                marginBottom: 8,
+              }}
+            >
+              {(t && t[z.tk]) || z.label}
+            </div>
+            {spalten.map((s, i) => {
+              const v = werte[i];
+              const ist = bestWert != null && v === bestWert;
+              return (
+                <div
+                  key={s.name + i}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "5px 0",
+                    fontSize: 13.5,
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "var(--ct)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      minWidth: 0,
+                    }}
+                  >
+                    {s.name}
+                  </span>
+                  <span
+                    style={{
+                      fontWeight: ist ? 800 : 600,
+                      color: ist ? "var(--ca)" : "var(--ct)",
+                      fontVariantNumeric: "tabular-nums",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {zeigeWert(v, z)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+
+      {onFinnFrage && (
+        <button
+          type="button"
+          onClick={() => onFinnFrage()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 9,
+            width: "100%",
+            padding: "13px 16px",
+            borderRadius: 12,
+            border: "1px solid #1E3A5F33",
+            background: "#1E3A5F0d",
+            // var(--primary-tx) statt #1E3A5F (Bugreport 2026-09-09): Rahmen
+            // und Flaechenton (mit Alpha) bleiben unveraendert - nur reines
+            // Marineblau als TEXTFARBE war im Dark Mode auf dieser Karte kaum
+            // lesbar.
+            color: "var(--primary-tx)",
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          <span aria-hidden="true">✦</span> {(t && t.vgFinnFrage) || "Welches ist das bessere Investment? — Finn fragen"}
+        </button>
+      )}
+    </div>
+  );
+}

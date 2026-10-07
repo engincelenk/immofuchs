@@ -1,0 +1,122 @@
+name: 🍎 iOS Build & TestFlight Upload
+
+# Nur manuell ausgeloest (Xcode-Runner sind teuer und ein iOS-Build ist kein
+# Ersatz fuer den normalen Web-Deploy) - siehe
+# docs/app-store-google-play-setup.md. Braucht echte Secrets (App Store
+# Connect API Key, Fastlane match), ohne die schlaegt der fastlane-Schritt
+# kontrolliert fehl.
+on:
+  workflow_dispatch:
+    inputs:
+      backend:
+        description: "Welcher Worker/Backend-Stand soll eingebaut werden?"
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+        default: dev
+
+jobs:
+  build-and-upload:
+    name: 🛠️ Build (macOS-Runner) & TestFlight-Upload
+    # macos-15 statt macos-14 (Live-Befund 2026-09-05): macos-14 liefert
+    # standardmaessig Xcode 15.4 - zu alt in zweierlei Hinsicht. Erstens ist
+    # Capacitor 8 (capacitor-swift-pm 8.5.0) fuer Xcode 16+ gebaut, dessen
+    # Package-Aufloesung dort haengen blieb. Zweitens - und unabhaengig davon
+    # zwingend - akzeptiert App Store Connect seit April 2025 keine Uploads
+    # mehr, die mit Xcode 15 gebaut wurden (Pflicht: Xcode 16 / iOS-18-SDK).
+    runs-on: macos-15
+    # Ohne explizites Limit ist der GitHub-Standard 360 Minuten (6h) - Live-
+    # Befund 2026-09-04: ein haengender xcodebuild-Schritt (siehe unten) hat
+    # genau diese volle Zeit auf dem teuren macOS-Runner verbraucht, bevor
+    # GitHub den Job automatisch abgebrochen hat. 30 Minuten sind fuer diesen
+    # Build grosszuegig bemessen.
+    timeout-minutes: 30
+
+    steps:
+      - name: 🚚 Code aus GitHub auschecken
+        uses: actions/checkout@v5
+
+      - name: 🧰 Xcode-Version explizit waehlen (16+, Pflicht fuer App Store)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: 🧾 Verwendete Xcode-Version protokollieren
+        run: xcodebuild -version
+
+      - name: 🛠️ Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: 📦 Web-Assets bauen (dist/, wird per cap sync in die App kopiert)
+        env:
+          # Backend-Ziel je nach Eingabe - analog zu den drei Web-Deploy-
+          # Workflows (deploy-dev/qa/prod.yml), damit sich ein TestFlight-Build
+          # wahlweise gegen dev/qa/prod testen laesst, bevor die App live geht.
+          VITE_ASSISTANT_URL: ${{ github.event.inputs.backend == 'prod' && 'https://immofuchs-assistant.engincelenk.workers.dev/api/assistant' || github.event.inputs.backend == 'qa' && 'https://immofuchs-assistant-qa.engincelenk.workers.dev/api/assistant' || 'https://api-dev.immofuchs.info/api/assistant' }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+          VITE_TURNSTILE_SITE_KEY: 0x4AAAAAAEW18bBEyl_o5nTS
+        run: |
+          npm ci
+          npm run build
+
+      - name: 📱 Capacitor-Sync (kopiert dist/ nach ios/App/App/public)
+        run: npx cap sync ios
+
+      - name: 📚 Swift-Package-Abhaengigkeiten aufloesen (vor Fastlane)
+        # Bewusst hier statt in Fastlanes build_app (dort per
+        # `skip_package_dependencies_resolution: true` abgeschaltet, siehe
+        # fastlane/Fastfile). Zwei Gruende, beide aus dem Live-Befund
+        # 2026-09-05:
+        #   1. Fastlane haengt an diesen Aufruf `-IDEPackageSupportUseBuiltinSCM
+        #      YES` als Kommandozeilen-Argument an. Kommandozeilen-Argumente
+        #      ueberschreiben `defaults write`, ein Umstellen per defaults war
+        #      deshalb wirkungslos. Hier ohne dieses Flag = normales System-git.
+        #   2. Eigener Schritt-Timeout: haengt die Aufloesung doch noch, bricht
+        #      es nach 10 Minuten sichtbar an DIESER Stelle ab, statt den
+        #      gesamten Job stumm bis zum Job-Timeout laufen zu lassen.
+        # Muss nach `npx cap sync ios` laufen (das schreibt Package.swift).
+        timeout-minutes: 10
+        run: xcodebuild -resolvePackageDependencies -scheme App -project ios/App/App.xcodeproj
+
+      - name: 💎 Ruby + Bundler einrichten
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: 🔐 Fastlane match + Build + TestFlight-Upload
+        env:
+          # App Store Connect API Key (Empfehlung statt Apple-ID/Passwort -
+          # keine 2FA-Unterbrechung in CI moeglich). Anlegen unter App Store
+          # Connect > Nutzer und Zugriff > Integrationen > App Store Connect
+          # API, Rolle "App Manager" reicht. ASC_KEY_CONTENT = Base64 der
+          # heruntergeladenen .p8-Datei (`base64 -i AuthKey_XXX.p8`).
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Fastlane match - siehe docs/app-store-google-play-setup.md A10.5.
+          # MATCH_GIT_URL enthaelt den Zugriffs-Token direkt eingebettet
+          # (https://<user>:<token>@github.com/<user>/<repo>) - siehe
+          # fastlane/Matchfile. BEWUSST kein MATCH_GIT_BASIC_AUTHORIZATION
+          # mehr hier: Live-Befund 2026-09-04, ein fehlendes GitHub-Secret
+          # wird in `env:` zu einem LEEREN String statt komplett zu
+          # entfallen - und ein leerer String gilt in Ruby als "vorhanden",
+          # wodurch match faelschlich einen leeren, ungueltigen Auth-Header
+          # gebaut hat ("invalid credentials", obwohl MATCH_GIT_URL allein
+          # bereits korrekt authentifiziert haette).
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          # Allgemeine CI-Absicherung: git soll nie interaktiv nach
+          # Zugangsdaten fragen, sondern sofort scheitern. Hat den
+          # SPM-Haenger von 2026-09-04 allein NICHT behoben (die Aufloesung
+          # lief ueber Xcodes eingebautes SCM-Modul, kein git-Prozess) -
+          # bleibt hier trotzdem als sinnvolle Absicherung stehen.
+          GIT_TERMINAL_PROMPT: "0"
+        run: bundle exec fastlane ios beta

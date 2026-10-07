@@ -1,120 +1,2097 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from "react";
+import { lazyWithReload } from "../../utils/lazyRetry.js";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
-import { fmt, LANG_LOCALE } from "../../utils/helpers.js";
+import { ACCOUNT_T } from "../../i18n/account.js";
+import { LANG_LOCALE } from "../../utils/helpers.js";
+import { FinnBubble } from "../assistant/FinnBubble.jsx";
+import { useFinnBubble } from "../../hooks/useFinnBubble.js";
+import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
+import { ASSISTANT_T } from "../../i18n/assistant.js";
+import { ASSISTANT_FIELDS, tabZuRechner } from "../../utils/assistantContext.js";
+import { AssistantGate } from "../assistant/AssistantGate.jsx";
+import { apiFetch } from "../../utils/apiBase.js";
+import { Sheet } from "../ui/Sheet.jsx";
+import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
+import { ObjektDetail } from "../dashboard/ObjektDetail.jsx";
+import { scoreBadgeColor, scoreBadgeText } from "../dashboard/dashboardUtils.js";
+import { ObjektKPIs, VollstaendigkeitsRing } from "../dashboard/ObjektKPIs.jsx";
+import { ObjektAnlegen } from "../dashboard/ObjektAnlegen.jsx";
+import { ObjektVergleich } from "../dashboard/ObjektVergleich.jsx";
+import { ObjektExpose } from "../dashboard/ObjektExpose.jsx";
+import { ObjektOrte } from "../dashboard/ObjektUnterlagen.jsx";
+import {
+  berechneObjektKennzahlen,
+  toResultData,
+  berechneVollstaendigkeit,
+  rangiereObjekte,
+  SORTIERUNGEN,
+} from "../../utils/objektKennzahlen.js";
+import { ladeRegionaldaten, regionalSnapshot } from "../../utils/regionalpreis.js";
 
-export function useSavedObjects(setData){
-  const[savedList,setSavedList]=useState(()=>{try{return JSON.parse(localStorage.getItem('if_saved_v1')||'[]');}catch{return[];}});
-  const saveObj=useCallback((name,data,tab)=>{
-    const obj={id:Date.now().toString(),name:name.trim()||'Objekt',date:new Date().toLocaleDateString('de-DE'),tab,data:{...data}};
-    setSavedList(prev=>{const next=[obj,...prev].slice(0,50);localStorage.setItem('if_saved_v1',JSON.stringify(next));return next;});
-  },[]);
-  const delObj=useCallback((id)=>{
-    setSavedList(prev=>{const next=prev.filter(o=>o.id!==id);localStorage.setItem('if_saved_v1',JSON.stringify(next));return next;});
-  },[]);
-  const loadObj=useCallback((obj,setTab)=>{setData(obj.data);setTab(obj.tab);},[setData]);
-  return{savedList,saveObj,delObj,loadObj};
+// Lazy statt statischem Import (Befund 2026-08-18, siehe release-notes.txt) -
+// Merkliste haengt auf jeder Rechner-Seite, CheckoutWizard aber nur bei
+// showUpgrade tatsaechlich sichtbar.
+const CheckoutWizard = lazyWithReload(
+  () => import("../checkout/CheckoutWizard.jsx").then((m) => ({ default: m.CheckoutWizard })),
+  "CheckoutWizard",
+);
+
+const MAX_COMPARE = 5;
+const searchChipStyle = {
+  height: 38,
+  padding: "0 12px",
+  borderRadius: 10,
+  border: "1px solid var(--cb)",
+  background: "var(--ci)",
+  color: "var(--ct)",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  whiteSpace: "nowrap",
+};
+const searchChipActiveStyle = {
+  ...searchChipStyle,
+  background: "var(--ca)",
+  color: "#fff",
+  borderColor: "var(--ca)",
+};
+// Objektart und Ansicht sahen bis 2026-09-09 beide wie Chips aus, obwohl sie
+// voellig Verschiedenes tun: die Objektart wechselt den INHALT (andere Daten,
+// andere Karten, anderer Oeffnen-Knopf), die Ansicht nur die DARSTELLUNG
+// derselben Daten. Gleiches Aussehen bei ungleicher Bedeutung war der Kern der
+// Verwirrung - deshalb jetzt zwei bewusst verschiedene Muster: Reiter mit
+// Unterstrich fuer den Inhalt, gerahmter Segment-Umschalter fuer die Ansicht.
+// Der aktive Reiter ist nicht nur farblich markiert (WCAG 1.4.1), sondern auch
+// ueber Unterstrich und Fettung.
+const reiterStyle = {
+  flex: "0 0 auto",
+  height: 44,
+  padding: "0 4px",
+  // Durchgaengig dieselbe Eigenschaftsebene: React warnt, sobald eine Kurzform
+  // (border/borderBottom) und eine Einzeleigenschaft (borderBottomColor) fuer
+  // denselben Wert gemischt werden. Der aktive Reiter aendert nur borderColor.
+  borderWidth: "0 0 2px",
+  borderStyle: "solid",
+  borderColor: "transparent",
+  background: "transparent",
+  color: "var(--ch)",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  whiteSpace: "nowrap",
+};
+const reiterActiveStyle = {
+  ...reiterStyle,
+  color: "var(--ct)",
+  fontWeight: 700,
+  borderColor: "transparent transparent var(--ca)",
+};
+const segmentStyle = {
+  width: 44,
+  height: 44,
+  border: "none",
+  background: "transparent",
+  color: "var(--ch)",
+  fontSize: 15,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  borderRadius: 8,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+const segmentActiveStyle = {
+  ...segmentStyle,
+  background: "var(--ca)",
+  color: "#fff",
+};
+// Kontingent der Testphase (Nutzer-Vorgabe 2026-08-25): 5 Objekte INSGESAMT
+// fuer die ganze Phase. Pro speichert unbegrenzt.
+//
+// Vorher 3 Objekte je Rechnertyp, vom Server als Gesamtzahl (3 x 4 Rechner)
+// geprueft - die Aufteilung je Rechner passierte nur hier im Frontend. Mit
+// einer glatten Gesamtzahl entfaellt diese Doppelrechnung: Client und Server
+// pruefen jetzt dieselbe Zahl auf dieselbe Weise (TRIAL_MERKLISTE_GESAMT in
+// worker/src/trialLimits.ts).
+const TRIAL_OBJECT_LIMIT_GESAMT = 5;
+
+// Icon+Label je Rechnertyp fuer Merkliste-Karten mit
+// kennzahlen.art==="rechnerErgebnis" (Auftrag 2026-09-08, Teil 4). Eigene,
+// lokale Konstante statt der IC-SVGs aus App.jsx - die sind dort nicht
+// exportiert.
+const RECHNER_TYP_INFO = {
+  kredit: { icon: "🏦", label: "Kreditrechner", key: "mlTypKredit" },
+  miete: { icon: "📈", label: "Mieterhöhungsrechner", key: "mlTypMiete" },
+  sanier: { icon: "🔧", label: "Sanierungsrechner", key: "sanierFull" },
+  vfe: { icon: "⚖️", label: "Vorfälligkeitsrechner", key: "mlTypVfe" },
+  steuer6: { icon: "🧾", label: "Steueroptimierung §6", key: "mlTypSteuer6" },
+};
+const LOCAL_STORAGE_KEY = "if_saved_v1";
+const PRO_MIRROR_KEY = "if_saved_pro_mirror_v1"; // Offline-Spiegelung (4.17)
+
+function readLocalList() {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+function writeLocalList(list) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    /* Storage evtl. blockiert/voll - kein Blocker fuer die Anzeige selbst */
+  }
 }
 
-export function SaveModal({onClose,onSave,defaultName,lang}){
-  const t=T[lang]||T.de;
-  const[name,setName]=useState(defaultName||'');
-  const inp=useRef(null);
-  useEffect(()=>{setTimeout(()=>inp.current?.focus(),100);},[]);
-  return createPortal(
-    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:9000,display:'flex',alignItems:'flex-end',justifyContent:'center'}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:'var(--cc)',borderRadius:'16px 16px 0 0',padding:'24px 20px 36px',width:'100%',maxWidth:480}}>
-        <div style={{width:40,height:4,background:'var(--cb)',borderRadius:2,margin:'0 auto 20px'}}/>
-        <div style={{fontSize:17,fontWeight:700,marginBottom:16,color:'var(--ct)'}}>{t.saveModalTitle||'Objekt speichern'}</div>
-        <input ref={inp} value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&name.trim())onSave(name);}}
-          placeholder={t.savePlaceholder||'z. B. Wohnung München · 2. OG'}
-          style={{width:'100%',height:42,padding:'0 12px',borderRadius:12,border:'1.5px solid var(--cb)',background:'var(--ci)',fontSize:16,color:'var(--ct)',boxSizing:'border-box',outline:'none',marginBottom:12}}/>
-        <button disabled={!name.trim()} onClick={()=>name.trim()&&onSave(name)}
-          style={{width:'100%',height:48,borderRadius:12,border:'none',background:name.trim()?'var(--ca)':'var(--cb)',color:name.trim()?'#fff':'var(--ch)',fontSize:16,fontWeight:700,cursor:name.trim()?'pointer':'default',transition:'background .15s'}}>
-          {t.saveConfirm||'Speichern'}
+// Server-Objekt (D1-Schema, 4.2/4.17) <-> lokale Objektform
+// {id,name,date,letzteAnsicht,data}. Das D1-Schema hat bewusst kein eigenes
+// Feld fuer die Ansicht (1:1 aus der Spec uebernommen) - sie wird deshalb in
+// result_data mitgefuehrt statt das Schema eigenmaechtig zu erweitern.
+// result_data war bis dahin ungenutzt ({}), input_data bleibt so der reine
+// Formular-State.
+// Schritt A1 des Umbauplans (docs/plans/neue-phase2/01-umbauplan-phase-a-b.md):
+// Bis 2026-09 trug inputData ein Feld "tab" und band das Objekt damit an genau
+// einen Rechner - derselbe Kauf, einmal im Rendite- und einmal im
+// Kreditrechner gespeichert, ergab zwei getrennte Objekte. Da alle sechs
+// Rechner ohnehin denselben d-State aus dem AppContext lesen, existiert
+// "ein Objekt, mehrere Blickwinkel" zur Laufzeit laengst; nur die Persistenz
+// hat es zerlegt. inputData ist deshalb jetzt der vollstaendige State, und
+// die Ansicht wandert als "letzteAnsicht" daneben - eine reine
+// UI-Erinnerung, keine Identitaet mehr.
+export function toServerPayload(local) {
+  // Zwei-Produkte-Umbau (Auftrag 2026-09-08): ein Rechner-Ergebnis (Kredit-,
+  // Miet-, Sanier-, VfE- oder Steuer6-Rechner) ist kein Rendite-Objekt und
+  // bekommt deshalb weder Kaufpreis/Wohnflaeche noch eine Score-Ampel - die
+  // volle berechneObjektKennzahlen()-Rechnung waere hier nur Unsinns-Zahlen.
+  // Fehlt local.kennzahlen.art (jeder Aufruf vor diesem Umbau, siehe
+  // objektMapping.test.js), bleibt exakt der bisherige Pfad.
+  if (local.kennzahlen?.art === "rechnerErgebnis") {
+    return {
+      id: local.id,
+      title: local.name,
+      plz: local.data?.plz || null,
+      ort: local.data?.ort || null,
+      kaufpreis: null,
+      wohnflaeche: null,
+      score: null,
+      scoreLabel: null,
+      inputData: { ...local.data },
+      resultData: {
+        art: "rechnerErgebnis",
+        rechnerTyp: local.kennzahlen.rechnerTyp,
+        letzteAnsicht: local.letzteAnsicht || "haupt",
+      },
+      source: "manuell",
+    };
+  }
+  const kaufpreis = Number(local.data?.kaufpreis);
+  const wohnflaeche = Number(local.data?.wohnflaeche ?? local.data?.flaeche);
+  // A2: score/scoreLabel standen hier bis 2026-09 hart auf null - nur der
+  // Exposé-Scan befuellte sie. Jetzt bekommt jedes Objekt seine Ampel.
+  const kz = berechneObjektKennzahlen(local.data);
+  // Regionaler Snapshot (2026-09-10, B.5/D.12): EINMALIG bei Anlage
+  // eingefroren, dann bei jedem weiteren Speichern unveraendert
+  // uebernommen - lokale.kennzahlen ist der zuletzt vom Server gelesene
+  // resultData-Stand (siehe fromServerObject), enthaelt bei einem schon
+  // existierenden Objekt also den fruehesten je gesetzten Snapshot. Erst
+  // wenn dort noch keiner steht (echte Neuanlage, oder die Regionaldaten
+  // waren beim allerersten Speichern noch nicht geladen), wird neu
+  // berechnet. So bleibt der Vergleichspunkt "damals" stabil, auch wenn
+  // regionalpreise.json spaeter (naechstes Quartal) aktualisiert wird.
+  const bestehenderSnapshot = local.kennzahlen?.regionalSnapshot || null;
+  const snapshot = bestehenderSnapshot || regionalSnapshot(local.data);
+  // Herkunft jedes Werts (objektseite-neu.md §7.2) - liegt als Parallelobjekt
+  // in resultData, nicht in inputData: inputData ist der Rechner-State und
+  // wird ueberall als flaches Feld-Objekt behandelt (u. a. die
+  // loadable-Heuristik weiter unten, die Schluessel zaehlt).
+  // Durchgereicht wie der regionalSnapshot darueber.
+  const herkunft = local.herkunft || local.kennzahlen?.herkunft || null;
+  return {
+    id: local.id,
+    title: local.name,
+    plz: local.data?.plz || null,
+    ort: local.data?.ort || null,
+    kaufpreis: Number.isFinite(kaufpreis) ? kaufpreis : null,
+    wohnflaeche: Number.isFinite(wohnflaeche) ? wohnflaeche : null,
+    score: kz.score,
+    scoreLabel: kz.scoreLabel,
+    inputData: { ...local.data },
+    resultData: {
+      ...toResultData(kz),
+      letzteAnsicht: local.letzteAnsicht || "haupt",
+      ...(snapshot ? { regionalSnapshot: snapshot } : {}),
+      ...(herkunft ? { herkunft } : {}),
+    },
+    source: "manuell",
+  };
+}
+
+// Bis 2026-08 wurden score/scoreLabel/source/plz/ort/kaufpreis/wohnflaeche/
+// updatedAt hier verworfen (galten als "nur fuer Start/ObjektListe" -
+// getrennter Hook useProObjects). Seit der Navigations-Zusammenfuehrung
+// (Konzept-Dok 8.5a) ist dies die einzige Objektquelle fuer Free+Pro, daher
+// muessen diese Felder erhalten bleiben (u. a. fuer Score-Badge und
+// ObjektDetail nach Exposé-Scan-Auto-Save, siehe autoSaveExposeObject.js).
+export function fromServerObject(server, locale) {
+  // A1: "tab" aus inputData herausziehen falls vorhanden - es ist seit dem
+  // Schnitt kein Bestandteil des States mehr, koennte aber in aelteren
+  // Testdatensaetzen noch stecken und wuerde sonst als Formularfeld landen.
+  const { tab: legacyTab, ...data } = server.inputData || {};
+  return {
+    id: server.id,
+    name: server.title || "Objekt",
+    date: new Date(server.updatedAt).toLocaleDateString(locale),
+    letzteAnsicht: server.resultData?.letzteAnsicht || legacyTab || "haupt",
+    data,
+    plz: server.plz ?? null,
+    ort: server.ort ?? null,
+    kaufpreis: server.kaufpreis ?? null,
+    wohnflaeche: server.wohnflaeche ?? null,
+    score: server.score ?? null,
+    scoreLabel: server.scoreLabel ?? null,
+    source: server.source ?? null,
+    updatedAt: server.updatedAt ?? null,
+    inputData: server.inputData || null,
+    // A2: die beim Speichern abgelegten Kennzahlen, damit die Liste rendern
+    // kann, ohne jedes Objekt neu durchzurechnen.
+    kennzahlen: server.resultData || null,
+  };
+}
+
+// useSavedObjects() laeuft bewusst in ZWEI Instanzen gleichzeitig (App.jsx
+// und Landing.jsx, siehe Kommentar dort). Ohne Dedupe feuert jede davon beim
+// Mount ihren eigenen GET /objects. Dieses geteilte In-Flight-Promise buendelt
+// zeitgleiche Leseanfragen zu einem einzigen Request; nach dem Settlen wird es
+// verworfen, ein spaeterer Refresh (z.B. nach Speichern/Loeschen) laedt also
+// wieder frisch. Rueckgabe null = Server antwortete nicht ok -> Aufrufer laesst
+// seinen Stand unveraendert (Verhalten wie vorher bei !res.ok).
+let objectsInFlight = null;
+function fetchObjectsOnce() {
+  if (!objectsInFlight) {
+    objectsInFlight = (async () => {
+      const res = await apiFetch("/objects");
+      if (!res.ok) return null;
+      const { objects } = await res.json();
+      return objects.map((o) => fromServerObject(o));
+    })().finally(() => {
+      objectsInFlight = null;
+    });
+  }
+  return objectsInFlight;
+}
+
+// Haelt Login-/Pro-Status, ruft /api/v1/me (Spec 5.3) - strukturell wie
+// useAssistant/useFinnBubble. Ein einziger Provider (AccountContext.jsx)
+// haelt genau eine Instanz, damit nicht jede Komponente ihren eigenen
+// /api/v1/me-Request ausloest.
+export function useSavedObjects(setData) {
+  // Cross-cutting Pro-Signal (siehe useAccount.js, broadcastIsPro): dieser
+  // Hook wird in App.jsx VOR AppProviders/AccountProvider aufgerufen, ein
+  // useAccountCtx()-Read waere hier immer null. Custom-Event + Cache-Flag
+  // umgehen das, ohne App.jsx grossflaechig umzubauen - die eigentliche
+  // Rechtepruefung bleibt ohnehin serverseitig (4.9).
+  const [isPro, setIsPro] = useState(() => {
+    try {
+      return localStorage.getItem("if_ispro_cache") === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    const handler = (e) => setIsPro(Boolean(e.detail));
+    window.addEventListener("if:ispro-changed", handler);
+    return () => window.removeEventListener("if:ispro-changed", handler);
+  }, []);
+
+  const [savedList, setSavedList] = useState(() => (isPro ? [] : readLocalList()));
+  const migratedRef = useRef(false);
+
+  const refreshFromServer = useCallback(async () => {
+    try {
+      const mapped = await fetchObjectsOnce();
+      if (!mapped) return;
+      setSavedList(mapped);
+      try {
+        localStorage.setItem(PRO_MIRROR_KEY, JSON.stringify(mapped));
+      } catch {
+        /* Spiegelung optional */
+      }
+    } catch {
+      // Offline (4.17): Leseansicht faellt auf den zuletzt erfolgreichen Stand zurueck.
+      try {
+        const cached = JSON.parse(localStorage.getItem(PRO_MIRROR_KEY) || "null");
+        if (cached) setSavedList(cached);
+      } catch {
+        /* kein Cache vorhanden */
+      }
+    }
+  }, []);
+
+  // Free->Pro-Migration (S5b-2, IMP-06): einmalig direkt nach dem Kippen auf
+  // isPro=true. Server quittiert mit der Anzahl importierter Objekte; der
+  // lokale Stand wird ERST NACH bestaetigtem Import geloescht, nie vorher -
+  // sonst wuerde ein Netzwerkfehler die einzigen Free-Objekte des Nutzers
+  // vernichten.
+  useEffect(() => {
+    if (!isPro) {
+      migratedRef.current = false;
+      return;
+    }
+    if (migratedRef.current) return;
+    migratedRef.current = true;
+    (async () => {
+      const localList = readLocalList();
+      if (localList.length > 0) {
+        await Promise.all(
+          localList.map((o) => ladeRegionaldaten(o.data?.bundesland, o.data?.plz).catch(() => {})),
+        );
+        try {
+          const res = await apiFetch("/objects/import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ objects: localList.map(toServerPayload) }),
+          });
+          if (res.ok) writeLocalList([]);
+        } catch (e) {
+          console.error(
+            "[merkliste] Free->Pro-Import fehlgeschlagen, lokaler Stand bleibt erhalten:",
+            e,
+          );
+        }
+      }
+      await refreshFromServer();
+    })();
+  }, [isPro, refreshFromServer]);
+
+  const saveObj = useCallback(
+    async (name, data, tab, opts = {}) => {
+      const obj = {
+        id: crypto.randomUUID(),
+        name: name.trim() || "Objekt",
+        date: new Date().toLocaleDateString("de-DE"),
+        // A1: der Aufrufer uebergibt weiterhin den aktuellen Rechner-Tab, er
+        // beschreibt jetzt aber nur noch, wo der Nutzer zuletzt war.
+        letzteAnsicht: tab,
+        data: { ...data },
+        // A2: auch der Free-Pfad (localStorage) fuehrt Score und Kennzahlen
+        // mit - sonst haette nur die Pro-Liste eine Ampel.
+        // opts.rechnerErgebnis (2026-09-08): ein Ergebnis der 5 Nebenrechner
+        // ist kein Rendite-Objekt - berechneObjektKennzahlen() liefe hier ins
+        // Leere (kein Kaufpreis) und ergaebe eine falsche/leere Ampel.
+        ...(opts.rechnerErgebnis
+          ? { score: null, scoreLabel: null, kennzahlen: { art: "rechnerErgebnis", rechnerTyp: tab } }
+          : (() => {
+              const kz = berechneObjektKennzahlen(data);
+              return { score: kz.score, scoreLabel: kz.scoreLabel, kennzahlen: kz };
+            })()),
+      };
+      // Herkunftsvermerke aus dem Anlegen-Formular (objektseite-neu.md §7.2).
+      // Sie liegen neben den Kennzahlen, weil sie zusammen mit ihnen in
+      // resultData gespeichert werden (siehe toServerPayload).
+      if (opts.herkunft) {
+        obj.kennzahlen = { ...(obj.kennzahlen || {}), herkunft: opts.herkunft };
+      }
+      if (isPro) {
+        await ladeRegionaldaten(data?.bundesland, data?.plz).catch(() => {});
+        try {
+          await apiFetch("/objects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(toServerPayload(obj)),
+          });
+        } catch (e) {
+          console.error("[merkliste] Speichern fehlgeschlagen:", e);
+        }
+        await refreshFromServer();
+        // "obj" bleibt trotz Server-Speicherung die richtige Rueckgabe: es
+        // traegt dieselbe id/Kennzahlen, die der frische Server-Datensatz
+        // gleich darauf auch haben wird - genug, um die Detailansicht sofort
+        // zu oeffnen, ohne auf den Refresh zu warten (2026-09-06, P1).
+        return obj;
+      }
+      setSavedList((prev) => {
+        // Hoechstens TRIAL_OBJECT_LIMIT_GESAMT Objekte insgesamt: ein neuer
+        // Speicherstand verdraengt den insgesamt aeltesten. Bis 2026-08-25 galt
+        // das Kontingent je Rechnertyp, verdraengt wurde deshalb der aelteste
+        // DIESES Typs - mit einer Gesamtgrenze waere diese Sonderbehandlung
+        // falsch: sie koennte ein Objekt loeschen, obwohl insgesamt noch Platz
+        // ist, und zugleich ueber die Gesamtgrenze laufen.
+        const next = [obj, ...prev].slice(0, TRIAL_OBJECT_LIMIT_GESAMT);
+        writeLocalList(next);
+        return next;
+      });
+      return obj;
+    },
+    [isPro, refreshFromServer],
+  );
+
+  // Bestehendes Objekt bearbeiten. Pro geht ueber PUT /objects/:id (der
+  // Endpunkt existiert bereits samt Ownership-Check), Free ueber den lokalen
+  // Stand. Score und Kennzahlen werden neu abgeleitet, sonst zeigte die Karte
+  // nach dem Bearbeiten die alte Ampel.
+  // extra.resultData: die AI-Engine legt ihre Ergebnisse dort ab. Ohne diesen
+  // Durchgriff wuerde toServerPayload() sie beim naechsten Speichern
+  // ueberschreiben - eine bezahlte Auswertung waere weg.
+  const updateObj = useCallback(
+    async (id, name, data, extra = {}) => {
+      const kz = berechneObjektKennzahlen(data);
+      if (isPro) {
+        await ladeRegionaldaten(data?.bundesland, data?.plz).catch(() => {});
+        try {
+          const vorher = savedList.find((o) => o.id === id);
+          // 2026-09-08: vorher?.kennzahlen wird durchgereicht, damit
+          // toServerPayload() bei einem Rechner-Ergebnis in seinem
+          // eigenen Zweig bleibt - sonst wuerde "Am Objekt speichern"
+          // (SaveBtn, aktivesObjekt-Zweig) es hier stillschweigend zu
+          // einem Rendite-Objekt mit Unsinns-Score degradieren.
+          const basis = toServerPayload({
+            id,
+            name,
+            data,
+            letzteAnsicht: vorher?.letzteAnsicht || "haupt",
+            kennzahlen: vorher?.kennzahlen,
+            // Eine frisch uebergebene Herkunft (Bearbeiten-Formular) schlaegt
+            // die gespeicherte; ohne neue bleibt die bestehende erhalten.
+            herkunft: extra.herkunft || vorher?.kennzahlen?.herkunft || null,
+          });
+          await apiFetch(`/objects/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...basis,
+              // extra.resultData wird in die Basis GEMERGT, nicht an ihre
+              // Stelle gesetzt (2026-09-20, objektseite-neu.md §7.2): vorher
+              // ersetzte dieser Zweig das komplette resultData und warf damit
+              // regionalSnapshot weg - und haette jetzt auch die Herkunft
+              // verworfen, sobald ein KI-Ergebnis mitgespeichert wird.
+              ...(extra.resultData
+                ? { resultData: { ...basis.resultData, ...extra.resultData } }
+                : {}),
+            }),
+          });
+        } catch (e) {
+          console.error("[merkliste] Bearbeiten fehlgeschlagen:", e);
+        }
+        await refreshFromServer();
+        return;
+      }
+      setSavedList((prev) => {
+        const next = prev.map((o) => {
+          if (o.id !== id) return o;
+          // Free-Pfad-Pendant zum Pro-Zweig oben: art/rechnerTyp bleiben
+          // erhalten statt mit dem frisch berechneten kz ueberschrieben zu
+          // werden.
+          const istRechnerErgebnis = o.kennzahlen?.art === "rechnerErgebnis";
+          return {
+            ...o,
+            name: name.trim() || o.name,
+            data: { ...data },
+            date: new Date().toLocaleDateString("de-DE"),
+            score: istRechnerErgebnis ? null : kz.score,
+            scoreLabel: istRechnerErgebnis ? null : kz.scoreLabel,
+            // Bug-Fix 2026-09-09: bei einem Rechner-Ergebnis wurde
+            // extra.resultData (z.B. ein neues KI-Ergebnis aus
+            // RechnerAiKarte.jsx) bisher stillschweigend verworfen - o.kennzahlen
+            // ging unveraendert durch. Jetzt wird gemergt (art/rechnerTyp bleiben
+            // erhalten, da RechnerAiKarte sie in extra.resultData mitschickt).
+            // Pendant zum Pro-Zweig oben: regionalSnapshot und herkunft
+            // haengen an o.kennzahlen und wuerden von `{ ...kz }` sonst
+            // stillschweigend abgeraeumt (objektseite-neu.md §7.2).
+            kennzahlen: {
+              ...(istRechnerErgebnis
+                ? extra.resultData
+                  ? { ...o.kennzahlen, ...extra.resultData }
+                  : o.kennzahlen
+                : extra.resultData
+                  ? { ...kz, ...extra.resultData }
+                  : { ...kz, ...(o.kennzahlen?.ai ? { ai: o.kennzahlen.ai } : {}) }),
+              ...(o.kennzahlen?.regionalSnapshot
+                ? { regionalSnapshot: o.kennzahlen.regionalSnapshot }
+                : {}),
+              ...(extra.herkunft || o.kennzahlen?.herkunft
+                ? { herkunft: extra.herkunft || o.kennzahlen.herkunft }
+                : {}),
+            },
+          };
+        });
+        writeLocalList(next);
+        return next;
+      });
+    },
+    [isPro, refreshFromServer, savedList],
+  );
+
+  const delObj = useCallback(
+    async (id) => {
+      if (isPro) {
+        try {
+          await apiFetch(`/objects/${id}`, { method: "DELETE" });
+        } catch (e) {
+          console.error("[merkliste] Loeschen fehlgeschlagen:", e);
+        }
+        await refreshFromServer();
+        return;
+      }
+      setSavedList((prev) => {
+        const next = prev.filter((o) => o.id !== id);
+        writeLocalList(next);
+        return next;
+      });
+    },
+    [isPro, refreshFromServer],
+  );
+
+  const loadObj = useCallback(
+    (obj, setTab) => {
+      setData(obj.data);
+      setTab(obj.letzteAnsicht || "haupt");
+    },
+    [setData],
+  );
+
+  return {
+    savedList,
+    saveObj,
+    updateObj,
+    delObj,
+    loadObj,
+    isPro,
+    freeLimit: TRIAL_OBJECT_LIMIT_GESAMT,
+    // Neu 2026-09-06: Der Exposé-Scan legt sein Objekt ueber
+    // autoSaveExposeObject direkt per apiFetch an, nicht ueber saveObj -
+    // dieser Hook erfaehrt davon nichts. Ohne einen Refresh von aussen
+    // bliebe die Liste nach dem Scan leer.
+    refreshFromServer,
+  };
+}
+
+// Gemeinsames Sheet-Bauteil statt eigenem Backdrop/Panel (UX-Audit
+// 2026-08-13) - `open` steuert die Sichtbarkeit, die Komponente selbst
+// bleibt immer gemountet (siehe SaveBtn unten), sonst gaebe es keine
+// Ausstiegs-Animation. `initialFocusRef` uebernimmt das manuelle
+// setTimeout-Fokussieren, das Sheet fokussiert automatisch, sobald der
+// Uebergang sichtbar geworden ist.
+export function SaveModal({ open, onClose, onSave, defaultName, lang }) {
+  const t = T[lang] || T.de;
+  const [name, setName] = useState(defaultName || "");
+  const inp = useRef(null);
+  // Die Komponente bleibt jetzt dauerhaft gemountet (siehe SaveBtn) - ohne
+  // diesen Reset stuende beim naechsten Oeffnen noch der zuletzt getippte
+  // Name im Feld, statt wieder mit `defaultName` zu starten (vorher gab es
+  // das nicht zu beachten: `{open && <SaveModal/>}` erzeugte bei jedem
+  // Oeffnen einen frischen useState-Ausgangswert).
+  useEffect(() => {
+    if (open) setName(defaultName || "");
+  }, [open, defaultName]);
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      variant="bottom"
+      size={480}
+      label={t.saveModalTitle || "Objekt speichern"}
+      initialFocusRef={inp}
+    >
+      {/* Seitlich kein eigenes Padding mehr - das liefert jetzt Sheet.jsx.
+          Damit fluchtet dieses Sheet zugleich mit allen anderen (16 statt 20). */}
+      <div style={{ padding: "0 0 36px" }}>
+        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, color: "var(--ct)" }}>
+          {t.saveModalTitle || "Objekt speichern"}
+        </div>
+        <input
+          ref={inp}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && name.trim()) onSave(name);
+          }}
+          placeholder={t.savePlaceholder || "z. B. Wohnung München · 2. OG"}
+          style={{
+            width: "100%",
+            height: 42,
+            padding: "0 12px",
+            borderRadius: 12,
+            border: "1.5px solid var(--cb)",
+            background: "var(--ci)",
+            fontSize: 16,
+            color: "var(--ct)",
+            boxSizing: "border-box",
+            outline: "none",
+            marginBottom: 12,
+          }}
+        />
+        <button
+          disabled={!name.trim()}
+          onClick={() => name.trim() && onSave(name)}
+          style={{
+            width: "100%",
+            height: 48,
+            borderRadius: 12,
+            border: "none",
+            background: name.trim() ? "var(--ca)" : "var(--cb)",
+            color: name.trim() ? "#fff" : "var(--ch)",
+            fontSize: 16,
+            fontWeight: 700,
+            cursor: name.trim() ? "pointer" : "default",
+            transition: "background .15s",
+          }}
+        >
+          {t.saveConfirm || "Speichern"}
         </button>
       </div>
-    </div>,document.body
+    </Sheet>
   );
 }
 
-export function SaveBtn({tab}){
-  const{d,saveObj,lang}=useApp();const t=T[lang]||T.de;const locale=LANG_LOCALE[lang]||'de-DE';
-  const[open,setOpen]=useState(false);
-  const hasData=d.kaufpreis||d.vergleichsmiete;
-  if(!hasData)return null;
-  const defaultName=d.ort?`${d.ort}${d.kaufpreis?` · ${Number(d.kaufpreis).toLocaleString('de-DE')} €`:''}`:'' ;
-  return(
-    <>
-      <button className="no-print" onClick={()=>setOpen(true)} style={{width:'100%',padding:'12px',borderRadius:12,border:'1.5px solid var(--ca)',background:'transparent',color:'var(--ca)',fontSize:15,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginTop:8,boxSizing:'border-box'}}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-        {t.saveBtnLabel||'Speichern'}
+export function SaveBtn({ tab }) {
+  const {
+    d,
+    saveObj,
+    updateObj,
+    lang,
+    savedList,
+    isProSavedObjects,
+    savedObjectsFreeLimit,
+    aktivesObjekt,
+  } = useApp();
+  const t = T[lang] || T.de;
+  const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
+  const [open, setOpen] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [speichertGerade, setSpeichertGerade] = useState(false);
+  const [amObjektGespeichert, setAmObjektGespeichert] = useState(false);
+  const hasData = d.kaufpreis || d.vergleichsmiete;
+  if (!hasData) return null;
+
+  // Kam der Rechner aus einem Objekt (App.jsx aktivesObjekt, gesetzt von
+  // inRechner() in ObjektDetail.jsx), schreibt Speichern seit 2026-09-06 AN
+  // DIESES OBJEKT zurueck statt ein neues anzulegen. Vorher rief dieser
+  // Knopf ausnahmslos saveObj() mit einer frischen UUID auf - jeder Rundweg
+  // Objekt -> Rechner -> Speichern erzeugte damit ein Duplikat (UX-Review
+  // 2026-09-06). Das Kontingent-Limit fuer NEUE Objekte gilt hier folgerichtig
+  // nicht: es wird nichts Neues angelegt.
+  if (aktivesObjekt) {
+    return (
+      <button
+        className="no-print"
+        disabled={speichertGerade}
+        onClick={async () => {
+          setSpeichertGerade(true);
+          try {
+            await updateObj(aktivesObjekt.id, aktivesObjekt.name, d);
+            setAmObjektGespeichert(true);
+            setTimeout(() => setAmObjektGespeichert(false), 2500);
+          } finally {
+            setSpeichertGerade(false);
+          }
+        }}
+        style={{
+          width: "100%",
+          padding: "12px",
+          borderRadius: 12,
+          border: "1.5px solid var(--ca)",
+          background: "transparent",
+          color: "var(--ca)",
+          fontSize: 15,
+          fontWeight: 600,
+          cursor: speichertGerade ? "default" : "pointer",
+          opacity: speichertGerade ? 0.6 : 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          marginTop: 8,
+          boxSizing: "border-box",
+        }}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+        </svg>
+        {amObjektGespeichert
+          ? (T[lang] || T.de).mlGespeichertHaken || "Gespeichert ✓"
+          : (T[lang] || T.de).mlAmObjektSpeichern || "Am Objekt speichern"}
       </button>
-      {open&&<SaveModal lang={lang} defaultName={defaultName} onClose={()=>setOpen(false)} onSave={(name)=>{saveObj(name,d,tab);setOpen(false);}}/>}
+    );
+  }
+  // Kontingent erreicht: Upgrade-Hinweis statt stillschweigendem Verdraengen
+  // des bisherigen Eintrags. Seit 2026-08-25 die Gesamtzahl ueber alle
+  // Rechnertypen (5), nicht mehr je Rechnertyp.
+  const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
+  // Strasse und Hausnummer voranstellen, sobald sie bekannt sind (aus dem
+  // Expose oder von Hand): zwei Wohnungen in derselben Stadt sind sonst beide
+  // nur "Ingersheim · 199.000 €" und in der Merkliste nicht auseinanderzuhalten.
+  // Der Name ist im Speichern-Dialog weiterhin frei ueberschreibbar.
+  const adresse = [d.strasse, d.hausnummer].filter(Boolean).join(" ").trim();
+  const ortTeil = [adresse, d.ort].filter(Boolean).join(", ");
+  const defaultName = ortTeil
+    ? `${ortTeil}${d.kaufpreis ? ` · ${Number(d.kaufpreis).toLocaleString("de-DE")} €` : ""}`
+    : "";
+  return (
+    <>
+      <button
+        className="no-print"
+        onClick={() => (limitReached ? setShowUpgrade(true) : setOpen(true))}
+        style={{
+          width: "100%",
+          padding: "12px",
+          borderRadius: 12,
+          border: "1.5px solid var(--ca)",
+          background: "transparent",
+          color: "var(--ca)",
+          fontSize: 15,
+          fontWeight: 600,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          marginTop: 8,
+          boxSizing: "border-box",
+        }}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+        </svg>
+        {limitReached ? `👑 ${at.trialLockedCta}` : t.saveBtnLabel || "Speichern"}
+      </button>
+      {showUpgrade && (
+        <Suspense fallback={<LazyPanelFallback />}>
+          <CheckoutWizard onClose={() => setShowUpgrade(false)} />
+        </Suspense>
+      )}
+      {/* Immer gemountet statt `{open && ...}` - `open` steuert die
+          Sichtbarkeit, nur so kann Sheet.jsx die Ausstiegs-Animation zeigen
+          (siehe SaveModal). */}
+      <SaveModal
+        open={open}
+        lang={lang}
+        defaultName={defaultName}
+        onClose={() => setOpen(false)}
+        onSave={(name) => {
+          // tab !== "haupt": jeder Nebenrechner (Kredit/Miete/Sanier/VfE/
+          // Steuer6) legt ein Rechner-Ergebnis an, kein Rendite-Objekt
+          // (Auftrag 2026-09-08).
+          saveObj(name, d, tab, { rechnerErgebnis: tab !== "haupt" });
+          setOpen(false);
+        }}
+      />
     </>
   );
 }
+export function Merkliste() {
+  const {
+    savedList,
+    saveObj,
+    delObj,
+    loadObj,
+    setTabExt,
+    lang,
+    isProSavedObjects,
+    savedObjectsFreeLimit,
+    refreshObjekte,
+    set,
+  } = useApp();
+  const t = T[lang] || T.de;
+  const locale = LANG_LOCALE[lang] || "de-DE";
+  const at = ASSISTANT_T[lang] || ASSISTANT_T.de;
+  const acct = ACCOUNT_T[lang] || ACCOUNT_T.de;
+  const [confirmDel, setConfirmDel] = useState(null);
+  // Hinweis "hier landen Objekte UND Rechner-Berechnungen": wegklickbar, damit er
+  // Stammnutzer nicht dauerhaft stoert. Bei leerer Liste bleibt er immer stehen -
+  // dort erklaert er, was die Seite ueberhaupt ist. Der Reiter "Rechner-
+  // Ergebnisse" erscheint erst nach dem ersten gespeicherten Ergebnis.
+  const HINWEIS_KEY = "if_merkliste_hinweis_zu";
+  const [hinweisZu, setHinweisZu] = useState(() => {
+    try {
+      return localStorage.getItem(HINWEIS_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const schliesseHinweis = () => {
+    setHinweisZu(true);
+    try {
+      localStorage.setItem(HINWEIS_KEY, "1");
+    } catch {
+      /* Storage blockiert - Hinweis bleibt bis zum Neuladen zu */
+    }
+  };
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  // Zusammengefuehrter Tab (Konzept-Dok Abschnitt 8.5a, 2026-08): ersetzt die
+  // vormals getrennten Tabs "Merkliste" (Free+Pro, manuell gespeichert) sowie
+  // "Start"/"Objekte" (Pro-only, u. a. automatisch per Exposé-Scan angelegte
+  // Objekte mit Score, siehe autoSaveExposeObject.js). detailObj oeffnet die
+  // bisherige ObjektDetail-Ansicht statt eines eigenen Tabs.
+  const [detailObj, setDetailObj] = useState(null);
+  // B3: Objekt anlegen mit fuenf Feldern statt vierzig.
+  const [anlegenOffen, setAnlegenOffen] = useState(false);
+  // Exposé-Weg beim Anlegen (2026-09-06). ObjektAnlegen hatte den Knopf schon
+  // immer, er haengt aber an der Prop `onExpose` - und die wurde von hier nie
+  // uebergeben. Der staerkste Weg ins Produkt war damit unsichtbar: PDF
+  // hinein, Felder gefuellt, Objekt angelegt.
+  //
+  // Wiederverwendet wird der bestehende Weg vollstaendig: AssistantSheet
+  // stoesst den Datei-Dialog an, useAssistant.extrahiereExpose ruft
+  // /api/expose-extract, autoSaveExposeObject legt das Objekt an. Neu ist
+  // ausschliesslich der Einstieg.
+  const [exposeOffen, setExposeOffen] = useState(false);
 
-export function Merkliste(){
-  const{savedList,delObj,loadObj,setTabExt,lang}=useApp();const t=T[lang]||T.de;const locale=LANG_LOCALE[lang]||'de-DE';
-  const[confirmDel,setConfirmDel]=useState(null);
-  const tabLabel={haupt:t.haupt||'Rendite',kredit:t.kredit||'Kredit',miete:t.miete||'Miete',sanier:t.sanier||'Sanierung'};
-  const tabColor={haupt:'#1E3A5F',kredit:'#0a7ea4',miete:'#2d8a4e',sanier:'#8a5a0a'};
-  const fmt=v=>v?Number(v).toLocaleString(locale):null;
-  if(!savedList.length)return(
-    <div style={{padding:'60px 20px',textAlign:'center'}}>
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ch)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:16,display:'block',margin:'0 auto 16px'}}><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-      <div style={{fontSize:16,fontWeight:700,color:'var(--ct)',marginBottom:8}}>{t.emptyTitle||'Noch keine Objekte gespeichert'}</div>
-      <div style={{fontSize:14,color:'var(--ch)',lineHeight:1.5}}>{t.emptyHint||'Berechne ein Objekt und tippe auf „Speichern", um es hier zu sichern.'}</div>
-    </div>
+  // Ein Einstieg, zwei Ausloeser: der Knopf in "Objekt anlegen" und die
+  // AI-Engine am Objekt (ObjektDetail sendet dafuer ein Fenster-Event, weil
+  // dort kein Assistent haengt).
+  //
+  // Steht bewusst HIER oben bei den uebrigen Hooks und nicht weiter unten
+  // beim Sheet: darunter liegt ein fruehes `return` fuer die Detailansicht -
+  // ein Hook dahinter waere bedingt und damit ein Verstoss gegen die
+  // Hook-Regeln.
+  const oeffneExpose = useCallback(() => {
+    setAnlegenOffen(false);
+    setExposeOffen(true);
+  }, []);
+
+  // Bis 2026-09-06 hoerte auf dieses Event niemand zu - der Knopf "Exposé
+  // hochladen" in der AI-Engine tat schlicht nichts. Bleibt fuer den
+  // AiEngine-Weg an einem BESTEHENDEN Objekt unveraendert (ObjektDetail.jsx
+  // dispatcht mit objektId im detail).
+  useEffect(() => {
+    const handler = () => oeffneExpose();
+    window.addEventListener("if:expose-oeffnen", handler);
+    return () => window.removeEventListener("if:expose-oeffnen", handler);
+  }, [oeffneExpose]);
+
+  // 2026-09-07: der Exposé-Wunsch von der Startseite (Landing.jsx Hero-Kachel,
+  // App.jsx startApp/opts.openUpload) fuehrt jetzt in "Objekt anlegen" statt
+  // direkt in den objektlosen Scan - der Scan ist dort oben bereits die erste
+  // Kachel (ObjektAnlegen.jsx, Weg 1).
+  useEffect(() => {
+    const handler = () => {
+      setDetailObj(null);
+      setAnlegenOffen(false);
+      setExposeOffen(false);
+    };
+    window.addEventListener("if:objekte-liste", handler);
+    return () => window.removeEventListener("if:objekte-liste", handler);
+  }, []);
+  useEffect(() => {
+    const handler = () => setAnlegenOffen(true);
+    window.addEventListener("if:objekt-anlegen-oeffnen", handler);
+    return () => window.removeEventListener("if:objekt-anlegen-oeffnen", handler);
+  }, []);
+  // Phase E: Zeilen-Diff vor dem Finn-Chat - die Zahlen zuerst, die
+  // Einordnung auf Wunsch.
+  const [vergleichOffen, setVergleichOffen] = useState(false);
+  // Phase E: Toggle Liste | Orte.
+  const [ansicht, setAnsicht] = useState("liste");
+  // Zwei-Produkte-Umbau (Auftrag 2026-09-08): Objekte (Rendite) und
+  // Rechner-Ergebnisse (Kredit/Miete/Sanier/VfE/Steuer6) landen in derselben
+  // Liste, sind inhaltlich aber verschieden genug (keine Score-Ampel, keine
+  // KPIs), dass sie getrennte Reiter brauchen statt gemeinsam durcheinander
+  // zu stehen.
+  const [listArt, setListArt] = useState("objekte");
+  const [query, setQuery] = useState("");
+  const [onlyGut, setOnlyGut] = useState(false);
+  // Voreinstellung Ampel (objektseite-neu.md §8): die Frage "welches zuerst
+  // ansehen" beantwortet das Urteil, nicht eine Einzelkennzahl.
+  const [sortierung, setSortierung] = useState("ampel");
+  const [sortByScore, setSortByScore] = useState(false);
+  // Filter nach Rechnertyp (Konzept-Dok 8.3, "Sortiermoeglichkeit nach
+  // Rechner") - "alle" statt null, damit der Vergleich in filtered() ohne
+  // Sonderfall auskommt.
+  // Seit 2026-08-25 ist savedObjectsFreeLimit bereits die Gesamtzahl - die
+  // vorherige Hochrechnung (Limit je Rechner x Anzahl Rechnertypen) entfaellt.
+  const limitReached = !isProSavedObjects && savedList.length >= savedObjectsFreeLimit;
+  const [compareIds, setCompareIds] = useState([]);
+  const [compareSheetOpen, setCompareSheetOpen] = useState(false);
+  // Die Sprechblase verspricht "ich vergleiche" - damit das eingeloest wird,
+  // stellt das Oeffnen ueber den Vergleichs-Button/die Bubble sofort die erste
+  // Vergleichsfrage, statt nur die Frage-Chips zu zeigen (Nutzer-Feedback
+  // 2026-07-29).
+  const [compareAutoAsk, setCompareAutoAsk] = useState(false);
+  // Sprechblase ueber dem Vergleichs-Button: die Merkliste ist kein Rechner,
+  // hier reicht ein Text (Nutzerentscheidung 2026-07-22).
+  const [compareBubbleText, dismissCompareBubble] = useFinnBubble(
+    [at.hintVergleich],
+    compareIds.length >= 2 && !compareSheetOpen,
   );
-  return(
-    <div style={{padding:'16px 16px 100px'}}>
-      <div style={{fontSize:13,color:'var(--ch)',marginBottom:12,fontWeight:500}}>{savedList.length} {savedList.length===1?(t.countSingular||'Objekt gespeichert'):(t.countPlural||'Objekte gespeichert')}</div>
-      {savedList.map(obj=>{
-        const kp=fmt(obj.data.kaufpreis);
-        const miete=fmt(obj.data.kaltmiete);
-        const ek=fmt(obj.data.eigenkapital);
-        return(
-          <div key={obj.id} style={{background:'var(--cc)',borderRadius:12,padding:'16px',marginBottom:10,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:15,color:'var(--ct)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{obj.name}</div>
-                <div style={{fontSize:12,color:'var(--ch)',marginTop:2}}>{obj.date}</div>
-              </div>
-              <span style={{background:tabColor[obj.tab]||'#888',color:'#fff',fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:20,marginLeft:10,whiteSpace:'nowrap',flexShrink:0}}>{tabLabel[obj.tab]||obj.tab}</span>
-            </div>
-            {(kp||miete||ek)&&(
-              <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:12,fontSize:13}}>
-                {kp&&<span><span style={{color:'var(--ch)'}}>{t.kaufpreis||'Kaufpreis'} </span><span style={{fontWeight:600,color:'var(--ct)'}}>{kp} €</span></span>}
-                {miete&&<span><span style={{color:'var(--ch)'}}>{t.kaltmiete||'Miete'} </span><span style={{fontWeight:600,color:'var(--ct)'}}>{miete} €/Mo.</span></span>}
-                {ek&&<span><span style={{color:'var(--ch)'}}>{t.eigenkapital||'EK'} </span><span style={{fontWeight:600,color:'var(--ct)'}}>{ek} €</span></span>}
-              </div>
-            )}
-            <div style={{display:'flex',gap:8}}>
-              <button onClick={()=>loadObj(obj,setTabExt)} style={{flex:1,height:38,borderRadius:10,border:'1.5px solid var(--ca)',background:'transparent',color:'var(--ca)',fontSize:14,fontWeight:600,cursor:'pointer'}}>
-                {t.loadBtn||'↩ Laden'}
+  const toggleCompare = (id) => {
+    setCompareIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_COMPARE) return prev;
+      return [...prev, id];
+    });
+  };
+  // Datenschutz-Zwischenschritt entfaellt (Nutzerwunsch 2026-07-22) -
+  // der Vergleichs-Chat oeffnet direkt.
+  const openCompare = () => {
+    setCompareAutoAsk(true);
+    setCompareSheetOpen(true);
+  };
+  const compareObjs = savedList.filter((o) => compareIds.includes(o.id));
+  // o.letzteAnsicht ist die UI-Tab-Id (haupt/kredit/...), der Worker will seinen eigenen
+  // rechner-Wert - siehe tabZuRechner(). Die Uebersetzung muss auch den
+  // ASSISTANT_FIELDS-Zugriff speisen, sonst bleiben die felder leer.
+  const vergleichsObjekte = compareObjs.map((o) => {
+    const rechner = tabZuRechner(o.letzteAnsicht);
+    const fields = ASSISTANT_FIELDS[rechner] ?? [];
+    const felder = Object.fromEntries(fields.map((f) => [f, o.data[f]]));
+    return { name: o.name, tab: rechner, felder };
+  });
+  const compareRechner = tabZuRechner(compareObjs[0]?.letzteAnsicht);
+
+  // Finn fuer die Objekt-Uebersicht: bis zu 5 Objekte mit den besten Scores gehen
+  // als vergleichsObjekte mit (Limit im Worker), OHNE Titel/Adresse - die Namen
+  // sind neutral durchnummeriert. Nur Zahlen: Eingaben wie im Renditerechner plus
+  // Score und die fertig gerechneten Kennzahlen.
+  const finnObjekte = useMemo(
+    () =>
+      savedList
+        .filter((o) => o.kennzahlen?.art !== "rechnerErgebnis" && o.data)
+        .slice()
+        .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+        .slice(0, 5)
+        .map((o, i) => {
+          const k = berechneObjektKennzahlen(o.data);
+          const eingaben = Object.fromEntries((ASSISTANT_FIELDS.objekt ?? []).map((f) => [f, o.data[f]]));
+          return {
+            name: `Objekt ${i + 1}`,
+            tab: "objekt",
+            felder: {
+              ...eingaben,
+              score: k.score,
+              cashflowProMonat: k.cashflowMon,
+              nettoRendite: k.nettoRendite,
+              kaufpreisfaktor: k.faktor,
+            },
+          };
+        }),
+    [savedList],
+  );
+
+  // Gibt es ueberhaupt Rechner-Ergebnisse, zeigt sich der Reiter erst dann -
+  // sonst ein Umschalter, der auf einer leeren Seite landet.
+  const hatRechnerErgebnisse = savedList.some(
+    (o) => o.kennzahlen?.art === "rechnerErgebnis",
+  );
+  const anzahlRechner = savedList.filter((o) => o.kennzahlen?.art === "rechnerErgebnis").length;
+  const anzahlObjekte = savedList.length - anzahlRechner;
+  const listeVorArt = useMemo(
+    () =>
+      savedList.filter((o) =>
+        listArt === "rechner"
+          ? o.kennzahlen?.art === "rechnerErgebnis"
+          : o.kennzahlen?.art !== "rechnerErgebnis",
+      ),
+    [savedList, listArt],
+  );
+  // Beim Reiterwechsel gelten Suche und Score-Filter nicht weiter: sie wurden
+  // fuer den anderen Inhalt gesetzt und wuerden auf dem neuen Reiter still
+  // Treffer verstecken (Score gibt es dort ohnehin nicht).
+  const wechsleArt = (id) => {
+    setListArt(id);
+    setQuery("");
+    setOnlyGut(false);
+    setSortByScore(false);
+  };
+  // Score existiert nur fuer Objekte aus dem Exposé-Scan-Auto-Save (Pro) -
+  // Suchleiste bleibt immer sichtbar, Score-Filter/-Sortierung nur wenn es
+  // ueberhaupt Objekte mit Score gibt (sonst ein Filter, der nie etwas
+  // findet - vgl. Projektregel "keine halbfertigen Zustaende").
+  // A2: frueher hatten nur Exposé-Objekte einen Score, deshalb war der
+  // Filter bedingt. Jetzt bekommt jedes Objekt mit Kaufpreis eine Ampel.
+  // Rechner-Ergebnisse haben nie einen Score - auf diesem Reiter blendet
+  // sich der Filter/die Sortierung damit automatisch aus.
+  const hasScores = listeVorArt.some((o) => o.score != null);
+  const filtered = useMemo(() => {
+    let list = listeVorArt;
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      list = list.filter(
+        (o) => o.name.toLowerCase().includes(q) || (o.ort || "").toLowerCase().includes(q),
+      );
+    }
+    if (hasScores && onlyGut) list = list.filter((o) => o.scoreLabel === "gut");
+    if (hasScores && sortByScore) list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    return list;
+  }, [listeVorArt, query, onlyGut, sortByScore, hasScores]);
+  // Zaehler je Reiter ("1 Objekt" gehoert zum Reiter Objekte). Das Kontingent
+  // (Gratis-Limit gilt ueber Objekte UND Rechner-Ergebnisse zusammen) steht
+  // getrennt und beschriftet - vorher las sich "2 Objekte gespeichert" neben
+  // dem Reiter "Objekte (1)" wie ein Widerspruch.
+  const wirdGefiltert = query.trim() !== "" || (hasScores && onlyGut);
+  const nSichtbar = listeVorArt.length;
+  const artLabel =
+    listArt === "rechner"
+      ? nSichtbar === 1
+        ? t.merklisteZaehlerErgebnis || "Rechner-Ergebnis"
+        : t.merklisteZaehlerErgebnisse || "Rechner-Ergebnisse"
+      : nSichtbar === 1
+        ? t.merklisteZaehlerObjekt || "Objekt"
+        : t.merklisteZaehlerObjekte || "Objekte";
+  const zaehlerText = wirdGefiltert
+    ? (t.merklisteTrefferVon || "{n} von {m}").replace("{n}", filtered.length).replace("{m}", nSichtbar)
+    : `${nSichtbar} ${artLabel}`;
+  const kontingentText = !isProSavedObjects
+    ? (t.merklistePlaetze || "{n} von {max} Plätzen belegt")
+        .replace("{n}", savedList.length)
+        .replace("{max}", savedObjectsFreeLimit)
+    : null;
+  // Die Orte-Ansicht bleibt als Wunsch gespeichert, greift aber nur auf dem
+  // Objekte-Reiter - Rechner-Ergebnisse haben keinen Ort zum Gruppieren.
+  const ansichtEffektiv = listArt === "rechner" ? "liste" : ansicht;
+
+  // ── Ranking (objektseite-neu.md §8, §21 D7) ───────────────────────────────
+  // "Gut im Vergleich wozu" beantwortet die LISTE, nicht die Objektseite
+  // (Entscheidung E3). Rechner-Ergebnisse sind keine Rendite-Objekte und
+  // werden nicht rangiert; sie haengen unveraendert hinten an.
+  const rangEintraege = useMemo(
+    () =>
+      rangiereObjekte(
+        filtered.filter((o) => o.kennzahlen?.art !== "rechnerErgebnis"),
+        t,
+        sortierung,
+      ),
+    [filtered, t, sortierung],
+  );
+  const rangVon = useMemo(() => {
+    const m = new Map();
+    for (const e of rangEintraege) m.set(e.objekt.id, e);
+    return m;
+  }, [rangEintraege]);
+  const sortiert = useMemo(
+    () => [
+      ...rangEintraege.map((e) => e.objekt),
+      ...filtered.filter((o) => o.kennzahlen?.art === "rechnerErgebnis"),
+    ],
+    [rangEintraege, filtered],
+  );
+  // Das Badge erscheint erst ab zwei rangierbaren Objekten - bei einem
+  // einzigen waere "1 von 1" eine Auszeichnung ohne Wettbewerb.
+  const zeigtRang = rangEintraege.filter((e) => e.rangierbar).length >= 2;
+
+  // Detailansicht (ehemals eigener Pro-Tab "Objekte") - ObjektDetail erwartet
+  // die rohe Server-Objektform; fuer Free-Objekte (kein Server-Datensatz)
+  // wird sie hier aus dem lokalen {id,name,date,tab,data}-Snapshot nachgebaut.
+  const openDetail = useCallback((obj) => {
+    setDetailObj({
+      id: obj.id,
+      title: obj.name,
+      date: obj.date,
+      plz: obj.plz ?? obj.data?.plz ?? null,
+      ort: obj.ort ?? obj.data?.ort ?? null,
+      score: obj.score ?? null,
+      scoreLabel: obj.scoreLabel ?? null,
+      kaufpreis: obj.kaufpreis ?? obj.data?.kaufpreis ?? null,
+      wohnflaeche: obj.wohnflaeche ?? obj.data?.wohnflaeche ?? obj.data?.flaeche ?? null,
+      // Bug-Fix 2026-09-07: fehlte hier komplett - ohne dieses Feld sah
+      // ObjektDetail beim (Wieder-)Oeffnen NIE gespeicherte KI-Auswertungen
+      // (ergebnisseLesen liest objekt.kennzahlen.ai), jedes Produkt stand
+      // dauerhaft auf "offen", und der naechste KI-Aufruf ueberschrieb am
+      // Server sogar bereits vorhandene Ergebnisse anderer Produkte, weil der
+      // Client von deren Existenz nichts wusste.
+      kennzahlen: obj.kennzahlen ?? null,
+      source: obj.source || "manuell",
+      updatedAt: obj.updatedAt || null,
+      inputData: obj.inputData || { ...obj.data },
+      letzteAnsicht: obj.letzteAnsicht || "haupt",
+    });
+  }, []);
+
+  // Pendant zu ObjektDetail.jsx inRechner() (Auftrag 2026-09-08): oeffnet ein
+  // Rechner-Ergebnis wieder in GENAU dem Rechner, in dem es entstand -
+  // ObjektDetail (Rendite-Detailseite) waere hier die falsche Ansicht, ein
+  // Kredit- oder Sanier-Ergebnis hat keinen Kaufpreis/Score.
+  const ladeRechnerErgebnis = useCallback(
+    (obj) => {
+      const gespeichert = obj.inputData || obj.data || {};
+      const { tab: _legacy, ...felder } = gespeichert;
+      Object.entries(felder).forEach(([k, v]) => set(k, v));
+      const rechnerTyp = obj.kennzahlen?.rechnerTyp;
+      setTabExt(obj.letzteAnsicht || rechnerTyp, {
+        id: obj.id,
+        name: obj.name,
+        art: "rechnerErgebnis",
+        rechnerTyp,
+      });
+    },
+    [set, setTabExt],
+  );
+
+  // Ruecksprung Objekt -> Rechner -> zurueck (App.jsx aktivesObjekt,
+  // UX-Review 2026-09-06): Der Rechner sendet dieses Event mit der Objekt-ID,
+  // wenn der Nutzer ueber die Leiste "<- Objekt: {Name}" zurueckwechselt.
+  // Ohne diesen Listener wuerde der Rueckweg nur in der LISTE landen statt
+  // wieder GENAU im Objekt, aus dem der Rechner geoeffnet wurde.
+  //
+  // 2026-09-08: bei einem Rechner-Ergebnis fehlt eine Detailseite (siehe
+  // ladeRechnerErgebnis oben) - hier reicht der Wechsel auf den passenden
+  // Listen-Reiter, openDetail() wuerde sonst die Rendite-Detailseite mit
+  // leeren Kennzahlen oeffnen.
+  useEffect(() => {
+    const handler = (e) => {
+      const id = e.detail?.id;
+      const treffer = id && savedList.find((o) => o.id === id);
+      if (!treffer) return;
+      if (treffer.kennzahlen?.art === "rechnerErgebnis") {
+        setListArt("rechner");
+        return;
+      }
+      openDetail(treffer);
+    };
+    window.addEventListener("if:objekt-oeffnen", handler);
+    return () => window.removeEventListener("if:objekt-oeffnen", handler);
+  }, [savedList, openDetail]);
+
+  // Der Exposé-Scan ist jetzt eine eigene Ansicht am Objekt, kein Chatfenster
+  // mehr (2026-09-06). Muss in JEDEN Rueckgabezweig - auch in den der
+  // Detailansicht: von dort kommt das Event, und fehlte das Sheet dort,
+  // passierte nach dem Klick sichtbar nichts.
+  //
+  // Nach dem Schliessen wird die Liste neu geladen: autoSaveExposeObject legt
+  // das Objekt serverseitig an, ohne dass diese Komponente davon erfaehrt.
+  const exposeSheet = (
+    <ObjektExpose
+      open={exposeOffen}
+      onClose={() => {
+        setExposeOffen(false);
+        refreshObjekte?.();
+      }}
+      lang={lang}
+    />
+  );
+
+  if (detailObj)
+    return (
+      <>
+        <ObjektDetail objekt={detailObj} onBack={() => setDetailObj(null)} />
+        {exposeSheet}
+      </>
+    );
+
+  // B3/2026-09-11: legt das Objekt aus den sechs Kernfeldern an und fuehrt
+  // direkt in den Renditerechner - annahmenFuer() (ueber ObjektAnlegen.jsx)
+  // hat den Entwurf `daten` bereits vollstaendig mit sinnvollen Startwerten
+  // ergaenzt, hier ist kein Feld mehr leer. `set()` uebernimmt jedes davon in
+  // den globalen Rechner-State, setTabExt() wechselt den Tab und traegt das
+  // Rundweg-Objekt (Ruecksprungleiste + "Speichern" aktualisiert dieses
+  // Objekt statt ein neues anzulegen) - dasselbe Muster wie
+  // ObjektDetail.inRechner(). Ersetzt den vormaligen mehrstufigen Assistenten
+  // (ObjektAnlegenWizard.jsx): dessen sieben Zusatzschritte fragten dieselben
+  // Felder ab, die der Renditerechner ohnehin automatisch vorbelegt.
+  const objektAnlegen = async (name, daten, herkunft) => {
+    const neu = await saveObj(name, daten, "haupt", { herkunft });
+    setAnlegenOffen(false);
+    if (neu) {
+      Object.entries(daten).forEach(([k, v]) => set(k, v));
+      setTabExt("haupt", { id: neu.id, name: neu.name || name });
+    }
+    return neu;
+  };
+
+  const anlegenSheet = (
+    // size ist Pflicht: ohne die Prop faellt Sheet.jsx auf maxWidth "none"
+    // zurueck (Sheet.jsx:178) und das Panel wird so breit wie das Fenster -
+    // auf einem 1900-px-Bildschirm ein 1870 px breites Feld fuer eine PLZ.
+    <Sheet
+      open={anlegenOffen}
+      onClose={() => setAnlegenOffen(false)}
+      label={t.oaAnlegen || "Objekt anlegen"}
+      size="min(720px, 100vw)"
+    >
+      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>{t.oaAnlegen || "Objekt anlegen"}</div>
+      {/* Kein onExpose mehr hier (2026-09-07): der Exposé-Weg beim Anlegen
+          eines NEUEN Objekts laeuft jetzt lokal in ObjektAnlegen selbst (eigene
+          Extraktion mit autoSave:false, siehe useAssistant.js), statt das
+          globale, objektlose ObjektExpose-Sheet zu oeffnen - das vermeidet ein
+          doppelt angelegtes Objekt. Der onExpose-Pfad (oeffneExpose oben)
+          bleibt ausschliesslich fuer ObjektDetail.jsx reserviert (Exposé an
+          einem BESTEHENDEN Objekt, AiEngine-Produkt "expose"). */}
+      <ObjektAnlegen
+        t={t}
+        onAnlegen={objektAnlegen}
+        onAbbrechen={() => setAnlegenOffen(false)}
+      />
+    </Sheet>
+  );
+
+  if (!savedList.length)
+    return (
+      <div style={{ padding: "60px 20px", textAlign: "center" }}>
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--ch)"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ marginBottom: 16, display: "block", margin: "0 auto 16px" }}
+        >
+          <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+        </svg>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--ct)", marginBottom: 8 }}>
+          {t.emptyTitle || "Noch keine Objekte gespeichert"}
+        </div>
+        <div style={{ fontSize: 14, color: "var(--ch)", lineHeight: 1.5, maxWidth: 340, margin: "0 auto" }}>
+          {t.mlLeerText ||
+            "Lege dein erstes Objekt mit fünf Angaben an — Kaufpreis, Wohnfläche, Kaltmiete, Eigenkapital und einem Namen. Rendite und Cashflow siehst du sofort danach."}
+        </div>
+        <button
+          type="button"
+          onClick={() => setAnlegenOffen(true)}
+          style={{
+            marginTop: 20,
+            height: 46,
+            padding: "0 22px",
+            borderRadius: 10,
+            border: "none",
+            background: "var(--ca)",
+            color: "#fff",
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          {t.mlAnlegenKnopf || "+ Objekt anlegen"}
+        </button>
+        {anlegenSheet}
+        {exposeSheet}
+      <AssistantGate
+        active={true}
+        rechner="objekte"
+        buildKontext={() => ({
+          anzahlGespeichert: savedList.length,
+          proNutzer: !!isProSavedObjects,
+          gratisLimit: savedObjectsFreeLimit,
+        })}
+        contextLabel={at.contextObjekte}
+        suggested={[
+          at.objekteSuggested1,
+          at.objekteSuggested2,
+          at.objekteSuggested3,
+          at.objekteSuggested4,
+          at.objekteSuggested5,
+          at.objekteSuggested6,
+          at.objekteSuggested7,
+          at.objekteSuggested8,
+          at.objekteSuggested9,
+          at.objekteSuggested10,
+          at.objekteSuggested11,
+          at.objekteSuggested12,
+        ]}
+        lang={lang}
+        vergleichsObjekte={finnObjekte}
+      />
+      </div>
+    );
+  return (
+    <div className="objekt-liste">
+      {(!hinweisZu || savedList.length === 0) && (
+        <div
+          role="note"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            background: "var(--info-bg)",
+            border: "1px solid var(--info-bd)",
+            color: "var(--info-tx)",
+            borderRadius: 10,
+            padding: "10px 12px",
+            marginBottom: 14,
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          <span style={{ flex: 1 }}>{t.merklisteHinweis}</span>
+          {savedList.length > 0 && (
+            <button
+              type="button"
+              onClick={schliesseHinweis}
+              aria-label={t.merklisteHinweisZu}
+              style={{
+                flexShrink: 0,
+                width: 44,
+                height: 44,
+                margin: "-12px -12px -12px 0",
+                border: "none",
+                background: "transparent",
+                color: "inherit",
+                fontSize: 18,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          )}
+        </div>
+      )}
+      {/* Titelzeile (Nutzer-Vorgabe 2026-09-30): Ueberschrift links, "Objekt anlegen"
+          rechts in EINER Zeile - vorher rutschte der Knopf auf dem Handy allein in eine
+          zweite Zeile unter den Reitern. Die Ueberschrift ist zugleich die erste
+          Ueberschrift der Seite (h1). Unter ~340 px wird der Knopftext gekuerzt, damit
+          beides nebeneinander bleibt. */}
+      <div
+        className="objekt-titelzeile"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 12,
+        }}
+      >
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 800,
+            letterSpacing: "-0.01em",
+            color: "var(--ct)",
+            minWidth: 0,
+          }}
+        >
+          {t.meineObjekte || "Meine Objekte"}
+        </h1>
+        <button
+          type="button"
+          onClick={() => setAnlegenOffen(true)}
+          style={{
+            flexShrink: 0,
+            height: 44,
+            padding: "0 16px",
+            borderRadius: 10,
+            border: "none",
+            background: "var(--ca)",
+            color: "#fff",
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span className="objekt-anlegen-lang">{t.mlAnlegenKnopf || "+ Objekt anlegen"}</span>
+          <span className="objekt-anlegen-kurz">{t.mlAnlegenKurz || "+ Anlegen"}</span>
+        </button>
+      </div>
+      {/* Reiter: erst sichtbar, sobald es mindestens ein Rechner-Ergebnis gibt - vorher
+          gaebe es einen Umschalter, der auf einer leeren Seite landet. */}
+      {hatRechnerErgebnisse && (
+        <div
+          role="tablist"
+          aria-label={t.mlObjektart || "Objektart"}
+          style={{ display: "flex", gap: 20, borderBottom: "1px solid var(--cb)", marginBottom: 14 }}
+        >
+          {[
+            ["objekte", t.merklisteZaehlerObjekte || "Objekte", anzahlObjekte],
+            ["rechner", t.merklisteZaehlerErgebnisse || "Rechner-Ergebnisse", anzahlRechner],
+          ].map(([id, label, anzahl]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={listArt === id}
+              tabIndex={listArt === id ? 0 : -1}
+              onClick={() => wechsleArt(id)}
+              style={listArt === id ? reiterActiveStyle : reiterStyle}
+            >
+              {label} ({anzahl})
+            </button>
+          ))}
+        </div>
+      )}
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 12,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <input
+          type="search"
+          name="q"
+          autoComplete="off"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={
+            listArt === "rechner"
+              ? t.mlSucheRechner || "Suche nach Name…"
+              : t.mlSucheObjekt || "Suche nach Name oder Ort…"
+          }
+          aria-label={t.mlSucheAria || "Gespeicherte Einträge durchsuchen"}
+          style={{
+            // Basis 260px: auf dem Handy passt daneben kein Umschalter mehr,
+            // die Zeile bricht um und das Suchfeld bekommt die volle Breite -
+            // auf dem Desktop dehnt es sich stattdessen und teilt sich die
+            // Zeile mit Umschalter und Zaehler.
+            flex: "1 1 260px",
+            maxWidth: 420,
+            height: 44,
+            padding: "0 12px",
+            // 16px ist Projektregel (iOS zoomt sonst beim Fokus hinein).
+            fontSize: 16,
+            border: "1px solid var(--cb)",
+            borderRadius: 10,
+            background: "var(--ci)",
+            color: "var(--ct)",
+            fontFamily: "inherit",
+            boxSizing: "border-box",
+            appearance: "none",
+          }}
+        />
+        {/* Die Orte-Gruppierung ergibt nur fuer Rendite-Objekte Sinn: Kredit-,
+            Sanierungs- und Vorfaelligkeitsrechnungen haben gar keinen Ort.
+            Deshalb wird der Umschalter dort ausgeblendet statt deaktiviert -
+            ein grauer Knopf ohne Erklaerung wirft nur Fragen auf. Der zuletzt
+            gewaehlte Wert bleibt erhalten und ist beim Zurueckwechseln wieder da. */}
+        {listArt === "objekte" && (
+          <div
+            role="group"
+            aria-label="Ansicht"
+            style={{
+              display: "flex",
+              border: "1px solid var(--cb)",
+              borderRadius: 10,
+              background: "var(--ci)",
+              padding: 2,
+              flexShrink: 0,
+            }}
+          >
+            {[
+              ["liste", "☰", "Als Liste anzeigen"],
+              ["orte", "📍", "Nach Ort gruppieren"],
+            ].map(([id, icon, beschriftung]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={ansicht === id}
+                aria-label={beschriftung}
+                title={beschriftung}
+                onClick={() => setAnsicht(id)}
+                style={ansicht === id ? segmentActiveStyle : segmentStyle}
+              >
+                {icon}
               </button>
-              <button onClick={()=>setConfirmDel(obj.id)} style={{height:38,width:38,borderRadius:10,border:'1.5px solid var(--cb)',background:'transparent',color:'var(--ch)',fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            ))}
+          </div>
+        )}
+        {hasScores && (
+          <>
+            <button
+              type="button"
+              onClick={() => setOnlyGut((v) => !v)}
+              aria-pressed={onlyGut}
+              style={onlyGut ? searchChipActiveStyle : searchChipStyle}
+            >
+              {t.mlScoreGut || "Score „Gut“"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortByScore((v) => !v)}
+              aria-pressed={sortByScore}
+              style={sortByScore ? searchChipActiveStyle : searchChipStyle}
+            >
+              {(t.mlSortierungWert || "Sortierung: {w}").replace(
+                "{w}",
+                sortByScore ? t.mlSortScore || "Score" : t.mlSortNeueste || "Neueste",
+              )}
+            </button>
+          </>
+        )}
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          style={{
+            fontSize: 12.5,
+            color: "var(--ch)",
+            fontWeight: 500,
+          }}
+          className="objekt-zaehler"
+        >
+          <span style={{ whiteSpace: "nowrap" }}>{zaehlerText}</span>
+          {kontingentText && <span style={{ whiteSpace: "nowrap" }}> · {kontingentText}</span>}
+        </div>
+      </div>
+      {limitReached && (
+        <button
+          onClick={() => setShowUpgrade(true)}
+          className="no-print"
+          style={{
+            display: "block",
+            width: "100%",
+            textAlign: "left",
+            padding: "10px 14px",
+            marginBottom: 14,
+            borderRadius: 10,
+            border: "1px solid var(--ca-bd)",
+            background: "var(--ca-bg)",
+            color: "var(--ca-dk)",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          👑 {acct.merklisteTrialVoll.replace("{limit}", String(savedObjectsFreeLimit))}
+        </button>
+      )}
+      {showUpgrade && (
+        <Suspense fallback={<LazyPanelFallback />}>
+          <CheckoutWizard onClose={() => setShowUpgrade(false)} />
+        </Suspense>
+      )}
+      {/* Frueher wurde bei 0 Treffern zusaetzlich noch ObjektOrte gerendert -
+          der Leerzustand erschien doppelt. */}
+      {filtered.length === 0 ? (
+        <div
+          style={{ textAlign: "center", padding: "32px 20px", color: "var(--ch)", fontSize: 13 }}
+        >
+          {wirdGefiltert
+            ? t.mlKeineTreffer || "Keine Treffer für deine Suche."
+            : listArt === "rechner"
+              ? t.mlNochKeineRechner || "Noch keine Rechner-Ergebnisse gespeichert."
+              : t.mlNochKeineObjekte || "Noch keine Objekte gespeichert."}
+        </div>
+      ) : null}
+      {filtered.length > 0 && ansichtEffektiv === "orte" && (
+        <ObjektOrte
+          objekte={filtered}
+          onOeffnen={(o) =>
+            o.kennzahlen?.art === "rechnerErgebnis" ? ladeRechnerErgebnis(o) : openDetail(o)
+          }
+        />
+      )}
+      {/* Sortierung der Rangfolge (§8). Nur sinnvoll, wenn ueberhaupt
+          rangiert wird. */}
+      {ansichtEffektiv === "liste" && zeigtRang && (
+        <div
+          role="group"
+          aria-label={t.mlSortierung || "Sortierung"}
+          style={{ display: "flex", gap: 6, margin: "4px 0 10px", flexWrap: "wrap" }}
+        >
+          {SORTIERUNGEN.map((s) => {
+            const aktiv = sortierung === s;
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSortierung(s)}
+                aria-pressed={aktiv}
+                style={{
+                  minHeight: 40,
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  border: `1px solid ${aktiv ? "var(--ca-bd)" : "var(--cb)"}`,
+                  background: aktiv ? "var(--ca-bg)" : "var(--cc)",
+                  color: aktiv ? "var(--ca-dk)" : "var(--ch)",
+                  fontSize: 12.5,
+                  fontWeight: aktiv ? 700 : 600,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                {t[`mlSort${s}`] ||
+                  { ampel: "Ampel", cashflow: "Cashflow v. St.", faktor: "Faktor" }[s]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {ansichtEffektiv === "liste" && (
+        <div className="objekt-karten">
+          {sortiert.map((obj) => {
+        const inputData = obj.inputData || { ...obj.data };
+        // Zwei-Produkte-Umbau (Auftrag 2026-09-08): ein Rechner-Ergebnis hat
+        // keinen Kaufpreis/Score - die Karte zeigt statt der Ampel/KPIs nur
+        // Icon+Rechnername+Datum, statt "Details"/"Laden" nur einen Knopf
+        // zurueck in den Rechner (ladeRechnerErgebnis).
+        const istRechnerErgebnis = obj.kennzahlen?.art === "rechnerErgebnis";
+        const rechnerInfo = istRechnerErgebnis
+          ? (() => {
+              const info = RECHNER_TYP_INFO[obj.kennzahlen?.rechnerTyp];
+              return info
+                ? { icon: info.icon, label: t[info.key] || info.label }
+                : { icon: "🧮", label: t.merklisteZaehlerErgebnis || "Rechner-Ergebnis" };
+            })()
+          : null;
+        const oeffnenAktion = () =>
+          istRechnerErgebnis ? ladeRechnerErgebnis(obj) : openDetail(obj);
+        // A3: sechs Objekt-Kennzahlen statt der frueheren rechnerspezifischen
+        // Vorschau - seit A1 ist ein Objekt nicht mehr an einen Rechner
+        // gebunden. Bevorzugt der beim Speichern abgelegte Stand (resultData),
+        // sonst frisch gerechnet (Free-Pfad/localStorage, Altbestand).
+        const kennzahlen = istRechnerErgebnis
+          ? null
+          : obj.kennzahlen?.score != null
+            ? { verfuegbar: true, kaufpreis: obj.kaufpreis ?? +inputData.kaufpreis, ...obj.kennzahlen }
+            : berechneObjektKennzahlen(inputData, t);
+        const vollstaendigkeit = berechneVollstaendigkeit(inputData);
+        // Exposé-Scan-Auto-Save legt Objekte nur mit {tab,quelle} an (siehe
+        // autoSaveExposeObject.js) - fuer diese gibt es nichts Sinnvolles zum
+        // "Laden" in den Rechner, nur die Detailansicht (Tap auf die Karte).
+        const loadable = Object.keys(inputData).length > 2;
+        // Rangfolge (§21 D7). `rang` ist null, wenn das Objekt mangels PLZ
+        // nicht rangierbar ist - dann steht ein "–" statt einer Ziffer und
+        // die Karte bekommt einen gestrichelten Rand.
+        const rangEintrag = zeigtRang ? rangVon.get(obj.id) : null;
+        const unvollstaendig = Boolean(rangEintrag) && !rangEintrag.rangierbar;
+        return (
+          <div
+            key={obj.id}
+            style={{
+              background: "var(--cc)",
+              borderRadius: 12,
+              padding: "16px",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              border: unvollstaendig ? "1px dashed var(--cb)" : undefined,
+            }}
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={oeffnenAktion}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") oeffnenAktion();
+              }}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: 10,
+                cursor: "pointer",
+              }}
+            >
+              <div style={{ display: "flex", gap: 10, flex: 1, minWidth: 0 }}>
+                {rangEintrag && (
+                  <div style={{ flexShrink: 0, textAlign: "center", width: 30 }}>
+                    <div
+                      style={{
+                        fontSize: 22,
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        color: rangEintrag.rang ? "var(--ct)" : "var(--ch)",
+                      }}
+                    >
+                      {rangEintrag.rang ?? "–"}
+                    </div>
+                    {rangEintrag.rang && (
+                      <div style={{ fontSize: 9.5, color: "var(--ch)", marginTop: 2 }}>
+                        {t.mlVon || "von"} {rangEintrag.gesamt}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 15,
+                      color: "var(--ct)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {obj.name}
+                  </div>
+                  {unvollstaendig && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        marginTop: 4,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: "var(--info-tx)",
+                        background: "var(--info-bg)",
+                        border: "1px solid var(--info-bd)",
+                        borderRadius: 999,
+                        padding: "2px 8px",
+                      }}
+                    >
+                      {t.mlUnvollstaendig || "Daten unvollständig"}
+                    </span>
+                  )}
+                  <div style={{ fontSize: 12, color: "var(--ch)", marginTop: 2 }}>{obj.date}</div>
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginLeft: 10,
+                  flexShrink: 0,
+                }}
+              >
+                {istRechnerErgebnis ? (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "var(--ci)",
+                      border: "1px solid var(--cb)",
+                      borderRadius: 20,
+                      padding: "4px 10px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--ct)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span aria-hidden="true">{rechnerInfo.icon}</span>
+                    {rechnerInfo.label}
+                  </span>
+                ) : (
+                  <>
+                    {obj.score != null && (
+                      <span
+                        style={{
+                          background: scoreBadgeColor(obj.scoreLabel),
+                          color: "#fff",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: "3px 9px",
+                          borderRadius: 20,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {scoreBadgeText(obj.scoreLabel, t)}
+                      </span>
+                    )}
+                    <VollstaendigkeitsRing prozent={vollstaendigkeit} />
+                  </>
+                )}
+              </div>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              {istRechnerErgebnis ? (
+                // Keine Nachrechnung hier (Auftrag 2026-09-08): die exakte
+                // Formel liegt im jeweiligen Rechner, ein Nachbau riskiert
+                // eine leise falsche Zahl neben der echten.
+                <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5 }}>
+                  {rechnerInfo.icon} {rechnerInfo.label} · {obj.date}
+                </div>
+              ) : kennzahlen?.verfuegbar ? (
+                <ObjektKPIs kennzahlen={kennzahlen} t={t} locale={locale} />
+              ) : (
+                // Lehrender Empty-State statt leerer Flaeche (Konzept 3.6):
+                // sagen, was fehlt, statt nur zu melden dass nichts da ist.
+                <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5 }}>
+                  {t.objektOhneKennzahlen ||
+                    "Trage einen Kaufpreis ein, damit Rendite und Cashflow berechnet werden können."}
+                </div>
+              )}
+            </div>
+            {/* "Details" ist neu (2026-09-06) und die Primaeraktion der Karte.
+                Bis hierher war die Detailansicht ausschliesslich ueber einen
+                Tap auf den Kartenkopf erreichbar - ein unsichtbares Ziel.
+                Wer das nicht zufaellig traf, kam nie zu Kennzahlen,
+                Stellschrauben und KI-Auswertung. Die Karte bleibt zusaetzlich
+                anklickbar; der Knopf ersetzt sie nicht, er macht sie sichtbar. */}
+            <div style={{ display: "flex", gap: 8 }}>
+              {istRechnerErgebnis ? (
+                <button
+                  onClick={() => ladeRechnerErgebnis(obj)}
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    borderRadius: 10,
+                    border: "none",
+                    background: "var(--ca)",
+                    color: "#fff",
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {t.mlImRechnerOeffnen || "Im Rechner öffnen →"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => openDetail(obj)}
+                    style={{
+                      flex: 1,
+                      height: 44,
+                      borderRadius: 10,
+                      border: "none",
+                      background: "var(--ca)",
+                      color: "#fff",
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Details →
+                  </button>
+                  {loadable && (
+                    <button
+                      onClick={() => loadObj(obj, setTabExt)}
+                      style={{
+                        flex: 1,
+                        height: 44,
+                        borderRadius: 10,
+                        border: "1.5px solid var(--ca)",
+                        background: "transparent",
+                        color: "var(--ca)",
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {t.loadBtn || "↩ Laden"}
+                    </button>
+                  )}
+                </>
+              )}
+              <button
+                onClick={() => setConfirmDel(obj.id)}
+                aria-label={t.mlObjektLoeschen || "Objekt löschen"}
+                style={{
+                  height: 44,
+                  width: 44,
+                  flexShrink: 0,
+                  borderRadius: 10,
+                  border: "1.5px solid var(--cb)",
+                  background: "transparent",
+                  color: "var(--ch)",
+                  fontSize: 18,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 ✕
               </button>
             </div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 10,
+                paddingTop: 10,
+                borderTop: "1px solid var(--cb)",
+                fontSize: 12,
+                color: "var(--ch)",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={compareIds.includes(obj.id)}
+                onChange={() => toggleCompare(obj.id)}
+                disabled={!compareIds.includes(obj.id) && compareIds.length >= MAX_COMPARE}
+                style={{ width: 16, height: 16, accentColor: "var(--ca)", cursor: "pointer" }}
+              />
+              {at.compareCheckbox}
+            </label>
           </div>
         );
-      })}
-      {confirmDel&&createPortal(
-        <div onClick={()=>setConfirmDel(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:9001,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 20px'}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'var(--cc)',borderRadius:16,padding:'24px 20px',width:'100%',maxWidth:360,textAlign:'center'}}>
-            <div style={{fontSize:16,fontWeight:700,color:'var(--ct)',marginBottom:8}}>{t.deleteTitle||'Objekt löschen?'}</div>
-            <div style={{fontSize:14,color:'var(--ch)',marginBottom:20}}>{t.deleteHint||'Diese Berechnung wird unwiderruflich gelöscht.'}</div>
-            <div style={{display:'flex',gap:10}}>
-              <button onClick={()=>setConfirmDel(null)} style={{flex:1,height:44,borderRadius:12,border:'1.5px solid var(--cb)',background:'transparent',color:'var(--ct)',fontSize:15,cursor:'pointer'}}>{t.cancelBtn||'Abbrechen'}</button>
-              <button onClick={()=>{delObj(confirmDel);setConfirmDel(null);}} style={{flex:1,height:44,borderRadius:12,border:'none',background:'#dc2626',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer'}}>{t.deleteBtn||'Löschen'}</button>
-            </div>
-          </div>
-        </div>,document.body
+          })}
+        </div>
       )}
+      {confirmDel &&
+        createPortal(
+          <div
+            onClick={() => setConfirmDel(null)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.5)",
+              zIndex: 9001,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "0 20px",
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "var(--cc)",
+                borderRadius: 16,
+                padding: "24px 20px",
+                width: "100%",
+                maxWidth: 360,
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--ct)", marginBottom: 8 }}>
+                {t.deleteTitle || "Objekt löschen?"}
+              </div>
+              <div style={{ fontSize: 14, color: "var(--ch)", marginBottom: 20 }}>
+                {t.deleteHint || "Diese Berechnung wird unwiderruflich gelöscht."}
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => setConfirmDel(null)}
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    borderRadius: 12,
+                    border: "1.5px solid var(--cb)",
+                    background: "transparent",
+                    color: "var(--ct)",
+                    fontSize: 15,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t.cancelBtn || "Abbrechen"}
+                </button>
+                <button
+                  onClick={() => {
+                    delObj(confirmDel);
+                    setConfirmDel(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    borderRadius: 12,
+                    border: "none",
+                    background: "#dc2626",
+                    color: "#fff",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t.deleteBtn || "Löschen"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {/* ═══ KI-ASSISTENT OBJEKTVERGLEICH (Phase 3, Sprint 6 — Konzept 3.3a) ═══
+          Bewusst IM Seitenfluss unter der Objektliste, nicht als fixes Overlay
+          per createPortal (Nutzer-Feedback 2026-07-29): das Overlay lag optisch
+          auf einer eigenen Ebene ueber der Seite und war ueber die volle Breite
+          viel zu gross. Jetzt kompakt und rechtsbuendig direkt an der Liste. */}
+      {compareIds.length >= 2 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: 8,
+            marginTop: 4,
+          }}
+        >
+          <FinnBubble
+            text={compareBubbleText || at.hintVergleich}
+            visible={!!compareBubbleText}
+            onOpen={() => {
+              dismissCompareBubble();
+              openCompare();
+            }}
+            onDismiss={dismissCompareBubble}
+            openLabel={at.compareButton}
+            dismissLabel={at.close}
+          />
+          <button
+            className="no-print"
+            onClick={() => {
+              // Phase E: erst der Zeilen-Diff mit den Zahlen, die Einordnung
+              // durch Finn auf Wunsch aus dem Vergleich heraus.
+              dismissCompareBubble();
+              setVergleichOffen(true);
+            }}
+            style={{
+              height: 38,
+              padding: "0 16px",
+              borderRadius: 10,
+              border: "1.5px solid var(--ca)",
+              background: "var(--ca)",
+              color: "#fff",
+              fontSize: 14,
+              fontWeight: 600,
+              fontFamily: "inherit",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            Vergleichen ({compareIds.length})
+          </button>
+        </div>
+      )}
+      {anlegenSheet}
+        {exposeSheet}
+      <Sheet
+        open={vergleichOffen}
+        onClose={() => setVergleichOffen(false)}
+        label="Objekte vergleichen"
+        size="min(720px, 100vw)"
+      >
+        <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 14 }}>
+          Objekte vergleichen
+        </div>
+        <ObjektVergleich
+          objekte={compareObjs}
+          t={t}
+          locale={locale}
+          onFinnFrage={() => {
+            setVergleichOffen(false);
+            openCompare();
+          }}
+        />
+      </Sheet>
+      <AssistantSheet
+        open={compareSheetOpen}
+        onClose={() => setCompareSheetOpen(false)}
+        rechner={compareRechner}
+        kontext={{}}
+        vergleichsObjekte={vergleichsObjekte}
+        contextLabel={at.contextVergleich}
+        suggested={[
+          at.vglSuggested1,
+          at.vglSuggested2,
+          at.vglSuggested3,
+          at.vglSuggested4,
+          at.vglSuggested5,
+          at.vglSuggested6,
+        ]}
+        lang={lang}
+        t={at}
+        autoAskQuestion={compareAutoAsk ? at.vglSuggested1 : null}
+        onAutoAskHandled={() => setCompareAutoAsk(false)}
+      />
     </div>
   );
 }

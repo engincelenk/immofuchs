@@ -1,5 +1,5 @@
 /**
- * ImmoFuchs Service Worker v49
+ * ImmoFuchs Service Worker v50
  * Strategie: Network-First mit Timeout + vollständigem Same-Origin-Caching
  * → Online: frisch vom Netz, gecacht für Offline
  * → Offline: sofort aus Cache (max. 800ms Timeout statt Browser-Default ~30s)
@@ -19,7 +19,6 @@ const APP_SHELL = [
   '/favicon.ico',
   '/icon-192.png',
   '/icon-512.png',
-  '/zinsen.json',
 ];
 
 // ── Install ──────────────────────────────────────────────
@@ -53,10 +52,20 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
-  // Navigations-Anfragen (HTML) → Network-First mit Timeout, Fallback /index.html
+  // Navigations-Anfragen (HTML) → Network-First, Fallback /index.html.
+  // Der Timeout ist online bewusst grosszuegig (Bugreport 2026-09-09): mit den
+  // frueheren 800ms bekam jeder, dessen Verbindung langsamer antwortete,
+  // dauerhaft die gecachte index.html - und damit dauerhaft die alten
+  // Bundle-Namen, also eine alte App-Version, die sich nur noch durch
+  // manuelles Leeren der Website-Daten beheben liess. Der kurze Timeout ist
+  // fuer den Offline-Fall gedacht und gilt jetzt auch nur noch dort.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetchWithTimeout(request, 800)
+      // Online: gewartet wird auf das Netz, OHNE Timeout-Rueckfall auf eine
+      // gecachte index.html - sie verweist nach einem Deploy auf geloeschte
+      // Bundles (2026-10-03: leere Seite). Der Cache greift nur noch, wenn das
+      // Netz wirklich fehlschlaegt oder der Browser offline ist.
+      (navigator.onLine ? fetch(request) : fetchWithTimeout(request, 800))
         .then(response => {
           cacheResponse(CACHE_NAME, request, response.clone());
           return response;
@@ -72,15 +81,15 @@ self.addEventListener('fetch', event => {
     fetchWithTimeout(request, 800)
       .then(response => {
         if (response.ok) {
-          // Zinsalarm: bei /zinsen.json Fetch im Hintergrund prüfen
-          if (url.pathname === '/zinsen.json' && alarmConfig?.enabled) {
-            response.clone().json().then(checkAlarmFromZinsen).catch(() => {});
-          }
           cacheResponse(CACHE_NAME, request, response.clone());
         }
         return response;
       })
-      .catch(() => caches.match(request))
+      // Kein Cache-Treffer (typisch direkt nach einem Deploy: die frische
+      // index.html verweist auf Bundle-Namen, die noch nie gecacht wurden) -
+      // dann ohne Timeout erneut ans Netz, statt die Seite mit einer leeren
+      // Antwort kaputtzumachen.
+      .catch(() => caches.match(request).then(treffer => treffer || fetch(request)))
   );
 });
 
@@ -91,40 +100,42 @@ function cacheResponse(cacheName, request, response) {
 
 // Fetch mit Timeout — nach ms ms wird auf Cache gefallen.
 // Verhindert den 4-5s Browser-Timeout bei offline Nutzung.
+//
+// Wichtig (Bugreport 2026-09-09): Eine Antwort, die NACH dem Timeout eintrifft,
+// wird nicht mehr ausgeliefert - aber sehr wohl noch in den Cache geschrieben.
+// Vorher wurde sie ersatzlos verworfen; der Cache blieb damit auf ewig auf dem
+// Stand des letzten schnellen Ladevorgangs stehen, und ein Nutzer mit langsamer
+// Verbindung sah nie wieder eine neue Version. Jetzt gilt: dieser Aufruf zeigt
+// noch den alten Stand, der naechste ist aktuell.
 function fetchWithTimeout(request, ms = 800) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('sw-timeout')), ms);
+    let abgelaufen = false;
+    const timer = setTimeout(() => {
+      abgelaufen = true;
+      reject(new Error('sw-timeout'));
+    }, ms);
     fetch(request).then(
-      res => { clearTimeout(timer); resolve(res); },
-      err => { clearTimeout(timer); reject(err); }
+      res => {
+        clearTimeout(timer);
+        if (abgelaufen) {
+          if (res.ok) cacheResponse(CACHE_NAME, request, res.clone());
+          return;
+        }
+        resolve(res);
+      },
+      err => {
+        clearTimeout(timer);
+        if (!abgelaufen) reject(err);
+      }
     );
   });
 }
 
-// ── Alarm: Zinsen prüfen und ggf. Notification anzeigen ──
-function checkAlarmFromZinsen(jsonData) {
-  if (!alarmConfig?.enabled || typeof alarmConfig.threshold !== 'number') return;
-  try {
-    const werte = (jsonData.quellen || []).map(q => q.wert).filter(v => v > 0);
-    if (!werte.length) return;
-    const sum = werte.reduce((a, b) => a + b, 0);
-    const avg = Math.round(sum / werte.length * 20) / 20;
-    if (avg <= alarmConfig.threshold) {
-      const title = alarmConfig.notifTitle || 'ImmoFuchs Zinsalarm';
-      const body = (alarmConfig.notifBody || 'Zinsen bei {avg}% – unter {threshold}%')
-        .replace('{avg}', avg)
-        .replace('{threshold}', alarmConfig.threshold);
-      self.registration.showNotification(title, {
-        body,
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        tag: 'zinsalarm',
-        renotify: true,
-        data: { avg, threshold: alarmConfig.threshold },
-      });
-    }
-  } catch(e) { /* silent */ }
-}
+// Zinsalarm: Der Bauzins kommt seit 2026-10-01 aus data.js und steckt im
+// Bundle. Die App schickt ihn per SET_ALARM mit (siehe ZinsAlarm.jsx), nach
+// jedem Deploy also der neue Wert. Die fruehere Hintergrundpruefung von
+// /zinsen.json las ein Feld "quellen", das es seit 2026-08-24 nicht mehr gab -
+// sie hat nie ausgeloest und ist mit der Datei entfallen.
 
 // ── Message Handler: Alarm-Config vom App empfangen ───────
 self.addEventListener('message', event => {

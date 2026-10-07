@@ -3,17 +3,38 @@ PROJEKT: ImmoFuchs.info — PWA für Immobilieninvestoren
 ═══════════════════════════════════════════════════════
 
 ── DESIGN-TOKEN ───────────────────────
-Primary:   #1E3A5F  (Marineblau)
-Accent:    #E8650A  (Fuchs-Orange)
-Surface:   #F8F9FA
-Text:      #1A1A2E
+(Ist-Zustand aus src/App.jsx, ROOT_TOKENS_CSS — am 2026-07-23 an den
+tatsaechlich ausgelieferten, live getesteten Code angeglichen.)
+Accent:    #E8600A  (Fuchs-Orange, CSS-Token --ca; dunkel --ca-dk #C44D00)
+Primary:   #1E3A5F  (Marineblau — Akzent fuer einzelne KPI-/Sektionsfarben)
+Surface:   #F5F5F0  (Seitenhintergrund --bg; Karten #FFFFFF --cc; Input --ci #FAFAF7)
+Text:      #1A1A1A  (--ct; gedaempft --ch #6C6C62 — am 2026-09-06 von
+           #8A8A80 abgedunkelt, das erreichte nur 3,05–3,48:1 und fiel
+           damit ueberall durch WCAG AA; jetzt mind. 4,64:1)
+Border:    #E5E5DC  (--cb)
 Radius:    12px
-Font:      Inter → system-ui → sans-serif
+Font:      'DM Sans' → sans-serif
 Mobile:    font-size 16px auf Inputs (iOS-Zoom-Schutz)
-           Input-Höhe: 42px einheitlich
 
 Diese Tokens werden in KEINER Antwort geändert,
 es sei denn, der User fordert es explizit.
+
+── PRODUKT-SCOPE (Ist-Zustand 2026-07-31) ──────────────
+6 Rechner:
+  1. Renditerechner       (Hauptrechner: Rendite, Cashflow,
+                            Steuervorteile, Mietrecht, Risikoanalyse)
+  2. Kreditrechner         (Finanzierung: monatliche Rate,
+                            Tilgungsplan, Restschuld nach Zinsbindung)
+  3. Mieterhöhungsrechner  (Mietrecht: nächste Mieterhöhung,
+                            Mietentwicklung)
+  4. Sanierungsrechner     (Kosten, BEG-Förderung, CO2-Einsparung,
+                            Amortisationsdauer)
+  5. Steueroptimierung §6  (Steuer: Rückwärtsrechnung — nötige
+                            Sanierungskosten/Kaufpreis, um Einkommen-
+                            steuer auf null zu bringen)
+  6. Vorfälligkeitsrechner (Kosten vorzeitiger Kreditablösung,
+                            BGH-konform, tagesaktueller Pfandbrief-
+                            Wiederanlagezins, vollständiger Tilgungsplan)
 
 ── APPROVAL-PFLICHT (ABSOLUT HART) ─────────────────────
 Vor JEDER Code-Änderung — egal wie klein — gilt:
@@ -31,7 +52,12 @@ geantwortet hat. Keine Ausnahmen.
 1. release-notes.txt automatisch aktualisieren
    (Version, Datum, kurze Beschreibung der Änderung)
 
-2. Deployment-Frage stellen:
+2. Lokaler Test-Frage stellen:
+   „Soll ich die Änderung auf localhost testen?"
+   Kein automatischer Test ohne diese Nachfrage — auch
+   nicht bei kleinen Änderungen.
+
+3. Deployment-Frage stellen:
    „Möchtest du deployen? Wähle:
      [1] dev   → push.ps1 dev
      [2] qa    → push.ps1 qa

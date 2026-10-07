@@ -1,0 +1,77 @@
+name: 🐕 Monatsjob-Waechter (DEV)
+
+# Prueft taeglich, ob der Monatsjob (monthly-update.yml) im laufenden Monat auf DEV
+# gelaufen ist - erkennbar an "Letzter Lauf: TT.MM.JJJJ" in
+# dev.immofuchs.info/datenstatus.html (bis 2026-10-01 am "stand" in zinsen.json,
+# die Datei ist entfallen). Die Seite schreibt der Monatsjob bei jedem Lauf neu,
+# online kommt sie erst ueber den anschliessenden Deploy - geprueft werden also
+# Lauf UND Deploy.
+# Hintergrund: am 01.09. und 01.10.2026 hat GitHub den geplanten Monatslauf gar nicht
+# ausgeloest, und niemand hat es gemerkt. Ab dem 3. des Monats oeffnet dieser Waechter
+# bei veraltetem Stand ein Issue und der Lauf wird rot (GitHub benachrichtigt dann per
+# Mail). Ist der Stand wieder aktuell, schliesst er das Issue.
+#
+# Taeglich statt monatlich, damit ein einzelner verworfener geplanter Lauf (wie beim
+# Monatsjob) hier nicht ins Gewicht faellt. Geplante Laeufe kommen bei GitHub immer
+# von main - Aenderungen an dieser Datei deshalb auch auf main (mit [skip ci]).
+# QA und PROD werden bewusst nicht geprueft (Nutzer-Vorgabe 2026-10-01).
+
+on:
+  schedule:
+    - cron: "41 8 * * *"
+      timezone: "Europe/Berlin"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  pruefen:
+    name: Zinsstand auf dev pruefen
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔎 Stand pruefen und Issue pflegen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Deutsche Zeit, passend zum Monatsjob und zu monthly_update.py
+          TAG=$(TZ=Europe/Berlin date +%d)
+          SOLL=$(TZ=Europe/Berlin date +%Y-%m)
+          # "Letzter Lauf: 01.11.2026 01:09 Uhr" -> 2026-11
+          IST=$(curl -fsS "https://dev.immofuchs.info/datenstatus.html?nc=$(date +%s)" \
+            | grep -oE 'Letzter Lauf: [0-9]{2}\.[0-9]{2}\.[0-9]{4}' \
+            | sed -E 's/.*: [0-9]{2}\.([0-9]{2})\.([0-9]{4})/\2-\1/')
+          IST=${IST:-nicht-lesbar}
+          echo "Tag $TAG, erwartet $SOLL, gefunden $IST"
+
+          TITLE="Monatsjob nicht gelaufen (DEV)"
+          OFFEN=$(gh issue list --repo "$GITHUB_REPOSITORY" --search "$TITLE in:title" --state open --json number --jq '.[0].number')
+
+          if [ "$IST" = "$SOLL" ]; then
+            echo "✓ Zinsstand ist aktuell."
+            if [ -n "$OFFEN" ]; then
+              gh issue close "$OFFEN" --repo "$GITHUB_REPOSITORY" --comment "Zinsstand auf dev ist wieder aktuell ($IST)."
+            fi
+            exit 0
+          fi
+
+          if [ "$((10#$TAG))" -lt 3 ]; then
+            echo "Vor dem 3. des Monats - der Monatsjob hat noch Zeit (Ersatzlaeufe am 1. und 2.)."
+            exit 0
+          fi
+
+          BODY="Am $(TZ=Europe/Berlin date +%d.%m.%Y) meldet dev.immofuchs.info/datenstatus.html als letzten Lauf \`$IST\` statt \`$SOLL\`. Der Monatsjob ist nicht gelaufen, oder eine Datenquelle (Bundesbank/Interhyp) war nicht erreichbar.
+
+          Abhilfe: Actions -> Monthly Data Update -> **Run workflow** (Branch main). NICHT \"Re-run\" bei einem alten Lauf - der nimmt die alte Workflow-Datei.
+
+          _Automatisch erzeugt vom Monatsjob-Waechter (.github/workflows/monthly-watchdog.yml)._"
+
+          if [ -n "$OFFEN" ]; then
+            gh issue edit "$OFFEN" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+            echo "Issue #$OFFEN aktualisiert"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY" --assignee "$GITHUB_REPOSITORY_OWNER"
+            echo "Issue erstellt"
+          fi
+          echo "::error::Monatsjob fuer $SOLL ist auf DEV nicht gelaufen (Stand: $IST)"
+          exit 1

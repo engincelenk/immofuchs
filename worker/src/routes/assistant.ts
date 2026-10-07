@@ -1,0 +1,605 @@
+// /api/assistant + /api/expose-extract - bewusst UNVERSIONIERT unter ihrem
+// heutigen Pfad (Stabilitätsregel, S3-1: keine Breaking Changes an
+// Bestandsfunktionen). Prompt-/Modell-Logik bleibt exakt wie sie war - added
+// wird ausschließlich ein vorgeschalteter Entitlement-/Consent-/Trial-Check
+// (4.9, S5-2/3/4/5/7). Kein Hono-Routing-Parameter (":id" etc.) nötig, daher
+// als einfache (Context) => Promise<Response>-Funktionen statt eigenem
+// Sub-Router gehalten - index.ts hängt sie direkt ein.
+import type { Context } from "hono";
+import type { AssistantResponse, Env, ExposeExtractResponse, Tier } from "../types";
+import { validateExposeExtractRequest, validateRequest, MAX_VERLAUF_TEXT_LEN } from "../validator";
+import { buildSystemPrompt, leseLang, mitSprache, nutzerMitSprache, tokenFaktor } from "../systemPrompt";
+import { buildUserPayload } from "../promptBuilder";
+import { callModel, callVisionModel } from "../modelRouter";
+import { filterOutput, entferneHerkunftUndRhythmus } from "../outputFilter";
+import { EXPOSE_JSON_SCHEMA, EXPOSE_SYSTEM_PROMPT } from "../exposePrompt";
+import {
+  nutzerPayload,
+  systemPromptFuer,
+  type AnalyseProdukt,
+  type Befund,
+  type GerechneteZahl,
+  type HebelVariante,
+} from "../analysePrompt";
+import {
+  parseAnalyseOutput,
+  parseBriefingOutput,
+  parseHandoutOutput,
+  type AnalyseErgebnis,
+  type BriefingErgebnis,
+  type HandoutErgebnis,
+} from "../analyseOutput";
+import { parseExposeOutput } from "../exposeOutput";
+import { authenticate } from "../auth/session";
+import { ermittleZugang, type Zugang } from "../entitlement";
+import { hasConsent } from "../consent";
+import { getTrialCount, getUserById, incrementTrialUsage, type UserRow } from "../db";
+import { TRIAL_LIMITS, trialTag } from "../trialLimits";
+
+const DEFAULT_FINN_PRO_DAILY_LIMIT = 50;
+const DEFAULT_FINN_FREE_MAX_TOKENS = 350;
+const DEFAULT_FINN_PRO_MAX_TOKENS = 700;
+const DEFAULT_GLOBAL_CUTOFF_RATIO = 0.7;
+
+// Authentifizierung ist seit der Preispolitik 2026-08-20 Pflicht. Vorher
+// waren Finn und der Exposé-Scan anonym nutzbar ("Free bleibt komplett
+// loginfrei", 4.0) - mit dem Wegfall von Free gibt es keinen anonymen Zugang
+// mehr, und die Kontingente haengen am Nutzer statt an der Session. Damit
+// reicht "Cookies loeschen" nicht mehr fuer ein frisches Kontingent.
+//
+// Bewusst ohne den Entitlement-Cookie-Cache (getEntitlement): der speichert
+// ein Boolean und koennte "Testphase" nicht von "Pro" unterscheiden. Ein
+// D1-Read je Anfrage ist gegenueber dem Modell-Aufruf, der gleich folgt,
+// nicht messbar.
+interface Zugriff {
+  user: UserRow;
+  zugang: Zugang;
+}
+
+async function resolveZugriff(request: Request, env: Env): Promise<Zugriff | null> {
+  const ctx = await authenticate(request, env);
+  if (!ctx) return null;
+  const [user, zugang] = await Promise.all([
+    getUserById(env.DB, ctx.session.user_id),
+    ermittleZugang(env, ctx.session.user_id),
+  ]);
+  if (!user) return null;
+  return { user, zugang };
+}
+
+export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Response> {
+  const env = c.env;
+  // Kill-Switch (Konzept 2.8) - ueber Cloudflare-Dashboard-Variable ohne Redeploy schaltbar.
+  if (env.ASSISTANT_ENABLED !== "true") {
+    return c.json({ error: "assistant_disabled" }, 503);
+  }
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+
+  const zugriff = await resolveZugriff(c.req.raw, env);
+  if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
+  if (zugriff.zugang === "keiner") return c.json({ error: "pro_required" }, 402);
+  const isPro = zugriff.zugang === "pro";
+
+  const freeMaxTokens = parseInt(env.FINN_FREE_MAX_TOKENS || "", 10) || DEFAULT_FINN_FREE_MAX_TOKENS;
+  const proMaxTokens = parseInt(env.FINN_PRO_MAX_TOKENS || "", 10) || DEFAULT_FINN_PRO_MAX_TOKENS;
+  const maxTokens = isPro ? proMaxTokens : freeMaxTokens;
+  // Laengeres Verlaufsfenster fuer Pro (S5-4): der Zeichen-Cap muss mit
+  // MAX_TOKENS mitwachsen, sonst kehrt der invalid_verlauf-Bug aus 1.55.96
+  // fuer Pro-Nutzer zurueck (4.18.5).
+  const maxVerlaufTextLen = Math.round((MAX_VERLAUF_TEXT_LEN * maxTokens) / DEFAULT_FINN_FREE_MAX_TOKENS);
+
+  const validation = validateRequest(body, maxVerlaufTextLen);
+  if (!validation.ok) {
+    return c.json({ error: validation.error }, 400);
+  }
+  const req = validation.data;
+
+  // KI-Consent vor der ersten Finn-Nutzung (Guideline 5.1.2(i), S5-7) - vor
+  // jedem Kontingent-Verbrauch geprueft, damit ein fehlender Consent keine
+  // Anfrage kostet.
+  if (!(await hasConsent(env, req.sessionId))) {
+    return c.json({ error: "consent_required" }, 412);
+  }
+
+  // Drei gestaffelte Schranken (siehe docs/code-review-2026-07-23.md, Punkt 1):
+  //   1. global  - hartes Tages-Cap ueber alle Nutzer, deckelt die Kosten.
+  //   2. ip      - pro CF-Connecting-IP.
+  //   3. Kontingent - Pro: Tageslimit je Session (S5-3, unveraendert).
+  //                    Testphase: festes Kontingent JE RECHNER fuer die
+  //                    ganze Phase, am Nutzer haengend (Migration 0025).
+  const proDailyLimit = parseInt(env.FINN_PRO_DAILY_LIMIT || "", 10) || DEFAULT_FINN_PRO_DAILY_LIMIT;
+  const ipLimit = parseInt(env.IP_DAILY_LIMIT || "", 10) || 60;
+  const globalLimit = parseInt(env.GLOBAL_DAILY_LIMIT || "", 10) || 2000;
+  // Pro-Reservierung (4.18.4, S5-5): Anfragen aus der Testphase pruefen gegen
+  // einen niedrigeren Anteil desselben globalen Zaehlers, Pro gegen das volle
+  // Limit - ein ausgeschoepftes Testkontingent macht Finn fuer zahlende
+  // Nutzer nicht unbenutzbar.
+  const cutoffRatio = parseFloat(env.FINN_FREE_GLOBAL_CUTOFF_RATIO || "") || DEFAULT_GLOBAL_CUTOFF_RATIO;
+  const effectiveGlobalLimit = isPro ? globalLimit : Math.floor(globalLimit * cutoffRatio);
+
+  const ip = c.req.header("CF-Connecting-IP") || "unknown";
+  const globalLimiter = env.RATE_LIMITER_DO.getByName("global");
+  const ipLimiter = env.RATE_LIMITER_DO.getByName(`ip:${ip}`);
+  // Nur noch Pro braucht den Session-Zaehler (Tageslimit). Das Kontingent der
+  // Testphase liegt in D1 am Nutzer, siehe unten.
+  const sessionLimiter = env.RATE_LIMITER_DO.getByName(req.sessionId);
+
+  const globalRl = await globalLimiter.checkAndIncrement(effectiveGlobalLimit);
+  if (!globalRl.allowed) {
+    return c.json({ error: "rate_limit_exceeded" }, 429);
+  }
+  const ipRl = await ipLimiter.checkAndIncrement(ipLimit);
+  if (!ipRl.allowed) {
+    await globalLimiter.decrement();
+    return c.json({ error: "rate_limit_exceeded" }, 429);
+  }
+  const trialStart = zugriff.user.app_trial_started_at;
+  if (isPro) {
+    const sessionRl = await sessionLimiter.checkAndIncrement(proDailyLimit);
+    if (!sessionRl.allowed) {
+      await Promise.all([globalLimiter.decrement(), ipLimiter.decrement()]);
+      return c.json({ error: "rate_limit_exceeded" }, 429);
+    }
+  } else {
+    // Testphase: Kontingent je Rechner und Tag, in D1 am Nutzer. Geprueft
+    // wird vorher, gezaehlt erst nach einer erfolgreichen Antwort (siehe
+    // unten) - ein Modell-Fehler soll kein Kontingent kosten.
+    const verbraucht =
+      trialStart === null
+        ? TRIAL_LIMITS.finn
+        : await getTrialCount(env.DB, zugriff.user.id, trialStart, "finn", req.rechner, trialTag());
+    if (verbraucht >= TRIAL_LIMITS.finn) {
+      await Promise.all([globalLimiter.decrement(), ipLimiter.decrement()]);
+      return c.json({ error: "trial_limit_reached" }, 402);
+    }
+  }
+
+  const systemPrompt = buildSystemPrompt(req.lang);
+  const userPayload = buildUserPayload(req);
+
+  let rawAnswer: string;
+  try {
+    rawAnswer = await callModel(env, req.lang, systemPrompt, userPayload, maxTokens);
+  } catch (err) {
+    // Absichtlich kein Logging von "frage"/"kontext" - nur strukturelle Fehlerinfo,
+    // damit kein Nutzer-Freitext in Cloudflare-Logs landet (Konzept 2.9/2.10).
+    console.error(
+      "assistant_model_call_failed",
+      err instanceof Error ? err.message : "unknown_error",
+    );
+    await Promise.all([
+      globalLimiter.decrement(),
+      ipLimiter.decrement(),
+      isPro ? sessionLimiter.decrement() : Promise.resolve(),
+    ]);
+    return c.json({ error: "model_call_failed" }, 502);
+  }
+
+  // Herkunfts-/Rhythmus-Saetze streichen (Regel 13 im System-Prompt, hier das Netz).
+  const antwort = entferneHerkunftUndRhythmus(filterOutput(rawAnswer, req.lang), req.lang);
+  const tier = extractTier(req.kontext);
+
+  // Kontingent der Testphase erst nach der erfolgreichen Antwort erhoehen -
+  // gleiche Haltung wie beim Exposé-Scan weiter unten.
+  if (!isPro && trialStart !== null) {
+    await incrementTrialUsage(env.DB, zugriff.user.id, trialStart, "finn", req.rechner, trialTag());
+  }
+
+  const responseBody: AssistantResponse = { antwort, tier };
+  return c.json(responseBody, 200);
+}
+
+export async function handleExposeExtract(c: Context<{ Bindings: Env }>): Promise<Response> {
+  const env = c.env;
+  if (env.EXPOSE_EXTRACT_ENABLED !== "true") {
+    return c.json({ error: "expose_extract_disabled" }, 503);
+  }
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+
+  const validation = validateExposeExtractRequest(body);
+  if (!validation.ok) {
+    return c.json({ error: validation.error }, 400);
+  }
+  const req = validation.data;
+
+  const zugriff = await resolveZugriff(c.req.raw, env);
+  if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
+  if (zugriff.zugang === "keiner") return c.json({ error: "pro_required" }, 402);
+  const isPro = zugriff.zugang === "pro";
+  const trialStart = zugriff.user.app_trial_started_at;
+
+  if (!(await hasConsent(env, req.sessionId))) {
+    return c.json({ error: "consent_required" }, 412);
+  }
+
+  // Kontingent der Testphase (Migration 0025, seit 0026 je Tag): der Scan
+  // gehoert zum OBJEKT, nicht zum Rechner - ein Exposé wird einmal gelesen und
+  // fliesst danach in jeden Rechner. Deshalb ein gemeinsames Kontingent statt
+  // eines je Rechner. Pro unterliegt nur den Fair-Use-Limits unten.
+  if (!isPro) {
+    const verbraucht =
+      trialStart === null
+        ? TRIAL_LIMITS.expose
+        : await getTrialCount(env.DB, zugriff.user.id, trialStart, "expose", "", trialTag());
+    if (verbraucht >= TRIAL_LIMITS.expose) {
+      return c.json({ error: "trial_limit_reached" }, 402);
+    }
+  }
+
+  const dailyLimit = parseInt(env.EXPOSE_DAILY_LIMIT || "", 10) || 5;
+  const ipLimit = parseInt(env.EXPOSE_IP_DAILY_LIMIT || "", 10) || 15;
+  const globalLimit = parseInt(env.EXPOSE_GLOBAL_DAILY_LIMIT || "", 10) || 300;
+  const ip = c.req.header("CF-Connecting-IP") || "unknown";
+
+  const globalLimiter = env.RATE_LIMITER_DO.getByName("expose:global");
+  const ipLimiter = env.RATE_LIMITER_DO.getByName(`expose:ip:${ip}`);
+  const sessionLimiter = env.RATE_LIMITER_DO.getByName(`expose:${req.sessionId}`);
+
+  const globalRl = await globalLimiter.checkAndIncrement(globalLimit);
+  if (!globalRl.allowed) {
+    return c.json({ error: "rate_limit_exceeded" }, 429);
+  }
+  const ipRl = await ipLimiter.checkAndIncrement(ipLimit);
+  if (!ipRl.allowed) {
+    await globalLimiter.decrement();
+    return c.json({ error: "rate_limit_exceeded" }, 429);
+  }
+  const sessionRl = await sessionLimiter.checkAndIncrement(dailyLimit);
+  if (!sessionRl.allowed) {
+    await Promise.all([globalLimiter.decrement(), ipLimiter.decrement()]);
+    return c.json({ error: "rate_limit_exceeded" }, 429);
+  }
+
+  const dateien = req.pdf ? [...req.images, req.pdf] : req.images;
+
+  let rawAnswer: string;
+  try {
+    rawAnswer = await callVisionModel(env, EXPOSE_SYSTEM_PROMPT, EXPOSE_JSON_SCHEMA, dateien);
+  } catch (err) {
+    const grund = err instanceof Error ? err.message : "unknown_error";
+    console.error("expose_extract_model_call_failed", grund);
+    await Promise.all([
+      globalLimiter.decrement(),
+      ipLimiter.decrement(),
+      sessionLimiter.decrement(),
+    ]);
+    const inhaltsproblem = grund.includes("pdf_ohne_text");
+    return c.json({ error: inhaltsproblem ? "extraction_failed" : "model_call_failed" }, 502);
+  }
+
+  let ergebnis: ExposeExtractResponse;
+  try {
+    ergebnis = parseExposeOutput(rawAnswer);
+  } catch (err) {
+    console.error(
+      "expose_extract_output_invalid",
+      err instanceof Error ? err.message : "unknown_error",
+    );
+    await Promise.all([
+      globalLimiter.decrement(),
+      ipLimiter.decrement(),
+      sessionLimiter.decrement(),
+    ]);
+    return c.json({ error: "extraction_failed" }, 502);
+  }
+
+  // Zaehler erst NACH erfolgreicher Extraktion erhoehen - ein gescheiterter
+  // Versuch soll kein Kontingent verbrauchen.
+  if (!isPro && trialStart !== null) {
+    await incrementTrialUsage(env.DB, zugriff.user.id, trialStart, "expose", "", trialTag());
+  }
+
+  return c.json(ergebnis, 200);
+}
+
+function extractTier(kontext: Record<string, unknown>): Tier {
+  const bewertung = kontext.bewertung;
+  if (bewertung && typeof bewertung === "object" && !Array.isArray(bewertung)) {
+    const tier = (bewertung as Record<string, unknown>).tier;
+    if (tier === "green" || tier === "yellow" || tier === "red") return tier;
+  }
+  return null;
+}
+
+// ── AI-Engine: strukturierte Objektauswertung ───────────────────────────────
+//
+// Neu 2026-09, deshalb versioniert unter /api/v1/ (die beiden Handler oben
+// bleiben unversioniert, weil sie Bestandsfunktionen sind).
+//
+// NUR PRO (Nutzerentscheidung 2026-09-05). Anders als beim Chat gibt es hier
+// kein Testkontingent: die Auswertung wird am Objekt gespeichert und ist damit
+// dauerhaft wertvoll, nicht fluechtig wie eine Chatantwort.
+// 2026-09-08 von 900 auf 1500 angehoben: mit vier Abschnitten a 160 Woertern
+// (siehe FORM in analysePrompt.ts) reichten 900 Tokens nicht mehr - das Modell
+// brach mitten im JSON ab, der Parser verwarf die Antwort, und das Kontingent
+// war fuer nichts verbraucht.
+const ANALYSE_MAX_TOKENS = 1500;
+// Das Briefing hat mehr Textfelder als die uebrigen Produkte (Urteil, drei
+// Listen, vier Einordnungssaetze - siehe BRIEFING_FORM in analysePrompt.ts).
+// 2000 ist eine Annahme, die an einer echten Antwort zu pruefen ist: zu knapp
+// heisst abgeschnittenes JSON, und das kostet Kontingent ohne Ergebnis (der
+// Aufrufer gibt es zurueck, der Nutzer hat trotzdem nichts).
+const BRIEFING_MAX_TOKENS = 2000;
+
+// Hoechstens sechs Varianten, jedes Textfeld hoechstens 40 Zeichen: der
+// Client schickt heute vier kurze Zeilen, alles darueber hinaus ist entweder
+// ein Fehler oder ein Versuch, ueber ein strukturiertes Feld Text in den
+// Prompt zu bekommen. Fehlerhafte Eintraege werden verworfen, nicht
+// abgelehnt - eine unbrauchbare Variante darf keine bezahlte Auswertung
+// scheitern lassen.
+const VARIANTEN_MAX = 6;
+const VARIANTEN_TEXT_MAX = 40;
+
+// Gemeinsam fuer beide Zahlenkanaele: gekuerzt, getrimmt, ohne
+// Zeilenumbrueche. Ein Umbruch koennte eine eigene Prompt-Zeile vortaeuschen.
+function promptText(v: unknown, max: number = VARIANTEN_TEXT_MAX): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim().slice(0, max);
+  return s && !/[\r\n]/.test(s) ? s : null;
+}
+
+// Die fertig gerechneten Label-Wert-Zeilen (beim Briefing die Vergleiche,
+// Tragfaehigkeits-, Zeitraum- und Stresstest-Zeilen; bei den Rechner-
+// Produkten deren eigene Werte).
+//
+// Eigene, groessere Grenzen als bei den Varianten (2026-09-18): das Briefing
+// schickt rund zwanzig Zeilen statt vier, und eine Vergleichszeile wie
+// "3.980,00 €/m² gegen 3.858,00 €/m² (im Rahmen)" passt nicht in 40 Zeichen.
+// Bei den alten Grenzen waere die Haelfte der Zahlen stumm verschwunden und
+// das Modell haette genau ueber die Werte geschrieben, die es nicht gesehen
+// hat. Die Disziplin bleibt dieselbe: gekuerzt, getrimmt, ohne Zeilenumbruch.
+const ZAHLEN_MAX = 24;
+const ZAHLEN_TEXT_MAX = 120;
+
+export function leseZahlen(roh: unknown): GerechneteZahl[] | undefined {
+  if (!Array.isArray(roh)) return undefined;
+  const sauber: GerechneteZahl[] = [];
+  for (const eintrag of roh.slice(0, ZAHLEN_MAX)) {
+    if (typeof eintrag !== "object" || eintrag === null || Array.isArray(eintrag)) continue;
+    const e = eintrag as Record<string, unknown>;
+    const label = promptText(e.label, ZAHLEN_TEXT_MAX);
+    const wert = promptText(e.wert, ZAHLEN_TEXT_MAX);
+    if (label === null || wert === null) continue;
+    sauber.push({ label, wert });
+  }
+  return sauber.length > 0 ? sauber : undefined;
+}
+
+// Die Kernaussagen bereits erstellter Auswertungen - Traeger des Produkts
+// "handout". Sie stammen zwar urspruenglich aus unserem eigenen Modell, kommen
+// aber ueber den Client zurueck und sind damit derselbe Injection-Kanal wie
+// jeder andere Fremdtext: gekuerzt, ohne Zeilenumbrueche, Anzahl begrenzt.
+// Groesseres Textlimit als bei den Varianten, weil eine Kernaussage
+// bauartbedingt ein ganzer Satz ist (Prompt-Vorgabe: bis 240 Zeichen).
+const BEFUNDE_MAX = 3;
+const BEFUND_TEXT_MAX = 260;
+
+export function leseBefunde(roh: unknown): Befund[] | undefined {
+  if (!Array.isArray(roh)) return undefined;
+  const sauber: Befund[] = [];
+  for (const eintrag of roh.slice(0, BEFUNDE_MAX)) {
+    if (typeof eintrag !== "object" || eintrag === null || Array.isArray(eintrag)) continue;
+    const e = eintrag as Record<string, unknown>;
+    const produkt = promptText(e.produkt);
+    const roheAussage = typeof e.kernaussage === "string" ? e.kernaussage.trim() : "";
+    const kernaussage = roheAussage.slice(0, BEFUND_TEXT_MAX).replace(/[\r\n]+/g, " ").trim();
+    if (produkt === null || !kernaussage) continue;
+    sauber.push({ produkt, kernaussage });
+  }
+  return sauber.length > 0 ? sauber : undefined;
+}
+
+// Standort-Fakten (Backlog C.8): kurze, quellenfreie Saetze zum Bundesland
+// des Objekts (siehe regionalFakten() im Client). Gleicher Injection-Kanal
+// wie Befunde/Varianten, deshalb dieselbe Disziplin: Anzahl und Laenge hart
+// begrenzt, keine Zeilenumbrueche.
+const STANDORTFAKTEN_MAX = 3;
+const STANDORTFAKTEN_TEXT_MAX = 200;
+
+export function leseStandortFakten(roh: unknown): string[] | undefined {
+  if (!Array.isArray(roh)) return undefined;
+  const sauber: string[] = [];
+  for (const eintrag of roh.slice(0, STANDORTFAKTEN_MAX)) {
+    if (typeof eintrag !== "string") continue;
+    const text = eintrag.trim().slice(0, STANDORTFAKTEN_TEXT_MAX).replace(/[\r\n]+/g, " ").trim();
+    if (text) sauber.push(text);
+  }
+  return sauber.length > 0 ? sauber : undefined;
+}
+
+export function leseVarianten(roh: unknown): HebelVariante[] | undefined {
+  if (!Array.isArray(roh)) return undefined;
+
+  const text = promptText;
+  const zahl = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
+
+  const sauber: HebelVariante[] = [];
+  for (const eintrag of roh.slice(0, VARIANTEN_MAX)) {
+    if (typeof eintrag !== "object" || eintrag === null || Array.isArray(eintrag)) continue;
+    const e = eintrag as Record<string, unknown>;
+    const feld = text(e.feld);
+    const aenderung = text(e.aenderung);
+    const neuerWert = text(e.neuerWert);
+    const score = zahl(e.score);
+    const deltaScore = zahl(e.deltaScore);
+    if (feld === null || aenderung === null || neuerWert === null) continue;
+    if (score === null || deltaScore === null) continue;
+    // cashflowMon/dscr sind optional (Investment-Briefing-Schema 2026-09,
+    // Traeger der scenarios-Zeilen im HEBEL-Prompt) - ein fehlendes oder
+    // ungueltiges Feld verwirft nicht die ganze Variante, es bleibt einfach weg.
+    const cashflowMon = text(e.cashflowMon);
+    const dscr = text(e.dscr);
+    sauber.push({
+      feld,
+      aenderung,
+      neuerWert,
+      score,
+      deltaScore,
+      ...(cashflowMon ? { cashflowMon } : {}),
+      ...(dscr ? { dscr } : {}),
+    });
+  }
+  return sauber.length > 0 ? sauber : undefined;
+}
+
+export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promise<Response> {
+  const env = c.env;
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  if (typeof body !== "object" || body === null) {
+    return c.json({ error: "invalid_body" }, 400);
+  }
+  const b = body as Record<string, unknown>;
+
+  const produkt =
+    (
+      ["briefing", "handout", "kredit", "miete", "sanier", "vfe", "steuer6"] as const
+    ).find((p) => p === b.produkt) ?? null;
+  if (!produkt) return c.json({ error: "unbekanntes_produkt" }, 400);
+
+  const kennzahlen = b.kennzahlen;
+  if (typeof kennzahlen !== "object" || kennzahlen === null || Array.isArray(kennzahlen)) {
+    return c.json({ error: "kennzahlen_fehlen" }, 400);
+  }
+  // Der Freitext-Hinweis geht mit an das Modell - deshalb hart begrenzt, damit
+  // er nicht als Traeger fuer Prompt-Injection oder als Datenkanal dient.
+  const hinweis = typeof b.hinweis === "string" ? b.hinweis.slice(0, 500) : "";
+  // App-Sprache des Nutzers (seit 2026-10-03), Rueckfall Deutsch.
+  const lang = leseLang(b.lang);
+
+  // Durchgerechnete Varianten fuer das Produkt "hebel". Sie stammen aus der
+  // Rendite-/Score-Engine des Clients - hier wird nur die Form geprueft.
+  // Genauso hart begrenzt wie der Hinweis: alles, was in den Prompt wandert,
+  // ist ein potenzieller Injection-Traeger, auch wenn es strukturiert aussieht.
+  const varianten = leseVarianten(b.varianten);
+  const zahlen = leseZahlen(b.zahlen);
+  // Nur das Handout setzt auf frueheren Auswertungen auf - fuer die anderen
+  // Produkte waere ein fremder Modelltext im Prompt reines Risiko ohne Nutzen.
+  const befunde = produkt === "handout" ? leseBefunde(b.befunde) : undefined;
+  // Standort-Fakten (Backlog C.8) nur dort, wo der Prompt sie auch nutzt
+  // (siehe HALTUNG-Regel in analysePrompt.ts) - fuer die uebrigen Produkte
+  // waeren sie nur ungenutzter Prompt-Ballast.
+  const standortRelevant = produkt === "briefing" || produkt === "sanier";
+  const standortFakten = standortRelevant ? leseStandortFakten(b.standortFakten) : undefined;
+
+  const zugriff = await resolveZugriff(c.req.raw, env);
+  if (!zugriff) return c.json({ error: "not_authenticated" }, 401);
+  if (zugriff.zugang !== "pro") return c.json({ error: "pro_required" }, 402);
+
+  const sessionId = typeof b.sessionId === "string" ? b.sessionId : "";
+  if (!(await hasConsent(env, sessionId))) {
+    return c.json({ error: "consent_required" }, 412);
+  }
+
+  // Fair-Use wie beim Chat: die Auswertung ist teurer als eine Chatantwort,
+  // deshalb ein eigener, knapperer Zaehler je Nutzer und Tag.
+  const tagesLimit = parseInt(env.ANALYSE_DAILY_LIMIT || "", 10) || 20;
+  const limiter = env.RATE_LIMITER_DO.getByName(`analyse:${zugriff.user.id}`);
+  const rl = await limiter.checkAndIncrement(tagesLimit);
+  if (!rl.allowed) return c.json({ error: "rate_limit_exceeded" }, 429);
+
+  let roh: string;
+  try {
+    roh = await callModel(
+      env,
+      lang,
+      mitSprache(systemPromptFuer(produkt as AnalyseProdukt), lang),
+      nutzerMitSprache(
+        nutzerPayload(
+          kennzahlen as Record<string, unknown>,
+          hinweis,
+          varianten,
+          zahlen,
+          befunde,
+          standortFakten,
+        ),
+        lang,
+      ),
+      (produkt === "briefing" ? BRIEFING_MAX_TOKENS : ANALYSE_MAX_TOKENS) * tokenFaktor(lang),
+    );
+  } catch (err) {
+    // Kontingent zurueckgeben: der Nutzer hat kein Ergebnis bekommen.
+    await limiter.decrement();
+    // Den Grund NICHT verschlucken (Befund 2026-09-06): Dieser Zweig hat
+    // wochenlang jeden Modellfehler in ein nacktes 503 verwandelt, ohne eine
+    // Spur zu hinterlassen - die Ursache war dadurch von aussen nicht
+    // feststellbar.
+    const grund = err instanceof Error ? err.message : "unknown_error";
+    console.error("analyse_model_call_failed", JSON.stringify({ produkt, grund }));
+    return c.json({ error: "modell_nicht_erreichbar" }, 503);
+  }
+
+  // Drei Formen, drei Parser (analyseOutput.ts): das Handout liefert eine
+  // Fragenliste, das Briefing sieben Textfelder zu bereits gerechneten
+  // Zahlen, die fuenf Rechner-Produkte das generische Schema. Die
+  // Verzweigung sitzt hier und nur hier.
+  const ergebnis: AnalyseErgebnis | BriefingErgebnis | HandoutErgebnis | null =
+    produkt === "handout"
+      ? parseHandoutOutput(roh)
+      : produkt === "briefing"
+        ? parseBriefingOutput(roh)
+        : parseAnalyseOutput(roh);
+  if (!ergebnis) {
+    await limiter.decrement();
+    return c.json({ error: "unbrauchbare_antwort" }, 502);
+  }
+
+  // filterOutput NACH dem Parsen, nicht davor: es ersetzt bei Verdacht den
+  // gesamten Text durch einen Fallback-Satz. Auf das rohe JSON angewandt
+  // wuerde dieser Satz zur "summary" - der Nutzer bekaeme eine
+  // Fehlermeldung als Analyseergebnis serviert. Stattdessen pruefen wir den
+  // zusammengesetzten Text und verwerfen im Verdachtsfall das ganze Ergebnis.
+  // Beim Handout sind die Fragen dieser Text: sie sind das Ergebnis. Beim
+  // Briefing sind es Urteil, die drei Listen und die vier Einordnungssaetze.
+  // Bei den fuenf Rechner-Produkten summary, alle Insight-Texte
+  // (keyInsights/risks/opportunities), assumptions und die optionale
+  // recommendation. Jedes Feld, das der Nutzer zu sehen bekommt, muss durch
+  // den Filter - ein ungeprueftes Feld waere der Weg daran vorbei.
+  const gesamttext = (
+    "fragen" in ergebnis
+      ? [ergebnis.kernaussage, ...ergebnis.fragen.map((f) => f.frage)]
+      : "urteil" in ergebnis
+        ? [
+            ergebnis.urteil,
+            ...ergebnis.staerken.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.risiken.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.hebel.map((i) => `${i.title} ${i.text}`),
+            ergebnis.markt,
+            ergebnis.tragfaehigkeit,
+            ergebnis.zeitraum,
+            ergebnis.stresstest,
+          ]
+        : [
+            ergebnis.summary,
+            ...ergebnis.keyInsights.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.risks.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.opportunities.map((i) => `${i.title} ${i.text}`),
+            ...ergebnis.assumptions,
+            ergebnis.recommendation ?? "",
+          ]
+  ).join(" ");
+  if (filterOutput(gesamttext, lang) !== gesamttext) {
+    await limiter.decrement();
+    return c.json({ error: "unbrauchbare_antwort" }, 502);
+  }
+
+  return c.json({ produkt, ergebnis });
+}
