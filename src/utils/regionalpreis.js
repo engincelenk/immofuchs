@@ -1,0 +1,350 @@
+// Regionaler Kaufpreis-Richtwert je Bundesland/Kreis, fuer die Einordnung im
+// Renditerechner. Geladen wird je Bundesland vom Worker (siehe unten).
+//
+// Matching-Strategie bewusst dreistufig statt einer erfundenen Genauigkeit:
+// 1. Exakter Namensabgleich Ort <-> Kreis/Stadt (deckt kreisfreie Staedte
+//    und Faelle ab, in denen der Ort selbst der Kreissitz ist).
+// 2. Sonst PLZ -> amtlicher Kreisname (plzKreis.js, Backlog Punkt 4,
+//    2026-09-11) - deckt kleine Gemeinden ab, die selbst kein Kreis sind
+//    (z.B. PLZ 74385 -> Pleidelsheim -> Landkreis Ludwigsburg), OHNE eine
+//    geografische Naeherung zu erfinden: die Zuordnung kommt aus amtlichen
+//    Kreisgrenzen (siehe plzKreis.js), nicht aus PLZ-Naehe.
+// 3. Sonst Landesdurchschnitt - kein Rateversuch ueber Postleitzahlen-Naehe,
+//    das waere Scheingenauigkeit ohne echte Kreisgrenzen-Kenntnis.
+//
+// Die Quelle der Zahlen wird hier bewusst NICHT mitgefuehrt oder angezeigt
+// (Nutzerentscheidung 2026-09-09) - nur die Werte selbst und eine grobe
+// Ebenen-Angabe ("kreis"/"bundesland") fuer die UI-Formulierung.
+
+import { fmt, fmtP } from "./helpers.js";
+import { apiV1 } from "./apiBase.js";
+import { kreisFuerPlz, ladePlzKreis } from "./plzKreis.js";
+
+// Seit 2026-10-03 NICHT mehr als statische Datei (public/regionalpreise.json
+// war per Direkt-URL am Stueck herunterladbar): der Worker liefert je Anfrage
+// genau EIN Bundesland (GET /api/v1/daten/regionalpreise/:code, mit
+// Rate-Limit je IP, worker/src/routes/daten.ts). Der Client sammelt die
+// geladenen Bundeslaender in `daten.bundeslaender` - alle synchronen
+// Zugriffe unten suchen dort wie bisher und finden ein Land, sobald es
+// geladen ist.
+
+let daten = null;
+const laufend = new Map();
+let metaLaufend = null;
+
+// Laedt das Bundesland (Kuerzel wie "BW"). Mehrere gleichzeitige Aufrufe
+// teilen sich dieselbe Anfrage; ein Fehlschlag wird nicht gemerkt. Ohne
+// gueltiges Kuerzel gibt es nichts zu laden.
+export function ladeRegionalpreise(bundeslandCode) {
+  const code = String(bundeslandCode ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return Promise.resolve(daten);
+  if (daten?.bundeslaender.some((b) => b.code === code)) return Promise.resolve(daten);
+  if (!laufend.has(code)) {
+    laufend.set(
+      code,
+      fetch(apiV1(`/daten/regionalpreise/${code}`))
+        .then((r) => {
+          if (!r.ok) throw new Error(`regionalpreise_${r.status}`);
+          return r.json();
+        })
+        .then(({ stand, bundesland }) => {
+          daten = {
+            stand,
+            bundeslaender: [...(daten?.bundeslaender || []), bundesland],
+          };
+          laufend.delete(code);
+          return daten;
+        })
+        .catch((err) => {
+          laufend.delete(code);
+          throw err;
+        }),
+    );
+  }
+  return laufend.get(code);
+}
+
+// Alles, was regionalPreis() fuer ein Objekt braucht: das Bundesland und die
+// Kreiszuordnung der PLZ.
+export function ladeRegionaldaten(bundeslandCode, plz) {
+  return Promise.all([ladeRegionalpreise(bundeslandCode), ladePlzKreis(plz)]);
+}
+
+// Nur Zaehlwerte (Stand, Laender, Kreise) fuer die Landingpage - ohne Login
+// und ohne ein Bundesland zu kennen.
+export function ladeRegionalMeta() {
+  if (!metaLaufend) {
+    metaLaufend = fetch(apiV1("/daten/regionalpreise-meta"))
+      .then((r) => {
+        if (!r.ok) throw new Error(`regionalpreise_meta_${r.status}`);
+        return r.json();
+      })
+      .catch((err) => {
+        metaLaufend = null;
+        throw err;
+      });
+  }
+  return metaLaufend;
+}
+
+function normalisiere(s) {
+  return String(s || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\(kreis\)\s*$/i, "")
+    .replace(/\s*\(bezirk\)\s*$/i, "");
+}
+
+// Reine Matching-Logik, getrennt vom Modul-State exportiert - dasselbe
+// Testmuster wie dekodiere() in mietReferenz.js: testbar ohne fetch/Laufzeit.
+// `plzKreisName` ist bereits aufgeloest (PLZ -> Kreisname) statt hier selbst
+// per plzKreis.js nachzuschlagen - derselbe Trennungsgrund wie bei "ref" in
+// regionalpreisZeilen(): der Aufrufer laedt/matcht, diese Funktion rechnet
+// nur noch, dadurch ohne fetch/Modul-State testbar.
+export function findRegionalPreis(quellDaten, bundeslandCode, ort, plzKreisName) {
+  if (!quellDaten || !bundeslandCode) return null;
+  const bl = quellDaten.bundeslaender.find((b) => b.code === bundeslandCode);
+  if (!bl) return null;
+
+  const ortNorm = normalisiere(ort);
+  let kreis = ortNorm
+    ? bl.kreise.find((k) => normalisiere(k.name) === ortNorm) || null
+    : null;
+
+  // Stufe 2: der getippte Ort ist oft eine kleine Gemeinde, die selbst kein
+  // Kreis ist - dann greift der amtliche Kreisname zur PLZ (siehe
+  // Datei-Kommentar oben).
+  if (!kreis && plzKreisName) {
+    const kreisNorm = normalisiere(plzKreisName);
+    kreis = bl.kreise.find((k) => normalisiere(k.name) === kreisNorm) || null;
+  }
+
+  if (kreis) {
+    return {
+      ebene: "kreis",
+      name: kreis.name,
+      kaufWohnung: kreis.kaufWohnung,
+      kaufHaus: kreis.kaufHaus,
+      mieteWohnung: kreis.mieteWohnung,
+      mieteHaus: kreis.mieteHaus,
+    };
+  }
+
+  const lw = bl.landeswerte;
+  if (!lw) return null;
+  return {
+    ebene: "bundesland",
+    name: null,
+    kaufWohnung: lw.kaufWohnungAvg,
+    kaufHaus: lw.kaufHausAvg,
+    mieteWohnung: lw.mieteWohnungAvg,
+    mieteHaus: lw.mieteHausAvg,
+  };
+}
+
+// Synchron, sobald ladeRegionalpreise() aufgeloest ist - null davor oder bei
+// unbekanntem Bundesland. `plz` ist optional (Stufe 2, siehe oben) - ohne
+// PLZ oder bevor plzKreis.js geladen ist, verhaelt sich der Aufruf wie
+// zuvor (Ortsname, sonst Bundesland-Durchschnitt).
+export function regionalPreis(bundeslandCode, ort, plz) {
+  return findRegionalPreis(daten, bundeslandCode, ort, plz ? kreisFuerPlz(plz) : null);
+}
+
+// Qualitative Standort-Fakten auf Bundeslandebene (Backlog C.8) - eigene
+// formulierte, quellenfreie Saetze (siehe immodaten.json), NICHT aus dem
+// Immoheld-Blogartikel uebernommen (siehe Recherche-Notiz dort). Bewusst nur
+// Bundesland-Ebene, nicht Kreis: Bundesland wird bereits als kennzahlen.
+// bundesland an die KI geschickt (siehe ObjektDetail.jsx), ist also keine
+// zusaetzliche Preisgabe von Standortdaten - der Kreis-/Ortsname bleibt
+// weiterhin aussen vor.
+export function regionalFakten(bundeslandCode, max = 2) {
+  if (!daten || !bundeslandCode) return [];
+  const bl = daten.bundeslaender.find((b) => b.code === bundeslandCode);
+  return Array.isArray(bl?.fakten) ? bl.fakten.slice(0, max) : [];
+}
+
+// Regionale Wertsteigerungs-Annahme (Backlog Punkt 5): die Kaufpreis-
+// Veraenderung ggue. Vorjahr auf Bundeslandebene (kein Kreis-Wert vorhanden,
+// siehe immodaten.json), als Vorbelegung fuer das Wertsteigerung-Feld im
+// Renditerechner statt der bisherigen bundesweiten Pauschalzahl. Fehlt der
+// Wert (Bayern/Berlin - siehe _hinweis in immodaten.json, PDF-Schnappschuss
+// zeigte beim Speichern den falschen Reiter), liefert diese Funktion null -
+// der Aufrufer faellt dann auf die bestehende WERTSTEIGERUNG-Konstante
+// zurueck statt eine Zahl zu erfinden.
+export function regionalWertsteigerung(bundeslandCode) {
+  if (!daten || !bundeslandCode) return null;
+  const bl = daten.bundeslaender.find((b) => b.code === bundeslandCode);
+  const wert = bl?.landeswerte?.kaufWohnungVeraenderung;
+  return typeof wert === "number" ? wert : null;
+}
+
+// Landesdurchschnitt Kaufpreis/m² (Investment-Briefing, V5 Preisniveau Kreis
+// vs. Land): anders als regionalPreis() liefert diese Funktion IMMER den
+// Landeswert, auch wenn der Ort selbst einem Kreis zugeordnet ist - V5
+// vergleicht ja genau die Kreis- gegen die Landesebene, braucht also beide
+// unabhaengig voneinander statt der einen, die regionalPreis() je nach
+// Treffer zurueckgibt.
+export function regionalLandeswert(bundeslandCode) {
+  if (!daten || !bundeslandCode) return null;
+  const bl = daten.bundeslaender.find((b) => b.code === bundeslandCode);
+  const wert = bl?.landeswerte?.kaufWohnungAvg;
+  return typeof wert === "number" ? wert : null;
+}
+
+// Landestrend seit Q2 2022 (Investment-Briefing, V6 Preistrend): analog zu
+// regionalWertsteigerung(), aber auf dem laengeren Zeitraum. Nur Bundesland-
+// Ebene, kein Kreis-Wert vorhanden (siehe immodaten.json). Fehlt der Wert,
+// liefert diese Funktion null statt eine Zahl zu erfinden - der Aufrufer
+// (V6-Kachel) blendet die betroffene Zeile dann aus.
+export function regionalTrend(bundeslandCode) {
+  if (!daten || !bundeslandCode) return null;
+  const bl = daten.bundeslaender.find((b) => b.code === bundeslandCode);
+  const wert = bl?.landeswerte?.kaufWohnungVeraenderung4J;
+  return typeof wert === "number" ? wert : null;
+}
+
+// Kaufpreis-Quartalsverlauf des Landes Q2 2022..Q2 2026 (17 Werte je Wohnung
+// und Haus, aus den Datenblaettern rekonstruiert, siehe
+// scripts/extract_datenblatt_zusatz.py). Nicht fuer jedes Land vorhanden
+// (Bayern/Berlin: PDF zeigte den falschen Reiter) - dann null, der Aufrufer
+// blendet die Linie aus statt eine zu erfinden.
+export function regionalVerlauf(bundeslandCode) {
+  if (!daten || !bundeslandCode) return null;
+  const bl = daten.bundeslaender.find((b) => b.code === bundeslandCode);
+  const v = bl?.verlauf;
+  if (!Array.isArray(v?.wohnung) || !Array.isArray(v?.haus)) return null;
+  return v;
+}
+
+// Welcher Datenstand gerade geladen ist ("Q2 2026" etc.) - fuer den
+// eingefrorenen Snapshot unten, damit spaetere Vergleiche wissen, aus
+// welchem Quartal ein Snapshot stammt.
+export function regionalpreiseStand() {
+  return daten?.stand ?? null;
+}
+
+// Eingefrorener Kaufpreis-Snapshot fuer ein Objekt, EINMALIG bei Anlage
+// berechnet (Backlog B.5/D.12: Grundlage fuer Portfolio-Tracking ueber
+// Zeit). Bewusst getrennt von regionalPreis()/regionalpreisZeilen(): die
+// dort verwendeten Werte sind immer die AKTUELLEN (fuer die Preiseinordnung
+// JETZT), ein Snapshot dagegen darf sich bei einer spaeteren
+// Datenaktualisierung NICHT mehr veraendern - sonst wuesste man nie, wie
+// sich eine Region seit dem Kauf wirklich entwickelt hat. Der Aufrufer
+// (toServerPayload in Merkliste.jsx) ist dafuer verantwortlich, einen schon
+// vorhandenen Snapshot NICHT durch einen neuen zu ersetzen.
+export function regionalSnapshot(data) {
+  const kaufpreis = +data?.kaufpreis || 0;
+  const flaeche = +data?.flaeche || 0;
+  if (!(kaufpreis > 0) || !(flaeche > 0)) return null;
+  const ref = regionalPreis(data?.bundesland, data?.ort, data?.plz);
+  if (!ref || !(ref.kaufWohnung > 0)) return null;
+  return {
+    stand: regionalpreiseStand(),
+    kaufpreisQm: Math.round((kaufpreis / flaeche) * 100) / 100,
+    regionalerRichtwertQm: ref.kaufWohnung,
+    ebene: ref.ebene,
+  };
+}
+
+// Fuer die KI-Produkte preis/analyse/hebel (2026-09-10): dieselbe
+// "Gerechnete Werte"-Uebergabe wie preisZeilen() in preisSchaetzung.js -
+// das Modell bekommt fertige Zahlen, rechnet nichts selbst und nennt keine
+// Herkunft (Regel in systemPrompt.ts/analysePrompt.ts). Diese beiden Zeilen
+// bleiben ohne Ort-/Kreisnamen - der Name des eigenen Orts geht separat als
+// "ort" in den Kennzahlen mit (siehe ObjektDetail.starteProdukt), Namen
+// anderer Kreise nur ueber vergleichsortZeilen() unten.
+//
+// "ref" wird als Parameter uebergeben statt hier per regionalPreis()
+// nachgeschlagen - dasselbe Trennungsmuster wie berechnePreisSchaetzung(d,
+// t, referenzMieteQm): der Aufrufer laedt/matcht, diese Funktion rechnet nur
+// noch, dadurch ohne fetch/Modul-State testbar.
+export function regionalpreisZeilen(basis, ref, locale = "de-DE") {
+  const kaufpreis = +basis?.kaufpreis || 0;
+  const flaeche = +basis?.flaeche || 0;
+  if (!(kaufpreis > 0) || !(flaeche > 0)) return [];
+  if (!ref || !(ref.kaufWohnung > 0)) return [];
+
+  const kaufpreisQm = kaufpreis / flaeche;
+  const abweichung = (kaufpreisQm / ref.kaufWohnung - 1) * 100;
+  const qm = (n) =>
+    `${n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/m²`;
+
+  return [
+    { label: "Regionaler Kaufpreis-Richtwert", wert: qm(ref.kaufWohnung) },
+    {
+      label: "Abweichung vom Richtwert",
+      wert: `${abweichung > 0 ? "+" : "−"}${Math.abs(abweichung).toFixed(0)} %`,
+    },
+  ];
+}
+
+// Vergleichsorte fuer "Kaufpreis analysieren" (Backlog Punkt 9, 2026-09-10):
+// bis zu `max` ANDERE Kreise desselben Bundeslands, nach Naehe im
+// Kaufpreis-Niveau sortiert - die preislich naechstliegenden sind die
+// aussagekraeftigsten Vergleichspunkte, die sich aus diesen Daten ehrlich
+// belegen lassen. Bewusst KEINE geografische Nachbarschaft (das wuerde
+// echte Kreisgrenzen-Kenntnis brauchen, die diese Tabelle nicht hat - siehe
+// Matching-Strategie oben).
+//
+// Reine Matching-Logik als eigene Funktion exportiert - dasselbe
+// Testmuster wie findRegionalPreis(): testbar ohne fetch/Modul-State.
+export function findVergleichsorte(quellDaten, bundeslandCode, ort, max = 3) {
+  if (!quellDaten || !bundeslandCode) return [];
+  const bl = quellDaten.bundeslaender.find((b) => b.code === bundeslandCode);
+  if (!Array.isArray(bl?.kreise)) return [];
+
+  const ortNorm = normalisiere(ort);
+  const eigenerPreis = bl.kreise.find((k) => normalisiere(k.name) === ortNorm)?.kaufWohnung;
+  const andere = bl.kreise.filter(
+    (k) => normalisiere(k.name) !== ortNorm && k.kaufWohnung > 0,
+  );
+
+  if (Number.isFinite(eigenerPreis)) {
+    andere.sort(
+      (a, b) => Math.abs(a.kaufWohnung - eigenerPreis) - Math.abs(b.kaufWohnung - eigenerPreis),
+    );
+  }
+
+  return andere.slice(0, max).map((k) => ({ name: k.name, kaufWohnung: k.kaufWohnung }));
+}
+
+// Synchron, sobald ladeRegionalpreise() aufgeloest ist - gleiches Muster wie
+// regionalPreis().
+export function regionalVergleichsorte(bundeslandCode, ort, max = 3) {
+  return findVergleichsorte(daten, bundeslandCode, ort, max);
+}
+
+// Die Label-Wert-Zeilen zu regionalVergleichsorte(), im selben Format wie
+// regionalpreisZeilen() - der Ortsname steht bewusst im Label, damit das
+// Modell ihn woertlich uebernehmen kann, statt selbst einen zu erfinden.
+export function vergleichsortZeilen(vergleichsorte, locale = "de-DE") {
+  const qm = (n) =>
+    `${n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/m²`;
+  return vergleichsorte.map((o) => ({
+    label: `Vergleichsort ${o.name}`,
+    wert: qm(o.kaufWohnung),
+  }));
+}
+
+// UI-Ampel-Text fuer den Vergleich "eigener Wert vs. regionaler Richtwert"
+// (Renditerechner-Kaufpreis, Renditerechner-Kaltmiete, Mieterhoehungsrechner-
+// Vergleichsmiete, Expose-Scan). Bisheriger Fehler (Nutzer-Befund
+// 2026-09-10): drei fast identische, aber leicht verschiedene Implementierungen
+// zeigten nur den Richtwert und "X% ueber dem regionalen Richtwert" OHNE den
+// eigenen Wert zu nennen - las sich wie "Richtwert ist ueber dem Richtwert".
+// Diese eine Funktion ersetzt alle drei und nennt immer BEIDE Werte in einem
+// Satz.
+export function regionalAmpelText(eigenerWert, referenzWert, t, decimals = 0) {
+  if (!(eigenerWert > 0) || !(referenzWert > 0)) return null;
+  const abweichung = (eigenerWert / referenzWert - 1) * 100;
+  const absAbw = Math.abs(abweichung);
+  const stufe = absAbw <= 10 ? "ok" : absAbw <= 25 ? "warn" : "bad";
+  const richtwertText = `${fmt(referenzWert, decimals)} €/m²`;
+  const text =
+    absAbw <= 10
+      ? `${fmt(eigenerWert, decimals)} €/m² — ${t.regImRahmen} (${t.regRichtwert}: ${richtwertText})`
+      : `${fmt(eigenerWert, decimals)} €/m² — ${fmtP(absAbw, 0)} ${
+          abweichung > 0 ? t.regDrueber : t.regDrunter
+        } (${t.regRichtwert}: ${richtwertText})`;
+  return { stufe, text };
+}

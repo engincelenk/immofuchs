@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function () {
+      try {
+        var v = localStorage.getItem("if_theme");
+        if (v === "light") document.documentElement.setAttribute("data-theme", "light");
+        else if (v !== "system") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+  <title>Vertrag widerrufen – ImmoFuchs</title>
+  <link rel="stylesheet" href="/vertrag.css" />
+</head>
+<body data-seite="withdraw">
+  <div class="wrap">
+    <div id="app"></div>
+    <noscript><p>Vertrag widerrufen: Bitte aktiviere JavaScript oder schreibe uns an <a href="mailto:info@immofuchs.info">info@immofuchs.info</a>.</p></noscript>
+  </div>
+  <script src="/vertrag.js"></script>
+</body>
+</html>

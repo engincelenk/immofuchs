@@ -20,20 +20,21 @@ function wasDismissedRecently() {
 }
 
 function dismiss() {
-  try { localStorage.setItem(STORAGE_KEY, String(Date.now())); } catch {}
+  try {
+    localStorage.setItem(STORAGE_KEY, String(Date.now()));
+  } catch {}
 }
 
 // Läuft die App bereits als installierte PWA?
 function isStandalone() {
   return (
-    window.navigator.standalone === true ||
-    window.matchMedia("(display-mode: standalone)").matches
+    window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches
   );
 }
 
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null); // Android
-  const [showIOS, setShowIOS] = useState(false);              // iOS
+  const [showIOS, setShowIOS] = useState(false); // iOS
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -49,9 +50,7 @@ export default function InstallPrompt() {
     window.addEventListener("beforeinstallprompt", handler);
 
     // ── iOS: kein Event → manuellen Hinweis zeigen ────────
-    const isIOS =
-      /iphone|ipad|ipod/i.test(navigator.userAgent) &&
-      !window.MSStream;
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
     const isSafari = /safari/i.test(navigator.userAgent) && !/chrome/i.test(navigator.userAgent);
     if (isIOS && isSafari) {
       // Kurz verzögert anzeigen damit Seite erstmal lädt
@@ -94,7 +93,9 @@ export default function InstallPrompt() {
             <strong> „Zum Home-Bildschirm"</strong> — App offline nutzbar.
           </div>
         </div>
-        <button onClick={handleDismiss} style={closeStyle} aria-label="Schließen">✕</button>
+        <button onClick={handleDismiss} style={closeStyle} aria-label="Schließen">
+          ✕
+        </button>
       </div>
     );
   }
@@ -110,7 +111,9 @@ export default function InstallPrompt() {
       <button onClick={handleInstall} style={installBtnStyle}>
         Installieren
       </button>
-      <button onClick={handleDismiss} style={closeStyle} aria-label="Schließen">✕</button>
+      <button onClick={handleDismiss} style={closeStyle} aria-label="Schließen">
+        ✕
+      </button>
     </div>
   );
 }

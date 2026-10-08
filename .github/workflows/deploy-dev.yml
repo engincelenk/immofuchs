@@ -38,9 +38,23 @@ jobs:
         env:
           # Oeffentliche Worker-URL (kein Geheimnis, landet ohnehin im Client-
           # Bundle) - ohne das baut Vite "undefined" ein, siehe release-notes.txt.
-          # Zeigt seit 2026-07-21 auf den separaten Dev-Worker (nicht mehr auf
-          # den Prod-Worker) - siehe worker/wrangler.toml [env.dev].
-          VITE_ASSISTANT_URL: https://immofuchs-assistant-dev.engincelenk.workers.dev/api/assistant
+          # Zeigt seit 2026-08-04 auf die Custom Domain api-dev.immofuchs.info
+          # statt *.workers.dev (Spec 5.1, S0-1) - noetig, damit das
+          # Session-Cookie (SameSite=Lax) zwischen Frontend und Worker
+          # ueberhaupt ankommt (beide jetzt "same-site" unter immofuchs.info).
+          VITE_ASSISTANT_URL: https://api-dev.immofuchs.info/api/assistant
+          # Stripe Publishable Key (Wechsel weg von Paddle, siehe
+          # docs/plans/2026-08-26-paddle-zu-stripe-migration-spec.md): laeuft
+          # im Browser, ist von Stripe selbst als nicht-geheim eingestuft
+          # (landet ohnehin im ausgelieferten Bundle) - trotzdem als
+          # GitHub-Secret, damit der Test-/Live-Key sich ohne Code-Aenderung
+          # tauschen laesst. Muss unter Settings > Secrets > Actions als
+          # VITE_STRIPE_PUBLISHABLE_KEY (pk_test_... fuer dev) angelegt werden.
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+          # Turnstile-Site-Key der Registrierung (Preispolitik 2026-08-20):
+          # oeffentlich wie der Stripe Publishable Key - das Geheimnis ist
+          # allein TURNSTILE_SECRET im Worker-Secret-Store.
+          VITE_TURNSTILE_SITE_KEY: 0x4AAAAAAEW18bBEyl_o5nTS
         run: |
           npm ci
           npm run build
@@ -53,9 +67,46 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y lftp
 
+          # Alte gehashte Bundles bleiben stehen (kein --delete in assets/): wer nach
+          # einem Deploy noch eine gecachte index.html hat, bekommt sonst 404 und eine
+          # leere Seite. Alles andere wird weiter bereinigt (--delete), damit z. B.
+          # nicht mehr auszuliefernde Datendateien auch vom Server verschwinden.
+          # Reihenfolge: assets, Rest (ohne assets/), assets nochmals - falls die
+          # Ausschluss-Regel je versagt, stellt der letzte Schritt alles wieder her.
           lftp -c "
           set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
           open -u $SSH_USER,$SSH_PASS sftp://$SSH_HOST:22;
-          mirror -R ./dist /dev.immofuchs.info --reverse --verbose --continue --delete;
+          mirror -R --verbose --continue ./dist/assets /dev.immofuchs.info/assets;
+          mirror -R ./dist /dev.immofuchs.info --reverse --verbose --continue --delete --exclude '^assets/';
+          mirror -R --verbose --continue ./dist/assets /dev.immofuchs.info/assets;
           quit;
           "
+
+      # Rauchtest nach dem Hochladen (Vorfall 2026-10-01: ein Build ohne
+      # VITE_ASSISTANT_URL lag online, Login und alle API-Aufrufe waren tot, und
+      # niemand hat es am Lauf gesehen). Prueft die LIVE-Seite: enthaelt das
+      # ausgelieferte Bundle die API-Adresse, und antwortet der Worker (401 ohne
+      # Anmeldung = erreichbar)? Sonst wird der Lauf rot.
+      - name: 🔎 Rauchtest dev.immofuchs.info
+        run: |
+          OK=""
+          for i in $(seq 1 12); do
+            B=$(curl -fsS "https://dev.immofuchs.info/?nc=$(date +%s)$i" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1 || true)
+            if [ -n "$B" ] && curl -fsS "https://dev.immofuchs.info/$B" -o /tmp/bundle.js \
+              && grep -q "api-dev.immofuchs.info/api/assistant" /tmp/bundle.js; then
+              echo "✓ Live-Bundle $B enthaelt die API-Adresse"
+              OK=1
+              break
+            fi
+            sleep 5
+          done
+          if [ -z "$OK" ]; then
+            echo "::error::Live-Bundle (${B:-unbekannt}) enthaelt keine API-Adresse - Login und API waeren tot"
+            exit 1
+          fi
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" https://api-dev.immofuchs.info/api/v1/me)
+          echo "api-dev /api/v1/me -> HTTP $CODE"
+          if [ "$CODE" != "401" ]; then
+            echo "::error::Worker antwortet mit HTTP $CODE statt 401 (nicht angemeldet)"
+            exit 1
+          fi

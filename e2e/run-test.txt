@@ -1,0 +1,2 @@
+cd C:\Projects\ImmofuchsPRO
+powershell -File run-all-tests.ps1

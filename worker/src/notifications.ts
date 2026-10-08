@@ -1,0 +1,249 @@
+// Generisches Notification-Intent-Design (Spec 10.0, S4-4): Ereignis +
+// Empfänger + Nutzlast, NICHT E-Mail-spezifisch geschrieben - Phase D
+// (native App) dockt Capacitor-Push als zweiten Versandweg an, ohne diese
+// Trigger-Logik neu zu schreiben. Fürs Erste ist E-Mail der einzige Kanal
+// (4.11: "Push-Aufbau nicht nötig, E-Mail reicht").
+import type { Env } from "./types";
+import { preisText } from "./preise";
+import { sendEmail } from "./email";
+import { sendPushToUser } from "./push";
+
+export type NotificationEvent =
+  | "renewal_reminder"
+  | "cancellation_confirmed"
+  | "reactivation_confirmed"
+  | "withdrawal_received"
+  | "withdrawal_expired"
+  | "withdrawal_confirmed"
+  | "account_deleted"
+  | "payment_failed"
+  | "payment_succeeded"
+  | "password_changed"
+  | "email_change_requested"
+  | "trial_ending";
+
+export interface NotificationIntent {
+  event: NotificationEvent;
+  recipientEmail: string;
+  // Optional (Phase D, S7-1): nur gesetzt, wenn der Aufrufer die user_id zur
+  // Hand hat - loest zusaetzlich zur E-Mail den Push-Kanal aus. E-Mail bleibt
+  // in jedem Fall der garantierte Weg (10.0), Push ist rein additiv.
+  recipientUserId?: string;
+  payload: Record<string, unknown>;
+}
+
+export async function dispatchNotification(env: Env, intent: NotificationIntent): Promise<void> {
+  const { subject, html } = renderEmail(intent);
+  // Dev-Umleitung (TEST_EMAIL_REDIRECT_TO) sitzt seit 2026-08-19 zentral in
+  // sendEmail() (email.ts) statt hier - siehe dortigen Kommentar. Deckt damit
+  // auch die acht anderen sendEmail()-Aufrufer ab, die nicht ueber diese
+  // Funktion laufen (Registrierung, Passwort-Reset, Magic Link, ...).
+  //
+  // Try/catch bewusst NEU (2026-08-19, Live-Befund via
+  // worker/e2e/billing-lifecycle.e2e.test.ts): dispatchNotification() wird in
+  // routes/billing.ts (cancel/reactivate) und routes/account.ts IMMER erst
+  // NACH dem eigentlichen Stripe-Aufruf + D1-Schreibvorgang aufgerufen - der
+  // fachliche Vorgang ist zu diesem Zeitpunkt bereits abgeschlossen. Ohne
+  // dieses catch liess ein bloss fehlgeschlagener Mailversand (Anbieter-
+  // Ausfall, Rate-Limit, ...) POST /billing/cancel mit 502 cancel_failed
+  // antworten, OBWOHL die Kuendigung bei Stripe und in D1 laengst wirksam
+  // war - der Kunde haette eine falsche Fehlermeldung fuer eine tatsaechlich
+  // erfolgreiche Aktion gesehen. Die "garantierter Weg"-Zusage oben (Spec
+  // 10.0) bezieht sich auf den Versandversuch selbst (E-Mail bleibt Pflicht,
+  // Push bleibt optional), nicht darauf, dass ein Zustellfehler die HTTP-
+  // Antwort des AUSLOESENDEN Vorgangs verfaelschen darf - dieselbe
+  // Guard-Logik wie beim Push-Pfad direkt darunter, nur fuer den bisher
+  // ungeschuetzten E-Mail-Pfad.
+  try {
+    await sendEmail(env, intent.recipientEmail, subject, html);
+  } catch (err) {
+    console.error("email_dispatch_failed", err instanceof Error ? err.message : "unknown");
+  }
+
+  if (intent.recipientUserId) {
+    const { title, body } = renderPush(intent);
+    try {
+      await sendPushToUser(env, intent.recipientUserId, { title, body });
+    } catch (err) {
+      // Push darf die eigentliche (E-Mail-)Benachrichtigung nie verhindern.
+      console.error("push_dispatch_failed", err instanceof Error ? err.message : "unknown");
+    }
+  }
+}
+
+function renderPush(intent: NotificationIntent): { title: string; body: string } {
+  switch (intent.event) {
+    case "renewal_reminder":
+      return { title: "ImmoFuchs Pro verlängert sich bald", body: `Verlängerung am ${intent.payload.periodEndDate}` };
+    case "cancellation_confirmed":
+      return { title: "Kündigung bestätigt", body: `Pro bleibt aktiv bis ${intent.payload.periodEndDate}` };
+    case "reactivation_confirmed":
+      return { title: "Kündigung zurückgenommen", body: "Dein Abo läuft wie gewohnt weiter." };
+    case "withdrawal_received":
+      return { title: "Widerruf eingegangen", body: "Wir haben deinen Widerruf erhalten." };
+    case "withdrawal_expired":
+      return { title: "Widerrufsfrist abgelaufen", body: "Dein Widerruf kam nach Ablauf der 14 Tage." };
+    case "withdrawal_confirmed":
+      return { title: "Vertrag beendet", body: "Dein Vertrag wurde beendet, die Erstattung ist veranlasst." };
+    case "account_deleted":
+      return { title: "Konto gelöscht", body: "Dein ImmoFuchs-Konto wurde gelöscht." };
+    case "payment_failed":
+      return { title: "Zahlung fehlgeschlagen", body: `Pro bleibt noch bis ${intent.payload.graceEndsDate} aktiv.` };
+    case "payment_succeeded":
+      return { title: "Willkommen bei ImmoFuchs Pro", body: "Dein Abo ist jetzt aktiv." };
+    case "password_changed":
+      return { title: "Passwort geändert", body: "Warst du das nicht? Bitte sofort zurücksetzen." };
+    case "email_change_requested":
+      return { title: "E-Mail-Änderung angefragt", body: `Wechsel zu ${intent.payload.newEmail} angefragt.` };
+    case "trial_ending":
+      return {
+        title: "Deine Testphase endet bald",
+        body: `Am ${intent.payload.periodEndDate} werden ${intent.payload.amount} abgebucht.`,
+      };
+  }
+}
+
+function renderEmail(intent: NotificationIntent): { subject: string; html: string } {
+  switch (intent.event) {
+    case "renewal_reminder": {
+      const datum = String(intent.payload.periodEndDate ?? "");
+      const betrag = String(intent.payload.amount ?? preisText("yearly"));
+      if (intent.payload.wechselZuMonatlich) {
+        return {
+          subject: "Dein ImmoFuchs-Pro-Jahresabo wechselt in den Monatsplan",
+          html: `<p>Dein Jahresabo endet am ${datum}. Danach läuft ImmoFuchs Pro als Monatsabo weiter (${preisText("monthly")}), jederzeit zum Monatsende kündbar.</p>
+                 <p>Falls du das nicht möchtest, kannst du im Konto-Bereich jederzeit kündigen.</p>`,
+        };
+      }
+      return {
+        subject: "Dein ImmoFuchs-Pro-Abo verlängert sich bald",
+        html: `<p>Dein Jahresabo verlängert sich am ${datum} automatisch (${betrag}).</p>
+               <p>Falls du das nicht möchtest, kannst du im Konto-Bereich jederzeit kündigen.</p>`,
+      };
+    }
+    // § 312k Abs. 4 BGB: Inhalt der Erklaerung, Datum UND Uhrzeit des Zugangs und der
+    // Zeitpunkt, zu dem der Vertrag endet - sofort, elektronisch, in Textform.
+    case "cancellation_confirmed": {
+      const datum = String(intent.payload.periodEndDate ?? "");
+      const eingang = String(intent.payload.receivedAt ?? "");
+      const vertrag = String(intent.payload.contract ?? "ImmoFuchs Pro");
+      const name = String(intent.payload.name ?? "");
+      const email = String(intent.payload.email ?? "");
+      return {
+        subject: "Deine Kündigung ist bestätigt",
+        html: `<p>Wir bestätigen deine Kündigung.</p>
+               <p><strong>Inhalt der Kündigung:</strong> Kündigung des Vertrags „${vertrag}“ zum Ende der laufenden Abrechnungsperiode${name ? `<br><strong>Name:</strong> ${name}` : ""}<br><strong>E-Mail:</strong> ${email}<br><strong>Zugang der Kündigung:</strong> ${eingang}<br><strong>Der Vertrag endet am:</strong> ${datum}</p>
+               <p>Bis dahin bleibt ImmoFuchs Pro aktiv. Du kannst die Kündigung bis dahin jederzeit im Konto-Bereich zurücknehmen.</p>`,
+      };
+    }
+    // § 356a Abs. 4 BGB: bestaetigt AUSSCHLIESSLICH den Eingang, nicht die Wirksamkeit.
+    case "withdrawal_received": {
+      const eingang = String(intent.payload.receivedAt ?? "");
+      const vertrag = String(intent.payload.contract ?? "ImmoFuchs Pro");
+      const name = String(intent.payload.name ?? "");
+      const email = String(intent.payload.email ?? "");
+      return {
+        subject: "Eingang deines Widerrufs",
+        html: `<p>Wir bestätigen den <strong>Eingang</strong> deiner Widerrufserklärung. Diese Mail bestätigt ausschließlich den Eingang; die Prüfung von Wirksamkeit und Umfang folgt.</p>
+               <p><strong>Inhalt:</strong> Widerruf des Vertrags „${vertrag}“${name ? `<br><strong>Name:</strong> ${name}` : ""}<br><strong>E-Mail:</strong> ${email}<br><strong>Eingang:</strong> ${eingang}</p>`,
+      };
+    }
+    case "withdrawal_expired": {
+      return {
+        subject: "Dein Widerruf: Frist abgelaufen",
+        html: `<p>Die Widerrufsfrist von 14 Tagen war bei Eingang deiner Erklärung bereits abgelaufen, ein Widerruf ist deshalb nicht mehr möglich.</p>
+               <p>Du kannst dein Abo weiterhin jederzeit kündigen – über „Verträge hier kündigen“ in der Fußzeile der Website oder im Konto-Bereich.</p>`,
+      };
+    }
+    case "reactivation_confirmed": {
+      return {
+        subject: "Deine Kündigung wurde zurückgenommen",
+        html: `<p>Dein ImmoFuchs-Pro-Abo läuft wie gewohnt weiter.</p>`,
+      };
+    }
+    case "withdrawal_confirmed": {
+      const erstattung = String(intent.payload.erstattung ?? "");
+      const wertersatz = String(intent.payload.wertersatz ?? "");
+      const tage = String(intent.payload.tage ?? "");
+      return {
+        subject: "Dein Vertrag ist beendet – Erstattung veranlasst",
+        html: `<p>Auf deinen Widerruf hin ist dein ImmoFuchs-Pro-Vertrag beendet, der Pro-Zugang endet jetzt.</p>
+               <p>Wertersatz für die bis zum Widerruf erbrachte Leistung (${tage} Tage): ${wertersatz}<br>
+               Erstattung: ${erstattung}</p>
+               <p>Die Erstattung erfolgt auf das bei der Zahlung verwendete Zahlungsmittel; sie kann je nach Bank einige Tage dauern.</p>`,
+      };
+    }
+    case "account_deleted": {
+      return {
+        subject: "Dein ImmoFuchs-Konto wurde gelöscht",
+        html: `<p>Dein Konto und alle zugehörigen Daten wurden gelöscht. Ein aktives Abo wurde sofort beendet.</p>`,
+      };
+    }
+    case "payment_failed": {
+      const graceEndsDate = String(intent.payload.graceEndsDate ?? "");
+      return {
+        subject: "Deine Zahlung ist fehlgeschlagen",
+        html: `<p>Die Abbuchung für dein ImmoFuchs-Pro-Abo ist fehlgeschlagen. Stripe versucht es automatisch erneut.</p>
+               <p>Bis ${graceEndsDate} bleibt Pro trotzdem aktiv. Bitte aktualisiere in der Zwischenzeit deine Zahlungsmethode im Konto-Bereich.</p>`,
+      };
+    }
+    // Konzept-Dok "Rechnungserstellung und Versand" Abschnitt 1 ("Zahlung
+    // erfolgreich"): ergaenzt eine bisher fehlende Bestaetigung beim
+    // erstmaligen Kauf (siehe stripe/webhook.ts, customer.subscription.created
+    // ohne bestehenden DB-Eintrag). Kein Duplikat zur eigentlichen Rechnung -
+    // die stellt seit dem Wechsel weg von Paddle als Merchant of Record
+    // Stripe Invoicing automatisch im Auftrag von ImmoFuchs aus; das hier ist
+    // eine zusaetzliche Produkt-/Willkommens-Mail.
+    case "payment_succeeded": {
+      const plan = intent.payload.plan === "monthly" ? "monatlich" : "jährlich";
+      const amount = String(intent.payload.amount ?? "");
+      const periodEndDate = String(intent.payload.periodEndDate ?? "");
+      return {
+        subject: "Willkommen bei ImmoFuchs Pro",
+        html: `<p>Deine Zahlung war erfolgreich - dein ImmoFuchs-Pro-Abo ist jetzt aktiv.</p>
+               <p>Abo: ImmoFuchs Pro<br>
+               Abrechnung: ${plan}<br>
+               Betrag: ${amount}<br>
+               Nächste Verlängerung: ${periodEndDate}</p>
+               <p>Deine Rechnung dazu bekommst du automatisch per E-Mail zugeschickt. Im Konto-Bereich unter "Zahlungen" findest du sie jederzeit wieder.</p>`,
+      };
+    }
+    // Sicherheitshinweis, kein Marketing (4.13): geht immer raus, auch wenn der
+    // Nutzer die Aenderung selbst ausgeloest hat - genau das macht ihn zum
+    // Warnsignal, falls es jemand anderes war.
+    // Vorwarnung vor der ersten Abbuchung nach dem 3-Tage-Trial (Phase 3):
+    // der Nutzer hat die Zahlungsmethode beim Trial-Start hinterlegt, die
+    // Belastung kaeme sonst unangekuendigt. Versandfenster ist 1 Tag vor
+    // Trial-Ende (siehe scheduled.ts, ONE_DAY_MS), Betreff entsprechend
+    // angepasst.
+    case "trial_ending": {
+      const datum = String(intent.payload.periodEndDate ?? "");
+      const betrag = String(intent.payload.amount ?? "");
+      return {
+        subject: "Deine ImmoFuchs-Testphase endet in 1 Tag",
+        html: `<p>Deine kostenlose Testphase endet am ${datum}. Danach werden ${betrag} abgebucht und dein Pro-Zugang laeuft normal weiter.</p>
+               <p>Wenn du nicht weitermachen moechtest, kannst du bis dahin jederzeit im Konto-Bereich kuendigen - es entstehen dann keine Kosten.</p>`,
+      };
+    }
+    case "password_changed": {
+      return {
+        subject: "Dein ImmoFuchs-Passwort wurde geändert",
+        html: `<p>Dein Passwort wurde soeben geändert. Alle anderen Geräte wurden zur Sicherheit abgemeldet.</p>
+               <p>Warst du das nicht? Setze dein Passwort umgehend über "Passwort vergessen" zurück und kontaktiere unseren Support.</p>`,
+      };
+    }
+    // PR-Ergaenzung (Spec-v3.0 Kap. 5): Sicherheitshinweis an die ALTE
+    // Adresse, bevor die neue bestaetigt ist - sonst bliebe ein Account-
+    // Takeover per E-Mail-Wechsel fuer den urspruenglichen Kontoinhaber
+    // unbemerkt. Geht an die alte Adresse, waehrend der Bestaetigungslink an
+    // die neue geht (siehe routes/account.ts).
+    case "email_change_requested": {
+      const newEmail = String(intent.payload.newEmail ?? "");
+      return {
+        subject: "E-Mail-Änderung für dein ImmoFuchs-Konto angefragt",
+        html: `<p>Für dein ImmoFuchs-Konto wurde ein Wechsel zur Adresse <strong>${newEmail}</strong> angefragt. Wirksam wird das erst, wenn der Bestätigungslink in dieser neuen Adresse angeklickt wird.</p>
+               <p>Warst du das nicht? Dann kannst du diese E-Mail ignorieren - deine Adresse bleibt unverändert. Kontaktiere bei Verdacht auf Missbrauch bitte unseren Support.</p>`,
+      };
+    }
+  }
+}

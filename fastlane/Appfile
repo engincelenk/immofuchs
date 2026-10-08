@@ -1,0 +1,8 @@
+# Siehe docs/app-store-google-play-setup.md Abschnitt A. app_identifier muss
+# exakt zu capacitor.config.json (appId) und zur App-Store-Connect-App passen.
+app_identifier("info.immofuchs.app")
+
+# Beide Werte kommen als GitHub Secrets (nie im Code) - siehe
+# .github/workflows/mobile-ios.yml.
+apple_id(ENV["FASTLANE_APPLE_ID"]) if ENV["FASTLANE_APPLE_ID"]
+team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]

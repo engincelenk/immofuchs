@@ -1,0 +1,106 @@
+# iOS-Build + TestFlight-Upload, laeuft ausschliesslich auf dem GitHub-Actions
+# macOS-Runner (.github/workflows/mobile-ios.yml) - kein lokaler Mac noetig.
+# Siehe docs/app-store-google-play-setup.md fuer die einmalige Einrichtung
+# (App Store Connect API Key, Fastlane match Zertifikats-Repo).
+#
+# App Store Connect API Key statt Apple-ID/Passwort (Empfehlung): keine
+# 2FA-Unterbrechung in einer nicht-interaktiven CI-Umgebung moeglich.
+default_platform(:ios)
+
+platform :ios do
+  desc "Baut die App und laedt sie zu TestFlight hoch"
+  lane :beta do
+    # Pflichtschritt fuer match auf CI (Fastlane-Doku): legt einen temporaeren
+    # Schluesselbund an, entsperrt ihn und macht ihn zum Default - sonst
+    # importiert match die Zertifikate in den `login.keychain` des Runners.
+    # Live-Befund 2026-09-05: genau das loeste blockierende
+    # Schluesselbund-Abfragen aus, an denen der nachfolgende xcodebuild-
+    # Schritt ohne Timeout haengen blieb. Ausserhalb von CI ein No-Op.
+    setup_ci
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_CONTENT"],
+      is_key_content_base64: true,
+    )
+
+    # match liest/schreibt Zertifikate+Profile aus einem separaten privaten
+    # Git-Repo (siehe docs/app-store-google-play-setup.md A10.5) - readonly
+    # in CI, damit ein versehentlicher Lauf nie neue Zertifikate erzeugt.
+    # Einmaliger Erst-Lauf mit readonly:false (2026-09-04) hat Zertifikat +
+    # Profil bereits erfolgreich erzeugt und ins Repo gepusht - ab jetzt
+    # wieder dauerhaft readonly:true.
+    match(
+      type: "appstore",
+      readonly: true,
+      api_key: api_key,
+    )
+
+    # Ohne diesen Schritt bleibt das Xcode-Projekt auf "Automatic Signing"
+    # stehen und ignoriert die von match geladenen Profile - der Build
+    # scheitert dann mit einem Signing-Fehler, obwohl match selbst
+    # erfolgreich war. code_sign_identity/profile_name kommen aus den
+    # ENV-Variablen, die match beim Lauf oben automatisch gesetzt hat
+    # (sigh_<bundle-id>_appstore_*).
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "ios/App/App.xcodeproj",
+      team_id: ENV["APPLE_TEAM_ID"],
+      code_sign_identity: "Apple Distribution",
+      profile_name: ENV["sigh_info.immofuchs.app_appstore_profile-name"],
+    )
+
+    increment_build_number(
+      xcodeproj: "ios/App/App.xcodeproj",
+      # Build-Nummer = GitHub-Actions-Laufnummer statt einer lokal
+      # hochgezaehlten Zahl - eindeutig ueber beliebig viele CI-Laeufe hinweg,
+      # ohne dass ein Commit die Zahl selbst pflegen muesste.
+      build_number: ENV["GITHUB_RUN_NUMBER"] || Time.now.to_i.to_s,
+    )
+
+    build_app(
+      project: "ios/App/App.xcodeproj",
+      scheme: "App",
+      export_method: "app-store",
+      export_options: { signingStyle: "manual" },
+      # Die Swift-Packages werden bereits im Workflow-Schritt davor aufgeloest
+      # (.github/workflows/mobile-ios.yml) - dort ohne Fastlanes Flag
+      # `-IDEPackageSupportUseBuiltinSCM YES` und mit eigenem Timeout, statt
+      # unbegrenzt zu haengen. Ohne dieses skip wuerde gym die Aufloesung
+      # trotzdem ein zweites Mal mit genau diesem Flag anstossen.
+      skip_package_dependencies_resolution: true,
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end
+
+platform :android do
+  desc "Laedt das bereits gebaute App Bundle in den Play-Internal-Testing-Track"
+  lane :beta do
+    # Bewusst NUR der Upload: gebaut wird per Gradle direkt im Workflow
+    # (.github/workflows/mobile-android.yml), nicht ueber Fastlanes
+    # gradle-Action. Grund: die Signatur-/versionCode-Logik steht bereits in
+    # android/app/build.gradle und liest Umgebungsvariablen - ein zweiter
+    # Build-Weg daneben waere eine zweite Wahrheit ueber dieselbe Sache.
+    upload_to_play_store(
+      track: "internal",
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      json_key: ENV["PLAY_SERVICE_ACCOUNT_JSON_PATH"],
+      # Store-Texte/Bilder werden in der Play Console gepflegt, nicht aus dem
+      # Repo hochgeladen - sonst wuerde ein CI-Lauf dort von Hand gepflegte
+      # Beschreibungen ueberschreiben.
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+      # Nur hochladen, nicht automatisch an Tester ausrollen - der letzte
+      # Schritt bleibt bewusst ein bewusster Klick in der Play Console.
+      release_status: "draft",
+    )
+  end
+end

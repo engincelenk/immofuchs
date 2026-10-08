@@ -19,89 +19,239 @@ export const MARKET_RATES = {
 // Intervall: bei Gesetzänderung (sehr selten)
 // Quelle: Landesgesetze
 export const GREST = {
-  BW:5, BY:3.5, BE:6, BB:6.5, HB:5, HH:5.5,
-  HE:6, MV:6,  NI:5, NW:6.5, RP:5, SL:6.5,
-  SN:5.5, ST:5, SH:6.5, TH:6.5
+  BW: 5,
+  BY: 3.5,
+  BE: 6,
+  BB: 6.5,
+  HB: 5,
+  HH: 5.5,
+  HE: 6,
+  MV: 6,
+  NI: 5,
+  NW: 6.5,
+  RP: 5,
+  SL: 6.5,
+  SN: 5.5,
+  ST: 5,
+  SH: 6.5,
+  TH: 6.5,
 };
 
 // ── BUNDESLAND-NAMEN ─────────────────────────────────────────────────────
 export const BL_N = {
-  BW:"Baden-Württemberg", BY:"Bayern", BE:"Berlin", BB:"Brandenburg",
-  HB:"Bremen", HH:"Hamburg", HE:"Hessen", MV:"Mecklenburg-Vorpommern",
-  NI:"Niedersachsen", NW:"Nordrhein-Westfalen", RP:"Rheinland-Pfalz",
-  SL:"Saarland", SN:"Sachsen", ST:"Sachsen-Anhalt", SH:"Schleswig-Holstein",
-  TH:"Thüringen"
+  BW: "Baden-Württemberg",
+  BY: "Bayern",
+  BE: "Berlin",
+  BB: "Brandenburg",
+  HB: "Bremen",
+  HH: "Hamburg",
+  HE: "Hessen",
+  MV: "Mecklenburg-Vorpommern",
+  NI: "Niedersachsen",
+  NW: "Nordrhein-Westfalen",
+  RP: "Rheinland-Pfalz",
+  SL: "Saarland",
+  SN: "Sachsen",
+  ST: "Sachsen-Anhalt",
+  SH: "Schleswig-Holstein",
+  TH: "Thüringen",
 };
 
-export const BL_O = [{v:"",l:"–"}, ...Object.entries(BL_N).map(([v,l])=>({v,l}))];
-
+export const BL_O = [{ v: "", l: "–" }, ...Object.entries(BL_N).map(([v, l]) => ({ v, l }))];
 
 // ── WIEDERANLAGEZINS (PFANDBRIEF) ───────────────────────────────────────
-// Intervall: monatlich (automatisch via Bundesbank API)
-// Quelle: Deutsche Bundesbank, Zeitreihe BBK01.WU8148 (Hypothekenpfandbrief 10J)
+// Intervall: monatlich (automatisch via Bundesbank API, scripts/monthly_update.py)
+// Quelle: Deutsche Bundesbank, Reihe BBSIS.M.I.UMR.RD.EUR.MFISX.B.X100.A.R.A.A._Z._Z.A
+// (Umlaufrendite inländischer Hypothekenpfandbriefe, Monatswert). Seit 2026-10-03
+// diese Gesamtreihe statt der früheren 10-Jahres-Reihe BBK01.WU8148 (alter
+// API-Server abgeschaltet) - ein Durchschnitt über alle Laufzeiten, kein
+// laufzeitgenauer Wiederanlagezins.
 export const PFANDBRIEF = {
-  stand: "Mai 2026",
-  zins: 3.40,                  // % p.a. — 10-jähriger Hypothekenpfandbrief Ø
+  stand: "September 2026",
+  zins: 3.63, // % p.a. — Hypothekenpfandbriefe, Umlaufrendite Ø aller Laufzeiten
+};
+
+// ── BUNDESANLEIHE 10 JAHRE ──────────────────────────────────────────────
+// Intervall: monatlich (automatisch via scripts/monthly_update.py)
+// Quelle: Deutsche Bundesbank, rendbund-data.pdf, Spalte "10 Jahre" (letzte
+// Tageszeile) - dieselbe Abfrage, die auch den Bauzins (MARKET_RATES) speist.
+// Verwendet: Karte Alternativ-Investment (src/data/alternativAnlagen.js),
+// Szenario-Mitte und Rueckblick der Bundesanleihe. Liegt hier und nicht in
+// alternativAnlagen.js, weil der Monatsjob nur src/data.js committet.
+export const BUNDESANLEIHE_10J = {
+  stand: "September 2026",
+  rendite: 3.61, // % p.a., Umlaufrendite 10-jaehriger Bundeswertpapiere
 };
 
 // ── MIETPREISPROGNOSE ────────────────────────────────────────────────────
 // Intervall: quartalsweise
 // Quelle: Stat. Bundesamt, IW-Institut
 export const MIET_P = {
+  stand: "Q1 2026",
   kapp15: { pA: 3.5, q: "IW-Institut 2025" },
-  normal: { pA: 2.5, q: "Stat. Bundesamt 2025" }
+  normal: { pA: 2.5, q: "Stat. Bundesamt 2025" },
 };
 
-// ── KFW FÖRDERQUOTEN BEG ─────────────────────────────────────────────────
-// Intervall: quartalsweise
-// Quelle: kfw.de
-export const KFW = {
-  basisfoerderung: 15,        // % der Investitionskosten
-  einkommensbonus: 30,        // % zusätzlich bei niedrigem Einkommen (BEG 2024/2025: zvE ≤ 40.000 €)
-  klimageschwindigkeitsbonus: 20, // % beim Heizungstausch (bis 2028)
-  maxFoerderung: 70,          // % maximale Gesamtförderung
-  maxInvestition: 30000,      // € max. förderfähige Kosten je Wohneinheit
-  klimaBonus_baujahrGrenze: 2002, // Klimageschwindigkeitsbonus nur für Gebäude erstmals errichtet vor 01.01.2002
+// ── WERTSTEIGERUNG WOHNIMMOBILIEN ────────────────────────────────────────
+// Intervall: quartalsweise, von Hand (Datenpflege-Erinnerung WERTSTEIGERUNG)
+// Quelle: Statistisches Bundesamt, Pressemitteilung zum Haeuserpreisindex,
+//         Veraenderung der Wohnimmobilienpreise insgesamt zum Vorjahresquartal.
+// Wird an zwei Stellen gelesen: als Kennzahl auf der Landingpage-Datentafel
+// und als Vorbelegung des Eingabefelds "Wertsteigerung" im Renditerechner
+// (App.jsx defaults.wertP). Bewusst dieselbe Zahl - die Landingpage soll
+// nichts anderes behaupten, als der Rechner voreinstellt.
+// ACHTUNG: Das ist die aktuelle Jahresrate, keine Langfristannahme. Sie
+// schwankt spuerbar (Q4/2025: +3,0 %, Q1/2026: +1,4 %, Q2/2026: +0,6 %) und
+// kann in einer fallenden Marktphase negativ werden.
+export const WERTSTEIGERUNG = {
+  stand: "Q2 2026",
+  pA: 0.6, // % gegenüber Vorjahresquartal
+};
+
+// ── AFA-SÄTZE § 7 EStG ───────────────────────────────────────────────────
+// Intervall: bei Gesetzänderung
+// Quelle: § 7 Abs. 4 und Abs. 5a EStG
+// Lag bisher nur als Literale in Renditerechner.jsx (afaFromBj) und als
+// Vorbelegung "2" in App.jsx.
+export const AFA = {
+  standard: 2, // % linear, Gebäude ab Baujahr 1925
+  altbau: 2.5, // % linear, Baujahr vor 1925
+  neubau: 3, // % linear, Fertigstellung ab 2023
+  grenzeAltbau: 1925, // Baujahr < grenzeAltbau → altbau
+  grenzeNeubau: 2023, // Baujahr >= grenzeNeubau → neubau
+
+  // Degressive Gebäude-AfA, § 7 Abs. 5a EStG: 5 % vom Restbuchwert statt
+  // linear. Herstellungsbeginn bzw. obligatorischer Kaufvertrag muss im
+  // Förderfenster liegen.
+  degressivSatz: 5, // % vom Restbuchwert
+  degressivVon: 2023, // ab 01.10.2023
+  degressivBis: 2029, // bis 30.09.2029
+
+  // Sonderabschreibung Mietwohnungsneubau, § 7b EStG — zusätzlich zur
+  // linearen oder degressiven AfA in den ersten vier Jahren.
+  // ACHTUNG: setzt Effizienzhaus 40 mit Nachhaltigkeitsklasse voraus,
+  // nachgewiesen durch das Qualitätssiegel Nachhaltiges Gebäude (QNG).
+  // Ohne QNG besteht kein Anspruch — dieselbe Bedingung hebt beim
+  // KfW-Programm 297/298 den Höchstbetrag auf 150.000 € je Wohneinheit.
+  sonderSatz: 5, // % p. a.
+  sonderJahre: 4,
+  sonderKostenGrenzeQm: 5200, // € je m² Wohnfläche — Anspruchsvoraussetzung
+  sonderBemessungsCapQm: 4000, // € je m² Wohnfläche — Deckel der Bemessungsgrundlage
+  sonderVon: 2023, // Bauantrag ab 01.01.2023
+  sonderBis: 2029, // Bauantrag vor 01.10.2029
+};
+
+// ── KFW-FÖRDERKREDITE ────────────────────────────────────────────────────
+// Intervall: quartalsweise (Handpflege — die KfW rendert ihre
+// Konditionentabelle clientseitig, ein automatischer Abruf wie bei
+// Bundesbank/Interhyp ist damit nicht zuverlässig möglich; recherchiert
+// 2026-08-26, siehe scripts/monthly_update.py PFLEGE_INTERVALL). Der
+// tatsächliche Zins ist ohnehin individuell aus Bonität × Besicherung
+// berechnet und steht erst bei Zusage der Hausbank fest — auch die
+// offizielle KfW-Seite zeigt deshalb keinen pauschalen Tagessatz.
+// Quelle fürs Update: kfw.de, Produktinfos 297/298 und 124 (offizielle
+// Bedingungen/Höchstbeträge), zum schnellen Abgleich der Richtwerte
+// zusätzlich https://www.baufi24.de/foerderung/kfw-297-298-klimafeundlicher-neubau-wohngebaeude/
+// (Drittanbieter-Übersicht, keine Garantie — im Zweifel kfw.de vorziehen).
+// Die Zinssätze hängen von Laufzeit, Zinsbindung und tilgungsfreien Jahren
+// ab und werden erst bei der Zusage festgeschrieben — alles hier sind
+// Richtwerte, die der Nutzer überschreiben kann.
+export const KFW_KREDIT = {
+  stand: "Oktober 2026",
+  kfn: {
+    nr: "297/298",
+    vermietbar: true, // Vermieter sind ausdrücklich antragsberechtigt
+    maxProWE: 100000, // € je Wohneinheit
+    maxProWE_qng: 150000, // € je Wohneinheit mit QNG-Zertifikat
+    zins: 2.2, // % effektiv, Richtwert (297, 26–35 J., Standard 55)
+    maxLaufzeit: 35,
+    maxZinsbindung: 10,
+    maxTilgungsfrei: 5,
+  },
+  wohneigentum: {
+    nr: "124",
+    // Nur Selbstnutzer: vermietete oder gewerblich genutzte Flächen sind
+    // ausdrücklich ausgeschlossen. Dieses Flag steuert die Programmauswahl
+    // im Kreditrechner.
+    vermietbar: false,
+    maxProWE: 100000,
+    maxProWE_qng: 100000,
+    zins: 4.65, // % effektiv, Richtwert (124, 10 J. Zinsbindung)
+    maxLaufzeit: 35,
+    maxZinsbindung: 10,
+    maxTilgungsfrei: 5,
+  },
+};
+
+// ── ENERGIEAUSWEIS: PLAUSIBILITÄTSGRENZEN ────────────────────────────────
+// Für den Endenergie-Kennwert in kWh/m²a. Außerhalb dieser Spanne liegt fast
+// sicher ein Lesefehler vor (verrutschtes Komma, Jahresverbrauch in kWh statt
+// Kennwert je m²). Dann ist die Baujahr-Schätzung des Sanierungsrechners die
+// bessere Näherung als ein falscher Messwert.
+// Referenz: Passivhaus ~15, unsanierter Altbau bis ~350 kWh/m²a.
+export const VERBRAUCH_GRENZEN = { min: 20, max: 400 };
+
+// ── NICHT UMLAGEFÄHIGE KOSTEN ────────────────────────────────────────────
+// Verwaltung + Instandhaltung + Rücklage, also der Teil des Hausgelds, den
+// der Vermieter selbst traegt. Branchenueblicher Richtwert: 1,00–2,50 € je m²
+// Wohnflaeche und Monat. Der Rechner setzt die Mitte an.
+//
+// Bewusst NICHT aus dem Expose uebernommen: die Aufteilung des Hausgelds in
+// umlagefaehig/nicht umlagefaehig steht nur in einem Bruchteil der Exposes.
+// Ein einheitlich gerechneter Wert ist ueber Objekte hinweg vergleichbar, ein
+// mal vorhandener und mal geschaetzter Wert waere es nicht.
+//
+// Die Tooltips in i18n/tips.js lesen diese Werte - Formel und Erklaerung
+// koennen dadurch nicht auseinanderlaufen.
+export const NICHT_UML = {
+  min: 1.0, // €/m²/Monat unteres Ende des Richtwerts
+  max: 2.5, // €/m²/Monat oberes Ende
+  mittel: 1.75, // €/m²/Monat — damit rechnet die App
 };
 
 // ── ENERGIEKLASSEN (kWh/m²a → Buchstabe) ────────────────────────────────────
 // Quelle: GEG 2024, EnEV-Systematik (Primärenergiebedarf)
 export const ENERGIE_KLASSEN = [
-  { bis:  30, kl: "A+" },
-  { bis:  50, kl: "A"  },
-  { bis:  75, kl: "B"  },
-  { bis: 100, kl: "C"  },
-  { bis: 130, kl: "D"  },
-  { bis: 160, kl: "E"  },
-  { bis: 200, kl: "F"  },
-  { bis: 250, kl: "G"  },
+  { bis: 30, kl: "A+" },
+  { bis: 50, kl: "A" },
+  { bis: 75, kl: "B" },
+  { bis: 100, kl: "C" },
+  { bis: 130, kl: "D" },
+  { bis: 160, kl: "E" },
+  { bis: 200, kl: "F" },
+  { bis: 250, kl: "G" },
   { bis: Infinity, kl: "H" },
 ];
 
-// ── BAFA FÖRDERUNG ───────────────────────────────────────────────────────
-// Intervall: quartalsweise
-// Quelle: bafa.de
+// ── BAFA FÖRDERUNG (BEG EM) ──────────────────────────────────────────────
+// Gebaeudehuelle + Anlagentechnik ausser Heizung (Sanierungsrechner: Fenster,
+// Fassade, Dach, Tuer, Keller, oberste Geschossdecke, Lueftung).
+// Intervall: quartalsweise (Handpflege, Erinnerung ueber PFLEGE_INTERVALL)
+// Quelle: bafa.de > Sanierung Wohngebaeude > Gebaeudehuelle / Anlagentechnik,
+// Merkblatt Juli 2026, geprueft 2026-10-01. Rechnung: utils/begFoerderung.js.
 export const BAFA = {
-  aktiv: true,
-  basisfoerderung: 15,        // % der förderfähigen Kosten
-  heizungstauschBonus: 5,     // % zusätzlich
+  stand: "Oktober 2026",
+  basisfoerderung: 15, // % der foerderfaehigen Ausgaben
+  isfpBonus: 5, // % - nur auf den Betrag ueber der Mindestinvestition (= Hoechstgrenze ohne iSFP)
+  // Hoechstgrenze foerderfaehiger Ausgaben fuer alle Massnahmen ZUSAMMEN, je Wohneinheit gestaffelt
+  hoechstgrenze: { erste: 30000, zweiBisSechs: 15000, abSieben: 8000 },
+  hoechstgrenzeIsfp: { erste: 60000, zweiBisSechs: 30000, abSieben: 15000 },
 };
 
-// ── CO₂-PREIS ────────────────────────────────────────────────────────────
-// Intervall: jährlich
-// Quelle: Umweltbundesamt, BEHG
-export const CO2 = {
-  preis2026: 55,              // €/Tonne CO₂
-  preis2027: 65,              // €/Tonne CO₂ (geplant)
-};
-
-// ── ENERGIEPREISE (allgemein) ────────────────────────────────────────────
-// Intervall: quartalsweise
-// Quelle: BDEW, Verbraucherzentrale
-export const ENERGIE = {
-  stromCtKwh: 32.5,           // Cent/kWh Haushaltsstrom Ø Deutschland
-  gasCtKwh: 9.8,              // Cent/kWh Erdgas Ø Deutschland
-  heizölCtL: 95,              // Cent/Liter Heizöl Ø Deutschland
+// ── KFW 458 HEIZUNGSFOERDERUNG (BEG EM) ────────────────────────────────────
+// Intervall: quartalsweise (Handpflege, Erinnerung ueber PFLEGE_INTERVALL)
+// Quelle: kfw.de, Zuschuss 458 (Privatpersonen; GbR/Firmen: 459), geprueft
+// 2026-10-01. Klima- und Einkommensbonus nur fuer die selbstgenutzte
+// Wohneinheit. Die angekuendigten Absenkungen (Klimabonus -4 Punkte, erste
+// Hoechstgrenze -750 EUR, jeweils halbjaehrlich ab 01.02.2027) rechnet
+// utils/begFoerderung.js selbst nach Datum.
+export const KFW_HEIZUNG = {
+  stand: "Oktober 2026",
+  grundfoerderung: 30, // %
+  maxFoerderung: 80, // % Gesamtfoerdersatz inkl. Boni
+  klimabonusStart: 16, // % bis 31.01.2027, entfaellt ab 01.08.2028
+  einkommensbonus: [0, 10, 30, 40], // % je Stufe (Auswahl im Rechner)
+  hoechstgrenze: { erste: 28000, zweiBisSechs: 15000, abSieben: 8000 },
 };
 
 // ── SANIERUNGSRECHNER: ENERGIEDATEN ─────────────────────────────────────
@@ -110,31 +260,31 @@ export const ENERGIE = {
 export const SAN_ENERGIE = {
   stand: "Q1 2026",
   // Default-Eingabewerte (Vorbesetzung der Input-Felder)
-  defaultStrompreis: 0.35,    // €/kWh — Haushaltsstrom inkl. Netzentgelt, Steuern
-  defaultHeizpreis:  0.12,    // €/kWh — Heizöl/Gas/Pellets Mischrichtwert
+  defaultStrompreis: 0.35, // €/kWh — Haushaltsstrom inkl. Netzentgelt, Steuern
+  defaultHeizpreis: 0.12, // €/kWh — Heizöl/Gas/Pellets Mischrichtwert
 
   // Energiepreis je Heizungstyp (€/kWh Wärme, Ø-Werte)
   // Quelle: BDEW Energiemarktdaten, UBA 2026
   ep: {
-    wp:          0.09,   // Wärmepumpe (Strom ~0.35 €/kWh ÷ COP 3–4 + WP-Sondertarif → ~0.09 €/kWh Wärme)
-    pellets:     0.07,   // Pellets €/kWh
-    "fernw-std": 0.12,   // Fernwärme Standard
-    kohle:       0.09,   // Kohle
-    heizoel:     0.12,   // Heizöl
-    strom:       0.31,   // Direktstrom (Nachtspeicher etc.)
-    gas:         0.13,   // Erdgas
+    wp: 0.09, // Wärmepumpe (Strom ~0.35 €/kWh ÷ COP 3–4 + WP-Sondertarif → ~0.09 €/kWh Wärme)
+    pellets: 0.07, // Pellets €/kWh
+    "fernw-std": 0.12, // Fernwärme Standard
+    kohle: 0.09, // Kohle
+    heizoel: 0.12, // Heizöl
+    strom: 0.31, // Direktstrom (Nachtspeicher etc.)
+    gas: 0.13, // Erdgas
   },
 
   // CO₂-Emissionsfaktoren je Heizungstyp (kg CO₂/kWh Endenergie)
   // Quelle: UBA 2026, GEMIS-Datenbank
   co2F: {
-    wp:          0.070,  // Wärmepumpe (Strommix 2026)
-    pellets:     0.020,  // Holzpellets (biogen, Vorkette)
-    "fernw-std": 0.180,  // Fernwärme Bundesdurchschnitt
-    kohle:       0.340,  // Steinkohle
-    heizoel:     0.266,  // Heizöl
-    strom:       0.434,  // Strom (Bundesdurchschnitt 2026)
-    gas:         0.202,  // Erdgas
+    wp: 0.07, // Wärmepumpe (Strommix 2026)
+    pellets: 0.02, // Holzpellets (biogen, Vorkette)
+    "fernw-std": 0.18, // Fernwärme Bundesdurchschnitt
+    kohle: 0.34, // Steinkohle
+    heizoel: 0.266, // Heizöl
+    strom: 0.434, // Strom (Bundesdurchschnitt 2026)
+    gas: 0.202, // Erdgas
   },
 };
 
@@ -149,64 +299,229 @@ export const SAN_NORMEN = {
     { bis: 1970, hk: 180 },
     { bis: 1985, hk: 150 },
     { bis: 2000, hk: 120 },
-    { bis: 2010, hk:  80 },
+    { bis: 2010, hk: 80 },
     { bis: Infinity, hk: 50 },
   ],
-  warmwasserKWhPerson: 800,    // kWh/Person/Jahr (DIN 18599-10)
-  hilfsStromKWhM2:       8,    // kWh/m²/Jahr Pumpenstrom etc.
-  hausStromKWhM2:      150,    // kWh/m²/Jahr Haushaltsstrom Norm (BDEW)
+  warmwasserKWhPerson: 800, // kWh/Person/Jahr (DIN 18599-10)
+  hilfsStromKWhM2: 8, // kWh/m²/Jahr Pumpenstrom etc.
+  hausStromKWhM2: 150, // kWh/m²/Jahr Haushaltsstrom Norm (BDEW)
   // Haushaltsstrom nach Personenzahl (kWh/Jahr) — Quelle: BDEW 2024
   stromBDEW: { 1: 1300, 2: 2700, 3: 3500, 4: 4000, 5: 5000 },
-  pvErtragKWhKwp:      950,    // kWh/kWp/Jahr Ø Deutschland (Fraunhofer ISE)
-  pvEigenverbrauchQuote: 0.70, // 70% Eigenverbrauchsquote (Ø ohne Speicher ~30%, mit Speicher ~70%)
+  pvErtragKWhKwp: 950, // kWh/kWp/Jahr Ø Deutschland (Fraunhofer ISE)
+  pvEigenverbrauchQuote: 0.7, // 70% Eigenverbrauchsquote (Ø ohne Speicher ~30%, mit Speicher ~70%)
 };
 
 // ── SANIERUNGSRECHNER: MAßNAHMENKOSTEN (TIERS) ──────────────────────────
 // Intervall: halbjährlich (Baupreisindex)
 // Quelle: BKI Baukosten 2025/26, Handwerksinnungen, Verbraucherzentrale
 export const SAN_TIERS = {
-  fenster:    { s:{p: 800,l:"sTierFenS"}, g:{p:1200,l:"sTierFenG"}, m:{p:1600,l:"sTierFenM"} },
-  fensterXL:  { s:{p:2500},              g:{p:4500},                m:{p:7000}               },
-  fensterHST: { s:{p:5000},              g:{p:7000},                m:{p:9000}               },
-  fassade:    { s:{p:12200,l:"sTierFasS",d:10}, g:{p:15900,l:"sTierFasG",d:16}, m:{p:21400,l:"sTierFasM",d:20} },
-  heizung:    { s:{p:25000,l:"sTierHzS"}, g:{p:33000,l:"sTierHzG"}, m:{p:45000,l:"sTierHzM"} },
-  dach:       { s:{p:11200,l:"sTierDaS"}, g:{p:14600,l:"sTierDaG"}, m:{p:16800,l:"sTierDaM"} },
-  tuer:       { s:{p: 3500,l:"sTierTuS"}, g:{p: 7000,l:"sTierTuG"}, m:{p:11000,l:"sTierTuM"} },
-  pv:         { s:{p:10100,l:"sTierPvS"}, g:{p:16100,l:"sTierPvG"}, m:{p:24200,l:"sTierPvM"} },
-  lueftung:   { s:{p: 6000,l:"sTierLuS"}, g:{p: 9500,l:"sTierLuG"}, m:{p:14000,l:"sTierLuM"} },
+  stand: "August 2026",
+  fenster: {
+    s: { p: 800, l: "sTierFenS" },
+    g: { p: 1200, l: "sTierFenG" },
+    m: { p: 1600, l: "sTierFenM" },
+  },
+  fensterXL: { s: { p: 2500 }, g: { p: 4500 }, m: { p: 7000 } },
+  fensterHST: { s: { p: 5000 }, g: { p: 7000 }, m: { p: 9000 } },
+  fassade: {
+    s: { p: 12200, l: "sTierFasS", d: 10 },
+    g: { p: 15900, l: "sTierFasG", d: 16 },
+    m: { p: 21400, l: "sTierFasM", d: 20 },
+  },
+  heizung: {
+    s: { p: 25000, l: "sTierHzS" },
+    g: { p: 33000, l: "sTierHzG" },
+    m: { p: 45000, l: "sTierHzM" },
+  },
+  dach: {
+    s: { p: 11200, l: "sTierDaS" },
+    g: { p: 14600, l: "sTierDaG" },
+    m: { p: 16800, l: "sTierDaM" },
+  },
+  tuer: {
+    s: { p: 3500, l: "sTierTuS" },
+    g: { p: 7000, l: "sTierTuG" },
+    m: { p: 11000, l: "sTierTuM" },
+  },
+  pv: {
+    s: { p: 10100, l: "sTierPvS" },
+    g: { p: 16100, l: "sTierPvG" },
+    m: { p: 24200, l: "sTierPvM" },
+  },
+  lueftung: {
+    s: { p: 6000, l: "sTierLuS" },
+    g: { p: 9500, l: "sTierLuG" },
+    m: { p: 14000, l: "sTierLuM" },
+  },
 };
 
 // ── SANIERUNGSRECHNER: FÖRDERQUELLEN-KEYS ───────────────────────────────
 export const SAN_SRC_KEYS = {
-  fenster:  "sSrcBafa", fassade:  "sSrcBafa",
-  heizung:  "sSrcHz",   dach:     "sSrcBafa",
-  tuer:     "sSrcBafa", pv:       "sSrcPv",
-  keller:   "sSrcBafa", ogdecke:  "sSrcBafa",
-  batterie: "sSrcBat",  lueftung: "sSrcBafa",
+  fenster: "sSrcBafa",
+  fassade: "sSrcBafa",
+  heizung: "sSrcHz",
+  dach: "sSrcBafa",
+  tuer: "sSrcBafa",
+  pv: "sSrcPv",
+  keller: "sSrcBafa",
+  ogdecke: "sSrcBafa",
+  batterie: "sSrcBat",
+  lueftung: "sSrcBafa",
 };
 
 // ── LANDESBANKEN & BUNDESLAND-BONUS ──────────────────────────────────────
 export const LAND_F = {
-  BW:"L-Bank BW", BY:"BayernLabo", BE:"IBB Berlin", BB:"ILB Brandenburg",
-  HB:"Bremer Aufbau-Bank", HH:"IFB Hamburg", HE:"WIBank Hessen", MV:"LFI M-V",
-  NI:"NBank Niedersachsen", NW:"NRW.BANK", RP:"ISB Rheinland-Pfalz",
-  SL:"SIKB Saarland", SN:"SAB Sachsen", ST:"IB Sachsen-Anhalt",
-  SH:"IB.SH", TH:"TAB Thüringen",
+  BW: "L-Bank BW",
+  BY: "BayernLabo",
+  BE: "IBB Berlin",
+  BB: "ILB Brandenburg",
+  HB: "Bremer Aufbau-Bank",
+  HH: "IFB Hamburg",
+  HE: "WIBank Hessen",
+  MV: "LFI M-V",
+  NI: "NBank Niedersachsen",
+  NW: "NRW.BANK",
+  RP: "ISB Rheinland-Pfalz",
+  SL: "SIKB Saarland",
+  SN: "SAB Sachsen",
+  ST: "IB Sachsen-Anhalt",
+  SH: "IB.SH",
+  TH: "TAB Thüringen",
 };
 
 export const LAND_BONUS_FQ = {
-  BW: { heizung:.05, fassade:.03, dach:.03 },
-  BY: { heizung:.05, fassade:.05, dach:.03 },
-  BE: { heizung:.10, fassade:.10, fenster:.05, dach:.05 },
-  BB: { fassade:.05, dach:.05, keller:.05, ogdecke:.05 },
-  HH: { heizung:.10, fenster:.05, fassade:.05 },
-  HE: { heizung:.05, fassade:.03 },
-  NW: { heizung:.10, fassade:.05, dach:.05, fenster:.05 },
-  MV: { heizung:.05 },
-  SN: { heizung:.05, fassade:.05, dach:.03 },
-  ST: { heizung:.05, fassade:.03 },
-  TH: { heizung:.05, fassade:.03 },
-  SH: { heizung:.05, fassade:.03 },
+  BW: { heizung: 0.05, fassade: 0.03, dach: 0.03 },
+  BY: { heizung: 0.05, fassade: 0.05, dach: 0.03 },
+  BE: { heizung: 0.1, fassade: 0.1, fenster: 0.05, dach: 0.05 },
+  BB: { fassade: 0.05, dach: 0.05, keller: 0.05, ogdecke: 0.05 },
+  HH: { heizung: 0.1, fenster: 0.05, fassade: 0.05 },
+  HE: { heizung: 0.05, fassade: 0.03 },
+  NW: { heizung: 0.1, fassade: 0.05, dach: 0.05, fenster: 0.05 },
+  MV: { heizung: 0.05 },
+  SN: { heizung: 0.05, fassade: 0.05, dach: 0.03 },
+  ST: { heizung: 0.05, fassade: 0.03 },
+  TH: { heizung: 0.05, fassade: 0.03 },
+  SH: { heizung: 0.05, fassade: 0.03 },
 };
 
 export const LAND_BONUS_CAP = 5000;
+
+// ── Bauteile: Nutzungsdauer, Energieanteil, Kostenbasis (zentral) ────────────
+// Genutzt von utils/bauteile.js (effektives Alter, Status, Investitionsbedarf) und
+// dem Sanierungsrechner. Nutzungsdauern: BBSR-Tabelle "Nutzungsdauern von Bauteilen
+// fuer Lebenszyklusanalysen nach BNB" (KG 300 Einzelbauteile, KG 400 Gewerkeebene);
+// Kennnummer je Eintrag, bei "≥ 50" ist 50 eingesetzt.
+//   lebensdauer  Nutzungsdauer in Jahren
+//   sanKey       Massnahme im Sanierungsrechner (null = dort nicht vorhanden)
+//   ek           Anteil an der Heizwaerme-Ersparnis einer erledigten Massnahme
+//   standard     wird beim Investitionsbedarf ohne Zusatzangabe mitgerechnet
+//   kosten       Kostenbasis fuer die Schaetzung: menge x preis, Referenz 140 m²
+//                (skaliert = linear mit der Wohnflaeche); null = keine Preisbasis
+export const BAUTEILE = [
+  // KG 420 Waermeversorgungsanlagen
+  {
+    key: "heizung",
+    lebensdauer: 20,
+    quelle: "BBSR KG 420",
+    sanKey: "heizung",
+    ek: 0.35,
+    standard: true,
+    kosten: { menge: 1, preis: SAN_TIERS.heizung.s.p, skaliert: false },
+  },
+  // 334.212 Fenster (Rahmen und Fluegel): Kunststoff, Nadelholz behandelt
+  {
+    key: "fenster",
+    lebensdauer: 40,
+    quelle: "BBSR 334.212",
+    sanKey: "fenster",
+    ek: 0.12,
+    standard: true,
+    kosten: { menge: 12, preis: SAN_TIERS.fenster.s.p, skaliert: true },
+  },
+  // 335.641 Waermedaemmverbundsystem
+  {
+    key: "fassade",
+    lebensdauer: 40,
+    quelle: "BBSR 335.641",
+    sanKey: "fassade",
+    ek: 0.2,
+    standard: true,
+    kosten: { menge: 1, preis: SAN_TIERS.fassade.s.p, skaliert: true },
+  },
+  // 363.512 Deckungen: Ziegel (≥ 50)
+  {
+    key: "dach",
+    lebensdauer: 50,
+    quelle: "BBSR 363.512",
+    sanKey: "dach",
+    ek: 0.08,
+    standard: true,
+    kosten: { menge: 1, preis: SAN_TIERS.dach.s.p, skaliert: true },
+  },
+  // KG 440 Starkstromanlagen
+  {
+    key: "elektrik",
+    lebensdauer: 25,
+    quelle: "BBSR KG 440",
+    sanKey: null,
+    ek: 0,
+    standard: true,
+    kosten: null,
+  },
+  // KG 410 Abwasser-, Wasser-, Gasanlagen
+  {
+    key: "leitungen",
+    lebensdauer: 25,
+    quelle: "BBSR KG 410",
+    sanKey: null,
+    ek: 0,
+    standard: true,
+    kosten: null,
+  },
+  // KG 410 (Sanitaerobjekte)
+  {
+    key: "bad",
+    lebensdauer: 25,
+    quelle: "BBSR KG 410",
+    sanKey: null,
+    ek: 0,
+    standard: false,
+    kosten: null,
+  },
+  // 334.114 Standardtueren: Kunststoff
+  {
+    key: "tuer",
+    lebensdauer: 40,
+    quelle: "BBSR 334.114",
+    sanKey: "tuer",
+    ek: 0.02,
+    standard: false,
+    kosten: { menge: 1, preis: SAN_TIERS.tuer.s.p, skaliert: false },
+  },
+  // Daemmung Kellerdecke / oberste Geschossdecke (Daemmstoffe ≥ 50)
+  {
+    key: "kellerdecke",
+    lebensdauer: 50,
+    quelle: "BBSR KG 350 (Daemmung ≥ 50)",
+    sanKey: "keller",
+    ek: 0.05,
+    standard: false,
+    kosten: { menge: 60, preis: 37, skaliert: true },
+  },
+  {
+    key: "ogdecke",
+    lebensdauer: 50,
+    quelle: "BBSR KG 360 (Daemmung ≥ 50)",
+    sanKey: "ogdecke",
+    ek: 0.06,
+    standard: false,
+    kosten: { menge: 60, preis: 35, skaliert: true },
+  },
+];
+
+// Hoechstens so viel Heizwaerme-Ersparnis wird erledigten Massnahmen gutgeschrieben -
+// sonst rechnet z. B. ein Haus von 1970 mit neuer Heizung, alten Fenstern von 1999
+// und teilgedaemmter Fassade sich in Klasse B, was kein Ausweis bestaetigen wuerde.
+export const MAX_ERSPARNIS_ERLEDIGT = 0.4;
+// Referenzflaeche der Standardmengen in BAUTEILE[].kosten.
+export const BAUTEIL_REFERENZ_FLAECHE = 140;

@@ -1,0 +1,167 @@
+// Duenner Wrapper um die bestehende apiFetch-Utility (Spec 10.0) - ersetzt
+// den frueher eigenstaendigen Fetch-Wrapper aus admin/src/api.js (separates
+// Vite-Projekt, siehe Nutzer-Entscheidung 2026-08-11: Admin-Bereich wird
+// vollstaendig in die Kunden-App integriert statt als eigene App/eigener
+// Login-Screen zu laufen). apiFetch haengt bereits credentials:"include" und
+// im nativen Kontext den Bearer-Token-Header an.
+import { apiFetch } from "../../../../utils/apiBase.js";
+
+async function request(path, options = {}) {
+  const res = await apiFetch(path, options);
+  let body = {};
+  try {
+    body = await res.json();
+  } catch {
+    body = {};
+  }
+  if (!res.ok) {
+    const err = new Error(body.error || "request_failed");
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
+export function fetchDashboard() {
+  return request("/admin/dashboard");
+}
+
+export function fetchActivity() {
+  return request("/admin/activity");
+}
+
+// Alle schreibenden Aufrufe gehen ueber diesen Helfer, damit der
+// Content-Type nicht - wie frueher bei den Gutschein-Routen - an einzelnen
+// Stellen vergessen wird.
+function post(path, body) {
+  return request(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+// filters: {q, role, status, subscription, sort} - leere Werte werden
+// weggelassen, der Worker behandelt fehlende Parameter als "kein Filter".
+export function fetchUsers(filters = {}, page) {
+  const params = new URLSearchParams();
+  if (filters.q) params.set("q", filters.q);
+  if (filters.role) params.set("role", filters.role);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.subscription) params.set("subscription", filters.subscription);
+  if (filters.sort) params.set("sort", filters.sort);
+  if (page) params.set("page", String(page));
+  const qs = params.toString();
+  return request(`/admin/users${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchUserDetail(id) {
+  return request(`/admin/users/${encodeURIComponent(id)}`);
+}
+
+// input: {email, name?, role, isTestUser?, testEmailRedirectTo?, subscription?: {status, plan}}
+// subscription UND testEmailRedirectTo sind nur zusammen mit isTestUser:true
+// gueltig (Worker lehnt es sonst ab) - es gibt dafuer keinen echten
+// Stripe-Kauf bzw. keinen Grund fuer eine Mail-Umleitung.
+export function createUser(input) {
+  return post("/admin/users", input);
+}
+
+export function setUserStatus(id, status) {
+  return post(`/admin/users/${encodeURIComponent(id)}/status`, { status });
+}
+
+export function setUserRole(id, role) {
+  return post(`/admin/users/${encodeURIComponent(id)}/role`, { role });
+}
+
+// Nur den tatsaechlich umgeschalteten Wert senden - der Worker laesst den
+// jeweils anderen Schalter dann unangetastet.
+export function setUserFlags(id, flags) {
+  return post(`/admin/users/${encodeURIComponent(id)}/flags`, flags);
+}
+
+// input: {status: "" | SubStatus, plan?: Plan} - "" heisst "Kein Abo (Free)",
+// nur fuer isTestUser-Konten gueltig (Worker lehnt es sonst ab).
+export function setUserSubscription(id, input) {
+  return post(`/admin/users/${encodeURIComponent(id)}/subscription`, input);
+}
+
+export function addSupportNote(id, note) {
+  return post(`/admin/users/${encodeURIComponent(id)}/notes`, { note });
+}
+
+export function triggerPasswordReset(id) {
+  return post(`/admin/users/${encodeURIComponent(id)}/password-reset`);
+}
+
+export function revokeSessions(id) {
+  return post(`/admin/users/${encodeURIComponent(id)}/sessions/revoke`);
+}
+
+export function deleteUser(id) {
+  return post(`/admin/users/${encodeURIComponent(id)}/delete`);
+}
+
+export function fetchSubscriptions(status, page) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (page) params.set("page", String(page));
+  const qs = params.toString();
+  return request(`/admin/subscriptions${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchSubscriptionDetail(id) {
+  return request(`/admin/subscriptions/${encodeURIComponent(id)}`);
+}
+
+// Gleicht ein Abo mit Stripe ab (Stripe ist die Wahrheit). Antwort:
+// {result: "unchanged" | "corrected" | "not_applicable", diff?}.
+export function reconcileSubscription(id) {
+  return post(`/admin/subscriptions/${encodeURIComponent(id)}/reconcile`);
+}
+
+// filters: {admin, action, target, from, to} - from/to als ms-Zeitstempel.
+export function fetchAuditLog(page, filters = {}) {
+  const params = new URLSearchParams();
+  if (page) params.set("page", String(page));
+  if (filters.admin) params.set("admin", filters.admin);
+  if (filters.action) params.set("action", filters.action);
+  if (filters.target) params.set("target", filters.target);
+  if (filters.from) params.set("from", String(filters.from));
+  if (filters.to) params.set("to", String(filters.to));
+  const qs = params.toString();
+  return request(`/admin/audit-log${qs ? `?${qs}` : ""}`);
+}
+
+// Schickt alle E-Mail-Vorlagen einmal an den eingeloggten Admin selbst
+// (Nutzeranfrage 2026-08-26) - zum Pruefen von Layout/Inhalt im echten
+// Postfach, ohne jeden Ausloeser einzeln durchzuspielen.
+export function triggerTestEmails() {
+  return post("/admin/test-emails");
+}
+
+// Kaufsperre (worker/src/checkoutGate.ts)
+export function fetchCheckoutGate() {
+  return request("/admin/checkout-gate");
+}
+
+export function setCheckoutGate(open) {
+  return post("/admin/checkout-gate", { open });
+}
+
+// Registrierungssperre (worker/src/registrationGate.ts)
+export function fetchRegistrationGate() {
+  return request("/admin/registration-gate");
+}
+
+export function setRegistrationGate(open) {
+  return post("/admin/registration-gate", { open });
+}
+
+export function fetchFeedback(page) {
+  const params = new URLSearchParams();
+  if (page) params.set("page", String(page));
+  const qs = params.toString();
+  return request(`/admin/feedback${qs ? `?${qs}` : ""}`);
+}
