@@ -107,6 +107,13 @@ pattern = "api.immofuchs.info"
 custom_domain = true
 zone_name = "immofuchs.info"
 
+# Log-Aufzeichnung (Workers Observability, 2026-10-08): macht Fehler nachtraeglich im Dashboard sichtbar
+# (Anfragen, Antwortcodes, console.error des Workers). Hinweis Datenschutz: Anfrage-Adressen enthalten
+# bei E-Mail-Bestaetigung/Passwort-Reset einmalig gueltige Tokens; Aufbewahrung ist kurz (Tarif-abhaengig).
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 # Workers AI Binding (Llama 3.3, primaerer Pfad fuer DE/EN) - kein API-Key noetig,
 # nur ueber das Cloudflare-Konto freigeschaltet.
 [ai]
@@ -176,7 +183,8 @@ zone_name = "immofuchs.info"
 # laeuft hier, und beides zur selben Zeit hinzubekommen ist Glueckssache.
 # Mit Retention steht der Grund (analyse_model_call_failed bzw.
 # [FALLBACK_ALERT] mit Googles Originaltext) nachtraeglich im Dashboard.
-# Bewusst nur fuer dev - qa/prod bleiben unangetastet (Nutzer-Vorgabe).
+# Seit 2026-10-08 auch fuer prod (Top-Level, unten) und qa (siehe [env.qa.observability]) -
+# freigegeben vom Inhaber. Ohne die Aufzeichnung waere eine Fehlersuche nach dem Vorfall nicht moeglich.
 [env.dev.observability]
 enabled = true
 head_sampling_rate = 1
@@ -284,6 +292,10 @@ EXPOSE_EXTRACT_ENABLED = "true"
 EXPOSE_DAILY_LIMIT = "8"
 EXPOSE_IP_DAILY_LIMIT = "20"
 EXPOSE_GLOBAL_DAILY_LIMIT = "150"
+
+[env.qa.observability]
+enabled = true
+head_sampling_rate = 1
 
 [env.qa.ai]
 binding = "AI"
