@@ -11,10 +11,10 @@
     "test": "vitest run",
     "test:watch": "vitest watch",
     "db:migrate:dev": "wrangler d1 migrations apply immofuchs-dev --env dev --remote",
-    "db:migrate:qa": "wrangler d1 migrations apply immofuchs-qa --env qa --remote",
+    "db:migrate:qa": "echo qa teilt die Datenbank mit prod: Migrationen laufen nur ueber db:migrate:prod && exit 1",
     "db:migrate:prod": "wrangler d1 migrations apply immofuchs-prod --remote",
     "db:migrate:dev:local": "wrangler d1 migrations apply immofuchs-dev --env dev",
-    "db:migrate:qa:local": "wrangler d1 migrations apply immofuchs-qa --env qa",
+    "db:migrate:qa:local": "wrangler d1 migrations apply immofuchs-prod --env qa",
     "db:migrate:prod:local": "wrangler d1 migrations apply immofuchs-prod"
   },
   "dependencies": {

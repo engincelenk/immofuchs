@@ -305,6 +305,8 @@ zone_name = "immofuchs.info"
 ASSISTANT_ENABLED = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://qa.immofuchs.info"
 APP_BASE_URL = "https://qa.immofuchs.info"
+# Standby: qa liest die echten Daten, verschickt aber nichts und schreibt nichts ausser Anmelden/Assistent/Admin (src/standby.ts).
+STANDBY = "true"
 # qa ist der Zwilling von prod: gleiche Kauf- und Jahresabo-Einstellungen wie prod (siehe CHECKOUT_ENABLED und
 # YEARLY_AUTO_MONTHLY im Top-Level-[vars] oben). Seit 2026-10-08.
 CHECKOUT_ENABLED = "false"
@@ -343,10 +345,15 @@ head_sampling_rate = 1
 [env.qa.ai]
 binding = "AI"
 
+# qa ist der Zwilling von prod und teilt sich DIESELBE Datenbank (seit 2026-10-08, Weg A): immer derselbe Datenstand,
+# kein Abzug noetig. Im Standby (STANDBY = "true") darf qa nichts schreiben ausser Anmelden/Assistent/Admin und
+# verschickt nichts (src/standby.ts). Die frueher benutzte Datenbank immofuchs-qa (6ca47997-...) bleibt ungenutzt bestehen.
+# Folge: Datenbank-Migrationen gelten fuer prod UND qa gleichzeitig und muessen abwaertskompatibel sein, denn qa laeuft
+# eine Version hinter prod (Reihenfolge: dev -> prod -> qa).
 [[env.qa.d1_databases]]
 binding = "DB"
-database_name = "immofuchs-qa"
-database_id = "6ca47997-a551-4be3-8471-8c2f291a12cf"
+database_name = "immofuchs-prod"
+database_id = "09781d0c-cc60-47f8-97f9-5e26afa7cd1c"
 migrations_dir = "migrations"
 
 [[env.qa.durable_objects.bindings]]
@@ -354,5 +361,152 @@ name = "RATE_LIMITER_DO"
 class_name = "SessionRateLimiter"
 
 [[env.qa.migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionRateLimiter"]
+
+# ═══ Failover: der qa-Worker uebernimmt die Rolle von prod (docs/betrieb/notfall-runbook.md, Abschnitt "Umschalten auf qa") ═══
+# Gleicher Worker wie qa (gleicher Name, damit dieselben Secrets gelten), aber:
+#  - Custom Domain api.immofuchs.info (zusaetzlich zu api-qa), STANDBY aus, Variablen wie prod,
+#  - prod-Datenbank und prod-Sicherungsspeicher, beide Cron-Trigger (Taegliches 06:00, Sicherung 06:30).
+# Einspielen: npx wrangler deploy --env failover   (vorher api.immofuchs.info beim prod-Worker freigeben, siehe Runbook).
+# Zurueck in den Standby: npx wrangler deploy --env qa
+[env.failover]
+name = "immofuchs-assistant-qa"
+
+[[env.failover.routes]]
+pattern = "api.immofuchs.info"
+custom_domain = true
+zone_name = "immofuchs.info"
+
+[[env.failover.routes]]
+pattern = "api-qa.immofuchs.info"
+custom_domain = true
+zone_name = "immofuchs.info"
+
+[env.failover.triggers]
+crons = ["0 6 * * *", "30 6 * * *"]
+
+[env.failover.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.failover.vars]
+ASSISTANT_ENABLED = "true"
+# Prod-Kaufsperre: nur Admin-Konten koennen kaufen (worker/src/checkoutGate.ts).
+# Zum Freischalten im Cloudflare-Dashboard auf "true" setzen bzw. entfernen.
+# Gilt nur hier (Prod); dev/qa haben eigene [vars] und bleiben offen.
+CHECKOUT_ENABLED = "false"
+# Jahresabo -> nach dem ersten Jahr automatisch Monatsplan (AGB Ziffer 6, § 309 Nr. 9 BGB: keine stillschweigende
+# Verlaengerung um ein weiteres Jahr bei Verbrauchern). Umsetzung ueber eine Stripe Subscription Schedule
+# (worker/src/stripe/checkout.ts, ensureYearlyToMonthlySchedule). Auf prod seit 2026-10-08 an (Entscheidung des Inhabers).
+# Auf prod ist der Mechanismus noch durch einen echten Jahres-Testkauf zu bestaetigen (Zeitplan mit zwei Phasen in Stripe pruefen).
+YEARLY_AUTO_MONTHLY = "true"
+# Prod-Registrierungssperre: keine neuen Konten ueber die oeffentlichen Wege
+# (worker/src/registrationGate.ts). Bestehende Konten melden sich normal an.
+# Im Admin-Dashboard umschaltbar; der Schalter dort schlaegt diesen Wert.
+REGISTRATION_ENABLED = "false"
+# Oeffentlicher Schluessel fuer die verschluesselte Sicherung (RSA-4096). Der Worker kann damit NUR verschluesseln;
+# der private Schluessel liegt ausschliesslich beim Betreiber (docs/betrieb/backup-schluessel.txt + Offline-Kopie).
+BACKUP_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAkUFCQ2Gyp4nZ2D+vPaX+\nyro5XX7fGuH0/VmbCdt9oWrmeYe8qyBaZnMfk+rEOC920ZLTR1vOqDntMWnIMC6f\n5EFIY7TIL3yAia6sRby6pB2hhkihuHRBpFkP+cSYsmAyVjv1BVnKhxJTMZv1JWKZ\nwC74hrbs+6LEdHVRiy/65VDVGquV/oSjZouOwfXiRNppFcHXU16tjFVNDWfjnsWR\nTHMJkub1rQsMoBhKsRQO5b++18wxkvHRhiB/eDu/TLFP2uwkRr7xajkHpNZa6sSm\n7qk7qFxhZplPRBKVpm6KpAhIMMeQlkY1i+bke/+wrh1W7G0HniX2wez79jAC5RvE\nSdpDVfOuoNXZvRFymxxVPYuRK1IaqrmvYqq5dmTrZRVh4+xlu8kX34P8GjhfamiC\nbWweaBpYfc/h9sH/xk969Zp7kxnSBFdSH+GV3kx4GRsNtmSeBzW1galG2ERX63v0\nmXYWQfpGrqxoiOh+HEKluZLD2JWtK38Pe9Nt3iaCEpCisy8+IzfiK4XaOqfh18yV\nsEpx3eeWPDBSoAtgpQHtdiAl0A/NO+ERXMjKkJCQPtqxW+wQS2VPc7jr4YMsrlRo\nibsfzgRYy7rG7zjkJgpUK41CbQT05+QmHSWLQqL0ZwkDmKTmzJCkUD0FSx4+Hi2l\nOverDQ0pvpjdEEwek6ndM3kCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+# Ziel fuer Magic-Link-/OAuth-Redirects und Absender der Auth-Mails (Prod). Ohne
+# APP_BASE_URL landet man nach dem Login auf der nackten Worker-Domain (siehe
+# Befund 2026-08-04 bei [env.dev.vars]). send.immofuchs.info ist bei Resend
+# bereits als Sending-Domain verifiziert.
+APP_BASE_URL = "https://immofuchs.info"
+MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
+# Kommagetrennt: lokaler Dev-Server + dev.immofuchs.info (automatisches
+# CI-Deployment aus Immofuchs-dev, siehe .github/workflows/deploy-dev.yml) +
+# die echte Produktions-Domain, damit CORS schon vorbereitet ist, sobald das
+# Frontend live auf immofuchs.info zeigt (kein Redeploy noetig an diesem
+# Punkt). Das allein schaltet noch nichts "live" - dafuer muss das Frontend
+# tatsaechlich dorthin deployt werden, siehe Go-Live-Gate im Sprint-Plan
+# (DSGVO/AVV) fuer echte Nutzerdaten.
+ALLOWED_ORIGIN = "https://immofuchs.info,https://www.immofuchs.info"
+# ═══ Limits 2026-08-03: auf das Maximum kalibriert, das die kostenlosen
+# Kontingente von Gemini und Workers AI tatsaechlich hergeben (siehe
+# release-notes.txt) - NICHT einfach hochgesetzt. Dieser Worker bedient
+# QA UND PROD gleichzeitig (beide zeigen auf "immofuchs-assistant", siehe
+# deploy-qa.yml/deploy-prod.yml), teilen sich also EIN Kontingent:
+#   - Gemini "gemini-2.5-flash-lite" Free-Tier: 1.000 Requests/Tag,
+#     15/Minute, PRO PROJEKT/KEY - Text-Chat UND Expose-Extraktion nutzen
+#     dasselbe Modell und damit denselben Topf.
+#   - Workers AI Free-Tier: 10.000 Neuronen/Tag, KONTOWEIT (gilt fuer alle
+#     Worker im Account inkl. Dev), nur als Fallback wenn Gemini scheitert.
+#     Eine Text-Antwort verbraucht ca. 400-600 Neuronen -> ca. 20-25
+#     Fallback-Antworten/Tag sind das realistische Maximum, danach schlaegt
+#     auch der Fallback fehl (das war der urspruengliche "Kurzer Aussetzer"-
+#     Verdacht, bevor sich das invalid_verlauf-Problem herausstellte).
+# GLOBAL_DAILY_LIMIT (Text) + EXPOSE_GLOBAL_DAILY_LIMIT (Bild) bleiben in
+# Summe unter 1.000, damit an einem normalen Tag nicht in den Workers-AI-
+# Fallback gerutscht wird, dessen Kapazitaet viel kleiner ist.
+DAILY_REQUEST_LIMIT = "50"
+# Zweite/dritte Schranke gegen sessionId-Rotation (siehe docs/code-review-2026-07-23.md).
+# Ueber das Dashboard ohne Redeploy anpassbar, wie ASSISTANT_ENABLED.
+IP_DAILY_LIMIT = "100"
+GLOBAL_DAILY_LIMIT = "800"
+# Text-Chat-Modell fuer Gemini. Ohne Eintrag nimmt der Worker
+# "gemini-2.5-flash-lite" (siehe modelRouter.ts). Ueber das Dashboard
+# umstellbar, ohne Redeploy - wichtig bei Googles kurzen Deprecation-Zyklen
+# (der Vorgaenger "gemini-2.0-flash-lite" wurde zum 01.06.2026 abgeschaltet).
+# GEMINI_MODEL = "gemini-2.5-flash-lite"
+# ── Expose-/Screenshot-Extraktion (/api/expose-extract) ──
+# Eigener Kill-Switch, unabhaengig von ASSISTANT_ENABLED: Bild-Calls sind
+# teurer und riskanter als Text-Chat und muessen isoliert abschaltbar sein
+# (Spec 11.4). Hier bewusst "false" - auf Prod/QA laeuft bis Sprint 2 nur der
+# Platzhalter-Endpunkt, der soll dort nicht erreichbar sein. Umschalten
+# spaeter ueber das Dashboard, ohne Redeploy.
+EXPOSE_EXTRACT_ENABLED = "true"
+# Deutlich niedriger als beim Text-Chat (Spec 6/11.3): Extraktionen pro
+# Session/Tag, IP und Global anteilig - siehe Limits-Kommentar oben.
+EXPOSE_DAILY_LIMIT = "8"
+EXPOSE_IP_DAILY_LIMIT = "20"
+EXPOSE_GLOBAL_DAILY_LIMIT = "150"
+# Vision-Modell fuer die Extraktion. Ohne Eintrag nimmt der Worker
+# "gemini-2.0-flash-lite" (siehe modelRouter.ts) - dasselbe Modell wie der
+# Text-Chat. Ueber das Dashboard umstellbar, ohne Redeploy, falls sich die
+# Extraktionsqualitaet als zu schwach erweist.
+# EXPOSE_GEMINI_MODEL = "gemini-2.0-flash"
+
+# ═══ Kommerzialisierung (2026-08-03, Sprints 0-5b) ═══
+# Kostenloser Exposé-Scan / Konto-Kauf: freiwillige 14-Tage-Geld-zurueck-Frist
+# und 3-Tage-Dunning-Kulanzfrist sind Code-Konstanten (siehe subscriptions.ts),
+# nicht hier - reine Geschaeftslogik, kein Infrastruktur-Flag.
+# Soft-Cap gegen Objekt-Flut (4.9): 500 ist eine Produktentscheidung, kein
+# Sicherheitslimit - ueber das Dashboard ohne Redeploy anpassbar.
+OBJECTS_SOFT_CAP = "500"
+# Pro: taegliches Limit (4.0a/4.18.3, Sprint 5).
+FINN_PRO_DAILY_LIMIT = "50"
+# Die Kontingente der Testphase stehen nicht mehr hier, sondern in
+# src/trialLimits.ts: sie haengen am Nutzer (Migration 0025), nicht an der
+# Umgebung, und das Frontend liest dieselben Zahlen ueber /me.
+FINN_FREE_MAX_TOKENS = "350"
+FINN_PRO_MAX_TOKENS = "700"
+# Pro-Reservierung im globalen Kontingent (4.18.4/S5-5): ab diesem Anteil von
+# GLOBAL_DAILY_LIMIT werden nur noch Pro-Anfragen bedient.
+FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
+
+# Custom Domain des Prod-Workers: Frontend (immofuchs.info) und API liegen so
+# "same-site", sonst kommt das SameSite=Lax-Session-Cookie nie an (vgl. dev).
+STANDBY = "false"
+
+[env.failover.ai]
+binding = "AI"
+
+[[env.failover.d1_databases]]
+binding = "DB"
+database_name = "immofuchs-prod"
+database_id = "09781d0c-cc60-47f8-97f9-5e26afa7cd1c"
+migrations_dir = "migrations"
+
+[[env.failover.r2_buckets]]
+binding = "BACKUPS"
+bucket_name = "immofuchs-backups-prod"
+jurisdiction = "eu"
+
+[[env.failover.durable_objects.bindings]]
+name = "RATE_LIMITER_DO"
+class_name = "SessionRateLimiter"
+
+[[env.failover.migrations]]
 tag = "v1"
 new_sqlite_classes = ["SessionRateLimiter"]
