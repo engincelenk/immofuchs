@@ -9,6 +9,7 @@ import {
   triggerTestEmails,
 } from "./adminApi.js";
 import { AdminGateSection } from "./AdminGateSection.jsx";
+import { AdminBackupSection } from "./AdminBackupSection.jsx";
 import { useAdminToast } from "./AdminToast.jsx";
 import {
   PLAN_LABELS,
@@ -138,6 +139,8 @@ export function AdminDashboardView() {
           toastOpen: "Registrierung ist jetzt für alle geöffnet.",
         }}
       />
+
+      <AdminBackupSection />
 
       <section style={{ marginTop: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 4px" }}>E-Mail-Vorlagen testen</h3>

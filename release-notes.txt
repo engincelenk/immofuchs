@@ -1,3 +1,22 @@
+## 2026-10-08 (1.100.103) [WORKER+FRONTEND]
+
+### Taegliche verschluesselte Datenbank-Sicherung nach R2
+
+- Worker: neuer Job (worker/src/backup/) erzeugt einen vollstaendigen SQL-Export der D1-Datenbank (selbst gebaut, ohne API-Token im Worker),
+  komprimiert und verschluesselt ihn (AES-256-GCM, Schluessel mit dem OEFFENTLICHEN RSA-4096-Schluessel verpackt) und legt ihn in einem
+  R2-Bucket (EU) ab. Gegenpruefung der Groesse, Begleitdatei mit Pruefsumme und Zeilenzahlen, Statusdatei.
+- Aufbewahrung: 14 Tage taeglich, 8 Wochen woechentlich (Sonntag), 12 Monate monatlich (1. des Monats). Aelteres wird automatisch geloescht.
+- Prod: eigener Cron 06:30 UTC (dev/qa nur der bisherige 06:00-Cron, damit das Abfragebudget des Free-Plans nicht geteilt wird;
+  Konto-Grenze 5 Cron-Trigger). Bei Fehlern geht beim Cron-Lauf eine Mail (BACKUP_ALERT_EMAIL, sonst CONTACT_EMAIL).
+- Der Worker kennt nur den oeffentlichen Schluessel (BACKUP_PUBLIC_KEY in wrangler.toml). Der private Schluessel liegt beim Betreiber.
+- Admin: GET /admin/backup-status, POST /admin/backup-run (Audit-Log backup.run); Dashboard-Abschnitt "Datenbank-Sicherung" mit Status
+  und Knopf "Jetzt sichern".
+- Werkzeug zum Wiederherstellen: scripts/backup_entschluesseln.mjs. R2-Buckets: immofuchs-backups-dev, -qa, -prod (EU).
+- Befund der Wiederherstellungsprobe (dev, echte Sicherung): Die Sicherung ist korrekt (Pruefsumme, 20 Tabellen, 0 Abweichungen), aber eine Einzeldatei mit
+  1163 Anweisungen brachte D1 beim Einspielen aus dem Tritt (D1_RESET_DO). Darum: Der Export schreibt die Tabellen jetzt in Fremdschluessel-Reihenfolge (Eltern zuerst),
+  und scripts/backup_entschluesseln.mjs hat die Option --teilen (Teilstuecke, Standard 400 Anweisungen).
+- Tests: 17 neue (Export und Reihenfolge, Zerlegen, Verschluesselung inkl. Manipulation/falscher Schluessel, Aufbewahrung, Job inkl. Fehlerfall).
+
 ## 2026-10-08 (1.100.102) [WORKER]
 
 ### Observability fuer prod und qa

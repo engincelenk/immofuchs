@@ -262,6 +262,15 @@ export interface Env {
   CHECKOUT_ENABLED?: string;
   // "false": keine neuen Konten ueber die oeffentlichen Wege (registrationGate.ts). Fehlt die Variable, ist die Registrierung offen.
   REGISTRATION_ENABLED?: string;
+
+  // Taegliche, verschluesselte Datenbank-Sicherung nach R2 (src/backup/job.ts). Ohne Bucket oder
+  // oeffentlichen Schluessel ist die Sicherung aus. Der Worker kennt nur den OEFFENTLICHEN Schluessel.
+  BACKUPS?: R2Bucket;
+  BACKUP_PUBLIC_KEY?: string;
+  // "false": Sicherung trotz Konfiguration ausschalten. Fehlt die Variable, ist sie an.
+  BACKUP_ENABLED?: string;
+  // Empfaenger der Fehlermail (Standard: CONTACT_EMAIL, dann info@immofuchs.info).
+  BACKUP_ALERT_EMAIL?: string;
   // Empfaenger des oeffentlichen Kontaktformulars (Default info@immofuchs.info).
   CONTACT_EMAIL?: string;
   // Taeglicher D1<->Stripe-Abgleich (stripe/reconcile.ts): "log" (Default, nur
