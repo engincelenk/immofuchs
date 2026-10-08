@@ -11,6 +11,7 @@
 // Firebase-/Apple-Push-Zugangsdaten in dieser Umgebung).
 import { SignJWT, importPKCS8 } from "jose";
 import type { Env } from "./types";
+import { isStandby } from "./standby";
 import { listPushTokensForUser, removePushToken, type PushTokenRow } from "./db";
 
 export interface PushPayload {
@@ -143,6 +144,7 @@ async function sendApnsPush(env: Env, token: string, payload: PushPayload): Prom
 // selbst auf. Ohne konfigurierte Credentials (Platzhalter-Setup) einfach
 // still ein No-Op pro Plattform.
 export async function sendPushToUser(env: Env, userId: string, payload: PushPayload): Promise<void> {
+  if (isStandby(env)) return; // Standby (qa als Zwilling von prod): keine Nachrichten an echte Kunden
   const tokens = await listPushTokensForUser(env.DB, userId);
   await Promise.all(tokens.map((t) => sendPushToToken(env, t, payload)));
 }

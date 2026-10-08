@@ -24,6 +24,7 @@ import { adminRoutes } from "./routes/admin";
 import { lageRoutes } from "./routes/lage";
 import { publicContractRoutes } from "./routes/publicContract";
 import { handleScheduled } from "./scheduled";
+import { isStandby, standbyGuard } from "./standby";
 
 export { SessionRateLimiter } from "./sessionRateLimiter";
 
@@ -44,6 +45,11 @@ app.use(
     credentials: true,
   }),
 );
+
+// Standby (qa als Zwilling von prod): schreibende Anfragen ausser Anmelden, Assistent und Admin sperren.
+app.use("/api/*", standbyGuard);
+// Oeffentlich: das Frontend zeigt im Standby einen Hinweis, damit niemand qa fuer prod haelt.
+app.get("/api/v1/standby-status", (c) => c.json({ standby: isStandby(c.env) }));
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 app.onError((err, c) => {

@@ -3,6 +3,7 @@ import App from "./App";
 import InstallPrompt from "./InstallPrompt";
 import { AccountProvider } from "./context/AccountContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
+import { StandbyBanner } from "./components/shell/StandbyBanner.jsx";
 
 // AccountProvider liegt hier statt in AppProviders.jsx (Konzept-Dok 2/8.4.4,
 // Login-Standard-Flow, 2026-08-10): der Login-Status muss bereits auf der
@@ -15,6 +16,7 @@ import { ThemeProvider } from "./context/ThemeContext.jsx";
 ReactDOM.createRoot(document.getElementById("root")).render(
   <ThemeProvider>
     <AccountProvider>
+      <StandbyBanner />
       <App />
       <InstallPrompt />
     </AccountProvider>
