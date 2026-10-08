@@ -1,3 +1,12 @@
+## 2026-10-08 (1.100.104) [WORKER]
+
+### Prod: Jahresabo wechselt nach dem ersten Jahr automatisch in den Monatsplan
+
+- worker/wrangler.toml: YEARLY_AUTO_MONTHLY = "true" jetzt auch auf prod (vorher nur dev). Entspricht AGB Ziffer 6 und § 309 Nr. 9 BGB
+  (keine stillschweigende Verlaengerung um ein weiteres Jahr bei Verbrauchern, danach monatlich kuendbar).
+- Ohne die Einstellung haette Stripe ein Jahresabo nach 12 Monaten wieder fuer ein Jahr zum Jahrespreis verlaengert (Widerspruch zu den eigenen AGB).
+- Noch zu bestaetigen: Jahres-Testkauf auf prod, danach in Stripe die Subscription Schedule mit zwei Phasen (Jahr, dann Monat) pruefen.
+
 ## 2026-10-08 (1.100.103) [WORKER+FRONTEND]
 
 ### Taegliche verschluesselte Datenbank-Sicherung nach R2
