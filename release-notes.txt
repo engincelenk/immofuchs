@@ -1,3 +1,18 @@
+## 2026-10-08 (1.100.106) [WORKER+FRONTEND]
+
+### qa als Zwilling von prod: gemeinsame Datenbank, Standby, Failover-Konfiguration
+
+- worker/wrangler.toml: qa nutzt jetzt dieselbe D1-Datenbank wie prod (immofuchs-prod) und laeuft mit STANDBY = "true". Immer derselbe Datenstand, kein Abzug noetig.
+  Folge: Migrationen gelten fuer prod und qa gleichzeitig und muessen abwaertskompatibel sein (qa laeuft eine Version hinter prod; Reihenfolge dev -> prod -> qa).
+  db:migrate:qa bricht deshalb mit Hinweis ab. Die bisherige Datenbank immofuchs-qa bleibt ungenutzt bestehen.
+- Neu worker/src/standby.ts: Im Standby keine Mails (email.ts), keine Push-Nachrichten (push.ts), keine Hintergrundjobs (scheduled.ts) und keine schreibenden
+  Anfragen ausser Anmelden, Abmelden, Apple-Rueckweg, KI-Assistent und Admin (503 {"error":"standby"}). Damit kann qa weder Stripe noch Kundendaten aendern.
+  Oeffentlich: GET /api/v1/standby-status.
+- Frontend: orangefarbener Hinweis "Standby-Umgebung (Zwilling von prod)" oben, solange der Worker im Standby laeuft (StandbyBanner in main.jsx).
+- Neu [env.failover] in wrangler.toml: derselbe Worker wie qa, aber mit Custom Domain api.immofuchs.info, STANDBY aus, Prod-Variablen, Prod-Datenbank,
+  Prod-Sicherungsspeicher und beiden Cron-Triggern. Umschalten: npx wrangler deploy --env failover; zurueck: npx wrangler deploy --env qa.
+- Tests: 10 neue (Sperrliste, Router-Sperre, keine Mail/Push/Jobs im Standby).
+
 ## 2026-10-08 (1.100.105) [WORKER]
 
 ### qa wie prod: Kauf gesperrt und Jahresabo-Wechsel

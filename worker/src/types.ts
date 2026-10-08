@@ -262,6 +262,9 @@ export interface Env {
   CHECKOUT_ENABLED?: string;
   // "false": keine neuen Konten ueber die oeffentlichen Wege (registrationGate.ts). Fehlt die Variable, ist die Registrierung offen.
   REGISTRATION_ENABLED?: string;
+  // "true": Standby-Betrieb (qa als Zwilling von prod): keine Mails, keine Hintergrundjobs, keine schreibenden
+  // Anfragen ausser Anmelden/Assistent/Admin (standby.ts). Fehlt die Variable oder ist sie "false", laeuft alles normal.
+  STANDBY?: string;
 
   // Taegliche, verschluesselte Datenbank-Sicherung nach R2 (src/backup/job.ts). Ohne Bucket oder
   // oeffentlichen Schluessel ist die Sicherung aus. Der Worker kennt nur den OEFFENTLICHEN Schluessel.

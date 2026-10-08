@@ -13,6 +13,7 @@
 // Beide Wege liefern dieselbe Signatur nach aussen - ein Wechsel ist damit eine
 // Konfigurations-, keine Code-Entscheidung.
 import type { Env } from "./types";
+import { isStandby } from "./standby";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const DEFAULT_FROM = "ImmoFuchs <login@immofuchs.info>";
@@ -118,6 +119,11 @@ export async function sendEmail(
   subjectRaw: string,
   html: string,
 ): Promise<void> {
+  // Standby (qa als Zwilling von prod, siehe standby.ts): niemals Mails an echte Kunden schicken.
+  if (isStandby(env)) {
+    console.log("standby_email_suppressed");
+    return;
+  }
   const { to, subjectPrefix } = await resolveRecipient(env, toRaw);
   const subject = `${subjectPrefix}${subjectRaw}`;
   const from = parseFrom(env.MAGIC_LINK_FROM_EMAIL || DEFAULT_FROM);

@@ -13,6 +13,7 @@ import { dispatchNotification } from "./notifications";
 import { reconcileSubscriptions } from "./stripe/reconcile";
 import { reconcileCustomers } from "./stripe/customerSync";
 import { runBackup } from "./backup/job";
+import { isStandby } from "./standby";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -22,6 +23,9 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 export const BACKUP_CRON = "30 6 * * *";
 
 export async function handleScheduled(env: Env, cron?: string): Promise<void> {
+  // Standby (qa als Zwilling von prod, gleiche Datenbank): keine Erinnerungs-Mails, kein Abgleich, kein
+  // Aufraeumen. Das uebernimmt der prod-Worker; sonst gaebe es jede Mail doppelt.
+  if (isStandby(env)) return;
   if (cron === BACKUP_CRON) {
     try {
       await runBackup(env, "cron");
