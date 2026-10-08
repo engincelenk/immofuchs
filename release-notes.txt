@@ -1,3 +1,14 @@
+## 2026-10-08 (1.100.108) [WORKER]
+
+### Failover-Probelauf bestanden, Konfiguration angepasst
+
+- Probelauf (api.immofuchs.info von prod auf den qa-Worker und zurueck, ohne Kunden): Der qa-Worker uebernimmt die Domain mit einem Befehl
+  (npx wrangler deploy --env failover), Wrangler fragt nicht nach, STANDBY ist dann aus, die Prod-Daten stehen sofort bereit. Zurueck:
+  npx wrangler deploy (prod), danach npx wrangler deploy --env qa. Datenbank danach unveraendert.
+- Befund: Der Failover-Deploy meldete einen Fehler beim Setzen der Cron-Zeitplaene (Free-Plan: max. 5 Cron-Trigger je Konto; der fremde Worker
+  gold-radar-wecker belegt einen Platz). [env.failover.triggers] hat deshalb nur noch den 06:00-Cron. Die Sicherung 06:30 laeuft weiter vom prod-Worker.
+- Hinweis: Waehrend des Failovers antwortet auch api-qa ohne Standby (derselbe Worker).
+
 ## 2026-10-08 (1.100.107) [FRONTEND]
 
 ### Admin-Dashboard: neues Layout fuer Kennzahlen und Einstellungen
