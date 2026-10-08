@@ -1,3 +1,16 @@
+## 2026-10-08 (1.100.101) [FRONTEND+WORKER]
+
+### Registrierungssperre fuer prod und qa
+
+- Worker: Variable REGISTRATION_ENABLED = "false" (Top-Level/prod und [env.qa.vars]; dev bleibt offen) verhindert neue Konten ueber alle oeffentlichen Wege:
+  E-Mail + Passwort (403 registration_closed), Google/Apple und Magic-Link fuer neue Adressen (Rueckleitung mit login_error=registration_closed).
+  Bestehende Konten melden sich normal an, Admins koennen weiter Konten anlegen.
+- Der Schalter liegt zusaetzlich in app_settings (registration_open) und schlaegt die Variable - ein Deploy setzt ihn nicht zurueck.
+  Neu: oeffentlicher GET /auth/registration-status, Admin-Routen GET/POST /admin/registration-gate mit Audit-Log (registration_gate.set).
+- Admin-Dashboard: neuer Abschnitt "Registrierung oeffnen" neben "Kauf freigeben" (beide jetzt ueber die gemeinsame Komponente AdminGateSection).
+- Registrierungsformular: Hinweis "Die Registrierung ist noch nicht geoeffnet ..." und deaktivierter Absende-Knopf bei Sperre. 5 Sprachen.
+- Tests: registrationGate.test.ts, db.oauthRegistration.test.ts.
+
 ## 2026-10-07 (1.100.100) [INFRA]
 
 ### QA und Prod bekommen eigene Worker-Konfiguration

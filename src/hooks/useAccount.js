@@ -60,6 +60,21 @@ export function useAccount() {
   // Kaufsperre (worker/src/checkoutGate.ts): oeffentlicher Status fuer Besucher ohne Konto.
   // Bis zur Antwort gilt der Kauf als gesperrt, damit nichts kurz aufblitzt und wieder verschwindet.
   const [publicCheckoutOpen, setPublicCheckoutOpen] = useState(false);
+  // Registrierungssperre (worker/src/registrationGate.ts): bis zur Antwort gilt sie als offen. Eine
+  // falsche "offen"-Anzeige schadet nicht, der Server lehnt neue Konten ohnehin ab.
+  const [registrationOpen, setRegistrationOpen] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch("/auth/registration-status")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (!cancelled && json) setRegistrationOpen(Boolean(json.open));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   useEffect(() => {
     let cancelled = false;
     apiFetch("/billing/checkout-status")
@@ -316,6 +331,8 @@ export function useAccount() {
       if (res.ok) return { ok: true };
       if (res.status === 409) return { ok: false, error: "email_taken", providers: body.providers || [] };
       if (res.status === 429) return { ok: false, error: "rate_limited" };
+      // 403 mit eigenem Code: Registrierung gesperrt (registrationGate.ts).
+      if (res.status === 403 && body.error === "registration_closed") return { ok: false, error: "registration_closed" };
       // 403: Turnstile hat abgelehnt (bot_check_failed).
       if (res.status === 403) return { ok: false, error: "bot_check_failed" };
       return { ok: false, error: body.error || "invalid" };
@@ -687,6 +704,7 @@ export function useAccount() {
     isLoggedIn: Boolean(me),
     // Eingeloggt gilt die Antwort von /me (Admins duerfen immer kaufen), sonst der oeffentliche Status.
     checkoutOpen: me ? Boolean(me.checkoutOpen) : publicCheckoutOpen,
+    registrationOpen,
     isPro: Boolean(me?.isPro),
     // Zugangsstufe und Testphase (Preispolitik 2026-08-20). `zugang` ist
     // "pro" | "trial" | "keiner" - isPro allein kann die Testphase nicht

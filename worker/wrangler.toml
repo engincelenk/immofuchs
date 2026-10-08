@@ -19,6 +19,10 @@ ASSISTANT_ENABLED = "true"
 # Zum Freischalten im Cloudflare-Dashboard auf "true" setzen bzw. entfernen.
 # Gilt nur hier (Prod); dev/qa haben eigene [vars] und bleiben offen.
 CHECKOUT_ENABLED = "false"
+# Prod-Registrierungssperre: keine neuen Konten ueber die oeffentlichen Wege
+# (worker/src/registrationGate.ts). Bestehende Konten melden sich normal an.
+# Im Admin-Dashboard umschaltbar; der Schalter dort schlaegt diesen Wert.
+REGISTRATION_ENABLED = "false"
 # Ziel fuer Magic-Link-/OAuth-Redirects und Absender der Auth-Mails (Prod). Ohne
 # APP_BASE_URL landet man nach dem Login auf der nackten Worker-Domain (siehe
 # Befund 2026-08-04 bei [env.dev.vars]). send.immofuchs.info ist bei Resend
@@ -265,6 +269,8 @@ zone_name = "immofuchs.info"
 ASSISTANT_ENABLED = "true"
 ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://qa.immofuchs.info"
 APP_BASE_URL = "https://qa.immofuchs.info"
+# qa ist der Zwilling von prod und wie prod gesperrt (siehe REGISTRATION_ENABLED oben).
+REGISTRATION_ENABLED = "false"
 MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
 OBJECTS_SOFT_CAP = "500"
 FINN_PRO_DAILY_LIMIT = "50"

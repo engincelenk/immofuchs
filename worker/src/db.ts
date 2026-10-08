@@ -195,7 +195,8 @@ export async function listLinkedProviders(db: Env["DB"], userId: string): Promis
 
 export type OAuthLoginResult =
   | { ok: true; user: UserRow }
-  | { ok: false; error: "email_taken_other_method"; providers: string[] };
+  | { ok: false; error: "email_taken_other_method"; providers: string[] }
+  | { ok: false; error: "registration_closed" };
 
 // Login via Google/Apple: Erst-Login legt users+oauth_identities an (das *ist*
 // die Registrierung, Spec-v3.0 Kap. 2.2). Anders als frueher KEINE
@@ -208,6 +209,7 @@ export async function findOrCreateUserForOAuth(
   provider: string,
   providerUserId: string,
   email: string,
+  registrationOpen = true,
 ): Promise<OAuthLoginResult> {
   const existing = await findUserByOAuth(db, provider, providerUserId);
   if (existing) {
@@ -219,6 +221,8 @@ export async function findOrCreateUserForOAuth(
     const providers = await listLinkedProviders(db, byEmail.id);
     return { ok: false, error: "email_taken_other_method", providers };
   }
+  // Ein Erst-Login legt ein Konto an - bei gesperrter Registrierung bleibt es aus.
+  if (!registrationOpen) return { ok: false, error: "registration_closed" };
   const user = await createUser(db, email);
   await linkOAuthIdentity(db, user.id, provider, providerUserId);
   return { ok: true, user };

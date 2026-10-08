@@ -107,6 +107,9 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
     return (
       <div>
         <AuthHeading title={t.registerTitle} />
+        {account.registrationOpen === false && (
+          <div style={{ ...warnBannerStyle, marginBottom: 12 }}>{t.registerErrorClosed}</div>
+        )}
         {inlineError && !emailTakenProviders && <ErrorBanner t={t} code={inlineError} />}
         {emailTakenProviders && (
           <div style={{ ...warnBannerStyle, marginBottom: 12 }}>
@@ -202,7 +205,11 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
               soll die Pruefung sehen, bevor er klickt, nicht danach eine
               Fehlermeldung bekommen. Meist laeuft sie unsichtbar durch. */}
           <TurnstileFeld onToken={(token) => (turnstileToken.current = token || "")} />
-          <button type="submit" disabled={busy === "register"} style={primaryBtnStyle}>
+          <button
+            type="submit"
+            disabled={busy === "register" || account.registrationOpen === false}
+            style={primaryBtnStyle}
+          >
             {t.registerSubmit}
           </button>
         </form>

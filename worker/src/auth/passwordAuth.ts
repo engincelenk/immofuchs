@@ -22,6 +22,7 @@ import {
   type UserRow,
 } from "../db";
 import { sendEmail } from "../email";
+import { isRegistrationOpen } from "../registrationGate";
 import { hashPassword, hashToken, isPasswordLeaked, isValidEmail, isValidPasswordLength, verifyPassword } from "./password";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -74,7 +75,13 @@ export type RegisterResult =
   | { ok: true }
   | {
       ok: false;
-      error: "invalid_email" | "invalid_password" | "invalid_name" | "rate_limited" | "bot_check_failed";
+      error:
+        | "invalid_email"
+        | "invalid_password"
+        | "invalid_name"
+        | "rate_limited"
+        | "bot_check_failed"
+        | "registration_closed";
     }
   | { ok: false; error: "email_taken"; providers: string[] };
 
@@ -124,6 +131,10 @@ export async function registerWithPassword(
     if (existing.password_hash) providers.push("password");
     return { ok: false, error: "email_taken", providers };
   }
+
+  // Registrierungssperre (registrationGate.ts): erst NACH der E-Mail-Pruefung, damit
+  // jemand mit bestehendem Konto weiter den Hinweis auf seine Anmeldemethode bekommt.
+  if (!(await isRegistrationOpen(env))) return { ok: false, error: "registration_closed" };
 
   // HIBP-Check ist best-effort (4.4) - ein Ausfall des Drittdiensts blockiert
   // die Registrierung nicht, s. isPasswordLeaked.
