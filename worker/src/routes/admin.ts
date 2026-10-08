@@ -7,6 +7,7 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { envCheckoutDefault, getCheckoutOverride, isCheckoutPublic, setCheckoutOverride } from "../checkoutGate";
+import { isBackupConfigured, readBackupStatus, runBackup } from "../backup/job";
 import {
   envRegistrationDefault,
   getRegistrationOverride,
@@ -754,6 +755,26 @@ adminRoutes.post("/registration-gate", requireAuth, requireAdmin, requireCsrfOri
     details: { from: before, to: body.open },
   });
   return c.json({ open: body.open, source: "db" });
+});
+
+// Datenbank-Sicherung (worker/src/backup/job.ts): Status ablesen und von Hand anstossen.
+adminRoutes.get("/backup-status", requireAuth, requireAdminRead, async (c) => {
+  const configured = isBackupConfigured(c.env);
+  return c.json({ configured, status: configured ? await readBackupStatus(c.env) : null });
+});
+
+adminRoutes.post("/backup-run", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  if (!isBackupConfigured(c.env)) return c.json({ error: "backup_not_configured" }, 409);
+  const status = await runBackup(c.env, "manual");
+  await logAdminAction(c.env.DB, {
+    adminUserId: c.var.userId,
+    adminEmail: c.var.user.email,
+    action: "backup.run",
+    targetType: "backup",
+    targetId: status.key ?? "-",
+    details: { ok: status.ok, rows: status.rows ?? null, error: status.error ?? null },
+  });
+  return c.json({ configured: true, status });
 });
 
 // Letzte Aktivitaeten (Admin-MVP Abschnitt 3). Read-Only, feste Obergrenze -

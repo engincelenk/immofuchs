@@ -159,6 +159,15 @@ export function setRegistrationGate(open) {
   return post("/admin/registration-gate", { open });
 }
 
+// Datenbank-Sicherung (worker/src/backup/job.ts)
+export function fetchBackupStatus() {
+  return request("/admin/backup-status");
+}
+
+export function runBackupNow() {
+  return post("/admin/backup-run");
+}
+
 export function fetchFeedback(page) {
   const params = new URLSearchParams();
   if (page) params.set("page", String(page));

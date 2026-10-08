@@ -12,11 +12,25 @@ import {
 import { dispatchNotification } from "./notifications";
 import { reconcileSubscriptions } from "./stripe/reconcile";
 import { reconcileCustomers } from "./stripe/customerSync";
+import { runBackup } from "./backup/job";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-export async function handleScheduled(env: Env): Promise<void> {
+// Eigener Cron nur fuer die Sicherung (prod): so teilt sie sich das Abfragebudget des Free-Plans
+// (50 D1-Abfragen je Aufruf) nicht mit den uebrigen Jobs. Muss mit [triggers] in wrangler.toml uebereinstimmen.
+export const BACKUP_CRON = "30 6 * * *";
+
+export async function handleScheduled(env: Env, cron?: string): Promise<void> {
+  if (cron === BACKUP_CRON) {
+    try {
+      await runBackup(env, "cron");
+    } catch (err) {
+      console.error("backup_cron_failed", err instanceof Error ? err.message : "unknown");
+    }
+    return;
+  }
+
   // Datenminimierung fuer den Brute-Force-Schutz des Passwort-Wegs (4.13,
   // Migration 0011) - Zeilen aelter als 24 Std. werden nicht mehr gebraucht.
   try {
