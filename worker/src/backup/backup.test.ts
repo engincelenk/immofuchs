@@ -1,9 +1,9 @@
 import { generateKeyPairSync } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error -- JS-Werkzeug ohne Typen (scripts/backup_entschluesseln.mjs)
-import { decryptBackup } from "../../../scripts/backup_entschluesseln.mjs";
+import { decryptBackup, splitSql } from "../../../scripts/backup_entschluesseln.mjs";
 import { encryptBackup } from "./crypto";
-import { dumpDatabase, sqlLiteral } from "./sqlDump";
+import { dumpDatabase, orderByDependency, sqlLiteral } from "./sqlDump";
 import { keysToDelete } from "./retention";
 import { runBackup, STATUS_KEY, type BackupStatus } from "./job";
 
@@ -112,6 +112,61 @@ describe("dumpDatabase", () => {
     expect(sql).toContain(`INSERT INTO "users" ("id", "email", "note", "data") VALUES ('u1', 'a@example.com', 'O''Brien', X'01ff');`);
     expect(sql).toContain(`'u2', 'b@example.com', NULL, NULL`);
     expect(tables).toEqual({ users: 2, subscriptions: 1 });
+  });
+});
+
+describe("Reihenfolge nach Fremdschluesseln", () => {
+  it("schreibt referenzierte Tabellen vor die referenzierenden (nicht alphabetisch)", async () => {
+    const { sql } = await dumpDatabase(fakeDb());
+    // alphabetisch kaeme "subscriptions" vor "users", subscriptions verweist aber auf users
+    expect(sql.indexOf("CREATE TABLE users")).toBeLessThan(sql.indexOf("CREATE TABLE subscriptions"));
+    expect(sql.indexOf('INSERT INTO "users"')).toBeLessThan(sql.indexOf('INSERT INTO "subscriptions"'));
+  });
+
+  it("ordnet Ketten und bleibt bei Zyklen stabil", () => {
+    const t = (name: string, sql: string) => ({ name, sql });
+    const kette = orderByDependency([
+      t("c", "CREATE TABLE c (x REFERENCES b(id))"),
+      t("a", "CREATE TABLE a (x)"),
+      t("b", "CREATE TABLE b (x REFERENCES a(id))"),
+    ]);
+    expect(kette.map((r) => r.name)).toEqual(["a", "b", "c"]);
+    const zyklus = orderByDependency([
+      t("y", "CREATE TABLE y (x REFERENCES z(id))"),
+      t("z", "CREATE TABLE z (x REFERENCES y(id))"),
+    ]);
+    expect(zyklus.map((r) => r.name).sort()).toEqual(["y", "z"]);
+  });
+});
+
+describe("splitSql (Teilstuecke fuer grosse Wiederherstellungen)", () => {
+  it("trennt Schema, Daten und Indizes; jedes Datenstueck beginnt mit PRAGMA", async () => {
+    const { sql } = await dumpDatabase(fakeDb());
+    const parts = splitSql(sql, 2);
+    expect(parts[0].name).toBe("teil-000-schema");
+    expect(parts[0].sql).toContain("CREATE TABLE users");
+    expect(parts[0].sql).not.toContain("INSERT INTO");
+    const daten = parts.filter((p: { name: string }) => /^teil-\d{3}$/.test(p.name));
+    expect(daten).toHaveLength(2); // 3 INSERTs, je hoechstens 2 pro Stueck
+    for (const p of daten) expect(p.sql.startsWith("PRAGMA defer_foreign_keys=TRUE;")).toBe(true);
+    expect(parts[parts.length - 1].name).toMatch(/indizes$/);
+    expect(parts[parts.length - 1].sql).toContain("CREATE INDEX idx_users_email");
+  });
+
+  it("verliert keine Anweisung und haelt Zeilenumbrueche in Textwerten zusammen", () => {
+    const sql = [
+      "PRAGMA defer_foreign_keys=TRUE;",
+      "CREATE TABLE t (id INTEGER, note TEXT);",
+      "INSERT INTO \"t\" (\"id\", \"note\") VALUES (1, 'erste Zeile",
+      "zweite Zeile');",
+      "INSERT INTO \"t\" (\"id\", \"note\") VALUES (2, 'x');",
+      "CREATE INDEX i ON t (id);",
+    ].join("\n");
+    const parts = splitSql(sql, 1);
+    const alles = parts.map((p: { sql: string }) => p.sql).join("\n");
+    expect(alles).toContain("'erste Zeile\nzweite Zeile'");
+    expect((alles.match(/^INSERT INTO/gm) ?? []).length).toBe(2);
+    expect(parts.filter((p: { name: string }) => /^teil-\d{3}$/.test(p.name))).toHaveLength(2);
   });
 });
 

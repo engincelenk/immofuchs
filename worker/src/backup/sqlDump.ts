@@ -44,12 +44,42 @@ interface MasterRow {
   sql: string;
 }
 
+// Tabellen so ordnen, dass referenzierte Tabellen (REFERENCES ...) vor den referenzierenden stehen.
+// Noetig, weil sich grosse Sicherungen nur in Teilstuecken einspielen lassen (D1 verkraftet sehr
+// grosse Einzeldateien nicht, siehe scripts/backup_entschluesseln.mjs --teilen); jedes Teilstueck ist
+// eine eigene Transaktion, deren Fremdschluessel bis zum Ende nur innerhalb dieses Stuecks aufgeschoben sind.
+// Bei Zyklen entscheidet die alphabetische Reihenfolge (defer_foreign_keys faengt das innerhalb eines Stuecks ab).
+export function orderByDependency<T extends { name: string; sql: string }>(tables: T[]): T[] {
+  const byName = new Map(tables.map((t) => [t.name, t]));
+  const deps = new Map<string, string[]>();
+  for (const t of tables) {
+    const refs = new Set<string>();
+    for (const m of t.sql.matchAll(/REFERENCES\s+["`[]?([A-Za-z0-9_]+)/gi)) {
+      if (m[1] !== t.name && byName.has(m[1])) refs.add(m[1]);
+    }
+    deps.set(t.name, [...refs].sort());
+  }
+  const result: T[] = [];
+  const done = new Set<string>();
+  const visiting = new Set<string>();
+  const visit = (name: string): void => {
+    if (done.has(name) || visiting.has(name)) return;
+    visiting.add(name);
+    for (const d of deps.get(name) ?? []) visit(d);
+    visiting.delete(name);
+    done.add(name);
+    result.push(byName.get(name) as T);
+  };
+  for (const t of [...tables].sort((a, b) => a.name.localeCompare(b.name))) visit(t.name);
+  return result;
+}
+
 export async function dumpDatabase(db: D1Database): Promise<DumpResult> {
   const master = await db
     .prepare("SELECT type, name, tbl_name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name")
     .all<MasterRow>();
   const rows = master.results ?? [];
-  const tableRows = rows.filter((r) => r.type === "table" && !SKIP.test(r.name));
+  const tableRows = orderByDependency(rows.filter((r) => r.type === "table" && !SKIP.test(r.name)));
   const otherRows = rows.filter((r) => r.type !== "table" && !SKIP.test(r.tbl_name));
 
   const out: string[] = ["PRAGMA defer_foreign_keys=TRUE;"];

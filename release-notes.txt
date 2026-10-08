@@ -12,7 +12,10 @@
 - Admin: GET /admin/backup-status, POST /admin/backup-run (Audit-Log backup.run); Dashboard-Abschnitt "Datenbank-Sicherung" mit Status
   und Knopf "Jetzt sichern".
 - Werkzeug zum Wiederherstellen: scripts/backup_entschluesseln.mjs. R2-Buckets: immofuchs-backups-dev, -qa, -prod (EU).
-- Tests: 13 neue (Export, Verschluesselung inkl. Manipulation/falscher Schluessel, Aufbewahrung, Job inkl. Fehlerfall).
+- Befund der Wiederherstellungsprobe (dev, echte Sicherung): Die Sicherung ist korrekt (Pruefsumme, 20 Tabellen, 0 Abweichungen), aber eine Einzeldatei mit
+  1163 Anweisungen brachte D1 beim Einspielen aus dem Tritt (D1_RESET_DO). Darum: Der Export schreibt die Tabellen jetzt in Fremdschluessel-Reihenfolge (Eltern zuerst),
+  und scripts/backup_entschluesseln.mjs hat die Option --teilen (Teilstuecke, Standard 400 Anweisungen).
+- Tests: 17 neue (Export und Reihenfolge, Zerlegen, Verschluesselung inkl. Manipulation/falscher Schluessel, Aufbewahrung, Job inkl. Fehlerfall).
 
 ## 2026-10-08 (1.100.102) [WORKER]
 
