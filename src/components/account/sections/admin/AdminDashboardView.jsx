@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { fetchActivity, fetchCheckoutGate, fetchDashboard, setCheckoutGate, triggerTestEmails } from "./adminApi.js";
+import {
+  fetchActivity,
+  fetchCheckoutGate,
+  fetchDashboard,
+  fetchRegistrationGate,
+  setCheckoutGate,
+  setRegistrationGate,
+  triggerTestEmails,
+} from "./adminApi.js";
+import { AdminGateSection } from "./AdminGateSection.jsx";
 import { useAdminToast } from "./AdminToast.jsx";
 import {
   PLAN_LABELS,
@@ -39,9 +48,6 @@ export function AdminDashboardView() {
   const [error, setError] = useState(null);
   const [testEmailsConfirm, setTestEmailsConfirm] = useState(false);
   const [testEmailsBusy, setTestEmailsBusy] = useState(false);
-  const [gate, setGate] = useState(null); // {open, source} | null
-  const [gateConfirm, setGateConfirm] = useState(false);
-  const [gateBusy, setGateBusy] = useState(false);
   const toast = useAdminToast();
 
   useEffect(() => {
@@ -54,27 +60,10 @@ export function AdminDashboardView() {
     fetchActivity()
       .then((data) => !cancelled && setActivity(data.entries))
       .catch(() => !cancelled && setActivity([]));
-    fetchCheckoutGate()
-      .then((data) => !cancelled && setGate(data))
-      .catch(() => {});
     return () => {
       cancelled = true;
     };
   }, []);
-
-  async function handleGateToggle() {
-    setGateBusy(true);
-    try {
-      const res = await setCheckoutGate(!gate.open);
-      setGate(res);
-      toast.success(res.open ? "Kauf ist jetzt für alle freigegeben." : "Kauf ist jetzt gesperrt.");
-    } catch (err) {
-      toast.error(errorText(err));
-    } finally {
-      setGateBusy(false);
-      setGateConfirm(false);
-    }
-  }
 
   async function handleTestEmails() {
     setTestEmailsBusy(true);
@@ -118,51 +107,37 @@ export function AdminDashboardView() {
         </div>
       )}
 
-      {gate && (
-        <section style={{ marginTop: 24 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 4px" }}>Kauf freigeben</h3>
-          <p style={{ ...mutedTextStyle, marginTop: 0, marginBottom: 12 }}>
-            Aktuell:{" "}
-            <strong style={{ color: gate.open ? "#22c55e" : "#c0392b" }}>
-              {gate.open ? "für alle offen" : "gesperrt (nur Admins und Testuser)"}
-            </strong>
-            {gate.source === "env" && " – Startwert aus der Server-Konfiguration, noch nie hier umgestellt."}
-          </p>
-          {!gateConfirm ? (
-            <button type="button" style={secondaryBtnStyle} onClick={() => setGateConfirm(true)}>
-              {gate.open ? "🔒 Kauf sperren" : "🔓 Kauf für alle freigeben"}
-            </button>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-                background: "var(--cc)",
-                border: "1px solid var(--cb)",
-                borderRadius: 12,
-                padding: 14,
-              }}
-            >
-              <span style={{ fontSize: 13 }}>
-                {gate.open ? "Kauf für alle Nutzer sperren?" : "Kauf jetzt für alle Nutzer freigeben?"}
-              </span>
-              <button type="button" style={dangerBtnStyle} disabled={gateBusy} onClick={handleGateToggle}>
-                {gateBusy ? "Speichert …" : gate.open ? "Ja, sperren" : "Ja, freigeben"}
-              </button>
-              <button
-                type="button"
-                style={secondaryBtnStyle}
-                disabled={gateBusy}
-                onClick={() => setGateConfirm(false)}
-              >
-                Abbrechen
-              </button>
-            </div>
-          )}
-        </section>
-      )}
+      <AdminGateSection
+        title="Kauf freigeben"
+        load={fetchCheckoutGate}
+        save={setCheckoutGate}
+        texts={{
+          stateOpen: "für alle offen",
+          stateClosed: "gesperrt (nur Admins und Testuser)",
+          buttonClose: "🔒 Kauf sperren",
+          buttonOpen: "🔓 Kauf für alle freigeben",
+          askClose: "Kauf für alle Nutzer sperren?",
+          askOpen: "Kauf jetzt für alle Nutzer freigeben?",
+          toastClosed: "Kauf ist jetzt gesperrt.",
+          toastOpen: "Kauf ist jetzt für alle freigegeben.",
+        }}
+      />
+
+      <AdminGateSection
+        title="Registrierung öffnen"
+        load={fetchRegistrationGate}
+        save={setRegistrationGate}
+        texts={{
+          stateOpen: "für alle offen",
+          stateClosed: "gesperrt (bestehende Konten melden sich weiter an)",
+          buttonClose: "🔒 Registrierung sperren",
+          buttonOpen: "🔓 Registrierung für alle öffnen",
+          askClose: "Neue Registrierungen sperren?",
+          askOpen: "Registrierung jetzt für alle öffnen?",
+          toastClosed: "Registrierung ist jetzt gesperrt.",
+          toastOpen: "Registrierung ist jetzt für alle geöffnet.",
+        }}
+      />
 
       <section style={{ marginTop: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 4px" }}>E-Mail-Vorlagen testen</h3>

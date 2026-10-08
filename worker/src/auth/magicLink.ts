@@ -5,6 +5,7 @@
 import type { Env } from "../types";
 import { createMagicLink, consumeMagicLink, getUserByEmail, createUser } from "../db";
 import { sendEmail } from "../email";
+import { isRegistrationOpen } from "../registrationGate";
 import { hashToken } from "./password";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,7 +56,7 @@ export async function requestMagicLink(
 
 export type VerifyMagicLinkResult =
   | { ok: true; userId: string }
-  | { ok: false; error: "invalid_or_expired" };
+  | { ok: false; error: "invalid_or_expired" | "registration_closed" };
 
 export async function verifyMagicLink(env: Env, token: string): Promise<VerifyMagicLinkResult> {
   const email = await consumeMagicLink(env.DB, await hashToken(token));
@@ -63,6 +64,9 @@ export async function verifyMagicLink(env: Env, token: string): Promise<VerifyMa
 
   const existing = await getUserByEmail(env.DB, email);
   if (existing) return { ok: true, userId: existing.id };
+
+  // Neue Adresse = neues Konto: bei gesperrter Registrierung (registrationGate.ts) nicht anlegen.
+  if (!(await isRegistrationOpen(env))) return { ok: false, error: "registration_closed" };
 
   const user = await createUser(env.DB, email);
   return { ok: true, userId: user.id };

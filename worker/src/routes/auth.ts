@@ -18,6 +18,7 @@ import {
 } from "../auth/passwordAuth";
 import { login, logout, extractSessionId, buildClearSessionCookie } from "../auth/session";
 import { deleteAllSessionsForUser, findOrCreateUserForOAuth } from "../db";
+import { isRegistrationOpen } from "../registrationGate";
 import { deleteAccountCompletely } from "../accountDeletion";
 import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
 
@@ -103,7 +104,13 @@ authRoutes.get("/google/callback", async (c) => {
   try {
     const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/google/callback");
     const identity = await exchangeGoogleCode(c.env, code, redirectUri);
-    const result = await findOrCreateUserForOAuth(c.env.DB, "google", identity.providerUserId, identity.email);
+    const result = await findOrCreateUserForOAuth(
+      c.env.DB,
+      "google",
+      identity.providerUserId,
+      identity.email,
+      await isRegistrationOpen(c.env),
+    );
 
     if (deleteReauthUserId) {
       // D2: nur loeschen, wenn die frisch bestaetigte Google-Identitaet
@@ -125,6 +132,7 @@ authRoutes.get("/google/callback", async (c) => {
     }
 
     if (!result.ok) {
+      if (result.error === "registration_closed") return c.redirect(`${base}/?login_error=registration_closed`, 302);
       return c.redirect(`${base}/?login_error=oauth_email_taken&providers=${encodeURIComponent(result.providers.join(","))}`, 302);
     }
     const { cookie } = await login(c.env, result.user.id, c.req.header("User-Agent") || null);
@@ -192,7 +200,13 @@ authRoutes.post("/apple/callback", async (c) => {
   try {
     const redirectUri = workerCallbackUrl(c.req.raw, "/api/v1/auth/apple/callback");
     const identity = await exchangeAppleCode(c.env, code, redirectUri);
-    const result = await findOrCreateUserForOAuth(c.env.DB, "apple", identity.providerUserId, identity.email);
+    const result = await findOrCreateUserForOAuth(
+      c.env.DB,
+      "apple",
+      identity.providerUserId,
+      identity.email,
+      await isRegistrationOpen(c.env),
+    );
 
     if (deleteReauthUserId) {
       if (!result.ok || result.user.id !== deleteReauthUserId) {
@@ -210,6 +224,7 @@ authRoutes.post("/apple/callback", async (c) => {
     }
 
     if (!result.ok) {
+      if (result.error === "registration_closed") return c.redirect(`${base}/?login_error=registration_closed`, 302);
       return c.redirect(`${base}/?login_error=oauth_email_taken&providers=${encodeURIComponent(result.providers.join(","))}`, 302);
     }
     // crossSite: true - Apple ruft diesen Callback per response_mode=form_post
@@ -244,7 +259,10 @@ authRoutes.get("/magic-link/verify", async (c) => {
   const token = c.req.query("token") || "";
   const base = frontendBase(c.env, c.req.raw);
   const result = await verifyMagicLink(c.env, token);
-  if (!result.ok) return c.redirect(`${base}/?login_error=magic_link_invalid`, 302);
+  if (!result.ok) {
+    if (result.error === "registration_closed") return c.redirect(`${base}/?login_error=registration_closed`, 302);
+    return c.redirect(`${base}/?login_error=magic_link_invalid`, 302);
+  }
   const { cookie } = await login(c.env, result.userId, c.req.header("User-Agent") || null);
   c.header("Set-Cookie", cookie, { append: true });
   return c.redirect(`${base}/?login_success=1`, 302);
@@ -253,6 +271,9 @@ authRoutes.get("/magic-link/verify", async (c) => {
 // ═══ E-Mail + Passwort (Ergaenzung 04.08., Spec v8 4.4/4.5/4.13) ═══
 // Fuenfter Login-Weg. Reihenfolge im Modal bewusst nachrangig (4.3, IMP-14) -
 // die vier passwortlosen Wege bleiben unveraendert die primaeren Buttons.
+
+// Oeffentlich: das Registrierungsformular zeigt den Hinweis schon vor dem Absenden.
+authRoutes.get("/registration-status", async (c) => c.json({ open: await isRegistrationOpen(c.env) }));
 
 authRoutes.post("/register", requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
@@ -276,6 +297,7 @@ authRoutes.post("/register", requireCsrfOrigin, async (c) => {
   if (!result.ok) {
     if (result.error === "rate_limited") return c.json({ error: result.error }, 429);
     if (result.error === "bot_check_failed") return c.json({ error: result.error }, 403);
+    if (result.error === "registration_closed") return c.json({ error: result.error }, 403);
     if (result.error === "email_taken") return c.json({ error: result.error, providers: result.providers }, 409);
     return c.json({ error: result.error }, 400);
   }

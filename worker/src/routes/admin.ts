@@ -8,6 +8,12 @@ import { Hono } from "hono";
 import type { Env } from "../types";
 import { envCheckoutDefault, getCheckoutOverride, isCheckoutPublic, setCheckoutOverride } from "../checkoutGate";
 import {
+  envRegistrationDefault,
+  getRegistrationOverride,
+  isRegistrationOpen,
+  setRegistrationOverride,
+} from "../registrationGate";
+import {
   requireAuth,
   requireAdmin,
   requireAdminRead,
@@ -720,6 +726,31 @@ adminRoutes.post("/checkout-gate", requireAuth, requireAdmin, requireCsrfOrigin,
     action: "checkout_gate.set",
     targetType: "setting",
     targetId: "checkout_public",
+    details: { from: before, to: body.open },
+  });
+  return c.json({ open: body.open, source: "db" });
+});
+
+// Registrierungssperre (worker/src/registrationGate.ts): gleiches Muster wie die Kaufsperre.
+adminRoutes.get("/registration-gate", requireAuth, requireAdminRead, async (c) => {
+  const override = await getRegistrationOverride(c.env.DB);
+  return c.json({
+    open: override ?? envRegistrationDefault(c.env),
+    source: override === null ? "env" : "db",
+  });
+});
+
+adminRoutes.post("/registration-gate", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (typeof body?.open !== "boolean") return c.json({ error: "invalid_body" }, 400);
+  const before = await isRegistrationOpen(c.env);
+  await setRegistrationOverride(c.env.DB, body.open);
+  await logAdminAction(c.env.DB, {
+    adminUserId: c.var.userId,
+    adminEmail: c.var.user.email,
+    action: "registration_gate.set",
+    targetType: "setting",
+    targetId: "registration_open",
     details: { from: before, to: body.open },
   });
   return c.json({ open: body.open, source: "db" });

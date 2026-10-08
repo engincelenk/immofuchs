@@ -260,6 +260,8 @@ export interface Env {
   YEARLY_AUTO_MONTHLY?: string;
   // "false": Kauf nur fuer Admin-Konten (checkoutGate.ts). Fehlt die Variable, ist der Kauf offen.
   CHECKOUT_ENABLED?: string;
+  // "false": keine neuen Konten ueber die oeffentlichen Wege (registrationGate.ts). Fehlt die Variable, ist die Registrierung offen.
+  REGISTRATION_ENABLED?: string;
   // Empfaenger des oeffentlichen Kontaktformulars (Default info@immofuchs.info).
   CONTACT_EMAIL?: string;
   // Taeglicher D1<->Stripe-Abgleich (stripe/reconcile.ts): "log" (Default, nur

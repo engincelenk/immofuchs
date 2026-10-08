@@ -150,6 +150,15 @@ export function setCheckoutGate(open) {
   return post("/admin/checkout-gate", { open });
 }
 
+// Registrierungssperre (worker/src/registrationGate.ts)
+export function fetchRegistrationGate() {
+  return request("/admin/registration-gate");
+}
+
+export function setRegistrationGate(open) {
+  return post("/admin/registration-gate", { open });
+}
+
 export function fetchFeedback(page) {
   const params = new URLSearchParams();
   if (page) params.set("page", String(page));
