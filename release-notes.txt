@@ -1,3 +1,11 @@
+## 2026-10-08 (1.100.105) [WORKER]
+
+### qa wie prod: Kauf gesperrt und Jahresabo-Wechsel
+
+- worker/wrangler.toml, [env.qa.vars]: CHECKOUT_ENABLED = "false" und YEARLY_AUTO_MONTHLY = "true", wie auf prod. qa ist als Zwilling von prod gedacht.
+  Der Kaufschalter stand auf qa bereits in der Datenbank auf "gesperrt" (app_settings), jetzt auch in der Konfiguration.
+- Weiterhin offen fuer den Zwilling: Stripe-Live-Werte auf qa, Datenabzug von prod, Standby-Schalter.
+
 ## 2026-10-08 (1.100.104) [WORKER]
 
 ### Prod: Jahresabo wechselt nach dem ersten Jahr automatisch in den Monatsplan
