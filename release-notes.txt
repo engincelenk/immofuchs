@@ -1,3 +1,13 @@
+## 2026-10-08 (1.100.104) [FRONTEND]
+
+### Admin-Dashboard: neues Layout fuer Kennzahlen und Einstellungen
+
+- Kennzahlen: MRR steht als Hauptkachel in Orange ueber der vollen Breite, die uebrigen fuenf Kacheln darunter.
+- Einstellungen (Kauf freigeben, Registrierung oeffnen, Datenbank-Sicherung, E-Mail-Vorlagen testen) liegen jetzt als Zeilen in einer gemeinsamen Karte:
+  Text und Status links, Bedienelement rechts (vorher klebten die Buttons links, der Rest der Zeile blieb leer).
+- Kaufsperre und Registrierungssperre sind jetzt Schalter (role="switch"); die Rueckfrage "Ja, sperren / Ja, freigeben" bleibt, sie erscheint unter der Zeile.
+- Neue Datei AdminSettingRow.jsx (Karte, Zeile, Schalter, Rueckfrage-Box). Design-Tokens unveraendert.
+
 ## 2026-10-08 (1.100.103) [WORKER+FRONTEND]
 
 ### Taegliche verschluesselte Datenbank-Sicherung nach R2
