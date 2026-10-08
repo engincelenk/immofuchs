@@ -367,7 +367,7 @@ new_sqlite_classes = ["SessionRateLimiter"]
 # ═══ Failover: der qa-Worker uebernimmt die Rolle von prod (docs/betrieb/notfall-runbook.md, Abschnitt "Umschalten auf qa") ═══
 # Gleicher Worker wie qa (gleicher Name, damit dieselben Secrets gelten), aber:
 #  - Custom Domain api.immofuchs.info (zusaetzlich zu api-qa), STANDBY aus, Variablen wie prod,
-#  - prod-Datenbank und prod-Sicherungsspeicher, beide Cron-Trigger (Taegliches 06:00, Sicherung 06:30).
+#  - prod-Datenbank und prod-Sicherungsspeicher, ein Cron-Trigger (Taegliches 06:00; ein zweiter ginge ueber die Free-Plan-Grenze).
 # Einspielen: npx wrangler deploy --env failover   (vorher api.immofuchs.info beim prod-Worker freigeben, siehe Runbook).
 # Zurueck in den Standby: npx wrangler deploy --env qa
 [env.failover]
@@ -384,7 +384,11 @@ custom_domain = true
 zone_name = "immofuchs.info"
 
 [env.failover.triggers]
-crons = ["0 6 * * *", "30 6 * * *"]
+# Nur EIN Cron: Der Free-Plan erlaubt 5 Cron-Trigger je Konto, und mit dem Worker "gold-radar-wecker" (anderes Projekt)
+# sind dev (1) + prod (2) + qa (1) + dieser bereits 5. Ein zweiter Cron fuer den Failover-Worker scheiterte im
+# Probelauf vom 2026-10-08 (Worker und Domain wurden trotzdem eingespielt, aber Wrangler meldete einen Fehler).
+# Die Sicherung um 06:30 laeuft deshalb weiter vom prod-Worker bzw. von Hand (Admin-Dashboard "Jetzt sichern").
+crons = ["0 6 * * *"]
 
 [env.failover.observability]
 enabled = true
