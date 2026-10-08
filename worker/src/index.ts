@@ -75,7 +75,7 @@ app.route("/api/v1/public", publicContractRoutes);
 
 export default {
   fetch: app.fetch,
-  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(handleScheduled(env));
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(handleScheduled(env, controller.cron));
   },
 } satisfies ExportedHandler<Env>;

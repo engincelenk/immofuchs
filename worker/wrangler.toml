@@ -7,7 +7,10 @@ compatibility_flags = ["nodejs_compat"]
 # scheduled()-Handler filtert selbst auf die 7-Tage-Vorlauffrist, der Cron
 # muss also nicht exakt an einem bestimmten Tag treffen.
 [triggers]
-crons = ["0 6 * * *"]
+# 06:00 = taegliche Jobs (Abgleich, Erinnerungen); 06:30 = Datenbank-Sicherung (eigener Aufruf, damit sie sich
+# das Abfragebudget des Free-Plans nicht mit den uebrigen Jobs teilt). Muss zu BACKUP_CRON in src/scheduled.ts passen.
+# dev und qa haben bewusst nur den ersten Cron (siehe [env.*.triggers]); Free-Plan: max. 5 Cron-Trigger je Konto.
+crons = ["0 6 * * *", "30 6 * * *"]
 
 # Nicht-geheime Konfiguration. ASSISTANT_ENABLED ist der Kill-Switch aus
 # Konzept 2.8 - fuer "Umschalten ohne Redeploy" ueber das Cloudflare-Dashboard
@@ -23,6 +26,9 @@ CHECKOUT_ENABLED = "false"
 # (worker/src/registrationGate.ts). Bestehende Konten melden sich normal an.
 # Im Admin-Dashboard umschaltbar; der Schalter dort schlaegt diesen Wert.
 REGISTRATION_ENABLED = "false"
+# Oeffentlicher Schluessel fuer die verschluesselte Sicherung (RSA-4096). Der Worker kann damit NUR verschluesseln;
+# der private Schluessel liegt ausschliesslich beim Betreiber (docs/betrieb/backup-schluessel.txt + Offline-Kopie).
+BACKUP_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAkUFCQ2Gyp4nZ2D+vPaX+\nyro5XX7fGuH0/VmbCdt9oWrmeYe8qyBaZnMfk+rEOC920ZLTR1vOqDntMWnIMC6f\n5EFIY7TIL3yAia6sRby6pB2hhkihuHRBpFkP+cSYsmAyVjv1BVnKhxJTMZv1JWKZ\nwC74hrbs+6LEdHVRiy/65VDVGquV/oSjZouOwfXiRNppFcHXU16tjFVNDWfjnsWR\nTHMJkub1rQsMoBhKsRQO5b++18wxkvHRhiB/eDu/TLFP2uwkRr7xajkHpNZa6sSm\n7qk7qFxhZplPRBKVpm6KpAhIMMeQlkY1i+bke/+wrh1W7G0HniX2wez79jAC5RvE\nSdpDVfOuoNXZvRFymxxVPYuRK1IaqrmvYqq5dmTrZRVh4+xlu8kX34P8GjhfamiC\nbWweaBpYfc/h9sH/xk969Zp7kxnSBFdSH+GV3kx4GRsNtmSeBzW1galG2ERX63v0\nmXYWQfpGrqxoiOh+HEKluZLD2JWtK38Pe9Nt3iaCEpCisy8+IzfiK4XaOqfh18yV\nsEpx3eeWPDBSoAtgpQHtdiAl0A/NO+ERXMjKkJCQPtqxW+wQS2VPc7jr4YMsrlRo\nibsfzgRYy7rG7zjkJgpUK41CbQT05+QmHSWLQqL0ZwkDmKTmzJCkUD0FSx4+Hi2l\nOverDQ0pvpjdEEwek6ndM3kCAwEAAQ==\n-----END PUBLIC KEY-----\n"
 # Ziel fuer Magic-Link-/OAuth-Redirects und Absender der Auth-Mails (Prod). Ohne
 # APP_BASE_URL landet man nach dem Login auf der nackten Worker-Domain (siehe
 # Befund 2026-08-04 bei [env.dev.vars]). send.immofuchs.info ist bei Resend
@@ -106,6 +112,12 @@ FINN_FREE_GLOBAL_CUTOFF_RATIO = "0.7"
 pattern = "api.immofuchs.info"
 custom_domain = true
 zone_name = "immofuchs.info"
+
+# R2-Speicher fuer die verschluesselten Datenbank-Sicherungen (EU-Region), siehe src/backup/job.ts.
+[[r2_buckets]]
+binding = "BACKUPS"
+bucket_name = "immofuchs-backups-prod"
+jurisdiction = "eu"
 
 # Log-Aufzeichnung (Workers Observability, 2026-10-08): macht Fehler nachtraeglich im Dashboard sichtbar
 # (Anfragen, Antwortcodes, console.error des Workers). Hinweis Datenschutz: Anfrage-Adressen enthalten
@@ -211,6 +223,9 @@ MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
 # nicht existierende Postfaecher - siehe notifications.ts. Nur dev, kein Wert
 # in qa/prod (Top-Level-[vars]), damit sich dort nichts aendert.
 TEST_EMAIL_REDIRECT_TO = "useforai@web.de"
+# Oeffentlicher Schluessel fuer die verschluesselte Sicherung (RSA-4096). Der Worker kann damit NUR verschluesseln;
+# der private Schluessel liegt ausschliesslich beim Betreiber (docs/betrieb/backup-schluessel.txt + Offline-Kopie).
+BACKUP_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAkUFCQ2Gyp4nZ2D+vPaX+\nyro5XX7fGuH0/VmbCdt9oWrmeYe8qyBaZnMfk+rEOC920ZLTR1vOqDntMWnIMC6f\n5EFIY7TIL3yAia6sRby6pB2hhkihuHRBpFkP+cSYsmAyVjv1BVnKhxJTMZv1JWKZ\nwC74hrbs+6LEdHVRiy/65VDVGquV/oSjZouOwfXiRNppFcHXU16tjFVNDWfjnsWR\nTHMJkub1rQsMoBhKsRQO5b++18wxkvHRhiB/eDu/TLFP2uwkRr7xajkHpNZa6sSm\n7qk7qFxhZplPRBKVpm6KpAhIMMeQlkY1i+bke/+wrh1W7G0HniX2wez79jAC5RvE\nSdpDVfOuoNXZvRFymxxVPYuRK1IaqrmvYqq5dmTrZRVh4+xlu8kX34P8GjhfamiC\nbWweaBpYfc/h9sH/xk969Zp7kxnSBFdSH+GV3kx4GRsNtmSeBzW1galG2ERX63v0\nmXYWQfpGrqxoiOh+HEKluZLD2JWtK38Pe9Nt3iaCEpCisy8+IzfiK4XaOqfh18yV\nsEpx3eeWPDBSoAtgpQHtdiAl0A/NO+ERXMjKkJCQPtqxW+wQS2VPc7jr4YMsrlRo\nibsfzgRYy7rG7zjkJgpUK41CbQT05+QmHSWLQqL0ZwkDmKTmzJCkUD0FSx4+Hi2l\nOverDQ0pvpjdEEwek6ndM3kCAwEAAQ==\n-----END PUBLIC KEY-----\n"
 OBJECTS_SOFT_CAP = "500"
 FINN_PRO_DAILY_LIMIT = "50"
 FINN_FREE_MAX_TOKENS = "350"
@@ -239,6 +254,14 @@ EXPOSE_GLOBAL_DAILY_LIMIT = "150"
 # stattdessen Resend bzw. der Log-Fallback.
 # [[env.dev.send_email]]
 # name = "EMAIL"
+
+[env.dev.triggers]
+crons = ["0 6 * * *"]
+
+[[env.dev.r2_buckets]]
+binding = "BACKUPS"
+bucket_name = "immofuchs-backups-dev"
+jurisdiction = "eu"
 
 [env.dev.ai]
 binding = "AI"
@@ -279,6 +302,9 @@ ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:5174,https://qa.immofuc
 APP_BASE_URL = "https://qa.immofuchs.info"
 # qa ist der Zwilling von prod und wie prod gesperrt (siehe REGISTRATION_ENABLED oben).
 REGISTRATION_ENABLED = "false"
+# Oeffentlicher Schluessel fuer die verschluesselte Sicherung (RSA-4096). Der Worker kann damit NUR verschluesseln;
+# der private Schluessel liegt ausschliesslich beim Betreiber (docs/betrieb/backup-schluessel.txt + Offline-Kopie).
+BACKUP_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAkUFCQ2Gyp4nZ2D+vPaX+\nyro5XX7fGuH0/VmbCdt9oWrmeYe8qyBaZnMfk+rEOC920ZLTR1vOqDntMWnIMC6f\n5EFIY7TIL3yAia6sRby6pB2hhkihuHRBpFkP+cSYsmAyVjv1BVnKhxJTMZv1JWKZ\nwC74hrbs+6LEdHVRiy/65VDVGquV/oSjZouOwfXiRNppFcHXU16tjFVNDWfjnsWR\nTHMJkub1rQsMoBhKsRQO5b++18wxkvHRhiB/eDu/TLFP2uwkRr7xajkHpNZa6sSm\n7qk7qFxhZplPRBKVpm6KpAhIMMeQlkY1i+bke/+wrh1W7G0HniX2wez79jAC5RvE\nSdpDVfOuoNXZvRFymxxVPYuRK1IaqrmvYqq5dmTrZRVh4+xlu8kX34P8GjhfamiC\nbWweaBpYfc/h9sH/xk969Zp7kxnSBFdSH+GV3kx4GRsNtmSeBzW1galG2ERX63v0\nmXYWQfpGrqxoiOh+HEKluZLD2JWtK38Pe9Nt3iaCEpCisy8+IzfiK4XaOqfh18yV\nsEpx3eeWPDBSoAtgpQHtdiAl0A/NO+ERXMjKkJCQPtqxW+wQS2VPc7jr4YMsrlRo\nibsfzgRYy7rG7zjkJgpUK41CbQT05+QmHSWLQqL0ZwkDmKTmzJCkUD0FSx4+Hi2l\nOverDQ0pvpjdEEwek6ndM3kCAwEAAQ==\n-----END PUBLIC KEY-----\n"
 MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
 OBJECTS_SOFT_CAP = "500"
 FINN_PRO_DAILY_LIMIT = "50"
@@ -292,6 +318,14 @@ EXPOSE_EXTRACT_ENABLED = "true"
 EXPOSE_DAILY_LIMIT = "8"
 EXPOSE_IP_DAILY_LIMIT = "20"
 EXPOSE_GLOBAL_DAILY_LIMIT = "150"
+
+[env.qa.triggers]
+crons = ["0 6 * * *"]
+
+[[env.qa.r2_buckets]]
+binding = "BACKUPS"
+bucket_name = "immofuchs-backups-qa"
+jurisdiction = "eu"
 
 [env.qa.observability]
 enabled = true
