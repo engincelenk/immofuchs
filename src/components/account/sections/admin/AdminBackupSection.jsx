@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchBackupStatus, runBackupNow } from "./adminApi.js";
 import { useAdminToast } from "./AdminToast.jsx";
-import { errorText, mutedTextStyle, secondaryBtnStyle } from "./adminUiStyles.js";
+import { AdminSettingRow } from "./AdminSettingRow.jsx";
+import { errorText, secondaryBtnStyle } from "./adminUiStyles.js";
 
 // Zeigt die letzte Datenbank-Sicherung (worker/src/backup/job.ts) und erlaubt, eine anzustossen.
 // Die Sicherung ist verschluesselt; zum Wiederherstellen wird der private Schluessel gebraucht
 // (docs/betrieb/backup-schluessel.txt, Werkzeug scripts/backup_entschluesseln.mjs).
 const STALE_AFTER_MS = 36 * 60 * 60 * 1000; // taeglicher Lauf + Puffer
 
-const formatSize = (bytes) => (bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} kB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
+const formatSize = (bytes) =>
+  bytes < 1024 * 1024
+    ? `${(bytes / 1024).toFixed(1)} kB`
+    : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const formatTime = (iso) => new Date(iso).toLocaleString("de-DE");
 
 export function AdminBackupSection() {
@@ -51,7 +55,9 @@ export function AdminBackupSection() {
   let headline;
   let color = "var(--ch)";
   if (!state.configured) {
-    headline = state.loadFailed ? "Status konnte nicht geladen werden." : "nicht eingerichtet (auf dieser Umgebung läuft keine Sicherung)";
+    headline = state.loadFailed
+      ? "Status konnte nicht geladen werden."
+      : "nicht eingerichtet (auf dieser Umgebung läuft keine Sicherung)";
   } else if (!status) {
     headline = "noch keine Sicherung vorhanden";
     color = "#c0392b";
@@ -64,20 +70,24 @@ export function AdminBackupSection() {
   }
 
   return (
-    <section style={{ marginTop: 24 }}>
-      <h3 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 4px" }}>Datenbank-Sicherung</h3>
-      <p style={{ ...mutedTextStyle, marginTop: 0, marginBottom: 12 }}>
-        <strong style={{ color }}>{headline}</strong>
-        {state.configured && lastSuccess && !status?.ok && ` – letzter Erfolg: ${formatTime(lastSuccess)}`}
-        {state.configured && stale && status?.ok && " – älter als 36 Stunden, bitte prüfen."}
-        <br />
-        Täglich automatisch, verschlüsselt in R2 (EU). Wiederherstellen: Notfall-Runbook.
-      </p>
-      {state.configured && (
-        <button type="button" style={secondaryBtnStyle} disabled={busy} onClick={handleRun}>
-          {busy ? "Sichert …" : "💾 Jetzt sichern"}
-        </button>
-      )}
-    </section>
+    <AdminSettingRow
+      title="Datenbank-Sicherung"
+      control={
+        state.configured && (
+          <button type="button" style={secondaryBtnStyle} disabled={busy} onClick={handleRun}>
+            {busy ? "Sichert …" : "💾 Jetzt sichern"}
+          </button>
+        )
+      }
+    >
+      <strong style={{ color }}>{headline}</strong>
+      {state.configured &&
+        lastSuccess &&
+        !status?.ok &&
+        ` – letzter Erfolg: ${formatTime(lastSuccess)}`}
+      {state.configured && stale && status?.ok && " – älter als 36 Stunden, bitte prüfen."}
+      <br />
+      Täglich automatisch, verschlüsselt in R2 (EU). Wiederherstellen: Notfall-Runbook.
+    </AdminSettingRow>
   );
 }
