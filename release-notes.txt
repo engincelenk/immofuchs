@@ -1,3 +1,11 @@
+## 2026-10-08 (1.100.102) [WORKER]
+
+### Observability fuer prod und qa
+
+- worker/wrangler.toml: Workers Observability (Log-Aufzeichnung, alle Anfragen) jetzt auch fuer prod (Top-Level) und qa, wie bisher auf dev.
+  Fehler (Stripe-Webhook, Apple/Google-Login, KI-Aufrufe, Abgleich) sind damit nachtraeglich im Cloudflare-Dashboard sichtbar.
+- Datenschutz-Hinweis: Anfrage-Adressen enthalten bei E-Mail-Bestaetigung und Passwort-Reset einmalig gueltige Tokens; die Aufbewahrung ist kurz und tarifabhaengig.
+
 ## 2026-10-08 (1.100.101) [FRONTEND+WORKER]
 
 ### Registrierungssperre fuer prod und qa
