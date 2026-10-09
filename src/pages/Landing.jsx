@@ -365,6 +365,8 @@ function MarktdatenSection({ l, lang }) {
   );
 }
 
+let loginFehlerSchonGezeigt = false;
+
 export function Landing({ onStart, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
@@ -482,6 +484,24 @@ export function Landing({ onStart, lang, setLang }) {
   // Login oeffnen: derselbe Dialog, den auch der "Anmelden"-Knopf zeigt, und
   // nach erfolgreicher Anmeldung landet man bei seinen Objekten (openMode
   // "login" ruft onStart("saved") beim Schliessen).
+  // Rueckkehr aus einem gescheiterten Login (Google/Apple/Magic-Link, z.B.
+  // Registrierung gesperrt): Login-Dialog oeffnen, dort steht die Fehlermeldung
+  // (AccountStep.jsx liest account.error). Ohne das sah man gar nichts.
+  // Nur einmal pro Seitenaufruf: account.error wird nie geleert, ein spaeteres Abmelden
+  // (Landing mountet neu) soll den Dialog nicht erneut aufpoppen lassen.
+  const loginFehler = account?.error;
+  useEffect(() => {
+    if (
+      !loginFehlerSchonGezeigt &&
+      typeof loginFehler === "string" &&
+      loginFehler.startsWith("login_error_") &&
+      loginFehler !== "login_error_delete_reauth_failed" &&
+      !account?.isLoggedIn
+    ) {
+      loginFehlerSchonGezeigt = true;
+      setOpenMode("login");
+    }
+  }, [loginFehler, account?.isLoggedIn]);
   const starteRechner = (tab, opts) => {
     if (!account?.isLoggedIn) {
       setOpenMode("login");
