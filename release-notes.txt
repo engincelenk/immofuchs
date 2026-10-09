@@ -1,3 +1,11 @@
+## 2026-10-08 (1.100.109) [WORKER]
+
+### Cron-Platz fuer den Failover: dev ohne Cron, Failover-Worker mit beiden Crons
+
+- worker/wrangler.toml: [env.dev.triggers] crons = [] (dev hat nur Testkonten, braucht weder Stripe-Abgleich noch Erinnerungs-Mails).
+- [env.failover.triggers] wieder mit beiden Crons (Wartung 06:00, Sicherung 06:30). Konto-Grenze im Free-Plan: 5 Cron-Trigger;
+  prod 2 + qa/failover 2 + gold-radar-wecker (anderes Projekt) 1 = 5. Damit laeuft die automatische Sicherung auch nach einem Failover weiter.
+
 ## 2026-10-08 (1.100.108) [WORKER]
 
 ### Failover-Probelauf bestanden, Konfiguration angepasst
