@@ -112,3 +112,26 @@ describe("Jahresplan wechselt nach dem ersten Jahr in den Monatsplan", () => {
     expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_1", { cancel_at_period_end: true });
   });
 });
+
+describe("Rechnungsangaben am Kunden (Kleinunternehmer)", () => {
+  const adresse = {
+    firstName: "Max", lastName: "Muster", street: "Weg", houseNumber: "1",
+    zip: "66799", city: "Ueberherrn", country: "DE",
+  };
+
+  it("setzt Fussnote und deutsche Sprache, ohne Steuernummer kein Zusatzfeld", async () => {
+    await createSubscriptionCheckout(env, "user_1", "a@b.de", "monthly", null, adresse);
+    const arg = customersCreate.mock.calls[0][0];
+    expect(arg.preferred_locales).toEqual(["de"]);
+    expect(arg.invoice_settings.footer).toContain("§ 19 UStG");
+    expect(arg.invoice_settings.custom_fields).toBeUndefined();
+  });
+
+  it("traegt die Steuernummer als Zusatzfeld ein", async () => {
+    const mitNummer = { ...env, INVOICE_TAX_NUMBER: " 12/345/67890 " } as unknown as Env;
+    await createSubscriptionCheckout(mitNummer, "user_1", "a@b.de", "monthly", null, adresse);
+    expect(customersCreate.mock.calls[0][0].invoice_settings.custom_fields).toEqual([
+      { name: "Steuernummer", value: "12/345/67890" },
+    ]);
+  });
+});

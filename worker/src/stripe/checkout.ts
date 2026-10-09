@@ -81,6 +81,25 @@ async function syncTaxId(env: Env, customerId: string, address: BillingAddress):
   }
 }
 
+// Rechnungs-Pflichtangaben fuer Kleinunternehmer (§ 14 Abs. 4, § 19 UStG): Hinweis auf die
+// Steuerbefreiung als Fusszeile und die Steuernummer als Zusatzfeld. Beides setzen wir am
+// Kunden, damit es unabhaengig von den Dashboard-Einstellungen auf jeder Rechnung steht.
+// Die Steuernummer kommt aus INVOICE_TAX_NUMBER (wrangler.toml); solange sie leer ist (Platzhalter),
+// erscheint kein Feld - lieber keine Angabe als eine falsche. Sprache Deutsch, weil es eine
+// deutsche Rechnung ist.
+export const INVOICE_FOOTER = "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.";
+
+export function invoiceFieldsFor(env: Env) {
+  const taxNumber = env.INVOICE_TAX_NUMBER?.trim();
+  return {
+    preferred_locales: ["de"],
+    invoice_settings: {
+      footer: INVOICE_FOOTER,
+      ...(taxNumber ? { custom_fields: [{ name: "Steuernummer", value: taxNumber }] } : {}),
+    },
+  };
+}
+
 // Erzeugt (bzw. findet) den Stripe-Kunden fuer diesen Nutzer. user_id landet
 // in customer.metadata, damit der Webhook die Zahlung dem richtigen Konto
 // zuordnen kann. Die Rechnungsadresse (AddressStep.jsx) landet direkt auf dem
@@ -119,7 +138,7 @@ async function findOrCreateCustomer(
     : {};
   if (match) {
     if (address) {
-      await stripe.customers.update(match.id, addressFields);
+      await stripe.customers.update(match.id, { ...invoiceFieldsFor(env), ...addressFields });
       await syncTaxId(env, match.id, address);
     }
     return match.id;
@@ -127,6 +146,7 @@ async function findOrCreateCustomer(
   const customer = await stripe.customers.create({
     email,
     metadata: { user_id: userId },
+    ...invoiceFieldsFor(env),
     ...addressFields,
   });
   if (address) await syncTaxId(env, customer.id, address);

@@ -92,7 +92,10 @@ billingRoutes.post("/checkout", requireAuth, requireCsrfOrigin, async (c) => {
     (["firstName", "lastName", "street", "houseNumber", "zip", "city"] as const).every(
       (key) => candidate[key].length > 0,
     );
-  const address = addressComplete ? candidate : null;
+  // Ohne vollstaendige Adresse gaebe es eine unvollstaendige Rechnung (§ 14 UStG); das Formular
+  // erzwingt die Felder bereits, der Server prueft es zusaetzlich.
+  if (!addressComplete) return c.json({ error: "address_required" }, 400);
+  const address = candidate;
 
   try {
     const { clientSecret } = await createSubscriptionCheckout(
