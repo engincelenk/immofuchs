@@ -1,3 +1,12 @@
+## 2026-10-09 (1.100.110) [WORKER]
+
+### Rechnung fuer Kleinunternehmer: Fussnote, Steuernummer-Platzhalter, Adresse Pflicht
+
+- worker/src/stripe/checkout.ts: Der Stripe-Kunde bekommt beim Kauf die Rechnungs-Fussnote "Gemaess § 19 UStG wird keine Umsatzsteuer berechnet.", die Sprache Deutsch und - wenn gesetzt - die Steuernummer als Zusatzfeld.
+- worker/wrangler.toml: neue Variable INVOICE_TAX_NUMBER (prod und Failover), als leerer Platzhalter. Steuernummer vom Finanzamt eintragen; solange leer, erscheint kein Feld.
+- worker/src/routes/billing.ts: Kauf ohne vollstaendige Rechnungsadresse wird mit 400 address_required abgelehnt (das Formular erzwingt sie schon).
+- Tests ergaenzt (checkout.test.ts). Anleitung: docs/betrieb/rechnung-anleitung.md.
+
 ## 2026-10-08 (1.100.109) [WORKER]
 
 ### Cron-Platz fuer den Failover: dev ohne Cron, Failover-Worker mit beiden Crons
