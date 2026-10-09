@@ -195,7 +195,9 @@ export function useAccount() {
       noteProStatus(true, json?.zugang === "pro");
     } catch (e) {
       console.error("[account] refresh fehlgeschlagen:", e);
-      setError("refresh_failed");
+      // Eine Login-Fehlermeldung aus dem Redirect (z.B. registration_closed) nicht
+      // ueberschreiben: sie soll dem Nutzer noch angezeigt werden (Landing.jsx).
+      setError((prev) => (typeof prev === "string" && prev.startsWith("login_error_") ? prev : "refresh_failed"));
       setMe(null);
       broadcastIsPro(false);
       noteProStatus(false, false);

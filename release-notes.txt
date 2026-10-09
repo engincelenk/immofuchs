@@ -1,3 +1,12 @@
+## 2026-10-09 (1.100.111) [FRONTEND]
+
+### Gescheiterter Login: kein Aufblitzen der App mehr, Hinweis statt Landingpage ohne Erklaerung
+
+- Ausloeser (prod): Google-Login mit einer Adresse ohne Konto bei gesperrter Registrierung zeigte kurz die leere Objektansicht, dann die Landingpage - ohne Meldung.
+- src/App.jsx: Rueckkehr mit login_error (ausser delete_reauth_failed) zaehlt nicht mehr als "eingeloggt zurueck"; die App bleibt auf der Landingpage.
+- src/pages/Landing.jsx: oeffnet in dem Fall einmal den Login-Dialog mit der Fehlermeldung (z.B. "Die Registrierung ist noch nicht geoeffnet ...").
+- src/hooks/useAccount.js: refresh_failed ueberschreibt eine Login-Fehlermeldung nicht mehr.
+
 ## 2026-10-09 (1.100.110) [WORKER]
 
 ### Rechnung fuer Kleinunternehmer: Fussnote, Steuernummer-Platzhalter, Adresse Pflicht

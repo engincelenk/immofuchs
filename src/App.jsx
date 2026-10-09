@@ -347,11 +347,20 @@ const ROOT_TOKENS_CSS =
 // an dem die Bestaetigung gerendert wird: der Zustand war gesetzt, es gab nur
 // niemanden, der ihn anzeigt. Wer gerade bezahlt hat, ist ohnehin Kunde und
 // gehoert in den App-Shell, nicht auf die Werbeseite.
+//
+// Ausnahme `login_error`: ein gescheiterter Login (z.B. Registrierung gesperrt,
+// fremdes Google-Konto) hat keine Sitzung ergeben. Bisher zeigte die App dafuer
+// kurz den App-Shell und warf den Nutzer dann auf die Landingpage zurueck - ein
+// sichtbares Aufblitzen ohne Erklaerung. Jetzt bleibt er direkt auf der
+// Landingpage, die den Login-Dialog mit der Fehlermeldung oeffnet (Landing.jsx).
+// `delete_reauth_failed` ist ein Sonderfall: der Nutzer ist angemeldet und gehoert
+// in den App-Shell.
 function hasAuthRedirectParam() {
   const params = new URLSearchParams(window.location.search);
+  const loginError = params.get("login_error");
+  if (loginError && loginError === "delete_reauth_failed") return true;
   return [
     "login_success",
-    "login_error",
     "account_deleted",
     "email_change_success",
     "email_change_error",
