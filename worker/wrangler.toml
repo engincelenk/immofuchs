@@ -22,6 +22,9 @@ ASSISTANT_ENABLED = "true"
 # Zum Freischalten im Cloudflare-Dashboard auf "true" setzen bzw. entfernen.
 # Gilt nur hier (Prod); dev/qa haben eigene [vars] und bleiben offen.
 CHECKOUT_ENABLED = "false"
+# Steuernummer fuer die Rechnung (Kleinunternehmer, § 14 UStG). PLATZHALTER: hier die Steuernummer vom Finanzamt eintragen,
+# z. B. "12/345/67890". Solange leer, steht kein Feld auf der Rechnung (worker/src/stripe/checkout.ts, invoiceFieldsFor).
+INVOICE_TAX_NUMBER = ""
 # Jahresabo -> nach dem ersten Jahr automatisch Monatsplan (AGB Ziffer 6, § 309 Nr. 9 BGB: keine stillschweigende
 # Verlaengerung um ein weiteres Jahr bei Verbrauchern). Umsetzung ueber eine Stripe Subscription Schedule
 # (worker/src/stripe/checkout.ts, ensureYearlyToMonthlySchedule). Auf prod seit 2026-10-08 an (Entscheidung des Inhabers).
@@ -401,6 +404,9 @@ ASSISTANT_ENABLED = "true"
 # Zum Freischalten im Cloudflare-Dashboard auf "true" setzen bzw. entfernen.
 # Gilt nur hier (Prod); dev/qa haben eigene [vars] und bleiben offen.
 CHECKOUT_ENABLED = "false"
+# Steuernummer fuer die Rechnung (Kleinunternehmer, § 14 UStG). PLATZHALTER: hier die Steuernummer vom Finanzamt eintragen,
+# z. B. "12/345/67890". Solange leer, steht kein Feld auf der Rechnung (worker/src/stripe/checkout.ts, invoiceFieldsFor).
+INVOICE_TAX_NUMBER = ""
 # Jahresabo -> nach dem ersten Jahr automatisch Monatsplan (AGB Ziffer 6, § 309 Nr. 9 BGB: keine stillschweigende
 # Verlaengerung um ein weiteres Jahr bei Verbrauchern). Umsetzung ueber eine Stripe Subscription Schedule
 # (worker/src/stripe/checkout.ts, ensureYearlyToMonthlySchedule). Auf prod seit 2026-10-08 an (Entscheidung des Inhabers).
