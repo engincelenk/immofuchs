@@ -25,9 +25,9 @@ CHECKOUT_ENABLED = "false"
 # Steuernummer fuer die Rechnung (Kleinunternehmer, § 14 UStG). PLATZHALTER: hier die Steuernummer vom Finanzamt eintragen,
 # z. B. "12/345/67890". Solange leer, steht kein Feld auf der Rechnung (worker/src/stripe/checkout.ts, invoiceFieldsFor).
 INVOICE_TAX_NUMBER = ""
-# Admin-Zweitfaktor per E-Mail-Code (worker/src/auth/adminMfa.ts). Erst auf "true" stellen, wenn auf dev getestet und das
-# E-Mail-Postfach des Admins mit Zwei-Faktor geschuetzt ist. Zurueck auf "false" hebt die Pflicht sofort auf (Notausgang).
-ADMIN_MFA_REQUIRED = "false"
+# Admin-Zweitfaktor per E-Mail-Code (worker/src/auth/adminMfa.ts). Seit 2026-10-10 an (auf dev getestet; das
+# E-Mail-Postfach des Admins sollte Zwei-Faktor haben, der Schutz ist so stark wie das Postfach). Zurueck auf "false" hebt die Pflicht sofort auf (Notausgang).
+ADMIN_MFA_REQUIRED = "true"
 # Jahresabo -> nach dem ersten Jahr automatisch Monatsplan (AGB Ziffer 6, § 309 Nr. 9 BGB: keine stillschweigende
 # Verlaengerung um ein weiteres Jahr bei Verbrauchern). Umsetzung ueber eine Stripe Subscription Schedule
 # (worker/src/stripe/checkout.ts, ensureYearlyToMonthlySchedule). Auf prod seit 2026-10-08 an (Entscheidung des Inhabers).
@@ -412,9 +412,9 @@ CHECKOUT_ENABLED = "false"
 # Steuernummer fuer die Rechnung (Kleinunternehmer, § 14 UStG). PLATZHALTER: hier die Steuernummer vom Finanzamt eintragen,
 # z. B. "12/345/67890". Solange leer, steht kein Feld auf der Rechnung (worker/src/stripe/checkout.ts, invoiceFieldsFor).
 INVOICE_TAX_NUMBER = ""
-# Admin-Zweitfaktor per E-Mail-Code (worker/src/auth/adminMfa.ts). Erst auf "true" stellen, wenn auf dev getestet und das
-# E-Mail-Postfach des Admins mit Zwei-Faktor geschuetzt ist. Zurueck auf "false" hebt die Pflicht sofort auf (Notausgang).
-ADMIN_MFA_REQUIRED = "false"
+# Admin-Zweitfaktor per E-Mail-Code (worker/src/auth/adminMfa.ts). Seit 2026-10-10 an (auf dev getestet; das
+# E-Mail-Postfach des Admins sollte Zwei-Faktor haben, der Schutz ist so stark wie das Postfach). Zurueck auf "false" hebt die Pflicht sofort auf (Notausgang).
+ADMIN_MFA_REQUIRED = "true"
 # Jahresabo -> nach dem ersten Jahr automatisch Monatsplan (AGB Ziffer 6, § 309 Nr. 9 BGB: keine stillschweigende
 # Verlaengerung um ein weiteres Jahr bei Verbrauchern). Umsetzung ueber eine Stripe Subscription Schedule
 # (worker/src/stripe/checkout.ts, ensureYearlyToMonthlySchedule). Auf prod seit 2026-10-08 an (Entscheidung des Inhabers).
