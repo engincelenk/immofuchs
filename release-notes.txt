@@ -1,3 +1,9 @@
+## 2026-10-10 (1.100.117) [WORKER]
+
+### Admin-Zweitfaktor (E-Mail-Code) auf prod und im Failover eingeschaltet
+
+- worker/wrangler.toml: ADMIN_MFA_REQUIRED = "true" auf prod und Failover (dev war schon an; qa bleibt aus, Standby sendet keine Mails). Notausgang: Schalter auf "false" und neu deployen.
+
 ## 2026-10-10 (1.100.116) [WORKER] [FRONTEND]
 
 ### Sitzungsdauer: Leerlauf und Gesamtdauer je Rolle, E-Mail-Wechsel mit Passwort
