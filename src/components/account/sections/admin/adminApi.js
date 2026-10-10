@@ -150,6 +150,15 @@ export function setCheckoutGate(open) {
   return post("/admin/checkout-gate", { open });
 }
 
+// Admin-Zweitfaktor per E-Mail-Code (worker/src/auth/adminMfa.ts); "open" = Pflicht ist an
+export function fetchAdminMfaGate() {
+  return request("/admin/admin-mfa-gate");
+}
+
+export function setAdminMfaGate(open) {
+  return post("/admin/admin-mfa-gate", { open });
+}
+
 // Registrierungssperre (worker/src/registrationGate.ts)
 export function fetchRegistrationGate() {
   return request("/admin/registration-gate");

@@ -65,7 +65,7 @@ export function requirePermission(permission: Permission) {
   return createMiddleware<{ Bindings: Env; Variables: AuthVars }>(async (c, next) => {
     if (!hasPermission(c.var.user, permission)) return c.json({ error: "forbidden" }, 403);
     // Admin-Zweitfaktor: ohne bestaetigte Sitzung keine Admin-Rechte (nur bei ADMIN_MFA_REQUIRED=true).
-    if (adminMfaRequired(c.env, c.var.user) && !c.var.mfaVerified) return c.json({ error: "mfa_required" }, 403);
+    if (!c.var.mfaVerified && (await adminMfaRequired(c.env, c.var.user))) return c.json({ error: "mfa_required" }, 403);
     await next();
   });
 }
