@@ -30,6 +30,14 @@ async function postJson(path, body) {
   return { ok: res.ok, status: res.status, error: json.error };
 }
 
+// Zeigt waehrend der offenen Bestaetigung NUR den Dialog; die App wird gar nicht erst gerendert,
+// damit weder ihre Oberflaeche noch ihre Datenabrufe im Hintergrund laufen.
+export function MfaGuard({ children }) {
+  const account = useAccountCtx();
+  if (account?.mfaRequired) return <AdminMfaGate />;
+  return children;
+}
+
 export function AdminMfaGate() {
   const account = useAccountCtx();
   const t = ACCOUNT_T[currentLang()] || ACCOUNT_T.de;
@@ -87,7 +95,8 @@ export function AdminMfaGate() {
         position: "fixed",
         inset: 0,
         zIndex: 3000,
-        background: "rgba(0,0,0,.55)",
+        // Vollflaechig und deckend: dahinter darf nichts von der eingeloggten Seite zu sehen sein.
+        background: "var(--bg)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

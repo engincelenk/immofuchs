@@ -4,7 +4,7 @@
 
 - worker/migrations/0037_admin_mfa.sql: Spalte sessions.mfa_verified_at und Tabelle admin_mfa_codes (Code nur als Hash, 10 Minuten gueltig, max. 5 Versuche, Neuanforderung hoechstens einmal pro Minute). Rueckwaertskompatibel.
 - worker/src/auth/adminMfa.ts, routes/account.ts, middleware.ts: Ist ADMIN_MFA_REQUIRED = "true", antworten alle Admin-Routen fuer eine unbestaetigte Admin-Sitzung mit 403 mfa_required; POST /account/mfa/request und /account/mfa/verify; /me liefert mfaRequired. Normale Nutzer sind nicht betroffen.
-- Frontend: AdminMfaGate.jsx (Dialog ueber der App, Code wird automatisch gesendet), Texte in allen 5 Sprachen.
+- Frontend: AdminMfaGate.jsx (Code wird automatisch gesendet), Texte in allen 5 Sprachen. Waehrend der offenen Bestaetigung wird NUR der Dialog auf deckendem Hintergrund gezeigt, die App dahinter wird gar nicht gerendert (MfaGuard in main.jsx).
 - worker/wrangler.toml: ADMIN_MFA_REQUIRED = "true" auf dev, "false" auf prod und Failover (Notausgang: Schalter zurueck auf "false"). qa bleibt ohne Schalter, da Standby keine Mails sendet.
 - Tests: worker/src/auth/adminMfa.test.ts.
 
