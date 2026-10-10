@@ -110,7 +110,10 @@ export async function isPasswordLeaked(password: string): Promise<boolean> {
       .toUpperCase();
     const prefix = hex.slice(0, 5);
     const suffix = hex.slice(5);
-    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+      // Kein haengender Drittdienst: nach 3 s zaehlt das Passwort als nicht geprueft (best effort).
+      signal: AbortSignal.timeout(3000),
+    });
     if (!res.ok) return false;
     const body = await res.text();
     return body.split("\n").some((line) => {

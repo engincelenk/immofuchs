@@ -3,6 +3,7 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
+import { adminMfaRequired, requestAdminMfaCode, verifyAdminMfaCode } from "../auth/adminMfa";
 import { ermittleZugang } from "../entitlement";
 import { RECHNER_VALUES } from "../validator";
 import {
@@ -21,7 +22,7 @@ import {
   startAppTrialIfNew,
   insertFeedback,
 } from "../db";
-import { hashPassword, isValidPasswordLength, verifyPassword } from "../auth/password";
+import { hashPassword, isPasswordLeaked, isValidPasswordLength, verifyPassword } from "../auth/password";
 import { sendEmail } from "../email";
 import { dispatchNotification } from "../notifications";
 import { deleteAccountCompletely } from "../accountDeletion";
@@ -57,6 +58,8 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     email: c.var.user.email,
     name: c.var.user.name,
     role: c.var.user.role,
+    // Admin-Zweitfaktor (auth/adminMfa.ts): true = Admin-Sitzung wartet auf den E-Mail-Code.
+    mfaRequired: adminMfaRequired(c.env, c.var.user) && !c.var.mfaVerified,
     // Kaufsperre (checkoutGate.ts): Admins und Testuser duerfen immer kaufen.
     checkoutOpen: await isCheckoutOpenFor(c.env, c.var.user),
     emailVerified: Boolean(c.var.user.email_verified_at),
@@ -225,6 +228,30 @@ accountRoutes.post("/account/name", requireAuth, requireCsrfOrigin, async (c) =>
 //    bereits authentifiziert. Das ist NICHT dasselbe wie die unbeaufsichtigte
 //    "Stattdessen Passwort setzen"-Verknuepfung per E-Mail (passwordAuth.ts),
 //    die es ohne Session gibt und deshalb Double-Opt-In braucht.
+// Admin-Zweitfaktor (auth/adminMfa.ts): Code per E-Mail anfordern und bestaetigen. Nur fuer Admin-Konten
+// bei ADMIN_MFA_REQUIRED=true; fuer alle anderen 400, damit die Routen nichts verraten oder missbrauchbar sind.
+accountRoutes.post("/account/mfa/request", requireAuth, requireCsrfOrigin, async (c) => {
+  if (!adminMfaRequired(c.env, c.var.user)) return c.json({ error: "mfa_not_required" }, 400);
+  if (c.var.mfaVerified) return c.json({ ok: true, alreadyVerified: true });
+  try {
+    const result = await requestAdminMfaCode(c.env, c.var.sessionId, c.var.user);
+    if (!result.ok) return c.json({ error: result.error }, 429);
+  } catch (err) {
+    console.error("admin_mfa_send_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "mfa_send_failed" }, 502);
+  }
+  return c.json({ ok: true });
+});
+
+accountRoutes.post("/account/mfa/verify", requireAuth, requireCsrfOrigin, async (c) => {
+  if (!adminMfaRequired(c.env, c.var.user)) return c.json({ error: "mfa_not_required" }, 400);
+  const body = await c.req.json().catch(() => null);
+  const code = body && typeof body.code === "string" ? body.code : "";
+  const result = await verifyAdminMfaCode(c.env, c.var.sessionId, code);
+  if (!result.ok) return c.json({ error: result.error }, result.error === "too_many_attempts" ? 429 : 400);
+  return c.json({ ok: true });
+});
+
 accountRoutes.post("/account/password", requireAuth, requireCsrfOrigin, async (c) => {
   const body = await c.req.json().catch(() => null);
   const currentPassword = body && typeof body.currentPassword === "string" ? body.currentPassword : null;
@@ -233,6 +260,7 @@ accountRoutes.post("/account/password", requireAuth, requireCsrfOrigin, async (c
   // Gleiche Laengen-Regel wie Registrierung und Reset (auth/password.ts,
   // BSI-/NIST-Linie: min. 10 Zeichen, keine Zeichenklassen-Pflicht).
   if (!isValidPasswordLength(newPassword)) return c.json({ error: "invalid_password" }, 400);
+  if (await isPasswordLeaked(newPassword)) return c.json({ error: "password_leaked" }, 400);
 
   const existingHash = c.var.user.password_hash;
   if (existingHash) {

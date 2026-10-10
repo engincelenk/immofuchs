@@ -260,6 +260,8 @@ export interface Env {
   YEARLY_AUTO_MONTHLY?: string;
   // "false": Kauf nur fuer Admin-Konten (checkoutGate.ts). Fehlt die Variable, ist der Kauf offen.
   CHECKOUT_ENABLED?: string;
+  /** "true": Admin-Rechte nur nach E-Mail-Code (auth/adminMfa.ts). */
+  ADMIN_MFA_REQUIRED?: string;
   /** Steuernummer fuer die Rechnung (Kleinunternehmer); leer = kein Feld. Siehe stripe/checkout.ts. */
   INVOICE_TAX_NUMBER?: string;
   // "false": keine neuen Konten ueber die oeffentlichen Wege (registrationGate.ts). Fehlt die Variable, ist die Registrierung offen.

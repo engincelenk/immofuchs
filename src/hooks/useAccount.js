@@ -706,6 +706,8 @@ export function useAccount() {
     isLoggedIn: Boolean(me),
     // Eingeloggt gilt die Antwort von /me (Admins duerfen immer kaufen), sonst der oeffentliche Status.
     checkoutOpen: me ? Boolean(me.checkoutOpen) : publicCheckoutOpen,
+    // Admin-Zweitfaktor: die Sitzung wartet auf den E-Mail-Code (AdminMfaGate.jsx).
+    mfaRequired: Boolean(me?.mfaRequired),
     registrationOpen,
     isPro: Boolean(me?.isPro),
     // Zugangsstufe und Testphase (Preispolitik 2026-08-20). `zugang` ist

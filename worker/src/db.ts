@@ -58,6 +58,8 @@ export interface SessionRow {
   expires_at: number;
   user_agent: string | null;
   last_seen_at: number | null;
+  /** Admin-Zweitfaktor (Migration 0037); undefiniert, solange die Migration fehlt. */
+  mfa_verified_at?: number | null;
 }
 
 export interface SubscriptionRow {

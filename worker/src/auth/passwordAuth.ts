@@ -78,6 +78,7 @@ export type RegisterResult =
       error:
         | "invalid_email"
         | "invalid_password"
+        | "password_leaked"
         | "invalid_name"
         | "rate_limited"
         | "bot_check_failed"
@@ -137,8 +138,9 @@ export async function registerWithPassword(
   if (!(await isRegistrationOpen(env))) return { ok: false, error: "registration_closed" };
 
   // HIBP-Check ist best-effort (4.4) - ein Ausfall des Drittdiensts blockiert
-  // die Registrierung nicht, s. isPasswordLeaked.
-  const leaked = await isPasswordLeaked(password);
+  // die Registrierung nicht, s. isPasswordLeaked. Ein bekannt geleaktes Passwort
+  // wird seit 2026-10-09 abgelehnt (NIST SP 800-63B), nicht mehr nur per Mail gewarnt.
+  if (await isPasswordLeaked(password)) return { ok: false, error: "password_leaked" };
   const passwordHash = await hashPassword(password);
   const user = await createUserWithPassword(env.DB, email, passwordHash, name);
 
@@ -157,7 +159,6 @@ export async function registerWithPassword(
       "Bestätige deine E-Mail-Adresse bei ImmoFuchs",
       `<p>Willkommen bei ImmoFuchs! Bestätige deine E-Mail-Adresse mit einem Klick (24 Stunden gültig):</p>
        <p><a href="${verifyLink(workerOrigin, rawToken)}">${verifyLink(workerOrigin, rawToken)}</a></p>
-       ${leaked ? "<p>Hinweis: Das gewählte Passwort taucht in bekannten Datenlecks auf. Wir empfehlen dir, es nach der Bestätigung zu ändern.</p>" : ""}
        <p>Falls du dich nicht bei ImmoFuchs registriert hast, kannst du diese E-Mail ignorieren.</p>`,
     );
   } catch (err) {
@@ -344,10 +345,14 @@ function providerDisplayName(provider: string): string {
   return provider;
 }
 
-export type ResetPasswordResult = { ok: true } | { ok: false; error: "invalid_or_expired" | "invalid_password" };
+export type ResetPasswordResult =
+  | { ok: true }
+  | { ok: false; error: "invalid_or_expired" | "invalid_password" | "password_leaked" };
 
 export async function resetPassword(env: Env, token: string, newPassword: string): Promise<ResetPasswordResult> {
   if (!isValidPasswordLength(newPassword)) return { ok: false, error: "invalid_password" };
+  // Vor dem Verbrauchen des Tokens, damit der Nutzer mit demselben Link ein anderes Passwort waehlen kann.
+  if (await isPasswordLeaked(newPassword)) return { ok: false, error: "password_leaked" };
   const userId = await consumePasswordResetToken(env.DB, await hashToken(token));
   if (!userId) return { ok: false, error: "invalid_or_expired" };
 
