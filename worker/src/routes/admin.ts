@@ -14,6 +14,7 @@ import {
   isRegistrationOpen,
   setRegistrationOverride,
 } from "../registrationGate";
+import { getAdminMfaOverride, envAdminMfaDefault, isAdminMfaEnabled, setAdminMfaOverride } from "../auth/adminMfa";
 import {
   requireAuth,
   requireAdmin,
@@ -752,6 +753,33 @@ adminRoutes.post("/registration-gate", requireAuth, requireAdmin, requireCsrfOri
     action: "registration_gate.set",
     targetType: "setting",
     targetId: "registration_open",
+    details: { from: before, to: body.open },
+  });
+  return c.json({ open: body.open, source: "db" });
+});
+
+// Admin-Zweitfaktor (worker/src/auth/adminMfa.ts): gleiches Muster. "open" = Pflicht ist an. Das Ausschalten
+// geht nur mit bestaetigter Sitzung (requireAdmin prueft sie), das Einschalten verlangt danach von allen
+// Admin-Sitzungen den E-Mail-Code.
+adminRoutes.get("/admin-mfa-gate", requireAuth, requireAdminRead, async (c) => {
+  const override = await getAdminMfaOverride(c.env.DB);
+  return c.json({
+    open: override ?? envAdminMfaDefault(c.env),
+    source: override === null ? "env" : "db",
+  });
+});
+
+adminRoutes.post("/admin-mfa-gate", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (typeof body?.open !== "boolean") return c.json({ error: "invalid_body" }, 400);
+  const before = await isAdminMfaEnabled(c.env);
+  await setAdminMfaOverride(c.env.DB, body.open);
+  await logAdminAction(c.env.DB, {
+    adminUserId: c.var.userId,
+    adminEmail: c.var.user.email,
+    action: "admin_mfa_gate.set",
+    targetType: "setting",
+    targetId: "admin_mfa_required",
     details: { from: before, to: body.open },
   });
   return c.json({ open: body.open, source: "db" });

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import {
   fetchActivity,
+  fetchAdminMfaGate,
   fetchCheckoutGate,
   fetchDashboard,
   fetchRegistrationGate,
+  setAdminMfaGate,
   setCheckoutGate,
   setRegistrationGate,
   triggerTestEmails,
@@ -182,6 +184,22 @@ export function AdminDashboardView() {
             askOpen: "Registrierung jetzt für alle öffnen?",
             toastClosed: "Registrierung ist jetzt gesperrt.",
             toastOpen: "Registrierung ist jetzt für alle geöffnet.",
+          }}
+        />
+
+        <AdminGateSection
+          title="Admin-Zweitfaktor"
+          load={fetchAdminMfaGate}
+          save={setAdminMfaGate}
+          texts={{
+            stateOpen: "an (E-Mail-Code bei jeder Admin-Anmeldung)",
+            stateClosed: "aus",
+            askClose: "Zweitfaktor für Admins ausschalten? Admin-Anmeldungen brauchen dann keinen E-Mail-Code mehr.",
+            askOpen: "Zweitfaktor für Admins einschalten? Danach brauchen alle Admin-Sitzungen einen E-Mail-Code, auch deine.",
+            confirmClose: "Ja, ausschalten",
+            confirmOpen: "Ja, einschalten",
+            toastClosed: "Admin-Zweitfaktor ist jetzt aus.",
+            toastOpen: "Admin-Zweitfaktor ist jetzt an.",
           }}
         />
 

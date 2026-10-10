@@ -51,12 +51,34 @@ function lastSentCode(): string {
 
 beforeEach(() => sendEmail.mockReset());
 
+// D1-Ersatz nur fuer die Einstellung app_settings.admin_mfa_required (null = Zeile fehlt).
+function settingsEnv(envValue: string | undefined, dbValue: string | null) {
+  const db = { prepare: () => ({ bind: () => ({ first: async () => (dbValue === null ? null : { value: dbValue }) }) }) };
+  return { ADMIN_MFA_REQUIRED: envValue, DB: db } as unknown as Pick<Env, "ADMIN_MFA_REQUIRED" | "DB">;
+}
+
 describe("adminMfaRequired", () => {
-  it("gilt nur fuer Admins und nur mit Schalter", () => {
-    expect(adminMfaRequired({ ADMIN_MFA_REQUIRED: "true" }, { role: "admin" })).toBe(true);
-    expect(adminMfaRequired({ ADMIN_MFA_REQUIRED: "true" }, { role: "customer" })).toBe(false);
-    expect(adminMfaRequired({ ADMIN_MFA_REQUIRED: "false" }, { role: "admin" })).toBe(false);
-    expect(adminMfaRequired({}, { role: "admin" })).toBe(false);
+  it("gilt nur fuer Admins", async () => {
+    expect(await adminMfaRequired(settingsEnv("true", null), { role: "admin" })).toBe(true);
+    expect(await adminMfaRequired(settingsEnv("true", null), { role: "customer" })).toBe(false);
+  });
+
+  it("nimmt ohne Datenbank-Wert die Variable als Startwert", async () => {
+    expect(await adminMfaRequired(settingsEnv("false", null), { role: "admin" })).toBe(false);
+    expect(await adminMfaRequired(settingsEnv(undefined, null), { role: "admin" })).toBe(false);
+  });
+
+  it("laesst den Schalter im Dashboard die Variable uebersteuern", async () => {
+    expect(await adminMfaRequired(settingsEnv("false", "true"), { role: "admin" })).toBe(true);
+    expect(await adminMfaRequired(settingsEnv("true", "false"), { role: "admin" })).toBe(false);
+  });
+
+  it("faellt auf die Variable zurueck, wenn die Tabelle fehlt", async () => {
+    const kaputt = {
+      ADMIN_MFA_REQUIRED: "true",
+      DB: { prepare: () => ({ bind: () => ({ first: async () => { throw new Error("no such table"); } }) }) },
+    } as unknown as Pick<Env, "ADMIN_MFA_REQUIRED" | "DB">;
+    expect(await adminMfaRequired(kaputt, { role: "admin" })).toBe(true);
   });
 });
 

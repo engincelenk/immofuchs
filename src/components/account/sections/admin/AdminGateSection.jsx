@@ -55,7 +55,7 @@ export function AdminGateSection({ title, load, save, texts }) {
           <AdminConfirmBox>
             <span style={{ fontSize: 13 }}>{gate.open ? texts.askClose : texts.askOpen}</span>
             <button type="button" style={dangerBtnStyle} disabled={busy} onClick={handleToggle}>
-              {busy ? "Speichert …" : gate.open ? "Ja, sperren" : "Ja, freigeben"}
+              {busy ? "Speichert …" : gate.open ? (texts.confirmClose ?? "Ja, sperren") : (texts.confirmOpen ?? "Ja, freigeben")}
             </button>
             <button
               type="button"

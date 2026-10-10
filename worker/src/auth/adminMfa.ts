@@ -4,7 +4,7 @@
 // Ablauf: Eine Admin-Sitzung startet unbestaetigt (sessions.mfa_verified_at IS NULL). Admin-Routen
 // (middleware.ts, requirePermission) antworten dann 403 mfa_required. Das Frontend fordert per
 // requestAdminMfaCode() einen Code an und bestaetigt ihn mit verifyAdminMfaCode(); danach ist die
-// Sitzung bestaetigt. Schalter: ADMIN_MFA_REQUIRED = "true" (ohne Schalter bleibt alles wie bisher).
+// Sitzung bestaetigt. Schalter: Admin-Dashboard (app_settings) bzw. ADMIN_MFA_REQUIRED = "true" als Startwert.
 import type { Env } from "../types";
 import type { UserRow } from "../db";
 import { sendEmail } from "../email";
@@ -14,8 +14,47 @@ export const MFA_CODE_TTL_MS = 10 * 60 * 1000;
 export const MFA_RESEND_MIN_MS = 60 * 1000;
 export const MFA_MAX_ATTEMPTS = 5;
 
-export function adminMfaRequired(env: Pick<Env, "ADMIN_MFA_REQUIRED">, user: Pick<UserRow, "role">): boolean {
-  return env.ADMIN_MFA_REQUIRED === "true" && user.role === "admin";
+// Quelle der Wahrheit: app_settings.admin_mfa_required (im Admin-Dashboard umschaltbar, ueberlebt Deploys).
+// Fehlt die Zeile, gilt ADMIN_MFA_REQUIRED aus wrangler.toml. Gleiches Muster wie registrationGate.ts.
+export const ADMIN_MFA_SETTING_KEY = "admin_mfa_required";
+
+// null = nicht gesetzt (oder Tabelle noch nicht migriert) -> Variable entscheidet.
+export async function getAdminMfaOverride(db: Env["DB"]): Promise<boolean | null> {
+  try {
+    const row = await db
+      .prepare("SELECT value FROM app_settings WHERE key = ?")
+      .bind(ADMIN_MFA_SETTING_KEY)
+      .first<{ value: string }>();
+    if (!row) return null;
+    return row.value === "true";
+  } catch {
+    return null;
+  }
+}
+
+export async function setAdminMfaOverride(db: Env["DB"], required: boolean): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    )
+    .bind(ADMIN_MFA_SETTING_KEY, required ? "true" : "false", Date.now())
+    .run();
+}
+
+export function envAdminMfaDefault(env: Pick<Env, "ADMIN_MFA_REQUIRED">): boolean {
+  return env.ADMIN_MFA_REQUIRED === "true";
+}
+
+export async function isAdminMfaEnabled(env: Pick<Env, "ADMIN_MFA_REQUIRED" | "DB">): Promise<boolean> {
+  return (await getAdminMfaOverride(env.DB)) ?? envAdminMfaDefault(env);
+}
+
+// Gilt die Pflicht fuer DIESEN Nutzer? Nur Admins; die Einstellung wird nur fuer sie gelesen (kein Mehraufwand
+// fuer Kunden-Anfragen).
+export async function adminMfaRequired(env: Pick<Env, "ADMIN_MFA_REQUIRED" | "DB">, user: Pick<UserRow, "role">): Promise<boolean> {
+  if (user.role !== "admin") return false;
+  return isAdminMfaEnabled(env);
 }
 
 export function newMfaCode(): string {
