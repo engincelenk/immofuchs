@@ -43,7 +43,9 @@ export function PasswordResetFlow({ t, account, initialStep = "request", onBack 
     const result = await account.confirmPasswordReset(account.resetToken, newPassword);
     setBusy(false);
     if (!result.ok) {
-      setInlineError(result.error === "invalid_password" ? "invalid_password" : "invalid_or_expired");
+      setInlineError(
+        result.error === "invalid_password" || result.error === "password_leaked" ? result.error : "invalid_or_expired",
+      );
       return;
     }
     setStep("success");

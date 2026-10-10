@@ -1,3 +1,34 @@
+## 2026-10-10 (1.100.114) [WORKER] [FRONTEND]
+
+### Admin-Zweitfaktor per E-Mail-Code (Schalter ADMIN_MFA_REQUIRED, auf prod/qa zunaechst aus)
+
+- worker/migrations/0037_admin_mfa.sql: Spalte sessions.mfa_verified_at und Tabelle admin_mfa_codes (Code nur als Hash, 10 Minuten gueltig, max. 5 Versuche, Neuanforderung hoechstens einmal pro Minute). Rueckwaertskompatibel.
+- worker/src/auth/adminMfa.ts, routes/account.ts, middleware.ts: Ist ADMIN_MFA_REQUIRED = "true", antworten alle Admin-Routen fuer eine unbestaetigte Admin-Sitzung mit 403 mfa_required; POST /account/mfa/request und /account/mfa/verify; /me liefert mfaRequired. Normale Nutzer sind nicht betroffen.
+- Frontend: AdminMfaGate.jsx (Dialog ueber der App, Code wird automatisch gesendet), Texte in allen 5 Sprachen.
+- worker/wrangler.toml: ADMIN_MFA_REQUIRED = "true" auf dev, "false" auf prod und Failover (Notausgang: Schalter zurueck auf "false"). qa bleibt ohne Schalter, da Standby keine Mails sendet.
+- Tests: worker/src/auth/adminMfa.test.ts.
+
+## 2026-10-10 (1.100.113) [WORKER] [FRONTEND]
+
+### Sicherheits-Check: Abhaengigkeiten aktualisiert, geleakte Passwoerter werden abgelehnt
+
+- package-lock.json (Frontend und worker): npm audit fix, Paket qs (2 moderate Treffer) aktualisiert. Worker: 0 Treffer; Frontend: 3 moderate bleiben (nur @capacitor/cli, Build-Werkzeug, Fix braeuchte ein Breaking Update).
+- worker/src/auth/passwordAuth.ts, routes/account.ts: ein in bekannten Datenlecks (HIBP, k-Anonymitaet) auftauchendes Passwort wird bei Registrierung, Passwort-Reset und Passwort-Aenderung mit "password_leaked" abgelehnt (bisher nur Hinweis in der Willkommens-Mail). Ausfall des Dienstes blockiert weiterhin nicht; Timeout 3 s.
+- Frontend: neue Meldung registerErrorLeakedPassword in allen 5 Sprachen (CheckoutShared, ProfilSection, PasswordResetFlow).
+- Neue Tests: worker/src/auth/password.test.ts.
+
+## 2026-10-10 (1.100.112) [TEST]
+
+### e2e-Suite an Anmeldepflicht und Kaufsperre angepasst, neue Tests fuer bisher ungeprueft gebliebene Routen
+
+- Abgleich: Prod (origin/main) ist code-gleich mit dev; die Suite lief auf dev mit 3 roten API- und 9 roten Browser-Tests - alle durch veraltete Tests, kein Produktfehler.
+- e2e/uiHelpers.ts: `enterApp` nur noch fuer eingeloggte Kontexte; neu `openLoginFromLanding` (anonymer Klick oeffnet seit 2026-09-09 den Login-Dialog statt der App).
+- e2e/landing.spec.ts (A1-A3), auth.spec.ts (C1/C2), account-security.spec.ts (G5.1/G5.2): auf das neue Verhalten umgeschrieben (Logout steht jetzt im Kontomenue und fuehrt auf die Landingpage).
+- auth.spec.ts C5/D2: skip - dev nutzt echtes Cloudflare Turnstile, Headless-Chromium besteht es nicht (Worker-Seite deckt auth-password.e2e.test.ts ab).
+- billing-checkout/billing-gaps: Konten mit aktivem Abo bekommen seit bfb3396 409 already_subscribed; Tests pruefen jetzt diese Sperre, die Erfolgs-/Rabattcode-Faelle sind skip (Fixture ohne Abo fehlt).
+- Neu e2e/public-routes.e2e.test.ts: standby-/registration-/checkout-status, /daten (PLZ, Regionalpreise, Origin-Schutz), /public (Validierung, Honeypot, CSRF), withdraw-preview/withdraw (401), Admin-Schalter (nur GET). admin-permissions: +6 Routen (checkout-gate, registration-gate, backup-status/-run) -> 403 fuer Kunden.
+- Hinweis: /public/* laesst Aufrufe OHNE Origin-Header durch (checkCsrfOrigin, bewusst) - ein Test ohne Origin hat am 2026-10-10 einmal eine echte Kontaktformular-Mail ausgeloest; der Test nutzt jetzt eine fremde Origin.
+
 ## 2026-10-09 (1.100.111) [FRONTEND]
 
 ### Gescheiterter Login: kein Aufblitzen der App mehr, Hinweis statt Landingpage ohne Erklaerung
