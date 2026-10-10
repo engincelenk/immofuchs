@@ -254,12 +254,13 @@ function PasswordBlock({ t, account }) {
           show={reveal}
           onToggleShow={() => setReveal((v) => !v)}
           autoComplete="new-password"
-          minLength={10}
+          minLength={12}
+          showStrength
         />
         <input
           type={reveal ? "text" : "password"}
           required
-          minLength={10}
+          minLength={12}
           value={repeatPassword}
           onChange={(e) => setRepeatPassword(e.target.value)}
           placeholder={t.newPasswordRepeatPlaceholder}

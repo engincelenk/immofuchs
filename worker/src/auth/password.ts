@@ -87,7 +87,7 @@ export function isValidEmail(email: string): boolean {
 
 // Laenge statt Zeichenklassen (BSI-/NIST-SP-800-63B-Linie, Spec 4.4): min.
 // 10 Zeichen, keine Sonderzeichen-Pflicht, keine erzwungene Rotation.
-const MIN_PASSWORD_LENGTH = 10;
+const MIN_PASSWORD_LENGTH = 12; // OWASP/ASVS: mindestens 12 (angehoben von 10 am 2026-10-10)
 const MAX_PASSWORD_LENGTH = 256; // schuetzt PBKDF2 vor absichtlich ueberlangen Eingaben (DoS)
 
 export function isValidPasswordLength(password: string): boolean {

@@ -66,7 +66,8 @@ export function PasswordResetFlow({ t, account, initialStep = "request", onBack 
             onToggleShow={() => setShowNewPassword((s) => !s)}
             t={t}
             autoComplete="new-password"
-            minLength={10}
+            minLength={12}
+            showStrength
           />
           <PasswordField
             id={`${uid}-new-repeat`}
@@ -77,7 +78,7 @@ export function PasswordResetFlow({ t, account, initialStep = "request", onBack 
             onToggleShow={() => setShowNewPassword((s) => !s)}
             t={t}
             autoComplete="new-password"
-            minLength={10}
+            minLength={12}
           />
           <button type="submit" disabled={busy} style={primaryBtnStyle}>
             {t.newPasswordSubmit}
