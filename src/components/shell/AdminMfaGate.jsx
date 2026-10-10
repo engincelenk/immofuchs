@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useAccountCtx } from "../../context/AccountContext.jsx";
+import { AccountCtx, useAccountCtx } from "../../context/AccountContext.jsx";
+import { Landing } from "../../pages/Landing.jsx";
 import { apiFetch } from "../../utils/apiBase.js";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { FONT_CSS, ROOT_TOKENS_CSS } from "../../App.jsx";
@@ -37,12 +38,22 @@ async function postJson(path, body) {
   return { ok: res.ok, status: res.status, error: json.error };
 }
 
-// Zeigt waehrend der offenen Bestaetigung NUR den Dialog; die App wird gar nicht erst gerendert,
-// damit weder ihre Oberflaeche noch ihre Datenabrufe im Hintergrund laufen.
+// Waehrend der offenen Bestaetigung zeigt der Hintergrund die abgemeldete Landingpage, NICHT die Seite nach
+// der Anmeldung: die App wird gar nicht erst gerendert, und die Landingpage bekommt ein Konto ohne Login
+// untergeschoben (sie zeigt dann "Anmelden" statt des Profils). Der Dialog selbst nutzt das echte Konto.
 export function MfaGuard({ children }) {
   const account = useAccountCtx();
-  if (account?.mfaRequired) return <AdminMfaGate />;
-  return children;
+  const [lang, setLang] = useState(currentLang);
+  if (!account?.mfaRequired) return children;
+  const abgemeldet = { ...account, me: null, isLoggedIn: false, isPro: false, mfaRequired: false };
+  return (
+    <>
+      <AccountCtx.Provider value={abgemeldet}>
+        <Landing onStart={() => {}} lang={lang} setLang={setLang} />
+      </AccountCtx.Provider>
+      <AdminMfaGate />
+    </>
+  );
 }
 
 export function AdminMfaGate() {
@@ -105,8 +116,7 @@ export function AdminMfaGate() {
           position: "fixed",
           inset: 0,
           zIndex: 3000,
-          // Vollflaechig und deckend: dahinter darf nichts von der eingeloggten Seite zu sehen sein.
-          background: "var(--bg)",
+          background: "rgba(0,0,0,.55)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
