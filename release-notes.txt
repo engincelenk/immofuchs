@@ -1,3 +1,12 @@
+## 2026-10-10 (1.100.116) [WORKER] [FRONTEND]
+
+### Sitzungsdauer: Leerlauf und Gesamtdauer je Rolle, E-Mail-Wechsel mit Passwort
+
+- worker/src/auth/sessionLimits.ts, db.ts (getAndTouchSession): Admin-Sitzungen enden nach 60 Minuten Leerlauf oder 8 Stunden insgesamt; Kunden-Sitzungen nach 30 Tagen Leerlauf oder 90 Tagen insgesamt (bisher nur 90 Tage gleitend). Abgelaufene Sitzungen werden sofort geloescht. Folge: bestehende Admin-Sitzungen laufen beim Deploy nach hoechstens 8 Stunden Alter ab; Kunden, die 30 Tage inaktiv waren, melden sich neu an.
+- Frontend (useAccount.js): kehrt jemand nach laengerer Pause in den Tab zurueck, wird die Sitzung leise geprueft; bei 401 faellt die App auf die Landingpage zurueck.
+- worker/src/routes/account.ts, ProfilSection.jsx: Die E-Mail-Adresse aendern verlangt bei Konten mit Passwort das aktuelle Passwort (Schutz vor Kontouebernahme ueber eine gestohlene Sitzung). Reine Google-/Apple-Konten sind nicht betroffen.
+- Tests: worker/src/auth/sessionLimits.test.ts.
+
 ## 2026-10-10 (1.100.115) [WORKER] [FRONTEND]
 
 ### Passwort-Richtlinie nach OWASP: Mindestlaenge 12, Staerkeanzeige

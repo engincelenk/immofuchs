@@ -25,6 +25,10 @@ export function ProfilSection({ t, account, onBack }) {
   const [newEmail, setNewEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  // Der Server verlangt bei Konten mit Passwort das aktuelle Passwort ("current_password_required").
+  const [emailNeedsPassword, setEmailNeedsPassword] = useState(false);
+  const [emailPassword, setEmailPassword] = useState("");
+  const [emailError, setEmailError] = useState(null);
   // Konzept-Dok 1.6/3.3/8.8: Name ist bei Google-/Apple-Konten anfangs
   // leer (kein eigenes Registrierungsformular dort) - hier
   // nachtraeglich ergaenz-/aenderbar, direkt ohne Double-Opt-In (anders als
@@ -52,10 +56,18 @@ export function ProfilSection({ t, account, onBack }) {
   async function handleEmailSubmit(e) {
     e.preventDefault();
     setEmailBusy(true);
-    await account.changeEmail(newEmail);
+    setEmailError(null);
+    const result = await account.changeEmail(newEmail, emailPassword);
     setEmailBusy(false);
+    if (!result.ok) {
+      if (result.error === "current_password_required") setEmailNeedsPassword(true);
+      setEmailError(result.error === "invalid_credentials" ? "profilPasswordErrorInvalidCurrent" : "profilPasswordErrorCurrentRequired");
+      return;
+    }
     setChangingEmail(false);
     setNewEmail("");
+    setEmailPassword("");
+    setEmailNeedsPassword(false);
     // Immer als "gesendet" quittieren: der Server antwortet aus
     // Enumerations-Gruenden auch dann mit ok, wenn die Zieladresse belegt ist.
     setEmailSent(true);
@@ -71,6 +83,18 @@ export function ProfilSection({ t, account, onBack }) {
         {changingEmail ? (
           <form onSubmit={handleEmailSubmit}>
             <div style={blockTitleStyle}>{t.accountEmail}</div>
+            {emailError && <div style={errorBannerStyle}>{t[emailError]}</div>}
+            {emailNeedsPassword && (
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                value={emailPassword}
+                onChange={(e) => setEmailPassword(e.target.value)}
+                placeholder={t.profilPasswordCurrent}
+                style={{ ...textInputStyle, marginBottom: 8 }}
+              />
+            )}
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <input
                 type="email"

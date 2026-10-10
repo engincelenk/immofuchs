@@ -160,6 +160,16 @@ accountRoutes.post("/account/email", requireAuth, requireCsrfOrigin, async (c) =
   const newEmail = body && typeof body.newEmail === "string" ? body.newEmail.trim().toLowerCase() : "";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) return c.json({ error: "invalid_email" }, 400);
 
+  // Frische Anmeldung (2026-10-10): Wer ein Passwort hat, muss es hier erneut eingeben. Sonst koennte eine
+  // gestohlene Sitzung die Adresse aendern und per "Passwort vergessen" das Konto uebernehmen. Reine
+  // OAuth-Konten haben kein Passwort; ihr Schutz ist der Anbieter-Login.
+  const existingHash = c.var.user.password_hash;
+  if (existingHash) {
+    const currentPassword = body && typeof body.currentPassword === "string" ? body.currentPassword : "";
+    if (!currentPassword) return c.json({ error: "current_password_required" }, 400);
+    if (!(await verifyPassword(currentPassword, existingHash))) return c.json({ error: "invalid_credentials" }, 401);
+  }
+
   const collision = await getUserByEmail(c.env.DB, newEmail);
   if (collision && collision.id !== c.var.userId) {
     // Bewusst dieselbe generische Antwort wie beim Magic-Link-Versand
