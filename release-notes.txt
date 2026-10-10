@@ -1,3 +1,12 @@
+## 2026-10-10 (1.100.118) [WORKER] [FRONTEND]
+
+### Admin-Zweitfaktor im Admin-Dashboard ein-/ausschaltbar
+
+- worker/src/auth/adminMfa.ts, routes/admin.ts: Die Pflicht kommt jetzt aus app_settings.admin_mfa_required (Dashboard-Schalter, ueberlebt Deploys); fehlt die Zeile, gilt ADMIN_MFA_REQUIRED aus wrangler.toml als Startwert (gleiches Muster wie Kauf- und Registrierungssperre). GET/POST /admin/admin-mfa-gate, jede Umstellung steht im Admin-Protokoll. adminMfaRequired ist jetzt asynchron.
+- Frontend: Schalter "Admin-Zweitfaktor" im Dashboard (AdminGateSection, eigene Bestaetigungstexte).
+- Notausgang bei Aussperrung: Zeile in app_settings auf "false" setzen oder loeschen und ADMIN_MFA_REQUIRED auf "false" deployen (siehe docs/betrieb/notfall-runbook.md).
+- Tests angepasst/erweitert: worker/src/auth/adminMfa.test.ts.
+
 ## 2026-10-10 (1.100.117) [WORKER]
 
 ### Admin-Zweitfaktor (E-Mail-Code) auf prod und im Failover eingeschaltet

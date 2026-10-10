@@ -59,7 +59,7 @@ accountRoutes.get("/me", requireAuth, async (c) => {
     name: c.var.user.name,
     role: c.var.user.role,
     // Admin-Zweitfaktor (auth/adminMfa.ts): true = Admin-Sitzung wartet auf den E-Mail-Code.
-    mfaRequired: adminMfaRequired(c.env, c.var.user) && !c.var.mfaVerified,
+    mfaRequired: !c.var.mfaVerified && (await adminMfaRequired(c.env, c.var.user)),
     // Kaufsperre (checkoutGate.ts): Admins und Testuser duerfen immer kaufen.
     checkoutOpen: await isCheckoutOpenFor(c.env, c.var.user),
     emailVerified: Boolean(c.var.user.email_verified_at),
@@ -241,7 +241,7 @@ accountRoutes.post("/account/name", requireAuth, requireCsrfOrigin, async (c) =>
 // Admin-Zweitfaktor (auth/adminMfa.ts): Code per E-Mail anfordern und bestaetigen. Nur fuer Admin-Konten
 // bei ADMIN_MFA_REQUIRED=true; fuer alle anderen 400, damit die Routen nichts verraten oder missbrauchbar sind.
 accountRoutes.post("/account/mfa/request", requireAuth, requireCsrfOrigin, async (c) => {
-  if (!adminMfaRequired(c.env, c.var.user)) return c.json({ error: "mfa_not_required" }, 400);
+  if (!(await adminMfaRequired(c.env, c.var.user))) return c.json({ error: "mfa_not_required" }, 400);
   if (c.var.mfaVerified) return c.json({ ok: true, alreadyVerified: true });
   try {
     const result = await requestAdminMfaCode(c.env, c.var.sessionId, c.var.user);
@@ -254,7 +254,7 @@ accountRoutes.post("/account/mfa/request", requireAuth, requireCsrfOrigin, async
 });
 
 accountRoutes.post("/account/mfa/verify", requireAuth, requireCsrfOrigin, async (c) => {
-  if (!adminMfaRequired(c.env, c.var.user)) return c.json({ error: "mfa_not_required" }, 400);
+  if (!(await adminMfaRequired(c.env, c.var.user))) return c.json({ error: "mfa_not_required" }, 400);
   const body = await c.req.json().catch(() => null);
   const code = body && typeof body.code === "string" ? body.code : "";
   const result = await verifyAdminMfaCode(c.env, c.var.sessionId, code);
