@@ -21,6 +21,7 @@ export function ErrorBanner({ t, code }) {
     email_not_verified: t.loginErrorEmailNotVerified,
     email_taken: t.registerErrorEmailTaken,
     invalid_password: t.registerErrorInvalidPassword,
+    password_leaked: t.registerErrorLeakedPassword,
     invalid_name: t.registerErrorInvalidName,
     bot_check_failed: t.registerErrorBotCheck,
     registration_closed: t.registerErrorClosed,

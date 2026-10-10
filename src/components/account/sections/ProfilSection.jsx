@@ -202,6 +202,7 @@ function PasswordBlock({ t, account }) {
     current_password_required: t.profilPasswordErrorCurrentRequired,
     invalid_credentials: t.profilPasswordErrorInvalidCurrent,
     invalid_password: t.registerErrorInvalidPassword,
+    password_leaked: t.registerErrorLeakedPassword,
     password_mismatch: t.newPasswordMismatch,
   };
 

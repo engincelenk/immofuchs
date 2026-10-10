@@ -7,11 +7,14 @@ import { authenticate, checkCsrfOrigin } from "./auth/session";
 import { getEntitlement, hasPermission, type Permission } from "./entitlement";
 import type { UserRow } from "./db";
 import { getUserById } from "./db";
+import { adminMfaRequired } from "./auth/adminMfa";
 
 export interface AuthVars {
   userId: string;
   user: UserRow;
   sessionId: string;
+  /** Admin-Zweitfaktor fuer diese Sitzung bestaetigt (auth/adminMfa.ts). */
+  mfaVerified: boolean;
 }
 
 // Setzt c.var.userId/user/sessionId oder antwortet 401 - fuer alle
@@ -32,6 +35,7 @@ export const requireAuth = createMiddleware<{ Bindings: Env; Variables: AuthVars
     c.set("userId", user.id);
     c.set("user", user);
     c.set("sessionId", ctx.session.id);
+    c.set("mfaVerified", Boolean(ctx.session.mfa_verified_at));
     await next();
   },
 );
@@ -60,6 +64,8 @@ export const requirePro = createMiddleware<{ Bindings: Env; Variables: Entitleme
 export function requirePermission(permission: Permission) {
   return createMiddleware<{ Bindings: Env; Variables: AuthVars }>(async (c, next) => {
     if (!hasPermission(c.var.user, permission)) return c.json({ error: "forbidden" }, 403);
+    // Admin-Zweitfaktor: ohne bestaetigte Sitzung keine Admin-Rechte (nur bei ADMIN_MFA_REQUIRED=true).
+    if (adminMfaRequired(c.env, c.var.user) && !c.var.mfaVerified) return c.json({ error: "mfa_required" }, 403);
     await next();
   });
 }
