@@ -207,6 +207,26 @@ export function useAccount() {
     }
   }, [broadcastIsPro, noteProStatus]);
 
+  // Sitzungsablauf (Leerlauf/Gesamtdauer, worker/src/auth/sessionLimits.ts): kehrt jemand nach laengerer Pause
+  // in den Tab zurueck, pruefen wir leise, ob die Sitzung noch gilt. Bei 401 laedt refresh() den Zustand neu und
+  // die App faellt auf die Landingpage zurueck, statt eine tote Oberflaeche zu zeigen.
+  useEffect(() => {
+    if (!me) return undefined;
+    let last = Date.now();
+    const onVisible = async () => {
+      if (document.visibilityState !== "visible" || Date.now() - last < 60_000) return;
+      last = Date.now();
+      try {
+        const res = await apiFetch("/me");
+        if (res.status === 401) refresh();
+      } catch {
+        /* offline o. ae.: kein Grund, abzumelden */
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [me, refresh]);
+
   // Nach OAuth-/Magic-Link-Redirect landet der Nutzer mit
   // ?login_success=1|login_error=...|email_change_success=1|email_change_error=...
   // in der URL zurueck (Worker-Redirects, siehe routes/auth.ts) - einmal lesen,
@@ -584,13 +604,20 @@ export function useAccount() {
     window.open(url, "_blank");
   }, []);
 
-  const changeEmail = useCallback(async (newEmail) => {
+  const changeEmail = useCallback(async (newEmail, currentPassword) => {
     const res = await apiFetch("/account/email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ newEmail }),
+      body: JSON.stringify({ newEmail, currentPassword }),
     });
-    return res.ok;
+    if (res.ok) return { ok: true };
+    let error = "request_failed";
+    try {
+      error = (await res.json()).error || error;
+    } catch {
+      /* keine JSON-Antwort */
+    }
+    return { ok: false, error };
   }, []);
 
   // Direkt statt Double-Opt-In wie changeEmail: Name ist kein

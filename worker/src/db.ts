@@ -3,6 +3,7 @@
 // (Konvention: kleine, fokussierte Dateien, analog zum bestehenden Worker-Stil).
 import type { Env } from "./types";
 import { PLAN_PREIS_EUR } from "./preise";
+import { isSessionTimedOut } from "./auth/sessionLimits";
 
 export interface UserRow {
   id: string;
@@ -562,10 +563,21 @@ export async function getAndTouchSession(
   db: Env["DB"],
   sessionId: string,
 ): Promise<SessionRow | null> {
-  const row = await db.prepare("SELECT * FROM sessions WHERE id = ?").bind(sessionId).first<SessionRow>();
-  if (!row) return null;
+  const joined = await db
+    .prepare(
+      "SELECT s.*, u.role AS user_role FROM sessions s LEFT JOIN users u ON u.id = s.user_id WHERE s.id = ?",
+    )
+    .bind(sessionId)
+    .first<SessionRow & { user_role: string | null }>();
+  if (!joined) return null;
+  const { user_role: role, ...row } = joined;
   if (row.expires_at < Date.now()) return null;
   const now = Date.now();
+  // Leerlauf- und Gesamtdauer je Rolle (auth/sessionLimits.ts): eine abgelaufene Sitzung wird sofort geloescht.
+  if (isSessionTimedOut(row, role, now)) {
+    await db.prepare("DELETE FROM sessions WHERE id = ?").bind(sessionId).run();
+    return null;
+  }
   const newExpiry = now + SESSION_TTL_MS;
   await db
     .prepare("UPDATE sessions SET last_seen_at = ?, expires_at = ? WHERE id = ?")
