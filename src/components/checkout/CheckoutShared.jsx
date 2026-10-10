@@ -4,6 +4,7 @@ import {
   selectInputStyle,
   textInputStyle,
 } from "./checkoutStyles.js";
+import { passwordStrength } from "../../utils/passwordStrength.js";
 
 // Fehlertext-Mapping (Extrakt aus LoginModal.jsx) - eine Stelle fuer alle
 // Fehlercodes, die AccountStep/PasswordResetFlow zurueckbekommen koennen.
@@ -165,6 +166,28 @@ export function SelectField({ id, label, hint, options, style, ...selectProps })
   );
 }
 
+// Orientierende Staerkeanzeige (utils/passwordStrength.js): Balken + Wort. Ersetzt nicht die Serverpruefung.
+const STRENGTH_COLORS = ["#c0392b", "#c0392b", "#d68910", "#2e8b57", "#1e7e4a"];
+const STRENGTH_KEYS = ["pwStrengthTooShort", "pwStrengthWeak", "pwStrengthFair", "pwStrengthGood", "pwStrengthStrong"];
+
+export function PasswordStrength({ password, t }) {
+  if (!password) return null;
+  const { level } = passwordStrength(password);
+  const color = STRENGTH_COLORS[level];
+  return (
+    <div aria-live="polite" style={{ marginTop: 6 }}>
+      <div style={{ display: "flex", gap: 4 }} aria-hidden="true">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= level ? color : "var(--cb)" }} />
+        ))}
+      </div>
+      <div style={{ fontSize: 11.5, marginTop: 4, color: "var(--ch)" }}>
+        {t.pwStrengthLabel}: <strong style={{ color }}>{t[STRENGTH_KEYS[level]]}</strong>
+      </div>
+    </div>
+  );
+}
+
 export function PasswordField({
   id,
   label,
@@ -177,6 +200,7 @@ export function PasswordField({
   t,
   autoComplete,
   minLength,
+  showStrength,
 }) {
   return (
     <div>
@@ -219,6 +243,7 @@ export function PasswordField({
         </button>
       </div>
       {hint && <p style={{ fontSize: 11, color: "var(--ch)", margin: "5px 0 0" }}>{hint}</p>}
+      {showStrength && <PasswordStrength password={value} t={t} />}
     </div>
   );
 }

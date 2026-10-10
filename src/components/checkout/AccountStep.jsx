@@ -179,7 +179,8 @@ export function AccountStep({ t, account, plan, onVerificationSent, onForgotPass
             onToggleShow={() => setShowRegPassword((s) => !s)}
             t={t}
             autoComplete="new-password"
-            minLength={10}
+            minLength={12}
+            showStrength
           />
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 11.5, color: "var(--ct)" }}>
             <input

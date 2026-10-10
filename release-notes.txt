@@ -1,3 +1,12 @@
+## 2026-10-10 (1.100.115) [WORKER] [FRONTEND]
+
+### Passwort-Richtlinie nach OWASP: Mindestlaenge 12, Staerkeanzeige
+
+- worker/src/auth/password.ts: Mindestlaenge von 10 auf 12 Zeichen (gilt fuer neue und geaenderte Passwoerter; bestehende bleiben gueltig). Hoechstlaenge 256 unveraendert.
+- Frontend: minLength 12 in Registrierung, Passwort-Reset und Profil; Hinweis- und Fehlertexte in allen 5 Sprachen angepasst.
+- Neu: Passwort-Staerkeanzeige (Balken + Wort: zu kurz / schwach / mittel / gut / stark) unter dem neuen Passwort in Registrierung, Reset und Profil (utils/passwordStrength.js, PasswordStrength in CheckoutShared.jsx). Reine Orientierung; die Serverpruefung (Laenge, Datenleck-Abgleich) bleibt massgeblich.
+- Admin-Zweitfaktor-Dialog: Hintergrund ist jetzt die abgemeldete Landingpage statt der App (AdminMfaGate.jsx).
+
 ## 2026-10-10 (1.100.114) [WORKER] [FRONTEND]
 
 ### Admin-Zweitfaktor per E-Mail-Code (Schalter ADMIN_MFA_REQUIRED, auf prod/qa zunaechst aus)
