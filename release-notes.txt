@@ -1,3 +1,10 @@
+## 2026-10-11 (1.100.120) [FRONTEND]
+
+### Standby-Banner auf qa entfernt
+
+- src/main.jsx: Der orange Hinweis "Standby-Umgebung (Zwilling von prod): nur lesen, keine Mails, keine Kaeufe" wird nicht mehr eingebunden. Die Komponente StandbyBanner.jsx bleibt im Repo, falls der Hinweis wiederkommen soll.
+- Das Standby-Verhalten des Workers (STANDBY, worker/src/standby.ts) ist unveraendert: qa bleibt schreibgeschuetzt, ohne Mails und ohne Kaeufe. Nur der sichtbare Hinweis entfaellt.
+
 ## 2026-10-11 (1.100.119) [TOOLING]
 
 ### Apple-Login auf prod repariert (Secrets), Pruefskript fuer Worker-Secrets

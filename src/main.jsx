@@ -3,7 +3,6 @@ import App from "./App";
 import InstallPrompt from "./InstallPrompt";
 import { AccountProvider } from "./context/AccountContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
-import { StandbyBanner } from "./components/shell/StandbyBanner.jsx";
 import { MfaGuard } from "./components/shell/AdminMfaGate.jsx";
 
 // AccountProvider liegt hier statt in AppProviders.jsx (Konzept-Dok 2/8.4.4,
@@ -17,7 +16,6 @@ import { MfaGuard } from "./components/shell/AdminMfaGate.jsx";
 ReactDOM.createRoot(document.getElementById("root")).render(
   <ThemeProvider>
     <AccountProvider>
-      <StandbyBanner />
       <MfaGuard>
         <App />
         <InstallPrompt />
