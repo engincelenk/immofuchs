@@ -358,8 +358,10 @@ binding = "AI"
 # qa ist der Zwilling von prod und teilt sich DIESELBE Datenbank (seit 2026-10-08, Weg A): immer derselbe Datenstand,
 # kein Abzug noetig. Im Standby (STANDBY = "true") darf qa nichts schreiben ausser Anmelden/Assistent/Admin und
 # verschickt nichts (src/standby.ts). Die frueher benutzte Datenbank immofuchs-qa (6ca47997-...) bleibt ungenutzt bestehen.
-# Folge: Datenbank-Migrationen gelten fuer prod UND qa gleichzeitig und muessen abwaertskompatibel sein, denn qa laeuft
-# eine Version hinter prod (Reihenfolge: dev -> prod -> qa).
+# Folge: Datenbank-Migrationen gelten fuer prod UND qa gleichzeitig und muessen abwaertskompatibel sein, denn waehrend eines
+# Releases laeuft kurz der alte Worker neben der neuen Datenbank. Seit 2026-10-11 haben prod und qa immer denselben Stand:
+# ein Release (push.ps1 prod) deployt den Worker erst auf qa, dann auf prod. Gewollte Unterschiede zu prod pflegt
+# scripts/check-twin.ps1, jede neue Einstellung gehoert in [vars] UND [env.qa.vars].
 [[env.qa.d1_databases]]
 binding = "DB"
 database_name = "immofuchs-prod"

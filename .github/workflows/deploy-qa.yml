@@ -3,8 +3,12 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - Immofuchs-qa
+      - main
 
+# Zwilling von prod (seit 2026-10-11): qa baut und deployt bei JEDEM Push auf main, genau wie
+# deploy-prod.yml - derselbe Commit, derselbe Stand. Der Branch Immofuchs-qa wird nicht mehr
+# benutzt (Archiv). Das Backend (Worker) deployt push.ps1 prod gemeinsam fuer qa und prod.
+#
 # Verhindert, dass zwei Deploys fuer QA gleichzeitig mit --delete auf
 # qa.immofuchs.info spiegeln - der zuletzt fertige gewinnt sonst
 # unkontrolliert, ein neuer Lauf bricht den aelteren stattdessen ab.

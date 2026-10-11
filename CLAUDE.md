@@ -36,6 +36,35 @@ es sei denn, der User fordert es explizit.
                             BGH-konform, tagesaktueller Pfandbrief-
                             Wiederanlagezins, vollständiger Tilgungsplan)
 
+── UMGEBUNGEN (Modell seit 2026-10-11) ────────────────
+prod und qa sind ZWILLINGE und haben immer denselben Stand.
+Entwickelt und committet wird direkt auf dem Branch main.
+
+  prod   immofuchs.info       Branch main   Worker api.immofuchs.info
+  qa     qa.immofuchs.info    Branch main   Worker api-qa.immofuchs.info
+         qa = Zwilling von prod im Standby (STANDBY=true): nur
+         lesen, keine Mails, keine Käufe. Gleiche Datenbank wie
+         prod. Alles, was auf prod läuft, muss auch auf qa laufen.
+  dev    dev.immofuchs.info   Branch Immofuchs-dev   api-dev.immofuchs.info
+         Entwicklungsumgebung mit eigener Datenbank. Bekommt den
+         prod-Stand nur manuell (push.ps1 dev-sync); der Monatsjob
+         aktualisiert dev weiterhin selbst.
+
+Regeln:
+  - Ein Release (push.ps1 prod) aktualisiert prod UND qa
+    gemeinsam: Tests, Worker erst qa dann prod, danach Push auf
+    main (die CI deployt beide Frontends). Nie nur eines von beiden.
+  - Der Branch Immofuchs-qa wird nicht mehr benutzt (Archiv).
+  - Datenbank-Migrationen gelten für prod UND qa gleichzeitig und
+    müssen abwärtskompatibel sein.
+  - Gewollte Unterschiede qa gegenüber prod: Domains
+    (ALLOWED_ORIGIN, APP_BASE_URL), STANDBY, Admin-Zweitfaktor aus,
+    keine Steuernummer, ein Cron statt zwei. Alles andere muss
+    gleich sein: Prüfung mit scripts\check-twin.ps1 (Konfiguration)
+    und scripts\check-secrets.ps1 (Secret-Namen je Umgebung).
+  - Änderungen an Konfiguration oder Verdrahtung immer in prod UND
+    qa vornehmen (wrangler.toml: [vars] und [env.qa.vars]).
+
 ── APPROVAL-PFLICHT (ABSOLUT HART) ─────────────────────
 Vor JEDER Code-Änderung — egal wie klein — gilt:
 
@@ -59,9 +88,15 @@ geantwortet hat. Keine Ausnahmen.
 
 3. Deployment-Frage stellen:
    „Möchtest du deployen? Wähle:
-     [1] dev   → push.ps1 dev
-     [2] qa    → push.ps1 qa
-     [3] prod  → push.ps1 prod
+     [1] prod + qa → push.ps1 prod   (Release, beide gemeinsam)
+     [2] dev       → push.ps1 dev    (nur Entwicklungsumgebung)
+     [3] dev-Sync  → push.ps1 dev-sync (dev auf prod-Stand setzen,
+                                        überschreibt Immofuchs-dev)
      [4] Kein Deploy"
+
+   Vorher nie in einem Arbeitsverzeichnis releasen, in dem
+   fremde, nicht committete Änderungen anderer Sitzungen liegen:
+   erst mit „push.ps1 prod -DryRun" den Plan zeigen und nur die
+   eigenen Dateien committen.
 
 ═══════════════════════════════════════════════════════

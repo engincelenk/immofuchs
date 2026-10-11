@@ -1,3 +1,17 @@
+## 2026-10-11 (1.100.121) [TOOLING] [CI]
+
+### Neues Umgebungsmodell: prod und qa sind Zwillinge, entwickelt wird auf main
+
+- Modell: Entwickelt und committet wird direkt auf main. prod und qa haben immer denselben Stand und werden gemeinsam deployt. dev bleibt Entwicklungsumgebung (eigener Branch Immofuchs-dev, eigene Datenbank) und bekommt den prod-Stand nur manuell. Der Branch Immofuchs-qa wird nicht mehr benutzt (Archiv, nicht geloescht).
+- .github/workflows/deploy-qa.yml: loest jetzt bei jedem Push auf main aus (vorher Immofuchs-qa), wie deploy-prod.yml. Derselbe Commit baut beide Frontends.
+- .github/workflows/monthly-update.yml: Matrix PROD+QA (ein Datencommit auf main, danach werden deploy-prod.yml und deploy-qa.yml angestossen) und DEV (Immofuchs-dev, weiterhin monatlich). Der eigene QA-Zweig entfaellt.
+- push.ps1 neu: "prod" = Release fuer prod UND qa (Tests, Rueckfrage, optional Migration, Worker erst qa mit Rauchtest, dann prod mit Rauchtest, dann Push main; die CI deployt beide Frontends); "dev" = nur Immofuchs-dev; "dev-sync" = dev auf den Stand von main setzen (ueberschreibt Immofuchs-dev nach Rueckfrage, listet verlorene Commits, force-with-lease) und den dev-Worker nachziehen; "qa" gibt es nicht mehr. Neu: -DryRun zeigt den Release-Plan, ohne etwas zu aendern; -SkipTests nur im Notfall. Das Skript funktioniert auch in einem git-Worktree.
+- scripts/check-twin.ps1: vergleicht [vars], Datenbank und Cron-Trigger von prod gegen qa und Failover in worker/wrangler.toml und meldet jede Abweichung, die nicht als gewollt hinterlegt ist (ALLOWED_ORIGIN, APP_BASE_URL, STANDBY, Admin-Zweitfaktor, Steuernummer, ein Cron). Zusammen mit scripts/check-secrets.ps1 (Secret-Namen je Umgebung).
+- CLAUDE.md: neuer Abschnitt "Umgebungen" und neue Deploy-Frage ([1] prod+qa, [2] dev, [3] dev-Sync, [4] kein Deploy).
+- worker/wrangler.toml: nur Kommentar zur Auslieferungsreihenfolge angepasst.
+- Einmalige Angleichung: main wurde mit dem Stand von Immofuchs-dev/-qa zusammengefuehrt (Inhalt identisch, nur die beiden Dateien aus 1.100.119/.120 kamen hinzu).
+- Offen: qa-Frontend nutzt VITE_STRIPE_PUBLISHABLE_KEY_QA, prod den _PROD-Schluessel. Fuer einen vollen Zwilling muss qa denselben Schluessel und der qa-Worker die passenden Stripe-Secrets haben (Eingriff in Secrets, noch nicht entschieden).
+
 ## 2026-10-11 (1.100.120) [FRONTEND]
 
 ### Standby-Banner auf qa entfernt

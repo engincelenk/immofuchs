@@ -39,19 +39,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       # fail-fast: false, damit z.B. ein fehlgeschlagener PROD-Build nicht auch
-      # den DEV/QA-Lauf abbricht - die drei Umgebungen sind unabhaengig.
+      # den DEV-Lauf abbricht - PROD+QA und DEV sind unabhaengig.
       fail-fast: false
       matrix:
         env:
-          - name: PROD
+          # Seit 2026-10-11: prod und qa sind Zwillinge und teilen sich den Branch main -
+          # EIN Datencommit, danach werden beide Deploy-Workflows angestossen.
+          # dev bleibt eigene Umgebung auf Immofuchs-dev und laeuft weiter monatlich.
+          - name: PROD+QA
             branch: main
-            slug: prod
+            slugs: "prod qa"
           - name: DEV
             branch: Immofuchs-dev
-            slug: dev
-          - name: QA
-            branch: Immofuchs-qa
-            slug: qa
+            slugs: "dev"
 
     # Bewusst KEINE concurrency-Gruppe mehr: dieser Job spiegelt seit
     # 2026-09-03 nicht mehr selbst auf den Zielordner, sondern stoesst das
@@ -175,10 +175,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh workflow run "deploy-${{ matrix.env.slug }}.yml" \
-            --repo "${{ github.repository }}" \
-            --ref "${{ matrix.env.branch }}"
-          echo "✓ deploy-${{ matrix.env.slug }}.yml auf ${{ matrix.env.branch }} angestossen"
+          for slug in ${{ matrix.env.slugs }}; do
+            gh workflow run "deploy-${slug}.yml" \
+              --repo "${{ github.repository }}" \
+              --ref "${{ matrix.env.branch }}"
+            echo "✓ deploy-${slug}.yml auf ${{ matrix.env.branch }} angestossen"
+          done
 
       - name: ⏭️ Kein Deploy nötig
         if: steps.commit.outputs.changed != 'true'
