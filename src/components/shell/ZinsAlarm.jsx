@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { TL } from "../../i18n/translations.js";
 import { MARKET_RATES } from "../../data.js";
 
@@ -26,6 +26,7 @@ export function ZinsAlarm({ lang }) {
   const l = TL[lang] || TL.de;
   // Bauzins aus data.js (Monatsjob); zinsen.json entfiel 2026-10-01.
   const avg = Number(MARKET_RATES.avg) || null;
+  const schwelleId = useId();
 
   const [threshold, setThreshold] = useState(() => {
     try {
@@ -138,11 +139,15 @@ export function ZinsAlarm({ lang }) {
 
       {/* Controls row */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <label style={{ fontSize: 13, color: "var(--cl)", fontWeight: 600, whiteSpace: "nowrap" }}>
+        <label
+          htmlFor={schwelleId}
+          style={{ fontSize: 13, color: "var(--cl)", fontWeight: 600, whiteSpace: "nowrap" }}
+        >
           {l.alarmThreshold}
         </label>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input
+            id={schwelleId}
             type="number"
             step="0.05"
             min="1"
@@ -161,7 +166,8 @@ export function ZinsAlarm({ lang }) {
               border: "1px solid var(--cb)",
               borderRadius: 8,
               padding: "0 10px",
-              fontSize: 15,
+              // 16px: darunter zoomt iOS beim Antippen (CLAUDE.md, QA-Befund F5).
+              fontSize: 16,
               background: "var(--ci)",
               color: "var(--ct)",
               fontFamily: "inherit",

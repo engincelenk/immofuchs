@@ -36,6 +36,12 @@ export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null); // Android
   const [showIOS, setShowIOS] = useState(false); // iOS
   const [visible, setVisible] = useState(false);
+  // Abstand nach unten = Hoehe der Rechner-Tableiste, solange sie zu sehen ist.
+  // Vorher lag der Hinweis fest am unteren Rand UEBER der Tableiste - die
+  // Rechner waren auf dem Handy erst nach dem Wegklicken bedienbar (QA-Befund
+  // F3, 2026-10-11). Gemessen statt per CSS-Breakpoint, weil die Tableiste
+  // erst mit der App-Ansicht erscheint und ab 1280px der Sidebar weicht.
+  const [tbarHoehe, setTbarHoehe] = useState(0);
 
   useEffect(() => {
     // Schon installiert oder kürzlich geschlossen → nichts tun
@@ -63,6 +69,26 @@ export default function InstallPrompt() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  useEffect(() => {
+    if (!visible) return;
+    const messen = () => {
+      const tb = document.querySelector(".tbar-wrap");
+      const h = tb && getComputedStyle(tb).display !== "none" ? tb.getBoundingClientRect().height : 0;
+      setTbarHoehe(Math.round(h));
+    };
+    messen();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(messen) : null;
+    ro?.observe(document.body);
+    window.addEventListener("resize", messen);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", messen);
+    };
+  }, [visible]);
+
+  // Die Tableiste bringt den Safe-Area-Abstand selbst mit (padding-bottom).
+  const bannerPos = { ...bannerStyle, bottom: tbarHoehe > 0 ? tbarHoehe : bannerStyle.bottom };
+
   const handleInstall = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -84,7 +110,7 @@ export default function InstallPrompt() {
   // ── iOS-Banner ────────────────────────────────────────────
   if (showIOS && !deferredPrompt) {
     return (
-      <div style={bannerStyle}>
+      <div style={bannerPos}>
         <img src="/icon-192.png" alt="Immofuchs" style={iconStyle} />
         <div style={{ flex: 1 }}>
           <div style={titleStyle}>Zum Home-Bildschirm</div>
@@ -102,7 +128,7 @@ export default function InstallPrompt() {
 
   // ── Android-Banner ────────────────────────────────────────
   return (
-    <div style={bannerStyle}>
+    <div style={bannerPos}>
       <img src="/icon-192.png" alt="Immofuchs" style={iconStyle} />
       <div style={{ flex: 1 }}>
         <div style={titleStyle}>App installieren</div>
@@ -132,7 +158,7 @@ const bannerStyle = {
   background: "#1E3A5F",
   color: "#fff",
   boxShadow: "0 -2px 16px rgba(0,0,0,0.25)",
-  fontFamily: "Inter, system-ui, sans-serif",
+  fontFamily: "'DM Sans', sans-serif",
 };
 
 const iconStyle = {
@@ -157,7 +183,7 @@ const subStyle = {
 
 const installBtnStyle = {
   padding: "8px 16px",
-  background: "#E8650A",
+  background: "var(--ca, #E8600A)",
   color: "#fff",
   border: "none",
   borderRadius: 8,
@@ -174,7 +200,10 @@ const closeStyle = {
   color: "rgba(255,255,255,0.6)",
   fontSize: 16,
   cursor: "pointer",
-  padding: "4px 4px",
+  // Mindestens 32x32 px Tippflaeche (vorher 22x28, QA-Befund F6).
+  minWidth: 32,
+  minHeight: 32,
+  padding: 4,
   flexShrink: 0,
   lineHeight: 1,
 };

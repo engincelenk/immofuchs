@@ -1,5 +1,5 @@
 import { berechneSteuerTrick } from "../../utils/steuerTrick.js";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { STEUER_T } from "../../i18n/steuerTrick.js";
 import { T } from "../../i18n/translations.js";
@@ -18,7 +18,7 @@ import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 // Fokus/Blur-Puffer-Prinzip wie F: waehrend der Eingabe roh, beim Verlassen
 // des Felds formatiert - sonst wuerden Tausenderpunkte beim Weitertippen als
 // Dezimalpunkte missverstanden.
-function CurrencyField({ value, onChange, style }) {
+function CurrencyField({ id, value, onChange, style }) {
   const toDisp = (v) => (v === "" || v == null || Number.isNaN(+v) ? "" : (+v).toLocaleString("de-DE"));
   const [local, setLocal] = useState(() => toDisp(value));
   const focused = useRef(false);
@@ -27,6 +27,7 @@ function CurrencyField({ value, onChange, style }) {
   }, [value]);
   return (
     <input
+      id={id}
       type="text"
       inputMode="decimal"
       value={local}
@@ -53,6 +54,8 @@ export function SteuerTrick() {
   // SaveBtn/Merkliste greifen.
   const { lang, d, set, aktivesObjekt } = useApp();
   const st = STEUER_T[lang] || STEUER_T.de;
+  // Label <-> Feld verknuepfen (QA-Befund F4, 2026-10-11: 4 Felder ohne Label).
+  const feldId = useId();
   const ls = d.steuer6Ls ?? "50000";
   const gst = d.steuer6Gst ?? "42";
   const grd = d.steuer6Grd ?? "100000";
@@ -126,12 +129,12 @@ export function SteuerTrick() {
           <div style={card}>
             <div style={secLbl}>{st.inputSec}</div>
             <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>
+              <label htmlFor={`${feldId}-ls`} style={lbl}>
                 {st.lsLabel}
                 <Tip text={st.lsTip} label={st.lsLabel} />
               </label>
               <div style={{ position: "relative" }}>
-                <CurrencyField value={ls} onChange={(v) => set("steuer6Ls", v)} style={inp} />
+                <CurrencyField id={`${feldId}-ls`} value={ls} onChange={(v) => set("steuer6Ls", v)} style={inp} />
                 <span
                   style={{
                     position: "absolute",
@@ -148,12 +151,13 @@ export function SteuerTrick() {
               <div style={hint}>{st.lsHint}</div>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>
+              <label htmlFor={`${feldId}-gst`} style={lbl}>
                 {st.gstLabel}
                 <Tip text={st.gstTip} label={st.gstLabel} />
               </label>
               <div style={{ position: "relative" }}>
                 <input
+                  id={`${feldId}-gst`}
                   type="number"
                   value={gst}
                   onChange={(e) => set("steuer6Gst", e.target.value)}
@@ -178,12 +182,12 @@ export function SteuerTrick() {
               <div style={hint}>{st.gstHint}</div>
             </div>
             <div>
-              <label style={lbl}>
+              <label id={`${feldId}-grd-lb`} htmlFor={`${feldId}-grd`} style={lbl}>
                 {st.grdLabel}
                 <Tip text={st.grdTip} label={st.grdLabel} />
               </label>
               <div style={{ position: "relative" }}>
-                <CurrencyField value={grd} onChange={(v) => set("steuer6Grd", v)} style={inp} />
+                <CurrencyField id={`${feldId}-grd`} value={grd} onChange={(v) => set("steuer6Grd", v)} style={inp} />
                 <span
                   style={{
                     position: "absolute",
@@ -204,6 +208,7 @@ export function SteuerTrick() {
                 step={10000}
                 value={grundstueck}
                 onChange={(e) => set("steuer6Grd", e.target.value)}
+                aria-labelledby={`${feldId}-grd-lb`}
                 style={{
                   width: "100%",
                   height: 32,

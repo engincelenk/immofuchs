@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { Tip } from "./Tip.jsx";
 
@@ -41,6 +41,13 @@ export function F({
   children,
 }) {
   const isNum = type === "number";
+  // Label <-> Eingabefeld verknuepfen (Screenreader, Klick aufs Label fokussiert
+  // das Feld). Vorher fehlte jede Verknuepfung: axe meldete je Rechner bis zu
+  // 41 Felder ohne Label (QA-Befund F4, 2026-10-11). Mit children (Sel u. a.)
+  // liegt das Feld beim Aufrufer - dort benennt aria-labelledby statt htmlFor.
+  const baseId = useId();
+  const inputId = `${baseId}-in`;
+  const labelId = `${baseId}-lb`;
   // Euro-Betraege bekommen automatisch Tausenderpunkte in der Anzeige
   // (Nutzer-Vorgabe 2026-08-28: "10000" -> "10.000"), erkannt am unit="€" -
   // €/m², €/kWh etc. bleiben unberuehrt, da dort Nachkommastellen zaehlen.
@@ -113,6 +120,8 @@ export function F({
         }}
       >
         <label
+          id={labelId}
+          htmlFor={children ? undefined : inputId}
           style={{
             fontSize: 15,
             color: "var(--cl)",
@@ -141,6 +150,7 @@ export function F({
             }}
           >
             <input
+              id={inputId}
               type={isNum ? "text" : type}
               inputMode={isNum ? "decimal" : undefined}
               value={dispVal}
@@ -183,6 +193,7 @@ export function F({
               step={slider.step}
               value={sliderVal}
               onChange={hSlider}
+              aria-labelledby={labelId}
               style={{
                 width: "100%",
                 height: 32,
@@ -205,6 +216,7 @@ export function Sel({ label, value, onChange, options, tip }) {
   return (
     <F label={label} tip={tip}>
       <select
+        aria-label={typeof label === "string" ? label : undefined}
         value={value}
         onChange={(e) => {
           const v = e.target.value;
@@ -283,6 +295,7 @@ export function LiveSliderPanel({ title, children }) {
 }
 
 export function LiveSlider({ label, unit, value, onChange, min, max, step, tip }) {
+  const labelId = useId();
   const num = value === "" || value == null || Number.isNaN(+value) ? 0 : +value;
   return (
     <div style={{ marginBottom: 12 }}>
@@ -296,6 +309,7 @@ export function LiveSlider({ label, unit, value, onChange, min, max, step, tip }
         }}
       >
         <span
+          id={labelId}
           style={{
             fontSize: 13,
             color: "var(--cl)",
@@ -327,6 +341,7 @@ export function LiveSlider({ label, unit, value, onChange, min, max, step, tip }
         step={step}
         value={num}
         onChange={(e) => onChange(e.target.value)}
+        aria-labelledby={labelId}
         style={{
           width: "100%",
           height: 32,

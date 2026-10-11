@@ -704,6 +704,10 @@ export default function App() {
       .tbar-wrap{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--cc);border-top:1px solid var(--cb);display:flex;align-items:stretch;padding-bottom:env(safe-area-inset-bottom)}
       .tbar{flex:1;min-width:0;padding:6px 0;display:flex;justify-content:flex-start;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
       .tbar::-webkit-scrollbar{display:none}
+      /* Fusszeilen-Links: Schrift bleibt klein, die Tippflaeche nicht (WCAG 2.5.8,
+         mind. 24px; vorher 13px hoch - QA-Befund F6, 2026-10-11). */
+      .app-fuss > a,.app-fuss > button{display:inline-flex;align-items:center;min-height:24px}
+      .app-fuss{align-items:center}
       .tbar-more{flex:0 0 auto;width:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;border:none;border-left:1px solid var(--cb);background:var(--cc);cursor:pointer;font-family:inherit;
         /* Schlagschatten nach links: macht sichtbar, dass die Tabs UNTER
            diesem Knopf weiterlaufen - der eigentliche Hinweis darauf, dass
@@ -1118,6 +1122,7 @@ export default function App() {
           )}
           {tab === "saved" && <Merkliste />}
           <div
+            className="app-fuss"
             style={{
               marginTop: 32,
               paddingTop: 18,

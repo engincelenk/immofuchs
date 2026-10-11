@@ -71,3 +71,5 @@ e2e/.env.local*
 # Datenbasis (src/immodata/*/datenblatter/*.json) ist kein PDF und bleibt
 # daher getrackt. Quell-PDFs liegen lokal weiter, fuer die jaehrliche Pflege.
 src/immodata/**/*.pdf
+# Klartext-Zugangsdaten der Testkonten (prod/qa) - nie committen
+e2e/testuser.txt

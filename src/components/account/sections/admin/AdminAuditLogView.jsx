@@ -22,6 +22,16 @@ const ACTION_LABELS = {
   "discount.update": "Gutschein geändert",
   "discount.activate": "Gutschein aktiviert",
   "discount.deactivate": "Gutschein deaktiviert",
+  // Nachgetragen (QA-Befund F8, 2026-10-11): diese Schluessel schreibt der
+  // Worker ebenfalls, sie erschienen bisher roh in der Liste.
+  "user.subscription_set": "Abo manuell gesetzt",
+  "checkout_gate.set": "Kauf-Sperre geändert",
+  "registration_gate.set": "Registrierungs-Sperre geändert",
+  "admin_mfa_gate.set": "Admin-Zweitfaktor geändert",
+  "backup.run": "Backup manuell gestartet",
+  "test_emails.sent": "Test-E-Mails versendet",
+  "subscription.reconcile_created": "Abo nachgetragen (Abgleich)",
+  "subscription.reconcile": "Abo abgeglichen",
 };
 
 const EMPTY_FILTERS = { admin: "", action: "", target: "", from: "", to: "" };

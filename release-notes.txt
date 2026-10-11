@@ -10,6 +10,33 @@
 - Tests: kiBudget.test.ts, kiAlarm.test.ts; Worker-Typecheck und alle 425 Worker-Tests gruen.
 - Offen: nach 3-4 Wochen Messdaten pruefen und KI_BUDGET_ENFORCE auf "true" setzen. Kosten sind eine Schaetzung (Gemini-Token werden nicht durchgereicht); Google-Quota und Budget-Alarm bleiben als aeussere Bremse noetig.
 
+## 2026-10-11 (1.100.123) [FIX] [A11Y] [SICHERHEIT]
+
+### Befunde des ersten QA-Laufs behoben (F1-F8 aus e2e/reports/qa-2026-10-11_17-25-40/FIXPLAN.md)
+
+- F1 Datenverlust: Eine im Mietrechner eingegebene Kaltmiete wurde beim naechsten Oeffnen des Renditerechners durch Miete/m2 x Flaeche ueberschrieben. Miete.jsx setzt jetzt dieselbe Markierung (mietQuelleRef = "kalt") wie der Renditerechner, die Kaltmiete fuehrt, Miete/m2 folgt.
+- F2 Sicherheit (API): Der Worker setzt auf jede Antwort HSTS, X-Content-Type-Options, X-Frame-Options und Referrer-Policy (worker/src/securityHeaders.ts, mit Tests). Bewusst ohne Cross-Origin-Resource-Policy, weil das Frontend die API von einer anderen Origin laedt. Frontend-Header stehen noch aus (Hosting-Entscheidung).
+- F3 Mobil: Der iOS-Hinweis "Zum Home-Bildschirm" (InstallPrompt.jsx) sitzt jetzt oberhalb der Rechner-Tableiste statt darueber. Vorher waren die Rechner erst nach dem Wegklicken bedienbar. Dazu Schrift DM Sans, Orange aus dem Token und ein Schliessen-Knopf mit 32x32 px.
+- F4 Barrierefreiheit: Die Eingabefelder (atoms.jsx F, LiveSlider, Sel) und die Felder des Paragraf-6-Rechners sind per useId mit ihren Labels verknuepft, die Schieberegler per aria-labelledby. axe meldet in allen 6 Rechnern 0 Felder ohne Label (vorher bis zu 41 je Rechner).
+- F5: Das Zinsalarm-Eingabefeld hat 16 px (iOS-Zoom-Schutz laut CLAUDE.md) und ein verknuepftes Label.
+- F6 Tippflaechen: Die Fusszeilen-Links in der App sind mindestens 24 px hoch. Die ausgeblendete Finn-Sprechblase faengt keine Taps mehr ab (vorher nur durchsichtig, aber klickbar), ihr Schliessen-Knopf ist 28 px gross.
+- F7: Die Sitemap verweist auf /datenschutz.html und /impressum.html statt auf zwei 404-Adressen.
+- F8: Das Admin-Audit-Log beschriftet 8 bisher rohe Aktionen (backup.run, Kauf- und Registrierungssperre, Admin-Zweitfaktor, Abo manuell gesetzt, Test-Mails, Abo-Abgleich).
+- QA-Suite: Der Tap-Ziel-Test zaehlt unsichtbare Elemente nicht mehr mit. Neuer Test M6 prueft, dass der Install-Hinweis die Tableiste nicht verdeckt.
+- Offen und nicht umgesetzt: die Kontraste der Markenfarbe (weisser Text auf #E8600A 3,43:1, Orange auf dunklem Grund 4,17:1, gefordert 4,5:1). Das ist eine Token-Entscheidung und braucht eine eigene Freigabe.
+
+## 2026-10-11 (1.100.122) [TOOLING] [TEST]
+
+### QA-Suite: ein Befehl testet die ganze App auf qa (Zwilling von prod), nur lesend
+
+- Neu: npm run test:qa (= e2e/run-qa-tests.ps1). Laeuft Unit-Tests Frontend + Worker und die neue Playwright-Suite e2e/qa-*.qa.ts gegen qa.immofuchs.info. Ergebnis mit Zeitstempel in e2e/reports/qa-<Zeitstempel>/ (BERICHT.md, html/, JSON, Screenshots/Traces).
+- Sicherheit: qa nutzt die prod-Datenbank. e2e/qa-global-setup.ts bricht den ganzen Lauf ab, wenn /api/v1/standby-status nicht true meldet. Keine Kaeufe, keine KI-Aufrufe, keine Admin-Aktionen, keine Mails; Tests der Schreibsperre senden absichtlich ungueltige Daten.
+- Abgedeckt (114 Tests): Standby-Schutz, Zugriffsschutz, CORS, Security-Header, Secrets im Bundle (qa-01); Landing, Rechtsseiten, Cookie-Banner, PWA, Sitemap, Links, Ladezeit (qa-02); Daten-API und Lese-Endpunkte aller drei Testkonten inkl. Admin (qa-03); alle 6 Rechner: Rendern, Reaktion, Grenzwerte, Tab-Wechsel (qa-04); 5 Sprachen (qa-05); axe-core WCAG 2.1 AA, Tastatur, iPhone-Ansicht (qa-06); Konto- und Admin-Bereiche nur ansehen (qa-07).
+- Zugangsdaten der prod-Testkonten: e2e/.env.local.qa (git-ignoriert). e2e/testuser.txt neu in .gitignore (Klartext-Passwoerter).
+- package.json: Script test:qa, devDependency @axe-core/playwright.
+- Der fruehere Testordner Immofuchs-testing-agent (Heuristiken von 2026-05) ist in der QA-Suite aufgegangen und wird nicht uebernommen.
+- Erster Lauf: Unit 2227/2227 gruen, QA 101/113 gruen. Die roten Tests sind echte Befunde (Fix-Plan liegt zur Freigabe vor): fehlende Security-Header, Kaltmiete geht beim Wechsel Miete -> Rendite verloren, Install-Hinweis verdeckt mobil die Tableiste, Formularfelder ohne Label/Kontrast (WCAG), 15-px-Eingabe auf der Landing, zu kleine Tap-Ziele, Sitemap mit 404-Adressen, Roh-Schluessel im Audit-Log.
+
 ## 2026-10-11 (1.100.121) [TOOLING] [CI]
 
 ### Neues Umgebungsmodell: prod und qa sind Zwillinge, entwickelt wird auf main

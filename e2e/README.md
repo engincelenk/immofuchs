@@ -57,3 +57,39 @@ Präfix umbenannt (`api-e2e-README.md`/`browser-e2e-README.md`/
 `dashboard-README.md`, `run-api-e2e.ps1`/`run-browser-e2e.ps1`,
 `api-global-setup.ts`/`browser-global-setup.ts`) - alle anderen Dateien
 behalten ihre bisherigen Namen, da eindeutig.
+
+## QA-Suite: ein Befehl, ein Bericht (gegen qa.immofuchs.info)
+
+```powershell
+npm run test:qa          # = powershell -File e2e\run-qa-tests.ps1
+```
+
+Laeuft nacheinander: Unit-Tests Frontend, Unit-Tests Worker, dann die
+Playwright-Suite `qa-*.qa.ts` gegen **qa** (Zwilling von prod). Ergebnis in
+`e2e/reports/qa-<Zeitstempel>/`: `BERICHT.md` (Zusammenfassung, alle roten
+Tests), `html/` (Playwright-Report), JSON-Rohdaten, Screenshots/Traces.
+
+**Nur lesend.** qa nutzt die prod-Datenbank. `qa-global-setup.ts` bricht den
+ganzen Lauf ab, wenn `/api/v1/standby-status` nicht `true` meldet. Es gibt
+keine Kaeufe, keine KI-Aufrufe, keine Admin-Aktionen und keine Mails. Login
+und Logout der drei Testkonten sind die einzigen Schreibzugriffe (Sessions).
+Schreibende Ablaeufe (Registrierung, Objekte, Billing im Stripe-Testmodus,
+Kontoloeschung) testen weiterhin die dev-Suiten oben.
+
+| Datei | Inhalt |
+|---|---|
+| `qa-01-sicherheit` | Standby-Schutz (6 gesperrte Schreibwege), Zugriffsschutz, CORS, Security-Header, keine Secrets im Bundle |
+| `qa-02-oeffentlich` | Landing, Rechtsseiten, Cookie-Banner, PWA, Sitemap, interne Links, Ladezeit |
+| `qa-03-api` | oeffentliche Daten-API, Lese-Endpunkte aller drei Konten, Admin-API (GET) |
+| `qa-04-rechner` | alle 6 Rechner: Rendern, Reaktion auf Eingaben, Grenzwerte je Feld, Tab-Wechsel |
+| `qa-05-sprachen` | DE/EN/TR/ZH/HI: Roh-Keys, NaN, vergessene deutsche Texte |
+| `qa-06-mobil-a11y` | axe-core (WCAG 2.1 AA), Tastatur-Fokus, iPhone: Querscrollen, 16-px-Inputs, Tap-Ziele |
+| `qa-07-konto` | Meine Objekte, alle Kontobereiche, Admin-Reiter (nur ansehen) |
+
+Zugangsdaten: `e2e/.env.local.qa` (git-ignoriert; `E2E_PASSWORD_MONATLICH`,
+`_JAEHRLICH`, `_ADMIN` der prod-Testkonten). `e2e/testuser.txt` ist
+ebenfalls git-ignoriert.
+
+Neue QA-Tests: Datei `e2e/qa-<nr>-<thema>.qa.ts`, erste Zeile
+`import "./qa-env"` (bzw. `import { ... } from "./qa-env"`), Helfer aus
+`qa-helpers.ts`. Endung `.qa.ts` ist Pflicht, sonst greift die dev-Konfig sie auf.

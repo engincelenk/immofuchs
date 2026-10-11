@@ -25,6 +25,7 @@ import { lageRoutes } from "./routes/lage";
 import { publicContractRoutes } from "./routes/publicContract";
 import { handleScheduled } from "./scheduled";
 import { isStandby, standbyGuard } from "./standby";
+import { securityHeaders } from "./securityHeaders";
 
 export { SessionRateLimiter } from "./sessionRateLimiter";
 
@@ -45,6 +46,9 @@ app.use(
     credentials: true,
   }),
 );
+
+// HSTS, nosniff, X-Frame-Options, Referrer-Policy auf jeder Antwort (siehe securityHeaders.ts).
+app.use("*", securityHeaders);
 
 // Standby (qa als Zwilling von prod): schreibende Anfragen ausser Anmelden, Assistent und Admin sperren.
 app.use("/api/*", standbyGuard);

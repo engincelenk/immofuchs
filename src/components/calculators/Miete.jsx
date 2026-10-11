@@ -53,7 +53,7 @@ function RegionalmieteHinweis({ regGeladen, d, t }) {
 }
 
 export default function Miete() {
-  const { d, set, t, tip, lang, aktivesObjekt } = useApp();
+  const { d, set, t, tip, lang, aktivesObjekt, mietQuelleRef } = useApp();
   const [view, setView] = useState("input");
   useMieteDamalsVorbelegung(d, set);
   // plzData.js laedt die Kappungsgrenzen-Liste selbst beim Modulimport, legt
@@ -123,7 +123,14 @@ export default function Miete() {
             label={t.kaltmiete}
             unit={`€/${t.monLabel || "Mon."}`}
             value={d.kaltmiete}
-            onChange={(v) => set("kaltmiete", v)}
+            onChange={(v) => {
+              // Wie im Renditerechner: die Kaltmiete fuehrt, €/m² folgt. Ohne die
+              // Markierung rechnete der Renditerechner beim naechsten Oeffnen die
+              // Kaltmiete aus €/m² x Flaeche neu und ueberschrieb diese Eingabe
+              // (QA-Befund F1, 2026-10-11).
+              if (mietQuelleRef) mietQuelleRef.current = "kalt";
+              set("kaltmiete", v);
+            }}
             tip={tip("kaltmiete")}
           />
           {+d.gewerbemiete > 0 && (
