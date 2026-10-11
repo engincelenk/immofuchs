@@ -81,12 +81,7 @@ geantwortet hat. Keine Ausnahmen.
 1. release-notes.txt automatisch aktualisieren
    (Version, Datum, kurze Beschreibung der Änderung)
 
-2. Lokaler Test-Frage stellen:
-   „Soll ich die Änderung auf localhost testen?"
-   Kein automatischer Test ohne diese Nachfrage — auch
-   nicht bei kleinen Änderungen.
-
-3. Deployment-Frage stellen:
+2. Deployment-Frage stellen (keine Frage nach einem localhost-Test):
    „Möchtest du deployen? Wähle:
      [1] prod + qa → push.ps1 prod   (Release, beide gemeinsam)
      [2] dev       → push.ps1 dev    (nur Entwicklungsumgebung)

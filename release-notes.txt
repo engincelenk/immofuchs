@@ -9,6 +9,7 @@
 - scripts/check-twin.ps1: vergleicht [vars], Datenbank und Cron-Trigger von prod gegen qa und Failover in worker/wrangler.toml und meldet jede Abweichung, die nicht als gewollt hinterlegt ist (ALLOWED_ORIGIN, APP_BASE_URL, STANDBY, Admin-Zweitfaktor, Steuernummer, ein Cron). Zusammen mit scripts/check-secrets.ps1 (Secret-Namen je Umgebung).
 - CLAUDE.md: neuer Abschnitt "Umgebungen" und neue Deploy-Frage ([1] prod+qa, [2] dev, [3] dev-Sync, [4] kein Deploy).
 - worker/wrangler.toml: nur Kommentar zur Auslieferungsreihenfolge angepasst.
+- CLAUDE.md: Die Nachfrage nach einem localhost-Test nach jeder Entwicklung entfaellt (Wunsch des Inhabers); die Deploy-Frage ist jetzt Schritt 2.
 - Einmalige Angleichung: main wurde mit dem Stand von Immofuchs-dev/-qa zusammengefuehrt (Inhalt identisch, nur die beiden Dateien aus 1.100.119/.120 kamen hinzu).
 - Offen: qa-Frontend nutzt VITE_STRIPE_PUBLISHABLE_KEY_QA, prod den _PROD-Schluessel. Fuer einen vollen Zwilling muss qa denselben Schluessel und der qa-Worker die passenden Stripe-Secrets haben (Eingriff in Secrets, noch nicht entschieden).
 
