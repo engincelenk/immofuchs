@@ -297,6 +297,15 @@ export interface Env {
   // AI-Engine (2026-09): Fair-Use je Pro-Nutzer und Tag fuer die
   // strukturierte Objektauswertung. Ohne Wert greift der Default 20.
   ANALYSE_DAILY_LIMIT?: string;
+  // KI-Kosten je Kunde (kiBudget.ts, kiAlarm.ts). Alle in Mikro-Euro (1 EUR = 1.000.000), alle ohne
+  // Redeploy im Dashboard aenderbar. KI_BUDGET_ENFORCE "true" schaltet Drosselung/Stopp nach Budget scharf;
+  // aus (Phase 1) wird nur gemessen und gewarnt - die Notbremse je Tag gilt immer.
+  KI_BUDGET_ENFORCE?: string;
+  KI_BUDGET_TAG_MIKRO?: string;
+  KI_BUDGET_MONAT_MIKRO?: string;
+  KI_NOTBREMSE_TAG_MIKRO?: string;
+  KI_ALARM_TAG_MIKRO?: string;
+  KI_ALARM_NUTZER_MIKRO?: string;
   // Free-Kontingent seit 2026-08-18 kein Tageslimit mehr, sondern insgesamt
   // N Anfragen je Rechnertyp (dauerhaft, siehe SessionRateLimiter).
   FINN_FREE_MAX_TOKENS?: string;

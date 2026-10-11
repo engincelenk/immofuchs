@@ -1,3 +1,15 @@
+## 2026-10-11 (1.100.124) [WORKER] [KOSTEN] [DB]
+
+### KI-Kosten je Kunde: messen, drosseln, melden
+
+- Neue Tabelle ki_nutzung (Migration 0038, abwaertskompatibel, prod und qa gemeinsam): geschaetzte KI-Kosten in Mikro-Euro je Nutzer, Tag und Funktion.
+- worker/src/kiBudget.ts: Kostenschaetzung aus Zeichenlaengen, Budgetpruefung vor jedem KI-Aufruf. Notbremse (immer an): 1,00 EUR je Kunde und Tag. Budget (nur mit KI_BUDGET_ENFORCE=true): 0,15 EUR je Tag und 1,50 EUR je Monat; ab 80 % kuerzere Antworten, ab 100 % Antwort 429 rate_limit_exceeded mit grund ki_budget (das Frontend zeigt dafuer schon die Tageslimit-Meldung). Ein Messfehler laesst den Aufruf durch.
+- Eingebunden in Finn-Chat, Analyse/Briefing, Exposé-Scan, Lage-Analyse und Alternativ-Einordnung. Schliesst die Luecke, dass Pro-Kunden bei Lage und Alternativ kein Limit hatten.
+- worker/src/kiAlarm.ts, im 06:00-Job: Warn-Mail an BACKUP_ALERT_EMAIL/CONTACT_EMAIL, wenn die Kosten von gestern ueber max(2 EUR, 3 x Wochendurchschnitt) liegen oder ein Kunde ueber 0,50 EUR kam; raeumt Zeilen aelter als 120 Tage auf.
+- wrangler.toml: KI_BUDGET_ENFORCE="false" in prod, qa, failover und dev (Phase 1: nur messen und warnen). Weitere Schwellen (KI_BUDGET_TAG_MIKRO, KI_BUDGET_MONAT_MIKRO, KI_NOTBREMSE_TAG_MIKRO, KI_ALARM_TAG_MIKRO, KI_ALARM_NUTZER_MIKRO) haben Standardwerte im Code und sind im Dashboard aenderbar.
+- Tests: kiBudget.test.ts, kiAlarm.test.ts; Worker-Typecheck und alle 425 Worker-Tests gruen.
+- Offen: nach 3-4 Wochen Messdaten pruefen und KI_BUDGET_ENFORCE auf "true" setzen. Kosten sind eine Schaetzung (Gemini-Token werden nicht durchgereicht); Google-Quota und Budget-Alarm bleiben als aeussere Bremse noetig.
+
 ## 2026-10-11 (1.100.121) [TOOLING] [CI]
 
 ### Neues Umgebungsmodell: prod und qa sind Zwillinge, entwickelt wird auf main

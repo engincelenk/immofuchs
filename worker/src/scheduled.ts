@@ -14,6 +14,7 @@ import { reconcileSubscriptions } from "./stripe/reconcile";
 import { reconcileCustomers } from "./stripe/customerSync";
 import { runBackup } from "./backup/job";
 import { isStandby } from "./standby";
+import { pruefeKiKostenAlarm } from "./kiAlarm";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -42,6 +43,9 @@ export async function handleScheduled(env: Env, cron?: string): Promise<void> {
   } catch (err) {
     console.error("login_attempts_cleanup_failed", err instanceof Error ? err.message : "unknown");
   }
+
+  // KI-Kosten von gestern pruefen und bei Auffaelligkeit mailen (kiAlarm.ts). Wirft nie.
+  await pruefeKiKostenAlarm(env);
 
   // Abgleich D1 <-> Stripe VOR den Erinnerungs-Mails, damit diese auf dem
   // korrigierten Stand beruhen. Ein Fehler hier darf die Mails nicht blockieren.

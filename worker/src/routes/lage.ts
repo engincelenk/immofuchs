@@ -21,6 +21,7 @@ import { callLageModel, LAGE_MAX_TOKENS } from "../modelRouter";
 import { leseLang, mitSprache, nutzerMitSprache, tokenFaktor } from "../systemPrompt";
 import { lageSystemPrompt, lageUserPayload } from "../lagePrompt";
 import { ermittleZugang } from "../entitlement";
+import { begrenzeTokens, bucheKiKosten, pruefeKiBudget } from "../kiBudget";
 
 export const lageRoutes = new Hono<{ Bindings: Env; Variables: EntitlementVars }>();
 
@@ -57,6 +58,10 @@ lageRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c) => {
 
   // Trial-Kontingent wie Handout: TAEGLICH, objektuebergreifend (kein
   // rechner-Parameter noetig, siehe trialLimits.ts TAGESKONTINGENT).
+  // KI-Budget je Kunde (kiBudget.ts) - schliesst die Luecke, dass Pro hier sonst kein Limit hatte.
+  const kiBudget = await pruefeKiBudget(c.env, c.var.userId);
+  if (kiBudget.stufe === "erschoepft") return c.json({ error: "rate_limit_exceeded", grund: "ki_budget" }, 429);
+
   const zugang = await ermittleZugang(c.env, c.var.userId);
   if (zugang !== "pro") {
     const trialStart = c.var.user.app_trial_started_at;
@@ -69,12 +74,12 @@ lageRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c) => {
 
   const lang = leseLang(body?.lang);
   try {
-    const antwort = await callLageModel(
-      c.env,
-      mitSprache(lageSystemPrompt(lang), lang),
-      nutzerMitSprache(lageUserPayload(ort, kreis, bundesland), lang),
-      { maxTokens: LAGE_MAX_TOKENS * tokenFaktor(lang) },
-    );
+    const system = mitSprache(lageSystemPrompt(lang), lang);
+    const nutzer = nutzerMitSprache(lageUserPayload(ort, kreis, bundesland), lang);
+    const antwort = await callLageModel(c.env, system, nutzer, {
+      maxTokens: begrenzeTokens(LAGE_MAX_TOKENS * tokenFaktor(lang), kiBudget),
+    });
+    await bucheKiKosten(c.env, c.var.userId, "lage", system.length + nutzer.length, antwort.length);
     return c.json({ text: antwort });
   } catch (err) {
     const grund = err instanceof Error ? err.message : "unknown_error";

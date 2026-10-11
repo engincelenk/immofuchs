@@ -35,6 +35,7 @@ import { ermittleZugang, type Zugang } from "../entitlement";
 import { hasConsent } from "../consent";
 import { getTrialCount, getUserById, incrementTrialUsage, type UserRow } from "../db";
 import { TRIAL_LIMITS, trialTag } from "../trialLimits";
+import { begrenzeTokens, bucheKiKosten, pruefeKiBudget } from "../kiBudget";
 
 const DEFAULT_FINN_PRO_DAILY_LIMIT = 50;
 const DEFAULT_FINN_FREE_MAX_TOKENS = 350;
@@ -88,6 +89,9 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
 
   const freeMaxTokens = parseInt(env.FINN_FREE_MAX_TOKENS || "", 10) || DEFAULT_FINN_FREE_MAX_TOKENS;
   const proMaxTokens = parseInt(env.FINN_PRO_MAX_TOKENS || "", 10) || DEFAULT_FINN_PRO_MAX_TOKENS;
+  // KI-Budget je Kunde (kiBudget.ts): vor allen Zaehlern pruefen, damit nichts zurueckgebucht werden muss.
+  const kiBudget = await pruefeKiBudget(env, zugriff.user.id);
+  if (kiBudget.stufe === "erschoepft") return c.json({ error: "rate_limit_exceeded", grund: "ki_budget" }, 429);
   const maxTokens = isPro ? proMaxTokens : freeMaxTokens;
   // Laengeres Verlaufsfenster fuer Pro (S5-4): der Zeichen-Cap muss mit
   // MAX_TOKENS mitwachsen, sonst kehrt der invalid_verlauf-Bug aus 1.55.96
@@ -165,7 +169,8 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
 
   let rawAnswer: string;
   try {
-    rawAnswer = await callModel(env, req.lang, systemPrompt, userPayload, maxTokens);
+    // Gedrosselt wird nur die Antwortlaenge; das Verlaufsfenster (maxVerlaufTextLen) bleibt bewusst unveraendert.
+    rawAnswer = await callModel(env, req.lang, systemPrompt, userPayload, begrenzeTokens(maxTokens, kiBudget));
   } catch (err) {
     // Absichtlich kein Logging von "frage"/"kontext" - nur strukturelle Fehlerinfo,
     // damit kein Nutzer-Freitext in Cloudflare-Logs landet (Konzept 2.9/2.10).
@@ -190,6 +195,8 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
   if (!isPro && trialStart !== null) {
     await incrementTrialUsage(env.DB, zugriff.user.id, trialStart, "finn", req.rechner, trialTag());
   }
+
+  await bucheKiKosten(env, zugriff.user.id, "finn", systemPrompt.length + userPayload.length, rawAnswer.length);
 
   const responseBody: AssistantResponse = { antwort, tier };
   return c.json(responseBody, 200);
@@ -223,6 +230,9 @@ export async function handleExposeExtract(c: Context<{ Bindings: Env }>): Promis
   if (!(await hasConsent(env, req.sessionId))) {
     return c.json({ error: "consent_required" }, 412);
   }
+
+  const kiBudgetExpose = await pruefeKiBudget(env, zugriff.user.id);
+  if (kiBudgetExpose.stufe === "erschoepft") return c.json({ error: "rate_limit_exceeded", grund: "ki_budget" }, 429);
 
   // Kontingent der Testphase (Migration 0025, seit 0026 je Tag): der Scan
   // gehoert zum OBJEKT, nicht zum Rechner - ein Exposé wird einmal gelesen und
@@ -294,6 +304,9 @@ export async function handleExposeExtract(c: Context<{ Bindings: Env }>): Promis
     ]);
     return c.json({ error: "extraction_failed" }, 502);
   }
+
+  // Bilder/PDF zaehlen als Eingabe-Token (grobe Schaetzung, je Datei 2.000).
+  await bucheKiKosten(env, zugriff.user.id, "expose", EXPOSE_SYSTEM_PROMPT.length, rawAnswer.length, dateien.length * 2000);
 
   // Zaehler erst NACH erfolgreicher Extraktion erhoehen - ein gescheiterter
   // Versuch soll kein Kontingent verbrauchen.
@@ -511,29 +524,34 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
 
   // Fair-Use wie beim Chat: die Auswertung ist teurer als eine Chatantwort,
   // deshalb ein eigener, knapperer Zaehler je Nutzer und Tag.
+  const kiBudgetAnalyse = await pruefeKiBudget(env, zugriff.user.id);
+  if (kiBudgetAnalyse.stufe === "erschoepft") return c.json({ error: "rate_limit_exceeded", grund: "ki_budget" }, 429);
+
   const tagesLimit = parseInt(env.ANALYSE_DAILY_LIMIT || "", 10) || 20;
   const limiter = env.RATE_LIMITER_DO.getByName(`analyse:${zugriff.user.id}`);
   const rl = await limiter.checkAndIncrement(tagesLimit);
   if (!rl.allowed) return c.json({ error: "rate_limit_exceeded" }, 429);
 
   let roh: string;
+  const analyseSystem = mitSprache(systemPromptFuer(produkt as AnalyseProdukt), lang);
+  const analyseNutzer = nutzerMitSprache(
+    nutzerPayload(
+      kennzahlen as Record<string, unknown>,
+      hinweis,
+      varianten,
+      zahlen,
+      befunde,
+      standortFakten,
+    ),
+    lang,
+  );
   try {
     roh = await callModel(
       env,
       lang,
-      mitSprache(systemPromptFuer(produkt as AnalyseProdukt), lang),
-      nutzerMitSprache(
-        nutzerPayload(
-          kennzahlen as Record<string, unknown>,
-          hinweis,
-          varianten,
-          zahlen,
-          befunde,
-          standortFakten,
-        ),
-        lang,
-      ),
-      (produkt === "briefing" ? BRIEFING_MAX_TOKENS : ANALYSE_MAX_TOKENS) * tokenFaktor(lang),
+      analyseSystem,
+      analyseNutzer,
+      begrenzeTokens((produkt === "briefing" ? BRIEFING_MAX_TOKENS : ANALYSE_MAX_TOKENS) * tokenFaktor(lang), kiBudgetAnalyse),
     );
   } catch (err) {
     // Kontingent zurueckgeben: der Nutzer hat kein Ergebnis bekommen.
@@ -546,6 +564,8 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
     console.error("analyse_model_call_failed", JSON.stringify({ produkt, grund }));
     return c.json({ error: "modell_nicht_erreichbar" }, 503);
   }
+
+  await bucheKiKosten(env, zugriff.user.id, "analyse", analyseSystem.length + analyseNutzer.length, roh.length);
 
   // Drei Formen, drei Parser (analyseOutput.ts): das Handout liefert eine
   // Fragenliste, das Briefing sieben Textfelder zu bereits gerechneten

@@ -21,6 +21,7 @@ import {
   type AlternativAnlageInfo,
 } from "../alternativPrompt";
 import { ermittleZugang } from "../entitlement";
+import { begrenzeTokens, bucheKiKosten, pruefeKiBudget } from "../kiBudget";
 
 export const alternativRoutes = new Hono<{ Bindings: Env; Variables: EntitlementVars }>();
 
@@ -94,6 +95,10 @@ alternativRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c)
     return c.json({ error: "consent_required" }, 412);
   }
 
+  // KI-Budget je Kunde (kiBudget.ts) - schliesst die Luecke, dass Pro hier sonst kein Limit hatte.
+  const kiBudget = await pruefeKiBudget(c.env, c.var.userId);
+  if (kiBudget.stufe === "erschoepft") return c.json({ error: "rate_limit_exceeded", grund: "ki_budget" }, 429);
+
   const zugang = await ermittleZugang(c.env, c.var.userId);
   if (zugang !== "pro") {
     const trialStart = c.var.user.app_trial_started_at;
@@ -106,10 +111,13 @@ alternativRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c)
 
   try {
     const lang = leseLang(body?.lang);
-    const antwort = await callLageModel(c.env, mitSprache(alternativSystemPrompt(lang), lang), nutzerMitSprache(alternativUserPayload(nutzlast), lang), {
-      maxTokens: ALTERNATIV_MAX_TOKENS * tokenFaktor(lang),
+    const system = mitSprache(alternativSystemPrompt(lang), lang);
+    const nutzer = nutzerMitSprache(alternativUserPayload(nutzlast), lang);
+    const antwort = await callLageModel(c.env, system, nutzer, {
+      maxTokens: begrenzeTokens(ALTERNATIV_MAX_TOKENS * tokenFaktor(lang), kiBudget),
       temperature: ALTERNATIV_TEMPERATURE,
     });
+    await bucheKiKosten(c.env, c.var.userId, "alternativ", system.length + nutzer.length, antwort.length);
     // Herkunft/Rhythmus der Daten darf nicht ausgegeben werden (siehe outputFilter.ts).
     return c.json({ text: entferneHerkunftUndRhythmus(antwort, lang) });
   } catch (err) {
