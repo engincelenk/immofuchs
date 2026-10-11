@@ -534,7 +534,8 @@ export function AmpelKPI({ label, value, status, statusLabel, tip, color }) {
           style={{
             fontSize: 10,
             fontWeight: 600,
-            color: "var(--ch)",
+            // --cl statt --ch: auf der rot getoenten Karte erreichte --ch nur 4,39:1.
+            color: "var(--cl)",
             textTransform: "uppercase",
             letterSpacing: 0.5,
             lineHeight: 1.3,

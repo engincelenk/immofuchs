@@ -87,8 +87,8 @@ export function ZahlungenSection({ t, account, lang, onBack }) {
   }
 
   function statusLabel(invoice) {
-    if (invoice.status === "paid") return { text: t.rechnungenStatusCompleted, color: "#22c55e" };
-    if (invoice.status === "open") return { text: t.rechnungenStatusBilled, color: "#f59e0b" };
+    if (invoice.status === "paid") return { text: t.rechnungenStatusCompleted, color: "var(--ok-tx)" };
+    if (invoice.status === "open") return { text: t.rechnungenStatusBilled, color: "var(--warn-tx)" };
     return null;
   }
 

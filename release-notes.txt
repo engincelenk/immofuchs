@@ -1,3 +1,17 @@
+## 2026-10-11 (1.100.126) [A11Y] [DESIGN]
+
+### WCAG-AA-Kontrast: neue Akzentfarbe je Theme, Zoom erlaubt, Tippflaechen
+
+- Akzentfarbe (Nutzer-Freigabe, ersetzt #E8600A): Kein einzelnes Orange erreicht zugleich weisse Schrift darauf (#E8600A: 3,44:1) und Lesbarkeit als Text auf dunklem Grund (4,18:1). Deshalb je Theme ein eigener Wert. Hell: --ca #B84800, --ca-dk #9A3C00 (alle Kombinationen >= 4,79:1). Dunkel: --ca #F07A2E, --ca-dk #FF9450, dazu DUNKLE Schrift auf orangen Flaechen (>= 5,15:1).
+- Neues Token --on-ca (hell #FFF, dunkel #1A1A1A) fuer Schrift auf --ca-Flaechen. 55 Stellen (Knoepfe, Banner, Karten) sind von "#fff" auf var(--on-ca) umgestellt, ebenso der Standby-Banner, der Install-Hinweis und die zwei orangen Ergebnis-Karten (Finanzierung, Sanierung). Beschriftungen dort mit mindestens 0,9 Deckkraft (>= 4,60:1).
+- Ampelfarben als Schrift: 49 Stellen mit #22c55e/#f59e0b/#ef4444/#2d8a4e/#c0392b als Textfarbe nutzen jetzt die Status-Tokens --ok-tx/--warn-tx/--bad-tx. Flaechen, Rahmen und Diagramme behalten die kraeftigen Farben. Hell: --ok-tx #137333, --warn-tx #7A600E (vorher 4,42-4,59:1 auf getoenten Flaechen, jetzt >= 5,2:1).
+- Finanz-Score (ScoreBlock.jsx): Kopfleiste in der Ampelfarbe mit dunkler statt weisser Schrift (vorher 2,1-3,8:1), Score-Zahl und Skala in den Status-Tokens.
+- Kleinere Stellen: Cookie-Banner "Weitere Informationen" im Dark Mode (2,43 -> 6,4:1), Footer-Hinweis der Landing ohne Deckkraft-Abschlag, AmpelKPI-Label auf getoenter Karte in --cl. Statische Seiten (Impressum, Datenschutz, AGB, Vertrag, Datenstatus) mit Linkfarbe #9A3C00. PDF-Export mit der neuen Akzentfarbe.
+- Zoom: index.html erlaubt wieder das Vergroessern per Fingergeste (maximum-scale=1 und user-scalable=no entfernt, WCAG 1.4.4). Der iOS-Eingabe-Zoom bleibt aus, weil alle Felder 16 px haben.
+- Tippflaeche: Footer-Links in der App mindestens 24x24 px (der Link "AGB" war 20 px breit).
+- Geprueft lokal mit axe (color-contrast) auf Landing, Meine Objekte und allen 6 Rechnern, hell und dunkel: 0 Kontrastfehler. Gemeldet bleiben nur Texte auf Verlaufsflaechen, die axe nicht auswerten kann; die sind von Hand nachgerechnet.
+- CLAUDE.md: Design-Token-Abschnitt auf die neuen Werte angepasst.
+
 ## 2026-10-11 (1.100.125) [WORKER] [KOSTEN]
 
 ### Kapazitaetswarnung fuer das Gemini-Gratiskontingent

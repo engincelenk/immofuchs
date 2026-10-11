@@ -65,7 +65,7 @@ export function PurchaseConfirmation({ t, account, plan, onDone }) {
           height: 64,
           borderRadius: "50%",
           background: "var(--ca)",
-          color: "#fff",
+          color: "var(--on-ca)",
           fontSize: 30,
           display: "flex",
           alignItems: "center",

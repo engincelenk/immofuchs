@@ -38,7 +38,7 @@ export function StressTabelle({ stress, jahre }) {
   const val = (ok) => ({
     fontSize: 17,
     fontWeight: 700,
-    color: ok ? "#22c55e" : "#ef4444",
+    color: ok ? "var(--ok-tx)" : "var(--bad-tx)",
     fontVariantNumeric: "tabular-nums",
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -72,7 +72,7 @@ export function StressTabelle({ stress, jahre }) {
           </div>
           <div style={val(dscrOk)}>{dscrPct == null ? "–" : `${dscrPct} %`}</div>
           {dscrPct != null && (
-            <div style={{ fontSize: 10, color: dscrOk ? "#22c55e" : "#ef4444", marginTop: 2 }}>
+            <div style={{ fontSize: 10, color: dscrOk ? "var(--ok-tx)" : "var(--bad-tx)", marginTop: 2 }}>
               {dscrOk ? t.stressGedeckt : t.stressNichtGedeckt}
             </div>
           )}

@@ -76,7 +76,7 @@ const primaerKnopfStil = {
   borderRadius: 10,
   border: "none",
   background: "var(--ca)",
-  color: "#fff",
+  color: "var(--on-ca)",
   fontSize: 15,
   fontWeight: 700,
   cursor: "pointer",

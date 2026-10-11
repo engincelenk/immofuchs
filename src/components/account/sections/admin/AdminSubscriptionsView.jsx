@@ -29,7 +29,7 @@ const STATUS_FILTERS = [
 ];
 
 const PAYMENT_STATE = {
-  ok: { text: "OK", color: "#22c55e" },
+  ok: { text: "OK", color: "var(--ok-tx)" },
   failed: { text: "Fehlgeschlagen", color: "#c0392b" },
   none: { text: "Noch keine", color: "#8A8A80" },
 };

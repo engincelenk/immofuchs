@@ -782,7 +782,7 @@ export function Landing({ onStart, lang, setLang }) {
                 style={{
                   padding: "10px 18px",
                   background: account.isLoggedIn ? "var(--ca)" : "var(--ca-dk)",
-                  color: "#fff",
+                  color: "var(--on-ca)",
                   border: "none",
                   borderRadius: 10,
                   fontSize: 14,
@@ -1474,7 +1474,7 @@ export function Landing({ onStart, lang, setLang }) {
             }}
           >
             <div>{l.footerCr}</div>
-            <div style={{ maxWidth: 600, lineHeight: 1.6, opacity: 0.85 }}>{l.footerNote}</div>
+            <div style={{ maxWidth: 600, lineHeight: 1.6 }}>{l.footerNote}</div>
           </div>
         </div>
       </footer>
@@ -1549,7 +1549,7 @@ export function Landing({ onStart, lang, setLang }) {
       .lp-hero-sub{margin:0;max-width:720px;font-size:clamp(16px,1.6vw,19px);color:var(--cl);line-height:1.55}
       .lp-hero-ctas{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
       .lp-btn-primary,.lp-btn-secondary{min-height:52px;padding:0 26px;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
-      .lp-btn-primary{border:none;background:var(--ca);color:#fff;font-size:17px;box-shadow:0 8px 20px rgba(232,96,10,.28);transition:background .15s,transform .12s var(--ease-out)}
+      .lp-btn-primary{border:none;background:var(--ca);color:var(--on-ca);font-size:17px;box-shadow:0 8px 20px rgba(232,96,10,.28);transition:background .15s,transform .12s var(--ease-out)}
       .lp-btn-secondary{transition:transform .12s var(--ease-out)}
       .lp-btn-primary:hover{background:var(--ca-dk)}
       .lp-btn-secondary{border:1.5px solid var(--cb);background:var(--cc);color:var(--ct);font-size:16px;font-weight:600}
@@ -1634,7 +1634,7 @@ export function Landing({ onStart, lang, setLang }) {
       .lp-sticky-cta{display:none}
       @media(max-width:560px){
         .lp-sticky-cta{display:block;position:fixed;left:0;right:0;bottom:0;z-index:40;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--cc);border-top:1px solid var(--cb)}
-        .lp-sticky-cta button{width:100%;min-height:48px;border:none;border-radius:12px;background:var(--ca-dk);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+        .lp-sticky-cta button{width:100%;min-height:48px;border:none;border-radius:12px;background:var(--ca-dk);color:var(--on-ca);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
         .lp-sticky-pad{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
       }
       @media(prefers-reduced-motion:reduce){

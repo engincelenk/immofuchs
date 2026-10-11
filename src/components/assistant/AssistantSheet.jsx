@@ -85,7 +85,7 @@ export function AssistantSheet({
   // gesteuert, sondern als eigener Zustand, siehe Nutzer-Klarstellung).
   const statusInfo =
     status === "limit" || status === "zugang"
-      ? { label: t.statusLimited, color: "#f59e0b" }
+      ? { label: t.statusLimited, color: "var(--warn-tx)" }
       : { label: t.assistantTagline, color: "var(--ch)" };
 
   useEffect(() => {

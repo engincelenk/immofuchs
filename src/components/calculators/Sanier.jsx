@@ -98,7 +98,7 @@ function TierSel({ value, onChange, tiers }) {
             fontWeight: value === o.k ? 600 : 400,
             cursor: "pointer",
             background: value === o.k ? "var(--ca)" : "var(--ci)",
-            color: value === o.k ? "#fff" : "var(--ch)",
+            color: value === o.k ? "var(--on-ca)" : "var(--ch)",
             fontFamily: "inherit",
             lineHeight: 1.2,
           }}
@@ -916,7 +916,7 @@ export default function Sanier() {
                       transition: "background .2s",
                     }}
                   >
-                    {act[m.k] && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
+                    {act[m.k] && <span style={{ color: "var(--on-ca)", fontSize: 11 }}>✓</span>}
                   </div>
                 </div>
               </div>
@@ -1047,41 +1047,41 @@ export default function Sanier() {
               background: "linear-gradient(135deg,var(--ca),var(--ca-dk))",
               borderRadius: 14,
               padding: "18px 16px",
-              color: "#fff",
+              color: "var(--on-ca)",
               marginBottom: 14,
             }}
           >
-            <div style={{ fontSize: 10, opacity: 0.8, textTransform: "uppercase" }}>{t.sGesK}</div>
+            <div style={{ fontSize: 10, opacity: 0.9, textTransform: "uppercase" }}>{t.sGesK}</div>
             <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4 }}>
               {R.rows.length > 0 ? fmtE(R.tK) : "— €"}
             </div>
             {R.rows.length > 0 ? (
               <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
                 <div>
-                  <div style={{ fontSize: 9, opacity: 0.6 }}>BAFA/KfW</div>
+                  <div style={{ fontSize: 9, opacity: 0.9 }}>BAFA/KfW</div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>–{fmtE(R.tFo)}</div>
                 </div>
                 {R.tFoLand > 0 && (
                   <div>
-                    <div style={{ fontSize: 9, opacity: 0.8 }}>🏦 Landesbonus*</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "#93c5fd" }}>
+                    <div style={{ fontSize: 9, opacity: 0.9 }}>🏦 Landesbonus*</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--on-ca)" }}>
                       –{fmtE(R.tFoLand)}
                     </div>
                   </div>
                 )}
                 <div>
-                  <div style={{ fontSize: 9, opacity: 0.6 }}>{t.sNetK}</div>
+                  <div style={{ fontSize: 9, opacity: 0.9 }}>{t.sNetK}</div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{fmtE(R.ne)}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, opacity: 0.6 }}>{t.amo}</div>
+                  <div style={{ fontSize: 9, opacity: 0.9 }}>{t.amo}</div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>
                     {R.amJ > 30 ? "> 30 J." : `${R.amJ} J.`}
                   </div>
                 </div>
               </div>
             ) : (
-              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 10 }}>👈 {t.sMassnahmen}</div>
+              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 10 }}>👈 {t.sMassnahmen}</div>
             )}
           </div>
 
@@ -1186,7 +1186,7 @@ export default function Sanier() {
                           style={{ background: "var(--ci)", borderRadius: 4, padding: "4px 6px" }}
                         >
                           <div style={{ color: "var(--ch)" }}>BAFA/KfW ({r.fq}%)</div>
-                          <div style={{ color: "#22c55e", fontWeight: 500 }}>–{fmtE(r.f)}</div>
+                          <div style={{ color: "var(--ok-tx)", fontWeight: 500 }}>–{fmtE(r.f)}</div>
                           {r.foLand > 0 && (
                             <div style={{ color: "var(--info-tx)", fontWeight: 500, marginTop: 1 }}>
                               +BL –{fmtE(r.foLand)}{" "}

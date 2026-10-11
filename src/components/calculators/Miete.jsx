@@ -193,7 +193,7 @@ export default function Miete() {
                   borderRadius: 8,
                   border: `2px solid ${d.immLeer === val ? "var(--ca)" : "var(--cb)"}`,
                   background: d.immLeer === val ? "var(--ca)" : "var(--cc)",
-                  color: d.immLeer === val ? "#fff" : "var(--ct)",
+                  color: d.immLeer === val ? "var(--on-ca)" : "var(--ct)",
                   fontSize: 13,
                   fontWeight: d.immLeer === val ? 600 : 400,
                   cursor: "pointer",
@@ -306,7 +306,7 @@ export default function Miete() {
                           [t.akt, fmtE(nx.aktMiete) + "/Mon."],
                           [
                             t.mxE,
-                            <span style={{ color: "#22c55e" }}>
+                            <span style={{ color: "var(--ok-tx)" }}>
                               {nx.mE > 0 ? `+${fmtE(nx.mE)}` : "—"}
                             </span>,
                           ],
@@ -387,7 +387,7 @@ export default function Miete() {
                             style={{
                               padding: "3px 4px",
                               textAlign: "right",
-                              color: r.mE > 0 ? "#22c55e" : "var(--ch)",
+                              color: r.mE > 0 ? "var(--ok-tx)" : "var(--ch)",
                             }}
                           >
                             {r.mE > 0 ? `+${fmtE(r.mE)}` : "—"}
@@ -401,7 +401,7 @@ export default function Miete() {
                             style={{
                               padding: "3px 4px",
                               textAlign: "right",
-                              color: r.sC === "pos" ? "#22c55e" : "#ef4444",
+                              color: r.sC === "pos" ? "var(--ok-tx)" : "var(--bad-tx)",
                             }}
                           >
                             {r.status}

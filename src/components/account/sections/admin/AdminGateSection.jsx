@@ -70,7 +70,7 @@ export function AdminGateSection({ title, load, save, texts }) {
       }
     >
       Aktuell:{" "}
-      <strong style={{ color: gate.open ? "#22c55e" : "#c0392b" }}>
+      <strong style={{ color: gate.open ? "var(--ok-tx)" : "var(--bad-tx)" }}>
         {gate.open ? texts.stateOpen : texts.stateClosed}
       </strong>
       {gate.source === "env" &&

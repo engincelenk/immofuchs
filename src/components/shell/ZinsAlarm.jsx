@@ -99,7 +99,7 @@ export function ZinsAlarm({ lang }) {
   };
   const btnStyle = (active) => ({
     background: active ? "var(--ca)" : "var(--ca-bg)",
-    color: active ? "#fff" : "var(--ca)",
+    color: active ? "var(--on-ca)" : "var(--ca)",
     border: "1px solid var(--ca-bd)",
     borderRadius: 8,
     padding: "8px 16px",

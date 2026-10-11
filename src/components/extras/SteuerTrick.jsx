@@ -319,14 +319,14 @@ export function SteuerTrick() {
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--on-ca)" }}>
                       {st.totalInv}
                     </div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,.7)" }}>
+                    <div style={{ fontSize: 11, color: "var(--on-ca)", opacity: 0.9 }}>
                       {st.totalInvSub}
                     </div>
                   </div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>{fE(gesKP)}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "var(--on-ca)" }}>{fE(gesKP)}</div>
                 </div>
               </div>
               <div style={{ ...card, border: "2px solid #2d8a4e" }}>
@@ -334,7 +334,7 @@ export function SteuerTrick() {
                   style={{
                     fontSize: 12,
                     fontWeight: 700,
-                    color: "#2d8a4e",
+                    color: "var(--ok-tx)",
                     textTransform: "uppercase",
                     letterSpacing: 0.8,
                     marginBottom: 6,
@@ -379,7 +379,7 @@ export function SteuerTrick() {
                       style={{
                         fontSize: r.green ? 18 : 15,
                         fontWeight: 700,
-                        color: r.green ? "#2d8a4e" : "var(--ct)",
+                        color: r.green ? "var(--ok-tx)" : "var(--ct)",
                       }}
                     >
                       {r.v}

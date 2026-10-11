@@ -59,7 +59,7 @@ export function LandingMascot({ onStart, lang }) {
 
   const statusInfo =
     status === "limit" || status === "zugang"
-      ? { label: t.statusLimited, color: "#f59e0b" }
+      ? { label: t.statusLimited, color: "var(--warn-tx)" }
       : { label: t.assistantTagline, color: "var(--ch)" };
 
   const close = () => {
@@ -268,7 +268,7 @@ export function LandingMascot({ onStart, lang }) {
       )}
       <style>{`
         ${ASSISTANT_SHEET_CSS}
-        .if-lm-go{align-self:flex-start;margin-left:34px;border:none;background:var(--ca);color:#fff;font-family:inherit;font-weight:700;font-size:12.5px;border-radius:14px;padding:8px 14px;cursor:pointer}
+        .if-lm-go{align-self:flex-start;margin-left:34px;border:none;background:var(--ca);color:var(--on-ca);font-family:inherit;font-weight:700;font-size:12.5px;border-radius:14px;padding:8px 14px;cursor:pointer}
       `}</style>
     </>
   );

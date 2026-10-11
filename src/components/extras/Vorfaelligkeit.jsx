@@ -430,10 +430,10 @@ export function Vorfaelligkeit() {
                     alignItems: "center",
                   }}
                 >
-                  <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{vt.rNetto}</span>
+                  <span style={{ color: "var(--on-ca)", fontWeight: 700, fontSize: 13 }}>{vt.rNetto}</span>
                   <span
                     style={{
-                      color: "#fff",
+                      color: "var(--on-ca)",
                       fontWeight: 800,
                       fontSize: 22,
                       fontVariantNumeric: "tabular-nums",

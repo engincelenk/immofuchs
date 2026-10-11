@@ -50,7 +50,7 @@ export const primaryBtnStyle = {
   padding: "9px 16px",
   fontSize: 13,
   fontWeight: 700,
-  color: "#fff",
+  color: "var(--on-ca)",
   background: "var(--ca)",
   border: "none",
   borderRadius: 8,

@@ -252,11 +252,11 @@ export default function Kredit() {
                   background: "linear-gradient(135deg,var(--ca),var(--ca-dk))",
                   borderRadius: 14,
                   padding: "18px 16px",
-                  color: "#fff",
+                  color: "var(--on-ca)",
                   marginBottom: 14,
                 }}
               >
-                <div style={{ fontSize: 10, opacity: 0.8, textTransform: "uppercase" }}>
+                <div style={{ fontSize: 10, opacity: 0.9, textTransform: "uppercase" }}>
                   {t.rate}
                 </div>
                 <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4 }}>
@@ -266,17 +266,17 @@ export default function Kredit() {
                   // Der Zahlungsschock am Ende der tilgungsfreien Zeit ist die
                   // wichtigste Zahl dieses Blocks - vorher zahlt der Nutzer
                   // nur Zinsen auf den KfW-Anteil.
-                  <div style={{ fontSize: 11, opacity: 0.85, marginTop: 4 }}>
+                  <div style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>
                     {t.kfwRateAb.replace("{j}", String(R.kfwTf + 1))}: {fmtE(R.rateNachTf)}
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 20, marginTop: 12 }}>
                   <div>
-                    <div style={{ fontSize: 9, opacity: 0.6 }}>{t.zins}</div>
+                    <div style={{ fontSize: 9, opacity: 0.9 }}>{t.zins}</div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{fmtE(R.z1)}/Mo.</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, opacity: 0.6 }}>{t.tilgK}</div>
+                    <div style={{ fontSize: 9, opacity: 0.9 }}>{t.tilgK}</div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{fmtE(R.t1)}/Mo.</div>
                   </div>
                 </div>
@@ -351,7 +351,7 @@ export default function Kredit() {
                     style={{
                       fontSize: 13,
                       fontWeight: 600,
-                      color: R.bel > 90 ? "#ef4444" : R.bel > 80 ? "#f59e0b" : "#22c55e",
+                      color: R.bel > 90 ? "var(--bad-tx)" : R.bel > 80 ? "var(--warn-tx)" : "var(--ok-tx)",
                     }}
                   >
                     {fmtP(R.bel)}
@@ -424,7 +424,7 @@ export default function Kredit() {
                       style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}
                     >
                       <span>{t.neueLaufzeit}</span>
-                      <span style={{ fontWeight: 600, color: "#22c55e" }}>
+                      <span style={{ fontWeight: 600, color: "var(--ok-tx)" }}>
                         {fmt(R.years2, 1)} J. ({t.statt} {fmt(R.lz, 1)} J.)
                       </span>
                     </div>
@@ -432,7 +432,7 @@ export default function Kredit() {
                       style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}
                     >
                       <span>{t.zinsenGespart}</span>
-                      <span style={{ fontWeight: 600, color: "#22c55e" }}>
+                      <span style={{ fontWeight: 600, color: "var(--ok-tx)" }}>
                         {fmtE(R.zinsenGespart)}
                       </span>
                     </div>
@@ -440,7 +440,7 @@ export default function Kredit() {
                       style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}
                     >
                       <span>{t.jahreGespart || t.jahre}</span>
-                      <span style={{ fontWeight: 600, color: "#22c55e" }}>
+                      <span style={{ fontWeight: 600, color: "var(--ok-tx)" }}>
                         {fmt(R.jahreGespart, 1)} J.
                       </span>
                     </div>
@@ -492,7 +492,7 @@ export default function Kredit() {
                         <td style={{ padding: "3px 4px", textAlign: "right" }}>
                           {fmtE(r.z + r.t)}
                         </td>
-                        <td style={{ padding: "3px 4px", textAlign: "right", color: "#ef4444" }}>
+                        <td style={{ padding: "3px 4px", textAlign: "right", color: "var(--bad-tx)" }}>
                           {fmtE(r.z)}
                         </td>
                         <td style={{ padding: "3px 4px", textAlign: "right" }}>{fmtE(r.t)}</td>

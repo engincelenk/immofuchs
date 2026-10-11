@@ -267,8 +267,15 @@ export const FONT_CSS = "@import url('/fonts/dm-sans.css');";
 // [data-theme="dark"] fuer die explizite Nutzerwahl (siehe ThemeContext.jsx),
 // die Media-Query fuer "System" (nur wenn kein data-theme gesetzt ist - sonst
 // wuerde eine explizite Hell-Wahl auf einem dunklen System ignoriert).
-// --ca bleibt bewusst unveraendert: die Akzentfarbe ist auf beiden
-// Hintergruenden kontrastreich genug (CLAUDE.md-Designtoken, unveraendert).
+// --ca hat seit 2026-10-11 je Theme einen eigenen Wert (Nutzer-Freigabe, QA-Befund
+// Kontrast): #e8600a erreichte mit weisser Schrift nur 3,44:1 und als Text auf
+// dunklem Grund 4,18:1 (WCAG AA verlangt 4,5:1). Kein einzelnes Orange schafft
+// beides - fuer weisse Schrift muss es dunkel, als Text auf Dunkel hell sein.
+// Hell: --ca #b84800 (weiss drauf 5,30, auf Weiss/Seite/--ca-bg >= 4,79).
+// Dunkel: --ca #f07a2e (auf allen dunklen Flaechen >= 5,15), dafuer DUNKLE Schrift
+// auf orangen Flaechen: --on-ca #1a1a1a (6,24). Text auf --ca-Flaechen daher immer
+// var(--on-ca), nie "#fff". --ca-dk (Hover, Text auf --ca-bg): hell #9a3c00 (>= 6,29),
+// dunkel #ff9450 (>= 6,56, mit --on-ca 7,96).
 // --hdr-bg (halbtransparenter Header-/Sticky-Bar-Hintergrund hinter
 // backdrop-filter:blur): stand vorher an 3 Stellen (App.jsx .hdr,
 // MyAccount.jsx .ma-hdr-bar, Landing.jsx) als hartes rgba(245,245,240,.92)
@@ -297,11 +304,11 @@ export const FONT_CSS = "@import url('/fonts/dm-sans.css');";
 // anderen Stellen steht es als FLAECHE (Button-/Ribbon-Hintergrund) mit
 // weissem Text davor, das funktioniert unveraendert auf beiden Themes.
 const STATUS_TOKENS_LIGHT =
-  "--ok-tx:#15803d;--ok-bg:#e8f8ee;--ok-bd:#9fd3ae;--warn-tx:#8a6d10;--warn-bg:#fff8e6;--warn-bd:#f0d38a;--bad-tx:#b91c1c;--bad-bg:#fff0f0;--bad-bd:#f0a5a5;--info-tx:#1a5fa0;--info-bg:#ebf5ff;--info-bd:#a8cdf0;--primary-tx:#1e3a5f;";
+  "--ok-tx:#137333;--ok-bg:#e8f8ee;--ok-bd:#9fd3ae;--warn-tx:#7a600e;--warn-bg:#fff8e6;--warn-bd:#f0d38a;--bad-tx:#b91c1c;--bad-bg:#fff0f0;--bad-bd:#f0a5a5;--info-tx:#1a5fa0;--info-bg:#ebf5ff;--info-bd:#a8cdf0;--primary-tx:#1e3a5f;";
 const STATUS_TOKENS_DARK =
   "--ok-tx:#4ade80;--ok-bg:#16321f;--ok-bd:#2c5c3a;--warn-tx:#fbbf24;--warn-bg:#3a2f10;--warn-bd:#6b551c;--bad-tx:#f87171;--bad-bg:#3a1414;--bad-bd:#6b2626;--info-tx:#7db4f0;--info-bg:#14243a;--info-bd:#2c4666;--primary-tx:#7fb3e0;";
 const DARK_TOKENS =
-  "--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--cro:#202020;--ca-bg:#3a2414;--ca-bd:#5a3a1e;--hdr-bg:rgba(24,24,24,.92);" +
+  "--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--cro:#202020;--ca:#f07a2e;--ca-dk:#ff9450;--on-ca:#1a1a1a;--ca-bg:#3a2414;--ca-bd:#5a3a1e;--hdr-bg:rgba(24,24,24,.92);" +
   STATUS_TOKENS_DARK;
 // --ch war bis 2026-09-06 #8a8a80. Das lieferte auf keinem einzigen
 // Untergrund der App genug Kontrast: 3,48:1 auf Kartenweiss, 3,19:1 auf der
@@ -322,7 +329,7 @@ const DARK_TOKENS =
 // Der Dunkelmodus ist NICHT betroffen: --ch #9a9a90 liefert dort bereits
 // 5,06:1 bis 6,26:1.
 export const ROOT_TOKENS_CSS =
-  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#6c6c62;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#e8600a;--ca-dk:#c44d00;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f;--hdr-bg:rgba(245,245,240,.92);--ease-out:cubic-bezier(0.23,1,0.32,1);--ease-in-out:cubic-bezier(0.77,0,0.175,1);--ease-drawer:cubic-bezier(0.32,0.72,0,1);" +
+  ":root{--bg:#f5f5f0;--cc:#fff;--ct:#1a1a1a;--cl:#3d3d3a;--ch:#6c6c62;--cb:#e5e5dc;--ci:#fafaf7;--cro:#f0f0ea;--ca:#b84800;--ca-dk:#9a3c00;--on-ca:#fff;--ca-bg:#fff1e8;--ca-bd:#f5cba9;--primary:#1e3a5f;--hdr-bg:rgba(245,245,240,.92);--ease-out:cubic-bezier(0.23,1,0.32,1);--ease-in-out:cubic-bezier(0.77,0,0.175,1);--ease-drawer:cubic-bezier(0.32,0.72,0,1);" +
   STATUS_TOKENS_LIGHT +
   "}" +
   `:root[data-theme="dark"]{${DARK_TOKENS}}` +
@@ -706,7 +713,7 @@ export default function App() {
       .tbar::-webkit-scrollbar{display:none}
       /* Fusszeilen-Links: Schrift bleibt klein, die Tippflaeche nicht (WCAG 2.5.8,
          mind. 24px; vorher 13px hoch - QA-Befund F6, 2026-10-11). */
-      .app-fuss > a,.app-fuss > button{display:inline-flex;align-items:center;min-height:24px}
+      .app-fuss > a,.app-fuss > button{display:inline-flex;align-items:center;justify-content:center;min-height:24px;min-width:24px}
       .app-fuss{align-items:center}
       .tbar-more{flex:0 0 auto;width:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;border:none;border-left:1px solid var(--cb);background:var(--cc);cursor:pointer;font-family:inherit;
         /* Schlagschatten nach links: macht sichtbar, dass die Tabs UNTER
@@ -731,8 +738,8 @@ export default function App() {
       .if-row > *{margin-bottom:14px}
       .mob-toggle{display:flex;background:var(--cc);border:1px solid var(--cb);border-radius:12px;padding:4px;margin-bottom:14px;gap:4px}
       .mob-toggle button{flex:1;padding:11px 12px;font-size:15px;font-weight:600;border:none;border-radius:9px;background:transparent;color:var(--cl);cursor:pointer;font-family:inherit;min-height:44px}
-      .mob-toggle button.act{background:var(--ca);color:#fff}
-      .mob-next-btn{display:none;width:100%;padding:14px;font-size:16px;font-weight:700;background:var(--ca);color:#fff;border:none;border-radius:12px;cursor:pointer;font-family:inherit;margin-top:16px;letter-spacing:.3px}
+      .mob-toggle button.act{background:var(--ca);color:var(--on-ca)}
+      .mob-next-btn{display:none;width:100%;padding:14px;font-size:16px;font-weight:700;background:var(--ca);color:var(--on-ca);border:none;border-radius:12px;cursor:pointer;font-family:inherit;margin-top:16px;letter-spacing:.3px}
       .hdr-tag{display:none}
       /* .res-live-sliders (Slider-Feature 2026-08-28): auf Mobile/Tablet-
          Hochformat toggelt VT zwischen Eingabe und Ergebnis, dort duplizieren

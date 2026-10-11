@@ -183,8 +183,8 @@ const subStyle = {
 
 const installBtnStyle = {
   padding: "8px 16px",
-  background: "var(--ca, #E8600A)",
-  color: "#fff",
+  background: "var(--ca, #b84800)",
+  color: "var(--on-ca, #fff)",
   border: "none",
   borderRadius: 8,
   fontSize: 13,

@@ -822,7 +822,7 @@ export default function Haupt() {
                   borderRadius: 8,
                   border: `2px solid ${d.immLeer === val ? "var(--ca)" : "var(--cb)"}`,
                   background: d.immLeer === val ? "var(--ca)" : "var(--cc)",
-                  color: d.immLeer === val ? "#fff" : "var(--ct)",
+                  color: d.immLeer === val ? "var(--on-ca)" : "var(--ct)",
                   fontSize: 13,
                   fontWeight: d.immLeer === val ? 600 : 400,
                   cursor: "pointer",

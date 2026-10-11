@@ -616,7 +616,7 @@ function ObjektFormular({
               ...knopfStil,
               flex: 2,
               background: vollstaendig && !speichertLaeuft ? "var(--ca)" : "var(--cb)",
-              color: vollstaendig && !speichertLaeuft ? "#fff" : "var(--ch)",
+              color: vollstaendig && !speichertLaeuft ? "var(--on-ca)" : "var(--ch)",
               border: "none",
               cursor: vollstaendig && !speichertLaeuft ? "pointer" : "not-allowed",
             }}

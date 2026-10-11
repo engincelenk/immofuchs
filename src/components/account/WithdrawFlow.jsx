@@ -140,7 +140,7 @@ export function WithdrawFlow({ t, account, onDone }) {
             <button
               onClick={handleConfirm}
               disabled={busy}
-              style={{ ...btn, fontWeight: 700, background: "var(--ca)", color: "#fff", border: "none" }}
+              style={{ ...btn, fontWeight: 700, background: "var(--ca)", color: "var(--on-ca)", border: "none" }}
             >
               {t.withdrawConfirm}
             </button>

@@ -169,7 +169,7 @@ export function FeedbackModal({ t, onClose }) {
               <div
                 style={{
                   fontSize: 11.5,
-                  color: remaining > 0 ? "var(--ch)" : "#2d8a4e",
+                  color: remaining > 0 ? "var(--ch)" : "var(--ok-tx)",
                   margin: "6px 0 14px",
                   fontWeight: remaining > 0 ? 400 : 600,
                 }}

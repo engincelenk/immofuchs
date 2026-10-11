@@ -125,10 +125,10 @@ export function YearTable({ rows, zbJ }) {
                   <td style={{ ...td, color: "var(--ct)" }}>{fmtE(r.tilgB)}</td>
                   <td style={{ ...td, color: "var(--ct)" }}>{fmtE(r.steuer)}</td>
                   <td style={{ ...td, color: "var(--ct)" }}>{fmtE(r.miete)}</td>
-                  <td style={{ ...td, fontWeight: 600, color: cfO >= 0 ? "#22c55e" : "#ef4444" }}>
+                  <td style={{ ...td, fontWeight: 600, color: cfO >= 0 ? "var(--ok-tx)" : "var(--bad-tx)" }}>
                     {fmtE(cfO)}
                   </td>
-                  <td style={{ ...td, fontWeight: 600, color: r.cf >= 0 ? "#22c55e" : "#ef4444" }}>
+                  <td style={{ ...td, fontWeight: 600, color: r.cf >= 0 ? "var(--ok-tx)" : "var(--bad-tx)" }}>
                     {fmtE(r.cf)}
                   </td>
                 </tr>
@@ -158,11 +158,11 @@ export function YearTable({ rows, zbJ }) {
               <td style={{ ...td, color: "var(--ct)" }}>{fmtE(sum.steuer)}</td>
               <td style={{ ...td, color: "var(--ct)" }}>{fmtE(sum.miete)}</td>
               <td
-                style={{ ...td, fontWeight: 700, color: sum.cfOhneSt >= 0 ? "#22c55e" : "#ef4444" }}
+                style={{ ...td, fontWeight: 700, color: sum.cfOhneSt >= 0 ? "var(--ok-tx)" : "var(--bad-tx)" }}
               >
                 {fmtE(sum.cfOhneSt)}
               </td>
-              <td style={{ ...td, fontWeight: 700, color: sum.cf >= 0 ? "#22c55e" : "#ef4444" }}>
+              <td style={{ ...td, fontWeight: 700, color: sum.cf >= 0 ? "var(--ok-tx)" : "var(--bad-tx)" }}>
                 {fmtE(sum.cf)}
               </td>
             </tr>

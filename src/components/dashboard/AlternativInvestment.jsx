@@ -495,7 +495,7 @@ const consentJa = {
   borderRadius: 10,
   border: "none",
   background: "var(--ca)",
-  color: "#fff",
+  color: "var(--on-ca)",
   fontSize: 13.5,
   fontWeight: 700,
   cursor: "pointer",

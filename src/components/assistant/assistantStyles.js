@@ -31,7 +31,7 @@ export const ASSISTANT_SHEET_CSS = `
   .if-asst-input-row{flex:none;display:flex;gap:8px;padding:10px 14px calc(16px + env(safe-area-inset-bottom))}
   .if-asst-input-row input{flex:1;height:42px;border-radius:21px;border:1px solid var(--cb);padding:0 16px;font-size:16px;font-family:inherit;background:var(--ci);color:var(--ct);min-width:0}
   .if-asst-input-row input:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
-  .if-asst-send{flex:none;width:42px;height:42px;border-radius:50%;border:none;background:var(--ca);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
+  .if-asst-send{flex:none;width:42px;height:42px;border-radius:50%;border:none;background:var(--ca);color:var(--on-ca);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
   .if-asst-send:focus-visible{outline:2px solid var(--ca);outline-offset:2px}
   .if-asst-mic{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid var(--cb);background:var(--ci);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .if-asst-mic.listening{background:var(--bad-bg);border-color:var(--bad-bd);animation:ifAsstMicPulse 1.2s ease infinite}
@@ -71,7 +71,7 @@ export const ASSISTANT_SHEET_CSS = `
   }
 
   .if-exp-consent{flex:none;margin:0 14px 8px;padding:10px 12px;background:var(--ca-bg);border:1px solid var(--ca-bd);border-radius:12px;font-size:12px;color:var(--cl);line-height:1.45;display:flex;flex-direction:column;gap:8px}
-  .if-exp-consent button{align-self:flex-start;background:var(--ca);color:#fff;border:none;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
+  .if-exp-consent button{align-self:flex-start;background:var(--ca);color:var(--on-ca);border:none;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
 
   /* Zwei Zeilen statt einer: die Thumbs scrollen horizontal, der Auswerten-
      Knopf sitzt darunter in voller Breite und bleibt dadurch immer sichtbar
@@ -82,10 +82,10 @@ export const ASSISTANT_SHEET_CSS = `
   .if-exp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .if-exp-thumb.pdf{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ch)}
   .if-exp-thumb button{position:absolute;top:1px;right:1px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(26,26,26,.62);color:#fff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
-  .if-exp-start{flex:none;align-self:stretch;margin:0 14px;min-height:44px;background:var(--ca);color:#fff;border:none;border-radius:16px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+  .if-exp-start{flex:none;align-self:stretch;margin:0 14px;min-height:44px;background:var(--ca);color:var(--on-ca);border:none;border-radius:16px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
   .if-exp-start:disabled{opacity:.5;cursor:default}
   .if-exp-start:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
-  .if-exp-goto{align-self:stretch;min-height:44px;background:var(--ca);color:#fff;border:none;border-radius:12px;padding:10px 14px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
+  .if-exp-goto{align-self:stretch;min-height:44px;background:var(--ca);color:var(--on-ca);border:none;border-radius:12px;padding:10px 14px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
   .if-exp-goto:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
   .if-exp-fehler{flex:none;margin:0 14px 8px;font-size:12px;color:var(--bad-tx);background:var(--bad-bg);border-radius:8px;padding:7px 10px}
 
@@ -116,7 +116,7 @@ export const ASSISTANT_SHEET_CSS = `
   .if-exp-nurinfo{flex:none;font-size:10px;color:var(--ch);align-self:center}
   .if-exp-toggle{flex:none;align-self:center;display:flex;align-items:center;min-width:24px;min-height:24px;justify-content:center}
   .if-exp-toggle input{width:18px;height:18px;accent-color:var(--ca)}
-  .if-exp-apply{width:100%;margin-top:10px;background:var(--ca);color:#fff;border:none;border-radius:12px;padding:11px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;min-height:44px}
+  .if-exp-apply{width:100%;margin-top:10px;background:var(--ca);color:var(--on-ca);border:none;border-radius:12px;padding:11px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;min-height:44px}
   .if-exp-apply:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
   .if-exp-chip{align-self:center;background:var(--ci);border:1px solid var(--cb);border-radius:14px;padding:6px 12px;font-size:12px;color:var(--ch)}
 
@@ -177,7 +177,7 @@ export const ASSISTANT_SHEET_CSS = `
      Gleiche Absicherung wie bei .if-exp-start im Bestand. */
   .if-hnd-alle{flex:none;align-self:flex-start;background:transparent;color:var(--ca-dk);border:1px solid var(--cb);border-radius:10px;padding:6px 11px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer;min-height:32px}
   .if-hnd-alle:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
-  .if-hnd-pdf{flex:none;width:100%;background:var(--ca);color:#fff;border:none;border-radius:12px;padding:11px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;min-height:44px}
+  .if-hnd-pdf{flex:none;width:100%;background:var(--ca);color:var(--on-ca);border:none;border-radius:12px;padding:11px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;min-height:44px}
   .if-hnd-pdf:disabled{opacity:.5;cursor:default}
   .if-hnd-pdf:focus-visible{outline:2px solid var(--ca-dk);outline-offset:2px}
   .if-hnd-fehler{flex:none;font-size:11.5px;line-height:1.4;color:var(--ca-dk)}

@@ -172,7 +172,7 @@ const primaryBtnStyle = {
   fontSize: 14,
   fontWeight: 700,
   background: "var(--ca)",
-  color: "#fff",
+  color: "var(--on-ca)",
   border: "none",
   borderRadius: 10,
   cursor: "pointer",

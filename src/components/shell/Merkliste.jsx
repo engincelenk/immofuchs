@@ -55,7 +55,7 @@ const searchChipStyle = {
 const searchChipActiveStyle = {
   ...searchChipStyle,
   background: "var(--ca)",
-  color: "#fff",
+  color: "var(--on-ca)",
   borderColor: "var(--ca)",
 };
 // Objektart und Ansicht sahen bis 2026-09-09 beide wie Chips aus, obwohl sie
@@ -107,7 +107,7 @@ const segmentStyle = {
 const segmentActiveStyle = {
   ...segmentStyle,
   background: "var(--ca)",
-  color: "#fff",
+  color: "var(--on-ca)",
 };
 // Kontingent der Testphase (Nutzer-Vorgabe 2026-08-25): 5 Objekte INSGESAMT
 // fuer die ganze Phase. Pro speichert unbegrenzt.
@@ -634,7 +634,7 @@ export function SaveModal({ open, onClose, onSave, defaultName, lang }) {
             borderRadius: 12,
             border: "none",
             background: name.trim() ? "var(--ca)" : "var(--cb)",
-            color: name.trim() ? "#fff" : "var(--ch)",
+            color: name.trim() ? "var(--on-ca)" : "var(--ch)",
             fontSize: 16,
             fontWeight: 700,
             cursor: name.trim() ? "pointer" : "default",
@@ -1269,7 +1269,7 @@ export function Merkliste() {
             borderRadius: 10,
             border: "none",
             background: "var(--ca)",
-            color: "#fff",
+            color: "var(--on-ca)",
             fontSize: 15,
             fontWeight: 700,
             cursor: "pointer",
@@ -1387,7 +1387,7 @@ export function Merkliste() {
             borderRadius: 10,
             border: "none",
             background: "var(--ca)",
-            color: "#fff",
+            color: "var(--on-ca)",
             fontSize: 14,
             fontWeight: 700,
             cursor: "pointer",
@@ -1826,7 +1826,7 @@ export function Merkliste() {
                     borderRadius: 10,
                     border: "none",
                     background: "var(--ca)",
-                    color: "#fff",
+                    color: "var(--on-ca)",
                     fontSize: 13.5,
                     fontWeight: 700,
                     cursor: "pointer",
@@ -1845,7 +1845,7 @@ export function Merkliste() {
                       borderRadius: 10,
                       border: "none",
                       background: "var(--ca)",
-                      color: "#fff",
+                      color: "var(--on-ca)",
                       fontSize: 13.5,
                       fontWeight: 700,
                       cursor: "pointer",
@@ -2036,7 +2036,7 @@ export function Merkliste() {
               borderRadius: 10,
               border: "1.5px solid var(--ca)",
               background: "var(--ca)",
-              color: "#fff",
+              color: "var(--on-ca)",
               fontSize: 14,
               fontWeight: 600,
               fontFamily: "inherit",

@@ -48,7 +48,7 @@ export function AiNoticeModal({ t, onClose }) {
             borderRadius: 21,
             border: "none",
             background: "var(--ca)",
-            color: "#fff",
+            color: "var(--on-ca)",
             fontFamily: "inherit",
             fontWeight: 700,
             fontSize: 14,

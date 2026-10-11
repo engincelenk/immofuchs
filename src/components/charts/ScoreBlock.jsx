@@ -96,6 +96,11 @@ export function ScoreBlock({ score }) {
 
   const COLORS = { green: "#22c55e", yellow: "#f59e0b", orange: "#f97316", red: "#ef4444" };
   const col = COLORS[score.tier] || COLORS.red;
+  // Text in Ampelfarbe: die kraeftigen COLORS erreichen auf hellem Grund nur
+  // 2,1-3,8:1 (WCAG AA 4,5:1) - als Schrift deshalb die Status-Text-Tokens,
+  // die je Theme passend hell/dunkel sind. Flaechen und Ring bleiben kraeftig.
+  const TEXT_COLORS = { green: "var(--ok-tx)", yellow: "var(--warn-tx)", orange: "var(--warn-tx)", red: "var(--bad-tx)" };
+  const colTx = TEXT_COLORS[score.tier] || TEXT_COLORS.red;
   const lbl = t[score.labelKey] || score.labelKey;
 
   // Findings-Karten: Titel/Text je Kennzahl, aus derselben Quelle wie die
@@ -156,14 +161,15 @@ export function ScoreBlock({ score }) {
           style={{
             fontSize: 12,
             fontWeight: 700,
-            color: "#fff",
+            // Dunkel statt weiss: #1a1a1a erreicht auf allen Ampelflaechen >= 4,62:1.
+            color: "#1a1a1a",
             letterSpacing: 0.5,
             textTransform: "uppercase",
           }}
         >
           {t.financeScoreTitle || "ImmoFuchs Finanz-Score"}
         </span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", opacity: 0.9 }}>{lbl}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1a1a" }}>{lbl}</span>
       </div>
 
       {(() => {
@@ -245,10 +251,10 @@ export function ScoreBlock({ score }) {
                 ))}
               </g>
 
-              <text x={C} y={218} textAnchor="middle" fontSize={46} fontWeight={800} fill={col}>
+              <text x={C} y={218} textAnchor="middle" fontSize={46} fontWeight={800} fill={colTx}>
                 {displayScore}
               </text>
-              <text x={72} y={246} textAnchor="middle" fontSize={13} fontWeight={700} fill={COLORS.red}>
+              <text x={72} y={246} textAnchor="middle" fontSize={13} fontWeight={700} fill="var(--bad-tx)">
                 0
               </text>
               <text
@@ -257,7 +263,7 @@ export function ScoreBlock({ score }) {
                 textAnchor="middle"
                 fontSize={13}
                 fontWeight={700}
-                fill={COLORS.green}
+                fill="var(--ok-tx)"
               >
                 100
               </text>
@@ -284,7 +290,7 @@ export function ScoreBlock({ score }) {
                 textAlign: "center",
                 fontSize: 16,
                 fontWeight: 800,
-                color: col,
+                color: colTx,
                 marginTop: 2,
                 lineHeight: 1.25,
               }}

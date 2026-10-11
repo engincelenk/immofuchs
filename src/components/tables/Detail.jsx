@@ -69,8 +69,8 @@ export function Detail({ R, d }) {
           </span>
         </div>
         <div style={row}>
-          <span style={{ color: "#ef4444" }}>− {t.chartRestschuld}</span>
-          <span style={{ fontWeight: 600, color: "#ef4444" }}>−{fmtE(rsEnd)}</span>
+          <span style={{ color: "var(--bad-tx)" }}>− {t.chartRestschuld}</span>
+          <span style={{ fontWeight: 600, color: "var(--bad-tx)" }}>−{fmtE(rsEnd)}</span>
         </div>
         <div style={rowSub}>
           <span style={{ color: "var(--ct)" }}>= {t.detNettoerloes}</span>
@@ -78,23 +78,23 @@ export function Detail({ R, d }) {
         </div>
 
         <div style={row}>
-          <span style={{ color: "#ef4444" }}>− {t.eigenkapital}</span>
-          <span style={{ fontWeight: 600, color: "#ef4444" }}>−{fmtE(ek)}</span>
+          <span style={{ color: "var(--bad-tx)" }}>− {t.eigenkapital}</span>
+          <span style={{ fontWeight: 600, color: "var(--bad-tx)" }}>−{fmtE(ek)}</span>
         </div>
         {nkCash > 0 && (
           <div style={row}>
-            <span style={{ color: "#ef4444" }}>− {t.nbk}</span>
-            <span style={{ fontWeight: 600, color: "#ef4444" }}>−{fmtE(nkCash)}</span>
+            <span style={{ color: "var(--bad-tx)" }}>− {t.nbk}</span>
+            <span style={{ fontWeight: 600, color: "var(--bad-tx)" }}>−{fmtE(nkCash)}</span>
           </div>
         )}
         <div style={row}>
-          <span style={{ color: "#ef4444" }}>− {t.sonderUml}</span>
-          <span style={{ fontWeight: 600, color: "#ef4444" }}>−{fmtE(sonder)}</span>
+          <span style={{ color: "var(--bad-tx)" }}>− {t.sonderUml}</span>
+          <span style={{ fontWeight: 600, color: "var(--bad-tx)" }}>−{fmtE(sonder)}</span>
         </div>
         {ren > 0 && (
           <div style={row}>
-            <span style={{ color: "#ef4444" }}>− {t.renovierung}</span>
-            <span style={{ fontWeight: 600, color: "#ef4444" }}>−{fmtE(ren)}</span>
+            <span style={{ color: "var(--bad-tx)" }}>− {t.renovierung}</span>
+            <span style={{ fontWeight: 600, color: "var(--bad-tx)" }}>−{fmtE(ren)}</span>
           </div>
         )}
         <div style={rowSub}>
@@ -145,10 +145,10 @@ export function Detail({ R, d }) {
         {/* Ueber den Zeitraum kann die Steuerwirkung eine Last sein (negatives
             sSt): dann Last statt "Ersparnis" und ohne "+-"-Vorzeichen. */}
         <div style={{ ...row, borderTop: "6px solid var(--ci)" }}>
-          <span style={{ color: (R.sSt || 0) >= 0 ? "#22c55e" : "#ef4444" }}>
+          <span style={{ color: (R.sSt || 0) >= 0 ? "var(--ok-tx)" : "var(--bad-tx)" }}>
             {(R.sSt || 0) >= 0 ? "+" : "−"} {(R.sSt || 0) >= 0 ? t.detCumSteuer : t.detCumSteuerLast || t.detCumSteuer}
           </span>
-          <span style={{ fontWeight: 600, color: (R.sSt || 0) >= 0 ? "#22c55e" : "#ef4444" }}>
+          <span style={{ fontWeight: 600, color: (R.sSt || 0) >= 0 ? "var(--ok-tx)" : "var(--bad-tx)" }}>
             {(R.sSt || 0) >= 0 ? "+" : ""}
             {fmtE(R.sSt || 0)}
           </span>
