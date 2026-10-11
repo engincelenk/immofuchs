@@ -1,3 +1,13 @@
+## 2026-10-11 (1.100.119) [TOOLING]
+
+### Apple-Login auf prod repariert (Secrets), Pruefskript fuer Worker-Secrets
+
+- Ursache (per wrangler tail belegt, kein Codefehler): APPLE_KEY_ID/APPLE_PRIVATE_KEY auf prod zeigten auf die nicht existierende Key-ID 6UPJC87F8F, Apple antwortete im Token-Tausch mit invalid_client; die App zeigte die allgemeine Meldung "Anmeldung abgebrochen oder fehlgeschlagen".
+- Behoben ohne Deploy: neuer Apple-Key YT4V6T9D9Z, beide Secrets auf prod, dev und qa (Failover = qa-Worker) neu gesetzt; Apple-Login dort verifiziert.
+- scripts/check-secrets.ps1: listet je Umgebung fehlende, veraltete und unbekannte Worker-Secret-NAMEN (nur lesend, keine Werte).
+- Altlasten geloescht (Code dafuer ist laengst entfernt): dev PADDLE_API_KEY, PADDLE_PRICE_ID_MONTHLY, PADDLE_PRICE_ID_YEARLY, PADDLE_WEBHOOK_SECRET, WEBAUTHN_ORIGIN, WEBAUTHN_RP_ID sowie prod PADDLE_WEBHOOK_SECRET.
+- docs/technical_specs/betrieb/geheimnis-inventar.md (lokal, nicht im Git) um den Apple-Eintrag, Stripe-Stand auf prod und die Altlasten ergaenzt.
+
 ## 2026-10-10 (1.100.118) [WORKER] [FRONTEND]
 
 ### Admin-Zweitfaktor im Admin-Dashboard ein-/ausschaltbar
