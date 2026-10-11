@@ -1,3 +1,10 @@
+## 2026-10-11 (1.100.125) [WORKER] [KOSTEN]
+
+### Kapazitaetswarnung fuer das Gemini-Gratiskontingent
+
+- worker/src/kiAlarm.ts: Die taegliche Warn-Mail kommt jetzt auch, wenn die KI-Aufrufe von gestern 70 % der Tagesgrenze erreichen (Standard 1.000, Gemini-Gratiskontingent; Variable KI_KAPAZITAET_TAG, "0" schaltet die Warnung ab, mit bezahltem Tarif anpassen).
+- worker/src/types.ts: neue Variable KI_KAPAZITAET_TAG. Tests in kiAlarm.test.ts ergaenzt.
+
 ## 2026-10-11 (1.100.124) [WORKER] [KOSTEN] [DB]
 
 ### KI-Kosten je Kunde: messen, drosseln, melden

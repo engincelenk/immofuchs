@@ -306,6 +306,8 @@ export interface Env {
   KI_NOTBREMSE_TAG_MIKRO?: string;
   KI_ALARM_TAG_MIKRO?: string;
   KI_ALARM_NUTZER_MIKRO?: string;
+  // Tagesgrenze des KI-Anbieters fuer die Kapazitaetswarnung (Standard 1000 = Gemini-Gratiskontingent, "0" = aus).
+  KI_KAPAZITAET_TAG?: string;
   // Free-Kontingent seit 2026-08-18 kein Tageslimit mehr, sondern insgesamt
   // N Anfragen je Rechnertyp (dauerhaft, siehe SessionRateLimiter).
   FINN_FREE_MAX_TOKENS?: string;

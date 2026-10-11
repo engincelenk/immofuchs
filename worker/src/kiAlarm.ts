@@ -9,6 +9,11 @@ import { trialTag } from "./trialLimits";
 
 const TAG_MS = 24 * 60 * 60 * 1000;
 const AUFBEWAHRUNG_TAGE = 120;
+// Warnung, sobald so viel der Tagesgrenze des Anbieters verbraucht ist.
+export const KAPAZITAET_WARNANTEIL = 0.7;
+// Gratiskontingent Gemini 3.5 Flash-Lite: 1.000 Anfragen je Tag und Projekt (Stand 2026-10). Mit bezahltem Tarif
+// KI_KAPAZITAET_TAG im Dashboard hoch- oder auf 0 (= aus) setzen.
+const KAPAZITAET_TAG_STANDARD = 1000;
 
 export interface AlarmEingabe {
   gesamtMikro: number;
@@ -16,6 +21,9 @@ export interface AlarmEingabe {
   groessterNutzerMikro: number;
   schwelleTagMikro: number;
   schwelleNutzerMikro: number;
+  // Kapazitaetswarnung (Gratiskontingent): gestern gebuchte Aufrufe gegen die Tagesgrenze des Anbieters.
+  aufrufeGestern: number;
+  kapazitaetTag: number;
 }
 
 export function alarmGruende(e: AlarmEingabe): string[] {
@@ -26,6 +34,12 @@ export function alarmGruende(e: AlarmEingabe): string[] {
   }
   if (e.groessterNutzerMikro > e.schwelleNutzerMikro) {
     gruende.push(`Ein einzelner Kunde hat gestern ${euro(e.groessterNutzerMikro)} verbraucht (Schwelle ${euro(e.schwelleNutzerMikro)})`);
+  }
+  if (e.kapazitaetTag > 0 && e.aufrufeGestern >= e.kapazitaetTag * KAPAZITAET_WARNANTEIL) {
+    gruende.push(
+      `${e.aufrufeGestern} KI-Aufrufe gestern = ${Math.round((e.aufrufeGestern / e.kapazitaetTag) * 100)} % der Tagesgrenze von ${e.kapazitaetTag} ` +
+        `(Warnung ab ${Math.round(KAPAZITAET_WARNANTEIL * 100)} %). Das Gratiskontingent von Gemini reicht bald nicht mehr: danach Fehler bzw. Fallback auf Workers AI.`,
+    );
   }
   return gruende;
 }
@@ -67,6 +81,8 @@ export async function pruefeKiKostenAlarm(env: Env, jetzt: number = Date.now()):
       groessterNutzerMikro: topListe[0]?.k ?? 0,
       schwelleTagMikro: leseZahl(env.KI_ALARM_TAG_MIKRO, KI_DEFAULTS.alarmTagMikro),
       schwelleNutzerMikro: leseZahl(env.KI_ALARM_NUTZER_MIKRO, KI_DEFAULTS.alarmNutzerMikro),
+      aufrufeGestern: tot?.n ?? 0,
+      kapazitaetTag: env.KI_KAPAZITAET_TAG === "0" ? 0 : leseZahl(env.KI_KAPAZITAET_TAG, KAPAZITAET_TAG_STANDARD),
     });
 
     // Aufbewahrung begrenzen (Datenminimierung, Tabelle bleibt klein).
@@ -85,7 +101,7 @@ export async function pruefeKiKostenAlarm(env: Env, jetzt: number = Date.now()):
       `<ul>${gruende.map((g) => `<li>${esc(g)}</li>`).join("")}</ul>` +
       `<p>Gesamt gestern: ${euro(gesamt)} (${tot?.n ?? 0} Aufrufe). Monat bisher: ${euro(monat?.k ?? 0)}.</p>` +
       `<p>Groesste Verbraucher gestern:</p><ul>${zeilen}</ul>` +
-      `<p>Kosten sind eine Schaetzung aus der Textlaenge. Schwellen: Variablen KI_ALARM_TAG_MIKRO und KI_ALARM_NUTZER_MIKRO. ` +
+      `<p>Kosten sind eine Schaetzung aus der Textlaenge. Schwellen: Variablen KI_ALARM_TAG_MIKRO, KI_ALARM_NUTZER_MIKRO und KI_KAPAZITAET_TAG. ` +
       `Budgets: KI_BUDGET_ENFORCE, KI_BUDGET_TAG_MIKRO, KI_BUDGET_MONAT_MIKRO.</p>`;
     const an = env.BACKUP_ALERT_EMAIL || env.CONTACT_EMAIL || "info@immofuchs.info";
     await sendEmail(env, an, `ImmoFuchs: KI-Kosten auffaellig (${gestern})`, html);
