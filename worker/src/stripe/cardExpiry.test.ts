@@ -36,9 +36,15 @@ const env = { DB: {} } as unknown as Env;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  dispatchMock.mockResolvedValue(true);
 });
 
 describe("cardExpiredBy", () => {
+  it("Jahreswechsel: Dezember-Karte gilt bis 31.12., danach nicht mehr", () => {
+    expect(cardExpiredBy(12, 2026, Date.UTC(2026, 11, 31, 23, 59))).toBe(false);
+    expect(cardExpiredBy(12, 2026, Date.UTC(2027, 0, 1))).toBe(true);
+    expect(cardExpiredBy(1, 2027, Date.UTC(2027, 0, 31))).toBe(false);
+  });
   it("Karte gilt bis Ende des Ablaufmonats", () => {
     expect(cardExpiredBy(11, 2026, Date.UTC(2026, 10, 30, 23, 59))).toBe(false);
     expect(cardExpiredBy(11, 2026, Date.UTC(2026, 11, 1))).toBe(true);
@@ -87,6 +93,47 @@ describe("sendCardExpiryReminders", () => {
     expect(dispatchMock).toHaveBeenCalledTimes(1);
     expect(markMock).toHaveBeenCalledTimes(1);
     expect(markMock.mock.calls[0][1]).toBe("row_2");
+  });
+
+  it("Mail-Versand fehlgeschlagen: nicht als gemahnt markieren, naechster Lauf versucht es erneut", async () => {
+    listMock.mockResolvedValue([candidate()]);
+    retrieveMock.mockResolvedValue(stripeSub({ exp_month: 10, exp_year: 2026 }));
+    dispatchMock.mockResolvedValueOnce(false);
+    await sendCardExpiryReminders(env);
+    expect(markMock).not.toHaveBeenCalled();
+    await sendCardExpiryReminders(env);
+    expect(dispatchMock).toHaveBeenCalledTimes(2);
+    expect(markMock).toHaveBeenCalledWith(env.DB, "row_1", PERIOD_END);
+  });
+
+  it("Karte aus der Standardzahlungsmethode des Kunden, wenn das Abo keine hat", async () => {
+    listMock.mockResolvedValue([candidate()]);
+    retrieveMock.mockResolvedValue({
+      default_payment_method: null,
+      customer: {
+        id: "cus_1",
+        invoice_settings: { default_payment_method: { card: { last4: "1111", exp_month: 10, exp_year: 2026 } } },
+      },
+    });
+    await sendCardExpiryReminders(env);
+    expect(dispatchMock.mock.calls[0][1].payload).toMatchObject({ last4: "1111", expiry: "10/2026" });
+  });
+
+  it("geloeschter Kunde und nur Zahlungsmethoden-ID: keine Karte, keine Mail, trotzdem geprueft", async () => {
+    listMock.mockResolvedValue([candidate(), candidate({ id: "row_2", stripe_subscription_id: "sub_2" })]);
+    retrieveMock
+      .mockResolvedValueOnce({ default_payment_method: null, customer: { id: "cus_1", deleted: true } })
+      .mockResolvedValueOnce({ default_payment_method: "pm_1", customer: "cus_2" });
+    await sendCardExpiryReminders(env);
+    expect(dispatchMock).not.toHaveBeenCalled();
+    expect(markMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("Monat wird zweistellig aufgefuellt", async () => {
+    listMock.mockResolvedValue([candidate({ current_period_end: Date.UTC(2027, 3, 10) })]);
+    retrieveMock.mockResolvedValue(stripeSub({ exp_month: 3, exp_year: 2027 }));
+    await sendCardExpiryReminders(env);
+    expect(dispatchMock.mock.calls[0][1].payload.expiry).toBe("03/2027");
   });
 
   it("ohne faellige Abos kein Stripe-Aufruf", async () => {

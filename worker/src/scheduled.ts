@@ -13,6 +13,7 @@ import { dispatchNotification } from "./notifications";
 import { reconcileSubscriptions } from "./stripe/reconcile";
 import { reconcileCustomers } from "./stripe/customerSync";
 import { sendCardExpiryReminders } from "./stripe/cardExpiry";
+import { datumDe } from "./datum";
 import { runBackup } from "./backup/job";
 import { isStandby } from "./standby";
 import { pruefeKiKostenAlarm } from "./kiAlarm";
@@ -70,7 +71,7 @@ export async function handleScheduled(env: Env, cron?: string): Promise<void> {
         recipientEmail: sub.email,
         recipientUserId: sub.user_id,
         payload: {
-          periodEndDate: new Date(sub.current_period_end).toLocaleDateString("de-DE"),
+          periodEndDate: datumDe(sub.current_period_end),
           amount: preisText(sub.plan),
           wechselZuMonatlich: env.YEARLY_AUTO_MONTHLY === "true" && sub.plan === "yearly",
         },
@@ -98,7 +99,7 @@ export async function handleScheduled(env: Env, cron?: string): Promise<void> {
         recipientEmail: sub.email,
         recipientUserId: sub.user_id,
         payload: {
-          periodEndDate: new Date(sub.current_period_end).toLocaleDateString("de-DE"),
+          periodEndDate: datumDe(sub.current_period_end),
           amount: preisText(sub.plan),
         },
       });

@@ -33,7 +33,9 @@ export interface NotificationIntent {
   payload: Record<string, unknown>;
 }
 
-export async function dispatchNotification(env: Env, intent: NotificationIntent): Promise<void> {
+// Liefert true, wenn die E-Mail (der garantierte Weg) verschickt wurde. Aufrufer, die eine Erinnerung nur
+// nach erfolgreichem Versand als erledigt markieren wollen, werten das aus; alle anderen ignorieren es.
+export async function dispatchNotification(env: Env, intent: NotificationIntent): Promise<boolean> {
   const { subject, html } = renderEmail(intent);
   // Dev-Umleitung (TEST_EMAIL_REDIRECT_TO) sitzt seit 2026-08-19 zentral in
   // sendEmail() (email.ts) statt hier - siehe dortigen Kommentar. Deckt damit
@@ -55,8 +57,10 @@ export async function dispatchNotification(env: Env, intent: NotificationIntent)
   // Antwort des AUSLOESENDEN Vorgangs verfaelschen darf - dieselbe
   // Guard-Logik wie beim Push-Pfad direkt darunter, nur fuer den bisher
   // ungeschuetzten E-Mail-Pfad.
+  let emailSent = false;
   try {
     await sendEmail(env, intent.recipientEmail, subject, html);
+    emailSent = true;
   } catch (err) {
     console.error("email_dispatch_failed", err instanceof Error ? err.message : "unknown");
   }
@@ -70,6 +74,7 @@ export async function dispatchNotification(env: Env, intent: NotificationIntent)
       console.error("push_dispatch_failed", err instanceof Error ? err.message : "unknown");
     }
   }
+  return emailSent;
 }
 
 function renderPush(intent: NotificationIntent): { title: string; body: string } {

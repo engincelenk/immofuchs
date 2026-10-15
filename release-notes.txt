@@ -1,3 +1,12 @@
+## 2026-10-15 (1.100.128) [WORKER] [TESTS]
+
+### Folge-Release Karten-Erinnerung: Limit, Zeitzone, Versand-Pruefung, Tests
+
+- worker/src/stripe/cardExpiry.ts: hoechstens 8 statt 20 Pruefungen je Cron-Lauf (eine Pruefung kostet bis ~6 Subrequests, das Limit von 50 teilt sich der Lauf mit den anderen Jobs). Die Karte gilt nur dann als gemahnt, wenn die Mail wirklich verschickt wurde; sonst versucht der naechste Lauf es erneut. Kommentar zu Legacy-Karten (default_source).
+- worker/src/notifications.ts: dispatchNotification() liefert true, wenn die E-Mail verschickt wurde (bisher void). Bestehende Aufrufer aendern sich nicht.
+- worker/src/datum.ts: Datum fuer Mails in Berliner Zeit. Der Worker laeuft in UTC, eine Verlaengerung um 00:30 zeigte den Vortag. Gilt jetzt auch fuer die Trial- und die Erneuerungs-Erinnerung in scheduled.ts.
+- Tests: db.cardCheck.test.ts prueft das SQL gegen echtes SQLite (node:sqlite) mit allen Migrationen (Zeitfenster, Status, Test-Abos, Wochensperre, LIMIT/Rotation, COALESCE); dazu Jahreswechsel, Mail-Fehler mit Wiederholung, Kunden-Standardkarte, geloeschter Kunde, Monat zweistellig, card_expiring-Mail/Push und datumDe.
+
 ## 2026-10-15 (1.100.127) [WORKER] [DB] [FEHLERSEITEN]
 
 ### Karten-Ablauf-Erinnerung, eigene Fehlerseiten, bessere Fehlertexte

@@ -7,12 +7,15 @@ import type Stripe from "stripe";
 import type { Env } from "../types";
 import { listSubscriptionsForCardCheck, markCardExpiryChecked } from "../db";
 import { dispatchNotification } from "../notifications";
+import { datumDe } from "../datum";
 import { getStripeClient } from "./client";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-// Je Lauf hoechstens so viele Abos (je 1-2 Stripe-Aufrufe): Subrequest-Limit.
-const MAX_CHECKS_PER_RUN = 20;
+// Je Lauf hoechstens so viele Abos: eine Pruefung kostet Stripe-Aufruf(e), ein D1-Update, den Mailversand
+// und ggf. Push-Abfragen (bis zu ~6 Subrequests). Der Lauf teilt sich das Limit (50 je Aufruf, Free-Plan)
+// mit Trial-/Erneuerungs-Erinnerung, Abgleich und Aufraeumen.
+const MAX_CHECKS_PER_RUN = 8;
 
 // Eine Karte gilt bis zum Ende ihres Ablaufmonats. Reine Funktion (testbar):
 // true, wenn sie zum Zeitpunkt der naechsten Abbuchung nicht mehr gilt.
@@ -21,6 +24,8 @@ export function cardExpiredBy(expMonth: number, expYear: number, chargeAtMs: num
   return validUntilExclusive <= chargeAtMs;
 }
 
+// Geprueft werden nur PaymentMethod-Karten (Abo- oder Kunden-Standard). Alte Stripe-"Sources" (default_source)
+// werden bewusst nicht beruecksichtigt: neue Abos entstehen ausschliesslich mit PaymentMethods.
 async function defaultCardOf(stripe: Stripe, stripeSubscriptionId: string): Promise<Stripe.PaymentMethod.Card | null> {
   const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
     expand: ["default_payment_method", "customer.invoice_settings.default_payment_method"],
@@ -48,17 +53,19 @@ export async function sendCardExpiryReminders(env: Env): Promise<void> {
       if (!sub.stripe_subscription_id) continue;
       const card = await defaultCardOf(stripe, sub.stripe_subscription_id);
       if (card && cardExpiredBy(card.exp_month, card.exp_year, sub.current_period_end)) {
-        await dispatchNotification(env, {
+        const sent = await dispatchNotification(env, {
           event: "card_expiring",
           recipientEmail: sub.email,
           recipientUserId: sub.user_id,
           payload: {
             expiry: `${String(card.exp_month).padStart(2, "0")}/${card.exp_year}`,
             last4: card.last4,
-            periodEndDate: new Date(sub.current_period_end).toLocaleDateString("de-DE"),
+            periodEndDate: datumDe(sub.current_period_end),
           },
         });
-        await markCardExpiryChecked(env.DB, sub.id, sub.current_period_end);
+        // Nur nach erfolgreichem Versand als gemahnt markieren; sonst bleibt die Zeile ungeprueft und der
+        // naechste Lauf versucht es erneut.
+        if (sent) await markCardExpiryChecked(env.DB, sub.id, sub.current_period_end);
       } else {
         await markCardExpiryChecked(env.DB, sub.id);
       }
