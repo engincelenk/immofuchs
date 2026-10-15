@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <script>
+    (function () {
+      try {
+        var v = localStorage.getItem("if_theme");
+        if (v === "light") document.documentElement.setAttribute("data-theme", "light");
+        else if (v !== "system") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+  <title>Kurz nicht erreichbar – ImmoFuchs</title>
+  <link rel="stylesheet" href="/vertrag.css" />
+  <style>
+    .btn{display:inline-block;margin-top:8px;min-height:46px;line-height:46px;padding:0 22px;font-size:15px;font-weight:700;color:#fff;background:var(--ca);border-radius:10px;text-decoration:none}
+    .btn:focus-visible{outline:3px solid var(--lk);outline-offset:2px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>ImmoFuchs ist gerade kurz nicht erreichbar</h1>
+    <p>Wir führen vermutlich eine Wartung durch oder der Server antwortet nicht. Deine Daten sind sicher, es geht nichts verloren.</p>
+    <p>Bitte versuche es in ein paar Minuten noch einmal. Wenn es länger dauert, schreibe uns an <a href="mailto:info@immofuchs.info">info@immofuchs.info</a>.</p>
+    <a class="btn" href="/" onclick="location.reload();return false;">Seite neu laden</a>
+  </main>
+</body>
+</html>

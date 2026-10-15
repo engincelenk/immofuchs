@@ -84,6 +84,9 @@ export interface SubscriptionRow {
   updated_at: number;
   // Unix-Sekunden des zuletzt angewendeten Stripe-Events (Migration 0034).
   stripe_event_created: number | null;
+  // Karten-Ablauf-Erinnerung (Migration 0039); undefiniert, solange sie fehlt.
+  card_expiry_checked_at?: number | null;
+  card_expiry_reminder_for?: number | null;
 }
 
 export interface ObjectRow {
@@ -707,6 +710,51 @@ export async function markTrialReminderSent(db: Env["DB"], subscriptionId: strin
   await db
     .prepare("UPDATE subscriptions SET trial_reminder_sent_at = ? WHERE id = ?")
     .bind(Date.now(), subscriptionId)
+    .run();
+}
+
+// Ablaufende Karten: Abos, die in den naechsten `withinMs` verlaengert werden
+// und deren Karte seit `recheckAfterMs` nicht geprueft wurde. Aelteste Pruefung
+// zuerst, damit bei mehr Abos als `limit` alle der Reihe nach drankommen
+// (Subrequest-Limit eines Worker-Aufrufs). Synthetische Admin-Test-Abos gibt
+// es bei Stripe nicht und werden uebersprungen.
+export async function listSubscriptionsForCardCheck(
+  db: Env["DB"],
+  withinMs: number,
+  recheckAfterMs: number,
+  limit: number,
+): Promise<(SubscriptionRow & { email: string })[]> {
+  const now = Date.now();
+  const rows = await db
+    .prepare(
+      `SELECT subscriptions.*, users.email as email FROM subscriptions
+       JOIN users ON users.id = subscriptions.user_id
+       WHERE subscriptions.status IN ('active', 'trialing')
+         AND subscriptions.cancel_at_period_end = 0
+         AND subscriptions.stripe_subscription_id IS NOT NULL
+         AND subscriptions.stripe_subscription_id NOT LIKE ?
+         AND subscriptions.current_period_end BETWEEN ? AND ?
+         AND (subscriptions.card_expiry_reminder_for IS NULL
+              OR subscriptions.card_expiry_reminder_for != subscriptions.current_period_end)
+         AND (subscriptions.card_expiry_checked_at IS NULL OR subscriptions.card_expiry_checked_at < ?)
+       ORDER BY subscriptions.card_expiry_checked_at ASC
+       LIMIT ?`,
+    )
+    .bind(`${ADMIN_TEST_SUBSCRIPTION_PREFIX}%`, now, now + withinMs, now - recheckAfterMs, limit)
+    .all<SubscriptionRow & { email: string }>();
+  return rows.results;
+}
+
+export async function markCardExpiryChecked(
+  db: Env["DB"],
+  subscriptionId: string,
+  reminderForPeriodEnd?: number,
+): Promise<void> {
+  await db
+    .prepare(
+      "UPDATE subscriptions SET card_expiry_checked_at = ?, card_expiry_reminder_for = COALESCE(?, card_expiry_reminder_for) WHERE id = ?",
+    )
+    .bind(Date.now(), reminderForPeriodEnd ?? null, subscriptionId)
     .run();
 }
 

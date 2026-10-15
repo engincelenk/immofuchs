@@ -20,7 +20,8 @@ export type NotificationEvent =
   | "payment_succeeded"
   | "password_changed"
   | "email_change_requested"
-  | "trial_ending";
+  | "trial_ending"
+  | "card_expiring";
 
 export interface NotificationIntent {
   event: NotificationEvent;
@@ -99,6 +100,11 @@ function renderPush(intent: NotificationIntent): { title: string; body: string }
       return {
         title: "Deine Testphase endet bald",
         body: `Am ${intent.payload.periodEndDate} werden ${intent.payload.amount} abgebucht.`,
+      };
+    case "card_expiring":
+      return {
+        title: "Deine Zahlungskarte läuft ab",
+        body: `Die Karte endet ${intent.payload.expiry}. Bitte vor dem ${intent.payload.periodEndDate} aktualisieren.`,
       };
   }
 }
@@ -223,6 +229,19 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
         subject: "Deine ImmoFuchs-Testphase endet in 1 Tag",
         html: `<p>Deine kostenlose Testphase endet am ${datum}. Danach werden ${betrag} abgebucht und dein Pro-Zugang laeuft normal weiter.</p>
                <p>Wenn du nicht weitermachen moechtest, kannst du bis dahin jederzeit im Konto-Bereich kuendigen - es entstehen dann keine Kosten.</p>`,
+      };
+    }
+    // Ablaufende Karte (Cron, stripe/cardExpiry.ts): die Karte gilt zur naechsten
+    // Abbuchung nicht mehr - ohne Aktualisierung scheitert die Zahlung und Pro
+    // laeuft nach der Kulanzfrist aus.
+    case "card_expiring": {
+      const expiry = String(intent.payload.expiry ?? "");
+      const last4 = intent.payload.last4 ? ` (•••• ${String(intent.payload.last4)})` : "";
+      const datum = String(intent.payload.periodEndDate ?? "");
+      return {
+        subject: "Deine Zahlungskarte für ImmoFuchs Pro läuft bald ab",
+        html: `<p>Die bei ImmoFuchs Pro hinterlegte Karte${last4} läuft am Ende von ${expiry} ab. Die nächste Abbuchung ist am ${datum}.</p>
+               <p>Bitte hinterlege vorher im Konto-Bereich eine neue Zahlungsmethode, damit dein Pro-Zugang ohne Unterbrechung weiterläuft.</p>`,
       };
     }
     case "password_changed": {

@@ -1,0 +1,14 @@
+# Eigene Fehlerseiten (IONOS/Apache). Bewusst minimal: keine Weiterleitung auf
+# https und keine Rewrite-Regeln, damit nichts Bestehendes ueberschrieben wird
+# und die Seite nicht mit einem 500 ausfaellt, falls ein Modul fehlt.
+ErrorDocument 404 /404.html
+ErrorDocument 500 /fehler.html
+ErrorDocument 502 /fehler.html
+ErrorDocument 503 /fehler.html
+ErrorDocument 504 /fehler.html
+
+# Stripe-Kundenportal kehrt per return_url nach /konto zurueck (routes/billing.ts).
+# Die App hat keine Pfad-Routen - ohne Weiterleitung landet man dort auf dem 404.
+<IfModule mod_alias.c>
+  RedirectMatch 302 ^/konto/?$ /
+</IfModule>

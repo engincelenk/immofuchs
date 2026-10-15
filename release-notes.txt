@@ -1,3 +1,16 @@
+## 2026-10-15 (1.100.127) [WORKER] [DB] [FEHLERSEITEN]
+
+### Karten-Ablauf-Erinnerung, eigene Fehlerseiten, bessere Fehlertexte
+
+- worker/src/stripe/cardExpiry.ts + scheduled.ts: Der taegliche Cron prueft bei Abos, die in den naechsten 30 Tagen verlaengert werden, die Standardkarte bei Stripe (hoechstens 20 Abos je Lauf, je Abo einmal pro Woche). Gilt die Karte zur naechsten Abbuchung nicht mehr, geht die neue Benachrichtigung card_expiring per Mail und Push raus, einmal je Abrechnungsperiode. Stripe sendet fuer Karten kein Ablauf-Event, daher der Cron-Weg.
+- worker/migrations/0039_card_expiry_reminder.sql: zwei nullable Spalten an subscriptions (card_expiry_checked_at, card_expiry_reminder_for). Abwaertskompatibel, gilt fuer prod und qa gemeinsam. Vor dem Release: db:migrate:prod.
+- Trial-Ende, Erneuerung und fehlgeschlagene Zahlung bleiben wie bisher (Cron bzw. customer.subscription.updated). Der leere invoice.payment_failed-Zweig bleibt bewusst ohne Mail: Stripe setzt das Abo gleichzeitig auf past_due, die Mail kommt schon von dort, eine zweite waere ein Duplikat.
+- public/404.html, public/fehler.html, public/.htaccess: eigene Seiten fuer 404 und 500/502/503/504 (Wartung) statt der IONOS-Standardseiten. /konto (Rueckkehr vom Stripe-Kundenportal) leitet auf die Startseite statt auf 404.
+- src/components/shell/AppErrorBoundary.jsx + main.jsx: Absturz-Seite mit "Seite neu laden" statt weisser Seite.
+- src/components/checkout/CheckoutShared.jsx: magic_link_invalid hat einen eigenen Text, unbekannte Codes zeigen einen neutralen statt des OAuth-Textes.
+- src/utils/paymentError.js: Kartenfehler (abgelehnt, zu wenig Guthaben, abgelaufen, CVC, Kartennummer, 3-D Secure, Verarbeitung) mit eigenen Texten in 5 Sprachen; sonst bleibt Stripes Meldung.
+- Tests: cardExpiry.test.ts, paymentError.test.js.
+
 ## 2026-10-11 (1.100.126) [A11Y] [DESIGN]
 
 ### WCAG-AA-Kontrast: neue Akzentfarbe je Theme, Zoom erlaubt, Tippflaechen

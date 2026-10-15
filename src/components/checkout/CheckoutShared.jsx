@@ -29,10 +29,13 @@ export function ErrorBanner({ t, code }) {
     password_mismatch: t.newPasswordMismatch,
     invalid_or_expired: t.newPasswordErrorInvalidToken,
     verify_invalid: t.verifyErrorInvalid,
+    magic_link_invalid: t.loginErrorMagicLink,
     oauth_email_taken: t.loginErrorOauthOnly.replace("{provider}", ""),
     oauth_only: t.loginErrorOauthOnly.replace("{provider}", ""),
   };
-  return <div style={errorBannerStyle}>{map[code] || t.loginErrorOauth}</div>;
+  // Unbekannter Code: neutraler Text. Der OAuth-Text als Auffangnetz passte
+  // nicht zu Passwort-, Link- oder Netzwerkfehlern.
+  return <div style={errorBannerStyle}>{map[code] || t.loginErrorGeneric}</div>;
 }
 
 // Zwischenzustand beim Erzeugen der Kasse (Referenz-Screenshot "Weiterleitung

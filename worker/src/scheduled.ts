@@ -12,6 +12,7 @@ import {
 import { dispatchNotification } from "./notifications";
 import { reconcileSubscriptions } from "./stripe/reconcile";
 import { reconcileCustomers } from "./stripe/customerSync";
+import { sendCardExpiryReminders } from "./stripe/cardExpiry";
 import { runBackup } from "./backup/job";
 import { isStandby } from "./standby";
 import { pruefeKiKostenAlarm } from "./kiAlarm";
@@ -105,5 +106,12 @@ export async function handleScheduled(env: Env, cron?: string): Promise<void> {
     } catch (err) {
       console.error("trial_reminder_failed", sub.id, err instanceof Error ? err.message : "unknown");
     }
+  }
+
+  // Ablaufende Karten: zuletzt, ein Stripe-Fehler hier blockiert keine Mail oben.
+  try {
+    await sendCardExpiryReminders(env);
+  } catch (err) {
+    console.error("card_expiry_reminders_failed", err instanceof Error ? err.message : "unknown");
   }
 }

@@ -4,6 +4,7 @@ import InstallPrompt from "./InstallPrompt";
 import { AccountProvider } from "./context/AccountContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { MfaGuard } from "./components/shell/AdminMfaGate.jsx";
+import { AppErrorBoundary } from "./components/shell/AppErrorBoundary.jsx";
 
 // AccountProvider liegt hier statt in AppProviders.jsx (Konzept-Dok 2/8.4.4,
 // Login-Standard-Flow, 2026-08-10): der Login-Status muss bereits auf der
@@ -14,12 +15,14 @@ import { MfaGuard } from "./components/shell/AdminMfaGate.jsx";
 // ThemeProvider aussenrum (Etappe 1 Light/Dark/System, 2026-08-26): betrifft
 // beide Zweige gleichermassen und braucht keinen der beiden Contexte.
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <ThemeProvider>
-    <AccountProvider>
-      <MfaGuard>
-        <App />
-        <InstallPrompt />
-      </MfaGuard>
-    </AccountProvider>
-  </ThemeProvider>,
+  <AppErrorBoundary>
+    <ThemeProvider>
+      <AccountProvider>
+        <MfaGuard>
+          <App />
+          <InstallPrompt />
+        </MfaGuard>
+      </AccountProvider>
+    </ThemeProvider>
+  </AppErrorBoundary>,
 );

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <script>
+    (function () {
+      try {
+        var v = localStorage.getItem("if_theme");
+        if (v === "light") document.documentElement.setAttribute("data-theme", "light");
+        else if (v !== "system") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+  <title>Seite nicht gefunden – ImmoFuchs</title>
+  <link rel="stylesheet" href="/vertrag.css" />
+  <style>
+    .err-code{font-size:44px;font-weight:800;color:var(--lk);line-height:1.1;margin-bottom:6px}
+    .btn{display:inline-block;margin-top:8px;min-height:46px;line-height:46px;padding:0 22px;font-size:15px;font-weight:700;color:#fff;background:var(--ca);border-radius:10px;text-decoration:none}
+    .btn:focus-visible{outline:3px solid var(--lk);outline-offset:2px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="err-code" aria-hidden="true">404</div>
+    <h1>Diese Seite gibt es nicht</h1>
+    <p>Der Link ist vielleicht veraltet oder falsch geschrieben. Du kannst direkt zurück zu ImmoFuchs und von dort weiterrechnen.</p>
+    <a class="btn" href="/">Zur Startseite</a>
+    <div class="footer">
+      <a href="/kontakt.html">Kontakt</a>
+      <a href="/impressum.html">Impressum</a>
+      <a href="/datenschutz.html">Datenschutz</a>
+    </div>
+  </main>
+</body>
+</html>

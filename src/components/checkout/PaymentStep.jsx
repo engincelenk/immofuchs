@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { errorBannerStyle, primaryBtnStyle } from "./checkoutStyles.js";
 import { LockGlyph } from "./CheckoutShared.jsx";
 import { DEFAULT_COUNTRY } from "../../utils/countries.js";
+import { paymentErrorText } from "../../utils/paymentError.js";
 
 // Stripe verlangt bei fields.billingDetails.name:"never" ZWINGEND einen
 // nicht-leeren Wert (IntegrationError sonst, Live-Befund 2026-08-27). Firma
@@ -225,7 +226,7 @@ export function PaymentStep({
         },
       });
       if (confirmError) {
-        setError(confirmError.message || t.planCheckoutUnavailable);
+        setError(paymentErrorText(confirmError, t));
         setStage("ready");
         return;
       }
