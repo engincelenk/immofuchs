@@ -79,6 +79,9 @@ test.describe("Admin (nur lesen)", () => {
   test.skip(!sid, "keine Admin-Session");
   for (const pfad of [
     "/api/v1/admin/dashboard",
+    "/api/v1/admin/dashboard?von=2026-01-01&test=1",
+    "/api/v1/admin/stats-settings",
+    "/api/v1/admin/ki-nutzung",
     "/api/v1/admin/users",
     "/api/v1/admin/subscriptions",
     "/api/v1/admin/backup-status",

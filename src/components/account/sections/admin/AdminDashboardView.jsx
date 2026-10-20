@@ -3,7 +3,6 @@ import {
   fetchActivity,
   fetchAdminMfaGate,
   fetchCheckoutGate,
-  fetchDashboard,
   fetchRegistrationGate,
   setAdminMfaGate,
   setCheckoutGate,
@@ -11,6 +10,7 @@ import {
   triggerTestEmails,
 } from "./adminApi.js";
 import { AdminGateSection } from "./AdminGateSection.jsx";
+import { AdminKennzahlen } from "./AdminKennzahlen.jsx";
 import { AdminBackupSection } from "./AdminBackupSection.jsx";
 import { AdminConfirmBox, AdminSettingRow, AdminSettingsCard } from "./AdminSettingRow.jsx";
 import { useAdminToast } from "./AdminToast.jsx";
@@ -21,31 +21,6 @@ import {
   secondaryBtnStyle,
   dangerBtnStyle,
 } from "./adminUiStyles.js";
-
-// MRR steht als Hauptkachel ueber der vollen Breite, die uebrigen darunter.
-const HERO_TILE = "mrr";
-
-const TILES = [
-  { key: "totalUsers", label: "Nutzer gesamt", format: (v) => v.toLocaleString("de-DE") },
-  {
-    key: "newUsersThisMonth",
-    label: "Neue Nutzer (Monat)",
-    format: (v) => v.toLocaleString("de-DE"),
-  },
-  { key: "activeSubscriptions", label: "Aktive Abos", format: (v) => v.toLocaleString("de-DE") },
-  { key: "trialUsers", label: "Trial-Nutzer", format: (v) => v.toLocaleString("de-DE") },
-  {
-    key: "mrr",
-    label: "MRR",
-    format: (v) =>
-      `${v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`,
-  },
-  {
-    key: "cancellationsThisMonth",
-    label: "Kündigungen (Monat)",
-    format: (v) => v.toLocaleString("de-DE"),
-  },
-];
 
 // Beschriftung und Farbe je Ereignisart. Die Schluessel kommen 1:1 aus
 // listAdminActivity (worker/src/db.ts).
@@ -59,20 +34,14 @@ const ACTIVITY_KINDS = {
 };
 
 export function AdminDashboardView() {
-  const [stats, setStats] = useState(null);
   const [activity, setActivity] = useState(null);
-  const [error, setError] = useState(null);
   const [testEmailsConfirm, setTestEmailsConfirm] = useState(false);
   const [testEmailsBusy, setTestEmailsBusy] = useState(false);
   const toast = useAdminToast();
 
   useEffect(() => {
     let cancelled = false;
-    // Beide Abfragen unabhaengig: faellt der Aktivitaets-Feed aus, sollen die
-    // Kennzahlen trotzdem stehen - und umgekehrt.
-    fetchDashboard()
-      .then((data) => !cancelled && setStats(data))
-      .catch((err) => !cancelled && setError(errorText(err)));
+    // Kennzahlen laedt AdminKennzahlen selbst - faellt der Aktivitaets-Feed aus, stehen sie trotzdem.
     fetchActivity()
       .then((data) => !cancelled && setActivity(data.entries))
       .catch(() => !cancelled && setActivity([]));
@@ -103,60 +72,7 @@ export function AdminDashboardView() {
 
   return (
     <div>
-      {error && <div style={{ color: "#c0392b", fontSize: 13 }}>{error}</div>}
-      {!stats && !error && <div style={mutedTextStyle}>Wird geladen …</div>}
-
-      {stats && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))",
-            gap: 12,
-          }}
-        >
-          {TILES.map((tile) => {
-            const hero = tile.key === HERO_TILE;
-            return (
-              <div
-                key={tile.key}
-                style={{
-                  background: "var(--cc)",
-                  border: "1px solid var(--cb)",
-                  borderRadius: 12,
-                  padding: 16,
-                  order: hero ? -1 : 0,
-                  ...(hero && {
-                    gridColumn: "1 / -1",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                    gap: 12,
-                  }),
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: hero ? 13 : 11.5,
-                    color: "var(--ch)",
-                    marginBottom: hero ? 0 : 6,
-                  }}
-                >
-                  {hero ? "MRR (Monatsumsatz)" : tile.label}
-                </div>
-                <div
-                  style={{
-                    fontSize: hero ? 30 : 22,
-                    fontWeight: 700,
-                    color: hero ? "var(--ca)" : undefined,
-                  }}
-                >
-                  {tile.format(stats[tile.key] ?? 0)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <AdminKennzahlen />
 
       <AdminSettingsCard>
         <AdminGateSection

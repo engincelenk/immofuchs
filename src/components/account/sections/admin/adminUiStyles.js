@@ -124,6 +124,10 @@ export function formatDateTime(ms) {
 // Codes ("cannot_demote_self") sind fuer den Betreiber unbrauchbar.
 const ERROR_TEXTS = {
   forbidden: "Dafür fehlt deinem Konto die Berechtigung.",
+  standby_readonly:
+    "Diese Umgebung ist im Standby (qa, gleiche Datenbank wie prod). Einstellungen bitte auf prod ändern.",
+  invalid_range: "Ungültiger Zeitraum: Das Startdatum muss vor dem Enddatum liegen.",
+  ki_data_unavailable: "KI-Daten sind noch nicht verfügbar (Datenbank-Migration 0038 fehlt).",
   not_found: "Nutzer nicht gefunden.",
   invalid_role: "Unbekannte Rolle.",
   invalid_flags: "Keine gültige Änderung übergeben.",

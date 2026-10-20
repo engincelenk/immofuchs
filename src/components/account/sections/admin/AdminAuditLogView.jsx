@@ -32,6 +32,7 @@ const ACTION_LABELS = {
   "test_emails.sent": "Test-E-Mails versendet",
   "subscription.reconcile_created": "Abo nachgetragen (Abgleich)",
   "subscription.reconcile": "Abo abgeglichen",
+  "stats.zaehlbeginn_set": "Zählbeginn der Kennzahlen geändert",
 };
 
 const EMPTY_FILTERS = { admin: "", action: "", target: "", from: "", to: "" };

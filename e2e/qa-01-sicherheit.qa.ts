@@ -43,6 +43,26 @@ test.describe("Standby-Schutz (qa = prod-Datenbank)", () => {
   }
 });
 
+test.describe("Admin-Einstellungen auf qa nur lesbar", () => {
+  // qa teilt die Datenbank mit prod: eine Einstellung, die hier gespeichert wuerde, gaelte auch fuer prod.
+  // Ungueltige Koerper - versagt der Schutz, lehnt die Validierung ab (400), es wird nichts geschrieben.
+  const adminSession = () => {
+    const f = QA_AUTH.admin.replace(/\.json$/, ".session-id.txt");
+    return existsSync(f) ? `if_session=${readFileSync(f, "utf-8").trim()}` : "";
+  };
+  for (const pfad of ["/api/v1/admin/stats-settings", "/api/v1/admin/checkout-gate", "/api/v1/admin/registration-gate"]) {
+    test(`S10 - POST ${pfad} wird im Standby mit 409 abgewiesen`, async () => {
+      test.skip(!adminSession(), "keine Admin-Session");
+      const api = await request.newContext();
+      const r = await api.post(`${QA_API}${pfad}`, {
+        headers: { Origin: ORIGIN, "Content-Type": "application/json", Cookie: adminSession() },
+        data: pfad.endsWith("stats-settings") ? { zaehlbeginn: "kein-datum" } : { open: "kein-boolean" },
+      });
+      expect(r.status(), (await r.text()).slice(0, 200)).toBe(409);
+    });
+  }
+});
+
 test.describe("Zugriffsschutz", () => {
   for (const pfad of ["/api/v1/me", "/api/v1/objects", "/api/v1/account/devices", "/api/v1/admin/dashboard"]) {
     test(`S3 - ${pfad} ohne Anmeldung ist gesperrt`, async () => {

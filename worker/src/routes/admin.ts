@@ -5,6 +5,7 @@
 // Bedien-Oberflaeche dafuer (Button im Admin Panel) ist bewusst NICHT Teil
 // dieses Pakets, siehe Paket 6 "Admin Panel".
 import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
 import type { Env } from "../types";
 import { envCheckoutDefault, getCheckoutOverride, isCheckoutPublic, setCheckoutOverride } from "../checkoutGate";
 import { isBackupConfigured, readBackupStatus, runBackup } from "../backup/job";
@@ -15,6 +16,8 @@ import {
   setRegistrationOverride,
 } from "../registrationGate";
 import { getAdminMfaOverride, envAdminMfaDefault, isAdminMfaEnabled, setAdminMfaOverride } from "../auth/adminMfa";
+import { getDashboardKennzahlen, getKiAuswertung, getZaehlbeginn, istTag, leseZeitraum, setZaehlbeginn } from "../adminStats";
+import { isStandby } from "../standby";
 import {
   requireAuth,
   requireAdmin,
@@ -44,7 +47,6 @@ import {
   addSupportNote,
   listSupportNotes,
   deleteAllSessionsForUser,
-  getAdminDashboardStats,
   listAdminActivity,
   logAdminAction,
   listAdminAuditLog,
@@ -700,10 +702,54 @@ adminRoutes.post(
   },
 );
 
-// Dashboard (Konzept-Dok Abschnitt 3, MVP-Pflicht #1).
+// Einstellungen, die prod und qa gemeinsam betreffen (eine Datenbank), nur ausserhalb des Standby
+// aendern: sonst wuerde ein Klick im Admin-Bereich von qa die Einstellung von prod umstellen.
+// Nach einem Failover (STANDBY=false) ist qa wieder voll bedienbar.
+const nurOhneStandby = createMiddleware<{ Bindings: Env }>(async (c, next) => {
+  if (isStandby(c.env)) return c.json({ error: "standby_readonly" }, 409);
+  await next();
+});
+
+// Dashboard (Konzept-Dok Abschnitt 3, MVP-Pflicht #1). Seit 2026-10-12 mit Zeitraum (?von=&bis=,
+// YYYY-MM-DD, bis inklusive), ohne Test-/Admin-Konten (?test=1 bezieht sie ein) und ab Zaehlbeginn.
 adminRoutes.get("/dashboard", requireAuth, requireAdminRead, async (c) => {
-  const stats = await getAdminDashboardStats(c.env.DB);
+  const zeitraum = leseZeitraum(c.req.query("von") || undefined, c.req.query("bis") || undefined);
+  if (!zeitraum) return c.json({ error: "invalid_range" }, 400);
+  const stats = await getDashboardKennzahlen(c.env.DB, zeitraum, { mitTestkonten: c.req.query("test") === "1" });
   return c.json(stats);
+});
+
+// Zaehlbeginn der Kennzahlen ("auf null setzen" ohne Loeschen, siehe adminStats.ts).
+adminRoutes.get("/stats-settings", requireAuth, requireAdminRead, async (c) => {
+  return c.json({ zaehlbeginn: await getZaehlbeginn(c.env.DB), standby: isStandby(c.env) });
+});
+
+adminRoutes.post("/stats-settings", requireAuth, requireAdmin, requireCsrfOrigin, nurOhneStandby, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const neu = body?.zaehlbeginn ?? null;
+  if (neu !== null && !istTag(neu)) return c.json({ error: "invalid_body" }, 400);
+  const vorher = await getZaehlbeginn(c.env.DB);
+  await setZaehlbeginn(c.env.DB, neu);
+  await logAdminAction(c.env.DB, {
+    adminUserId: c.var.userId,
+    adminEmail: c.var.user.email,
+    action: "stats.zaehlbeginn_set",
+    targetType: "setting",
+    targetId: "stats_zaehlbeginn",
+    details: { from: vorher, to: neu },
+  });
+  return c.json({ zaehlbeginn: neu, standby: false });
+});
+
+// KI-Kosten und Kontingente (Reiter "KI & Kontingente", Quelle ki_nutzung).
+adminRoutes.get("/ki-nutzung", requireAuth, requireAdminRead, async (c) => {
+  try {
+    return c.json(await getKiAuswertung(c.env));
+  } catch (err) {
+    // Tabelle fehlt (Migration 0038 noch nicht eingespielt) - kein 500, sondern ein klarer Hinweis.
+    console.error("ki_auswertung_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "ki_data_unavailable" }, 503);
+  }
 });
 
 // Kaufsperre (worker/src/checkoutGate.ts): Status ablesen und umschalten.
@@ -717,7 +763,7 @@ adminRoutes.get("/checkout-gate", requireAuth, requireAdminRead, async (c) => {
   });
 });
 
-adminRoutes.post("/checkout-gate", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+adminRoutes.post("/checkout-gate", requireAuth, requireAdmin, requireCsrfOrigin, nurOhneStandby, async (c) => {
   const body = await c.req.json().catch(() => null);
   if (typeof body?.open !== "boolean") return c.json({ error: "invalid_body" }, 400);
   const before = await isCheckoutPublic(c.env);
@@ -742,7 +788,7 @@ adminRoutes.get("/registration-gate", requireAuth, requireAdminRead, async (c) =
   });
 });
 
-adminRoutes.post("/registration-gate", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+adminRoutes.post("/registration-gate", requireAuth, requireAdmin, requireCsrfOrigin, nurOhneStandby, async (c) => {
   const body = await c.req.json().catch(() => null);
   if (typeof body?.open !== "boolean") return c.json({ error: "invalid_body" }, 400);
   const before = await isRegistrationOpen(c.env);
@@ -769,7 +815,7 @@ adminRoutes.get("/admin-mfa-gate", requireAuth, requireAdminRead, async (c) => {
   });
 });
 
-adminRoutes.post("/admin-mfa-gate", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+adminRoutes.post("/admin-mfa-gate", requireAuth, requireAdmin, requireCsrfOrigin, nurOhneStandby, async (c) => {
   const body = await c.req.json().catch(() => null);
   if (typeof body?.open !== "boolean") return c.json({ error: "invalid_body" }, 400);
   const before = await isAdminMfaEnabled(c.env);

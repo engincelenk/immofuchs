@@ -13,7 +13,7 @@ const AUFBEWAHRUNG_TAGE = 120;
 export const KAPAZITAET_WARNANTEIL = 0.7;
 // Gratiskontingent Gemini 3.5 Flash-Lite: 1.000 Anfragen je Tag und Projekt (Stand 2026-10). Mit bezahltem Tarif
 // KI_KAPAZITAET_TAG im Dashboard hoch- oder auf 0 (= aus) setzen.
-const KAPAZITAET_TAG_STANDARD = 1000;
+export const KAPAZITAET_TAG_STANDARD = 1000;
 
 export interface AlarmEingabe {
   gesamtMikro: number;

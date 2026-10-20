@@ -22,8 +22,27 @@ async function request(path, options = {}) {
   return body;
 }
 
-export function fetchDashboard() {
-  return request("/admin/dashboard");
+// Kennzahlen mit Zeitraum (von/bis "YYYY-MM-DD", bis inklusive) und optional mit Test-/Admin-Konten.
+export function fetchDashboard({ von, bis, mitTestkonten } = {}) {
+  const q = new URLSearchParams();
+  if (von) q.set("von", von);
+  if (bis) q.set("bis", bis);
+  if (mitTestkonten) q.set("test", "1");
+  const s = q.toString();
+  return request(`/admin/dashboard${s ? `?${s}` : ""}`);
+}
+
+// Zaehlbeginn der Kennzahlen ("auf null setzen" ohne Loeschen). null = kein Zaehlbeginn.
+export function fetchStatsSettings() {
+  return request("/admin/stats-settings");
+}
+
+export function setStatsSettings(zaehlbeginn) {
+  return post("/admin/stats-settings", { zaehlbeginn });
+}
+
+export function fetchKiNutzung() {
+  return request("/admin/ki-nutzung");
 }
 
 export function fetchActivity() {

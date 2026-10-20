@@ -1,3 +1,16 @@
+## 2026-10-20 (1.100.129) [ADMIN] [WORKER] [TESTS]
+
+### Admin: Kennzahlen mit Zeitraum und Zaehlbeginn, neuer Reiter "KI & Kontingente"
+
+- Dashboard (AdminKennzahlen.jsx, worker/src/adminStats.ts): Test- und Admin-Konten zaehlen standardmaessig nicht mit (Schalter zum Einbeziehen). Vorher zeigte das Dashboard vor dem Start 4 Nutzer, 2 Abos und 11,99 EUR MRR - alles Testkonten.
+- Zaehlbeginn (app_settings.stats_zaehlbeginn): setzt die Kennzahlen "auf null", ohne Daten zu loeschen, z. B. auf das Go-Live-Datum; jederzeit aenderbar oder entfernbar. Gilt fuer prod und qa gemeinsam. Neu im Audit-Log: stats.zaehlbeginn_set.
+- Zeitraum: heute, 7 Tage, 30 Tage, dieser Monat, letzter Monat, dieses Jahr, seit Zaehlbeginn, eigener Zeitraum. Getrennt in Bestand (Stand jetzt: MRR, aktive Abos nach Monat/Jahr, Nutzer, Testphasen) und Bewegung im Zeitraum (neue Nutzer, E-Mail bestaetigt, Testphase gestartet, neue Abos, Kuendigungen, aktive Nutzer). Bestand gibt es nur fuer jetzt, weil die Datenbank keinen Abo-Verlauf speichert.
+- Neuer Reiter "KI & Kontingente" (AdminKiView.jsx): geschaetzte KI-Kosten heute/gestern/7 Tage/Monat mit Hochrechnung, Verlauf 30 Tage, Kosten je Funktion, Top 10 Kunden mit Budget-Auslastung und Status (normal/gedrosselt/gestoppt), Auslastung des Gemini-Tageskontingents, KI-Kosten je zahlendem Kunden im Verhaeltnis zum Umsatz, aktuelle Budget- und Limit-Einstellungen. Quelle: ki_nutzung, keine neue Tabelle.
+- Worker: GET /admin/dashboard nimmt ?von=&bis=&test=1, neu GET/POST /admin/stats-settings und GET /admin/ki-nutzung. kiAlarm.ts exportiert KAPAZITAET_TAG_STANDARD.
+- qa nur lesend fuer Einstellungen: POST auf stats-settings, checkout-gate und registration-gate antwortet im Standby mit 409 (gleiche Datenbank wie prod), admin-mfa-gate ebenso. Nach einem Failover wieder bedienbar.
+- Tests: adminStats.test.ts (11 Faelle gegen eine echte SQLite-Datenbank mit allen Migrationen), adminZeitraum.test.js (5), QA-Suite: S10 (409 im Standby, mit ungueltigem Koerper, damit selbst bei kaputtem Schutz nichts geschrieben wird) und die neuen Lese-Endpunkte in A5. Lokal mit axe geprueft: 0 Befunde in hell, dunkel und mobil.
+- Hinweis: S10 wird auf qa erst nach dem Worker-Release gruen.
+
 ## 2026-10-15 (1.100.128) [WORKER] [TESTS]
 
 ### Folge-Release Karten-Erinnerung: Limit, Zeitzone, Versand-Pruefung, Tests
