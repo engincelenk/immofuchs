@@ -431,7 +431,7 @@ export function Landing({ onStart, lang, setLang }) {
           const el = e.target;
           io.unobserve(el);
           el.classList.add("lp-rev-in");
-          setTimeout(() => el.classList.remove("lp-rev", "lp-rev-in", "lp-rev-sektion"), 1600);
+          setTimeout(() => el.classList.remove("lp-rev", "lp-rev-in", "lp-rev-sektion"), 900);
         }
       },
       // threshold 0 statt eines Anteils: eine ganze Sektion ist auf dem Handy oft
@@ -449,7 +449,7 @@ export function Landing({ onStart, lang, setLang }) {
         : 0;
       // Karten gestaffelt; Sektionen ohne Verzoegerung, sie sind ohnehin langsam
       if (!el.classList.contains("lp-rev-sektion"))
-        el.style.setProperty("--rd", `${(pos % 4) * 90}ms`);
+        el.style.setProperty("--rd", `${(pos % 4) * 50}ms`);
       el.classList.add("lp-rev");
       io.observe(el);
     });
@@ -1520,6 +1520,8 @@ export function Landing({ onStart, lang, setLang }) {
       @keyframes lp-auf{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
       @keyframes lp-stern{0%{opacity:.4;transform:scale(.8)}100%{opacity:1;transform:scale(1.15)}}
       .lp-auf{animation:lp-auf .32s var(--ease-out) both}
+      /* Oberhalb der Falz keine Einblendung: der Hero steht ab dem ersten Bild (2026-10-21) */
+      .lp-hero .lp-auf{animation:none}
       /* Endliche Wiederholung statt infinite: die Sterne sollen beim
          Ankommen aufmerksam machen, nicht dauerhaft neben dem Text flackern. */
       .lp-stern{display:inline-block;flex-shrink:0;animation:lp-stern 1.8s ease-in-out 6 alternate}
@@ -1537,12 +1539,13 @@ export function Landing({ onStart, lang, setLang }) {
         .lp-hero-stern:nth-of-type(3){right:12%!important;top:22px!important}
       }
       .lp-hero-inner{max-width:980px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:24px}
-      /* Handy: der Hero fuellt den ersten Bildschirm (abzueglich Kopfzeile) und
-         verteilt den Inhalt mittig. Vorher endete er mitten im Bild, darunter stand
-         die naechste Sektion mit hellerem Hintergrund, deren Inhalt erst beim
-         Scrollen eingeblendet wird - eine leere graue Flaeche mit harter Kante. */
+      /* Handy (Nutzerwunsch 2026-10-21): keine Sterne und keine Luecke ueber der
+         Ueberschrift. Der Hero ist nur so hoch wie sein Inhalt und beginnt direkt
+         unter der Kopfzeile; die naechste Sektion rueckt sofort ins Bild und blendet
+         ihren Inhalt ein (Ausloeser: Oberkante im Bild, siehe IntersectionObserver). */
       @media(max-width:699px){
-        .lp-hero{min-height:calc(100svh - 72px);display:flex;flex-direction:column;justify-content:center}
+        .lp-hero-stern{display:none!important}
+        .lp-hero{padding-top:28px!important;padding-bottom:36px!important}
         .lp-hero-inner{width:100%}
       }
       .lp-hero-h1{margin:0;font-size:clamp(34px,5.2vw,64px);font-weight:800;color:var(--ct);letter-spacing:-1.2px;line-height:1.05}
@@ -1569,9 +1572,10 @@ export function Landing({ onStart, lang, setLang }) {
          Effekte). Die Klassen setzt ein Effekt in Landing() erst per Skript - ohne
          JS bleibt alles sichtbar. Nach dem Einblenden werden sie wieder entfernt,
          damit Hover/Druck-Effekte der Karten ihre eigenen Zeiten behalten. */
-      .lp-rev{opacity:0;transform:translateY(18px);transition:opacity .8s var(--ease-out),transform .8s var(--ease-out);transition-delay:var(--rd,0ms)}
-      /* Ganze Sektion: langsamer und mit etwas mehr Weg - "langsame Einblendung" */
-      .lp-rev.lp-rev-sektion{transform:translateY(32px);transition-duration:1.1s}
+      .lp-rev{opacity:0;transform:translateY(10px);transition:opacity .35s var(--ease-out),transform .35s var(--ease-out);transition-delay:var(--rd,0ms)}
+      /* Ganze Sektion: etwas laenger, aber kurz genug, dass es nicht wie Nachladen wirkt
+         (2026-10-21: vorher 1,1 s und 32 px, wirkte auf dem Handy verzoegert) */
+      .lp-rev.lp-rev-sektion{transform:translateY(14px);transition-duration:.5s}
       .lp-rev.lp-rev-in{opacity:1;transform:none}
       /* Touch hat kein Hover: stattdessen ein kurzes Eindruecken beim Antippen. */
       @media(hover:none){

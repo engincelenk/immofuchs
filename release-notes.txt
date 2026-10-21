@@ -1,3 +1,14 @@
+## 2026-10-21 (1.100.130) [FRONTEND] [PERFORMANCE]
+
+### Landingpage mobil ohne Luecke, schnellerer Start mit Platzhalter, Rechner werden nachgeladen
+
+- Landing.jsx (nur Handy, unter 700 px): keine Sterne mehr im Hero, die Luecke ueber der Ueberschrift ist weg. Der Hero ist nur noch so hoch wie sein Inhalt (vorher mindestens ein ganzer Bildschirm mit mittig zentriertem Text). Desktop und Tablet unveraendert.
+- index.html: Platzhalter-Huelle im #root (Kopfzeile in Grau, hell/dunkel passend zum Theme). Sie steht ab dem ersten Bild, solange das Skript laedt; React ersetzt sie beim ersten Rendern. Der Lade-Kringel erscheint erst nach 450 ms, bei schnellem Laden sieht man ihn nie.
+- App.jsx, RechnerSkeleton.jsx: die sechs Rechner werden per React.lazy nachgeladen (Haupt-Bundle 1.730 kB auf 1.504 kB, die Rechner liegen in eigenen Chunks von 10 bis 76 kB). Beim ersten Oeffnen erscheint ein Platzhalter mit fester Groesse und verzoegertem Kringel statt einer leeren Flaeche. Die Chunks werden im Leerlauf vorgeladen (nicht bei Datensparmodus), das erste Oeffnen ist dann ohne Wartezeit.
+- Landing.jsx: Hero ohne Einblend-Animation (steht sofort). Einblenden beim Scrollen kuerzer: 0,35 s statt 0,8 s fuer Karten, 0,5 s statt 1,1 s fuer Sektionen, Weg 10/14 px statt 18/32 px, Staffelung 50 statt 90 ms. Aus bei "Bewegung reduzieren" wie bisher.
+- Messung (iPhone 13 emuliert, 4x CPU, 1,6 Mbit/s): Ueberschrift beginnt 108 px statt 138 px unter dem Seitenanfang, die Seite zeigt ab dem ersten Bild die Huelle statt leer zu bleiben. Tests: 1885 gruen, Lint ohne Fehler.
+- Nicht enthalten: Bild-Fix der Rechner-Karte (springt beim Laden von 156 auf 200 pt), das Zerlegen von i18n/translations.js (rund 800 kB Quelltext im Haupt-Bundle) und der Fuchs-Knopf, der die Zeile "In 5 Sprachen" ueberdeckt.
+
 ## 2026-10-20 (1.100.129) [ADMIN] [WORKER] [TESTS]
 
 ### Admin: Kennzahlen mit Zeitraum und Zaehlbeginn, neuer Reiter "KI & Kontingente"

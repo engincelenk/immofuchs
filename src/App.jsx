@@ -1,5 +1,5 @@
 import { bereinigeAltObjektDaten } from "./utils/altObjekt.js";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, lazy, Suspense } from "react";
 import { MARKET_RATES, WERTSTEIGERUNG, AFA } from "./data.js";
 import { berechneNichtUml } from "./utils/rendite.js";
 import { AppProviders } from "./context/AppProviders.jsx";
@@ -7,12 +7,7 @@ import { T, LANGS } from "./i18n/translations.js";
 import { TIPS } from "./i18n/tips.js";
 import { LangSel } from "./components/ui/LangSel.jsx";
 import { Sheet } from "./components/ui/Sheet.jsx";
-import Haupt from "./components/calculators/Renditerechner.jsx";
-import Kredit from "./components/calculators/Finanzierung.jsx";
-import Miete from "./components/calculators/Miete.jsx";
-import Sanier from "./components/calculators/Sanier.jsx";
-import { SteuerTrick } from "./components/extras/SteuerTrick.jsx";
-import { Vorfaelligkeit } from "./components/extras/Vorfaelligkeit.jsx";
+import { RechnerSkeleton } from "./components/ui/RechnerSkeleton.jsx";
 import { Landing } from "./pages/Landing.jsx";
 import { useSavedObjects, Merkliste } from "./components/shell/Merkliste.jsx";
 import { OfflineBanner } from "./components/shell/OfflineBanner.jsx";
@@ -23,6 +18,30 @@ import { tabZuRechner } from "./utils/assistantContext.js";
 import { useAccountCtx } from "./context/AccountContext.jsx";
 import { useTheme } from "./context/ThemeContext.jsx";
 import { hideSplashScreen, tabSwitchHaptic } from "./utils/nativeInit.js";
+
+// Rechner werden erst nachgeladen (2026-10-21): das Haupt-Bundle war 1,7 MB gross und
+// enthielt alle sechs Rechner, auf dem Handy blieb die Seite bis zum Parsen leer.
+// Die Importfunktionen stehen einzeln, damit die Landingpage die Chunks im Leerlauf
+// vorladen kann (ladeRechnerVor) - beim ersten Antippen ist dann nichts mehr zu laden.
+const importHaupt = () => import("./components/calculators/Renditerechner.jsx");
+const importKredit = () => import("./components/calculators/Finanzierung.jsx");
+const importMiete = () => import("./components/calculators/Miete.jsx");
+const importSanier = () => import("./components/calculators/Sanier.jsx");
+const importSteuer = () =>
+  import("./components/extras/SteuerTrick.jsx").then((m) => ({ default: m.SteuerTrick }));
+const importVfe = () =>
+  import("./components/extras/Vorfaelligkeit.jsx").then((m) => ({ default: m.Vorfaelligkeit }));
+const Haupt = lazy(importHaupt);
+const Kredit = lazy(importKredit);
+const Miete = lazy(importMiete);
+const Sanier = lazy(importSanier);
+const SteuerTrick = lazy(importSteuer);
+const Vorfaelligkeit = lazy(importVfe);
+function ladeRechnerVor() {
+  [importHaupt, importKredit, importMiete, importSanier, importSteuer, importVfe].forEach((f) =>
+    f().catch(() => {}),
+  );
+}
 
 const IC = {
   haupt: (a) => (
@@ -431,6 +450,18 @@ export default function App() {
     sessionStorage.setItem("if_landed", "1");
     return true;
   });
+  // Rechner-Chunks im Leerlauf vorladen, damit das erste Oeffnen ohne Wartezeit geht.
+  // Nicht bei aktivem Datensparmodus.
+  useEffect(() => {
+    if (navigator.connection?.saveData) return undefined;
+    const start = () => ladeRechnerVor();
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(start, { timeout: 4000 });
+      return () => cancelIdleCallback?.(id);
+    }
+    const id = setTimeout(start, 2000);
+    return () => clearTimeout(id);
+  }, []);
   // Liste aller Rechner, erreichbar ueber den festen Knopf rechts an der
   // Tab-Leiste (Nutzer-Feedback 2026-08-12).
   const [tabMenuOpen, setTabMenuOpen] = useState(false);
@@ -1069,7 +1100,9 @@ export default function App() {
                 setTab("saved");
               }}
             >
-              <Haupt />
+              <Suspense fallback={<RechnerSkeleton />}>
+                <Haupt />
+              </Suspense>
             </CalculatorTrialGate>
           )}
           {tab === "kredit" && (
@@ -1080,7 +1113,9 @@ export default function App() {
                 setTab("saved");
               }}
             >
-              <Kredit />
+              <Suspense fallback={<RechnerSkeleton />}>
+                <Kredit />
+              </Suspense>
             </CalculatorTrialGate>
           )}
           {tab === "miete" && (
@@ -1091,7 +1126,9 @@ export default function App() {
                 setTab("saved");
               }}
             >
-              <Miete />
+              <Suspense fallback={<RechnerSkeleton />}>
+                <Miete />
+              </Suspense>
             </CalculatorTrialGate>
           )}
           {tab === "sanier" && (
@@ -1102,7 +1139,9 @@ export default function App() {
                 setTab("saved");
               }}
             >
-              <Sanier />
+              <Suspense fallback={<RechnerSkeleton />}>
+                <Sanier />
+              </Suspense>
             </CalculatorTrialGate>
           )}
           {tab === "steuer6" && (
@@ -1113,7 +1152,9 @@ export default function App() {
                 setTab("saved");
               }}
             >
-              <SteuerTrick />
+              <Suspense fallback={<RechnerSkeleton />}>
+                <SteuerTrick />
+              </Suspense>
             </CalculatorTrialGate>
           )}
           {tab === "vfe" && (
@@ -1124,7 +1165,9 @@ export default function App() {
                 setTab("saved");
               }}
             >
-              <Vorfaelligkeit />
+              <Suspense fallback={<RechnerSkeleton />}>
+                <Vorfaelligkeit />
+              </Suspense>
             </CalculatorTrialGate>
           )}
           {tab === "saved" && <Merkliste />}
