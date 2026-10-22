@@ -23,6 +23,7 @@ import { exportRoutes } from "./routes/export";
 import { adminRoutes } from "./routes/admin";
 import { lageRoutes } from "./routes/lage";
 import { publicContractRoutes } from "./routes/publicContract";
+import { internalRoutes } from "./routes/internalReport";
 import { handleScheduled } from "./scheduled";
 import { isStandby, standbyGuard } from "./standby";
 import { securityHeaders } from "./securityHeaders";
@@ -78,6 +79,8 @@ app.route("/api/v1/daten", datenRoutes);
 app.route("/api/v1/devices", devicesRoutes);
 app.route("/api/v1/export", exportRoutes);
 app.route("/api/v1/admin", adminRoutes);
+// Nur fuer Automatik (Monatsbericht), per gemeinsamem Geheimnis geschuetzt - siehe routes/internalReport.ts.
+app.route("/api/v1/internal", internalRoutes);
 app.route("/api/v1/lage", lageRoutes);
 app.route("/api/v1/alternativ", alternativRoutes);
 // Ohne Anmeldung: Kuendigungsbutton, Widerrufsfunktion, Kontaktformular

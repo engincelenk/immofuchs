@@ -46,6 +46,11 @@ BACKUP_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8
 # bereits als Sending-Domain verifiziert.
 APP_BASE_URL = "https://immofuchs.info"
 MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
+# Betreiber-Adresse (2026-10-22, Nutzerwunsch): Kontaktformular, Backup-Fehler, KI-Alarm, Monatsbericht und Widerrufs-Kopie
+# gehen hierhin; sie ist auch Reply-To aller Mails (email.ts). Vorher stand nur der Standardwert im Code. qa und Failover
+# wie prod (Zwilling). dev bewusst ohne: dort geht ohnehin alles an TEST_EMAIL_REDIRECT_TO.
+CONTACT_EMAIL = "info@immofuchs.info"
+BACKUP_ALERT_EMAIL = "info@immofuchs.info"
 # Kommagetrennt: lokaler Dev-Server + dev.immofuchs.info (automatisches
 # CI-Deployment aus Immofuchs-dev, siehe .github/workflows/deploy-dev.yml) +
 # die echte Produktions-Domain, damit CORS schon vorbereitet ist, sobald das
@@ -333,6 +338,11 @@ REGISTRATION_ENABLED = "false"
 # der private Schluessel liegt ausschliesslich beim Betreiber (docs/betrieb/backup-schluessel.txt + Offline-Kopie).
 BACKUP_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAkUFCQ2Gyp4nZ2D+vPaX+\nyro5XX7fGuH0/VmbCdt9oWrmeYe8qyBaZnMfk+rEOC920ZLTR1vOqDntMWnIMC6f\n5EFIY7TIL3yAia6sRby6pB2hhkihuHRBpFkP+cSYsmAyVjv1BVnKhxJTMZv1JWKZ\nwC74hrbs+6LEdHVRiy/65VDVGquV/oSjZouOwfXiRNppFcHXU16tjFVNDWfjnsWR\nTHMJkub1rQsMoBhKsRQO5b++18wxkvHRhiB/eDu/TLFP2uwkRr7xajkHpNZa6sSm\n7qk7qFxhZplPRBKVpm6KpAhIMMeQlkY1i+bke/+wrh1W7G0HniX2wez79jAC5RvE\nSdpDVfOuoNXZvRFymxxVPYuRK1IaqrmvYqq5dmTrZRVh4+xlu8kX34P8GjhfamiC\nbWweaBpYfc/h9sH/xk969Zp7kxnSBFdSH+GV3kx4GRsNtmSeBzW1galG2ERX63v0\nmXYWQfpGrqxoiOh+HEKluZLD2JWtK38Pe9Nt3iaCEpCisy8+IzfiK4XaOqfh18yV\nsEpx3eeWPDBSoAtgpQHtdiAl0A/NO+ERXMjKkJCQPtqxW+wQS2VPc7jr4YMsrlRo\nibsfzgRYy7rG7zjkJgpUK41CbQT05+QmHSWLQqL0ZwkDmKTmzJCkUD0FSx4+Hi2l\nOverDQ0pvpjdEEwek6ndM3kCAwEAAQ==\n-----END PUBLIC KEY-----\n"
 MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
+# Betreiber-Adresse (2026-10-22, Nutzerwunsch): Kontaktformular, Backup-Fehler, KI-Alarm, Monatsbericht und Widerrufs-Kopie
+# gehen hierhin; sie ist auch Reply-To aller Mails (email.ts). Vorher stand nur der Standardwert im Code. qa und Failover
+# wie prod (Zwilling). dev bewusst ohne: dort geht ohnehin alles an TEST_EMAIL_REDIRECT_TO.
+CONTACT_EMAIL = "info@immofuchs.info"
+BACKUP_ALERT_EMAIL = "info@immofuchs.info"
 OBJECTS_SOFT_CAP = "500"
 FINN_PRO_DAILY_LIMIT = "50"
 # KI-Budget je Kunde (src/kiBudget.ts): "false" = Phase 1, nur messen und warnen (Notbremse je Tag gilt immer);
@@ -444,6 +454,11 @@ BACKUP_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8
 # bereits als Sending-Domain verifiziert.
 APP_BASE_URL = "https://immofuchs.info"
 MAGIC_LINK_FROM_EMAIL = "ImmoFuchs <login@send.immofuchs.info>"
+# Betreiber-Adresse (2026-10-22, Nutzerwunsch): Kontaktformular, Backup-Fehler, KI-Alarm, Monatsbericht und Widerrufs-Kopie
+# gehen hierhin; sie ist auch Reply-To aller Mails (email.ts). Vorher stand nur der Standardwert im Code. qa und Failover
+# wie prod (Zwilling). dev bewusst ohne: dort geht ohnehin alles an TEST_EMAIL_REDIRECT_TO.
+CONTACT_EMAIL = "info@immofuchs.info"
+BACKUP_ALERT_EMAIL = "info@immofuchs.info"
 # Kommagetrennt: lokaler Dev-Server + dev.immofuchs.info (automatisches
 # CI-Deployment aus Immofuchs-dev, siehe .github/workflows/deploy-dev.yml) +
 # die echte Produktions-Domain, damit CORS schon vorbereitet ist, sobald das

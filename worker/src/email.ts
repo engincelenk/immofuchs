@@ -17,6 +17,15 @@ import { isStandby } from "./standby";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const DEFAULT_FROM = "ImmoFuchs <login@immofuchs.info>";
+const DEFAULT_REPLY_TO = "info@immofuchs.info";
+
+// Betreiber-Postfach: Reply-To jeder Mail und Empfaenger der Betreiber-Mails (Kontaktformular, Backup-
+// und KI-Alarm, Monatsbericht, Widerrufs-Kopie). Seit 2026-10-22 ausdruecklich konfiguriert (CONTACT_EMAIL
+// in wrangler.toml), vorher nur der eingebaute Standard. Ohne dieses Reply-To gingen Antworten auf
+// Systemmails an login@send.immofuchs.info, wo niemand mitliest.
+export function betreiberAdresse(env: Pick<Env, "CONTACT_EMAIL">): string {
+  return env.CONTACT_EMAIL || DEFAULT_REPLY_TO;
+}
 
 // "ImmoFuchs <login@immofuchs.info>" -> { name, email }. Das Cloudflare-Binding
 // erwartet Name und Adresse getrennt, Resend nimmt die kombinierte Form.
@@ -54,7 +63,7 @@ function wrapEmailHtml(env: Env, bodyHtml: string): string {
       ${bodyHtml}
     </div>
     <div style="padding:16px 28px;border-top:1px solid #E5E5DC;color:#8A8A80;font-size:11px;">
-      ImmoFuchs · Diese E-Mail wurde automatisch versendet · <a href="https://immofuchs.info" style="color:#8A8A80;">immofuchs.info</a>
+      ImmoFuchs · Diese E-Mail wurde automatisch versendet. Antworten erreichen uns unter <a href="mailto:${betreiberAdresse(env)}" style="color:#8A8A80;">${betreiberAdresse(env)}</a> · <a href="https://immofuchs.info" style="color:#8A8A80;">immofuchs.info</a>
     </div>
   </div>
 </div>`;
@@ -133,7 +142,7 @@ export async function sendEmail(
   // ═══ 1. Cloudflare Email Sending (Binding) ═══
   if (env.EMAIL) {
     try {
-      await env.EMAIL.send({ to, from, subject, html, text });
+      await env.EMAIL.send({ to, from, subject, html, text, replyTo: betreiberAdresse(env) });
       return;
     } catch (err) {
       // Bewusst kein stiller Rueckfall auf Resend bei einem echten Sendefehler:
@@ -159,6 +168,7 @@ export async function sendEmail(
       body: JSON.stringify({
         from: env.MAGIC_LINK_FROM_EMAIL || DEFAULT_FROM,
         to: [to],
+        reply_to: betreiberAdresse(env),
         subject,
         html,
         text,

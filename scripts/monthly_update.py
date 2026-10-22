@@ -22,6 +22,7 @@ einen simplen requests.get() - das liess Claude fast jeden Monat
 monatelang Mai-Zinsen trotz laufendem Job).
 """
 
+import json
 import os, re
 from datetime import date, datetime
 
@@ -497,6 +498,28 @@ def main():
 
     total = len(changes) + len(i18n_changed)
     print(f"\n=== Abgeschlossen — {total} Änderungen gesamt ===")
+
+    # ── 6. Lauf-Ergebnis fuer den Monatsbericht (scripts/monatsbericht.py) ──
+    # Nur wenn der Workflow einen Zielpfad vorgibt. Strukturiert, damit der Bericht keine
+    # Logzeilen auswerten muss.
+    bericht_datei = os.environ.get("BERICHT_DATEI")
+    if bericht_datei:
+        quellen = [
+            {"name": "Bundesbank Umlaufrendite 10 Jahre (PDF)", "ok": bbk_10j is not None,
+             "hinweis": f"{bbk_10j} %" if bbk_10j is not None else "Abruf fehlgeschlagen"},
+            {"name": "Interhyp Zinstabelle 10 Jahre", "ok": bool(interhyp),
+             "hinweis": f"Ø {interhyp_avg} %" if interhyp else "Abruf fehlgeschlagen"},
+            {"name": "Bundesbank Pfandbrief-Rendite (API)", "ok": bool(pf),
+             "hinweis": f"{pf[0]} % ({pf[1]})" if pf else "Abruf fehlgeschlagen, Wert unverändert"},
+        ]
+        aenderungen = [c.strip() for c in changes + i18n_changed]
+        if final_avg is None:
+            aenderungen.append("Bauzins (MARKET_RATES) NICHT aktualisiert: mindestens eine Quelle fehlte")
+        with open(bericht_datei, "w", encoding="utf-8") as f:
+            json.dump(
+                {"monat": new_stand, "aenderungen": aenderungen, "quellen": quellen, "ueberfaellig": faellig},
+                f, ensure_ascii=False, indent=2,
+            )
 
 
 if __name__ == "__main__":

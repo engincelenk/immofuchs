@@ -1,3 +1,38 @@
+## 2026-10-22 (1.100.137) [WORKER]
+
+### Betreiber-Adresse info@immofuchs.info ausdruecklich konfiguriert, Reply-To in allen Mails, Widerrufs-Kopie
+
+- worker/wrangler.toml: CONTACT_EMAIL und BACKUP_ALERT_EMAIL stehen jetzt ausdruecklich auf info@immofuchs.info, in prod ([vars]), qa und Failover (Zwilling, check-twin.ps1: identisch). Vorher galt nur der eingebaute Standard im Code. dev bleibt ohne: dort geht ohnehin alles an TEST_EMAIL_REDIRECT_TO (useforai@web.de). qa verschickt wegen Standby weiterhin nichts.
+- worker/src/email.ts: jede Mail hat jetzt Reply-To = Betreiber-Adresse (Resend: reply_to, Cloudflare-Binding: replyTo). Vorher gingen Antworten auf Systemmails an login@send.immofuchs.info, wo niemand mitliest. Neue Funktion betreiberAdresse(). Fusszeile: "Antworten erreichen uns unter info@immofuchs.info" (mit mailto-Link) statt nur "automatisch versendet".
+- worker/src/betreiberMail.ts, contractActions.ts: bei jeder Widerrufserklaerung geht eine Kopie MIT ERGEBNIS an die Betreiber-Adresse: bestaetigt und erstattet (Betraege, Tage), nach Ablauf der Frist, ohne passenden Vertrag (der Kunde bekommt dann keine Mail) und fehlgeschlagen (Betreff beginnt mit ACHTUNG, bitte von Hand pruefen). Best effort: scheitert diese Mail, wird der Widerruf trotzdem ausgefuehrt, der Fehler nur protokolliert.
+- types.ts: EMAIL-Binding um replyTo ergaenzt.
+- Tests: email.test.ts (7: Reply-To bei Resend und Binding, Standard ohne Variable, Fusszeile, Standby ohne Versand, dev-Umleitung behaelt Reply-To), betreiberMail.test.ts (6). Worker 492, Frontend 1913 gruen, tsc ok.
+- Hinweis: auf qa verschickt die Admin-Funktion Test-E-Mails wegen Standby nichts, meldet aber Erfolg (unveraendert, nur festgehalten).
+
+## 2026-10-22 (1.100.136) [WORKER] [CI]
+
+### Monatsbericht per Mail nach jedem Monatsjob
+
+- Neu: nach dem Monatsjob (nur PROD+QA, monthly-update.yml, letzter Schritt, laeuft auch bei Fehlern) geht eine Mail an BACKUP_ALERT_EMAIL (sonst CONTACT_EMAIL, sonst info@immofuchs.info). Inhalt: was aktualisiert wurde (Werte vorher/nachher), welche Datenquellen (Bundesbank PDF, Interhyp, Bundesbank Pfandbrief) geklappt haben oder fehlten, ob ein Deploy ausgeloest wurde, und welche Handpflege-Themen noch von Hand fällig sind (mit Quelle, Datei und fertigem Satz fuer Claude). Bei Fehlern oder fehlender Quelle beginnt der Betreff mit ACHTUNG.
+- Die Einzel-Issues der Datenpflege-Erinnerung (datenpflege-erinnerung.yml) bleiben unveraendert bestehen; die Mail ist die Zusammenfassung obendrauf.
+- worker/src/routes/internalReport.ts: POST /api/v1/internal/monthly-report, geschuetzt durch das gemeinsame Geheimnis REPORT_TOKEN (Authorization: Bearer, Vergleich ueber SHA-256-Pruefsummen). Ohne gesetztes Secret ist der Endpunkt aus (503). Koerper hoechstens 60 kB, alle Felder geprueft und gekuerzt, jede Ausgabe in der Mail HTML-maskiert, Links nur als https.
+- worker/src/monatsbericht.ts: Pruefung und Mailtext (pruefeBericht, baueMonatsbericht). Tests: monatsbericht.test.ts, 15 Faelle (Pruefung, Maskierung, Betreff, 401/503/400/413/502, Empfaenger-Rueckfall).
+- scripts/monthly_update.py schreibt am Ende eine JSON-Ergebnisdatei (BERICHT_DATEI, nur wenn der Workflow sie vorgibt). scripts/monatsbericht.py baut daraus den Bericht und sendet ihn; er endet immer mit Exit-Code 0, der Monatsjob wird nie rot. Fehlt das GitHub-Secret REPORT_TOKEN, steht nur eine Zeile im Log.
+- scripts/datenpflege_erinnerung.py: faellige_themen() herausgeloest, wird vom Bericht mitbenutzt; Verhalten der Erinnerung unveraendert (Trockenlauf Oktober geprueft).
+- scripts/check-secrets.ps1: REPORT_TOKEN als optionales Secret gefuehrt (gebraucht auf prod und qa).
+- Einrichtung (einmalig): Worker-Secret REPORT_TOKEN auf prod und qa setzen UND derselbe Wert als GitHub-Secret REPORT_TOKEN (Settings -> Secrets and variables -> Actions). Ein Test-Aufruf mit curl an den Endpunkt schickt eine Probemail.
+
+## 2026-10-22 (1.100.135) [CI]
+
+### Monatsjob-Waechter und Datenpflege-Erinnerung gelten jetzt fuer prod + qa (main) statt dev
+
+- Bestandsaufnahme der auf dev fixierten Automatik: monthly-watchdog.yml pruefte nur dev.immofuchs.info, datenpflege-erinnerung.yml checkte Immofuchs-dev aus (Kalender und Texte lagen dort), und der Satz fuer Claude in den Issues hiess "deploye auf dev". monthly-update.yml war schon umgestellt (Matrix PROD+QA auf main, dazu DEV auf Immofuchs-dev) und bleibt so.
+- monthly-watchdog.yml: prueft taeglich immofuchs.info UND qa.immofuchs.info (datenstatus.html, "Letzter Lauf"), ab dem 3. des Monats ein Issue "Monatsjob nicht gelaufen (PROD/QA)" mit Liste der abweichenden Adressen und rote Laufanzeige (GitHub-Mail); wieder aktuell schliesst es das Issue. dev wird nicht mehr geprueft. Ein noch offenes Alt-Issue "Monatsjob nicht gelaufen (DEV)" schliesst der Waechter nicht von selbst - von Hand schliessen.
+- datenpflege-erinnerung.yml: checkt main statt Immofuchs-dev aus. Themenkalender und Texte (scripts/datenpflege_erinnerung.py) werden damit auf main gepflegt.
+- scripts/datenpflege_erinnerung.py: der Abschlusssatz in jedem Issue fuer Claude sagt jetzt "zeige mir danach den Plan mit push.ps1 prod -DryRun und frage vor dem Release" statt "deploye auf dev".
+- Geprueft: Bash-Skript des Waechters mit nachgestelltem gh gegen die echten Adressen (aktuell Stand 2026-10 auf prod, qa und dev): Fall aktuell schliesst, Fall veraltet erzeugt den Bericht und Exit 1. Die Workflows selbst laufen erst, wenn sie auf main liegen; geplante Laeufe nimmt GitHub immer von main.
+- Offen (noch nicht gebaut): ein Monatsbericht per Mail mit den geaenderten Werten und den Handpflege-Aufgaben.
+
 ## 2026-10-22 (1.100.134) [FRONTEND]
 
 ### Lade-Kringel springt nicht mehr, color-scheme gegen die Graublende vor dem ersten Bild

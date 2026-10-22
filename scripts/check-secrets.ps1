@@ -18,7 +18,10 @@ $pflicht = @(
 # Optional: ohne diese bleibt Push ein stilles No-Op (worker/src/push.ts).
 $optional = @(
   "FIREBASE_PROJECT_ID", "FIREBASE_SERVICE_ACCOUNT_JSON",
-  "APNS_KEY_ID", "APNS_TEAM_ID", "APNS_PRIVATE_KEY", "APNS_BUNDLE_ID", "APNS_ENV"
+  "APNS_KEY_ID", "APNS_TEAM_ID", "APNS_PRIVATE_KEY", "APNS_BUNDLE_ID", "APNS_ENV",
+  # Monatsbericht per Mail (worker/src/routes/internalReport.ts): gebraucht auf prod (Aufruf aus GitHub Actions)
+  # und qa (Zwilling); auf dev nicht. Ohne das Secret ist der Endpunkt aus, der Monatsjob laeuft trotzdem.
+  "REPORT_TOKEN"
 )
 # Veraltet: Der Code dafuer ist entfernt (Paddle -> Stripe, Passkey/WebAuthn).
 $veraltetMuster = "^(PADDLE_|WEBAUTHN_)"

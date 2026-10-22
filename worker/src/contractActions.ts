@@ -7,6 +7,7 @@
 import type { Env } from "./types";
 import { getActiveSubscription, getUserByEmail, newId, type SubscriptionRow, type UserRow } from "./db";
 import { dispatchNotification } from "./notifications";
+import { meldeWiderrufAnBetreiber, type WiderrufAusgang } from "./betreiberMail";
 import { cancelAtPeriodEnd, getPaidAmountCents, withdrawSubscription } from "./stripe/checkout";
 import { berechneWiderruf } from "./stripe/withdrawal";
 
@@ -163,8 +164,20 @@ export async function widerrufen(
       outcome,
     });
 
+  // Kopie an den Betreiber (info@immofuchs.info) mit Ergebnis - best effort, siehe betreiberMail.ts
+  const kopie = (ausgang: WiderrufAusgang) =>
+    meldeWiderrufAnBetreiber(env, {
+      name: input.name,
+      email: input.email,
+      kanal: input.channel,
+      eingang: formatZeitpunkt(input.receivedAt),
+      vertrag: sub ? planLabel(sub.plan) : undefined,
+      ausgang,
+    });
+
   if (!user || !sub || !sub.stripe_subscription_id) {
     await log("no_contract");
+    await kopie({ art: "kein_vertrag" });
     return { ok: true, gefunden: false };
   }
 
@@ -203,6 +216,7 @@ export async function widerrufen(
         recipientUserId: user.id,
         payload: {},
       });
+      await kopie({ art: "frist_abgelaufen" });
       return { ok: true, gefunden: true, fristAbgelaufen: true };
     }
     await withdrawSubscription(env, sub.stripe_subscription_id, {
@@ -223,10 +237,17 @@ export async function widerrufen(
         tage: quote.tageGenutzt,
       },
     });
+    await kopie({
+      art: "bestaetigt",
+      erstattung: eur(quote.erstattungCent),
+      wertersatz: eur(quote.wertersatzCent),
+      tage: quote.tageGenutzt,
+    });
     return { ok: true, gefunden: true, erstattungCent: quote.erstattungCent, wertersatzCent: quote.wertersatzCent };
   } catch (err) {
     console.error("billing_withdraw_failed", err instanceof Error ? err.message : "unknown");
     await log("failed");
+    await kopie({ art: "fehlgeschlagen" });
     return { ok: false, error: "withdraw_failed" };
   }
 }

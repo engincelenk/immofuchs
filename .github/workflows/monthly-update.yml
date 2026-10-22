@@ -113,6 +113,8 @@ jobs:
         id: update
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Ergebnisdatei fuer den Monatsbericht (scripts/monatsbericht.py, letzter Schritt unten)
+          BERICHT_DATEI: ${{ runner.temp }}/monatslauf.json
         run: python scripts/monthly_update.py
 
       # ── 4. Änderungen committen UND zurückpushen - data.js/translations.js
@@ -185,3 +187,20 @@ jobs:
       - name: ⏭️ Kein Deploy nötig
         if: steps.commit.outputs.changed != 'true'
         run: echo "Keine Datenänderung — ${{ matrix.env.name }} bleibt auf seinem aktuellen Stand."
+
+      # ── 6. Monatsbericht per Mail (seit 2026-10-22) ───────────────────────
+      #      Nur fuer PROD+QA (ein Bericht pro Monat, nicht doppelt fuer dev). Laeuft IMMER, auch
+      #      wenn der Update-Schritt scheitert - dann steht der Fehler oben in der Mail. Der Worker
+      #      schickt sie an BACKUP_ALERT_EMAIL. Fehlt das GitHub-Secret REPORT_TOKEN, wird nur
+      #      eine Zeile ins Log geschrieben, der Lauf bleibt gruen. Der Schritt macht den Lauf
+      #      nie rot (scripts/monatsbericht.py endet immer mit Exit-Code 0).
+      - name: 📧 Monatsbericht per Mail
+        if: always() && matrix.env.name == 'PROD+QA'
+        env:
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+          REPORT_URL: https://api.immofuchs.info/api/v1/internal/monthly-report
+          BERICHT_DATEI: ${{ runner.temp }}/monatslauf.json
+          UPDATE_OUTCOME: ${{ steps.update.outcome }}
+          COMMIT_CHANGED: ${{ steps.commit.outputs.changed }}
+          DEPLOY_SLUGS: ${{ matrix.env.slugs }}
+        run: python scripts/monatsbericht.py

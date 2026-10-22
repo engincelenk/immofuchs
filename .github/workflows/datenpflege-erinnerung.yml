@@ -3,12 +3,12 @@ name: 🗓️ Datenpflege-Erinnerung
 # Legt am 1. jedes Monats fuer jedes faellige Datenthema ein eigenes Issue an,
 # zugewiesen an den Repo-Besitzer (GitHub schickt dann eine Mail). Jedes Issue
 # enthaelt Quelle, Datei und einen fertigen Satz fuer Claude. Kalender und Texte:
-# scripts/datenpflege_erinnerung.py auf Immofuchs-dev - Aenderungen an den Themen
-# brauchen also nur einen Commit auf dev.
+# scripts/datenpflege_erinnerung.py auf main - Aenderungen an den Themen brauchen
+# also nur einen Commit auf main. (Bis 2026-10-21 lag das auf Immofuchs-dev; seit dem
+# Zwillingsmodell prod = qa auf main und auf Wunsch des Nutzers 2026-10-22 gilt main.)
 #
-# Geplante Laeufe startet GitHub nur von main - diese Datei liegt deshalb auch
-# auf main (mit [skip ci]), checkt aber immer Immofuchs-dev aus. QA und PROD
-# spielen keine Rolle (Nutzer-Vorgabe 2026-10-01).
+# Geplante Laeufe startet GitHub nur von main - diese Datei liegt deshalb auf main
+# (mit [skip ci]) und checkt ebenfalls main aus. dev spielt keine Rolle.
 #
 # Ersetzt das fruehere Sammel-Issue "Datenpflege ueberfaellig" im Monatsjob,
 # das nur im PROD-Zweig lief und nie ankam.
@@ -43,10 +43,10 @@ jobs:
     name: Faellige Datenpflege melden
     runs-on: ubuntu-latest
     steps:
-      - name: 🚚 Immofuchs-dev auschecken
+      - name: 🚚 main auschecken
         uses: actions/checkout@v5
         with:
-          ref: Immofuchs-dev
+          ref: main
 
       - name: 🐍 Python einrichten
         uses: actions/setup-python@v6

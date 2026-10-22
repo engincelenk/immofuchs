@@ -51,11 +51,11 @@ QUARTAL = [1, 4, 7, 10]
 HALBJAHR = [1, 7]
 
 # Gemeinsamer Abschluss jeder Claude-Anweisung - haelt die Projektregeln ein
-# (Release-Notes, Doku, Deploy nur auf dev).
+# (Release-Notes, Doku, Release auf prod und qa gemeinsam nach Freigabe).
 ABSCHLUSS = (
     "Setze bei Konstanten das Feld stand auf den aktuellen Monat, passe Tests an, "
     "trage die Aenderung in release-notes.txt und "
-    "docs/technical_specs/datenquellen-und-aktualisierung.md ein und deploye auf dev."
+    "docs/technical_specs/datenquellen-und-aktualisierung.md ein; zeige mir danach den Plan mit push.ps1 prod -DryRun und frage vor dem Release."
 )
 
 THEMEN = [
@@ -342,11 +342,9 @@ def gh(*args, eingabe=None):
     return subprocess.run(["gh", *args], check=True, capture_output=True, text=True, input=eingabe).stdout
 
 
-def main():
-    heute = jetzt()
-    if os.environ.get("TESTMONAT"):
-        heute = heute.replace(month=int(os.environ["TESTMONAT"]), day=1)
-    trocken = os.environ.get("TROCKEN", "").lower() in ("ja", "true", "1")
+def faellige_themen(heute, leise=False):
+    """Alle im Monat von `heute` faelligen Handpflege-Themen (Kalender plus veraltete Automatik).
+    Auch vom Monatsbericht genutzt (scripts/monatsbericht.py)."""
     periode = f"{MONATE[heute.month - 1]} {heute.year}"
     data_js = open(DATA_JS, encoding="utf-8").read()
     faellig = []
@@ -355,10 +353,21 @@ def main():
             continue
         # Diesen Monat schon gepflegt (stand = laufender Monat) -> keine Erinnerung
         if t.get("konst") and monate_seit(stand_lesen(data_js, t["konst"]), heute) == 0:
-            print(f"  ✓ {t['key']}: Stand ist bereits {periode}, übersprungen")
+            if not leise:
+                print(f"  ✓ {t['key']}: Stand ist bereits {periode}, übersprungen")
             continue
         faellig.append(t)
     faellig += veraltete_automatik(heute)
+    return faellig
+
+
+def main():
+    heute = jetzt()
+    if os.environ.get("TESTMONAT"):
+        heute = heute.replace(month=int(os.environ["TESTMONAT"]), day=1)
+    trocken = os.environ.get("TROCKEN", "").lower() in ("ja", "true", "1")
+    periode = f"{MONATE[heute.month - 1]} {heute.year}"
+    faellig = faellige_themen(heute)
     print(f"Monat {periode}: {len(faellig)} Thema/Themen fällig" + (" (TROCKEN)" if trocken else ""))
     for t in faellig:
         print(f"  - {t['key']}: {t['titel']}")

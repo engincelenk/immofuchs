@@ -242,6 +242,7 @@ export interface Env {
       subject: string;
       html?: string;
       text?: string;
+      replyTo?: string;
     }): Promise<unknown>;
   };
   APP_BASE_URL?: string; // fuer Magic-Link-/OAuth-Redirect-Ziele, z.B. "https://immofuchs.info"
@@ -278,6 +279,9 @@ export interface Env {
   BACKUP_ENABLED?: string;
   // Empfaenger der Fehlermail (Standard: CONTACT_EMAIL, dann info@immofuchs.info).
   BACKUP_ALERT_EMAIL?: string;
+  // Gemeinsames Geheimnis fuer POST /api/v1/internal/monthly-report (routes/internalReport.ts). Worker-Secret
+  // UND GitHub-Secret gleichen Namens; fehlt es, ist der Endpunkt aus. Der Bericht geht an BACKUP_ALERT_EMAIL.
+  REPORT_TOKEN?: string;
   // Empfaenger des oeffentlichen Kontaktformulars (Default info@immofuchs.info).
   CONTACT_EMAIL?: string;
   // Taeglicher D1<->Stripe-Abgleich (stripe/reconcile.ts): "log" (Default, nur
