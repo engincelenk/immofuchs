@@ -1131,7 +1131,13 @@ export function Landing({ onStart, lang, setLang }) {
                 width: "100%",
               }}
             >
+              {/* Handy (2026-10-22): Bild absolut im Rahmen, Regeln bei .calc-hero-bild unten.
+                  Vorher height:100% in einem Rahmen nur mit Mindesthoehe - Safari loeste die
+                  Prozenthoehe erst nach dem Laden auf, das Bild erschien zuerst im
+                  Seitenverhaeltnis (kleiner) und sprang dann auf die volle Hoehe. Ab 640 px
+                  bleibt es wie bisher im Fluss (die Kartenhoehe folgt dem Bild). */}
               <div
+                className="calc-hero-bild"
                 style={{
                   overflow: "hidden",
                   background: "linear-gradient(135deg,#fff1e8 0%,#ffd9b8 100%)",
@@ -1139,7 +1145,10 @@ export function Landing({ onStart, lang, setLang }) {
                 }}
               >
                 <img
+                  className="calc-hero-img"
                   src="/card-rendite.webp"
+                  width="1200"
+                  height="520"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                   alt=""
                 />
@@ -1650,6 +1659,7 @@ export function Landing({ onStart, lang, setLang }) {
       .calc-hero-card{grid-template-columns:1fr!important}
       @media(min-width:640px){.calc-hero-card{grid-template-columns:1fr 1fr!important}}
       .calc-hero-card>div:first-child{min-height:200px}
+      @media(max-width:639px){.calc-hero-bild{position:relative}.calc-hero-img{position:absolute;inset:0}}
       @media(min-width:640px){.calc-hero-card>div:first-child{min-height:0;height:100%}}
       .calc-cards-support{display:grid;grid-template-columns:1fr;gap:12px}
       .calc-cards-support>*{width:100%;min-width:0;box-sizing:border-box}
@@ -1703,7 +1713,9 @@ export function Landing({ onStart, lang, setLang }) {
           <button onClick={() => setOpenMode("login")}>{l.ctaFree}</button>
         </div>
       )}
-      <LandingMascot onStart={starteRechner} lang={lang} />
+      {/* Finn nur fuer angemeldete Nutzer (Nutzerwunsch 2026-10-22): abgemeldet gibt es keinen
+          schwebenden Fuchs, der Chat gehoert zu den Konto-Funktionen. */}
+      {account?.isLoggedIn && <LandingMascot onStart={starteRechner} lang={lang} />}
     </div>
   );
 }

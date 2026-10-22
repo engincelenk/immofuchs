@@ -1,3 +1,12 @@
+## 2026-10-22 (1.100.131) [FRONTEND]
+
+### Landingpage: Kartenbild springt nicht mehr, Finn nur noch angemeldet
+
+- Landing.jsx: das Kartenbild (card-rendite.webp) erschien auf dem iPhone zuerst kleiner (im Seitenverhaeltnis, darunter der Pfirsich-Hintergrund) und sprang dann auf die volle Hoehe. Ursache: height:100% in einem Rahmen, der nur eine Mindesthoehe hat; Safari loest die Prozenthoehe erst nach dem Laden auf. Unter 640 px liegt das Bild jetzt absolut im Rahmen (feste Hoehe 200 px, Bild fuellt sie von Anfang an). Ab 640 px bleibt alles wie bisher.
+- Das Bild hat jetzt width/height (1200x520), der Browser kennt das Seitenverhaeltnis vor dem Laden.
+- Gemessen (Chrome, Bild kuenstlich um 2,5 s verzoegert): Rahmen und Bild vorher/nachher gleich gross, Handy 360x200, Desktop 584x253 (1280 px) bzw. 322 (1600 px) wie bisher. Safari selbst konnte ich nicht messen, die Abhaengigkeit von der Prozenthoehe ist aber entfernt.
+- Landing.jsx: Finn (schwebender Fuchs-Knopf mit Chat) erscheint auf der Landingpage nur noch fuer angemeldete Nutzer. Abgemeldet ist er weg (Nutzerwunsch 2026-10-22). Der Fuchs im KI-Abschnitt der Seite ist ein Bild und bleibt.
+
 ## 2026-10-21 (1.100.130) [FRONTEND] [PERFORMANCE]
 
 ### Landingpage mobil ohne Luecke, schnellerer Start mit Platzhalter, Rechner werden nachgeladen
