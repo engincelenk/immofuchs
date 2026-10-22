@@ -1,3 +1,12 @@
+## 2026-10-22 (1.100.134) [FRONTEND]
+
+### Lade-Kringel springt nicht mehr, color-scheme gegen die Graublende vor dem ersten Bild
+
+- Befund aus der zweiten Bildschirmaufnahme (iPhone, 22.10. 19:16, bildweise ausgewertet): die unformatierte Seite hinter dem Kringel ist weg (1.100.133 wirkt), die Seite erscheint auf einmal. Zwei Reste: (1) der Kringel sprang beim Uebergang um etwa 27 px nach unten, (2) vor dem ersten Bild blendete der Schirm 0,1 s lang von dunkel nach Mittelgrau auf.
+- index.html: Der Kringel sitzt bei top:220px statt bei 50 % der Hoehe (gilt fuer die Platzhalter-Huelle und die Lade-Huelle der Landingpage gleichermassen, gemeinsame Klasse .boot-spin). iOS meldet beim ersten Bild eine kleinere Hoehe als kurz danach; die Mitte wanderte dadurch. Nachgestellt: Viewport-Hoehe waehrend des Ladens von 664 auf 700 px gewechselt, der Kringel bleibt stehen.
+- index.html: <meta name="color-scheme" content="dark light"> und im Theme-Skript style.colorScheme passend zur gespeicherten Wahl (hell: light, System: light dark, sonst dark). Das sagt der Webansicht schon waehrend des Parsens, welchen Standardhintergrund die Seite hat. Die Graublende ist als iOS-Standardhintergrund der noch leeren Webansicht vermutet, nicht bewiesen; ob sie weg ist, zeigt nur eine weitere Aufnahme.
+- Tests: 1885 gruen. Nicht gemessen: echtes Safari/WebKit.
+
 ## 2026-10-22 (1.100.133) [FRONTEND]
 
 ### Landingpage: keine unformatierte Seite mehr hinter dem Kringel, Aufdecken erst mit fertiger Schrift
