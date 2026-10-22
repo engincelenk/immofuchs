@@ -375,38 +375,53 @@ export function Landing({ onStart, lang, setLang }) {
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
   // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
   const account = useAccountCtx();
-  // Die Seite erscheint erst, wenn alles Sichtbare geladen ist (Nutzerwunsch 2026-10-22:
-  // kein stueckweises Aufbauen, lieber ein Lade-Kringel): Schriften, Bilder im oberen
-  // Bereich und der Kontostatus (sonst springt "Anmelden" nachtraeglich ein). Bis dahin
-  // liegt eine Huelle darueber, die der aus index.html gleicht. Nach 4 s wird sie in
-  // jedem Fall entfernt, damit eine haengende Anfrage die Seite nicht blockiert.
+  // Die Seite erscheint erst, wenn alles geladen ist (Nutzerwunsch 2026-10-22: kein
+  // stueckweises Aufbauen, lieber ein Lade-Kringel). Reihenfolge:
+  //  1. Kontostatus (/me) - davon haengen Anmelden/Avatar und der Finn-Knopf ab, die
+  //     sonst nachtraeglich einspringen,
+  //  2. danach ALLE Bilder der Seite (auch die weiter unten, loading wird auf eager
+  //     gesetzt) geladen UND decodiert, plus Schriften,
+  //  3. dann zwei Frames warten, damit der Browser alles gezeichnet hat.
+  // Bis dahin liegt eine Huelle darueber, die der aus index.html gleicht. Nach 6 s wird
+  // sie in jedem Fall entfernt, damit eine haengende Anfrage die Seite nicht blockiert.
   const [assetsBereit, setAssetsBereit] = useState(false);
+  const [fristAbgelaufen, setFristAbgelaufen] = useState(false);
   useEffect(() => {
-    let fertig = false;
-    const ok = () => {
-      if (fertig) return;
-      fertig = true;
-      setAssetsBereit(true);
-    };
-    const frist = setTimeout(ok, 4000);
-    const schriften = document.fonts?.ready ?? Promise.resolve();
-    const bilder = Array.from(document.querySelectorAll('.lp-wurzel img:not([loading="lazy"])'))
-      .filter((img) => img.getBoundingClientRect().top < window.innerHeight * 1.5)
-      .map((img) =>
-        img.complete
-          ? Promise.resolve()
-          : new Promise((fertigBild) => {
-              img.addEventListener("load", fertigBild, { once: true });
-              img.addEventListener("error", fertigBild, { once: true });
-            }),
-      );
-    Promise.all([schriften, ...bilder]).then(ok, ok);
-    return () => {
-      fertig = true;
-      clearTimeout(frist);
-    };
+    const frist = setTimeout(() => setFristAbgelaufen(true), 6000);
+    return () => clearTimeout(frist);
   }, []);
-  const bereit = assetsBereit && !account?.initialLoading;
+  const kontoFertig = !account?.initialLoading;
+  useEffect(() => {
+    if (!kontoFertig) return undefined;
+    let abgebrochen = false;
+    // DM Sans ausdruecklich laden: fonts.ready allein meldet "fertig", solange der Browser
+    // die Schrift noch gar nicht angefordert hat (Messung 22.10.: Aufdecken mit Ersatzschrift).
+    const schriften = document.fonts
+      ? Promise.all([
+          document.fonts.load('400 1em "DM Sans"'),
+          document.fonts.load('800 1em "DM Sans"'),
+        ]).then(() => document.fonts.ready)
+      : Promise.resolve();
+    const bilder = Array.from(document.querySelectorAll(".lp-wurzel img")).map((img) => {
+      img.loading = "eager";
+      return typeof img.decode === "function" ? img.decode().catch(() => {}) : Promise.resolve();
+    });
+    Promise.all([schriften, ...bilder])
+      .catch(() => {})
+      .then(
+        () =>
+          new Promise((fertig) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => fertig())),
+          ),
+      )
+      .then(() => {
+        if (!abgebrochen) setAssetsBereit(true);
+      });
+    return () => {
+      abgebrochen = true;
+    };
+  }, [kontoFertig]);
+  const bereit = fristAbgelaufen || (assetsBereit && kontoFertig);
   // Der Wizard wird auch von dieser Seite aus gemountet - waehrend er laeuft,
   // bleibt die eigenstaendige Kauf-Bestaetigung zu (er zeigt seine eigene).
   const anyWizardOpen = useAnyWizardOpen();

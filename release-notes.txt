@@ -1,3 +1,15 @@
+## 2026-10-22 (1.100.133) [FRONTEND]
+
+### Landingpage: keine unformatierte Seite mehr hinter dem Kringel, Aufdecken erst mit fertiger Schrift
+
+- Befund aus der Bildschirmaufnahme vom 22.10. (iPhone): bei 1,13 s war fuer rund 0,1 s die Seite OHNE Styles hinter dem Kringel sichtbar (schwarze Schrift, Standard-Knoepfe, Huelle durchsichtig). Die Styles aus index.html griffen, die von React eingefuegten nicht.
+- Ursache: Der React-Style begann mit @import url('/fonts/dm-sans.css'). Ein Stylesheet mit offenem @import wartet auf diese Datei; in Safari galten die Design-Tokens (--bg, --ct) und damit auch die Lade-Huelle so lange nicht. In Chrome nachgestellt (dm-sans.css kuenstlich verzoegert): dort wurde die Seite mit Ersatzschrift aufgedeckt und sprang danach auf DM Sans.
+- index.html: @font-face fuer DM Sans steht jetzt direkt im <head>, dazu preload der Schriftdatei. App.jsx: FONT_CSS ist leer (kein @import mehr). dm-sans.css wird nicht mehr angefragt.
+- index.html: die Lade-Huelle ist zusaetzlich statisch abgesichert (Inhalt verborgen, Huelle deckend in hell/dunkel), unabhaengig davon, wann Reacts Styles gelten.
+- Landing.jsx: wartet ausdruecklich auf DM Sans (fonts.load fuer 400 und 800), vorher meldete fonts.ready "fertig", bevor die Schrift ueberhaupt angefordert war. Weiter: erst Kontostatus, dann alle Bilder geladen und decodiert (auch die weiter unten), zwei Frames, dann Aufdecken; hoechstens 6 s.
+- Gemessen (Chrome, iPhone 13 emuliert, Schriftdatei um 2,5 s verzoegert): Huelle bleibt deckend und der Inhalt verborgen, bis DM Sans da ist, dann alles auf einmal. Angemeldet (vorgegebene /me-Antwort): nach dem Aufdecken aendern sich nur noch der Home-Bildschirm-Hinweis (nur im Safari-Browser, nicht in der installierten App), Finns Sprechblase nach 3 s und Finns Animation.
+- Nicht gemessen: echtes Safari/WebKit (lokal nicht installiert). Die statische Absicherung wirkt dort unabhaengig vom genauen Verhalten.
+
 ## 2026-10-22 (1.100.132) [FRONTEND]
 
 ### Landingpage erscheint erst, wenn alles geladen ist (Lade-Kringel statt stueckweisem Aufbau)

@@ -267,9 +267,13 @@ function createDefaults() {
 
 // Gemeinsame CSS-Bausteine fuer Landing- und App-Ansicht (frueher in beiden
 // <style>-Bloecken dupliziert). Die Design-Tokens leben nur noch hier an einer Stelle.
-// Selbst gehostet statt Google Fonts (Datenschutz, 2026-09-28) - siehe
-// public/fonts/dm-sans.css.
-export const FONT_CSS = "@import url('/fonts/dm-sans.css');";
+// Selbst gehostet statt Google Fonts (Datenschutz, 2026-09-28). Die @font-face-Regeln
+// stehen seit 2026-10-22 direkt im <head> von index.html, nicht mehr als @import hier:
+// ein @import in einem von React eingefuegten <style> haelt in Safari das GANZE
+// Stylesheet (inkl. Design-Tokens) zurueck, bis die Datei geladen ist - im Video vom
+// 22.10. war die Seite dadurch kurz unformatiert sichtbar. Der leere Baustein bleibt,
+// damit die bestehenden Verwendungen unveraendert funktionieren.
+export const FONT_CSS = "";
 // Bugreport 25.08.: der native Fokusring (in Safari ein schwarzes,
 // abgerundetes Rechteck) fiel z.B. um den Schliessen-Knopf des
 // Checkout-Wizards auf, den der Fokus-Trap dort automatisch fokussiert -
