@@ -375,6 +375,38 @@ export function Landing({ onStart, lang, setLang }) {
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
   // App()), daher hier direkt per Context verfuegbar, ohne Prop-Drilling.
   const account = useAccountCtx();
+  // Die Seite erscheint erst, wenn alles Sichtbare geladen ist (Nutzerwunsch 2026-10-22:
+  // kein stueckweises Aufbauen, lieber ein Lade-Kringel): Schriften, Bilder im oberen
+  // Bereich und der Kontostatus (sonst springt "Anmelden" nachtraeglich ein). Bis dahin
+  // liegt eine Huelle darueber, die der aus index.html gleicht. Nach 4 s wird sie in
+  // jedem Fall entfernt, damit eine haengende Anfrage die Seite nicht blockiert.
+  const [assetsBereit, setAssetsBereit] = useState(false);
+  useEffect(() => {
+    let fertig = false;
+    const ok = () => {
+      if (fertig) return;
+      fertig = true;
+      setAssetsBereit(true);
+    };
+    const frist = setTimeout(ok, 4000);
+    const schriften = document.fonts?.ready ?? Promise.resolve();
+    const bilder = Array.from(document.querySelectorAll('.lp-wurzel img:not([loading="lazy"])'))
+      .filter((img) => img.getBoundingClientRect().top < window.innerHeight * 1.5)
+      .map((img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise((fertigBild) => {
+              img.addEventListener("load", fertigBild, { once: true });
+              img.addEventListener("error", fertigBild, { once: true });
+            }),
+      );
+    Promise.all([schriften, ...bilder]).then(ok, ok);
+    return () => {
+      fertig = true;
+      clearTimeout(frist);
+    };
+  }, []);
+  const bereit = assetsBereit && !account?.initialLoading;
   // Der Wizard wird auch von dieser Seite aus gemountet - waehrend er laeuft,
   // bleibt die eigenstaendige Kauf-Bestaetigung zu (er zeigt seine eigene).
   const anyWizardOpen = useAnyWizardOpen();
@@ -405,58 +437,6 @@ export function Landing({ onStart, lang, setLang }) {
     const io = new IntersectionObserver(([e]) => setHeroCtaVisible(e.isIntersecting));
     io.observe(el);
     return () => io.disconnect();
-  }, []);
-
-  // Sanftes Einblenden beim Scrollen, Browser und Handy gleich. Zwei Stufen:
-  //  - jede Sektion unterhalb des Hero gleitet als Ganzes langsam herein
-  //    (Nutzerwunsch 2026-10-01: "langsame Einblendung des Contents" pro Sektion),
-  //  - Karten darin erscheinen zusaetzlich nacheinander (Stufung je
-  //    Geschwister-Position), statt alle gleichzeitig.
-  // Aus bei "Bewegung reduzieren" und ohne IntersectionObserver.
-  useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") return undefined;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return undefined;
-    const abschnitte = Array.from(document.querySelectorAll("section:not(.lp-hero)>*"));
-    const karten = Array.from(
-      document.querySelectorAll(
-        ".lp-ki-top,.lp-ki-karte,.lp-step,.calc-hero-card,.calc-cards-support>*",
-      ),
-    );
-    abschnitte.forEach((el) => el.classList.add("lp-rev-sektion"));
-    const ziele = [...abschnitte, ...karten];
-    const io = new IntersectionObserver(
-      (eintraege) => {
-        for (const e of eintraege) {
-          if (!e.isIntersecting) continue;
-          const el = e.target;
-          io.unobserve(el);
-          el.classList.add("lp-rev-in");
-          setTimeout(() => el.classList.remove("lp-rev", "lp-rev-in", "lp-rev-sektion"), 900);
-        }
-      },
-      // threshold 0 statt eines Anteils: eine ganze Sektion ist auf dem Handy oft
-      // hoeher als der Bildschirm - "12 % sichtbar" wuerde dort nie erreicht und
-      // der Inhalt bliebe unsichtbar. Ausloeser ist, dass die Oberkante ins
-      // untere Zehntel des Bildes rueckt.
-      { threshold: 0, rootMargin: "0px 0px -10% 0px" },
-    );
-    ziele.forEach((el) => {
-      // Schon oberhalb des Bildschirms (z.B. nach Neuladen mitten auf der Seite):
-      // gar nicht erst ausblenden, sonst bliebe es unsichtbar, bis man hochscrollt.
-      if (el.getBoundingClientRect().bottom < 0) return;
-      const pos = el.parentElement
-        ? Array.prototype.indexOf.call(el.parentElement.children, el)
-        : 0;
-      // Karten gestaffelt; Sektionen ohne Verzoegerung, sie sind ohnehin langsam
-      if (!el.classList.contains("lp-rev-sektion"))
-        el.style.setProperty("--rd", `${(pos % 4) * 50}ms`);
-      el.classList.add("lp-rev");
-      io.observe(el);
-    });
-    return () => {
-      io.disconnect();
-      ziele.forEach((el) => el.classList.remove("lp-rev", "lp-rev-in", "lp-rev-sektion"));
-    };
   }, []);
 
   // Bugfix (Nutzer-Feedback 2026-08-11): CheckoutWizard/MyAccount lesen
@@ -565,9 +545,13 @@ export function Landing({ onStart, lang, setLang }) {
 
   return (
     <div
-      className={
-        account && !account.initialLoading && !account.isLoggedIn ? "lp-sticky-pad" : undefined
-      }
+      className={[
+        "lp-wurzel",
+        !bereit && "lp-wartet",
+        account && !account.initialLoading && !account.isLoggedIn && "lp-sticky-pad",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={{
         minHeight: "100dvh",
         background: "var(--bg)",
@@ -580,6 +564,23 @@ export function Landing({ onStart, lang, setLang }) {
         width: "100%",
       }}
     >
+      {!bereit && (
+        <div
+          className="boot lp-lade"
+          role="status"
+          aria-label="Seite wird geladen"
+          style={{ position: "fixed", inset: 0, zIndex: 9000, background: "var(--bg)" }}
+        >
+          <div className="boot-hdr">
+            <span className="boot-logo" />
+            <span className="boot-dots">
+              <i />
+              <i />
+            </span>
+          </div>
+          <div className="boot-spin sofort" />
+        </div>
+      )}
       {/* ═══════════ STICKY HEADER WITH NAV + CTA ═══════════ */}
       <header
         style={{
@@ -1535,6 +1536,8 @@ export function Landing({ onStart, lang, setLang }) {
          Ankommen aufmerksam machen, nicht dauerhaft neben dem Text flackern. */
       .lp-stern{display:inline-block;flex-shrink:0;animation:lp-stern 1.8s ease-in-out 6 alternate}
       /* Ohne Orange-Schimmer im Hintergrund (Nutzer-Korrektur 2026-09-28). */
+      /* Bis alles geladen ist, bleibt der Inhalt unsichtbar (Huelle .lp-lade liegt darueber) */
+      .lp-wartet>*:not(.lp-lade){visibility:hidden}
       .lp-hero{position:relative;text-align:center}
       .lp-hero-stern{position:absolute;pointer-events:none;color:var(--ca)}
       .lp-stern-hell{color:#ffb27a}
@@ -1577,15 +1580,6 @@ export function Landing({ onStart, lang, setLang }) {
       .lp-h2{margin:0;font-size:clamp(26px,3vw,40px);font-weight:800;color:var(--ct);letter-spacing:-.5px;line-height:1.15}
       .lp-karte{transition:transform .2s var(--ease-out),box-shadow .2s,border-color .2s}
       .lp-karte:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(30,58,95,.12);border-color:var(--ca)}
-      /* Sanftes Einblenden beim Scrollen (Nutzerwunsch 2026-09-30, Handy hatte keine
-         Effekte). Die Klassen setzt ein Effekt in Landing() erst per Skript - ohne
-         JS bleibt alles sichtbar. Nach dem Einblenden werden sie wieder entfernt,
-         damit Hover/Druck-Effekte der Karten ihre eigenen Zeiten behalten. */
-      .lp-rev{opacity:0;transform:translateY(10px);transition:opacity .35s var(--ease-out),transform .35s var(--ease-out);transition-delay:var(--rd,0ms)}
-      /* Ganze Sektion: etwas laenger, aber kurz genug, dass es nicht wie Nachladen wirkt
-         (2026-10-21: vorher 1,1 s und 32 px, wirkte auf dem Handy verzoegert) */
-      .lp-rev.lp-rev-sektion{transform:translateY(14px);transition-duration:.5s}
-      .lp-rev.lp-rev-in{opacity:1;transform:none}
       /* Touch hat kein Hover: stattdessen ein kurzes Eindruecken beim Antippen. */
       @media(hover:none){
         .lp-karte:active,.lp-ki-karte:active{transform:scale(.985)}
@@ -1653,7 +1647,6 @@ export function Landing({ onStart, lang, setLang }) {
       @media(prefers-reduced-motion:reduce){
         .lp-auf,.lp-stern{animation:none}
         .lp-karte:hover{transform:none}
-        .lp-rev{opacity:1;transform:none;transition:none}
         .lp-karte:active,.lp-ki-karte:active,.lp-btn-primary:active,.lp-btn-secondary:active{transform:none}
       }
       .calc-hero-card{grid-template-columns:1fr!important}

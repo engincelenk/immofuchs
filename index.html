@@ -171,7 +171,8 @@
       .boot-hdr{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid #e5e5dc}
       .boot-logo{width:150px;height:28px;border-radius:8px;background:#e9e9e2}
       .boot-dots{display:flex;gap:10px}.boot-dots i{width:46px;height:46px;border-radius:12px;background:#e9e9e2}
-      .boot-spin{width:30px;height:30px;margin:28vh auto 0;border-radius:50%;border:3px solid #e5e5dc;border-top-color:#b84800;opacity:0;animation:boot-ein .2s linear .45s forwards,boot-dreh .8s linear infinite}
+      .boot-spin{position:fixed;top:50%;left:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:3px solid #e5e5dc;border-top-color:#b84800;opacity:0;animation:boot-ein .2s linear .45s forwards,boot-dreh .8s linear infinite}
+      .boot-spin.sofort{animation:boot-ein .01s linear forwards,boot-dreh .8s linear infinite}
       @keyframes boot-ein{to{opacity:1}}@keyframes boot-dreh{to{transform:rotate(360deg)}}
       html[data-theme="dark"] .boot-hdr{border-bottom-color:#2e2e2c}
       html[data-theme="dark"] :is(.boot-logo,.boot-dots i){background:#262626}
@@ -181,7 +182,7 @@
         html:not([data-theme="light"]):not([data-theme="dark"]) :is(.boot-logo,.boot-dots i){background:#262626}
         html:not([data-theme="light"]):not([data-theme="dark"]) .boot-spin{border-color:#3a3a38;border-top-color:#f07a2e}
       }
-      @media(prefers-reduced-motion:reduce){.boot-spin{animation:boot-ein .2s linear .45s forwards}}
+      @media(prefers-reduced-motion:reduce){.boot-spin{animation:boot-ein .2s linear .45s forwards}.boot-spin.sofort{animation:boot-ein .01s linear forwards}}
       /* iOS safe-area padding for bottom tab bar */
       .has-safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
       .cc-banner{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#fff;border-top:1px solid #e5e5dc;transform:translateY(100%);transition:transform .4s ease;font-family:'DM Sans',system-ui,sans-serif;box-shadow:0 -4px 20px rgba(0,0,0,.1)}

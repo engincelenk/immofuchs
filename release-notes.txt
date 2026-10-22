@@ -1,3 +1,13 @@
+## 2026-10-22 (1.100.132) [FRONTEND]
+
+### Landingpage erscheint erst, wenn alles geladen ist (Lade-Kringel statt stueckweisem Aufbau)
+
+- Landing.jsx: die Seite bleibt unsichtbar, bis Schriften, die Bilder im oberen Bereich (bis 1,5 Bildschirmhoehen) und der Kontostatus (/me) geladen sind. Bis dahin liegt eine Huelle mit Kopfzeilen-Platzhalter und sofort sichtbarem Lade-Kringel darueber, danach erscheint alles auf einmal. Nach hoechstens 4 s wird die Huelle in jedem Fall entfernt, damit eine haengende Anfrage die Seite nicht blockiert.
+- index.html: Der Kringel der Platzhalter-Huelle sitzt jetzt in der Bildschirmmitte (position fixed), damit er beim Uebergang zur Huelle der Landingpage nicht springt.
+- Landing.jsx: das Einblenden beim Scrollen (lp-rev, seit 2026-09-30) ist entfernt. Es liess Abschnitte und Karten nach dem Laden noch einmal nachtraeglich erscheinen. Wer es zurueckhaben will: Eintrag 1.100.130 beschreibt die Werte.
+- Gemessen (iPhone 13 emuliert, 4x CPU, 1,6 Mbit/s): Platzhalter, dann Huelle mit unsichtbarem Inhalt, dann alles gleichzeitig sichtbar, wenn Schrift und Bilder fertig sind. Tests 1885 gruen.
+- Offen: das Cookie-Banner blendet weiterhin unabhaengig von der Landingpage von unten ein.
+
 ## 2026-10-22 (1.100.131) [FRONTEND]
 
 ### Landingpage: Kartenbild springt nicht mehr, Finn nur noch angemeldet
