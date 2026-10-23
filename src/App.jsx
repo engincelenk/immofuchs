@@ -1,7 +1,8 @@
 import { bereinigeAltObjektDaten } from "./utils/altObjekt.js";
-import { useState, useCallback, useRef, useEffect, lazy, Suspense } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { MARKET_RATES, WERTSTEIGERUNG, AFA } from "./data.js";
 import { berechneNichtUml } from "./utils/rendite.js";
+import { zinsInfo } from "./utils/zinsStaffel.js";
 import { AppProviders } from "./context/AppProviders.jsx";
 import { T, LANGS } from "./i18n/translations.js";
 import { TIPS } from "./i18n/tips.js";
@@ -516,6 +517,11 @@ export default function App() {
   // abweichender Wert gilt als echte Eingabe.
   const nichtUmlTouchedRef = useRef(false);
   const nichtUmlAutoRef = useRef(String(berechneNichtUml(FLAECHE_DEFAULT)));
+  // Zinssatz folgt automatisch dem Finanzierungsanteil (Eigenkapital, Kaufpreis, ...), solange der Nutzer ihn
+  // nicht selbst aendert - gleiches Muster wie nichtUml. Anders als dort schaltet die Eingabe des genau
+  // automatischen Werts die Automatik wieder an (zinsTouchedRef = Wert weicht vom automatischen ab).
+  const zinsTouchedRef = useRef(false);
+  const zinsAutoRef = useRef(String(MARKET_RATES.avg));
 
   // Bauzins: kommt seit 2026-10-01 nur noch aus MARKET_RATES in data.js
   // (Vorbelegung in createDefaults). public/zinsen.json war derselbe Wert und
@@ -527,6 +533,7 @@ export default function App() {
     // echte Nutzereingabe - siehe Kommentar bei nichtUmlAutoRef.
     if (k === "nichtUml" && String(v) !== nichtUmlAutoRef.current)
       nichtUmlTouchedRef.current = true;
+    if (k === "zinssatz") zinsTouchedRef.current = String(v) !== zinsAutoRef.current;
     setData((p) => ({ ...p, [k]: v }));
   }, []);
 
@@ -541,6 +548,45 @@ export default function App() {
     nichtUmlAutoRef.current = neu;
     setData((p) => (p.nichtUml === neu ? p : { ...p, nichtUml: neu }));
   }, [data.flaeche]);
+
+  // Automatischer Zins je Finanzierungsanteil (utils/zinsStaffel.js). Nur die Felder, die das Bankdarlehen
+  // bestimmen, loesen eine Neuberechnung aus.
+  const zinsAuto = useMemo(
+    () =>
+      zinsInfo({
+        kaufpreis: data.kaufpreis,
+        garage: data.garage,
+        eigenkapital: data.eigenkapital,
+        nkFinanzieren: data.nkFinanzieren,
+        bundesland: data.bundesland,
+        notar: data.notar,
+        makler: data.makler,
+        kfwAktiv: data.kfwAktiv,
+        kfwBetrag: data.kfwBetrag,
+        wohneinheiten: data.wohneinheiten,
+        qng: data.qng,
+      }),
+    [
+      data.kaufpreis,
+      data.garage,
+      data.eigenkapital,
+      data.nkFinanzieren,
+      data.bundesland,
+      data.notar,
+      data.makler,
+      data.kfwAktiv,
+      data.kfwBetrag,
+      data.wohneinheiten,
+      data.qng,
+    ],
+  );
+  const zinsAutoWert = zinsAuto?.zins ?? null;
+  useEffect(() => {
+    if (zinsAutoWert == null) return;
+    zinsAutoRef.current = zinsAutoWert;
+    if (zinsTouchedRef.current) return;
+    setData((p) => (p.zinssatz === zinsAutoWert ? p : { ...p, zinssatz: zinsAutoWert }));
+  }, [zinsAutoWert]);
 
   const {
     savedList,
@@ -557,6 +603,8 @@ export default function App() {
   const loadObj = useCallback(
     (obj, setTab) => {
       nichtUmlTouchedRef.current = true;
+      // Der gespeicherte Zins gilt als bewusst gewaehlt und wird nicht durch die Automatik ersetzt.
+      zinsTouchedRef.current = true;
       // Gespeicherte Kaltmiete fuehrt, mieteQm wird daraus abgeleitet (nicht umgekehrt).
       if (+obj?.data?.kaltmiete > 0) mietQuelleRef.current = "kalt";
       // Alte Snapshots: nie bewusst gewaehlte Vorbelegungen entfernen (utils/altObjekt.js).
@@ -640,6 +688,7 @@ export default function App() {
       ctxValue={{
         d: data,
         set,
+        zinsAuto,
         mietQuelleRef,
         t,
         lang,

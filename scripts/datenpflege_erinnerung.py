@@ -116,6 +116,20 @@ THEMEN = [
     },
     # ── halbjaehrlich ────────────────────────────────────────────────────
     {
+        "key": "ZINS_ABSTAENDE",
+        "konst": "ZINS_ABSTAENDE",
+        "titel": "Zins-Abstände je Finanzierungsanteil",
+        "monate": HALBJAHR,
+        "quelle": "Marktbeobachtung (Konditionen für 60/80/90/100 % Finanzierung), Gegenprobe: Interhyp-Zinstabelle 10 Jahre (unter 70 % / bei 80 % / über 90 % Beleihungsauslauf)",
+        "datei": "`src/data.js` → `ZINS_ABSTAENDE` (die Tabelle `ZINS_NACH_FINANZIERUNG` schreibt der Monatsjob selbst)",
+        "verwendung": "Renditerechner und Kreditrechner: Zinssatz folgt automatisch dem Eigenkapital (Finanzierungsanteil)",
+        "claude": "Datenpflege ZINS_ABSTAENDE: Prüfe die Abstände in ZINS_ABSTAENDE (src/data.js, Prozentpunkte zum "
+        "Marktzins bei 80 % Finanzierung für 60, 70, 80, 90 und 100 %) gegen die aktuellen Konditionen "
+        "(Interhyp-Zinstabelle 10 Jahre als Gegenprobe). Ändere nur ZINS_ABSTAENDE und setze stand; "
+        "ZINS_NACH_FINANZIERUNG schreibt der Monatsjob, bis zum nächsten Lauf die Tabelle von Hand auf "
+        "MARKET_RATES.avg plus Abstand setzen (ein Test prüft die Übereinstimmung).",
+    },
+    {
         "key": "MIET_P",
         "konst": "MIET_P",
         "titel": "Mietprognose",

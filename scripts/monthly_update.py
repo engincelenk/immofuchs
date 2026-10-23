@@ -76,6 +76,8 @@ PFLEGE_INTERVALL = {
     "SAN_ENERGIE": 6,
     "KFW_KREDIT": 3,
     "SAN_TIERS": 6,
+    "ZINS_NACH_FINANZIERUNG": 1,
+    "ZINS_ABSTAENDE": 6,
 }
 
 # Anzeige-Metadaten fuer public/datenstatus.html - rein informativ, steuert
@@ -93,6 +95,8 @@ DATENSTATUS_META = {
     "SAN_ENERGIE": {"label": "Energiepreise & CO₂-Faktoren", "rechner": "Sanierungsrechner", "automatisiert": False},
     "KFW_KREDIT": {"label": "KfW-Förderkredit-Konditionen", "rechner": "Kreditrechner", "automatisiert": False},
     "SAN_TIERS": {"label": "Sanierungs-Maßnahmenkosten", "rechner": "Sanierungsrechner", "automatisiert": False},
+    "ZINS_NACH_FINANZIERUNG": {"label": "Zins je Finanzierungsanteil", "rechner": "Renditerechner, Kreditrechner", "automatisiert": True},
+    "ZINS_ABSTAENDE": {"label": "Zins-Abstände je Finanzierungsanteil", "rechner": "Renditerechner, Kreditrechner", "automatisiert": False},
 }
 
 # ── Month name tables ──────────────────────────────────────────────────────
@@ -144,6 +148,53 @@ def replace_market_rates_block(data_js: str, stand: str, avg, changes: list) -> 
     if m.group(0) == new_block:
         return data_js
     changes.append(f"  MARKET_RATES: stand={stand}, avg={avg}")
+    return data_js[: m.start()] + new_block + data_js[m.end() :]
+
+
+def lese_zins_abstaende(data_js: str):
+    """Liest ZINS_ABSTAENDE (Prozentpunkte je Finanzierungsanteil, von Hand gepflegt) aus data.js.
+    Gibt [(anteil, abstand), ...] zurueck oder None, wenn der Block fehlt/unlesbar ist."""
+    m = re.search(r"export const ZINS_ABSTAENDE = \{[\s\S]*?\n\};\n", data_js)
+    if not m:
+        return None
+    punkte = [(int(a), float(b)) for a, b in re.findall(r"\[\s*(\d+)\s*,\s*(-?[\d.]+)\s*\]", m.group(0))]
+    return punkte or None
+
+
+def berechne_zins_stufen(avg: float, abstaende):
+    """Zins je Finanzierungsanteil = Marktzins (gilt bei 80 %) plus Abstand, auf 2 Stellen gerundet."""
+    return [(anteil, round(avg + abstand, 2)) for anteil, abstand in abstaende]
+
+
+def replace_zins_stufen_block(data_js: str, stand: str, avg, changes: list) -> str:
+    """Schreibt ZINS_NACH_FINANZIERUNG neu, direkt nach der Zinsermittlung (Nutzerwunsch 2026-10-23).
+    Ohne neuen Marktzins (avg ist None) bleibt alles unveraendert. Das Format entspricht data.js
+    (Prettier), damit ein unveraenderter Lauf keinen Commit erzeugt."""
+    if avg is None:
+        return data_js
+    abstaende = lese_zins_abstaende(data_js)
+    if not abstaende:
+        print("  ⚠ ZINS_ABSTAENDE nicht gefunden/lesbar — ZINS_NACH_FINANZIERUNG bleibt unveraendert")
+        return data_js
+    stufen = berechne_zins_stufen(avg, abstaende)
+    zeilen = "".join(f"    [{a}, {z}],\n" for a, z in stufen)
+    new_block = (
+        "export const ZINS_NACH_FINANZIERUNG = {\n"
+        f'  stand: "{stand}",\n'
+        "  punkte: [\n"
+        f"{zeilen}"
+        "  ],\n"
+        "};\n"
+    )
+    pattern = re.compile(r"export const ZINS_NACH_FINANZIERUNG = \{[\s\S]*?\n\};\n")
+    m = pattern.search(data_js)
+    if not m:
+        print("  ⚠ ZINS_NACH_FINANZIERUNG-Block nicht gefunden")
+        return data_js
+    if m.group(0) == new_block:
+        return data_js
+    tabelle = ", ".join(f"{a} %={z}" for a, z in stufen)
+    changes.append(f"  ZINS_NACH_FINANZIERUNG: stand={stand}, {tabelle}")
     return data_js[: m.start()] + new_block + data_js[m.end() :]
 
 
@@ -291,27 +342,69 @@ def fetch_bundesbank_10j():
 
 # ── Quelle 2: Interhyp (clientseitig gerendert → Playwright) ───────────────
 
+def _interhyp_werte_plausibel(werte):
+    """Drei Prozentwerte (<70, =80, >90) gelten nur dann als gelesen, wenn sie nach einem Zins aussehen."""
+    return len(werte) == 3 and all(0.5 <= w <= 12 for w in werte)
+
+
+def parse_interhyp_zeilen(zeilen):
+    """Liest die Zeile '10 Jahre' aus den Tabellenzeilen (Liste von Zellentexten je Zeile).
+    Unabhaengig von der Ueberschrift der Tabelle - Interhyp hat sie nach dem 02.10.2026 umbenannt
+    ('Zinsbindung Tranche' -> 'Sollzinsbindung', Zeile '10' -> '10 Jahre')."""
+    for zeile in zeilen:
+        zellen = [z.strip() for z in zeile if z and z.strip()]
+        if not zellen or not re.fullmatch(r"10(\s*Jahre?)?", zellen[0], re.IGNORECASE):
+            continue
+        werte = []
+        for z in zellen[1:]:
+            m = re.fullmatch(r"([\d.,]+)\s*%", z)
+            if m:
+                werte.append(float(m.group(1).replace(".", "").replace(",", ".")))
+        if _interhyp_werte_plausibel(werte[:3]):
+            return tuple(werte[:3])
+    return None
+
+
+def parse_interhyp_text(text):
+    """Rueckfall ueber den Seitentext. Neues Layout ('10 Jahre' allein auf einer Zeile, danach drei
+    Prozentwerte) und das alte ('Zinsbindung Tranche' ... '10')."""
+    neu = re.compile(
+        r"(?m)^[ \t]*10 Jahre?[ \t]*$\s*([\d,]+)\s*%\s*([\d,]+)\s*%\s*([\d,]+)\s*%"
+    )
+    alt = re.compile(
+        r"Zinsbindung Tranche.*?\n\s*10\s*\n+\s*([\d,]+)\s*%\s*\n+\s*([\d,]+)\s*%\s*\n+\s*([\d,]+)\s*%",
+        re.DOTALL,
+    )
+    for muster in (neu, alt):
+        m = muster.search(text)
+        if m:
+            werte = tuple(float(x.replace(",", ".")) for x in m.groups())
+            if _interhyp_werte_plausibel(list(werte)):
+                return werte
+    return None
+
+
 def fetch_interhyp_10j():
     """Zinstabelle 'Effektiver Jahreszins', Zeile '10 Jahre', gibt
-    (Beleihungsauslauf<70, =80, >90) als Floats zurueck."""
+    (Beleihungsauslauf<70, =80, >90) als Floats zurueck. Liest zuerst die Tabelle selbst
+    (robust gegen Umbenennungen), dann den Seitentext als Rueckfall."""
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(user_agent=HEADERS["User-Agent"])
             page.goto(INTERHYP_URL, timeout=30000, wait_until="networkidle")
+            zeilen = page.evaluate(
+                "() => [...document.querySelectorAll('table tr')]"
+                ".map(tr => [...tr.cells].map(c => c.innerText.trim()))"
+            )
             text = page.inner_text("body")
             browser.close()
 
-        pattern = re.compile(
-            r"Zinsbindung Tranche.*?\n\s*10\s*\n+\s*([\d,]+)\s*%\s*\n+\s*([\d,]+)\s*%\s*\n+\s*([\d,]+)\s*%",
-            re.DOTALL,
-        )
-        m = pattern.search(text)
-        if not m:
+        werte = parse_interhyp_zeilen(zeilen) or parse_interhyp_text(text)
+        if not werte:
             print("  ⚠ Interhyp: Zinstabelle nicht gefunden/geaendertes Layout")
             return None
-        lt70, eq80, gt90 = (float(x.replace(",", ".")) for x in m.groups())
-        return lt70, eq80, gt90
+        return werte
     except Exception as e:
         print(f"  ⚠ Interhyp Fehler: {e}")
         return None
@@ -396,6 +489,7 @@ def main():
     changes = []
 
     data_js = replace_market_rates_block(data_js, new_stand, final_avg, changes)
+    data_js = replace_zins_stufen_block(data_js, new_stand, final_avg, changes)
 
     # BUNDESANLEIHE_10J (Karte Alternativ-Investment): derselbe Bundesbank-Wert,
     # der oben in den Bauzins eingeht, hier ohne Aufschlag.

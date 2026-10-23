@@ -45,6 +45,7 @@ import { SaveBtn } from "../shell/Merkliste.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
+import { zinsHinweis } from "../../utils/zinsStaffel.js";
 
 // Regionaler Kaufpreis-Realitaetscheck (2026-09-09, Wow-Feature Idee B.2):
 // vergleicht den eingegebenen Kaufpreis je m² (R.pQm) gegen den regionalen
@@ -144,7 +145,7 @@ function NebenkostenAufschluesselung({ t, R }) {
 }
 
 export default function Haupt() {
-  const { d, set, t, tip, setTabExt, lang, mietQuelleRef } = useApp();
+  const { d, set, t, tip, setTabExt, lang, mietQuelleRef, zinsAuto } = useApp();
   const [view, setView] = useState("input");
   const [secAllOpen, setSecAllOpen] = useState(false);
   const [secAllKey, setSecAllKey] = useState(0);
@@ -426,6 +427,7 @@ export default function Haupt() {
               onChange={(v) => set("zinssatz", v)}
               step="0.05"
               tip={tip("zinssatz")}
+              hint={zinsHinweis(zinsAuto, d.zinssatz, t)}
               slider={{ min: 0.5, max: 8, step: 0.05 }}
             />
             <F

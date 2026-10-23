@@ -15,6 +15,39 @@ export const MARKET_RATES = {
   avg: 4.32,
 };
 
+// ── ZINS NACH FINANZIERUNGSANTEIL (seit 2026-10-23) ─────────────────────────
+// MARKET_RATES.avg gilt als Zins bei 80 % Finanzierung (Bankdarlehen / Kaufpreis plus Garage). Fuer andere
+// Anteile addiert man einen Abstand; zwischen den Stuetzpunkten wird stufenlos interpoliert, ausserhalb
+// gilt der naechste Stuetzpunkt (utils/zinsStaffel.js).
+// Abstaende (Prozentpunkte) VON HAND pflegen, halbjaehrlich oder bei Marktaenderung. Grundlage (Nutzer,
+// 2026-10-23, Marktbeobachtung, jeweils "in der Regel hoeher, selten weniger"): 100 % = 4,60-4,80,
+// 90 % = 4,40-4,60, 80 % = 4,30-4,50, 60 % = 4,00-4,20. Daraus: 60 % -0,30, 90 % +0,10, 100 % +0,30;
+// 70 % (nicht genannt) als Mitte aus 60 und 80 = -0,15. Gegenprobe Interhyp-Zinstabelle (10 Jahre,
+// 12.-18.10.2026): unter 70 % 4,19, bei 80 % 4,30, ueber 90 % 4,56.
+export const ZINS_ABSTAENDE = {
+  stand: "Oktober 2026",
+  punkte: [
+    [60, -0.3],
+    [70, -0.15],
+    [80, 0],
+    [90, 0.1],
+    [100, 0.3],
+  ],
+};
+
+// Zins je Finanzierungsanteil = MARKET_RATES.avg + ZINS_ABSTAENDE. NICHT von Hand aendern: schreibt der
+// Monatsjob (scripts/monthly_update.py) direkt nach der Zinsermittlung; ein Test prueft die Uebereinstimmung.
+export const ZINS_NACH_FINANZIERUNG = {
+  stand: "Oktober 2026",
+  punkte: [
+    [60, 4.02],
+    [70, 4.17],
+    [80, 4.32],
+    [90, 4.42],
+    [100, 4.62],
+  ],
+};
+
 // ── GRUNDERWERBSTEUER je Bundesland ─────────────────────────────────────
 // Intervall: bei Gesetzänderung (sehr selten)
 // Quelle: Landesgesetze

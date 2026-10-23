@@ -14,9 +14,10 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { rate } from "../../utils/bands.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
+import { zinsHinweis } from "../../utils/zinsStaffel.js";
 
 export default function Kredit() {
-  const { d, set, t, tip, lang, aktivesObjekt } = useApp();
+  const { d, set, t, tip, lang, aktivesObjekt, zinsAuto } = useApp();
   const [view, setView] = useState("input");
   const [sondTP, setSondTP] = useState("5");
 
@@ -96,6 +97,7 @@ export default function Kredit() {
               onChange={(v) => set("zinssatz", v)}
               step="0.05"
               tip={tip("zinssatz")}
+              hint={zinsHinweis(zinsAuto, d.zinssatz, t)}
               slider={{ min: 0.5, max: 8, step: 0.05 }}
             />
             <F
