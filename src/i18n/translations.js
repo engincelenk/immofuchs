@@ -4709,8 +4709,7 @@ export const TL = {
     md5Zins: "Bauzinsen Ø (10 J.)",
     md5Wert: "Wertsteigerung p. a.",
     md5Miete: "Mietprognose p. a.",
-    md5Quelle:
-      "Bauzinsen monatlich (Bundesbank, Interhyp), Stand {zins}. Wertsteigerung quartalsweise (Statistisches Bundesamt), Stand {wert}. Mietprognose Stand {miete}.",
+    md5Quelle: "Alle Marktannahmen werden laufend aktualisiert.",
     md6T: "Vom Exposé zur Besichtigung",
     md6B: "3 Schritte",
     md6S: "Scan, Lage, Handout",
@@ -4896,8 +4895,7 @@ export const TL = {
     md5Zins: "Mortgage rate avg. (10 yrs)",
     md5Wert: "Value growth p.a.",
     md5Miete: "Rent forecast p.a.",
-    md5Quelle:
-      "Mortgage rates monthly (Bundesbank, Interhyp), as of {zins}. Value growth quarterly (Federal Statistical Office), as of {wert}. Rent forecast as of {miete}.",
+    md5Quelle: "All market assumptions are updated continuously.",
     md6T: "From listing to viewing",
     md6B: "3 steps",
     md6S: "Scan, location, handout",
@@ -5083,8 +5081,7 @@ export const TL = {
     md5Zins: "Konut kredisi faizi ort. (10 yıl)",
     md5Wert: "Yıllık değer artışı",
     md5Miete: "Yıllık kira tahmini",
-    md5Quelle:
-      "Faizler aylık (Bundesbank, Interhyp), tarih {zins}. Değer artışı üç aylık (Federal İstatistik Ofisi), tarih {wert}. Kira tahmini tarihi {miete}.",
+    md5Quelle: "Tüm piyasa varsayımları sürekli güncellenir.",
     md6T: "İlandan ziyarete",
     md6B: "3 adım",
     md6S: "Tarama, konum, el kitapçığı",
@@ -5265,8 +5262,7 @@ export const TL = {
     md5Zins: "平均房贷利率（10 年）",
     md5Wert: "年增值率",
     md5Miete: "年租金预测",
-    md5Quelle:
-      "房贷利率每月更新（德国央行、Interhyp），截至 {zins}。增值率按季度更新（联邦统计局），截至 {wert}。租金预测截至 {miete}。",
+    md5Quelle: "所有市场假设都会持续更新。",
     md6T: "从房源资料到看房",
     md6B: "3 个步骤",
     md6S: "识别、区位、讲义",
@@ -5442,8 +5438,7 @@ export const TL = {
     md5Zins: "औसत होम लोन दर (10 वर्ष)",
     md5Wert: "वार्षिक मूल्य वृद्धि",
     md5Miete: "वार्षिक किराया पूर्वानुमान",
-    md5Quelle:
-      "होम लोन दरें मासिक (बुंडेसबैंक, Interhyp), स्थिति {zins}। मूल्य वृद्धि तिमाही (संघीय सांख्यिकी कार्यालय), स्थिति {wert}। किराया पूर्वानुमान स्थिति {miete}।",
+    md5Quelle: "सभी बाज़ार धारणाएँ लगातार अपडेट की जाती हैं।",
     md6T: "लिस्टिंग से विज़िट तक",
     md6B: "3 चरण",
     md6S: "स्कैन, स्थान, हैंडआउट",

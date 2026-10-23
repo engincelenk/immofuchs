@@ -1,3 +1,22 @@
+## 2026-10-23 (1.100.139) [DATEN]
+
+### Datenpflege SAN_ENERGIE: Energiepreise und CO2-Faktor auf Q3 2026
+
+- src/data.js, SAN_ENERGIE (Sanierungsrechner), Stand Q1 2026 -> Q3 2026. Geaendert: defaultStrompreis 0,35 -> 0,37 EUR/kWh (BDEW-Strompreisanalyse 08/2026: 37,0 ct/kWh bei 3.500 kWh), Pellets 0,07 -> 0,09 (Deutsches Pelletinstitut Oktober 2026: 9,29 ct/kWh), Heizoel 0,12 -> 0,14 (Destatis-Daten Juli 2026, umgerechnet ca. 14,1 ct/kWh; Heizoel laut Destatis im August +49,6 % zum Vorjahr), CO2-Faktor Strom 0,434 -> 0,344 kg/kWh (Umweltbundesamt: Strommix 2025 = 344 g/kWh, 2024: 353; laut UBA vorlaeufige Berechnung).
+- Unveraendert, weil keine belastbare aktuelle Zahl gefunden: Erdgas (0,13), Fernwaerme (0,12), Kohle, Direktstrom (0,31), Waermepumpe (0,09), die uebrigen CO2-Faktoren, defaultHeizpreis (0,12, Mischrichtwert).
+- Auswirkung: Strom-Vorbelegung im Sanierungsrechner +5,7 %, Pellets +29 %, Heizoel +17 %; die CO2-Einsparung durch PV/Strom faellt kleiner aus (Faktor Strom -21 %). Quellen waren teils Berichte statt Primaerquellen (BDEW, Pelletinstitut, UBA, Destatis direkt nicht abrufbar) - bei der naechsten Pflege gegen die Primaerquellen pruefen.
+- Nicht gepflegt: MIET_P (Mietprognose, Stand Q1 2026, ueberfaellig). Die Destatis-Nettokaltmiete (+1,8 % Juli 2026) liess sich nur ueber einen Bericht belegen, keine Destatis-Mitteilung gefunden; auf Wunsch des Nutzers vorerst unveraendert.
+- Tests 1913 gruen, keine Test mit diesen Werten betroffen. Der Rechner selbst wurde nicht im Browser geprueft (hinter Login).
+
+## 2026-10-23 (1.100.138) [FRONTEND]
+
+### Landingpage: Karte "Aktuelle Marktannahmen" ohne Quellen- und Stand-Angaben
+
+- Landing.jsx, i18n/translations.js: Der Absatz unter den drei Werten nannte Quellen und den Stand je Datenreihe ("Bauzinsen monatlich (Bundesbank, Interhyp), Stand Oktober 2026. Wertsteigerung quartalsweise (Statistisches Bundesamt), Stand Q2 2026. Mietprognose Stand Q1 2026."). Besucher sollen nicht sehen, welche Daten welchen Stand haben. Ersetzt durch einen neutralen Satz in allen fuenf Sprachen: "Alle Marktannahmen werden laufend aktualisiert." (Schluessel md5Quelle, ohne Platzhalter).
+- Bewusst NICHT "bei ImmoFuchs ist alles aktuell": die eigene Pruefung (datenstatus.html) meldet Mietprognose und Energiepreise als ueberfaellig (Stand Q1 2026, Intervall 6 Monate). "Laufend aktualisiert" ist die Aussage, die dem tatsaechlichen Ablauf entspricht.
+- Offen, nicht geaendert: In der Sektion "Zinsen" weiter unten steht weiterhin "<Titel> · Stand: Oktober 2026" (ratesStand).
+- Tests 1913 gruen, Lint ohne neue Warnungen.
+
 ## 2026-10-22 (1.100.137) [WORKER]
 
 ### Betreiber-Adresse info@immofuchs.info ausdruecklich konfiguriert, Reply-To in allen Mails, Widerrufs-Kopie

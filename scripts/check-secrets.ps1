@@ -18,10 +18,7 @@ $pflicht = @(
 # Optional: ohne diese bleibt Push ein stilles No-Op (worker/src/push.ts).
 $optional = @(
   "FIREBASE_PROJECT_ID", "FIREBASE_SERVICE_ACCOUNT_JSON",
-  "APNS_KEY_ID", "APNS_TEAM_ID", "APNS_PRIVATE_KEY", "APNS_BUNDLE_ID", "APNS_ENV",
-  # Monatsbericht per Mail (worker/src/routes/internalReport.ts): gebraucht auf prod (Aufruf aus GitHub Actions)
-  # und qa (Zwilling); auf dev nicht. Ohne das Secret ist der Endpunkt aus, der Monatsjob laeuft trotzdem.
-  "REPORT_TOKEN"
+  "APNS_KEY_ID", "APNS_TEAM_ID", "APNS_PRIVATE_KEY", "APNS_BUNDLE_ID", "APNS_ENV"
 )
 # Veraltet: Der Code dafuer ist entfernt (Paddle -> Stripe, Passkey/WebAuthn).
 $veraltetMuster = "^(PADDLE_|WEBAUTHN_)"
@@ -54,6 +51,11 @@ try {
     $veraltet = @($gesetzt | Where-Object { $_ -match $veraltetMuster })
     $unbekannt = @($gesetzt | Where-Object { ($pflicht + $optional) -notcontains $_ -and $_ -notmatch $veraltetMuster })
     $pushFehlt = @($optional | Where-Object { $gesetzt -notcontains $_ })
+
+    # REPORT_TOKEN (Monatsbericht per Mail, worker/src/routes/internalReport.ts): Pflicht auf prod und qa (Zwilling),
+    # auf dev nicht gebraucht. Fehlt es, ist der Endpunkt aus und der Monatsjob schickt keine Mail.
+    if ($u.Name -ne "dev" -and $gesetzt -notcontains "REPORT_TOKEN") { $fehlend += "REPORT_TOKEN" }
+    $unbekannt = @($unbekannt | Where-Object { $_ -ne "REPORT_TOKEN" })
 
     if ($fehlend.Count -eq 0) { Write-Host "  OK        alle Pflicht-Secrets gesetzt" }
     foreach ($n in $fehlend) { Write-Host "  FEHLT     $n"; $fehlt = $true }

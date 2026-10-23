@@ -258,19 +258,19 @@ export const KFW_HEIZUNG = {
 // Intervall: quartalsweise
 // Quellen: BDEW, Umweltbundesamt (UBA), Destatis
 export const SAN_ENERGIE = {
-  stand: "Q1 2026",
+  stand: "Q3 2026",
   // Default-Eingabewerte (Vorbesetzung der Input-Felder)
-  defaultStrompreis: 0.35, // €/kWh — Haushaltsstrom inkl. Netzentgelt, Steuern
+  defaultStrompreis: 0.37, // €/kWh — Haushaltsstrom inkl. Netzentgelt, Steuern (BDEW-Strompreisanalyse 08/2026: 37,0 ct/kWh bei 3.500 kWh)
   defaultHeizpreis: 0.12, // €/kWh — Heizöl/Gas/Pellets Mischrichtwert
 
   // Energiepreis je Heizungstyp (€/kWh Wärme, Ø-Werte)
   // Quelle: BDEW Energiemarktdaten, UBA 2026
   ep: {
     wp: 0.09, // Wärmepumpe (Strom ~0.35 €/kWh ÷ COP 3–4 + WP-Sondertarif → ~0.09 €/kWh Wärme)
-    pellets: 0.07, // Pellets €/kWh
+    pellets: 0.09, // Pellets €/kWh (Deutsches Pelletinstitut, Oktober 2026: 9,29 ct/kWh)
     "fernw-std": 0.12, // Fernwärme Standard
     kohle: 0.09, // Kohle
-    heizoel: 0.12, // Heizöl
+    heizoel: 0.14, // Heizöl (Destatis-Daten Juli 2026, umgerechnet ca. 14,1 ct/kWh)
     strom: 0.31, // Direktstrom (Nachtspeicher etc.)
     gas: 0.13, // Erdgas
   },
@@ -283,7 +283,7 @@ export const SAN_ENERGIE = {
     "fernw-std": 0.18, // Fernwärme Bundesdurchschnitt
     kohle: 0.34, // Steinkohle
     heizoel: 0.266, // Heizöl
-    strom: 0.434, // Strom (Bundesdurchschnitt 2026)
+    strom: 0.344, // Strom (UBA: Strommix 2025 = 344 g/kWh, 2024: 353)
     gas: 0.202, // Erdgas
   },
 };

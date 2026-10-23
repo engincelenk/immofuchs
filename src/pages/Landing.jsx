@@ -289,7 +289,6 @@ function MarktdatenSection({ l, lang }) {
     Number(v).toLocaleString(loc, { minimumFractionDigits: d, maximumFractionDigits: d });
   const mitVorzeichen = (v, d) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${zahl(Math.abs(v), d)} %`;
   const zinsWert = Number(MARKET_RATES.avg);
-  const zinsStand = standLesbar(MARKET_RATES.stand, lang);
   const ersetze = (s, werte) =>
     Object.entries(werte).reduce((t, [k, v]) => t.replace(`{${k}}`, v), s || "");
 
@@ -342,13 +341,9 @@ function MarktdatenSection({ l, lang }) {
                       <dd>{mitVorzeichen(MIET_P.normal.pA, 1)}</dd>
                     </div>
                   </dl>
-                  <p className="lp-md-quelle">
-                    {ersetze(l.md5Quelle, {
-                      zins: zinsStand,
-                      wert: WERTSTEIGERUNG.stand,
-                      miete: MIET_P.stand,
-                    })}
-                  </p>
+                  {/* Bewusst ohne Quellen und Stand je Wert (Nutzerwunsch 2026-10-22): Besucher sollen nicht
+                      sehen, welche Daten welchen Stand haben. */}
+                  <p className="lp-md-quelle">{l.md5Quelle}</p>
                 </>
               ) : (
                 <>
@@ -1631,6 +1626,7 @@ export function Landing({ onStart, lang, setLang }) {
       .lp-step{padding:26px;border:1px solid var(--cb);border-radius:12px;background:var(--cc)}
       .lp-step h3{margin:0 0 6px;font-size:19px;font-weight:800;color:var(--ct);letter-spacing:-.2px}
       .lp-step p{margin:0;font-size:15px;line-height:1.55;color:var(--cl)}
+      .lp-step p.lp-md-quelle{font-size:12.5px;color:var(--ch)}
       .lp-step-ic{width:48px;height:48px;flex-shrink:0;border-radius:12px;background:var(--ca-bg);color:var(--ca-dk);display:inline-flex;align-items:center;justify-content:center}
       .lp-step-n{font-size:14px;font-weight:700;color:var(--ca-dk)}
       .lp-md-sub{margin:10px auto 0;max-width:640px;font-size:clamp(15px,1.3vw,17px);line-height:1.6;color:var(--cl)}
@@ -1646,8 +1642,7 @@ export function Landing({ onStart, lang, setLang }) {
       .lp-md-werte div:first-child{border-top:none}
       .lp-md-werte dt{color:var(--cl);font-size:14.5px}
       .lp-md-werte dd{margin:0;font-weight:800;font-size:17px;color:var(--ca-dk);font-variant-numeric:tabular-nums;white-space:nowrap}
-      .lp-step p.lp-md-quelle{font-size:12.5px;color:var(--ch)}
-      /* Dark Mode: --ca-dk (#c44d00) erreicht auf dunklen Karten nur ~3:1,
+      .lp-step p      /* Dark Mode: --ca-dk (#c44d00) erreicht auf dunklen Karten nur ~3:1,
          dort traegt das hellere --ca (~5:1). */
       html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic,html[data-theme="dark"] .lp-ki-ic,html[data-theme="dark"] .lp-md-beleg,html[data-theme="dark"] .lp-md-werte dd{color:var(--ca)}
       @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-step-n,.lp-step-ic,.lp-ki-ic,.lp-md-beleg,.lp-md-werte dd){color:var(--ca)}}
