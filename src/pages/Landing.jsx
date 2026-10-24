@@ -581,13 +581,6 @@ export function Landing({ onStart, lang, setLang }) {
           aria-label="Seite wird geladen"
           style={{ position: "fixed", inset: 0, zIndex: 9000, background: "var(--bg)" }}
         >
-          <div className="boot-hdr">
-            <span className="boot-logo" />
-            <span className="boot-dots">
-              <i />
-              <i />
-            </span>
-          </div>
           <div className="boot-spin sofort" />
         </div>
       )}

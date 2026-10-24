@@ -1,3 +1,10 @@
+## 2026-10-24 (1.100.142) [FRONTEND]
+
+### Ladeansicht auf Handy: Kringel in der Mitte, keine Platzhalter-Elemente oben
+
+- index.html, Landing.jsx: Der graue Platzhalter-Kopf (Logo-Balken, zwei Kaestchen, Trennlinie; Klassen .boot-hdr/.boot-logo/.boot-dots) ist entfernt, in der Platzhalter-Huelle im #root und in der Lade-Huelle der Landingpage. Beim Laden sieht man nur noch den Hintergrund (hell/dunkel) und den Kringel.
+- Der Kringel (.boot-spin) sitzt bei top:50svh mit Rand -15px statt bei top:220px, also in der Bildschirmmitte. svh ist die kleine Viewport-Hoehe und aendert sich beim iOS-Start nicht; der Sprung vom 22.10. (50 % der Hoehe) tritt damit nicht wieder auf. Farben und Design-Tokens unveraendert. Nicht auf einem echten iPhone geprueft.
+
 ## 2026-10-24 (1.100.141) [FRONTEND]
 
 ### Tooltip oeffnet keine Tastatur mehr, feste Zins-Texte ohne Zahlen, Auswahl "Finanzierungsanteil" in Rendite- und Kreditrechner
