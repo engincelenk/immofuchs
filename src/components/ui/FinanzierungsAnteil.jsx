@@ -7,8 +7,7 @@
 // Verhandlungs-Kaufpreis (utils/finanzierungsVergleich.js). Die Rechnung laeuft nur, solange der Vergleich offen ist.
 import { useDeferredValue, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
-import { ZINS_NACH_FINANZIERUNG } from "../../data.js";
-import { aktiveStufe } from "../../utils/zinsStaffel.js";
+import { aktiveStufe, sichtbareStufen } from "../../utils/zinsStaffel.js";
 import {
   ersteTragendeStufe,
   hatMiete,
@@ -27,14 +26,14 @@ export function Vergleich({ aktuellerAnteil }) {
   const { d: dLive, t } = useApp();
   // Tippen im Eigenkapital-Feld wartet nicht auf den Vergleich: er rechnet mit dem zuletzt ruhigen Stand.
   const d = useDeferredValue(dLive);
-  const punkte = ZINS_NACH_FINANZIERUNG.punkte;
+  const punkte = useMemo(() => sichtbareStufen(d), [d]);
   const [puffer, setPuffer] = useState(0);
   const mitMiete = hatMiete(d);
   const zeilen = useMemo(() => stufenVergleich(d, punkte, puffer), [d, punkte, puffer]);
   const tragend = useMemo(() => ersteTragendeStufe(zeilen), [zeilen]);
   const kp = useMemo(() => {
     if (!mitMiete) return null;
-    const zinsAkt = zinsDerStufe(aktuellerAnteil, punkte);
+    const zinsAkt = zinsDerStufe(aktuellerAnteil);
     const bestAnteil = punkte[0][0];
     return {
       aktuell: maxKaufpreisFuerCashflow(d, aktuellerAnteil, zinsAkt + puffer),
@@ -103,7 +102,7 @@ export function Vergleich({ aktuellerAnteil }) {
                 alignItems: "baseline",
               }}
             >
-              <span role="cell" style={{ ...zelle, textAlign: "left", fontWeight: 700 }}>{z.anteil} %</span>
+              <span role="cell" style={{ ...zelle, textAlign: "left", fontWeight: 700 }}>{Math.round(z.anteil)} %</span>
               <span role="cell" style={zelle}>{komma(z.zins.toFixed(2))}</span>
               <span role="cell" style={zelle}>{fmtE(z.rate)}</span>
               {mitMiete && (
@@ -167,13 +166,14 @@ export function Vergleich({ aktuellerAnteil }) {
 }
 
 export function FinanzierungsAnteil() {
-  const { t, zinsAuto, setzeFinanzierungsanteil } = useApp();
+  const { d, t, zinsAuto, setzeFinanzierungsanteil } = useApp();
   const [offen, setOffen] = useState(false);
-  const punkte = ZINS_NACH_FINANZIERUNG.punkte;
+  const punkte = useMemo(() => sichtbareStufen(d), [d]);
   // Ohne Kaufpreis gibt es nichts zu berechnen: die Auswahl bleibt dann weg.
   if (!zinsAuto || !setzeFinanzierungsanteil) return null;
   const aktiv = aktiveStufe(zinsAuto.anteil, punkte);
   const dazwischen = aktiv == null ? Math.round(zinsAuto.anteil) : null;
+  const ueber100 = zinsAuto.anteil > 100.5;
   return (
     <div className="if-field" style={{ marginBottom: 14 }} role="group" aria-label={t.finAnteilTitel}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
@@ -188,6 +188,7 @@ export function FinanzierungsAnteil() {
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${punkte.length}, minmax(0, 1fr))`, gap: 4 }}>
         {punkte.map(([anteil, zins]) => {
           const an = aktiv === anteil;
+          const anzeige = Math.round(anteil);
           return (
             <button
               key={anteil}
@@ -195,7 +196,7 @@ export function FinanzierungsAnteil() {
               onClick={() => setzeFinanzierungsanteil(anteil)}
               aria-pressed={an}
               aria-label={(t.finAnteilAria || "{anteil} % / {zins} %")
-                .replace("{anteil}", anteil)
+                .replace("{anteil}", anzeige)
                 .replace("{zins}", komma(zins.toFixed(2)))}
               style={{
                 minHeight: 48,
@@ -214,7 +215,7 @@ export function FinanzierungsAnteil() {
                 lineHeight: 1.15,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{anteil} %</span>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{anzeige} %</span>
               <span style={{ fontSize: 11.5, fontVariantNumeric: "tabular-nums" }}>
                 {komma(zins.toFixed(2))}
               </span>
@@ -222,6 +223,24 @@ export function FinanzierungsAnteil() {
           );
         })}
       </div>
+      {ueber100 && (
+        <div
+          role="note"
+          style={{
+            marginTop: 8,
+            padding: "8px 10px",
+            borderRadius: 8,
+            border: "1px solid var(--warn-bd)",
+            background: "var(--warn-bg)",
+            color: "var(--warn-tx)",
+            fontSize: 12.5,
+            lineHeight: 1.45,
+            fontWeight: 600,
+          }}
+        >
+          {fuelle(t.finAnteilUeber, { anteil: Math.round(zinsAuto.anteil) })}
+        </div>
+      )}
       <button
         type="button"
         onClick={() => setOffen((o) => !o)}

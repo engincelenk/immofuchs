@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Ctx } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
-import { Vergleich } from "./FinanzierungsAnteil.jsx";
+import { FinanzierungsAnteil, Vergleich } from "./FinanzierungsAnteil.jsx";
 
 const basis = {
   kaufpreis: "310000",
@@ -35,6 +35,18 @@ describe("Stufen-Vergleich (Darstellung)", () => {
     expect(s).toContain("Kaufpreis für Cashflow ab 0");
     expect(s).toContain("Verhandlungsziel");
     expect(s).not.toMatch(/\{\w+\}/); // keine unersetzten Platzhalter
+  });
+  it("Vollfinanzierung: Stufe ueber 100 % und Hinweis", () => {
+    const d = { ...basis, nkFinanzieren: true };
+    const h = renderToStaticMarkup(
+      <Ctx.Provider value={{ d, t: T.de, zinsAuto: { anteil: 108.6, zins: "4.79" }, setzeFinanzierungsanteil: () => {} }}>
+        <FinanzierungsAnteil />
+      </Ctx.Provider>,
+    );
+    const s = text(h);
+    expect(s).toContain("109 %");
+    expect(s).toContain("mehr als der Kaufpreis");
+    expect(s).not.toMatch(/\{\w+\}/);
   });
   it("ohne Miete: keine Cashflow-Spalte und keine Kaufpreis-Karte", () => {
     const s = text(html({ ...basis, kaltmiete: "" }));

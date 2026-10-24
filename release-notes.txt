@@ -1,3 +1,12 @@
+## 2026-10-24 (1.100.145) [FRONTEND] [DATEN]
+
+### Vollfinanzierung ueber 100 % klar erkennbar (Nebenkosten mitfinanziert)
+
+- Problem (Nutzer): Mit "Nebenkosten finanzieren" liegt der Anteil ueber 100 % (Darlehen / Kaufpreis plus Garage), war aber nur als kleines graues "≈ 108 %" sichtbar, keine Stufe war aktiv und der Zins stand still auf dem 100-%-Wert.
+- Neu: Warnhinweis (Warnfarbe) "x % Finanzierung: mehr als der Kaufpreis, weil die Nebenkosten mitfinanziert werden (Vollfinanzierung). Der Zins enthaelt einen Aufschlag." in 5 Sprachen. Zusaetzliche letzte Kachel mit dem echten Anteil (z. B. 109 %), nur bei finanzierten Nebenkosten; Antippen setzt Eigenkapital 0. Dieselbe Stufe steht im Stufen-Vergleich. (zinsStaffel.js sichtbareStufen)
+- Zins ueber 100 % steigt weiter: neuer Stuetzpunkt 110 % mit +0,50 gegenueber 80 % (4,82 %), also +0,20 je 10 Punkte ueber 100 %; dazwischen linear. GESCHAETZT (Nutzer 2026-10-24, "ja"); der Monatsjob berechnet den Punkt mit.
+- Tests: 1962 gruen (neu u. a. sichtbareStufen, Darstellung der Voll-Stufe mit Hinweis). Geschwindigkeitstest auf 250 ms gelockert (schwankte unter Last). Oberflaeche nur als Render-Test geprueft.
+
 ## 2026-10-24 (1.100.144) [FRONTEND]
 
 ### Slider greifbar, Zins-Slider weg, Hinweis und Stern weg, Eigenkapital-Eingabe nicht mehr traege

@@ -26,6 +26,8 @@ export const MARKET_RATES = {
 // 12.-18.10.2026): unter 70 % 4,19, bei 80 % 4,30, ueber 90 % 4,56.
 // 50 % ist GESCHAETZT (Nutzer 2026-10-24: -0,35; unter 60 % sinkt der Zins nur noch wenig) und wird in
 // der Oberflaeche NICHT gekennzeichnet (Nutzerwunsch 2026-10-24).
+// 110 % (Vollfinanzierung mit finanzierten Nebenkosten) ist ebenfalls GESCHAETZT: +0,20 je 10 Punkte ueber 100 %
+// (Nutzer 2026-10-24, ja). Die Oberflaeche zeigt diese Stufe nur bei "Nebenkosten finanzieren".
 export const ZINS_ABSTAENDE = {
   stand: "Oktober 2026",
   punkte: [
@@ -35,6 +37,7 @@ export const ZINS_ABSTAENDE = {
     [80, 0],
     [90, 0.1],
     [100, 0.3],
+    [110, 0.5],
   ],
 };
 
@@ -49,6 +52,7 @@ export const ZINS_NACH_FINANZIERUNG = {
     [80, 4.32],
     [90, 4.42],
     [100, 4.62],
+    [110, 4.82],
   ],
 };
 

@@ -90,6 +90,20 @@ export function eigenkapitalFuerAnteil(d, anteil, t = {}) {
 }
 
 /**
+ * Stufen der Auswahl: 50 bis 100 % immer; ist "Nebenkosten finanzieren" an und das Darlehen dadurch groesser
+ * als der Kaufpreis (Vollfinanzierung, Eigenkapital 0), kommt eine letzte Stufe mit genau diesem Anteil
+ * (z. B. 108,6 %) und dem Zins dazu - ueber 100 % steigt der Zins weiter (data.js, Stuetzpunkt 110 %).
+ */
+export function sichtbareStufen(d, punkte = ZINS_NACH_FINANZIERUNG.punkte, t = {}) {
+  const basis = punkte.filter(([a]) => a <= 100);
+  if (!d?.nkFinanzieren) return basis;
+  const voll = finanzierungsanteil({ ...d, eigenkapital: "0" }, t);
+  if (!(voll > 100.5)) return basis;
+  const zins = interpoliereZins(voll, punkte);
+  return zins == null ? basis : [...basis, [voll, Math.round(zins * 100) / 100]];
+}
+
+/**
  * Welche Stufe der Auswahl aktiv ist: der Anteil (Prozent), wenn er auf einem Stuetzpunkt liegt
  * (Toleranz 0,5 Punkte), sonst null.
  */

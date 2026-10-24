@@ -4,6 +4,7 @@ import {
   eigenkapitalFuerAnteil,
   finanzierungsanteil,
   interpoliereZins,
+  sichtbareStufen,
   zinsFuerDaten,
   zinsHinweis,
   zinsInfo,
@@ -186,5 +187,30 @@ describe("zinsHinweis: feste Texte ohne wechselnde Zahlen", () => {
   it("gibt ohne Info oder ohne Text nichts zurueck", () => {
     expect(zinsHinweis(null, "4.3", t)).toBeUndefined();
     expect(zinsHinweis({ anteil: 80, zins: "4.32" }, "4.32", {})).toBeUndefined();
+  });
+});
+
+describe("sichtbareStufen (Vollfinanzierung ueber 100 %)", () => {
+  const punkteMit110 = [...PUNKTE, [110, 4.82]];
+  it("ohne finanzierte Nebenkosten nur 50 bis 100 %", () => {
+    const s = sichtbareStufen(basis, punkteMit110);
+    expect(s.map(([a]) => a)).toEqual([60, 70, 80, 90, 100]);
+  });
+  it("mit finanzierten Nebenkosten eine letzte Stufe mit dem echten Anteil und aufgeschlagenem Zins", () => {
+    const d = { ...basis, nkFinanzieren: true };
+    const s = sichtbareStufen(d, punkteMit110);
+    const [voll, zins] = s[s.length - 1];
+    expect(voll).toBeGreaterThan(100.5);
+    expect(voll).toBeLessThan(115);
+    expect(zins).toBeGreaterThan(4.62);
+    expect(zins).toBeLessThanOrEqual(4.82);
+    expect(zins).toBeCloseTo(Math.round(interpoliereZins(voll, punkteMit110) * 100) / 100, 10);
+    // Antippen: Eigenkapital 0 und die Stufe ist aktiv
+    expect(eigenkapitalFuerAnteil(d, voll)).toBe(0);
+    expect(aktiveStufe(finanzierungsanteil({ ...d, eigenkapital: "0" }), s)).toBe(voll);
+  });
+  it("zinsInfo ueber 100 % nutzt den Aufschlag", () => {
+    const d = { ...basis, nkFinanzieren: true, eigenkapital: "0" };
+    expect(Number(zinsInfo(d, {}, punkteMit110).zins)).toBeGreaterThan(4.62);
   });
 });
