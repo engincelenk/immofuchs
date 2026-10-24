@@ -5,10 +5,10 @@
 // Zins-Automatik wieder ein (setzeFinanzierungsanteil in App.jsx).
 // Darunter einklappbar der Stufen-Vergleich (Rate, Cashflow, Eigenkapital je Stufe, mit Zins-Puffer) und der
 // Verhandlungs-Kaufpreis (utils/finanzierungsVergleich.js). Die Rechnung laeuft nur, solange der Vergleich offen ist.
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { ZINS_NACH_FINANZIERUNG } from "../../data.js";
-import { GESCHAETZTE_STUFEN, aktiveStufe } from "../../utils/zinsStaffel.js";
+import { aktiveStufe } from "../../utils/zinsStaffel.js";
 import {
   ersteTragendeStufe,
   hatMiete,
@@ -20,12 +20,13 @@ import { fmt, fmtE } from "../../utils/helpers.js";
 
 const komma = (v) => String(v).replace(".", ",");
 const PUFFER = [0, 0.3, 0.5];
-const gesch = (anteil) => (GESCHAETZTE_STUFEN.includes(anteil) ? "*" : "");
 const fuelle = (text, werte) =>
   Object.entries(werte).reduce((s, [k, v]) => s.split(`{${k}}`).join(v), text || "");
 
 export function Vergleich({ aktuellerAnteil }) {
-  const { d, t } = useApp();
+  const { d: dLive, t } = useApp();
+  // Tippen im Eigenkapital-Feld wartet nicht auf den Vergleich: er rechnet mit dem zuletzt ruhigen Stand.
+  const d = useDeferredValue(dLive);
   const punkte = ZINS_NACH_FINANZIERUNG.punkte;
   const [puffer, setPuffer] = useState(0);
   const mitMiete = hatMiete(d);
@@ -103,7 +104,7 @@ export function Vergleich({ aktuellerAnteil }) {
               }}
             >
               <span role="cell" style={{ ...zelle, textAlign: "left", fontWeight: 700 }}>{z.anteil} %</span>
-              <span role="cell" style={zelle}>{komma(z.zins.toFixed(2))}{gesch(z.anteil)}</span>
+              <span role="cell" style={zelle}>{komma(z.zins.toFixed(2))}</span>
               <span role="cell" style={zelle}>{fmtE(z.rate)}</span>
               {mitMiete && (
                 <span
@@ -215,15 +216,12 @@ export function FinanzierungsAnteil() {
             >
               <span style={{ fontSize: 13, fontWeight: 700 }}>{anteil} %</span>
               <span style={{ fontSize: 11.5, fontVariantNumeric: "tabular-nums" }}>
-                {komma(zins.toFixed(2))}{gesch(anteil)}
+                {komma(zins.toFixed(2))}
               </span>
             </button>
           );
         })}
       </div>
-      {t.finAnteilHinweis && (
-        <div style={{ fontSize: 11.5, color: "var(--ch)", marginTop: 6, lineHeight: 1.4 }}>{t.finAnteilHinweis}</div>
-      )}
       <button
         type="button"
         onClick={() => setOffen((o) => !o)}

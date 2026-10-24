@@ -211,7 +211,7 @@ export function SteuerTrick() {
                 aria-labelledby={`${feldId}-grd-lb`}
                 style={{
                   width: "100%",
-                  height: 32,
+                  height: 42,
                   marginTop: 8,
                   accentColor: "var(--ca)",
                   cursor: "pointer",

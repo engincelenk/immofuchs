@@ -293,7 +293,7 @@ export default function Haupt() {
             value={d.kaufpreis}
             onChange={(v) => set("kaufpreis", v)}
             tip={tip("kaufpreis")}
-            slider={{ min: 0, max: 3000000, step: 10000 }}
+            slider={{ min: 0, max: 1000000, step: 5000 }}
           />
           <F
             label={t.garageKauf}
@@ -411,7 +411,7 @@ export default function Haupt() {
             value={d.eigenkapital}
             onChange={(v) => set("eigenkapital", v)}
             tip={tip("eigenkapital")}
-            slider={{ min: 0, max: 3000000, step: 10000 }}
+            slider={{ min: 0, max: 1000000, step: 5000 }}
           />
           <FinanzierungsAnteil />
           <Toggle
@@ -430,7 +430,6 @@ export default function Haupt() {
               step="0.05"
               tip={tip("zinssatz")}
               hint={zinsHinweis(zinsAuto, d.zinssatz, t)}
-              slider={{ min: 0.5, max: 8, step: 0.05 }}
             />
             <F
               label={t.tilgung}
@@ -439,7 +438,7 @@ export default function Haupt() {
               onChange={(v) => set("tilgung", v)}
               step="0.05"
               tip={tip("tilgung")}
-              slider={{ min: 0.5, max: 8, step: 0.05 }}
+              slider={{ min: 0.5, max: 8, step: 0.1 }}
             />
           </Row>
           <F

@@ -1,3 +1,13 @@
+## 2026-10-24 (1.100.144) [FRONTEND]
+
+### Slider greifbar, Zins-Slider weg, Hinweis und Stern weg, Eigenkapital-Eingabe nicht mehr traege
+
+- Entfernt (Nutzerwunsch): Hinweistext unter den Stufen-Kacheln (finAnteilHinweis, 5 Sprachen) und der * an der 50-%-Stufe (GESCHAETZTE_STUFEN entfallen); der 50-%-Zins bleibt 3,97.
+- Zins-Slider entfernt (Renditerechner und Kreditrechner): der Zins folgt dem Finanzierungsanteil, ein Slider haette die Automatik bei jeder Beruehrung abgeschaltet. Das Zinsfeld bleibt bearbeitbar.
+- Alle Slider (30 Stueck, App.jsx CSS): touch-action:none (Wischen auf dem Regler gehoert dem Regler, nicht dem Seiten-Scrollen), Daumen 30 px statt Browser-Standard, Flaeche 42 px statt 32, sichtbare Schiene mit Rand. Kaufpreis und Eigenkapital: Bereich 0 bis 1 Mio. Euro in 5.000er-Schritten statt 0 bis 3 Mio. in 10.000ern (vorher ca. ein Schritt je Pixel, der Daumen sprang); groessere Werte bleiben im Zahlenfeld moeglich. Tilgung 0,1 statt 0,05 je Schritt. Auf einem echten Handy nicht geprueft.
+- Eigenkapital-Eingabe: Ursache war der geoeffnete Stufen-Vergleich, 370 ms je Tastendruck am Desktop (40 Bisektions-Schritte je Stufe). eigenkapitalFuerAnteil nutzt jetzt das Newton-Verfahren (Darlehen faellt linear, 1-3 Rechnungen statt 40; Bisektion bleibt als Rueckfall), der Vergleich rechnet ueber useDeferredValue, das Tippen wartet nicht darauf. Messung nachher: Vergleich plus beide Kaufpreis-Grenzen unter 120 ms (Test). Ob das Tippen bei zugeklapptem Vergleich traege war, ist nicht belegt.
+- Tests: 1958 gruen (neu: Geschwindigkeitstest).
+
 ## 2026-10-24 (1.100.143) [FRONTEND] [DATEN]
 
 ### Finanzierungsanteil bis 50 %, Stufen-Vergleich mit Rate und Cashflow, Zins-Puffer, Verhandlungs-Kaufpreis

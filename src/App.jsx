@@ -850,6 +850,14 @@ export default function App() {
          Handy/Tablet-Hochformat-Ausnahmen unten), muessen sie dort wieder an -
          dasselbe Redeklarations-Muster wie .mob-next-btn/.mob-toggle. */
       .res-live-sliders{display:block}
+      /* Slider (Nutzerwunsch 2026-10-24: liessen sich schwer greifen): touch-action:none gibt jede Wischbewegung auf
+         dem Regler dem Regler und nicht dem Seiten-Scrollen; grosser Daumen (30 px) und hoehere Flaeche. */
+      input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;touch-action:none;cursor:pointer}
+      input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:var(--cb);border:1px solid var(--ch)}
+      input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:30px;margin-top:-12px;border-radius:50%;background:var(--ca);border:3px solid var(--cc);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+      input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:var(--cb);border:1px solid var(--ch)}
+      input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--ca);border:3px solid var(--cc);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+      input[type=range]:focus-visible{outline:2px solid var(--ca);outline-offset:3px}
       /* TABLET / DESKTOP — overrides */
       @media(min-width:760px){
         .hdr-tag{display:block!important}

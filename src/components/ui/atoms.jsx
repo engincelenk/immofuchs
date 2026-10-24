@@ -196,7 +196,7 @@ export function F({
               aria-labelledby={labelId}
               style={{
                 width: "100%",
-                height: 32,
+                height: 42,
                 marginTop: 8,
                 accentColor: "var(--ca)",
                 cursor: "pointer",
@@ -344,7 +344,7 @@ export function LiveSlider({ label, unit, value, onChange, min, max, step, tip }
         aria-labelledby={labelId}
         style={{
           width: "100%",
-          height: 32,
+          height: 42,
           accentColor: "var(--ca)",
           cursor: "pointer",
         }}

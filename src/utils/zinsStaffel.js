@@ -7,9 +7,6 @@
 import { computeRendite } from "./rendite.js";
 import { ZINS_NACH_FINANZIERUNG } from "../data.js";
 
-// Stufen ohne Marktbeobachtung, nur geschaetzt (Oberflaeche markiert sie): unter 60 % sinkt der Zins nur noch wenig.
-export const GESCHAETZTE_STUFEN = [50];
-
 /**
  * Linear zwischen Stuetzpunkten [[anteil, zins], ...] interpolieren; ausserhalb gilt der naechste
  * Stuetzpunkt. Gibt null zurueck, wenn nichts zu berechnen ist.
@@ -68,7 +65,22 @@ export function eigenkapitalFuerAnteil(d, anteil, t = {}) {
   const anteilBei = (ek) => finanzierungsanteil({ ...d, eigenkapital: String(ek) }, t);
   let lo = 0;
   let hi = kaufpreis * 2; // genug Eigenkapital, damit das Darlehen 0 ist (auch mit finanzierten Nebenkosten)
-  if (anteilBei(lo) <= anteil) return 0; // schon mit 0 Eigenkapital nicht mehr Finanzierung als gewuenscht
+  const a0 = anteilBei(lo);
+  if (a0 <= anteil) return 0; // schon mit 0 Eigenkapital nicht mehr Finanzierung als gewuenscht
+  // Schnell (2026-10-24, der Stufen-Vergleich rief diese Funktion 8 Mal je Tastendruck auf): das Darlehen faellt
+  // linear mit dem Eigenkapital und wird bei 0 abgeschnitten, die Kurve ist also konvex und fallend. Das
+  // Newton-Verfahren von links trifft dann nach 1-3 Rechnungen statt 40. Greift es nicht, gilt die Bisektion.
+  const probe = Math.max(1, kaufpreis / 1000);
+  const steigung = (anteilBei(probe) - a0) / probe; // Prozentpunkte je Euro, negativ
+  if (steigung < 0) {
+    let ek = 0;
+    let a = a0;
+    for (let i = 0; i < 8 && a > anteil + 1e-9; i++) {
+      ek += (anteil - a) / steigung;
+      a = anteilBei(ek);
+    }
+    if (Math.abs(a - anteil) <= 1e-6) return Math.round(ek);
+  }
   for (let i = 0; i < 40; i++) {
     const mid = (lo + hi) / 2;
     if (anteilBei(mid) > anteil) lo = mid;

@@ -94,7 +94,7 @@ export function StressTabelle({ stress, jahre }) {
         step={1}
         value={level}
         onChange={(e) => setLevel(+e.target.value)}
-        style={{ width: "100%", height: 32, accentColor: "var(--ca)", cursor: "pointer" }}
+        style={{ width: "100%", height: 42, accentColor: "var(--ca)", cursor: "pointer" }}
       />
       <div
         style={{

@@ -116,3 +116,14 @@ describe("maxKaufpreisFuerCashflow", () => {
     expect(Date.now() - t0).toBeLessThan(3000);
   });
 });
+
+describe("Geschwindigkeit (Eigenkapital-Eingabe darf nicht haengen)", () => {
+  it("Stufen-Vergleich und beide Kaufpreis-Grenzen zusammen unter 120 ms", () => {
+    stufenVergleich(basis, PUNKTE); // Aufwaermen
+    const t0 = performance.now();
+    stufenVergleich(basis, PUNKTE);
+    maxKaufpreisFuerCashflow(basis, 80, 4.32);
+    maxKaufpreisFuerCashflow(basis, 50, 3.97);
+    expect(performance.now() - t0).toBeLessThan(120);
+  });
+});

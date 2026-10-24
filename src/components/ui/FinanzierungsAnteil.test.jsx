@@ -29,7 +29,8 @@ describe("Stufen-Vergleich (Darstellung)", () => {
   it("zeigt alle Stufen von 50 bis 100 %, Cashflow, Kaufpreis-Karte und Schaetzwert-Stern", () => {
     const s = text(html(basis));
     for (const a of [50, 60, 70, 80, 90, 100]) expect(s).toContain(`${a} %`);
-    expect(s).toContain("3,97*");
+    expect(s).toContain("3,97");
+    expect(s).not.toContain("*");
     expect(s).toContain("Cashflow/Mon.");
     expect(s).toContain("Kaufpreis für Cashflow ab 0");
     expect(s).toContain("Verhandlungsziel");
