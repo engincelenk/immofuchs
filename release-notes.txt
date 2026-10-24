@@ -1,3 +1,13 @@
+## 2026-10-24 (1.100.147) [FRONTEND]
+
+### Gestaltung "Ruhig" als Muster im Renditerechner (Option A, Nutzerwunsch: App wirkt kitschig)
+
+- Neu: ui/Icon.jsx (16 Linien-Icons im Stil der Navigation, stroke=currentColor) und in atoms.jsx InsRuhig (Hinweis: neutrale Flaeche, schmaler Statusstreifen links, normale Schriftfarbe, Icon statt Emoji) und AmpelKPIRuhig (Kennzahl ohne getoente Karte und ohne dicken Farbbalken: Wert in Textfarbe, nur ein Statuspunkt und die Bewertungszeile farbig). Sec zeichnet bei einem Icon-Namen (z. B. "pin") ein graues Linien-Icon, ein Emoji bleibt wie bisher - die anderen Rechner sind unveraendert.
+- Renditerechner: Bereichs-Ueberschriften und alle Hinweise mit Linien-Icons statt Emoji (Ins/AmpelKPI zeigen auf die ruhigen Varianten); die Glyph-Praefixe "✓ " und "⚠ " vor den Bewertungstexten entfallen (15 Stellen, die Sätze sagen es selbst); Emoji in den Weiterleitungs-Knoepfen und am Platzhalter entfernt; hartcodierte Ampel-Hexwerte (#22c55e, #f59e0b, #ef4444) durch die Status-Tokens ersetzt; Schriftgewichte 700/800 auf 600.
+- Stufen-Vergleich und Hinweise (FinanzierungsAnteil): keine gruene Zeilenflaeche mehr, tragende Stufe mit Haken und schmalem Balken, aktive Zeile grau umrandet, Zusammenfassung in Textfarbe, Warn- und Info-Kasten neutral mit Statusstreifen, Spalte "Anteil" breiter ("100 %" bricht nicht mehr um). Nur Cashflow-Zahlen bleiben rot/gruen.
+- Bewusst NICHT in diesem Schritt: Fuchs-Schwebeknopf (global), Landing-Verlaeufe, Emoji der anderen Rechner und der Uebersetzungen, Token fuer Schriftgroessen/Radien/Schatten, grosse Kennzahlen aus Option B. Die Farb-Tokens aus CLAUDE.md sind unveraendert.
+- Tests: 1967 gruen (neu ruhig.test.jsx). Oberflaeche NICHT im Browser gesehen (Rechner hinter Login), nur als Render-Test.
+
 ## 2026-10-24 (1.100.146) [FRONTEND]
 
 ### Eigener Zins: Stufen als Marktreferenz erkennbar

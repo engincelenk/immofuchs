@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useId } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { Tip } from "./Tip.jsx";
+import { Icon, iconName } from "./Icon.jsx";
 
 export function Dot({ color }) {
   const t = useApp()?.t || {};
@@ -430,7 +431,14 @@ export function Sec({ title, icon }) {
         borderBottom: "1px solid var(--cb)",
       }}
     >
-      <span style={{ fontSize: 18 }}>{icon}</span>
+      {/* Gestaltung "Ruhig": ein Icon-Name (z. B. "pin") zeichnet ein Linien-Icon in Grau, ein Emoji bleibt wie bisher. */}
+      {typeof icon === "string" && /^[a-z]+$/.test(icon) && iconName(icon) ? (
+        <span style={{ color: "var(--ch)", display: "inline-flex" }}>
+          <Icon name={icon} size={20} />
+        </span>
+      ) : (
+        <span style={{ fontSize: 18 }}>{icon}</span>
+      )}
       <span style={{ fontSize: 16, fontWeight: 600, color: "var(--ct)" }}>{title}</span>
     </div>
   );
@@ -489,6 +497,92 @@ export function Ins({ emoji, text, type = "info" }) {
     >
       <span style={{ fontSize: 14, flexShrink: 0 }}>{emoji}</span>
       <span style={{ fontSize: 12, color: tc, lineHeight: 1.5 }}>{text}</span>
+    </div>
+  );
+}
+
+// Gestaltung "Ruhig" (2026-10-24): Hinweis ohne Farbflaeche. Neutrale Flaeche, schmaler Streifen links in der
+// Statusfarbe, normale Schriftfarbe, kleines Linien-Icon. `emoji` versteht auch die bisherigen Emoji.
+export function InsRuhig({ emoji, text, type = "info" }) {
+  const tc = { info: "var(--info-tx)", good: "var(--ok-tx)", warn: "var(--warn-tx)", bad: "var(--bad-tx)" }[type];
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        alignItems: "flex-start",
+        padding: "10px 12px",
+        background: "var(--ci)",
+        border: "1px solid var(--cb)",
+        boxShadow: `inset 3px 0 0 ${tc}`,
+        borderRadius: 8,
+        marginBottom: 6,
+      }}
+    >
+      <span style={{ color: tc, display: "inline-flex", marginTop: 1 }}>
+        <Icon name={emoji} size={16} />
+      </span>
+      <span style={{ fontSize: 12.5, color: "var(--ct)", lineHeight: 1.5 }}>{text}</span>
+    </div>
+  );
+}
+
+// Gestaltung "Ruhig": Kennzahl ohne getoente Karte und ohne dicken Farbbalken. Der Wert bleibt in
+// Textfarbe, die Bewertung zeigt nur ein Punkt und die Bewertungszeile in der Statusfarbe.
+export function AmpelKPIRuhig({ label, value, status, statusLabel, tip, color }) {
+  const tx = color === "green" ? "var(--ok-tx)" : color === "yellow" ? "var(--warn-tx)" : "var(--bad-tx)";
+  return (
+    <div
+      style={{
+        background: "var(--cc)",
+        borderRadius: 12,
+        border: "1px solid var(--cb)",
+        padding: "10px 12px",
+        minWidth: 0,
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, minWidth: 0 }}>
+        <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: tx, flexShrink: 0 }} />
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: "var(--cl)",
+            lineHeight: 1.3,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {label}
+        </span>
+        {statusLabel && (
+          <span style={{ marginLeft: "auto", fontSize: 11, color: tx, fontWeight: 600, whiteSpace: "nowrap" }}>
+            {statusLabel}
+          </span>
+        )}
+      </div>
+      <div
+        style={{
+          fontSize: "clamp(18px,5.5vw,24px)",
+          fontWeight: 600,
+          color: "var(--ct)",
+          fontVariantNumeric: "tabular-nums",
+          lineHeight: 1.1,
+          margin: "4px 0",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {value}
+      </div>
+      {status && (
+        <div style={{ fontSize: 11, color: "var(--cl)", marginBottom: 2, lineHeight: 1.4 }}>{status}</div>
+      )}
+      {tip && <div style={{ fontSize: 11, color: "var(--ch)", lineHeight: 1.5 }}>{tip}</div>}
     </div>
   );
 }

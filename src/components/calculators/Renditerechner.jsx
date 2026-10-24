@@ -15,15 +15,16 @@ import {
   Sel,
   Row,
   Sec,
-  Ins,
+  InsRuhig as Ins,
   VT,
-  AmpelKPI,
+  AmpelKPIRuhig as AmpelKPI,
   NeutralKPI,
   Toggle,
   LiveSliderPanel,
   LiveSlider,
 } from "../ui/atoms.jsx";
 import { AccordionSection, SectionExplain } from "../ui/AccordionSection.jsx";
+import { Icon } from "../ui/Icon.jsx";
 import { ScoreBlock } from "../charts/ScoreBlock.jsx";
 import { InvestmentCheckRadar } from "../charts/InvestmentCheckRadar.jsx";
 import { ZinsTilgungChart } from "../charts/ZinsTilgungChart.jsx";
@@ -117,7 +118,7 @@ function NebenkostenAufschluesselung({ t, R }) {
       <div
         style={{
           fontSize: 22,
-          fontWeight: 700,
+          fontWeight: 600,
           color: "var(--ct)",
           fontVariantNumeric: "tabular-nums",
           lineHeight: 1.1,
@@ -279,7 +280,7 @@ export default function Haupt() {
       <VT view={view} setView={setView} />
       <div className="split">
         <div className={`inp-pane ${view === "input" ? "act" : ""}`}>
-          <Sec title={t.oL} icon="📍" />
+          <Sec title={t.oL} icon="pin" />
           <Sel
             label={t.bundesland}
             value={d.bundesland}
@@ -403,7 +404,7 @@ export default function Haupt() {
               slider={{ min: 0, max: 12, step: 0.5 }}
             />
           </Row>
-          <Sec title={t.fin} icon="🏦" />
+          <Sec title={t.fin} icon="bank" />
 
           <F
             label={t.eigenkapital}
@@ -463,7 +464,7 @@ export default function Haupt() {
             hint={t.anschlussZinsHint}
             tip={tip("anschlussZins")}
           />
-          <Sec title={t.stNk} icon="📋" />
+          <Sec title={t.stNk} icon="liste" />
           <Row>
             <F
               label={t.grEst}
@@ -544,7 +545,7 @@ export default function Haupt() {
               Wohneinheit hebt. Eine Frage, zwei Wirkungen. */}
           {istNeubau && (
             <>
-              <Sec title={t.nbTitel} icon="🏗️" />
+              <Sec title={t.nbTitel} icon="bau" />
               <Sel
                 label={t.nbModus}
                 value={d.afaModus || "linear"}
@@ -679,7 +680,7 @@ export default function Haupt() {
               )}
             </>
           )}
-          <Sec title={t.wZ} icon="📈" />
+          <Sec title={t.wZ} icon="anstieg" />
           {/* gridAutoFlow "dense" (Nutzer-Befund 2026-09-11): der Hinweis
               soll auf dem Handy (einspaltig) direkt UNTER Wertsteigerung
               stehen, vor Analysezeitraum - vorher stand er nach beiden
@@ -774,7 +775,7 @@ export default function Haupt() {
                 <div
                   style={{
                     fontSize: 10,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     color: unterGrenze
                       ? "var(--ok-tx)"
                       : ueberGrenze
@@ -792,7 +793,7 @@ export default function Haupt() {
               </div>
             );
           })()}
-          <Sec title={t.immLeerQ} icon="🏠" />
+          <Sec title={t.immLeerQ} icon="haus" />
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             {[
               ["nein", t.immLeerNein],
@@ -890,7 +891,9 @@ export default function Haupt() {
         <div className={`res-pane ${view === "result" ? "act" : ""}`}>
           {!R || (+d.kaufpreis || 0) <= 0 ? (
             <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ch)" }}>
-              <div style={{ fontSize: 40, opacity: 0.12, marginBottom: 8 }}>🏠</div>
+              <div style={{ color: "var(--ch)", opacity: 0.4, marginBottom: 8 }}>
+                <Icon name="haus" size={40} />
+              </div>
               {(+d.kaufpreis || 0) <= 0 && (
                 <div style={{ fontSize: 13 }}>
                   {t.kaufpreisFehlt || "Bitte Kaufpreis eingeben, um eine Bewertung zu sehen."}
@@ -911,7 +914,7 @@ export default function Haupt() {
                 }}
               >
                 <span
-                  style={{ fontSize: 16, fontWeight: 700, color: "var(--ct)", letterSpacing: -0.3 }}
+                  style={{ fontSize: 16, fontWeight: 600, color: "var(--ct)", letterSpacing: -0.3 }}
                 >
                   {t.kennzahlen}
                 </span>
@@ -1026,7 +1029,7 @@ export default function Haupt() {
                     ? "yellow"
                     : "green";
                 const selfHex =
-                  worstCol === "green" ? "#22c55e" : worstCol === "yellow" ? "#f59e0b" : "#ef4444";
+                  worstCol === "green" ? "var(--ok-tx)" : worstCol === "yellow" ? "var(--warn-tx)" : "var(--bad-tx)";
                 const selfIntro =
                   R.cf2OhneSt > 0
                     ? t.sec2GreenCF
@@ -1059,7 +1062,7 @@ export default function Haupt() {
                     ? "yellow"
                     : "green";
                 const ampelHex =
-                  worstCol === "green" ? "#22c55e" : worstCol === "yellow" ? "#f59e0b" : "#ef4444";
+                  worstCol === "green" ? "var(--ok-tx)" : worstCol === "yellow" ? "var(--warn-tx)" : "var(--bad-tx)";
                 const intro = R.bR >= 5 ? t.sec1GreenBR : R.bR >= 4 ? t.sec1YellowBR : t.sec1RedBR;
                 return (
                   <AccordionSection
@@ -1088,10 +1091,10 @@ export default function Haupt() {
                         }
                         status={
                           R.bR >= 5
-                            ? "✓ " + t.brGreen
+                            ? t.brGreen
                             : R.bR >= 4
                               ? "~ " + t.brYellow
-                              : "⚠ " + t.brRed
+                              : t.brRed
                         }
                         tip={R.bR >= 5 ? t.brGreenTip : R.bR >= 4 ? t.brYellowTip : t.brRedTip}
                       />
@@ -1108,10 +1111,10 @@ export default function Haupt() {
                         }
                         status={
                           R.nR >= 3.5
-                            ? "✓ " + t.nrGreen
+                            ? t.nrGreen
                             : R.nR >= 2.5
                               ? "~ " + t.nrYellow
-                              : "⚠ " + t.nrRed
+                              : t.nrRed
                         }
                         tip={R.nR >= 3.5 ? t.nrGreenTip : R.nR >= 2.5 ? t.nrYellowTip : t.nrRedTip}
                       />
@@ -1125,10 +1128,10 @@ export default function Haupt() {
                           }
                           status={
                             R.kpF <= 25
-                              ? "✓ " + tpl(t.kpfGut, { g: 25 })
+                              ? tpl(t.kpfGut, { g: 25 })
                               : R.kpF <= 30
                                 ? "~ " + tpl(t.kpfOkay, { g: 25, y: 30 })
-                                : "⚠ " + tpl(t.kpfTeuer, { y: 30 })
+                                : tpl(t.kpfTeuer, { y: 30 })
                           }
                           tip={tpl(t.kpfTip, { g: 25, y: 30 })}
                         />
@@ -1169,7 +1172,7 @@ export default function Haupt() {
                               : []),
                             ...(R.nR > 0 && R.nR < +d.zinssatz
                               ? [
-                                  `⚠ Nettorendite (${fmtP(R.nR)}) liegt unter deinem Zinssatz (${fmtP(+d.zinssatz)}) — Fremdkapital kostet mehr als die Immo einbringt`,
+                                  `Nettorendite (${fmtP(R.nR)}) liegt unter deinem Zinssatz (${fmtP(+d.zinssatz)}) — Fremdkapital kostet mehr als die Immo einbringt`,
                                 ]
                               : []),
                           ];
@@ -1225,7 +1228,7 @@ export default function Haupt() {
                     ? "yellow"
                     : "green";
                 const ampelHex =
-                  worstCol === "green" ? "#22c55e" : worstCol === "yellow" ? "#f59e0b" : "#ef4444";
+                  worstCol === "green" ? "var(--ok-tx)" : worstCol === "yellow" ? "var(--warn-tx)" : "var(--bad-tx)";
                 const intro =
                   R.cf2OhneSt > 0
                     ? t.sec2GreenCF
@@ -1260,10 +1263,10 @@ export default function Haupt() {
                         }
                         status={
                           R.cf2OhneSt > 0
-                            ? "✓ " + t.cfOGreen
+                            ? t.cfOGreen
                             : R.cf2OhneSt >= -150
                               ? "~ " + t.cfOYellow
-                              : "⚠ " + t.cfORed
+                              : t.cfORed
                         }
                         tip={
                           R.cf2OhneSt > 0
@@ -1286,10 +1289,10 @@ export default function Haupt() {
                         }
                         status={
                           R.cf2MitSt > 0
-                            ? "✓ " + t.cfMGreen
+                            ? t.cfMGreen
                             : R.cf2MitSt >= -150
                               ? "~ " + t.cfMYellow
-                              : "⚠ " + t.cfMRed
+                              : t.cfMRed
                         }
                         tip={
                           R.cf2MitSt > 0
@@ -1388,7 +1391,7 @@ export default function Haupt() {
                     ? "yellow"
                     : "green";
                 const ampelHex =
-                  worstCol === "green" ? "#22c55e" : worstCol === "yellow" ? "#f59e0b" : "#ef4444";
+                  worstCol === "green" ? "var(--ok-tx)" : worstCol === "yellow" ? "var(--warn-tx)" : "var(--bad-tx)";
                 const intro =
                   R.bel < 70 ? t.sec3GreenBel : R.bel < 85 ? t.sec3YellowBel : t.sec3RedBel;
                 return (
@@ -1419,10 +1422,10 @@ export default function Haupt() {
                         }
                         status={
                           R.bel < 70
-                            ? "✓ " + t.belGreen
+                            ? t.belGreen
                             : R.bel < 85
                               ? "~ " + t.belYellow
-                              : "⚠ " + t.belRed
+                              : t.belRed
                         }
                         tip={R.bel < 70 ? t.belGreenTip : R.bel < 85 ? t.belYellowTip : t.belRedTip}
                       />
@@ -1439,12 +1442,12 @@ export default function Haupt() {
                         }
                         status={
                           !isFinite(R.lz)
-                            ? "⚠ " + t.lzInf
+                            ? t.lzInf
                             : R.lz > 35
-                              ? "⚠ " + t.lzRed
+                              ? t.lzRed
                               : R.lz > 25
                                 ? "~ " + t.lzYellow
-                                : "✓ " + t.lzGreen
+                                : t.lzGreen
                         }
                         tip={
                           !isFinite(R.lz)
@@ -1496,7 +1499,7 @@ export default function Haupt() {
                             : []),
                           ...(!isFinite(R.lz)
                             ? [
-                                `⚠ Mit dieser Tilgung zahlst du ewig Zinsen — erhöhe die Tilgung auf mindestens 2% p.a.`,
+                                `Mit dieser Tilgung zahlst du ewig Zinsen — erhöhe die Tilgung auf mindestens 2% p.a.`,
                               ]
                             : []),
                         ]}
@@ -1569,7 +1572,7 @@ export default function Haupt() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        🏦 {t.kreditFull || t.kredit} →
+                        {t.kreditFull || t.kredit} →
                       </button>
                     </div>
                   </AccordionSection>
@@ -1586,9 +1589,9 @@ export default function Haupt() {
                   const beJCol = R.beJ ? rate("nkAmort", R.beJ).color : "red";
                   const sec4Color =
                     stErsCol === "green"
-                      ? "#22c55e"
+                      ? "var(--ok-tx)"
                       : stErsCol === "yellow"
-                        ? "#f59e0b"
+                        ? "var(--warn-tx)"
                         : "var(--primary)";
                   return (
                     <AccordionSection
@@ -1785,7 +1788,7 @@ export default function Haupt() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        📈 {t.mieteFull || t.miete} →
+                        {t.mieteFull || t.miete} →
                       </button>
                     </div>
                   );
@@ -1803,7 +1806,7 @@ export default function Haupt() {
 
               {/* ═══ SECTION 7: Verkaufsszenario & Ergebnis ═══ */}
               {(() => {
-                const ampelHex = R.g >= 0 ? "#22c55e" : "#ef4444";
+                const ampelHex = R.g >= 0 ? "var(--ok-tx)" : "var(--bad-tx)";
                 // Formel seit dem Objektseiten-Umbau nur noch in briefing.js
                 // (objektseite-neu.md §6.1): Block 3 der Objektseite und
                 // diese Zeile zeigen dieselbe Zahl, also darf es auch nur

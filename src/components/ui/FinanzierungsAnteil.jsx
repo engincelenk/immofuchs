@@ -16,6 +16,7 @@ import {
   zinsDerStufe,
 } from "../../utils/finanzierungsVergleich.js";
 import { fmt, fmtE } from "../../utils/helpers.js";
+import { Icon } from "./Icon.jsx";
 
 const komma = (v) => String(v).replace(".", ",");
 const PUFFER = [0, 0.3, 0.5];
@@ -43,7 +44,7 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
   }, [d, mitMiete, aktuellerAnteil, punkte, puffer]);
   const aktiv = aktiveStufe(aktuellerAnteil, punkte);
 
-  const spalten = mitMiete ? "34px 1fr 1fr 1fr 1.1fr" : "34px 1fr 1fr 1.1fr";
+  const spalten = mitMiete ? "52px 1fr 1fr 1fr 1.1fr" : "52px 1fr 1fr 1.1fr";
   const kopf = { fontSize: 11, color: "var(--ch)", fontWeight: 600, textAlign: "right" };
   const zelle = { fontSize: 12.5, textAlign: "right", fontVariantNumeric: "tabular-nums" };
   const proz = (v) => fmt(Math.abs(v), 1) + " %";
@@ -75,7 +76,7 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
         ))}
       </div>
       {eigenerZins && (
-        <div style={{ fontSize: 12, color: "var(--warn-tx)", marginBottom: 8, fontWeight: 600 }}>{t.finVglMarkt}</div>
+        <div style={{ fontSize: 12, color: "var(--cl)", marginBottom: 8, fontWeight: 600 }}>{t.finVglMarkt}</div>
       )}
       {puffer > 0 && <div style={{ fontSize: 12, color: "var(--ch)", marginBottom: 8 }}>{t.finVglPufferSub}</div>}
 
@@ -100,18 +101,22 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
                 gap: 4,
                 padding: "7px 6px",
                 borderRadius: 8,
-                border: an ? "1px solid var(--ca)" : "1px solid transparent",
-                background: traegt ? "var(--ok-bg)" : an ? "var(--ci)" : "transparent",
+                border: an ? "1px solid var(--ch)" : "1px solid transparent",
+                background: an ? "var(--ci)" : "transparent",
+                boxShadow: traegt ? "inset 3px 0 0 var(--ca)" : "none",
                 alignItems: "baseline",
               }}
             >
-              <span role="cell" style={{ ...zelle, textAlign: "left", fontWeight: 700 }}>{Math.round(z.anteil)} %</span>
+              <span role="cell" style={{ ...zelle, textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>
+                {traegt && <Icon name="haken" size={13} style={{ verticalAlign: "-2px", marginRight: 3, color: "var(--ca)" }} />}
+                {Math.round(z.anteil)} %
+              </span>
               <span role="cell" style={zelle}>{komma(z.zins.toFixed(2))}</span>
               <span role="cell" style={zelle}>{fmtE(z.rate)}</span>
               {mitMiete && (
                 <span
                   role="cell"
-                  style={{ ...zelle, fontWeight: 700, color: z.cashflow >= 0 ? "var(--ok-tx)" : "var(--bad-tx)" }}
+                  style={{ ...zelle, fontWeight: 600, color: z.cashflow >= 0 ? "var(--ok-tx)" : "var(--bad-tx)" }}
                 >
                   {fmtE(z.cashflow)}
                 </span>
@@ -124,7 +129,7 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
       {mitMiete && <div style={{ fontSize: 11.5, color: "var(--ch)", margin: "6px 0 0", lineHeight: 1.4 }}>{t.finVglCfNote}</div>}
 
       {mitMiete && (
-        <div style={{ fontSize: 13, marginTop: 8, lineHeight: 1.45, color: tragend ? "var(--ok-tx)" : "var(--bad-tx)", fontWeight: 600 }}>
+        <div style={{ fontSize: 13, marginTop: 8, lineHeight: 1.45, color: "var(--ct)", fontWeight: 600 }}>
           {tragend ? fuelle(t.finVglTraegt, { anteil: tragend.anteil }) : t.finVglNie}
         </div>
       )}
@@ -141,7 +146,7 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
             lineHeight: 1.5,
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.finKpTitel}</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>{t.finKpTitel}</div>
           {kp.aktuell ? (
             <div>
               {fuelle(t.finKpText, {
@@ -220,7 +225,7 @@ export function FinanzierungsAnteil() {
                 lineHeight: 1.15,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{anzeige} %</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{anzeige} %</span>
               <span style={{ fontSize: 11.5, fontVariantNumeric: "tabular-nums" }}>
                 {komma(zins.toFixed(2))}
               </span>
@@ -235,9 +240,10 @@ export function FinanzierungsAnteil() {
             marginTop: 8,
             padding: "8px 10px",
             borderRadius: 8,
-            border: "1px solid var(--info-bd)",
-            background: "var(--info-bg)",
-            color: "var(--info-tx)",
+            border: "1px solid var(--cb)",
+            background: "var(--ci)",
+            boxShadow: "inset 3px 0 0 var(--info-tx)",
+            color: "var(--ct)",
             fontSize: 12.5,
             lineHeight: 1.45,
             display: "flex",
@@ -247,7 +253,7 @@ export function FinanzierungsAnteil() {
             flexWrap: "wrap",
           }}
         >
-          <span style={{ fontWeight: 600 }}>{fuelle(t.finZinsEigen, { zins: komma(String(d.zinssatz).replace(",", ".")) })}</span>
+          <span>{fuelle(t.finZinsEigen, { zins: komma(String(d.zinssatz).replace(",", ".")) })}</span>
           <button
             type="button"
             onClick={setzeMarktzins}
@@ -255,12 +261,12 @@ export function FinanzierungsAnteil() {
               minHeight: 36,
               padding: "0 12px",
               borderRadius: 8,
-              border: "1px solid var(--info-tx)",
+              border: "1px solid var(--cb)",
               background: "transparent",
-              color: "var(--info-tx)",
+              color: "var(--ct)",
               fontFamily: "inherit",
               fontSize: 12.5,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: "pointer",
             }}
           >
@@ -275,15 +281,21 @@ export function FinanzierungsAnteil() {
             marginTop: 8,
             padding: "8px 10px",
             borderRadius: 8,
-            border: "1px solid var(--warn-bd)",
-            background: "var(--warn-bg)",
-            color: "var(--warn-tx)",
+            border: "1px solid var(--cb)",
+            background: "var(--ci)",
+            boxShadow: "inset 3px 0 0 var(--warn-tx)",
+            color: "var(--ct)",
             fontSize: 12.5,
             lineHeight: 1.45,
-            fontWeight: 600,
+            display: "flex",
+            gap: 8,
+            alignItems: "flex-start",
           }}
         >
-          {fuelle(t.finAnteilUeber, { anteil: Math.round(zinsAuto.anteil) })}
+          <span style={{ color: "var(--warn-tx)", display: "inline-flex", marginTop: 1 }}>
+            <Icon name="warnung" size={16} />
+          </span>
+          <span>{fuelle(t.finAnteilUeber, { anteil: Math.round(zinsAuto.anteil) })}</span>
         </div>
       )}
       <button
