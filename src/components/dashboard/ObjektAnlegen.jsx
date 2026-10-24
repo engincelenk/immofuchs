@@ -561,7 +561,7 @@ function ObjektFormular({
             <span>{oa(t, "oaCashflowVorSteuer", "Cashflow / Monat (vor Steuer)")}</span>
             <span
               style={{
-                color: kz.cashflowMon >= 0 ? "#2F6B4F" : "#B3402A",
+                color: kz.cashflowMon >= 0 ? "var(--ok-tx)" : "var(--bad-tx)",
                 fontVariantNumeric: "tabular-nums",
               }}
             >

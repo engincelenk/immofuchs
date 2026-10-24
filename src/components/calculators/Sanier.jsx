@@ -614,7 +614,7 @@ export default function Sanier() {
               gap: 8,
               width: "100%",
               background: d.sanIsfp ? "var(--ok-bg)" : "var(--ci)",
-              border: `1px solid ${d.sanIsfp ? "#22c55e" : "var(--cb)"}`,
+              border: `1px solid ${d.sanIsfp ? "var(--ca)" : "var(--cb)"}`,
               borderRadius: 8,
               padding: "8px 10px",
               cursor: "pointer",
@@ -628,7 +628,7 @@ export default function Sanier() {
                 width: 34,
                 height: 20,
                 borderRadius: 10,
-                background: d.sanIsfp ? "#22c55e" : "var(--cb)",
+                background: d.sanIsfp ? "var(--ca)" : "var(--cb)",
                 position: "relative",
                 flexShrink: 0,
                 transition: "background .2s",
@@ -1226,7 +1226,7 @@ export default function Sanier() {
                     <span>
                       {fmtE(R.tK)} – {fmtE(R.tFo)}
                       {R.tFoLand > 0 && (
-                        <span style={{ color: "#3b82f6" }}> –{fmtE(R.tFoLand)}</span>
+                        <span style={{ color: "var(--ok-tx)" }}> –{fmtE(R.tFoLand)}</span>
                       )}{" "}
                       = <span style={{ color: "var(--ca)" }}>{fmtE(R.ne)}</span>
                     </span>
@@ -1235,7 +1235,7 @@ export default function Sanier() {
                     <div
                       style={{
                         fontSize: 9,
-                        color: "#3b82f6",
+                        color: "var(--ok-tx)",
                         marginTop: 4,
                         paddingTop: 4,
                         borderTop: "1px solid var(--cb)",
@@ -1435,7 +1435,7 @@ export default function Sanier() {
                       height: "100%",
                       width: `${Math.min((R.amJ / 30) * 100, 100)}%`,
                       borderRadius: 3,
-                      background: R.amJ <= 10 ? "#22c55e" : R.amJ <= 20 ? "var(--ca)" : "#f59e0b",
+                      background: R.amJ <= 10 ? "var(--ok-tx)" : R.amJ <= 20 ? "var(--ca)" : "var(--warn-tx)",
                     }}
                   />
                 </div>

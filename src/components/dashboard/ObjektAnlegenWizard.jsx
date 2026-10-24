@@ -232,7 +232,7 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
             </div>
           )}
           {auswahlFehler && (
-            <div style={{ fontSize: 12.5, color: "#B3402A", marginBottom: 10 }}>
+            <div style={{ fontSize: 12.5, color: "var(--bad-tx)", marginBottom: 10 }}>
               {xt["fehler" + auswahlFehler[0].toUpperCase() + auswahlFehler.slice(1)]}
             </div>
           )}
@@ -252,7 +252,7 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
             <ExposeUploadProgress phase={status} fortschritt={uploadFortschritt} t={xt} />
           )}
           {exposeFehler && (
-            <div style={{ fontSize: 12.5, color: "#B3402A", marginTop: 10 }}>
+            <div style={{ fontSize: 12.5, color: "var(--bad-tx)", marginTop: 10 }}>
               {xt[exposeFehler]}
             </div>
           )}

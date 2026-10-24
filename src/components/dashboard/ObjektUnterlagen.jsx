@@ -124,7 +124,7 @@ export function ObjektUnterlagen({ objektId }) {
       </button>
 
       {fehler && (
-        <div style={{ marginTop: 8, fontSize: 13.5, color: "#B3402A", lineHeight: 1.45 }}>
+        <div style={{ marginTop: 8, fontSize: 13.5, color: "var(--bad-tx)", lineHeight: 1.45 }}>
           {fehler}
         </div>
       )}

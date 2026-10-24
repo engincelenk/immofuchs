@@ -1,3 +1,13 @@
+## 2026-10-24 (1.100.148) [FRONTEND]
+
+### Dezente Farben: Status gedaempft, Info neutral, kein Ampel-Schmuck mehr (Nutzer: ueberall gruen und blau, kitschig)
+
+- Tokens (App.jsx, Freigabe "Ja"): ok/warn/bad hell #2F6B4F/#7A600E/#B3402A, dunkel #6FAE8A/#D4A94A/#E0836F, Flaechen und Raender entsprechend ruhig; Info ist jetzt neutral grau (kein Blau), --primary-tx dunkel #8FA6C0. Kontrast per Skript nachgerechnet: alle Texte mind. 5,0:1 (WCAG AA) auf Kartenweiss, Seitenflaeche, Chips und der Statusflaeche; Marine im Dunkeln vorher 1,37:1, jetzt 6,3:1.
+- Ampel-Schmuck entfernt: Kennzahl-Karten (AmpelKPI) ueberall ohne Farbbalken und getoente Flaeche (Wert in Textfarbe, nur Punkt und Bewertungszeile farbig); Detail.jsx ohne Ampel-Oberkante und -Flaeche; Ueberblick ohne farbigen Kartenrand; Score-Anzeige ohne Leuchtschatten; Schalter (Kreditrechner-Optionen, Sanierung) in Orange statt Gruen.
+- Hexwerte durch Tokens ersetzt (#22c55e, #ef4444, #f59e0b, #3b82f6, #2F6B4F/#B3402A als Text, #c0392b im Passwort-Staerkebalken): Finanzierung, Sanierung, Ueberblick, Objekt-KPIs, ObjektAnlegen(+Wizard), Unterlagen, AiEngine, ChatBubble, CheckoutShared. Weisse-Schrift-Flaechen (Score-Badge, Score-Kopf, Radar-Punkte) mit festen gedaempften Toenen. Diagramme: Zinsen/Eigenanteil in Marine (--primary-tx, im Dunkeln lesbar), Tilgung/Marktwert in --ca (altes #E8600A weg), Mieter-Tilgung grau; Radar-Hintergrund jetzt Token statt hellem #eef2f6.
+- CLAUDE.md: Abschnitt Design-Token um die gedaempfte Status-Palette ergaenzt.
+- Bewusst NICHT in diesem Schritt: Landing-Verlaeufe, Admin-Bereich (eigene Hexwerte), Verlauf des Score-Tachos, Diagramm-Reduktion auf drei Farben in allen Charts. Tests 1967 gruen. Oberflaeche nicht im Browser gesehen (Login).
+
 ## 2026-10-24 (1.100.147) [FRONTEND]
 
 ### Gestaltung "Ruhig" als Muster im Renditerechner (Option A, Nutzerwunsch: App wirkt kitschig)

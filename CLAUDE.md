@@ -11,6 +11,13 @@ Accent:    je Theme (seit 2026-10-11, WCAG AA, Nutzer-Freigabe; vorher
            dunkel: --ca #F07A2E, --ca-dk #FF9450, --on-ca #1A1A1A
            Schrift auf --ca-Flaechen immer var(--on-ca), nie "#fff".
            Ampelfarben als SCHRIFT nur ueber --ok-tx/--warn-tx/--bad-tx.
+Status:    GEDAEMPFT seit 2026-10-24 (Nutzer-Freigabe, "dezent statt kitschig"):
+           hell:   ok #2F6B4F, warn #7A600E, bad #B3402A (Flaechen #EEF3EF/#F7F1E1/#F8EEEA)
+           dunkel: ok #6FAE8A, warn #D4A94A, bad #E0836F (Flaechen #1D2620/#2A251A/#2C201D)
+           Kontrast der Texte mind. 5,0:1. Status nur als Zahlen-/Textfarbe oder kleiner
+           Punkt, keine Karten-Oberkanten, keine Ampel-Raender. Info ist NEUTRAL grau (kein
+           Blau). Marineblau nur noch als Diagrammfarbe (--primary-tx, dunkel #8FA6C0).
+           Orange (--ca) nur fuer Aktion, aktiv, Fokus - nie fuer Warnung. Schalter = --ca.
 Primary:   #1E3A5F  (Marineblau — Akzent fuer einzelne KPI-/Sektionsfarben)
 Surface:   #F5F5F0  (Seitenhintergrund --bg; Karten #FFFFFF --cc; Input --ci #FAFAF7)
 Text:      #1A1A1A  (--ct; gedaempft --ch #6C6C62 — am 2026-09-06 von

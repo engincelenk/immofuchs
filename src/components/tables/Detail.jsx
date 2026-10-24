@@ -112,8 +112,8 @@ export function Detail({ R, d }) {
         <div
           style={{
             padding: "14px",
-            background: isPosOhne ? "rgba(34,197,94,.08)" : "rgba(239,68,68,.08)",
-            borderTop: `2px solid ${isPosOhne ? "#22c55e" : "#ef4444"}`,
+            background: "var(--ci)",
+            borderTop: "1px solid var(--cb)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -156,8 +156,8 @@ export function Detail({ R, d }) {
         <div
           style={{
             padding: "14px",
-            background: isPosMit ? "rgba(34,197,94,.08)" : "rgba(239,68,68,.08)",
-            borderTop: `2px solid ${isPosMit ? "#22c55e" : "#ef4444"}`,
+            background: "var(--ci)",
+            borderTop: "1px solid var(--cb)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",

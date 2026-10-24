@@ -1,4 +1,4 @@
-const TIER_HEX = { green: "#22c55e", yellow: "#f59e0b", red: "#ef4444" };
+const TIER_HEX = { green: "var(--ok-tx)", yellow: "var(--warn-tx)", red: "var(--bad-tx)" };
 
 function MascotAvatar() {
   return (

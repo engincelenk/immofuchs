@@ -18,9 +18,9 @@ export function Dot({ color }) {
         verticalAlign: "middle",
       }}
       title={
-        color === "#22c55e"
+        color === "#2F6B4F"
           ? t.mlBadgeGut || "Gut"
-          : color === "#f59e0b"
+          : color === "#7A600E"
             ? t.mlBadgeMittel || "Mittelmäßig"
             : t.mlBadgeKritisch || "Kritisch"
       }
@@ -368,7 +368,7 @@ export function Toggle({ checked, onChange, label, sub, tip }) {
         gap: 8,
         width: "100%",
         background: checked ? "var(--ok-bg)" : "var(--ci)",
-        border: `1px solid ${checked ? "#22c55e" : "var(--cb)"}`,
+        border: `1px solid ${checked ? "var(--ca)" : "var(--cb)"}`,
         borderRadius: 8,
         padding: "8px 10px",
         cursor: "pointer",
@@ -382,7 +382,7 @@ export function Toggle({ checked, onChange, label, sub, tip }) {
           width: 34,
           height: 20,
           borderRadius: 10,
-          background: checked ? "#22c55e" : "var(--cb)",
+          background: checked ? "var(--ca)" : "var(--cb)",
           position: "relative",
           flexShrink: 0,
           transition: "background .2s",
@@ -587,109 +587,8 @@ export function AmpelKPIRuhig({ label, value, status, statusLabel, tip, color })
   );
 }
 
-export function AmpelKPI({ label, value, status, statusLabel, tip, color }) {
-  const bg =
-    color === "green"
-      ? "rgba(34,197,94,.08)"
-      : color === "yellow"
-        ? "rgba(245,158,11,.08)"
-        : "rgba(239,68,68,.08)";
-  const borderTop = color === "green" ? "#22c55e" : color === "yellow" ? "#f59e0b" : "#ef4444";
-  const badgeBg =
-    color === "green"
-      ? "rgba(34,197,94,.15)"
-      : color === "yellow"
-        ? "rgba(245,158,11,.15)"
-        : "rgba(239,68,68,.15)";
-  const textCol =
-    color === "green" ? "var(--ok-tx)" : color === "yellow" ? "var(--warn-tx)" : "var(--bad-tx)";
-  return (
-    <div
-      style={{
-        background: bg,
-        borderRadius: 12,
-        border: `0.5px solid ${borderTop}33`,
-        borderTop: `5px solid ${borderTop}`,
-        padding: "10px 10px",
-        minWidth: 0,
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: 4,
-          gap: 4,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            // --cl statt --ch: auf der rot getoenten Karte erreichte --ch nur 4,39:1.
-            color: "var(--cl)",
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-            lineHeight: 1.3,
-            minWidth: 0,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {label}
-        </span>
-        <span
-          style={{
-            background: badgeBg,
-            color: textCol,
-            fontSize: 9,
-            fontWeight: 700,
-            padding: "2px 6px",
-            borderRadius: 20,
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-        >
-          {statusLabel}
-        </span>
-      </div>
-      <div
-        style={{
-          fontSize: "clamp(18px,5.5vw,24px)",
-          fontWeight: 700,
-          color: textCol,
-          fontVariantNumeric: "tabular-nums",
-          lineHeight: 1.1,
-          margin: "4px 0",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value}
-      </div>
-      {status && (
-        <div
-          style={{
-            fontSize: 10,
-            color: textCol,
-            fontWeight: 600,
-            marginBottom: 2,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {status}
-        </div>
-      )}
-      {tip && <div style={{ fontSize: 9, color: "var(--ch)", lineHeight: 1.5 }}>{tip}</div>}
-    </div>
-  );
-}
+// Seit 2026-10-24 ueberall die ruhige Variante (kein Farbbalken, keine getoente Karte).
+export const AmpelKPI = AmpelKPIRuhig;
 
 // ═══ NEUTRAL-KPI CARD ═══
 export function NeutralKPI({ label, value, sub }) {

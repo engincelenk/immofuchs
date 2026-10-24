@@ -94,7 +94,7 @@ export function ScoreBlock({ score }) {
     );
   }
 
-  const COLORS = { green: "#22c55e", yellow: "#f59e0b", orange: "#f97316", red: "#ef4444" };
+  const COLORS = { green: "#2F6B4F", yellow: "#7A600E", orange: "#94540F", red: "#B3402A" };
   const col = COLORS[score.tier] || COLORS.red;
   // Text in Ampelfarbe: die kraeftigen COLORS erreichen auf hellem Grund nur
   // 2,1-3,8:1 (WCAG AA 4,5:1) - als Schrift deshalb die Status-Text-Tokens,
@@ -234,7 +234,6 @@ export function ScoreBlock({ score }) {
                 stroke="url(#scoreGaugeGrad)"
                 strokeWidth={18}
                 strokeLinecap="round"
-                style={{ filter: `drop-shadow(0 0 8px ${col}59)` }}
               />
 
               {/* 11 Skalenstriche ueber die 240 Grad des Zeigerwegs */}

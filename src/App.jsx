@@ -327,10 +327,13 @@ export const FONT_CSS = "";
 // Mode kaum noch lesbar. --primary selbst bleibt unveraendert: an allen
 // anderen Stellen steht es als FLAECHE (Button-/Ribbon-Hintergrund) mit
 // weissem Text davor, das funktioniert unveraendert auf beiden Themes.
+// Seit 2026-10-24 GEDAEMPFT (Nutzer: App wirkte kitschig, ueberall gruen und blau; Freigabe "Ja"): Status nur als
+// ruhige Text- und Flaechenfarbe, Info ist neutral grau (kein Blau mehr), Marineblau im Dunkeln aufgehellt.
+// Kontrast der Texte mind. 5,0:1 (WCAG AA) auf Kartenweiss, Seitenflaeche, Chips und der jeweiligen Statusflaeche.
 const STATUS_TOKENS_LIGHT =
-  "--ok-tx:#137333;--ok-bg:#e8f8ee;--ok-bd:#9fd3ae;--warn-tx:#7a600e;--warn-bg:#fff8e6;--warn-bd:#f0d38a;--bad-tx:#b91c1c;--bad-bg:#fff0f0;--bad-bd:#f0a5a5;--info-tx:#1a5fa0;--info-bg:#ebf5ff;--info-bd:#a8cdf0;--primary-tx:#1e3a5f;";
+  "--ok-tx:#2f6b4f;--ok-bg:#eef3ef;--ok-bd:#cfe0d6;--warn-tx:#7a600e;--warn-bg:#f7f1e1;--warn-bd:#e6d9b3;--bad-tx:#b3402a;--bad-bg:#f8eeea;--bad-bd:#e8cdc5;--info-tx:#3d3d3a;--info-bg:#f2f2ec;--info-bd:#e5e5dc;--primary-tx:#1e3a5f;";
 const STATUS_TOKENS_DARK =
-  "--ok-tx:#4ade80;--ok-bg:#16321f;--ok-bd:#2c5c3a;--warn-tx:#fbbf24;--warn-bg:#3a2f10;--warn-bd:#6b551c;--bad-tx:#f87171;--bad-bg:#3a1414;--bad-bd:#6b2626;--info-tx:#7db4f0;--info-bg:#14243a;--info-bd:#2c4666;--primary-tx:#7fb3e0;";
+  "--ok-tx:#6fae8a;--ok-bg:#1d2620;--ok-bd:#2f4a3b;--warn-tx:#d4a94a;--warn-bg:#2a251a;--warn-bd:#5a4c2a;--bad-tx:#e0836f;--bad-bg:#2c201d;--bad-bd:#5a3a33;--info-tx:#d8d8d2;--info-bg:#2a2a2a;--info-bd:#3a3a38;--primary-tx:#8fa6c0;";
 const DARK_TOKENS =
   "--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--cro:#202020;--ca:#f07a2e;--ca-dk:#ff9450;--on-ca:#1a1a1a;--ca-bg:#3a2414;--ca-bd:#5a3a1e;--hdr-bg:rgba(24,24,24,.92);" +
   STATUS_TOKENS_DARK;

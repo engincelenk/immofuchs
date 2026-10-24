@@ -170,7 +170,7 @@ export function SelectField({ id, label, hint, options, style, ...selectProps })
 }
 
 // Orientierende Staerkeanzeige (utils/passwordStrength.js): Balken + Wort. Ersetzt nicht die Serverpruefung.
-const STRENGTH_COLORS = ["#c0392b", "#c0392b", "#d68910", "#2e8b57", "#1e7e4a"];
+const STRENGTH_COLORS = ["var(--bad-tx)", "var(--bad-tx)", "var(--warn-tx)", "var(--ok-tx)", "var(--ok-tx)"];
 const STRENGTH_KEYS = ["pwStrengthTooShort", "pwStrengthWeak", "pwStrengthFair", "pwStrengthGood", "pwStrengthStrong"];
 
 export function PasswordStrength({ password, t }) {

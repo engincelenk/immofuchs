@@ -64,7 +64,7 @@ export function InvestmentCheckRadar({ R }) {
   const dataPath = dataPts.map((p, i) => (i === 0 ? "M" : "L") + p.x + "," + p.y).join(" ") + " Z";
 
   const tierColor = (r) =>
-    r.tier === "green" ? "#22c55e" : r.tier === "yellow" ? "#f59e0b" : "#ef4444";
+    r.tier === "green" ? "#2F6B4F" : r.tier === "yellow" ? "#7A600E" : "#B3402A";
 
   return (
     <div
@@ -157,7 +157,7 @@ export function InvestmentCheckRadar({ R }) {
           style={{
             fontSize: 11,
             color: "var(--ct)",
-            background: "#eef2f6",
+            background: "var(--ci)",
             borderRadius: 8,
             padding: "8px 10px",
             marginTop: 8,

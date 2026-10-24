@@ -55,10 +55,10 @@ export function VermoegensQuelleChart({ R, d }) {
       key: "eigenerAnteil",
       label: t.vqEigenerAnteil,
       value: eigenImKaufpreis + eigenerAnteilTilgung,
-      color: "#1E3A5F",
+      color: "var(--primary-tx)",
     },
-    { key: "mieterTilgung", label: t.vqMieterTilgung, value: mieterTilgKum, color: "#6E8CAE" },
-    { key: "markt", label: t.vqMarkt, value: Math.max(0, R.w || 0), color: "#E8600A" },
+    { key: "mieterTilgung", label: t.vqMieterTilgung, value: mieterTilgKum, color: "var(--ch)" },
+    { key: "markt", label: t.vqMarkt, value: Math.max(0, R.w || 0), color: "var(--ca)" },
   ];
   const total = segments.reduce((a, s) => a + s.value, 0);
   if (total <= 0) return null;

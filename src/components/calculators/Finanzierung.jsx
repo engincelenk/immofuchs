@@ -373,7 +373,7 @@ export default function Kredit() {
                       height: "100%",
                       width: `${Math.min(R.bel, 100)}%`,
                       borderRadius: 3,
-                      background: R.bel > 90 ? "#ef4444" : R.bel > 80 ? "#f59e0b" : "var(--ca)",
+                      background: R.bel > 90 ? "var(--bad-tx)" : R.bel > 80 ? "var(--warn-tx)" : "var(--ca)",
                     }}
                   />
                 </div>

@@ -31,10 +31,10 @@ const ERKLAERUNG = {
 };
 
 const TIER_FARBE = {
-  green: "#2F6B4F",
-  yellow: "#B8860B",
-  orange: "#C2410C",
-  red: "#B3402A",
+  green: "var(--ok-tx)",
+  yellow: "var(--warn-tx)",
+  orange: "var(--warn-tx)",
+  red: "var(--bad-tx)",
 };
 
 // Wortwahl bewusst wie in investmentScore.js/staffel(): der Score bewertet
@@ -195,7 +195,6 @@ export function Ueberblick({
           background: "var(--cc)",
           border: "1px solid var(--cb)",
           borderRadius: 12,
-          borderTop: `3px solid ${farbe}`,
           padding: 16,
         }}
       >
@@ -218,8 +217,8 @@ export function Ueberblick({
               padding: "3px 9px",
               borderRadius: 999,
               whiteSpace: "nowrap",
-              color: cf >= 0 ? "#2F6B4F" : "#B3402A",
-              background: cf >= 0 ? "#2F6B4F1a" : "#B3402A1a",
+              color: cf >= 0 ? "var(--ok-tx)" : "var(--bad-tx)",
+              background: cf >= 0 ? "var(--ok-bg)" : "var(--bad-bg)",
             }}
           >
             {CF_WORT(cf)}
@@ -245,7 +244,7 @@ export function Ueberblick({
               l: "Cashflow / Monat (vor Steuer)",
               tip: ERKLAERUNG.cashflow,
               v: `${cf >= 0 ? "+" : ""}${eur(cf, locale)}`,
-              c: cf >= 0 ? "#2F6B4F" : "#B3402A",
+              c: cf >= 0 ? "var(--ok-tx)" : "var(--bad-tx)",
             },
             {
               l: "Nettorendite",
@@ -350,14 +349,14 @@ export function Ueberblick({
             label="Einnahmen"
             wert={ein}
             anteil={ein / max}
-            farbe="#2F6B4F"
+            farbe="var(--ok-tx)"
             locale={locale}
           />
           <Balken
             label="Ausgaben"
             wert={aus}
             anteil={aus / max}
-            farbe="#B3402A"
+            farbe="var(--bad-tx)"
             locale={locale}
           />
         </div>

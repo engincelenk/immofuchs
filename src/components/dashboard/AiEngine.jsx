@@ -742,7 +742,7 @@ export function VariantenBlock({ varianten, max, titel }) {
               fontVariantNumeric: "tabular-nums",
               // Ein Hebel ohne Wirkung ist gedaempft, nicht gruen: deltaScore 0
               // heisst "aendert nichts" und darf nicht wie ein Gewinn aussehen.
-              color: v.deltaScore > 0 ? "#2F6B4F" : v.deltaScore < 0 ? "#B3402A" : "var(--cl)",
+              color: v.deltaScore > 0 ? "var(--ok-tx)" : v.deltaScore < 0 ? "var(--bad-tx)" : "var(--cl)",
             }}
           >
             {v.score}/100

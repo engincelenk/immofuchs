@@ -37,8 +37,8 @@ export function ZinsTilgungChart({ rows }) {
   // Zinsen = Marineblau (Primary, "Kosten"), Tilgung = Fuchs-Orange (Accent,
   // "baut Vermoegen auf") - dieselben zwei Farben, die im ganzen Rechner
   // fuer Primary/Accent stehen, statt eigener Chart-Farben.
-  const colZins = "#1E3A5F";
-  const colTilg = "#E8600A";
+  const colZins = "var(--primary-tx)";
+  const colTilg = "var(--ca)";
   // Ohne Auswahl zeigt die Info-Zeile das letzte Jahr (naeher an "wo stehe
   // ich am Ende" als ein beliebiges erstes Jahr).
   const activeIdx = sel ?? n - 1;

@@ -37,7 +37,7 @@ export function ObjektKPIs({ kennzahlen, t }) {
     {
       label: t?.kpiCashflowVSt || "Cashflow v. St.",
       value: `${cf >= 0 ? "+" : ""}${eur(cf)}`,
-      color: cf >= 0 ? "#2F6B4F" : "#B3402A",
+      color: cf >= 0 ? "var(--ok-tx)" : "var(--bad-tx)",
     },
   ];
 
@@ -88,7 +88,7 @@ export function VollstaendigkeitsRing({ prozent, groesse = 38 }) {
   const voll = (p / 100) * umfang;
   // Unter 60 % gedaempft statt alarmierend: fehlende Felder sind kein Fehler,
   // sondern eine Einladung.
-  const farbe = p >= 90 ? "#2F6B4F" : p >= 60 ? "var(--ca)" : "var(--ch)";
+  const farbe = p >= 90 ? "var(--ok-tx)" : p >= 60 ? "var(--ca)" : "var(--ch)";
 
   return (
     <span
