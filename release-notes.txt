@@ -1,3 +1,12 @@
+## 2026-10-24 (1.100.143) [FRONTEND] [DATEN]
+
+### Finanzierungsanteil bis 50 %, Stufen-Vergleich mit Rate und Cashflow, Zins-Puffer, Verhandlungs-Kaufpreis
+
+- Nutzerwunsch (Marktbeispiel 66 qm, 310.000 Euro, ca. 900 Euro Miete): Der Zins allein sagt wenig, entscheidend sind Rate und Cashflow je Stufe; der Zinsmarkt ist vorgegeben, der Kaufpreis ist der Hebel.
+- Daten: neue Stufe 50 % (ZINS_ABSTAENDE -0,35, Tabelle 3,97 %). GESCHAETZT (unter 60 % gibt es keine Marktbeobachtung, nur "sinkt noch wenig"), deshalb in der Oberflaeche mit * markiert (GESCHAETZTE_STUFEN in zinsStaffel.js). Der Monatsjob liest die Punkte generisch und berechnet 50 % mit.
+- Neu in components/ui/FinanzierungsAnteil.jsx: sechs Kacheln 50 bis 100 %; Hinweis "Zinsen sind Bestcase-Richtwerte, in der Regel etwas hoeher"; einklappbar "Stufen vergleichen" mit Tabelle je Stufe (Zins, Rate/Mon., Cashflow/Mon. vor Steuer Jahr 1, Eigenkapital), gruene Zeile = Stufe mit dem meisten Fremdkapital, die schon traegt; Zins-Puffer (±0 / +0,3 / +0,5) rechnet nur den Vergleich gegen hoehere Zinsen, die Eingaben bleiben unveraendert; Karte "Kaufpreis fuer Cashflow ab 0" (hoechster Kaufpreis bei der aktuellen Stufe als Verhandlungsziel in Prozent zum Angebot, dazu der Wert selbst bei 50 % Finanzierung). Ohne Miete fallen Cashflow-Spalte und Kaufpreis-Karte weg. Die Rechnung laeuft nur, solange der Vergleich offen ist.
+- Neu: utils/finanzierungsVergleich.js (stufenZeile, stufenVergleich, ersteTragendeStufe, maxKaufpreisFuerCashflow per Bisektion ueber die echte Rendite-Rechnung, auf 500 Euro abgerundet). Texte in 5 Sprachen.
+- Tests: finanzierungsVergleich.test.js (u. a. 100 % = Zins plus Tilgung, Monotonie, Kaufpreis-Grenze), FinanzierungsAnteil.test.jsx (Darstellung in allen 5 Sprachen). Beispiel des Nutzers nachgerechnet: Rate 1.710 / 1.306 / 933 Euro, Cashflow -810 / -406 / -33 Euro bei 100 / 80 / 60 % (Nutzer ohne Kosten: -805 / -400 / -30). Alle 1954 Tests gruen. Oberflaeche NICHT im Browser geprueft (Rechner hinter Login), nur als Render-Test.
 ## 2026-10-24 (1.100.142) [FRONTEND]
 
 ### Ladeansicht auf Handy: Kringel in der Mitte, keine Platzhalter-Elemente oben

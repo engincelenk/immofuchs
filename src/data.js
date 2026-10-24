@@ -24,9 +24,12 @@ export const MARKET_RATES = {
 // 90 % = 4,40-4,60, 80 % = 4,30-4,50, 60 % = 4,00-4,20. Daraus: 60 % -0,30, 90 % +0,10, 100 % +0,30;
 // 70 % (nicht genannt) als Mitte aus 60 und 80 = -0,15. Gegenprobe Interhyp-Zinstabelle (10 Jahre,
 // 12.-18.10.2026): unter 70 % 4,19, bei 80 % 4,30, ueber 90 % 4,56.
+// 50 % ist GESCHAETZT (Nutzer 2026-10-24: -0,35; unter 60 % sinkt der Zins nur noch wenig) und wird in
+// der Oberflaeche als Schaetzwert gekennzeichnet (GESCHAETZTE_STUFEN in utils/zinsStaffel.js).
 export const ZINS_ABSTAENDE = {
   stand: "Oktober 2026",
   punkte: [
+    [50, -0.35],
     [60, -0.3],
     [70, -0.15],
     [80, 0],
@@ -40,6 +43,7 @@ export const ZINS_ABSTAENDE = {
 export const ZINS_NACH_FINANZIERUNG = {
   stand: "Oktober 2026",
   punkte: [
+    [50, 3.97],
     [60, 4.02],
     [70, 4.17],
     [80, 4.32],

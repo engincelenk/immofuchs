@@ -7,6 +7,9 @@
 import { computeRendite } from "./rendite.js";
 import { ZINS_NACH_FINANZIERUNG } from "../data.js";
 
+// Stufen ohne Marktbeobachtung, nur geschaetzt (Oberflaeche markiert sie): unter 60 % sinkt der Zins nur noch wenig.
+export const GESCHAETZTE_STUFEN = [50];
+
 /**
  * Linear zwischen Stuetzpunkten [[anteil, zins], ...] interpolieren; ausserhalb gilt der naechste
  * Stuetzpunkt. Gibt null zurueck, wenn nichts zu berechnen ist.
