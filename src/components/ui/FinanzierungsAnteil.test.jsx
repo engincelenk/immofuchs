@@ -48,6 +48,35 @@ describe("Stufen-Vergleich (Darstellung)", () => {
     expect(s).toContain("mehr als der Kaufpreis");
     expect(s).not.toMatch(/\{\w+\}/);
   });
+  it("eigener Zins: Hinweis mit Knopf, Marktzins-Beschriftung im Vergleich", () => {
+    const d = { ...basis, zinssatz: "3.9" };
+    const h = renderToStaticMarkup(
+      <Ctx.Provider
+        value={{ d, t: T.de, zinsAuto: { anteil: 80, zins: "4.32" }, setzeFinanzierungsanteil: () => {}, setzeMarktzins: () => {} }}
+      >
+        <FinanzierungsAnteil />
+      </Ctx.Provider>,
+    );
+    const s = text(h);
+    expect(s).toContain("Eigener Zins 3,9 % aktiv");
+    expect(s).toContain("Marktzins verwenden");
+    expect(h).toContain("dashed");
+    const ohne = renderToStaticMarkup(
+      <Ctx.Provider
+        value={{ d: { ...basis, zinssatz: "4.32" }, t: T.de, zinsAuto: { anteil: 80, zins: "4.32" }, setzeFinanzierungsanteil: () => {}, setzeMarktzins: () => {} }}
+      >
+        <FinanzierungsAnteil />
+      </Ctx.Provider>,
+    );
+    expect(text(ohne)).not.toContain("Eigener Zins");
+    expect(ohne).not.toContain("dashed");
+    const v = renderToStaticMarkup(
+      <Ctx.Provider value={{ d, t: T.de }}>
+        <Vergleich aktuellerAnteil={80} eigenerZins />
+      </Ctx.Provider>,
+    );
+    expect(text(v)).toContain("nicht mit deinem eigenen Zins");
+  });
   it("ohne Miete: keine Cashflow-Spalte und keine Kaufpreis-Karte", () => {
     const s = text(html({ ...basis, kaltmiete: "" }));
     expect(s).not.toContain("Cashflow/Mon.");

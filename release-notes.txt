@@ -1,3 +1,12 @@
+## 2026-10-24 (1.100.146) [FRONTEND]
+
+### Eigener Zins: Stufen als Marktreferenz erkennbar
+
+- Problem (Nutzer): Wer im Zinsfeld einen eigenen Wert eingab, sah oben weiter die Stufen mit Marktzinsen, die aktive Kachel gefuellt - Kacheln und Rechnung widersprachen sich.
+- Jetzt bei eigenem Zins: Hinweiszeile "Eigener Zins x % aktiv. Die Kacheln zeigen Marktzinsen." mit Knopf "Marktzins verwenden" (App.jsx setzeMarktzins: schaltet die Zins-Automatik wieder ein, Eigenkapital bleibt); die aktive Kachel ist nur gestrichelt umrandet statt gefuellt; im Stufen-Vergleich der Hinweis "Gerechnet mit Marktzinsen, nicht mit deinem eigenen Zins." (5 Sprachen). Leeres Zinsfeld loest den Hinweis nicht aus.
+- Bewusst nicht: Vergleich mit dem eigenen Zins rechnen - dann haetten alle Stufen denselben Zins und der Vorteil von mehr Eigenkapital verschwaende.
+- Tests: 1963 gruen (neu: Darstellung mit eigenem Zins). Nur als Render-Test geprueft.
+
 ## 2026-10-24 (1.100.145) [FRONTEND] [DATEN]
 
 ### Vollfinanzierung ueber 100 % klar erkennbar (Nebenkosten mitfinanziert)

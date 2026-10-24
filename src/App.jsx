@@ -595,6 +595,13 @@ export default function App() {
     },
     [data],
   );
+  // "Marktzins verwenden" (FinanzierungsAnteil): verwirft den eigenen Zins, Eigenkapital bleibt wie es ist.
+  const setzeMarktzins = useCallback(() => {
+    if (zinsAutoWert == null) return;
+    zinsTouchedRef.current = false;
+    zinsAutoRef.current = zinsAutoWert;
+    setData((p) => (p.zinssatz === zinsAutoWert ? p : { ...p, zinssatz: zinsAutoWert }));
+  }, [zinsAutoWert]);
   useEffect(() => {
     if (zinsAutoWert == null) return;
     zinsAutoRef.current = zinsAutoWert;
@@ -704,6 +711,7 @@ export default function App() {
         set,
         zinsAuto,
         setzeFinanzierungsanteil,
+        setzeMarktzins,
         mietQuelleRef,
         t,
         lang,

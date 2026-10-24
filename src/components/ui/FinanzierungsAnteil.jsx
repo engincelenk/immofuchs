@@ -22,7 +22,7 @@ const PUFFER = [0, 0.3, 0.5];
 const fuelle = (text, werte) =>
   Object.entries(werte).reduce((s, [k, v]) => s.split(`{${k}}`).join(v), text || "");
 
-export function Vergleich({ aktuellerAnteil }) {
+export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
   const { d: dLive, t } = useApp();
   // Tippen im Eigenkapital-Feld wartet nicht auf den Vergleich: er rechnet mit dem zuletzt ruhigen Stand.
   const d = useDeferredValue(dLive);
@@ -74,6 +74,9 @@ export function Vergleich({ aktuellerAnteil }) {
           </button>
         ))}
       </div>
+      {eigenerZins && (
+        <div style={{ fontSize: 12, color: "var(--warn-tx)", marginBottom: 8, fontWeight: 600 }}>{t.finVglMarkt}</div>
+      )}
       {puffer > 0 && <div style={{ fontSize: 12, color: "var(--ch)", marginBottom: 8 }}>{t.finVglPufferSub}</div>}
 
       <div role="table" aria-label={t.finVglTitel}>
@@ -166,7 +169,7 @@ export function Vergleich({ aktuellerAnteil }) {
 }
 
 export function FinanzierungsAnteil() {
-  const { d, t, zinsAuto, setzeFinanzierungsanteil } = useApp();
+  const { d, t, zinsAuto, setzeFinanzierungsanteil, setzeMarktzins } = useApp();
   const [offen, setOffen] = useState(false);
   const punkte = useMemo(() => sichtbareStufen(d), [d]);
   // Ohne Kaufpreis gibt es nichts zu berechnen: die Auswahl bleibt dann weg.
@@ -174,6 +177,8 @@ export function FinanzierungsAnteil() {
   const aktiv = aktiveStufe(zinsAuto.anteil, punkte);
   const dazwischen = aktiv == null ? Math.round(zinsAuto.anteil) : null;
   const ueber100 = zinsAuto.anteil > 100.5;
+  // Eigener Zins im Feld: die Kacheln zeigen dann nur noch die Marktzinsen (Referenz), die aktive Kachel ist umrandet.
+  const eigenerZins = String(d.zinssatz ?? "").trim() !== "" && String(d.zinssatz) !== zinsAuto.zins;
   return (
     <div className="if-field" style={{ marginBottom: 14 }} role="group" aria-label={t.finAnteilTitel}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
@@ -202,9 +207,9 @@ export function FinanzierungsAnteil() {
                 minHeight: 48,
                 padding: "6px 0",
                 borderRadius: 10,
-                border: an ? "1px solid var(--ca)" : "1px solid var(--cb)",
-                background: an ? "var(--ca)" : "var(--ci)",
-                color: an ? "var(--on-ca)" : "var(--ct)",
+                border: an ? (eigenerZins ? "2px dashed var(--ca)" : "1px solid var(--ca)") : "1px solid var(--cb)",
+                background: an && !eigenerZins ? "var(--ca)" : "var(--ci)",
+                color: an && !eigenerZins ? "var(--on-ca)" : "var(--ct)",
                 fontFamily: "inherit",
                 cursor: "pointer",
                 display: "flex",
@@ -223,6 +228,46 @@ export function FinanzierungsAnteil() {
           );
         })}
       </div>
+      {eigenerZins && setzeMarktzins && (
+        <div
+          role="note"
+          style={{
+            marginTop: 8,
+            padding: "8px 10px",
+            borderRadius: 8,
+            border: "1px solid var(--info-bd)",
+            background: "var(--info-bg)",
+            color: "var(--info-tx)",
+            fontSize: 12.5,
+            lineHeight: 1.45,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>{fuelle(t.finZinsEigen, { zins: komma(String(d.zinssatz).replace(",", ".")) })}</span>
+          <button
+            type="button"
+            onClick={setzeMarktzins}
+            style={{
+              minHeight: 36,
+              padding: "0 12px",
+              borderRadius: 8,
+              border: "1px solid var(--info-tx)",
+              background: "transparent",
+              color: "var(--info-tx)",
+              fontFamily: "inherit",
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {t.finZinsMarkt}
+          </button>
+        </div>
+      )}
       {ueber100 && (
         <div
           role="note"
@@ -261,7 +306,7 @@ export function FinanzierungsAnteil() {
       >
         {t.finVglTitel} {offen ? "▴" : "▾"}
       </button>
-      {offen && <Vergleich aktuellerAnteil={zinsAuto.anteil} />}
+      {offen && <Vergleich aktuellerAnteil={zinsAuto.anteil} eigenerZins={eigenerZins} />}
     </div>
   );
 }
