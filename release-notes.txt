@@ -1,3 +1,13 @@
+## 2026-10-24 (1.100.141) [FRONTEND]
+
+### Tooltip oeffnet keine Tastatur mehr, feste Zins-Texte ohne Zahlen, Auswahl "Finanzierungsanteil" in Rendite- und Kreditrechner
+
+- Tip.jsx (Fehler seit der Label-Verknuepfung vom 11.10., betraf ALLE Felder mit Fragezeichen): Das Fragezeichen liegt im <label> des Feldes; der Tipp fokussierte dadurch das Eingabefeld, iOS oeffnete die Zahlentastatur, und der Tooltip erschien erst nach "Fertig". Jetzt verhindert preventDefault() das Fokussieren: Tooltip sofort, Tastatur bleibt zu. Auf dem emulierten Handy geprueft (Fokus nicht im Feld, Tooltip sichtbar); auf einem echten iPhone nicht.
+- Feste Texte ohne wechselnde Zahlen (Nutzerwunsch): Hinweis ueber dem Zinsfeld "Automatisch nach Eigenkapital" bzw. "Eigener Wert (Automatik aus)"; Tooltip Zinssatz erklaert die Automatik und nennt nur die feste Bezugsgroesse 80 % (keine Zinszahl, keinen Stand mehr). In allen 5 Sprachen. Entfernt: MARKET_RATES-Import in tips.js.
+- Neu: components/ui/FinanzierungsAnteil.jsx unter dem Eigenkapital-Feld im Renditerechner und im Kreditrechner. Fuenf Stufen 60/70/80/90/100 %, jede mit dem zugehoerigen Zins. Die Zinszahlen kommen LIVE aus ZINS_NACH_FINANZIERUNG (Monatsjob) und stehen nicht in den Uebersetzungen. Tippen auf eine Stufe setzt das Eigenkapital so, dass das Bankdarlehen dem Anteil entspricht, und schaltet die Zins-Automatik wieder ein (App.jsx setzeFinanzierungsanteil, eine einzige State-Aenderung). Aendert der Nutzer das Eigenkapital von Hand, folgt der Zins, die aktive Stufe wandert; liegt der Anteil zwischen zwei Stufen, ist keine markiert und es steht "≈ 85 %" daneben. Texte (finAnteilTitel, finAnteilSub, finAnteilAria) in 5 Sprachen.
+- utils/zinsStaffel.js: eigenkapitalFuerAnteil (Bisektion ueber die echte Rechnung, beruecksichtigt finanzierte Nebenkosten und KfW), aktiveStufe, zinsHinweis jetzt ohne Zahlen.
+- Tests: zinsStaffel.test.js 28 (neu u. a. Eigenkapital je Anteil mit/ohne Nebenkosten und KfW, Hin- und Rueckrechnung, aktive Stufe, Hinweis ohne Ziffer). Oberflaeche mit nachgestelltem Login auf emuliertem iPhone: Stufen 60/90/100/80 setzen Eigenkapital 128.000 / 32.000 / 0 / 64.000 und Zins 4,02 / 4,42 / 4,62 / 4,32; Eigenkapital 48.000 von Hand ergibt Zins 4,37 und "≈ 85 %"; eigener Zins 3.9 zeigt "Eigener Wert (Automatik aus)", Tippen auf 80 % stellt die Automatik wieder her; Kreditrechner identisch (Stufe 70: Eigenkapital 96.000, Zins 4,17).
+
 ## 2026-10-23 (1.100.140) [FRONTEND] [DATEN] [CI]
 
 ### Zinssatz folgt dem Finanzierungsanteil (Eigenkapital), Monatsjob berechnet die Zins-Tabelle, Interhyp-Abruf repariert

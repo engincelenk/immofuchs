@@ -32,6 +32,10 @@ export function Tip({ text, label }) {
     <span ref={ref} style={{ position: "relative", display: "inline-block", marginLeft: 4 }}>
       <span
         onClick={(e) => {
+          // Das Fragezeichen liegt im <label> des Feldes (F in atoms.jsx, htmlFor). Ohne preventDefault
+          // fokussiert der Tipp das Eingabefeld und iOS oeffnet die Tastatur; der Tooltip erschien erst
+          // nach "Fertig" (Nutzer-Befund 2026-10-24).
+          e.preventDefault();
           e.stopPropagation();
           setS(!s);
         }}

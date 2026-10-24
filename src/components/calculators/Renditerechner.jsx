@@ -46,6 +46,7 @@ import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { zinsHinweis } from "../../utils/zinsStaffel.js";
+import { FinanzierungsAnteil } from "../ui/FinanzierungsAnteil.jsx";
 
 // Regionaler Kaufpreis-Realitaetscheck (2026-09-09, Wow-Feature Idee B.2):
 // vergleicht den eingegebenen Kaufpreis je m² (R.pQm) gegen den regionalen
@@ -412,6 +413,7 @@ export default function Haupt() {
             tip={tip("eigenkapital")}
             slider={{ min: 0, max: 3000000, step: 10000 }}
           />
+          <FinanzierungsAnteil />
           <Toggle
             checked={!!d.nkFinanzieren}
             onChange={(v) => set("nkFinanzieren", v)}

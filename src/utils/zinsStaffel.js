@@ -54,18 +54,42 @@ export function zinsFuerDaten(d, t = {}, punkte = ZINS_NACH_FINANZIERUNG.punkte)
   return zinsInfo(d, t, punkte)?.zins ?? null;
 }
 
-const komma = (v) => String(v).replace(".", ",");
+/**
+ * Eigenkapital (ganze Euro), bei dem das Bankdarlehen `anteil` Prozent von Kaufpreis plus Garage entspricht.
+ * Beruecksichtigt Nebenkosten-Finanzierung und KfW ueber die echte Rechnung (Bisektion, der Anteil sinkt
+ * mit dem Eigenkapital monoton). Gibt null zurueck, wenn es keinen Kaufpreis gibt.
+ */
+export function eigenkapitalFuerAnteil(d, anteil, t = {}) {
+  const kaufpreis = (+d.kaufpreis || 0) + (+d.garage || 0);
+  if (kaufpreis <= 0 || !Number.isFinite(anteil)) return null;
+  const anteilBei = (ek) => finanzierungsanteil({ ...d, eigenkapital: String(ek) }, t);
+  let lo = 0;
+  let hi = kaufpreis * 2; // genug Eigenkapital, damit das Darlehen 0 ist (auch mit finanzierten Nebenkosten)
+  if (anteilBei(lo) <= anteil) return 0; // schon mit 0 Eigenkapital nicht mehr Finanzierung als gewuenscht
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (anteilBei(mid) > anteil) lo = mid;
+    else hi = mid;
+  }
+  return Math.round(hi);
+}
 
 /**
- * Hinweistext unter dem Zinsfeld. `aktuell` ist der Wert im Feld. Steht dort der automatische Wert, nennt
- * der Text den Finanzierungsanteil; sonst den eigenen Wert und was automatisch gelten wuerde.
- * t.zinsAutoHinweis / t.zinsEigenHinweis mit {anteil} und {zins}; ohne Text gibt es keinen Hinweis.
+ * Welche Stufe der Auswahl aktiv ist: der Anteil (Prozent), wenn er auf einem Stuetzpunkt liegt
+ * (Toleranz 0,5 Punkte), sonst null.
+ */
+export function aktiveStufe(anteil, punkte = ZINS_NACH_FINANZIERUNG.punkte, toleranz = 0.5) {
+  if (!Number.isFinite(anteil)) return null;
+  const treffer = punkte.find(([a]) => Math.abs(a - anteil) <= toleranz);
+  return treffer ? treffer[0] : null;
+}
+
+/**
+ * Hinweistext unter dem Zinsfeld. `aktuell` ist der Wert im Feld. Bewusst OHNE wechselnde Zahlen
+ * (Nutzerwunsch 2026-10-24): feste Texte t.zinsAutoHinweis / t.zinsEigenHinweis; ohne Text kein Hinweis.
  */
 export function zinsHinweis(info, aktuell, t = {}) {
   if (!info) return undefined;
-  const anteil = komma(Math.round(info.anteil * 10) / 10);
   const eigen = String(aktuell ?? "") !== info.zins;
-  const vorlage = eigen ? t.zinsEigenHinweis : t.zinsAutoHinweis;
-  if (!vorlage) return undefined;
-  return vorlage.replace("{anteil}", anteil).replace("{zins}", komma(info.zins));
+  return (eigen ? t.zinsEigenHinweis : t.zinsAutoHinweis) || undefined;
 }

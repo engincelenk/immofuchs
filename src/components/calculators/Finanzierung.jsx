@@ -15,6 +15,7 @@ import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { rate } from "../../utils/bands.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 import { zinsHinweis } from "../../utils/zinsStaffel.js";
+import { FinanzierungsAnteil } from "../ui/FinanzierungsAnteil.jsx";
 
 export default function Kredit() {
   const { d, set, t, tip, lang, aktivesObjekt, zinsAuto } = useApp();
@@ -58,6 +59,7 @@ export default function Kredit() {
               }
             />
           </Row>
+          <FinanzierungsAnteil />
           <Toggle
             checked={!!d.nkFinanzieren}
             onChange={(v) => set("nkFinanzieren", v)}

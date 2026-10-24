@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { finanzierungsanteil, interpoliereZins, zinsFuerDaten } from "./zinsStaffel.js";
+import {
+  aktiveStufe,
+  eigenkapitalFuerAnteil,
+  finanzierungsanteil,
+  interpoliereZins,
+  zinsFuerDaten,
+  zinsHinweis,
+  zinsInfo,
+} from "./zinsStaffel.js";
 import { MARKET_RATES, ZINS_ABSTAENDE, ZINS_NACH_FINANZIERUNG } from "../data.js";
 
 const PUNKTE = [
@@ -118,5 +126,65 @@ describe("data.js: Tabelle und Abstaende passen zusammen", () => {
   it("hat Stand-Angaben im selben Monat (der Monatsjob schreibt beide)", () => {
     expect(typeof ZINS_NACH_FINANZIERUNG.stand).toBe("string");
     expect(typeof ZINS_ABSTAENDE.stand).toBe("string");
+  });
+});
+
+describe("eigenkapitalFuerAnteil (Auswahl Finanzierungsanteil)", () => {
+  it("liefert das Eigenkapital, bei dem das Darlehen dem Anteil entspricht", () => {
+    // 320.000 Kaufpreis plus Garage: 80 % Darlehen -> 64.000 Eigenkapital
+    expect(eigenkapitalFuerAnteil(basis, 80)).toBe(64000);
+    expect(eigenkapitalFuerAnteil(basis, 60)).toBe(128000);
+    expect(eigenkapitalFuerAnteil(basis, 90)).toBe(32000);
+  });
+  it("trifft den Anteil nach dem Zuruecksetzen genau (Hin- und Rueckrechnung)", () => {
+    for (const anteil of [60, 70, 80, 90, 100]) {
+      const ek = eigenkapitalFuerAnteil(basis, anteil);
+      expect(finanzierungsanteil({ ...basis, eigenkapital: String(ek) })).toBeCloseTo(anteil, 1);
+    }
+  });
+  it("100 % bedeutet ohne finanzierte Nebenkosten 0 Eigenkapital", () => {
+    expect(eigenkapitalFuerAnteil(basis, 100)).toBe(0);
+  });
+  it("beruecksichtigt finanzierte Nebenkosten: dann braucht 80 % mehr Eigenkapital", () => {
+    const mit = { ...basis, nkFinanzieren: true };
+    const ek = eigenkapitalFuerAnteil(mit, 80);
+    expect(ek).toBeGreaterThan(64000);
+    expect(finanzierungsanteil({ ...mit, eigenkapital: String(ek) })).toBeCloseTo(80, 1);
+  });
+  it("kommt mit einer KfW-Foerderung zurecht", () => {
+    const kfw = { ...basis, kfwAktiv: true, kfwBetrag: "40000", wohneinheiten: "1" };
+    const ek = eigenkapitalFuerAnteil(kfw, 80);
+    expect(finanzierungsanteil({ ...kfw, eigenkapital: String(ek) })).toBeCloseTo(80, 1);
+  });
+  it("gibt null ohne Kaufpreis zurueck", () => {
+    expect(eigenkapitalFuerAnteil({ ...basis, kaufpreis: "", garage: "" }, 80)).toBeNull();
+  });
+});
+
+describe("aktiveStufe", () => {
+  it("erkennt Stuetzpunkte mit Toleranz, sonst null", () => {
+    expect(aktiveStufe(80, PUNKTE)).toBe(80);
+    expect(aktiveStufe(80.4, PUNKTE)).toBe(80);
+    expect(aktiveStufe(81.25, PUNKTE)).toBeNull();
+    expect(aktiveStufe(85, PUNKTE)).toBeNull();
+    expect(aktiveStufe(NaN, PUNKTE)).toBeNull();
+  });
+});
+
+describe("zinsHinweis: feste Texte ohne wechselnde Zahlen", () => {
+  const t = { zinsAutoHinweis: "Automatisch nach Eigenkapital", zinsEigenHinweis: "Eigener Wert (Automatik aus)" };
+  it("meldet automatisch, solange der automatische Zins im Feld steht", () => {
+    const info = zinsInfo({ ...basis, eigenkapital: "64000" }, {}, PUNKTE);
+    expect(zinsHinweis(info, info.zins, t)).toBe("Automatisch nach Eigenkapital");
+  });
+  it("meldet eigenen Wert, sobald der Zins abweicht, und nennt dabei keine Zahl", () => {
+    const info = zinsInfo({ ...basis, eigenkapital: "64000" }, {}, PUNKTE);
+    const text = zinsHinweis(info, "3.9", t);
+    expect(text).toBe("Eigener Wert (Automatik aus)");
+    expect(text).not.toMatch(/\d/);
+  });
+  it("gibt ohne Info oder ohne Text nichts zurueck", () => {
+    expect(zinsHinweis(null, "4.3", t)).toBeUndefined();
+    expect(zinsHinweis({ anteil: 80, zins: "4.32" }, "4.32", {})).toBeUndefined();
   });
 });

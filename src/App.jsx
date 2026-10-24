@@ -2,7 +2,7 @@ import { bereinigeAltObjektDaten } from "./utils/altObjekt.js";
 import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { MARKET_RATES, WERTSTEIGERUNG, AFA } from "./data.js";
 import { berechneNichtUml } from "./utils/rendite.js";
-import { zinsInfo } from "./utils/zinsStaffel.js";
+import { zinsInfo, eigenkapitalFuerAnteil } from "./utils/zinsStaffel.js";
 import { AppProviders } from "./context/AppProviders.jsx";
 import { T, LANGS } from "./i18n/translations.js";
 import { TIPS } from "./i18n/tips.js";
@@ -581,6 +581,20 @@ export default function App() {
     ],
   );
   const zinsAutoWert = zinsAuto?.zins ?? null;
+  // Auswahl "Finanzierungsanteil" (components/ui/FinanzierungsAnteil.jsx): setzt das Eigenkapital so, dass
+  // das Bankdarlehen dem Anteil entspricht, und schaltet die Zins-Automatik wieder ein. Eine einzige
+  // State-Aenderung, damit Eigenkapital und Zins nie auseinanderlaufen.
+  const setzeFinanzierungsanteil = useCallback(
+    (anteil) => {
+      const ek = eigenkapitalFuerAnteil(data, anteil);
+      if (ek == null) return;
+      const info = zinsInfo({ ...data, eigenkapital: String(ek) });
+      zinsTouchedRef.current = false;
+      if (info) zinsAutoRef.current = info.zins;
+      setData((p) => ({ ...p, eigenkapital: String(ek), ...(info ? { zinssatz: info.zins } : {}) }));
+    },
+    [data],
+  );
   useEffect(() => {
     if (zinsAutoWert == null) return;
     zinsAutoRef.current = zinsAutoWert;
@@ -689,6 +703,7 @@ export default function App() {
         d: data,
         set,
         zinsAuto,
+        setzeFinanzierungsanteil,
         mietQuelleRef,
         t,
         lang,
