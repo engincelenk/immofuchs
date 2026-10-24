@@ -89,14 +89,14 @@ export const actionBtnStyle = {
 // ist bewusst neutral, sie ist ein legitimer, jederzeit erlaubter Schritt.
 export const dangerBtnStyle = {
   ...actionBtnStyle,
-  color: "#c0392b",
+  color: "var(--bad-tx)",
   border: "1px solid #e8b4ad",
 };
 
 export const successBannerStyle = {
   background: "#E7F3EA",
   border: "1px solid #2d8a4e",
-  color: "#1f6b3a",
+  color: "var(--ok-tx)",
   borderRadius: 8,
   padding: "8px 12px",
   fontSize: 12,

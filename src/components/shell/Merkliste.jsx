@@ -13,6 +13,7 @@ import { ASSISTANT_FIELDS, tabZuRechner } from "../../utils/assistantContext.js"
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { apiFetch } from "../../utils/apiBase.js";
 import { Sheet } from "../ui/Sheet.jsx";
+import { Emo } from "../ui/Icon.jsx";
 import { LazyPanelFallback } from "../ui/LazyPanelFallback.jsx";
 import { ObjektDetail } from "../dashboard/ObjektDetail.jsx";
 import { scoreBadgeColor, scoreBadgeText } from "../dashboard/dashboardUtils.js";
@@ -775,7 +776,7 @@ export function SaveBtn({ tab }) {
         >
           <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
         </svg>
-        {limitReached ? `👑 ${at.trialLockedCta}` : t.saveBtnLabel || "Speichern"}
+        {limitReached ? `${at.trialLockedCta}` : t.saveBtnLabel || "Speichern"}
       </button>
       {showUpgrade && (
         <Suspense fallback={<LazyPanelFallback />}>
@@ -1497,7 +1498,7 @@ export function Merkliste() {
                 onClick={() => setAnsicht(id)}
                 style={ansicht === id ? segmentActiveStyle : segmentStyle}
               >
-                {icon}
+                <Emo e={icon} />
               </button>
             ))}
           </div>
@@ -1559,7 +1560,7 @@ export function Merkliste() {
             fontFamily: "inherit",
           }}
         >
-          👑 {acct.merklisteTrialVoll.replace("{limit}", String(savedObjectsFreeLimit))}
+          {acct.merklisteTrialVoll.replace("{limit}", String(savedObjectsFreeLimit))}
         </button>
       )}
       {showUpgrade && (
@@ -1766,7 +1767,9 @@ export function Merkliste() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    <span aria-hidden="true">{rechnerInfo.icon}</span>
+                    <span aria-hidden="true" style={{ display: "inline-flex", marginRight: 4 }}>
+                      <Emo e={rechnerInfo.icon} size={14} />
+                    </span>
                     {rechnerInfo.label}
                   </span>
                 ) : (
@@ -1797,7 +1800,7 @@ export function Merkliste() {
                 // Formel liegt im jeweiligen Rechner, ein Nachbau riskiert
                 // eine leise falsche Zahl neben der echten.
                 <div style={{ fontSize: 12.5, color: "var(--ch)", lineHeight: 1.5 }}>
-                  {rechnerInfo.icon} {rechnerInfo.label} · {obj.date}
+                  {rechnerInfo.label} · {obj.date}
                 </div>
               ) : kennzahlen?.verfuegbar ? (
                 <ObjektKPIs kennzahlen={kennzahlen} t={t} locale={locale} />

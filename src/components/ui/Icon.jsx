@@ -82,6 +82,88 @@ const PFADE = {
       <path d="M12 10v4M12 16.8v.2" />
     </>
   ),
+  muenze: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M14.8 9.4a3.2 3.2 0 1 0 0 5.2M8.6 11h5M8.6 13h5" />
+    </>
+  ),
+  kalender: (
+    <>
+      <rect x="4" y="5.5" width="16" height="14.5" rx="2" />
+      <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
+    </>
+  ),
+  buch: (
+    <>
+      <path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H19v15H6.5A1.5 1.5 0 0 0 5 20.5z" />
+      <path d="M5 5.5v15M9 8h6" />
+    </>
+  ),
+  schloss: (
+    <>
+      <rect x="5.5" y="10.5" width="13" height="9.5" rx="2" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+    </>
+  ),
+  werkzeug: (
+    <>
+      <path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L4.5 16.3a1.8 1.8 0 0 0 2.5 2.5l4.8-4.8a4 4 0 0 0 5.2-5.4l-2.4 2.4-2.1-.6-.6-2.1z" />
+    </>
+  ),
+  dokument: (
+    <>
+      <path d="M7 3.5h7l4 4V20.5H7z" />
+      <path d="M14 3.5v4h4M9.5 12h6M9.5 15.5h6" />
+    </>
+  ),
+  gluehbirne: (
+    <>
+      <path d="M9.5 18h5M10.5 21h3" />
+      <path d="M12 3.5a5.5 5.5 0 0 0-3.2 10c.7.5 1.2 1.3 1.2 2.2h4c0-.9.5-1.7 1.2-2.2A5.5 5.5 0 0 0 12 3.5z" />
+    </>
+  ),
+  glocke: (
+    <>
+      <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z" />
+      <path d="M10 20.5h4" />
+    </>
+  ),
+  rechner: (
+    <>
+      <rect x="5.5" y="3.5" width="13" height="17" rx="2" />
+      <path d="M8.5 7.5h7M9 12h.01M12 12h.01M15 12h.01M9 15.5h.01M12 15.5h.01M15 15.5h.01" />
+    </>
+  ),
+  waage: (
+    <>
+      <path d="M12 4v16M7 20h10M5 7.5h14" />
+      <path d="M5 7.5 2.8 13a2.6 2.6 0 0 0 4.4 0zM19 7.5 16.8 13a2.6 2.6 0 0 0 4.4 0z" />
+    </>
+  ),
+  aktualisieren: (
+    <>
+      <path d="M19 8.5A7.5 7.5 0 0 0 5.5 10M5 15.5A7.5 7.5 0 0 0 18.5 14" />
+      <path d="M19.5 4v4.5H15M4.5 20v-4.5H9" />
+    </>
+  ),
+  blitz: (
+    <>
+      <path d="M13 3.5 6 13.5h5l-1 7 7-10h-5z" />
+    </>
+  ),
+  sonne: (
+    <>
+      <circle cx="12" cy="12" r="3.8" />
+      <path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18" />
+    </>
+  ),
+  mail: (
+    <>
+      <rect x="3.5" y="6" width="17" height="12.5" rx="2" />
+      <path d="m4 7.5 8 6 8-6" />
+    </>
+  ),
   haken: (
     <>
       <circle cx="12" cy="12" r="8" />
@@ -115,12 +197,50 @@ export const EMOJI_ICON = {
   "⚠": "warnung",
   "✅": "haken",
   "ℹ️": "info",
+  "💰": "muenze",
+  "💸": "muenze",
+  "💶": "muenze",
+  "📅": "kalender",
+  "📚": "buch",
+  "🔒": "schloss",
+  "🔧": "werkzeug",
+  "📄": "dokument",
+  "📝": "dokument",
+  "📎": "dokument",
+  "💡": "gluehbirne",
+  "🔔": "glocke",
+  "🧮": "rechner",
+  "📐": "rechner",
+  "⚖️": "waage",
+  "⚖": "waage",
+  "🔄": "aktualisieren",
+  "⚡": "blitz",
+  "🔋": "blitz",
+  "☀️": "sonne",
+  "📧": "mail",
+  "🏛️": "bank",
+  "🏛": "bank",
+  "🏬": "haus",
 };
 
 /** Icon-Name zu einem Namen oder einem bisherigen Emoji; null, wenn es dazu kein Icon gibt. */
 export function iconName(wert) {
   if (wert && PFADE[wert]) return wert;
   return EMOJI_ICON[wert] ?? null;
+}
+
+const BILD = /[\u{1F300}-\u{1FAFF}☀-➿⭐⬆]/u;
+const TEXTZEICHEN = /^[✓✔✕✗✦★☰➤✎➕]/u;
+
+/**
+ * Ein bisheriges Emoji als Linien-Icon, wenn es dazu eines gibt. Ohne Icon: Bild-Emoji entfallen (nichts
+ * Buntes mehr), schlichte Textzeichen wie "☰" oder "✓" bleiben stehen.
+ */
+export function Emo({ e, size = 16, style }) {
+  if (iconName(e)) return <Icon name={e} size={size} style={style} />;
+  const s = String(e ?? "");
+  if (s && BILD.test(s) && !TEXTZEICHEN.test(s)) return null;
+  return s || null;
 }
 
 export function Icon({ name, size = 18, style }) {

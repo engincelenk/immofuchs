@@ -119,7 +119,7 @@ export function StressTabelle({ stress, jahre }) {
       {stress.anschlussHinweis && (
         <div style={{ marginTop: 10 }}>
           <p style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.6 }}>
-            ⚠{" "}
+            {" "}
             {tpl(
               t.stressAnschlussHint ||
                 "Bei einer Anschlussfinanzierung von {zins} % wird dein Cashflow negativ.",

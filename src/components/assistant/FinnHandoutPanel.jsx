@@ -116,7 +116,7 @@ export function FinnHandoutPanel({ analyse, t, lang = "de" }) {
       >
         <span className="if-hnd-head-txt">
           <span className="if-hnd-head-titel">
-            📋 {h.titel} · {analyse.verdictLabel}
+            {h.titel} · {analyse.verdictLabel}
           </span>
           <span className="if-hnd-head-sub">{subZeile}</span>
         </span>
@@ -247,7 +247,7 @@ export function FinnHandoutPanel({ analyse, t, lang = "de" }) {
             disabled={auswahl.size === 0}
             onClick={handoutOeffnen}
           >
-            {auswahl.size === 0 ? h.pdfLeer : `${account?.isPro ? "" : "👑 "}${h.pdfBtn}`}
+            {auswahl.size === 0 ? h.pdfLeer : `${account?.isPro ? "" : ""}${h.pdfBtn}`}
           </button>
           {fehler && <div className="if-hnd-fehler">{fehler}</div>}
         </div>

@@ -364,7 +364,7 @@ export function AdminUsersView({ currentUser }) {
         )}
       </form>
 
-      {error && <div style={{ color: "#c0392b", fontSize: 13, marginBottom: 10 }}>{error}</div>}
+      {error && <div style={{ color: "var(--bad-tx)", fontSize: 13, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ overflowX: "auto" }}>
         <table style={tableStyle}>
@@ -411,7 +411,7 @@ export function AdminUsersView({ currentUser }) {
                       borderRadius: 20,
                       color: "#fff",
                       whiteSpace: "nowrap",
-                      background: u.accountStatus === "SUSPENDED" ? "#c0392b" : "#22c55e",
+                      background: u.accountStatus === "SUSPENDED" ? "#B3402A" : "#2F6B4F",
                     }}
                   >
                     {u.accountStatus === "SUSPENDED" ? "Gesperrt" : "Aktiv"}

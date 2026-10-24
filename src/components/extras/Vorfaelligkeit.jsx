@@ -12,6 +12,7 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
+import { Icon } from "../ui/Icon.jsx";
 
 export function Vorfaelligkeit() {
   const { d, set, t, lang, aktivesObjekt } = useApp();
@@ -342,7 +343,9 @@ export function Vorfaelligkeit() {
         <div className={`res-pane ${view === "result" ? "act" : ""}`}>
           {!R ? (
             <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ch)" }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>✂️</div>
+              <div style={{ marginBottom: 12, opacity: 0.4 }}>
+                <Icon name="bank" size={48} />
+              </div>
               <div style={{ fontSize: 14 }}>{vt.emptyTitle}</div>
               <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>{vt.emptyMin}</div>
             </div>

@@ -76,8 +76,8 @@ export function MascotFab({
         aria-label={label}
         style={{
           position: "relative",
-          width: 68,
-          height: 70,
+          width: 54,
+          height: 56,
           background: "transparent",
           border: "none",
           cursor: "pointer",
@@ -100,24 +100,19 @@ export function MascotFab({
             decoding="async"
             fetchpriority="high"
             style={{
-              width: 64,
-              height: 70,
+              width: 50,
+              height: 56,
               objectFit: "contain",
-              filter: loaded ? "drop-shadow(0 5px 10px rgba(20,20,20,.28))" : "none",
+              filter: "none",
             }}
           />
-          {loaded && (
-            <span className="if-mascot-fx" aria-hidden="true">
-              <span className="if-mascot-band" />
-            </span>
-          )}
-        </span>
+                  </span>
       </button>
       {/* ACHTUNG: in diesem Block keine Backticks verwenden - sie beenden das
           Template-Literal, der Build laeuft trotzdem durch und es kracht erst
           zur Laufzeit (Vorfall 2026-07-22). */}
       <style>{`
-        .if-mascot-motion{display:block;position:relative;width:64px;height:70px}
+        .if-mascot-motion{display:block;position:relative;width:50px;height:56px}
         .if-mascot-fab-img{display:block}
 
         /* Stromfluss: ein Leuchtband wandert durch die Figur. Die Effektebene

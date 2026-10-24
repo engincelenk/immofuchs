@@ -30,7 +30,7 @@ const STATUS_FILTERS = [
 
 const PAYMENT_STATE = {
   ok: { text: "OK", color: "var(--ok-tx)" },
-  failed: { text: "Fehlgeschlagen", color: "#c0392b" },
+  failed: { text: "Fehlgeschlagen", color: "var(--bad-tx)" },
   none: { text: "Noch keine", color: "#8A8A80" },
 };
 
@@ -91,7 +91,7 @@ export function AdminSubscriptionsView() {
         </div>
       </div>
 
-      {error && <div style={{ color: "#c0392b", fontSize: 13, marginBottom: 10 }}>{error}</div>}
+      {error && <div style={{ color: "var(--bad-tx)", fontSize: 13, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ overflowX: "auto" }}>
         <table style={tableStyle}>

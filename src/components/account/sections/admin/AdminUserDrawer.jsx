@@ -186,7 +186,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
         </div>
 
         {loading && <p style={{ ...mutedTextStyle, marginTop: 16 }}>Wird geladen …</p>}
-        {loadError && <p style={{ color: "#c0392b", fontSize: 12.5, marginTop: 16 }}>{loadError}</p>}
+        {loadError && <p style={{ color: "var(--bad-tx)", fontSize: 12.5, marginTop: 16 }}>{loadError}</p>}
 
         {detail && (
           <>
@@ -488,7 +488,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
                   background: "var(--cc)",
                 }}
               >
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: "#c0392b", marginBottom: 6 }}>Danger Zone</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--bad-tx)", marginBottom: 6 }}>Danger Zone</div>
                 <p style={{ ...mutedTextStyle, marginTop: 0 }}>
                   Löscht das Konto endgültig samt gespeicherter Objekte und Notizen. Ein laufendes Abo wird sofort
                   bei Stripe gekündigt. Diese Aktion lässt sich nicht rückgängig machen.
@@ -570,7 +570,7 @@ function StatusBadge({ status }) {
         padding: "2px 8px",
         borderRadius: 20,
         color: "#fff",
-        background: suspended ? "#c0392b" : "#22c55e",
+        background: suspended ? "#B3402A" : "#2F6B4F",
       }}
     >
       {suspended ? "Gesperrt" : "Aktiv"}

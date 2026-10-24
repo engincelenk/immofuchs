@@ -29,6 +29,7 @@ import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 import { regionalPreis, regionalFakten } from "../../utils/regionalpreis.js";
 import { useRegionaldaten } from "../../utils/useRegionaldaten.js";
+import { Emo } from "../ui/Icon.jsx";
 import {
   huelleFoerderung,
   heizungFoerderung,
@@ -603,7 +604,7 @@ export default function Sanier() {
                 paddingLeft: 4,
               }}
             >
-              🏦 Landesbank: {LAND_F[d.bundesland] || "BEG"} — {t.sanLandesbankHint}
+              Landesbank: {LAND_F[d.bundesland] || "BEG"} — {t.sanLandesbankHint}
             </div>
           )}
           <button
@@ -714,11 +715,11 @@ export default function Sanier() {
               }}
             >
               <span style={{ color: "var(--ch)" }}>
-                🏠 {t.eKl}: <b style={{ color: "var(--ct)" }}>{getEkl(d.baujahr)}</b>
+                {t.eKl}: <b style={{ color: "var(--ct)" }}>{getEkl(d.baujahr)}</b>
               </span>
               {R.selbst && R.klimaOk && klimabonusAktuell() > 0 ? (
                 <span style={{ color: "var(--ok-tx)", fontWeight: 600 }}>
-                  · ✅ KfW-Klimabonus {klimabonusAktuell()} %
+                  · KfW-Klimabonus {klimabonusAktuell()} %
                 </span>
               ) : (
                 <span style={{ color: "var(--ch)" }}>
@@ -868,7 +869,7 @@ export default function Sanier() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>{m.em}</span>
+                  <Emo e={m.em} />
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{m.n}</div>
                     {bauteilStatus[m.k] && (
@@ -1009,7 +1010,7 @@ export default function Sanier() {
                       gap: 6,
                     }}
                   >
-                    <span>📚 {t[m.src] || m.src}</span>
+                    <span>{t[m.src] || m.src}</span>
                     {m.capped && (
                       <span
                         style={{
@@ -1022,7 +1023,7 @@ export default function Sanier() {
                           border: "1px solid var(--warn-bd)",
                         }}
                       >
-                        ⚠ Cap
+                        Cap
                       </span>
                     )}
                   </div>
@@ -1063,7 +1064,7 @@ export default function Sanier() {
                 </div>
                 {R.tFoLand > 0 && (
                   <div>
-                    <div style={{ fontSize: 9, opacity: 0.9 }}>🏦 Landesbonus*</div>
+                    <div style={{ fontSize: 9, opacity: 0.9 }}>Landesbonus*</div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: "var(--on-ca)" }}>
                       –{fmtE(R.tFoLand)}
                     </div>
@@ -1081,7 +1082,7 @@ export default function Sanier() {
                 </div>
               </div>
             ) : (
-              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 10 }}>👈 {t.sMassnahmen}</div>
+              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 10 }}>{t.sMassnahmen}</div>
             )}
           </div>
 
@@ -1097,7 +1098,7 @@ export default function Sanier() {
                 border: "1px solid var(--cb)",
               }}
             >
-              🏛️ {t.foe} (BAFA/KfW) · {t.check}:{" "}
+              {t.foe} (BAFA/KfW) · {t.check}:{" "}
               <b style={{ color: "var(--ct)" }}>{LAND_F[d.bundesland] || "BEG"}</b>
               {R.tFoLand > 0 && (
                 <span style={{ marginLeft: 8, color: "var(--info-tx)" }}>
@@ -1120,11 +1121,11 @@ export default function Sanier() {
               <div
                 style={{ fontSize: 11, fontWeight: 600, color: "var(--warn-tx)", marginBottom: 6 }}
               >
-                ⚖️ {t.mR} — GEG
+                {t.mR} — GEG
               </div>
               {R.gegReq.map((g, i) => (
                 <div key={i} style={{ display: "flex", gap: 6, marginBottom: 4, fontSize: 11 }}>
-                  <span style={{ flexShrink: 0 }}>{g.sev === "warn" ? "⚠️" : "ℹ️"}</span>
+                  <span style={{ flexShrink: 0 }}>{g.sev === "warn" ? "" : "ℹ️"}</span>
                   <span style={{ color: "var(--warn-tx)" }}>
                     <b>{g.law}:</b> {g.text}
                   </span>
@@ -1163,7 +1164,7 @@ export default function Sanier() {
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 14 }}>{r.em}</span>
+                          <Emo e={r.em} size={14} />
                           <div>
                             <div style={{ fontSize: 12, fontWeight: 600 }}>{r.n}</div>
                             <div style={{ fontSize: 10, color: "var(--ch)" }}>{r.det}</div>
@@ -1208,7 +1209,7 @@ export default function Sanier() {
                         </div>
                       </div>
                       <div style={{ fontSize: 9, color: "var(--ch)", marginTop: 4 }}>
-                        📚 {t[r.src] || r.src} · {t.sNetK}: {fmtE(r.net)}
+                        {t[r.src] || r.src} · {t.sNetK}: {fmtE(r.net)}
                       </div>
                     </div>
                   ))}
@@ -1361,7 +1362,7 @@ export default function Sanier() {
                     fontSize: 11,
                   }}
                 >
-                  <span style={{ fontSize: 14 }}>📋</span>
+                  <span style={{ fontSize: 14 }}></span>
                   <span style={{ fontWeight: 600, color: "var(--ok-tx)" }}>
                     {t.sanIsfpActive.split("—")[0].trim()}
                   </span>
@@ -1449,7 +1450,7 @@ export default function Sanier() {
               </div>
 
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>💡 {t.sBerat}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>{t.sBerat}</div>
                 <Ins emoji="🔄" text={t.sanTip1} type="info" />
                 {d.sanIsfp ? (
                   <Ins emoji="✅" text={t.sanIsfpTip} type="good" />

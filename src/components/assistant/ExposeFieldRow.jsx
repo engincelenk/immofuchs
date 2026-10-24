@@ -5,6 +5,7 @@
 // der Zustand haengt also nicht an Farbe oder Symbol allein.
 
 import { fuelle } from "../../i18n/expose.js";
+import { Emo } from "../ui/Icon.jsx";
 
 const ICONS = {
   sicher: "✅",
@@ -27,7 +28,7 @@ export function ExposeFieldRow({ zeile, t, ausgewaehlt, onToggle }) {
   return (
     <div className={`if-exp-row${zeile.gefunden ? "" : " leer"}`}>
       <span className="if-exp-icon" role="img" aria-label={statusText} title={statusText}>
-        {ICONS[zeile.status]}
+        <Emo e={ICONS[zeile.status]} />
       </span>
       <div className="if-exp-feld">
         <div className="if-exp-label" id={anzeigeId}>
@@ -37,7 +38,7 @@ export function ExposeFieldRow({ zeile, t, ausgewaehlt, onToggle }) {
         {zeile.konflikt && (
           <div className="if-exp-konflikt">{fuelle(t.aktuell, { wert: zeile.bestehend })}</div>
         )}
-        {zeile.warnung && <div className="if-exp-warnung">⚠️ {zeile.warnung}</div>}
+        {zeile.warnung && <div className="if-exp-warnung">{zeile.warnung}</div>}
         {(zeile.status === "pruefen" || zeile.status === "unsicher") && !zeile.warnung && (
           <div className="if-exp-hinweis">{statusText}</div>
         )}

@@ -148,9 +148,18 @@ export function InvestmentCheckRadar({ R }) {
           marginTop: 4,
         }}
       >
-        <span>🟢 {t.badgeGut || "Gut"}</span>
-        <span>🟡 {t.badgeOkay || "Grenzwertig"}</span>
-        <span>🔴 {t.badgeKrit || "Kritisch"}</span>
+        <span>
+          <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#2F6B4F", marginRight: 5 }} />
+          {t.badgeGut || "Gut"}
+        </span>
+        <span>
+          <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#7A600E", marginRight: 5 }} />
+          {t.badgeOkay || "Grenzwertig"}
+        </span>
+        <span>
+          <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#B3402A", marginRight: 5 }} />
+          {t.badgeKrit || "Kritisch"}
+        </span>
       </div>
       {sel !== null && (
         <div

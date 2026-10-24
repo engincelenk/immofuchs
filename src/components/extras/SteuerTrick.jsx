@@ -10,6 +10,7 @@ import { Tip } from "../ui/Tip.jsx";
 import { SaveBtn } from "../shell/Merkliste.jsx";
 import { BrandIcon } from "../ui/BrandIcon.jsx";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
+import { Emo } from "../ui/Icon.jsx";
 
 // Euro-Eingabe mit Tausenderpunkten in der Anzeige (Nutzer-Vorgabe
 // 2026-08-28, "10000" -> "10.000") - dieser Rechner nutzt (anders als die
@@ -415,7 +416,9 @@ export function SteuerTrick() {
                       borderTop: i > 0 ? "1px solid var(--cb)" : "none",
                     }}
                   >
-                    <div style={{ fontSize: 18, flexShrink: 0, lineHeight: 1.4 }}>{w.icon}</div>
+                    <div style={{ flexShrink: 0, lineHeight: 1.4, color: "var(--ch)" }}>
+                      <Emo e={w.icon} size={18} />
+                    </div>
                     <div>
                       <div
                         style={{

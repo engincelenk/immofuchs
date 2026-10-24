@@ -1,6 +1,7 @@
 import { useApp } from "../../context/AppContext.jsx";
 import { cardStyle, primaryBtnStyle } from "./checkoutStyles.js";
 import { purchasePlanLabelKey } from "./planPricing.js";
+import { Emo } from "../ui/Icon.jsx";
 
 // Inhalt der Kauf-Bestaetigung (Vorbild: Screenshot-Konfetti-Screen, Farbe
 // --ca statt Navy). Bewusst OHNE eigenes Fenster-Drumherum, weil derselbe
@@ -114,7 +115,9 @@ export function PurchaseConfirmation({ t, account, plan, onDone }) {
 function TimelineItem({ icon, title, body }) {
   return (
     <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-      <span style={{ fontSize: 16, flexShrink: 0 }}>{icon}</span>
+      <span style={{ flexShrink: 0, display: "inline-flex", color: "var(--ch)" }}>
+        <Emo e={icon} />
+      </span>
       <div>
         <div style={{ fontSize: 12.5, fontWeight: 700 }}>{title}</div>
         <div style={{ fontSize: 11.5, color: "var(--ch)" }}>{body}</div>

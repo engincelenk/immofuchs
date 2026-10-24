@@ -60,13 +60,13 @@ export function AdminBackupSection() {
       : "nicht eingerichtet (auf dieser Umgebung läuft keine Sicherung)";
   } else if (!status) {
     headline = "noch keine Sicherung vorhanden";
-    color = "#c0392b";
+    color = "var(--bad-tx)";
   } else if (!status.ok) {
     headline = `letzter Lauf fehlgeschlagen (${formatTime(status.at)}): ${status.error}`;
-    color = "#c0392b";
+    color = "var(--bad-tx)";
   } else {
     headline = `letzte Sicherung ${formatTime(status.at)} · ${formatSize(status.bytesEncrypted)} verschlüsselt · ${status.rows} Datensätze`;
-    color = stale ? "#c0392b" : "#22c55e";
+    color = stale ? "var(--bad-tx)" : "var(--ok-tx)";
   }
 
   return (
@@ -75,7 +75,7 @@ export function AdminBackupSection() {
       control={
         state.configured && (
           <button type="button" style={secondaryBtnStyle} disabled={busy} onClick={handleRun}>
-            {busy ? "Sichert …" : "💾 Jetzt sichern"}
+            {busy ? "Sichert …" : "Jetzt sichern"}
           </button>
         )
       }

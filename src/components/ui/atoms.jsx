@@ -432,7 +432,7 @@ export function Sec({ title, icon }) {
       }}
     >
       {/* Gestaltung "Ruhig": ein Icon-Name (z. B. "pin") zeichnet ein Linien-Icon in Grau, ein Emoji bleibt wie bisher. */}
-      {typeof icon === "string" && /^[a-z]+$/.test(icon) && iconName(icon) ? (
+      {typeof icon === "string" && iconName(icon) ? (
         <span style={{ color: "var(--ch)", display: "inline-flex" }}>
           <Icon name={icon} size={20} />
         </span>
@@ -480,27 +480,6 @@ export function KPI({ label, value, sub, accent }) {
   );
 }
 
-export function Ins({ emoji, text, type = "info" }) {
-  const bg = { info: "var(--info-bg)", good: "var(--ok-bg)", warn: "var(--warn-bg)", bad: "var(--bad-bg)" }[type];
-  const tc = { info: "var(--info-tx)", good: "var(--ok-tx)", warn: "var(--warn-tx)", bad: "var(--bad-tx)" }[type];
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 8,
-        alignItems: "flex-start",
-        padding: "10px 12px",
-        background: bg,
-        borderRadius: 8,
-        marginBottom: 6,
-      }}
-    >
-      <span style={{ fontSize: 14, flexShrink: 0 }}>{emoji}</span>
-      <span style={{ fontSize: 12, color: tc, lineHeight: 1.5 }}>{text}</span>
-    </div>
-  );
-}
-
 // Gestaltung "Ruhig" (2026-10-24): Hinweis ohne Farbflaeche. Neutrale Flaeche, schmaler Streifen links in der
 // Statusfarbe, normale Schriftfarbe, kleines Linien-Icon. `emoji` versteht auch die bisherigen Emoji.
 export function InsRuhig({ emoji, text, type = "info" }) {
@@ -529,6 +508,9 @@ export function InsRuhig({ emoji, text, type = "info" }) {
 
 // Gestaltung "Ruhig": Kennzahl ohne getoente Karte und ohne dicken Farbbalken. Der Wert bleibt in
 // Textfarbe, die Bewertung zeigt nur ein Punkt und die Bewertungszeile in der Statusfarbe.
+// Seit 2026-10-24 ueberall die ruhige Variante (neutrale Flaeche, Statusstreifen, Linien-Icon).
+export const Ins = InsRuhig;
+
 export function AmpelKPIRuhig({ label, value, status, statusLabel, tip, color }) {
   const tx = color === "green" ? "var(--ok-tx)" : color === "yellow" ? "var(--warn-tx)" : "var(--bad-tx)";
   return (

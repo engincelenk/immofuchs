@@ -12,7 +12,7 @@
 export const EXPOSE_T = {
   de: {
     attachAria: "Exposé oder Screenshots hochladen",
-    chipUpload: "📄 Exposé hochladen",
+    chipUpload: "Exposé hochladen",
     dateiWaehlen: "Exposé oder Screenshots wählen",
     entfernenAria: "Bild entfernen",
     bilderGewaehlt: "{n} Datei(en) ausgewählt",
@@ -175,7 +175,7 @@ export const EXPOSE_T = {
 
   en: {
     attachAria: "Upload listing or screenshots",
-    chipUpload: "📄 Upload listing",
+    chipUpload: "Upload listing",
     dateiWaehlen: "Choose listing or screenshots",
     entfernenAria: "Remove image",
     bilderGewaehlt: "{n} file(s) selected",
@@ -335,7 +335,7 @@ export const EXPOSE_T = {
 
   tr: {
     attachAria: "İlan veya ekran görüntüsü yükle",
-    chipUpload: "📄 İlanı yükle",
+    chipUpload: "İlanı yükle",
     dateiWaehlen: "İlan veya ekran görüntüsü seç",
     entfernenAria: "Görseli kaldır",
     bilderGewaehlt: "{n} dosya seçildi",
@@ -491,7 +491,7 @@ export const EXPOSE_T = {
 
   zh: {
     attachAria: "上传房源或截图",
-    chipUpload: "📄 上传房源资料",
+    chipUpload: "上传房源资料",
     dateiWaehlen: "选择房源或截图",
     entfernenAria: "移除图片",
     bilderGewaehlt: "已选择 {n} 个文件",
@@ -646,7 +646,7 @@ export const EXPOSE_T = {
 
   hi: {
     attachAria: "लिस्टिंग या स्क्रीनशॉट अपलोड करें",
-    chipUpload: "📄 एक्सपोज़े अपलोड करें",
+    chipUpload: "एक्सपोज़े अपलोड करें",
     dateiWaehlen: "लिस्टिंग या स्क्रीनशॉट चुनें",
     entfernenAria: "छवि हटाएँ",
     bilderGewaehlt: "{n} फ़ाइल चुनी गई",

@@ -61,7 +61,7 @@ function Kontingent({ k }) {
     return <p style={mutedTextStyle}>Kontingent-Warnung ist ausgeschaltet (KI_KAPAZITAET_TAG = 0).</p>;
   }
   const farbe = k.anteil >= 1 ? "var(--bad-tx)" : k.anteil >= k.warnAb ? "var(--warn-tx)" : "var(--ok-tx)";
-  const balken = k.anteil >= 1 ? "#ef4444" : k.anteil >= k.warnAb ? "#f59e0b" : "#22c55e";
+  const balken = k.anteil >= 1 ? "var(--bad-tx)" : k.anteil >= k.warnAb ? "var(--warn-tx)" : "var(--ok-tx)";
   return (
     <div style={{ background: "var(--cc)", border: "1px solid var(--cb)", borderRadius: 12, padding: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", fontSize: 13 }}>

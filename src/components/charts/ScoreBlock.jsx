@@ -331,7 +331,7 @@ export function ScoreBlock({ score }) {
                 marginBottom: 6,
               }}
             >
-              ⚠ {txt}
+              {txt}
             </div>
           ))}
         </div>
@@ -396,7 +396,7 @@ export function ScoreBlock({ score }) {
                         gap: 8,
                       }}
                     >
-                      <span style={{ fontSize: 16 }}>{good ? "✓" : "⚠"}</span>
+                      <span style={{ fontSize: 16 }}>{good ? "✓" : ""}</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ct)" }}>
                         {m.title}
                       </span>

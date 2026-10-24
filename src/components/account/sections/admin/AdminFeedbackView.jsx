@@ -34,7 +34,7 @@ export function AdminFeedbackView() {
         Freitext-Feedback aus „Mein Konto" → Hilfe, neueste zuerst.
       </p>
 
-      {error && <div style={{ color: "#c0392b", fontSize: 13 }}>{error}</div>}
+      {error && <div style={{ color: "var(--bad-tx)", fontSize: 13 }}>{error}</div>}
       {!data && !error && <div style={mutedTextStyle}>Wird geladen …</div>}
       {data && data.entries.length === 0 && <div style={mutedTextStyle}>Noch kein Feedback.</div>}
 

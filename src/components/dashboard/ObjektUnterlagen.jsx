@@ -150,7 +150,7 @@ export function ObjektUnterlagen({ objektId }) {
               }}
             >
               <span aria-hidden="true" style={{ fontSize: 17 }}>
-                {f.typ === "application/pdf" ? "📄" : "🖼️"}
+                {f.typ === "application/pdf" ? "" : ""}
               </span>
               <button
                 type="button"
@@ -292,7 +292,7 @@ export function ObjektLage({ data, titel, eingebettet = false }) {
             `${tx("lageMaps", "In Google Maps öffnen")} ↗`
           ) : (
             <>
-              <span aria-hidden="true">📍</span> {tx("lageMaps", "In Google Maps öffnen")}
+              <span aria-hidden="true"></span> {tx("lageMaps", "In Google Maps öffnen")}
             </>
           )}
         </a>
@@ -415,7 +415,7 @@ export function ObjektOrte({ objekte, onOeffnen }) {
                 textDecoration: "none",
               }}
             >
-              📍 Auf der Karte öffnen
+              Auf der Karte öffnen
             </a>
           )}
         </div>

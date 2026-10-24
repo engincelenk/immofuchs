@@ -136,7 +136,7 @@ export function SelbsttraegerCheck({ R }) {
         }}
       >
         <span style={{ flexShrink: 0, fontSize: 14, lineHeight: 1.4 }}>
-          {isJa ? "➕" : taxPositive ? "⚠️" : "ℹ️"}
+          {isJa ? "➕" : taxPositive ? "" : "ℹ️"}
         </span>
         <div style={{ fontSize: 12, fontWeight: 500, color: taxText, lineHeight: 1.5 }}>
           {taxNote}

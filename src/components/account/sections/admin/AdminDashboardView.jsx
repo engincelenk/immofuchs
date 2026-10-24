@@ -29,7 +29,7 @@ const ACTIVITY_KINDS = {
   // Kartenhintergrund ist festes Marineblau im Dark Mode kaum lesbar.
   "user.registered": { label: "Neuer Nutzer registriert", color: "var(--primary-tx)" },
   "subscription.started": { label: "Subscription abgeschlossen", color: "var(--ok-tx)" },
-  "subscription.canceled": { label: "Subscription gekündigt", color: "#c0392b" },
+  "subscription.canceled": { label: "Subscription gekündigt", color: "var(--bad-tx)" },
   "admin.action": { label: "Admin-Aktion", color: "var(--ca-dk)" },
 };
 
@@ -130,7 +130,7 @@ export function AdminDashboardView() {
               disabled={testEmailsConfirm}
               onClick={() => setTestEmailsConfirm(true)}
             >
-              📧 Alle E-Mail-Vorlagen testen
+              Alle E-Mail-Vorlagen testen
             </button>
           }
           below={

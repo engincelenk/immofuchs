@@ -21,6 +21,7 @@ import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
+import { Icon } from "../ui/Icon.jsx";
 
 // Realitaetscheck fuer die selbst geschaetzte Vergleichsmiete (Backlog B.3),
 // dasselbe Ampel-Muster wie RegionalpreisHinweis im Renditerechner - nur
@@ -250,7 +251,9 @@ export default function Miete() {
         </div>
         <div className={`res-pane ${view === "result" ? "act" : ""}`}>
           {!R ? (
-            <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ch)" }}>💰</div>
+            <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ch)" }}>
+              <Icon name="muenze" size={40} />
+            </div>
           ) : (
             <>
               <div
@@ -270,7 +273,7 @@ export default function Miete() {
                       t.kapp,
                       <span style={{ fontWeight: 600, color: "var(--ca)" }}>{R.kP}% in 3 J.</span>,
                     ],
-                    [t.markt, R.k15 ? "🔴 " + t.ang : "🟢 " + t.std],
+                    [t.markt, R.k15 ? "" + t.ang : "" + t.std],
                     ...(R.vm ? [[t.vgl, fmtE(R.vm) + "/Mon."]] : []),
                   ].map(([k, v], i) => (
                     <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
@@ -333,7 +336,7 @@ export default function Miete() {
                           color: jz ? "var(--ok-tx)" : "var(--warn-tx)",
                         }}
                       >
-                        {jz ? `✅ ${t.jM}` : `⏳ ${t.ab} ${fmtDat(nx.datum, lang)}`}
+                        {jz ? `${t.jM}` : `${t.ab} ${fmtDat(nx.datum, lang)}`}
                       </div>
                     </div>
                   );
@@ -411,7 +414,7 @@ export default function Miete() {
                     </tbody>
                   </table>
                   <div style={{ fontSize: 10, color: "var(--ch)", marginTop: 6 }}>
-                    {R.vQ > 0 ? `📊 Ø +${fmt(R.vmPA, 1)}% p.a. | ${R.q}` : ""}
+                    {R.vQ > 0 ? `Ø +${fmt(R.vmPA, 1)}% p.a. | ${R.q}` : ""}
                   </div>
                 </div>
               )}

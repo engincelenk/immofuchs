@@ -225,7 +225,7 @@ export function ObjektExpose({ open, onClose, lang = "de" }) {
           {!laeuft && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
               <button type="button" onClick={dateiDialog} style={knopfZweit}>
-                {tt.wzDateiWaehlen || "📄 Datei auswählen"}
+                {tt.wzDateiWaehlen || "Datei auswählen"}
               </button>
               {(bilder.length > 0 || pdf) && (
                 <button type="button" onClick={starten} style={knopfPrimaer}>

@@ -1663,7 +1663,7 @@ export function LageKombiKarte({ data, titel, ergebnis, laufend, fehler, consent
               "repeating-linear-gradient(0deg, transparent 0 23px, var(--cb) 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, var(--cb) 23px 24px)",
           }}
         >
-          <span aria-hidden="true" style={{ fontSize: 22 }}>📍</span>
+          <span aria-hidden="true" style={{ fontSize: 22 }}></span>
         </div>
         <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0 }}>
           <ObjektLage data={data} titel={titel} eingebettet />

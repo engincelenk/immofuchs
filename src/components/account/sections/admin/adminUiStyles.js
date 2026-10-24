@@ -76,7 +76,7 @@ export const secondaryBtnStyle = {
 // wie im Kundenbereich, wo Kuendigen bewusst neutral bleibt.
 export const dangerBtnStyle = {
   ...primaryBtnStyle,
-  background: "#c0392b",
+  background: "#B3402A",
 };
 
 export const labelStyle = {
@@ -87,7 +87,7 @@ export const labelStyle = {
   marginBottom: 5,
 };
 
-export const errorTextStyle = { color: "#c0392b", fontSize: 12.5 };
+export const errorTextStyle = { color: "var(--bad-tx)", fontSize: 12.5 };
 
 export const mutedTextStyle = { color: "var(--ch)", fontSize: 12.5 };
 

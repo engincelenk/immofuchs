@@ -1164,7 +1164,7 @@ export default function Haupt() {
                             `${brRat.symbol} Bruttorendite ${fmtP(R.bR)} — ${R.bR >= 5 ? "solide ab 5 %" : R.bR >= 4 ? "4–5 % akzeptabel" : "unter 4 %"} → ${vrd(brRat)} (Jahresmiete ${fmtE(R.jMiete)} ÷ ${fmtE(R.gKP)})`,
                             `${nrRat.symbol} Nettorendite ${fmtP(R.nR)} — ${R.nR >= 3.5 ? "solide ab 3,5 %" : R.nR >= 2.5 ? "2,5–3,5 % akzeptabel" : "unter 2,5 %"} → ${vrd(nrRat)}${+d.leerstand > 0 ? " (inkl. Leerstandsverluste)" : ""}`,
                             `${kpRat.symbol} Kaufpreisfaktor ${fmt(kpF, 1)}x — ${kpF <= 25 ? "≤ 25x solide" : kpF <= 30 ? "25–30x teuer" : ">30x sehr teuer"} → ${vrd(kpRat)}`,
-                            `Benchmark-Vergleich: Tagesgeld 3 % ${R.nR >= 3 ? "✓" : "⚠"} · Staatsanleihe 3,5 % ${R.nR >= 3.5 ? "✓" : "⚠"} · ETF ~7 % ${R.nR >= 7 ? "✓" : "⚠"} — Nettorendite ${fmtP(R.nR)}`,
+                            `Benchmark-Vergleich: Tagesgeld 3 % ${R.nR >= 3 ? "✓" : ""} · Staatsanleihe 3,5 % ${R.nR >= 3.5 ? "✓" : ""} · ETF ~7 % ${R.nR >= 7 ? "✓" : ""} — Nettorendite ${fmtP(R.nR)}`,
                             ...(R.bR > 0 && R.nR > 0 && R.bR - R.nR > 2
                               ? [
                                   `Große Kostenschere — Brutto-Netto-Spread von ${fmtP(R.bR - R.nR)}: nicht-umlegbare Kosten prüfen!`,
@@ -1660,7 +1660,7 @@ export default function Haupt() {
                             const stR = rate("steuerErsM", stErsM);
                             const beR = R.beJ
                               ? rate("nkAmort", R.beJ)
-                              : { tier: "red", symbol: "⚠", color: "red" };
+                              : { tier: "red", symbol: "", color: "red" };
                             return [
                               `${stR.symbol} Steuerersparnis ${fmtE(Math.round(stErsM))}/Mon. — ${stErsM >= 150 ? "stark ab 150 €/Mon." : stErsM >= 75 ? "75–150 €/Mon. moderat" : "unter 75 €/Mon."} → ${vrd(stR)} (bei ${fmtP(st, 0)} Steuersatz)`,
                               `Zwei absetzbare Positionen: Darlehenszinsen (${fmtE(Math.round(R.yearRows[0]?.zinsen || 0))}/J.) + AfA (${fmtE(R.afJ)}/J.)`,

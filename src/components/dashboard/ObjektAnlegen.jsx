@@ -390,7 +390,7 @@ function ObjektFormular({
       {onExpose ? (
         <button type="button" onClick={onExpose} style={exposeKnopfStil}>
           <span style={{ fontSize: 22 }} aria-hidden="true">
-            📄
+            
           </span>
           <span>
             {/* var(--primary-tx) statt #1E3A5F (Bugreport 2026-09-09, wie

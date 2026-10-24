@@ -79,7 +79,7 @@ export function ExposeResultCard({ ergebnis, d, set, t, erledigt, anzahl, onUebe
   if (erledigt) {
     return (
       <div className="if-exp-chip" role="status">
-        📎 {fuelle(t.uebernommen, { n: anzahl })}
+        {fuelle(t.uebernommen, { n: anzahl })}
       </div>
     );
   }

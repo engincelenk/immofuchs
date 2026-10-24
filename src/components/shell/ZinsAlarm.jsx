@@ -1,6 +1,7 @@
 import { useState, useEffect, useId } from "react";
 import { TL } from "../../i18n/translations.js";
 import { MARKET_RATES } from "../../data.js";
+import { Icon } from "../ui/Icon.jsx";
 
 function showAlarmNotification(avg, threshold, lang) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
@@ -115,7 +116,9 @@ export function ZinsAlarm({ lang }) {
     <div style={card}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <span style={{ fontSize: 22 }}>🔔</span>
+        <span style={{ display: "inline-flex" }}>
+          <Icon name="glocke" size={22} />
+        </span>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "var(--ct)" }}>{l.alarmTitle}</div>
           <div style={{ fontSize: 12, color: "var(--ch)", marginTop: 2 }}>{l.alarmSub}</div>
@@ -132,7 +135,7 @@ export function ZinsAlarm({ lang }) {
               fontWeight: 700,
             }}
           >
-            🔔 {l.alarmTriggered}
+            {l.alarmTriggered}
           </span>
         )}
       </div>

@@ -793,7 +793,7 @@ export function Landing({ onStart, lang, setLang }) {
                   fontWeight: 700,
                   cursor: "pointer",
                   fontFamily: "inherit",
-                  boxShadow: "0 4px 12px rgba(232,96,10,.25)",
+                  boxShadow: "none",
                   letterSpacing: 0.2,
                   whiteSpace: "nowrap",
                 }}
@@ -1117,7 +1117,7 @@ export function Landing({ onStart, lang, setLang }) {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "var(--ca)";
-              e.currentTarget.style.boxShadow = "0 8px 28px rgba(232,96,10,.14)";
+              e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,.08)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = "var(--cb)";
@@ -1144,7 +1144,7 @@ export function Landing({ onStart, lang, setLang }) {
                 className="calc-hero-bild"
                 style={{
                   overflow: "hidden",
-                  background: "linear-gradient(135deg,#fff1e8 0%,#ffd9b8 100%)",
+                  background: "var(--ca-bg)",
                   minHeight: 200,
                 }}
               >
@@ -1209,7 +1209,7 @@ export function Landing({ onStart, lang, setLang }) {
                 badge: l.finBadge,
                 desc: l.finDesc,
                 feats: [l.finF1, l.finF2, l.finF3],
-                bg: "linear-gradient(135deg,#e8f5ed 0%,#bce4ce 100%)",
+                bg: "var(--ci)",
                 illus: (
                   <img
                     src="/card-kredit.webp"
@@ -1224,7 +1224,7 @@ export function Landing({ onStart, lang, setLang }) {
                 badge: l.rentBadge,
                 desc: l.rentDesc,
                 feats: [l.rentF1, l.rentF2, l.rentF3],
-                bg: "linear-gradient(135deg,#fff5e8 0%,#ffd5b8 100%)",
+                bg: "var(--ci)",
                 illus: (
                   <img
                     src="/card-miete.webp"
@@ -1239,7 +1239,7 @@ export function Landing({ onStart, lang, setLang }) {
                 badge: l.sanBadge,
                 desc: l.sanDesc,
                 feats: [l.sanF1, l.sanF2, l.sanF3],
-                bg: "linear-gradient(135deg,#e8f0f5 0%,#bcd4e6 100%)",
+                bg: "var(--ci)",
                 illus: (
                   <img
                     src="/card-sanierung.webp"
@@ -1254,7 +1254,7 @@ export function Landing({ onStart, lang, setLang }) {
                 badge: l.st6Badge,
                 desc: l.st6Desc,
                 feats: [l.st6F1, l.st6F2, l.st6F3],
-                bg: "linear-gradient(135deg,#e8eef5 0%,#c2d3e8 100%)",
+                bg: "var(--ci)",
                 illus: (
                   <img
                     src="/card-steuer.webp"
@@ -1269,7 +1269,7 @@ export function Landing({ onStart, lang, setLang }) {
                 badge: l.vfeBadge,
                 desc: l.vfeDesc,
                 feats: [l.vfeF1, l.vfeF2, l.vfeF3],
-                bg: "linear-gradient(135deg,#f0eafa 0%,#d4c5f0 100%)",
+                bg: "var(--ci)",
                 illus: (
                   <img
                     src="/card-vorfaelligkeit.webp"
@@ -1299,7 +1299,7 @@ export function Landing({ onStart, lang, setLang }) {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-3px)";
                   e.currentTarget.style.borderColor = "var(--ca)";
-                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(232,96,10,.12)";
+                  e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,.08)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "";
@@ -1567,7 +1567,7 @@ export function Landing({ onStart, lang, setLang }) {
       .lp-hero-sub{margin:0;max-width:720px;font-size:clamp(16px,1.6vw,19px);color:var(--cl);line-height:1.55}
       .lp-hero-ctas{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
       .lp-btn-primary,.lp-btn-secondary{min-height:52px;padding:0 26px;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
-      .lp-btn-primary{border:none;background:var(--ca);color:var(--on-ca);font-size:17px;box-shadow:0 8px 20px rgba(232,96,10,.28);transition:background .15s,transform .12s var(--ease-out)}
+      .lp-btn-primary{border:none;background:var(--ca);color:var(--on-ca);font-size:17px;transition:background .15s,transform .12s var(--ease-out)}
       .lp-btn-secondary{transition:transform .12s var(--ease-out)}
       .lp-btn-primary:hover{background:var(--ca-dk)}
       .lp-btn-secondary{border:1.5px solid var(--cb);background:var(--cc);color:var(--ct);font-size:16px;font-weight:600}
@@ -1582,7 +1582,7 @@ export function Landing({ onStart, lang, setLang }) {
       .lp-eyebrow-dot{width:7px;height:7px;border-radius:50%;background:var(--ca);flex-shrink:0}
       .lp-h2{margin:0;font-size:clamp(26px,3vw,40px);font-weight:800;color:var(--ct);letter-spacing:-.5px;line-height:1.15}
       .lp-karte{transition:transform .2s var(--ease-out),box-shadow .2s,border-color .2s}
-      .lp-karte:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(30,58,95,.12);border-color:var(--ca)}
+      .lp-karte:hover{box-shadow:0 2px 10px rgba(0,0,0,.08);border-color:var(--ca)}
       /* Touch hat kein Hover: stattdessen ein kurzes Eindruecken beim Antippen. */
       @media(hover:none){
         .lp-karte:active,.lp-ki-karte:active{transform:scale(.985)}

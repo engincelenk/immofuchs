@@ -61,7 +61,7 @@ export function rate(kpi, wert) {
   } else {
     tier = wert <= b.green ? "green" : b.yellow != null && wert <= b.yellow ? "yellow" : "red";
   }
-  const symbol = tier === "green" ? "✓" : tier === "yellow" ? "~" : "⚠";
+  const symbol = tier === "green" ? "✓" : tier === "yellow" ? "~" : "!";
   const color = tier === "green" ? "green" : tier === "yellow" ? "yellow" : "red";
   return { tier, symbol, color };
 }

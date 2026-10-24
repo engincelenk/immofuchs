@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Ctx } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
 import { AmpelKPIRuhig, InsRuhig, Sec } from "./atoms.jsx";
-import { Icon, EMOJI_ICON, iconName } from "./Icon.jsx";
+import { Icon, Emo, EMOJI_ICON, iconName } from "./Icon.jsx";
 
 const mit = (el) => renderToStaticMarkup(<Ctx.Provider value={{ t: T.de }}>{el}</Ctx.Provider>);
 
@@ -15,11 +15,16 @@ describe("Gestaltung Ruhig (Bausteine)", () => {
     expect(iconName("haus")).toBe("haus");
     for (const e of Object.keys(EMOJI_ICON)) expect(iconName(e), e).toBeTruthy();
   });
-  it("Sec: Icon-Name wird gezeichnet, ein Emoji bleibt Text", () => {
+  it("Sec: Icon-Name und bisheriges Emoji werden als Linien-Icon gezeichnet, Unbekanntes als Text", () => {
     expect(mit(<Sec title="Lage" icon="pin" />)).toContain("<svg");
-    const h = mit(<Sec title="Lage" icon="📍" />);
-    expect(h).toContain("📍");
-    expect(h).not.toContain("<svg");
+    expect(mit(<Sec title="Lage" icon="📍" />)).toContain("<svg");
+    expect(mit(<Sec title="Lage" icon="📍" />)).not.toContain("📍");
+    expect(mit(<Sec title="Strom" icon="🦄" />)).toContain("🦄");
+  });
+  it("Emo: Icon fuer bekannte Emoji, Bild-Emoji ohne Icon entfallen, Textzeichen bleiben", () => {
+    expect(renderToStaticMarkup(<Emo e="🏦" />)).toContain("<svg");
+    expect(renderToStaticMarkup(<Emo e="🦄" />)).toBe("");
+    expect(renderToStaticMarkup(<Emo e="☰" />)).toBe("☰");
   });
   it("InsRuhig: neutrale Flaeche, Icon statt Emoji, Text in Textfarbe", () => {
     const h = mit(<InsRuhig emoji="✅" text="Sonder-AfA aktiv" type="good" />);

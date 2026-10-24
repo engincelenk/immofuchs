@@ -116,7 +116,7 @@ export function AdminSubscriptionDrawer({ subscriptionId, onClose }) {
         </div>
 
         {loading && <p style={{ ...mutedTextStyle, marginTop: 16 }}>Wird geladen …</p>}
-        {loadError && <p style={{ color: "#c0392b", fontSize: 12.5, marginTop: 16 }}>{loadError}</p>}
+        {loadError && <p style={{ color: "var(--bad-tx)", fontSize: 12.5, marginTop: 16 }}>{loadError}</p>}
 
         {detail && (
           <>

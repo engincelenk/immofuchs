@@ -1,3 +1,15 @@
+## 2026-10-24 (1.100.149) [FRONTEND]
+
+### Gestaltung "Ruhig" in der ganzen App (Nutzerwunsch: App wirkte kitschig; Muster aus dem Renditerechner uebertragen)
+
+- Hinweise und Ueberschriften app-weit ruhig: Ins ist ueberall die ruhige Variante (neutrale Flaeche, Statusstreifen, Linien-Icon), Sec zeichnet bekannte Emoji als graues Linien-Icon, neuer Baustein Emo fuer Listen und Kacheln (Merkliste, Steuertrick, Sanierung, Bestaetigung, Expose-Zeilen). Icon.jsx kennt jetzt 31 Linien-Icons (neu u. a. Muenze, Kalender, Buch, Schloss, Werkzeug, Dokument, Gluehbirne, Glocke, Rechner, Waage, Blitz, Mail).
+- Rund 165 bunte Emoji aus Texten und Uebersetzungen entfernt (alle 5 Sprachen, Rechner, Dashboard, Admin, Hinweise); schlichte Textzeichen (✓, ✕, ✦, ☰, ➤), Flaggen und das Mikrofon bleiben. Ampel-Punkte in der Radar-Legende jetzt gezeichnete Punkte statt 🟢🟡🔴.
+- Landing: keine Pastellverlaeufe mehr (Gruen, Blau, Violett, Orange), keine orangen Leucht-Schatten, kein Hover-Anheben der Karten; Karten ruhig mit Rand und flachem Schatten.
+- Fuchs-Schwebeknopf kleiner (54 x 56 statt 68 x 70) und ohne Leuchtband und Schlagschatten, ueberdeckt weniger Inhalt.
+- Admin-Bereich auf die Status-Tokens umgestellt (feste, gedaempfte Toene dort, wo weisse Schrift auf der Flaeche steht).
+- Zusammen mit 1.100.147/148 (Muster Renditerechner, gedaempfte Status-Farben) wird damit der komplette Stand auf prod, qa und dev ausgerollt.
+- Tests 1968 gruen, Build ok; die Landing im emulierten Handy (dunkel) angesehen, die Rechner hinter dem Login nicht.
+
 ## 2026-10-24 (1.100.148) [FRONTEND]
 
 ### Dezente Farben: Status gedaempft, Info neutral, kein Ampel-Schmuck mehr (Nutzer: ueberall gruen und blau, kitschig)

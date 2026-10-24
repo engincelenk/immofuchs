@@ -40,7 +40,6 @@ export function OfflineBanner({ bottom }) {
         letterSpacing: 0.2,
       }}
     >
-      <span>📴</span>
       <span>Offline · Alle Rechner funktionieren{date ? ` · Daten vom ${date}` : ""}</span>
     </div>
   );

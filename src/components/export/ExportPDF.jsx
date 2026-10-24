@@ -132,7 +132,7 @@ export function ExportPDF({ title, rechner }) {
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
         ) : (
-          <span aria-hidden="true">👑</span>
+          <span aria-hidden="true"></span>
         )}
         {t.pdfExport}
       </button>

@@ -151,7 +151,7 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
     <div>
       <button type="button" onClick={onToggle} aria-expanded={offen} style={exposeKnopfStil}>
         <span style={{ fontSize: 22 }} aria-hidden="true">
-          📄
+          
         </span>
         <span>
           {/* var(--primary-tx) statt des festen Hex-Werts (Bugreport
@@ -239,7 +239,7 @@ export function ExposePanel({ offen, onToggle, onErgebnis, titel, unterzeile }) 
           {!laeuft && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" onClick={dateiDialog} style={exKnopfZweit}>
-                {tt.wzDateiWaehlen || "📄 Datei auswählen"}
+                {tt.wzDateiWaehlen || "Datei auswählen"}
               </button>
               {(bilder.length > 0 || pdf) && (
                 <button type="button" onClick={starten} style={exKnopfPrimaer}>

@@ -16,6 +16,7 @@ import { rate } from "../../utils/bands.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 import { zinsHinweis } from "../../utils/zinsStaffel.js";
 import { FinanzierungsAnteil } from "../ui/FinanzierungsAnteil.jsx";
+import { Icon } from "../ui/Icon.jsx";
 
 export default function Kredit() {
   const { d, set, t, tip, lang, aktivesObjekt, zinsAuto } = useApp();
@@ -247,7 +248,9 @@ export default function Kredit() {
         </div>
         <div className={`res-pane ${view === "result" ? "act" : ""}`}>
           {!R ? (
-            <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ch)" }}>🏦</div>
+            <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ch)" }}>
+              <Icon name="bank" size={40} />
+            </div>
           ) : (
             <>
               <div
@@ -391,7 +394,7 @@ export default function Kredit() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>💰 {t.sondTilgLabel}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{t.sondTilgLabel}</span>
                   <Tip text={tip("sondertilg")} />
                 </div>
                 <div style={{ fontSize: 10, color: "var(--ch)", marginBottom: 10 }}>
@@ -500,7 +503,7 @@ export default function Kredit() {
                         </td>
                         <td style={{ padding: "3px 4px", textAlign: "right" }}>{fmtE(r.t)}</td>
                         <td style={{ padding: "3px 4px", textAlign: "right" }}>
-                          {r.rest > 0 ? fmtE(r.rest) : "✅"}
+                          {r.rest > 0 ? fmtE(r.rest) : fmtE(0)}
                         </td>
                       </tr>
                     ))}
