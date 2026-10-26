@@ -100,7 +100,7 @@ function Toast({ toast, onDone }) {
         fontSize: 13,
         fontWeight: 600,
         color: "#fff",
-        background: isError ? "#B3402A" : "#2F6B4F",
+        background: isError ? "#C62828" : "#0E7C45",
         boxShadow: "0 6px 20px rgba(0,0,0,.18)",
       }}
     >

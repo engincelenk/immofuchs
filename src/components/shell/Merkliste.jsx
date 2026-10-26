@@ -1670,7 +1670,7 @@ export function Merkliste() {
               background: "var(--cc)",
               borderRadius: 12,
               padding: "16px",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px var(--cb)",
               border: unvollstaendig ? "1px dashed var(--cb)" : undefined,
             }}
           >

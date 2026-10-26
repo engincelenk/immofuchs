@@ -180,7 +180,7 @@ export function ZinsAlarm({ lang }) {
         </div>
 
         {permission === "denied" ? (
-          <span style={{ fontSize: 12, color: "#e74c3c", marginLeft: "auto" }}>
+          <span style={{ fontSize: 12, color: "var(--bad-tx)", marginLeft: "auto" }}>
             {l.alarmDenied}
           </span>
         ) : (
@@ -193,7 +193,7 @@ export function ZinsAlarm({ lang }) {
           </button>
         )}
 
-        {saved && <span style={{ fontSize: 12, color: "#27ae60" }}>{l.alarmSaved}</span>}
+        {saved && <span style={{ fontSize: 12, color: "var(--ok-tx)" }}>{l.alarmSaved}</span>}
         {!saved && enabled && permission === "granted" && (
           <span style={{ fontSize: 12, color: "var(--ch)" }}>{l.alarmGranted}</span>
         )}

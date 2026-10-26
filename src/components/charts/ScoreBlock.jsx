@@ -94,7 +94,7 @@ export function ScoreBlock({ score }) {
     );
   }
 
-  const COLORS = { green: "#2F6B4F", yellow: "#7A600E", orange: "#94540F", red: "#B3402A" };
+  const COLORS = { green: "#0E7C45", yellow: "#9A5B00", orange: "#B4540A", red: "#C62828" };
   const col = COLORS[score.tier] || COLORS.red;
   // Text in Ampelfarbe: die kraeftigen COLORS erreichen auf hellem Grund nur
   // 2,1-3,8:1 (WCAG AA 4,5:1) - als Schrift deshalb die Status-Text-Tokens,

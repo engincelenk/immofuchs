@@ -183,7 +183,9 @@ export function FinanzierungsAnteil() {
   const dazwischen = aktiv == null ? Math.round(zinsAuto.anteil) : null;
   const ueber100 = zinsAuto.anteil > 100.5;
   // Eigener Zins im Feld: die Kacheln zeigen dann nur noch die Marktzinsen (Referenz), die aktive Kachel ist umrandet.
-  const eigenerZins = String(d.zinssatz ?? "").trim() !== "" && String(d.zinssatz) !== zinsAuto.zins;
+  const eigenerZins =
+    String(d.zinssatz ?? "").trim() !== "" &&
+    (typeof zinsAuto.eigen === "boolean" ? zinsAuto.eigen : String(d.zinssatz) !== zinsAuto.zins);
   return (
     <div className="if-field" style={{ marginBottom: 14 }} role="group" aria-label={t.finAnteilTitel}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
@@ -240,8 +242,8 @@ export function FinanzierungsAnteil() {
             marginTop: 8,
             padding: "8px 10px",
             borderRadius: 8,
-            border: "1px solid var(--cb)",
-            background: "var(--ci)",
+            border: "1px solid var(--info-bd)",
+            background: "var(--info-bg)",
             boxShadow: "inset 3px 0 0 var(--info-tx)",
             color: "var(--ct)",
             fontSize: 12.5,
@@ -281,8 +283,8 @@ export function FinanzierungsAnteil() {
             marginTop: 8,
             padding: "8px 10px",
             borderRadius: 8,
-            border: "1px solid var(--cb)",
-            background: "var(--ci)",
+            border: "1px solid var(--warn-bd)",
+            background: "var(--warn-bg)",
             boxShadow: "inset 3px 0 0 var(--warn-tx)",
             color: "var(--ct)",
             fontSize: 12.5,

@@ -241,7 +241,7 @@ function PlanCard({
           // hervorgehoben wird die Jahreskarte bereits ueber Rahmen und
           // Ribbon.
           background: disabled ? "var(--cb)" : "var(--ca)",
-          color: disabled ? "var(--ch)" : "#fff",
+          color: disabled ? "var(--ch)" : "var(--on-ca)",
           border: disabled ? "1px solid var(--cb)" : "1px solid var(--ca)",
           ...(disabled ? { cursor: "not-allowed" } : {}),
         }}

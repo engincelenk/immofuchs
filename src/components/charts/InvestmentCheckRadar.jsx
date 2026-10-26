@@ -64,7 +64,7 @@ export function InvestmentCheckRadar({ R }) {
   const dataPath = dataPts.map((p, i) => (i === 0 ? "M" : "L") + p.x + "," + p.y).join(" ") + " Z";
 
   const tierColor = (r) =>
-    r.tier === "green" ? "#2F6B4F" : r.tier === "yellow" ? "#7A600E" : "#B3402A";
+    r.tier === "green" ? "var(--ok-tx)" : r.tier === "yellow" ? "var(--warn-tx)" : "var(--bad-tx)";
 
   return (
     <div
@@ -130,7 +130,7 @@ export function InvestmentCheckRadar({ R }) {
             cy={p.y}
             r={sel === i ? 7 : 6}
             fill={tierColor(kpis[i].rating)}
-            stroke="#fff"
+            stroke="var(--cc)"
             strokeWidth="1.5"
             style={{ cursor: "pointer" }}
             onClick={() => setSel((s) => (s === i ? null : i))}
@@ -149,15 +149,15 @@ export function InvestmentCheckRadar({ R }) {
         }}
       >
         <span>
-          <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#2F6B4F", marginRight: 5 }} />
+          <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--ok-tx)", marginRight: 5 }} />
           {t.badgeGut || "Gut"}
         </span>
         <span>
-          <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#7A600E", marginRight: 5 }} />
+          <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--warn-tx)", marginRight: 5 }} />
           {t.badgeOkay || "Grenzwertig"}
         </span>
         <span>
-          <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#B3402A", marginRight: 5 }} />
+          <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--bad-tx)", marginRight: 5 }} />
           {t.badgeKrit || "Kritisch"}
         </span>
       </div>

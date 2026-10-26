@@ -59,7 +59,7 @@ export function LangSel({ lang, setLang, align = "right" }) {
             background: "var(--cc)",
             border: "1px solid var(--cb)",
             borderRadius: 10,
-            boxShadow: "0 8px 24px rgba(0,0,0,.1)",
+            boxShadow: "0 8px 24px rgba(0,0,0,.1), 0 0 0 1px var(--cb)",
             zIndex: 200,
             overflow: "hidden",
             minWidth: 140,

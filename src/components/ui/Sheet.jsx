@@ -196,7 +196,7 @@ export function Sheet({
       maxWidth: size ?? "none",
       margin: size ? "0 auto" : undefined,
       borderRadius: "16px 16px 0 0",
-      boxShadow: "0 -8px 30px rgba(0,0,0,.18)",
+      boxShadow: "0 -8px 30px rgba(0,0,0,.18), 0 0 0 1px var(--cb)",
       maxHeight: "85vh",
       paddingBottom: "calc(6px + env(safe-area-inset-bottom))",
       // Horizontaler Innenabstand gehoert hierher, nicht in jeden Aufrufer
@@ -228,7 +228,7 @@ export function Sheet({
       bottom: 0,
       [variant]: 0,
       width: size ?? "min(300px, 84vw)",
-      boxShadow: variant === "left" ? "6px 0 28px rgba(0,0,0,.18)" : "-6px 0 28px rgba(0,0,0,.18)",
+      boxShadow: variant === "left" ? "6px 0 28px rgba(0,0,0,.18), 0 0 0 1px var(--cb)" : "-6px 0 28px rgba(0,0,0,.18), 0 0 0 1px var(--cb)",
       paddingTop: "env(safe-area-inset-top)",
     };
   } else {
@@ -244,7 +244,7 @@ export function Sheet({
       width: size ?? 320,
       maxHeight: "calc(100vh - 100px)",
       borderRadius: 14,
-      boxShadow: "0 18px 44px rgba(0,0,0,.18)",
+      boxShadow: "0 18px 44px rgba(0,0,0,.18), 0 0 0 1px var(--cb)",
       opacity: visible ? 1 : 0,
     };
   }

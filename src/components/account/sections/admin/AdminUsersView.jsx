@@ -411,7 +411,7 @@ export function AdminUsersView({ currentUser }) {
                       borderRadius: 20,
                       color: "#fff",
                       whiteSpace: "nowrap",
-                      background: u.accountStatus === "SUSPENDED" ? "#B3402A" : "#2F6B4F",
+                      background: u.accountStatus === "SUSPENDED" ? "#C62828" : "#0E7C45",
                     }}
                   >
                     {u.accountStatus === "SUSPENDED" ? "Gesperrt" : "Aktiv"}

@@ -18,9 +18,9 @@ export function Dot({ color }) {
         verticalAlign: "middle",
       }}
       title={
-        color === "#2F6B4F"
+        color === "#0E7C45"
           ? t.mlBadgeGut || "Gut"
-          : color === "#7A600E"
+          : color === "#9A5B00"
             ? t.mlBadgeMittel || "Mittelmäßig"
             : t.mlBadgeKritisch || "Kritisch"
       }
@@ -368,7 +368,7 @@ export function Toggle({ checked, onChange, label, sub, tip }) {
         gap: 8,
         width: "100%",
         background: checked ? "var(--ok-bg)" : "var(--ci)",
-        border: `1px solid ${checked ? "var(--ca)" : "var(--cb)"}`,
+        border: `1px solid ${checked ? "var(--ok-tx)" : "var(--cb)"}`,
         borderRadius: 8,
         padding: "8px 10px",
         cursor: "pointer",
@@ -382,7 +382,7 @@ export function Toggle({ checked, onChange, label, sub, tip }) {
           width: 34,
           height: 20,
           borderRadius: 10,
-          background: checked ? "var(--ca)" : "var(--cb)",
+          background: checked ? "var(--ok-tx)" : "var(--cb)",
           position: "relative",
           flexShrink: 0,
           transition: "background .2s",
@@ -484,6 +484,8 @@ export function KPI({ label, value, sub, accent }) {
 // Statusfarbe, normale Schriftfarbe, kleines Linien-Icon. `emoji` versteht auch die bisherigen Emoji.
 export function InsRuhig({ emoji, text, type = "info" }) {
   const tc = { info: "var(--info-tx)", good: "var(--ok-tx)", warn: "var(--warn-tx)", bad: "var(--bad-tx)" }[type];
+  const tbg = { info: "var(--info-bg)", good: "var(--ok-bg)", warn: "var(--warn-bg)", bad: "var(--bad-bg)" }[type];
+  const tbd = { info: "var(--info-bd)", good: "var(--ok-bd)", warn: "var(--warn-bd)", bad: "var(--bad-bd)" }[type];
   return (
     <div
       style={{
@@ -491,8 +493,8 @@ export function InsRuhig({ emoji, text, type = "info" }) {
         gap: 10,
         alignItems: "flex-start",
         padding: "10px 12px",
-        background: "var(--ci)",
-        border: "1px solid var(--cb)",
+        background: tbg,
+        border: `1px solid ${tbd}`,
         boxShadow: `inset 3px 0 0 ${tc}`,
         borderRadius: 8,
         marginBottom: 6,
@@ -550,7 +552,7 @@ export function AmpelKPIRuhig({ label, value, status, statusLabel, tip, color })
         style={{
           fontSize: "clamp(18px,5.5vw,24px)",
           fontWeight: 600,
-          color: "var(--ct)",
+          color: tx,
           fontVariantNumeric: "tabular-nums",
           lineHeight: 1.1,
           margin: "4px 0",

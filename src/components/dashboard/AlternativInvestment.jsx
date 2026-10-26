@@ -105,7 +105,7 @@ function Balkendiagramm({ v, horizont, imm, t }) {
                   ...balken,
                   ...wachsen(i + 1).style,
                   width: pct(mittel),
-                  background: besser ? "var(--ok-tx)" : "#b9b9ad",
+                  background: besser ? "var(--ok-tx)" : "var(--ch)",
                 }}
               />
               <div
@@ -337,7 +337,7 @@ export function AlternativInvestment({ data, t, lang = "de", anfangGestartet = f
           <i style={{ ...punkt, background: "var(--ok-tx)" }} />
           {L(t, "altLegendeDarueber", "Anlage über Immobilie (mittleres Szenario)")}
         </span>
-        <span><i style={{ ...punkt, background: "#b9b9ad" }} />{L(t, "altLegendeDarunter", "darunter")}</span>
+        <span><i style={{ ...punkt, background: "var(--ch)" }} />{L(t, "altLegendeDarunter", "darunter")}</span>
         <span><i style={{ ...punkt, background: "var(--cb)" }} />{L(t, "altLegendeSpanne", "Spanne vorsichtig–günstig")}</span>
       </div>
 

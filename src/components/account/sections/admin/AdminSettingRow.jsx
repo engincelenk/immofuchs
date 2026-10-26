@@ -65,7 +65,7 @@ export function AdminSwitch({ checked, label, disabled, onClick }) {
         padding: 0,
         border: "none",
         borderRadius: 13,
-        background: checked ? "var(--ca)" : "var(--ch)",
+        background: checked ? "var(--ok-tx)" : "var(--ch)",
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.6 : 1,
         transition: "background .2s",

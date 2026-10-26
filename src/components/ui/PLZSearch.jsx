@@ -65,7 +65,7 @@ export function PLZSearch({ showKapp = true } = {}) {
                 border: "1px solid var(--cb)",
                 borderRadius: 8,
                 zIndex: 50,
-                boxShadow: "0 4px 12px rgba(0,0,0,.1)",
+                boxShadow: "0 4px 12px rgba(0,0,0,.1), 0 0 0 1px var(--cb)",
                 maxHeight: 180,
                 overflow: "auto",
               }}

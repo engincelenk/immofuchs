@@ -164,7 +164,7 @@ export const priceChipStyle = {
 // Preis selbst.
 export const saveBadgeStyle = {
   display: "inline-block",
-  background: "#FCE9DC",
+  background: "var(--ca-bg)",
   color: "var(--ca-dk)",
   borderRadius: 20,
   padding: "3px 9px",

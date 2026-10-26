@@ -45,7 +45,7 @@ const pText = (t, produkt, feld) => tx(t, `aiProd_${produkt.id}_${feld}`, produk
 
 // Marineblau ist in der App die "Denk-Farbe" fuer KI. Sie markiert hier
 // ausschliesslich modellgenerierten Fliesstext - nie gerechnete Zahlen.
-const KI = "#1E3A5F";
+const KI = "var(--primary-tx)";
 
 // "expose" (Exposé-Scan) stand hier zusaetzlich als eigene Karte, obwohl der
 // Upload bereits an anderer Stelle in der App existiert (Objekt anlegen/

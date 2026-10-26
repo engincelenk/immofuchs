@@ -26,12 +26,12 @@ describe("Gestaltung Ruhig (Bausteine)", () => {
     expect(renderToStaticMarkup(<Emo e="🦄" />)).toBe("");
     expect(renderToStaticMarkup(<Emo e="☰" />)).toBe("☰");
   });
-  it("InsRuhig: neutrale Flaeche, Icon statt Emoji, Text in Textfarbe", () => {
+  it("InsRuhig: zart getoente Flaeche, Icon statt Emoji, Text in Textfarbe", () => {
     const h = mit(<InsRuhig emoji="✅" text="Sonder-AfA aktiv" type="good" />);
     expect(h).toContain("<svg");
     expect(h).toContain("Sonder-AfA aktiv");
     expect(h).not.toContain("✅");
-    expect(h).not.toContain("var(--ok-bg)");
+    expect(h).toContain("var(--ok-bg)");
   });
   it("AmpelKPIRuhig: Wert in Textfarbe, keine getoente Karte", () => {
     const h = mit(<AmpelKPIRuhig label="Cashflow" value="-355 €" color="red" status="kritisch" statusLabel="rot" />);

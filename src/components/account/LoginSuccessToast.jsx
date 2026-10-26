@@ -50,9 +50,9 @@ export function LoginSuccessToast({ t, name, email, message, onDone }) {
         borderRadius: 10,
         // Gleiche Gruen-Werte wie der "Angemeldet als"-Balken im
         // Zahlungsschritt (PaymentStep.jsx) - dieselbe Aussage, dieselbe Farbe.
-        background: "#E3F1E6",
-        border: "1px solid #2F9E52",
-        color: "#1E6B34",
+        background: "var(--ok-bg)",
+        border: "1px solid var(--ok-bd)",
+        color: "var(--ok-tx)",
         fontFamily: "'DM Sans', sans-serif",
         fontSize: 13,
         fontWeight: 600,

@@ -76,7 +76,7 @@ export const secondaryBtnStyle = {
 // wie im Kundenbereich, wo Kuendigen bewusst neutral bleibt.
 export const dangerBtnStyle = {
   ...primaryBtnStyle,
-  background: "#B3402A",
+  background: "#C62828",
 };
 
 export const labelStyle = {

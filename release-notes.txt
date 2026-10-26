@@ -1,3 +1,12 @@
+## 2026-10-26 (1.100.150) [FRONTEND]
+
+### Farben wieder lebendig, Flimmern beim Eigenkapital-Regler behoben, Hell/Dunkel in der ganzen App geprueft
+
+- Flimmern (Video 2026-10-26): Beim Ziehen am Eigenkapital-Regler folgt der Zins erst einen Render spaeter; der Vergleich "Feld = Automatik" war in dieser Luecke falsch und liess den Kasten "Eigener Zins aktiv" und den Hinweis "Eigener Wert (Automatik aus)" aufblitzen, der Inhalt sprang. Jetzt kennt die App den Zustand ausdruecklich (App.jsx zinsEigen, wird nur durch Eingabe im Zinsfeld, Laden eines Objekts, Stufe und "Marktzins verwenden" veraendert; zinsAuto.eigen).
+- Status wieder kraeftig (Nutzer: Farben sollen lebendig werden, Info bleibt grau): hell ok #0E7C45, warn #9A5B00, bad #C62828; dunkel #3DDC84, #FFB020, #FF6B5E; Hinweisflaechen wieder zart getoent (gruenlich, gelblich, roetlich) mit Streifen links; Kennzahl-Werte wieder gruen/rot; Schalter wieder gruen. Weiterhin keine Karten-Oberkanten, Verlaeufe, Leucht-Schatten. Kontrast aller Text/Flaechen-Paare in beiden Themes per Skript geprueft (alle mind. 4,8:1, weisse Schrift auf den festen Flaechen mind. 5,0:1).
+- Hell/Dunkel-Pruefung der ganzen App (Audit per Agent, Funde einzeln nachgesehen): feste Farben auf Tokens umgestellt: Erfolgsbalken, Anmelde-Toast, Plan-Chip, Rabatt-Badge, Preis-Schaltflaeche und Chat-Blase (Schrift --on-ca statt Weiss auf Orange), Fehler-Blase, Tooltip (invertiert statt #1a1a1a), KI-Karten (Marine --primary-tx statt unsichtbar im Dunkeln), Radar-Punkte und -Legende, Zins-Alarm, Vergleichsbalken, Admin-Rahmen/-Text; Energieklassen-Badge mit dunkler Schrift auf den hellen Klassen (vorher Weiss auf Gelb 1,5:1). Schwebende Flaechen (Sheets, Modale, Dropdowns, Chat) bekommen einen feinen Rand zusaetzlich zum Schatten, damit sie im Dunkeln nicht verschwinden.
+- CLAUDE.md: Status-Palette aktualisiert. Tests 1968 gruen. Oberflaeche der Rechner nicht im Browser gesehen (Login).
+
 ## 2026-10-24 (1.100.149) [FRONTEND]
 
 ### Gestaltung "Ruhig" in der ganzen App (Nutzerwunsch: App wirkte kitschig; Muster aus dem Renditerechner uebertragen)

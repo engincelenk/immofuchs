@@ -339,7 +339,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
 // Marineblau ist in der App die "Denk-Farbe" fuer KI (siehe ObjektDetail.jsx,
 // AiEngine.jsx) - hier ausschliesslich fuer die Glyphe und den modellgenerierten
 // Text, nie fuer gerechnete Zahlen.
-const KI = "#1E3A5F";
+const KI = "var(--primary-tx)";
 
 // "Risiko"/"Chance"-Label vor Risks/Opportunities - dieselben Farben wie
 // TON_FARBE in AiEngine.jsx (dort nicht exportiert, deshalb hier dupliziert,

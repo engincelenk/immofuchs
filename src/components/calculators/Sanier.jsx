@@ -44,6 +44,8 @@ import {
 const HUELLE = ["fenster", "fassade", "dach", "tuer", "keller", "ogdecke", "lueftung"];
 
 const EC_O = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
+// Mittlere und helle Klassen (Gruen bis Orange) tragen dunkle Schrift, die uebrigen weisse (Kontrast mind. 4,5:1).
+const EC_DARK = [1, 2, 3, 4, 5, 6];
 const EC_C = [
   "#0D6E3A",
   "#2E9E52",
@@ -615,7 +617,7 @@ export default function Sanier() {
               gap: 8,
               width: "100%",
               background: d.sanIsfp ? "var(--ok-bg)" : "var(--ci)",
-              border: `1px solid ${d.sanIsfp ? "var(--ca)" : "var(--cb)"}`,
+              border: `1px solid ${d.sanIsfp ? "var(--ok-tx)" : "var(--cb)"}`,
               borderRadius: 8,
               padding: "8px 10px",
               cursor: "pointer",
@@ -629,7 +631,7 @@ export default function Sanier() {
                 width: 34,
                 height: 20,
                 borderRadius: 10,
-                background: d.sanIsfp ? "var(--ca)" : "var(--cb)",
+                background: d.sanIsfp ? "var(--ok-tx)" : "var(--cb)",
                 position: "relative",
                 flexShrink: 0,
                 transition: "background .2s",
@@ -1272,7 +1274,7 @@ export default function Sanier() {
                       style={{
                         fontSize: 18,
                         fontWeight: 700,
-                        color: "#fff",
+                        color: EC_DARK.includes(R.ecV) ? "#1a1a1a" : "#fff",
                         background: EC_C[R.ecV],
                         borderRadius: 8,
                         width: 44,
@@ -1300,7 +1302,7 @@ export default function Sanier() {
                       style={{
                         fontSize: 18,
                         fontWeight: 700,
-                        color: "#fff",
+                        color: EC_DARK.includes(R.ecN) ? "#1a1a1a" : "#fff",
                         background: EC_C[R.ecN],
                         borderRadius: 8,
                         width: 44,

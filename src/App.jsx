@@ -327,13 +327,13 @@ export const FONT_CSS = "";
 // Mode kaum noch lesbar. --primary selbst bleibt unveraendert: an allen
 // anderen Stellen steht es als FLAECHE (Button-/Ribbon-Hintergrund) mit
 // weissem Text davor, das funktioniert unveraendert auf beiden Themes.
-// Seit 2026-10-24 GEDAEMPFT (Nutzer: App wirkte kitschig, ueberall gruen und blau; Freigabe "Ja"): Status nur als
-// ruhige Text- und Flaechenfarbe, Info ist neutral grau (kein Blau mehr), Marineblau im Dunkeln aufgehellt.
-// Kontrast der Texte mind. 5,0:1 (WCAG AA) auf Kartenweiss, Seitenflaeche, Chips und der jeweiligen Statusflaeche.
+// Seit 2026-10-24 diszipliniert (kein Ampel-Schmuck), seit 2026-10-26 wieder LEBENDIG (Nutzer: die gedaempften Toene
+// wirkten zu blass): kraeftiges Gruen/Bernstein/Rot als Zahlen-, Text- und zarte Hinweisfarbe, Info bleibt neutral grau
+// (kein Blau), Marineblau im Dunkeln aufgehellt. Kontrast der Texte mind. 4,8:1 (WCAG AA) auf Kartenweiss und Seitenflaeche.
 const STATUS_TOKENS_LIGHT =
-  "--ok-tx:#2f6b4f;--ok-bg:#eef3ef;--ok-bd:#cfe0d6;--warn-tx:#7a600e;--warn-bg:#f7f1e1;--warn-bd:#e6d9b3;--bad-tx:#b3402a;--bad-bg:#f8eeea;--bad-bd:#e8cdc5;--info-tx:#3d3d3a;--info-bg:#f2f2ec;--info-bd:#e5e5dc;--primary-tx:#1e3a5f;";
+  "--ok-tx:#0e7c45;--ok-bg:#e6f4ec;--ok-bd:#b7dec7;--warn-tx:#9a5b00;--warn-bg:#fbf0dc;--warn-bd:#ebcb93;--bad-tx:#c62828;--bad-bg:#fceaea;--bad-bd:#efb8b8;--info-tx:#3d3d3a;--info-bg:#f2f2ec;--info-bd:#e5e5dc;--primary-tx:#1e3a5f;";
 const STATUS_TOKENS_DARK =
-  "--ok-tx:#6fae8a;--ok-bg:#1d2620;--ok-bd:#2f4a3b;--warn-tx:#d4a94a;--warn-bg:#2a251a;--warn-bd:#5a4c2a;--bad-tx:#e0836f;--bad-bg:#2c201d;--bad-bd:#5a3a33;--info-tx:#d8d8d2;--info-bg:#2a2a2a;--info-bd:#3a3a38;--primary-tx:#8fa6c0;";
+  "--ok-tx:#3ddc84;--ok-bg:#12281c;--ok-bd:#1f5a3a;--warn-tx:#ffb020;--warn-bg:#2e2410;--warn-bd:#6b531a;--bad-tx:#ff6b5e;--bad-bg:#301816;--bad-bd:#6b2b27;--info-tx:#d8d8d2;--info-bg:#2a2a2a;--info-bd:#3a3a38;--primary-tx:#8fa6c0;";
 const DARK_TOKENS =
   "--bg:#181818;--cc:#232323;--ct:#f0f0ea;--cl:#d8d8d2;--ch:#9a9a90;--cb:#3a3a38;--ci:#2a2a2a;--cro:#202020;--ca:#f07a2e;--ca-dk:#ff9450;--on-ca:#1a1a1a;--ca-bg:#3a2414;--ca-bd:#5a3a1e;--hdr-bg:rgba(24,24,24,.92);" +
   STATUS_TOKENS_DARK;
@@ -524,6 +524,10 @@ export default function App() {
   // nicht selbst aendert - gleiches Muster wie nichtUml. Anders als dort schaltet die Eingabe des genau
   // automatischen Werts die Automatik wieder an (zinsTouchedRef = Wert weicht vom automatischen ab).
   const zinsTouchedRef = useRef(false);
+  // Dasselbe als State, damit die Oberflaeche den Zustand kennt, ohne Zahlen zu vergleichen: Beim Ziehen am
+  // Eigenkapital-Regler folgt der Zins erst einen Render spaeter, der Vergleich "Feld = Automatik" war in dieser
+  // Luecke falsch und liess den Eigener-Zins-Kasten flimmern (Video 2026-10-26).
+  const [zinsEigen, setZinsEigen] = useState(false);
   const zinsAutoRef = useRef(String(MARKET_RATES.avg));
 
   // Bauzins: kommt seit 2026-10-01 nur noch aus MARKET_RATES in data.js
@@ -536,7 +540,10 @@ export default function App() {
     // echte Nutzereingabe - siehe Kommentar bei nichtUmlAutoRef.
     if (k === "nichtUml" && String(v) !== nichtUmlAutoRef.current)
       nichtUmlTouchedRef.current = true;
-    if (k === "zinssatz") zinsTouchedRef.current = String(v) !== zinsAutoRef.current;
+    if (k === "zinssatz") {
+      zinsTouchedRef.current = String(v) !== zinsAutoRef.current;
+      setZinsEigen(zinsTouchedRef.current);
+    }
     setData((p) => ({ ...p, [k]: v }));
   }, []);
 
@@ -584,6 +591,11 @@ export default function App() {
     ],
   );
   const zinsAutoWert = zinsAuto?.zins ?? null;
+  // eigen = der Nutzer hat den Zins selbst gesetzt UND er weicht von der Automatik ab.
+  const zinsAutoCtx = useMemo(
+    () => (zinsAuto ? { ...zinsAuto, eigen: zinsEigen && String(data.zinssatz ?? "") !== zinsAuto.zins } : null),
+    [zinsAuto, zinsEigen, data.zinssatz],
+  );
   // Auswahl "Finanzierungsanteil" (components/ui/FinanzierungsAnteil.jsx): setzt das Eigenkapital so, dass
   // das Bankdarlehen dem Anteil entspricht, und schaltet die Zins-Automatik wieder ein. Eine einzige
   // State-Aenderung, damit Eigenkapital und Zins nie auseinanderlaufen.
@@ -593,6 +605,7 @@ export default function App() {
       if (ek == null) return;
       const info = zinsInfo({ ...data, eigenkapital: String(ek) });
       zinsTouchedRef.current = false;
+      setZinsEigen(false);
       if (info) zinsAutoRef.current = info.zins;
       setData((p) => ({ ...p, eigenkapital: String(ek), ...(info ? { zinssatz: info.zins } : {}) }));
     },
@@ -602,6 +615,7 @@ export default function App() {
   const setzeMarktzins = useCallback(() => {
     if (zinsAutoWert == null) return;
     zinsTouchedRef.current = false;
+    setZinsEigen(false);
     zinsAutoRef.current = zinsAutoWert;
     setData((p) => (p.zinssatz === zinsAutoWert ? p : { ...p, zinssatz: zinsAutoWert }));
   }, [zinsAutoWert]);
@@ -629,6 +643,7 @@ export default function App() {
       nichtUmlTouchedRef.current = true;
       // Der gespeicherte Zins gilt als bewusst gewaehlt und wird nicht durch die Automatik ersetzt.
       zinsTouchedRef.current = true;
+      setZinsEigen(true);
       // Gespeicherte Kaltmiete fuehrt, mieteQm wird daraus abgeleitet (nicht umgekehrt).
       if (+obj?.data?.kaltmiete > 0) mietQuelleRef.current = "kalt";
       // Alte Snapshots: nie bewusst gewaehlte Vorbelegungen entfernen (utils/altObjekt.js).
@@ -712,7 +727,7 @@ export default function App() {
       ctxValue={{
         d: data,
         set,
-        zinsAuto,
+        zinsAuto: zinsAutoCtx,
         setzeFinanzierungsanteil,
         setzeMarktzins,
         mietQuelleRef,

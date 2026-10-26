@@ -119,6 +119,6 @@ export function aktiveStufe(anteil, punkte = ZINS_NACH_FINANZIERUNG.punkte, tole
  */
 export function zinsHinweis(info, aktuell, t = {}) {
   if (!info) return undefined;
-  const eigen = String(aktuell ?? "") !== info.zins;
+  const eigen = typeof info.eigen === "boolean" ? info.eigen : String(aktuell ?? "") !== info.zins;
   return (eigen ? t.zinsEigenHinweis : t.zinsAutoHinweis) || undefined;
 }

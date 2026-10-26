@@ -14,7 +14,7 @@ const STYLES = {
   pro: { background: "var(--ca-bg)", color: "var(--ca-dk)", border: "1px solid var(--ca-bd)" },
   // Gleiche Gruen-Werte wie LoginSuccessToast/PaymentStep - dieselbe Aussage
   // ("laeuft, alles gut"), dieselbe Farbe.
-  trial: { background: "#E3F1E6", color: "#1E6B34", border: "1px solid #2F9E52" },
+  trial: { background: "var(--ok-bg)", color: "var(--ok-tx)", border: "1px solid var(--ok-bd)" },
   free: { background: "var(--cro)", color: "var(--ch)", border: "1px solid var(--cb)" },
 };
 

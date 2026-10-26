@@ -87,7 +87,7 @@ export function PurchaseConfirmModal({ onClose }) {
             ? {
                 background: "var(--bg)",
                 borderRadius: 16,
-                boxShadow: "0 24px 60px rgba(0,0,0,.22)",
+                boxShadow: "0 24px 60px rgba(0,0,0,.22), 0 0 0 1px var(--cb)",
                 border: "1px solid var(--cb)",
                 overflow: "hidden",
               }

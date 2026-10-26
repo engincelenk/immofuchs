@@ -482,7 +482,7 @@ export function AdminUserDrawer({ userId, currentUser, onClose, onChanged }) {
               <div
                 style={{
                   marginTop: 14,
-                  border: "1px solid #e8b4ad",
+                  border: "1px solid var(--bad-bd)",
                   borderRadius: 12,
                   padding: 16,
                   background: "var(--cc)",
@@ -570,7 +570,7 @@ function StatusBadge({ status }) {
         padding: "2px 8px",
         borderRadius: 20,
         color: "#fff",
-        background: suspended ? "#B3402A" : "#2F6B4F",
+        background: suspended ? "#C62828" : "#0E7C45",
       }}
     >
       {suspended ? "Gesperrt" : "Aktiv"}

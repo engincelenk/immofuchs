@@ -90,12 +90,12 @@ export const actionBtnStyle = {
 export const dangerBtnStyle = {
   ...actionBtnStyle,
   color: "var(--bad-tx)",
-  border: "1px solid #e8b4ad",
+  border: "1px solid var(--bad-bd)",
 };
 
 export const successBannerStyle = {
-  background: "#E7F3EA",
-  border: "1px solid #2d8a4e",
+  background: "var(--ok-bg)",
+  border: "1px solid var(--ok-bd)",
   color: "var(--ok-tx)",
   borderRadius: 8,
   padding: "8px 12px",
