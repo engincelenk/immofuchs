@@ -1,12 +1,11 @@
 // Reine Anzeige-Helfer fuers Dashboard (Spec 4.17) - getrennt von bands.js,
 // das die eigentliche BANDS-Bewertungslogik traegt.
 export function scoreBadgeColor(label) {
-  if (label === "gut") return "#0E7C45";
-  if (label === "grenzwertig") return "#9A5B00";
-  if (label === "kritisch") return "#C62828";
-  // Wie --ch in App.jsx. Das Badge traegt weisse Schrift; der alte Wert
-  // #8a8a80 kam damit nur auf 3,48:1.
-  return "#6c6c62";
+  if (label === "gut") return "#2FBF71";
+  if (label === "grenzwertig") return "#FFB800";
+  if (label === "kritisch") return "#F2545B";
+  // Neutrales Hellgrau; das Badge traegt dunkle Schrift (#1a1a1a, hier ca. 9:1).
+  return "#C9C9BF";
 }
 
 export function scoreBadgeText(label, t) {

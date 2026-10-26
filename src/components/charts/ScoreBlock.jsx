@@ -94,7 +94,8 @@ export function ScoreBlock({ score }) {
     );
   }
 
-  const COLORS = { green: "#0E7C45", yellow: "#9A5B00", orange: "#B4540A", red: "#C62828" };
+  // Leuchtende Flaechen (2026-10-26, Nutzer: Farben zu blass): Schrift darauf ist dunkel (#1a1a1a, mind. 5,1:1).
+  const COLORS = { green: "#2FBF71", yellow: "#FFB800", orange: "#FF8A3D", red: "#F2545B" };
   const col = COLORS[score.tier] || COLORS.red;
   // Text in Ampelfarbe: die kraeftigen COLORS erreichen auf hellem Grund nur
   // 2,1-3,8:1 (WCAG AA 4,5:1) - als Schrift deshalb die Status-Text-Tokens,
@@ -368,7 +369,7 @@ export function ScoreBlock({ score }) {
               style={{
                 fontSize: 12,
                 background: col,
-                color: "#fff",
+                color: "#1a1a1a",
                 borderRadius: 20,
                 padding: "1px 8px",
                 fontWeight: 700,

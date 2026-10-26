@@ -1,3 +1,11 @@
+## 2026-10-26 (1.100.151) [FRONTEND]
+
+### Score-Block und Ampel-Badges leuchtend statt braun (Nutzer: Farben immer noch sehr blass)
+
+- Fehler von 1.100.148/150: Die festen Ampel-Flaechen (Score-Kopfband und -Rahmen, Tacho-Verlauf, Zaehl-Punkt, Merkliste-Badges) waren fuer weisse Schrift abgedunkelt (#0E7C45, #9A5B00, #C62828), das Kopfband traegt aber dunkle Schrift: Braun mit Schwarz, matschiger Tacho. Jetzt leuchtende Flaechen mit dunkler Schrift: gruen #2FBF71, gelb #FFB800, orange #FF8A3D, rot #F2545B (dunkle Schrift mind. 5,1:1). Zaehl-Punkt und Merkliste-Badge tragen ebenfalls dunkle Schrift, der neutrale Fallback ist Hellgrau.
+- Hinweis zum Zwischenspeicher: prod, qa und dev liefern die kraeftigen Token-Farben (#3DDC84, #FF6B5E ...) bereits aus; ein Handy mit installierter PWA zeigt sie erst nach vollstaendigem Beenden und erneutem Oeffnen der App.
+- Tests 1968 gruen.
+
 ## 2026-10-26 (1.100.150) [FRONTEND]
 
 ### Farben wieder lebendig, Flimmern beim Eigenkapital-Regler behoben, Hell/Dunkel in der ganzen App geprueft

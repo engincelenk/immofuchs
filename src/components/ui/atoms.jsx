@@ -18,9 +18,9 @@ export function Dot({ color }) {
         verticalAlign: "middle",
       }}
       title={
-        color === "#0E7C45"
+        color === "#2FBF71"
           ? t.mlBadgeGut || "Gut"
-          : color === "#9A5B00"
+          : color === "#FFB800"
             ? t.mlBadgeMittel || "Mittelmäßig"
             : t.mlBadgeKritisch || "Kritisch"
       }

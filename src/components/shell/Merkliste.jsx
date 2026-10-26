@@ -1778,7 +1778,7 @@ export function Merkliste() {
                       <span
                         style={{
                           background: scoreBadgeColor(obj.scoreLabel),
-                          color: "#fff",
+                          color: "#1a1a1a",
                           fontSize: 11,
                           fontWeight: 700,
                           padding: "3px 9px",
