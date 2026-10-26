@@ -84,7 +84,7 @@ export async function rufeAnalyseAuf({
 // optional mit deutschem Rueckfall, damit kein Aufrufer stillschweigend
 // "undefined" anzeigt, wenn er `t` (noch) nicht durchreicht.
 export function analyseFehlertext(art, t = {}) {
-  if (art === "pro") return t.aiFehlerPro || "Diese Auswertung gehört zu ImmoFuchs Pro.";
+  if (art === "pro") return t.aiFehlerPro || "Diese Auswertung gehört zum ImmoFuchs-Abo.";
   if (art === "login")
     return t.aiFehlerLogin || "Bitte melde dich an, um die Auswertung zu starten.";
   if (art === "rateLimit")

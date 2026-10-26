@@ -291,7 +291,7 @@ export const T = {
     hardStopCf: "Über 800 € Zuzahlung im Monat, auch nach Steuerwirkung.",
     scoreHardStopTitel: "Deckelt den Score — unabhängig vom Kaufpreis:",
     // Fehlertexte der KI-Auswertungen (analyseFehlertext in aiAnalyse.js)
-    aiFehlerPro: "Diese Auswertung gehört zu ImmoFuchs Pro.",
+    aiFehlerPro: "Diese Auswertung gehört zum ImmoFuchs-Abo.",
     aiFehlerLogin: "Bitte melde dich an, um die Auswertung zu starten.",
     aiFehlerRateLimit: "Tageslimit erreicht — morgen wieder verfügbar.",
     aiFehlerModellAus:
@@ -1214,7 +1214,7 @@ export const T = {
       "Loan-to-value above 100% — the loan exceeds the pure purchase price (including financed closing costs).",
     hardStopCf: "Over €800 top-up per month, even after tax effects.",
     scoreHardStopTitel: "Caps the score — regardless of the purchase price:",
-    aiFehlerPro: "This analysis is part of ImmoFuchs Pro.",
+    aiFehlerPro: "This analysis is part of the ImmoFuchs subscription.",
     aiFehlerLogin: "Please sign in to start the analysis.",
     aiFehlerRateLimit: "Daily limit reached — available again tomorrow.",
     aiFehlerModellAus:
@@ -2193,7 +2193,7 @@ export const T = {
       "Kredi/değer oranı %100'ün üzerinde — kredi, saf satış fiyatını aşıyor (finanse edilen yan giderler dahil).",
     hardStopCf: "Vergi etkisinden sonra bile ayda 800 €'dan fazla ek ödeme.",
     scoreHardStopTitel: "Puanı sınırlıyor — satın alma fiyatından bağımsız olarak:",
-    aiFehlerPro: "Bu değerlendirme ImmoFuchs Pro kapsamındadır.",
+    aiFehlerPro: "Bu değerlendirme ImmoFuchs aboneliği kapsamındadır.",
     aiFehlerLogin: "Değerlendirmeyi başlatmak için lütfen giriş yapın.",
     aiFehlerRateLimit: "Günlük limit doldu — yarın yeniden kullanılabilir.",
     aiFehlerModellAus:
@@ -3166,7 +3166,7 @@ export const T = {
     hardStopBel: "贷款价值比超过100%——贷款金额超过了纯购买价格（含一并贷款的附加费用）。",
     hardStopCf: "即使考虑税收影响，每月仍需补贴超过800欧元。",
     scoreHardStopTitel: "限制评分——与购买价格无关：",
-    aiFehlerPro: "此分析属于 ImmoFuchs Pro。",
+    aiFehlerPro: "此分析属于 ImmoFuchs 订阅。",
     aiFehlerLogin: "请登录后开始分析。",
     aiFehlerRateLimit: "已达每日上限——明天可再次使用。",
     aiFehlerModellAus: "AI 服务目前无响应。请几分钟后重试。",
@@ -4103,7 +4103,7 @@ export const T = {
       "लोन-टू-वैल्यू 100% से अधिक — लोन शुद्ध खरीद मूल्य से अधिक है (वित्तपोषित अतिरिक्त लागतों सहित)।",
     hardStopCf: "कर प्रभाव के बाद भी प्रति माह 800 € से अधिक अतिरिक्त भुगतान।",
     scoreHardStopTitel: "स्कोर को सीमित करता है — खरीद मूल्य से स्वतंत्र:",
-    aiFehlerPro: "यह विश्लेषण ImmoFuchs Pro का हिस्सा है।",
+    aiFehlerPro: "यह विश्लेषण ImmoFuchs सदस्यता का हिस्सा है।",
     aiFehlerLogin: "विश्लेषण शुरू करने के लिए कृपया साइन इन करें।",
     aiFehlerRateLimit: "दैनिक सीमा पूरी — कल फिर उपलब्ध।",
     aiFehlerModellAus: "AI सेवा इस समय जवाब नहीं दे रही है। कृपया कुछ मिनट बाद पुनः प्रयास करें।",
@@ -4954,7 +4954,7 @@ export const TL = {
     navHow: "So funktioniert's",
     navZinsen: "Bauzinsen",
     subShort:
-      "Rechner für Kapitalanleger und Vermieter in Deutschland — Rendite, Finanzierung, Mietrecht, Sanierung. Mit kostenlosem Konto sofort loslegen. Unbegrenzte Nutzung mit ImmoFuchs Pro.",
+      "Rechner für Kapitalanleger und Vermieter in Deutschland — Rendite, Finanzierung, Mietrecht, Sanierung. Mit kostenlosem Konto sofort loslegen. Unbegrenzte Nutzung mit dem ImmoFuchs-Abo.",
     heroCtaPrimary: "Jetzt rechnen",
     heroCtaSecondary: "Wie funktioniert's?",
     heroBadgeLive: "Live-Daten",
@@ -5140,7 +5140,7 @@ export const TL = {
     navHow: "How it works",
     navZinsen: "Mortgage rates",
     subShort:
-      "Free calculators for investors and landlords in Germany — yield, financing, tenancy law, renovation. Get started instantly with a free account. Unlimited use with ImmoFuchs Pro.",
+      "Free calculators for investors and landlords in Germany — yield, financing, tenancy law, renovation. Get started instantly with a free account. Unlimited use with an ImmoFuchs subscription.",
     heroCtaPrimary: "Start calculating",
     heroCtaSecondary: "How does it work?",
     heroBadgeLive: "Live data",
@@ -5498,7 +5498,7 @@ export const TL = {
     navHow: "工作原理",
     navZinsen: "抵押利率",
     subShort:
-      "为德国投资者和房东提供免费计算器——回报、融资、租赁法、装修。注册免费账户即可立即开始。搭配 ImmoFuchs Pro 可无限使用。",
+      "为德国投资者和房东提供免费计算器——回报、融资、租赁法、装修。注册免费账户即可立即开始。订阅 ImmoFuchs 可无限使用。",
     heroCtaPrimary: "开始计算",
     heroCtaSecondary: "如何工作？",
     heroBadgeLive: "实时数据",
@@ -5677,7 +5677,7 @@ export const TL = {
     navHow: "यह कैसे काम करता है",
     navZinsen: "बंधक दरें",
     subShort:
-      "जर्मनी में निवेशकों और मकान मालिकों के लिए मुफ्त कैलकुलेटर। मुफ़्त खाते के साथ तुरंत शुरू करें। ImmoFuchs Pro के साथ असीमित उपयोग।",
+      "जर्मनी में निवेशकों और मकान मालिकों के लिए मुफ्त कैलकुलेटर। मुफ़्त खाते के साथ तुरंत शुरू करें। ImmoFuchs सदस्यता के साथ असीमित उपयोग।",
     heroCtaPrimary: "गणना शुरू करें",
     heroCtaSecondary: "यह कैसे काम करता है?",
     heroBadgeLive: "लाइव डेटा",

@@ -340,7 +340,7 @@ export function AdminUsersView({ currentUser }) {
           value={filters.subscription}
           onChange={(v) => updateFilter("subscription", v)}
           options={[
-            { value: "pro", label: "Pro" },
+            { value: "pro", label: "Abo" },
             { value: "free", label: "Free" },
           ]}
         />

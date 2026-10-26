@@ -76,7 +76,7 @@ async function logDeclaration(
   }
 }
 
-const planLabel = (plan: string) => (plan === "yearly" ? "ImmoFuchs Pro (Jahresplan)" : "ImmoFuchs Pro (Monatsplan)");
+const planLabel = (plan: string) => (plan === "yearly" ? "ImmoFuchs (Jahresplan)" : "ImmoFuchs (Monatsplan)");
 
 export type KuendigungErgebnis =
   | { ok: true; gefunden: true; periodEnd: number }

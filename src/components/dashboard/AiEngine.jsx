@@ -225,7 +225,7 @@ function ProduktZeile({
           </span>
         </span>
         {!proAktiv && (
-          <span style={{ ...preisChip, opacity: gesperrt ? 0.5 : 1 }}>Pro</span>
+          <span style={{ ...preisChip, opacity: gesperrt ? 0.5 : 1 }}>{t.proButton || "Abo"}</span>
         )}
         {/* "Neu" jetzt als Icon-Knopf oben rechts (objekt-detailseite-
             redesign.md, Variante E) statt als Textlink am Kartenende. */}

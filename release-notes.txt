@@ -1,3 +1,13 @@
+## 2026-10-26 (1.100.152) [FRONTEND] [WORKER]
+
+### Kein "Pro" mehr: das Produkt heisst ImmoFuchs (Nutzer: Pro ist nicht mehr der Fall)
+
+- App-Texte in allen 5 Sprachen (account.js, translations.js, assistant.js, expose.js): "ImmoFuchs Pro" ist "ImmoFuchs", das bezahlte Abo heisst "Abo" (en "subscription", tr "abonelik", zh "订阅", hi "सदस्यता"). Beispiele: Tarif-Etikett neben "Mein Konto" und im Kopf "Abo" statt "Pro", "Auf Pro upgraden" ist "Abo abschliessen", "Pro ist aktiv" ist "Dein Abo ist aktiv", "Willkommen bei ImmoFuchs", Testphase-, Widerrufs-, Kuendigungs- und FAQ-Texte, KI-Sperrtext ("gehoert zum ImmoFuchs-Abo"), Kontingent-Hinweise ("bei Free am Monatsersten, mit dem Abo morgen"), Landing-Beschreibung und manifest.json.
+- Oberflaeche: Abo-Zeile und Bestellung ohne "Pro", die Schriftzug-Beschriftung "Pro" neben dem Logo im Kaufdialog und Bestaetigungsdialog entfaellt, die Kennzeichnung an KI-Karten zeigt "Abo", der Admin-Filter heisst "Abo".
+- Server (Worker): Push-Titel, alle Abo-E-Mails (Verlaengerung, Kuendigung, Zahlung fehlgeschlagen, Widerruf, Willkommen, Karte laeuft ab, Jahres- auf Monatsplan), die Vertragsbezeichnung in E-Mails und Konto ("ImmoFuchs (Jahresplan)" / "(Monatsplan)") und das Produkt im Admin ("ImmoFuchs"). Der Worker braucht fuer diese Texte einen Deploy.
+- BEWUSST NICHT geaendert: Rechtstexte und Vertragsseiten in public/ (vertrag.js, datenschutz.html), der Produktname in Stripe (Rechnungen, Kundenportal), interne Namen im Code (isPro, planStatus "pro", ProHeaderButton) und die Tarif-Logik. Der Vertragsname dort muss mit dem Stripe-Produkt und den Rechtstexten gemeinsam und nach Rueckfrage umgestellt werden.
+- Tests: App 1968, Worker 492 gruen; Worker-Typpruefung sauber.
+
 ## 2026-10-26 (1.100.151) [FRONTEND]
 
 ### Score-Block und Ampel-Badges leuchtend statt braun (Nutzer: Farben immer noch sehr blass)

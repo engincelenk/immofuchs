@@ -80,9 +80,9 @@ export async function dispatchNotification(env: Env, intent: NotificationIntent)
 function renderPush(intent: NotificationIntent): { title: string; body: string } {
   switch (intent.event) {
     case "renewal_reminder":
-      return { title: "ImmoFuchs Pro verlängert sich bald", body: `Verlängerung am ${intent.payload.periodEndDate}` };
+      return { title: "ImmoFuchs verlängert sich bald", body: `Verlängerung am ${intent.payload.periodEndDate}` };
     case "cancellation_confirmed":
-      return { title: "Kündigung bestätigt", body: `Pro bleibt aktiv bis ${intent.payload.periodEndDate}` };
+      return { title: "Kündigung bestätigt", body: `Dein Zugang bleibt aktiv bis ${intent.payload.periodEndDate}` };
     case "reactivation_confirmed":
       return { title: "Kündigung zurückgenommen", body: "Dein Abo läuft wie gewohnt weiter." };
     case "withdrawal_received":
@@ -94,9 +94,9 @@ function renderPush(intent: NotificationIntent): { title: string; body: string }
     case "account_deleted":
       return { title: "Konto gelöscht", body: "Dein ImmoFuchs-Konto wurde gelöscht." };
     case "payment_failed":
-      return { title: "Zahlung fehlgeschlagen", body: `Pro bleibt noch bis ${intent.payload.graceEndsDate} aktiv.` };
+      return { title: "Zahlung fehlgeschlagen", body: `Dein Zugang bleibt noch bis ${intent.payload.graceEndsDate} aktiv.` };
     case "payment_succeeded":
-      return { title: "Willkommen bei ImmoFuchs Pro", body: "Dein Abo ist jetzt aktiv." };
+      return { title: "Willkommen bei ImmoFuchs", body: "Dein Abo ist jetzt aktiv." };
     case "password_changed":
       return { title: "Passwort geändert", body: "Warst du das nicht? Bitte sofort zurücksetzen." };
     case "email_change_requested":
@@ -121,13 +121,13 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       const betrag = String(intent.payload.amount ?? preisText("yearly"));
       if (intent.payload.wechselZuMonatlich) {
         return {
-          subject: "Dein ImmoFuchs-Pro-Jahresabo wechselt in den Monatsplan",
-          html: `<p>Dein Jahresabo endet am ${datum}. Danach läuft ImmoFuchs Pro als Monatsabo weiter (${preisText("monthly")}), jederzeit zum Monatsende kündbar.</p>
+          subject: "Dein ImmoFuchs-Jahresabo wechselt in den Monatsplan",
+          html: `<p>Dein Jahresabo endet am ${datum}. Danach läuft ImmoFuchs als Monatsabo weiter (${preisText("monthly")}), jederzeit zum Monatsende kündbar.</p>
                  <p>Falls du das nicht möchtest, kannst du im Konto-Bereich jederzeit kündigen.</p>`,
         };
       }
       return {
-        subject: "Dein ImmoFuchs-Pro-Abo verlängert sich bald",
+        subject: "Dein ImmoFuchs-Abo verlängert sich bald",
         html: `<p>Dein Jahresabo verlängert sich am ${datum} automatisch (${betrag}).</p>
                <p>Falls du das nicht möchtest, kannst du im Konto-Bereich jederzeit kündigen.</p>`,
       };
@@ -137,20 +137,20 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
     case "cancellation_confirmed": {
       const datum = String(intent.payload.periodEndDate ?? "");
       const eingang = String(intent.payload.receivedAt ?? "");
-      const vertrag = String(intent.payload.contract ?? "ImmoFuchs Pro");
+      const vertrag = String(intent.payload.contract ?? "ImmoFuchs");
       const name = String(intent.payload.name ?? "");
       const email = String(intent.payload.email ?? "");
       return {
         subject: "Deine Kündigung ist bestätigt",
         html: `<p>Wir bestätigen deine Kündigung.</p>
                <p><strong>Inhalt der Kündigung:</strong> Kündigung des Vertrags „${vertrag}“ zum Ende der laufenden Abrechnungsperiode${name ? `<br><strong>Name:</strong> ${name}` : ""}<br><strong>E-Mail:</strong> ${email}<br><strong>Zugang der Kündigung:</strong> ${eingang}<br><strong>Der Vertrag endet am:</strong> ${datum}</p>
-               <p>Bis dahin bleibt ImmoFuchs Pro aktiv. Du kannst die Kündigung bis dahin jederzeit im Konto-Bereich zurücknehmen.</p>`,
+               <p>Bis dahin bleibt dein Zugang aktiv. Du kannst die Kündigung bis dahin jederzeit im Konto-Bereich zurücknehmen.</p>`,
       };
     }
     // § 356a Abs. 4 BGB: bestaetigt AUSSCHLIESSLICH den Eingang, nicht die Wirksamkeit.
     case "withdrawal_received": {
       const eingang = String(intent.payload.receivedAt ?? "");
-      const vertrag = String(intent.payload.contract ?? "ImmoFuchs Pro");
+      const vertrag = String(intent.payload.contract ?? "ImmoFuchs");
       const name = String(intent.payload.name ?? "");
       const email = String(intent.payload.email ?? "");
       return {
@@ -169,7 +169,7 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
     case "reactivation_confirmed": {
       return {
         subject: "Deine Kündigung wurde zurückgenommen",
-        html: `<p>Dein ImmoFuchs-Pro-Abo läuft wie gewohnt weiter.</p>`,
+        html: `<p>Dein ImmoFuchs-Abo läuft wie gewohnt weiter.</p>`,
       };
     }
     case "withdrawal_confirmed": {
@@ -178,7 +178,7 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       const tage = String(intent.payload.tage ?? "");
       return {
         subject: "Dein Vertrag ist beendet – Erstattung veranlasst",
-        html: `<p>Auf deinen Widerruf hin ist dein ImmoFuchs-Pro-Vertrag beendet, der Pro-Zugang endet jetzt.</p>
+        html: `<p>Auf deinen Widerruf hin ist dein ImmoFuchs-Vertrag beendet, dein Zugang endet jetzt.</p>
                <p>Wertersatz für die bis zum Widerruf erbrachte Leistung (${tage} Tage): ${wertersatz}<br>
                Erstattung: ${erstattung}</p>
                <p>Die Erstattung erfolgt auf das bei der Zahlung verwendete Zahlungsmittel; sie kann je nach Bank einige Tage dauern.</p>`,
@@ -194,8 +194,8 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       const graceEndsDate = String(intent.payload.graceEndsDate ?? "");
       return {
         subject: "Deine Zahlung ist fehlgeschlagen",
-        html: `<p>Die Abbuchung für dein ImmoFuchs-Pro-Abo ist fehlgeschlagen. Stripe versucht es automatisch erneut.</p>
-               <p>Bis ${graceEndsDate} bleibt Pro trotzdem aktiv. Bitte aktualisiere in der Zwischenzeit deine Zahlungsmethode im Konto-Bereich.</p>`,
+        html: `<p>Die Abbuchung für dein ImmoFuchs-Abo ist fehlgeschlagen. Stripe versucht es automatisch erneut.</p>
+               <p>Bis ${graceEndsDate} bleibt dein Zugang trotzdem aktiv. Bitte aktualisiere in der Zwischenzeit deine Zahlungsmethode im Konto-Bereich.</p>`,
       };
     }
     // Konzept-Dok "Rechnungserstellung und Versand" Abschnitt 1 ("Zahlung
@@ -210,9 +210,9 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       const amount = String(intent.payload.amount ?? "");
       const periodEndDate = String(intent.payload.periodEndDate ?? "");
       return {
-        subject: "Willkommen bei ImmoFuchs Pro",
-        html: `<p>Deine Zahlung war erfolgreich - dein ImmoFuchs-Pro-Abo ist jetzt aktiv.</p>
-               <p>Abo: ImmoFuchs Pro<br>
+        subject: "Willkommen bei ImmoFuchs",
+        html: `<p>Deine Zahlung war erfolgreich - dein ImmoFuchs-Abo ist jetzt aktiv.</p>
+               <p>Abo: ImmoFuchs<br>
                Abrechnung: ${plan}<br>
                Betrag: ${amount}<br>
                Nächste Verlängerung: ${periodEndDate}</p>
@@ -232,7 +232,7 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       const betrag = String(intent.payload.amount ?? "");
       return {
         subject: "Deine ImmoFuchs-Testphase endet in 1 Tag",
-        html: `<p>Deine kostenlose Testphase endet am ${datum}. Danach werden ${betrag} abgebucht und dein Pro-Zugang laeuft normal weiter.</p>
+        html: `<p>Deine kostenlose Testphase endet am ${datum}. Danach werden ${betrag} abgebucht und dein Zugang laeuft normal weiter.</p>
                <p>Wenn du nicht weitermachen moechtest, kannst du bis dahin jederzeit im Konto-Bereich kuendigen - es entstehen dann keine Kosten.</p>`,
       };
     }
@@ -244,9 +244,9 @@ function renderEmail(intent: NotificationIntent): { subject: string; html: strin
       const last4 = intent.payload.last4 ? ` (•••• ${String(intent.payload.last4)})` : "";
       const datum = String(intent.payload.periodEndDate ?? "");
       return {
-        subject: "Deine Zahlungskarte für ImmoFuchs Pro läuft bald ab",
-        html: `<p>Die bei ImmoFuchs Pro hinterlegte Karte${last4} läuft am Ende von ${expiry} ab. Die nächste Abbuchung ist am ${datum}.</p>
-               <p>Bitte hinterlege vorher im Konto-Bereich eine neue Zahlungsmethode, damit dein Pro-Zugang ohne Unterbrechung weiterläuft.</p>`,
+        subject: "Deine Zahlungskarte für ImmoFuchs läuft bald ab",
+        html: `<p>Die bei ImmoFuchs hinterlegte Karte${last4} läuft am Ende von ${expiry} ab. Die nächste Abbuchung ist am ${datum}.</p>
+               <p>Bitte hinterlege vorher im Konto-Bereich eine neue Zahlungsmethode, damit dein Zugang ohne Unterbrechung weiterläuft.</p>`,
       };
     }
     case "password_changed": {

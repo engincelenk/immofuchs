@@ -108,7 +108,7 @@ export function AbonnementSection({ t, account, onUpgrade, onBack }) {
           <div style={blockCardStyle}>
             <div style={labelValueRowStyle}>
               <span style={labelStyle}>{t.accountPlan}</span>
-              <span style={valueStyle}>ImmoFuchs Pro – {formatPlanLabel(subscription, t)}</span>
+              <span style={valueStyle}>ImmoFuchs – {formatPlanLabel(subscription, t)}</span>
             </div>
             <div style={labelValueRowStyle}>
               <span style={labelStyle}>{t.accountStatus}</span>

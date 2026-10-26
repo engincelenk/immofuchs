@@ -171,7 +171,7 @@ export function RechnerAiKarte({ produktId, titel, kurz, data, kennzahlen, zahle
             </span>
           )}
         </span>
-        {!isProSavedObjects && <span style={preisChip}>Pro</span>}
+        {!isProSavedObjects && <span style={preisChip}>{t.proButton || "Abo"}</span>}
       </div>
 
       {consent && (

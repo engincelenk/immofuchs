@@ -88,7 +88,7 @@ export function OrderSummary({
         }}
       >
         <span style={{ fontWeight: 600, minWidth: 0 }}>
-          ImmoFuchs Pro <span style={{ color: "var(--ch)", fontWeight: 500 }}>({planLabel})</span>
+          ImmoFuchs <span style={{ color: "var(--ch)", fontWeight: 500 }}>({planLabel})</span>
         </span>
         <span style={{ display: "flex", alignItems: "baseline", gap: 7, flexShrink: 0 }}>
           {listAmount && (

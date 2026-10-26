@@ -630,7 +630,7 @@ adminRoutes.get("/subscriptions", requireAuth, requirePermission("subscription.r
       email: s.email,
       // "Produkt" ist im Auftrag eine eigene Spalte - es gibt aktuell genau
       // ein Produkt, deshalb konstant statt aus der DB (dort steht es nicht).
-      product: "ImmoFuchs Pro",
+      product: "ImmoFuchs",
       plan: s.plan,
       status: s.status,
       startedAt: s.first_purchase_at,
@@ -659,7 +659,7 @@ adminRoutes.get("/subscriptions/:id", requireAuth, requirePermission("subscripti
     id: sub.id,
     userId: sub.user_id,
     email: sub.email,
-    product: "ImmoFuchs Pro",
+    product: "ImmoFuchs",
     plan: sub.plan,
     status: sub.status,
     startedAt: sub.first_purchase_at,

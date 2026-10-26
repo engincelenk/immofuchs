@@ -109,7 +109,7 @@ export function PurchaseConfirmModal({ onClose }) {
           }}
         >
           <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-            <BrandIcon size={30} /> <span style={{ color: "var(--ca-dk)" }}>Pro</span>
+            <BrandIcon size={30} />
           </div>
           <button
             onClick={onClose}

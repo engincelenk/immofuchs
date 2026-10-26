@@ -134,7 +134,7 @@ describe("rufeAnalyseAuf", () => {
 
 describe("analyseFehlertext", () => {
   it("liefert je Sperrgrund einen eigenen, unterscheidbaren Text", () => {
-    expect(analyseFehlertext("pro")).toMatch(/Pro/);
+    expect(analyseFehlertext("pro")).toMatch(/Abo/);
     expect(analyseFehlertext("login")).toMatch(/melde dich an/i);
     expect(analyseFehlertext("rateLimit")).toMatch(/Tageslimit/);
     expect(analyseFehlertext("modellAus")).toMatch(/KI-Dienst antwortet gerade nicht/);

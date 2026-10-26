@@ -77,7 +77,7 @@ export const ASSISTANT_T = {
     placeholder: "Frag Finn etwas...",
     loading: "Einen Moment, ich schau mir das an",
     offline: "Dafür brauche ich kurz Internet. Deine Rechner laufen offline weiter.",
-    limit: "Dein Fragen-Kontingent ist gerade aufgebraucht — bei Free gibt es am Monatsersten neue, bei Pro morgen.",
+    limit: "Dein Fragen-Kontingent ist gerade aufgebraucht — bei Free gibt es am Monatsersten neue, mit dem Abo morgen.",
     zugang: "Dafür brauchst du ein Konto — sieben Tage kostenlos testen, ohne Zahlungsdaten.",
     error: "Kurzer Aussetzer bei mir — nochmal?",
     // Bewusst getrennt von `error` (Nutzerwunsch 2026-08-03): ein 4xx vom
@@ -285,7 +285,7 @@ export const ASSISTANT_T = {
     placeholder: "Ask Finn something...",
     loading: "One moment, I am having a look",
     offline: "I need a moment of internet for that. Your calculators keep working offline.",
-    limit: "Your question quota is used up for now — Free gets new ones on the 1st, Pro tomorrow.",
+    limit: "Your question quota is used up for now — Free gets new ones on the 1st, with a subscription tomorrow.",
     zugang: "You need an account for that — seven days free, no payment details.",
     error: "Brief hiccup on my end — try again?",
     errorTechnical:
@@ -490,7 +490,7 @@ export const ASSISTANT_T = {
     loading: "Bir saniye, buna bir bakıyorum",
     offline:
       "Bunun için internete ihtiyacım var. Hesaplayıcıların çevrimdışı çalışmaya devam ediyor.",
-    limit: "Soru kontenjanın şimdilik doldu — Free'de ayın 1'inde, Pro'da yarın yenileniyor.",
+    limit: "Soru kontenjanın şimdilik doldu — Free'de ayın 1'inde, abonelikte yarın yenileniyor.",
     zugang: "Bunun için bir hesap gerekiyor — yedi gün ücretsiz, ödeme bilgisi olmadan.",
     error: "Kısa bir aksaklık — tekrar dener misin?",
     errorTechnical:
@@ -686,7 +686,7 @@ export const ASSISTANT_T = {
     placeholder: "问 Finn 点什么...",
     loading: "稍等，我看一下",
     offline: "这个功能需要联网。你的计算器离线仍可使用。",
-    limit: "提问额度暂时用完了——免费版每月 1 日恢复，Pro 版明天恢复。",
+    limit: "提问额度暂时用完了——免费版每月 1 日恢复，订阅版明天恢复。",
     zugang: "这需要一个账户 — 七天免费试用，无需支付信息。",
     error: "出现短暂故障——要重试吗？",
     errorTechnical: "我这边出现了技术故障（不是网络问题）——试试更短的消息，或重新开始对话。",
@@ -889,7 +889,7 @@ export const ASSISTANT_T = {
     placeholder: "Finn से कुछ पूछें...",
     loading: "एक पल, मैं इसे देख रहा हूँ",
     offline: "इसके लिए इंटरनेट चाहिए। आपके कैलकुलेटर ऑफ़लाइन भी काम करते रहेंगे।",
-    limit: "आपका सवाल कोटा फ़िलहाल समाप्त — Free में हर महीने की 1 तारीख को, Pro में कल नए मिलते हैं।",
+    limit: "आपका सवाल कोटा फ़िलहाल समाप्त — Free में हर महीने की 1 तारीख को, सदस्यता में कल नए मिलते हैं।",
     zugang: "इसके लिए खाता चाहिए — सात दिन मुफ़्त, बिना भुगतान जानकारी के।",
     error: "थोड़ी रुकावट — दोबारा कोशिश करें?",
     errorTechnical:

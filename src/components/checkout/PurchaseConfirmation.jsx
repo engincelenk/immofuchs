@@ -87,7 +87,7 @@ export function PurchaseConfirmation({ t, account, plan, onDone }) {
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12, padding: "4px 0" }}>
           <span style={{ color: "var(--ch)" }}>{t.accountPlan}</span>
           <span style={{ fontWeight: 700, textAlign: "right" }}>
-            {planLabel ? `ImmoFuchs Pro – ${planLabel}` : "ImmoFuchs Pro"}
+            {planLabel ? `ImmoFuchs – ${planLabel}` : "ImmoFuchs"}
           </span>
         </div>
         {subscription?.currentPeriodEnd && (
