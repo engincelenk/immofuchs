@@ -1,3 +1,12 @@
+## 2026-10-27 (1.100.153) [FRONTEND]
+
+### Fazit in drei Zeilen: Objekt-Detail und Renditerechner nennen die Erkenntnis direkt (Nutzerwunsch)
+
+- Neue Karte "Fazit" mit drei nummerierten Zeilen (farbige Kreise): 1) traegt sich das Objekt, mit Cashflow vor Steuer pro Monat und Finanzierungsanteil, 2) wie viel Eigenkapital es fuer Cashflow >= 0 braucht (oder: auch bei 50 % Finanzierung reicht die Miete nicht), 3) Verhandlungsziel: hoechster Kaufpreis fuer Cashflow >= 0 mit Abschlag zum Angebot.
+- Ort: Objekt-Detail direkt unter "Was die Zahlen sagen" und oben im Ergebnis des Renditerechners vor dem Finanz-Score. Traegt sich das Objekt, steht nur Zeile 1 (positiv).
+- Gleiche Zahlen wie der Stufen-Vergleich (utils/fazit.js nutzt finanzierungsVergleich.js); auf der Objektseite hat der Zielpreis der Empfehlung Vorrang, damit beide Stellen dieselbe Zahl nennen. Texte in 5 Sprachen.
+- Tests: neue fazit.test.js (Zeilen, Vorrang des Zielpreises, Texte in allen Sprachen).
+
 ## 2026-10-26 (1.100.152) [FRONTEND] [WORKER]
 
 ### Kein "Pro" mehr: das Produkt heisst ImmoFuchs (Nutzer: Pro ist nicht mehr der Fall)

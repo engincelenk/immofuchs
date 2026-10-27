@@ -23,6 +23,7 @@ import {
   regionalWertsteigerung,
 } from "../../utils/regionalpreis.js";
 import { AiEngine } from "./AiEngine.jsx";
+import { FazitKarte } from "../ui/FazitKarte.jsx";
 import { AlternativInvestment } from "./AlternativInvestment.jsx";
 import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
@@ -219,6 +220,15 @@ export function InvestmentBriefing({
       )}
 
       <AntwortsatzKopf einschaetzung={einschaetzung} t={t} />
+      <FazitKarte
+        d={data}
+        t={t}
+        zielKaufpreis={
+          briefing.empfehlung?.wort === "verhandeln" && briefing.empfehlung.ziel?.art === "kaufpreis"
+            ? briefing.empfehlung.ziel.kaufpreis
+            : null
+        }
+      />
       <KennzahlenLeiste score={score} kennzahlen={briefing.kernkennzahlen} t={t} />
       <SchrittNav t={t} />
 

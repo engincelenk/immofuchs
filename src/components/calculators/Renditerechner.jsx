@@ -48,6 +48,7 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { zinsHinweis } from "../../utils/zinsStaffel.js";
 import { FinanzierungsAnteil } from "../ui/FinanzierungsAnteil.jsx";
+import { FazitKarte } from "../ui/FazitKarte.jsx";
 
 // Regionaler Kaufpreis-Realitaetscheck (2026-09-09, Wow-Feature Idee B.2):
 // vergleicht den eingegebenen Kaufpreis je m² (R.pQm) gegen den regionalen
@@ -949,6 +950,9 @@ export default function Haupt() {
                   </span>
                 </button>
               </div>
+
+              {/* FAZIT in drei Zeilen — vor dem Finanz-Score (Nutzerwunsch 2026-10-27) */}
+              <FazitKarte d={d} t={t} style={{ marginTop: 0, marginBottom: 12 }} />
 
               {/* FINANZ-SCORE — immer sichtbar */}
               <ScoreBlock score={score} />
