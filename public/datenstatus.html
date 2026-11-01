@@ -1,29 +1,15 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <!-- Theme wie index.html (Key "if_theme", Default dunkel) - blockierend vor dem ersten Paint. -->
-  <script>
-    (function () {
-      try {
-        var v = localStorage.getItem("if_theme");
-        if (v === "light") document.documentElement.setAttribute("data-theme", "light");
-        else if (v !== "system") document.documentElement.setAttribute("data-theme", "dark");
-      } catch (e) {
-        document.documentElement.setAttribute("data-theme", "dark");
-      }
-    })();
-  </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ImmoFuchs — Datenstatus</title>
 <link href="/fonts/dm-sans.css" rel="stylesheet">
 <style>
   :root {
-    --ca:#B84800; --ca-dk:#9A3C00; --bg:#F5F5F0; --cc:#FFFFFF;
-    --ct:#1A1A1A; --ch:#6C6C62; --cb:#E5E5DC; --ci:#FAFAF7; color-scheme:light;
+    --ca:#E8600A; --ca-dk:#C44D00; --bg:#F5F5F0; --cc:#FFFFFF;
+    --ct:#1A1A1A; --ch:#8A8A80; --cb:#E5E5DC;
   }
-  :root[data-theme="dark"] { --bg:#181818; --cc:#232323; --ct:#F0F0EA; --ch:#9A9A90; --cb:#3A3A38; --ci:#2A2A2A; color-scheme:dark; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --bg:#181818; --cc:#232323; --ct:#F0F0EA; --ch:#9A9A90; --cb:#3A3A38; --ci:#2A2A2A; color-scheme:dark; } }
   * { box-sizing:border-box; }
   body {
     margin:0; padding:32px 16px; background:var(--bg); color:var(--ct);
@@ -37,7 +23,7 @@
     border:1px solid var(--cb); border-radius:12px; overflow:hidden;
   }
   th, td { text-align:left; padding:10px 12px; font-size:13px; border-bottom:1px solid var(--cb); }
-  th { background:var(--ci); font-weight:600; color:var(--ch); text-transform:uppercase; font-size:11px; letter-spacing:.5px; }
+  th { background:#FAFAF7; font-weight:600; color:var(--ch); text-transform:uppercase; font-size:11px; letter-spacing:.5px; }
   tr:last-child td { border-bottom:none; }
   .sub { color:var(--ch); font-size:11px; }
   .legend { margin-top:16px; font-size:12px; color:var(--ch); }
@@ -46,7 +32,7 @@
 <body>
   <div class="wrap">
     <h1>📊 ImmoFuchs Datenstatus</h1>
-    <div class="meta">Letzter Lauf: 02.10.2026 12:34 Uhr · scripts/monthly_update.py</div>
+    <div class="meta">Letzter Lauf: 01.11.2026 06:52 Uhr · scripts/monthly_update.py</div>
     <table>
       <thead>
         <tr><th></th><th>Konstante</th><th>Rechner</th><th>Stand</th><th>Alter</th><th>Pflege</th></tr>
@@ -56,16 +42,8 @@
           <td>🔴</td>
           <td>Wiederanlagezins (Pfandbrief)<br><span class="sub">PFANDBRIEF</span></td>
           <td>Vorfälligkeitsrechner</td>
-          <td>Mai 2026</td>
-          <td>5 / 1 Monate</td>
-          <td>automatisch</td>
-        </tr>
-        <tr>
-          <td>🔴</td>
-          <td>Wertsteigerung Wohnimmobilien<br><span class="sub">WERTSTEIGERUNG</span></td>
-          <td>Renditerechner, Landingpage</td>
-          <td>Q1 2026</td>
-          <td>7 / 6 Monate</td>
+          <td>September 2026</td>
+          <td>2 / 1 Monate</td>
           <td>automatisch</td>
         </tr>
         <tr>
@@ -73,23 +51,15 @@
           <td>Mietpreisprognose<br><span class="sub">MIET_P</span></td>
           <td>Mieterhöhungsrechner</td>
           <td>Q1 2026</td>
-          <td>7 / 6 Monate</td>
-          <td>manuell</td>
-        </tr>
-        <tr>
-          <td>🔴</td>
-          <td>Energiepreise & CO₂-Faktoren<br><span class="sub">SAN_ENERGIE</span></td>
-          <td>Sanierungsrechner</td>
-          <td>Q1 2026</td>
-          <td>7 / 6 Monate</td>
+          <td>8 / 6 Monate</td>
           <td>manuell</td>
         </tr>
         <tr>
           <td>🟢</td>
-          <td>KfW-Förderkredit-Konditionen<br><span class="sub">KFW_KREDIT</span></td>
-          <td>Kreditrechner</td>
-          <td>August 2026</td>
-          <td>2 / 3 Monate</td>
+          <td>Wertsteigerung Wohnimmobilien<br><span class="sub">WERTSTEIGERUNG</span></td>
+          <td>Renditerechner, Landingpage</td>
+          <td>Q2 2026</td>
+          <td>5 / 6 Monate</td>
           <td>manuell</td>
         </tr>
         <tr>
@@ -97,23 +67,15 @@
           <td>Sanierungs-Maßnahmenkosten<br><span class="sub">SAN_TIERS</span></td>
           <td>Sanierungsrechner</td>
           <td>August 2026</td>
-          <td>2 / 6 Monate</td>
+          <td>3 / 6 Monate</td>
           <td>manuell</td>
-        </tr>
-        <tr>
-          <td>🟢</td>
-          <td>Bauzinsen<br><span class="sub">MARKET_RATES</span></td>
-          <td>Renditerechner, Kreditrechner</td>
-          <td>Oktober 2026</td>
-          <td>0 / 1 Monate</td>
-          <td>automatisch</td>
         </tr>
         <tr>
           <td>🟢</td>
           <td>KfW-Heizungsförderung 458 (BEG)<br><span class="sub">KFW_HEIZUNG</span></td>
           <td>Sanierungsrechner</td>
           <td>Oktober 2026</td>
-          <td>0 / 3 Monate</td>
+          <td>1 / 3 Monate</td>
           <td>manuell</td>
         </tr>
         <tr>
@@ -121,8 +83,56 @@
           <td>BAFA-Förderung<br><span class="sub">BAFA</span></td>
           <td>Sanierungsrechner</td>
           <td>Oktober 2026</td>
-          <td>0 / 3 Monate</td>
+          <td>1 / 3 Monate</td>
           <td>manuell</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Energiepreise & CO₂-Faktoren<br><span class="sub">SAN_ENERGIE</span></td>
+          <td>Sanierungsrechner</td>
+          <td>Q3 2026</td>
+          <td>2 / 6 Monate</td>
+          <td>manuell</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>KfW-Förderkredit-Konditionen<br><span class="sub">KFW_KREDIT</span></td>
+          <td>Kreditrechner</td>
+          <td>Oktober 2026</td>
+          <td>1 / 3 Monate</td>
+          <td>manuell</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Zins-Abstände je Finanzierungsanteil<br><span class="sub">ZINS_ABSTAENDE</span></td>
+          <td>Renditerechner, Kreditrechner</td>
+          <td>Oktober 2026</td>
+          <td>1 / 6 Monate</td>
+          <td>manuell</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Bauzinsen<br><span class="sub">MARKET_RATES</span></td>
+          <td>Renditerechner, Kreditrechner</td>
+          <td>November 2026</td>
+          <td>0 / 1 Monate</td>
+          <td>automatisch</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Bundesanleihe 10 Jahre<br><span class="sub">BUNDESANLEIHE_10J</span></td>
+          <td>Objektseite: Alternativ-Investment</td>
+          <td>November 2026</td>
+          <td>0 / 1 Monate</td>
+          <td>automatisch</td>
+        </tr>
+        <tr>
+          <td>🟢</td>
+          <td>Zins je Finanzierungsanteil<br><span class="sub">ZINS_NACH_FINANZIERUNG</span></td>
+          <td>Renditerechner, Kreditrechner</td>
+          <td>November 2026</td>
+          <td>0 / 1 Monate</td>
+          <td>automatisch</td>
         </tr>
       </tbody>
     </table>

@@ -11,8 +11,8 @@
 //       und Interhyp-Zinstabelle (10J, Eigen-Ø der drei Beleihungsauslauf-
 //       Klassen) - einzige Zinsangabe, kein separater Topzins.
 export const MARKET_RATES = {
-  stand: "Oktober 2026",
-  avg: 4.32,
+  stand: "November 2026",
+  avg: 4.21,
 };
 
 // ── ZINS NACH FINANZIERUNGSANTEIL (seit 2026-10-23) ─────────────────────────
@@ -44,15 +44,15 @@ export const ZINS_ABSTAENDE = {
 // Zins je Finanzierungsanteil = MARKET_RATES.avg + ZINS_ABSTAENDE. NICHT von Hand aendern: schreibt der
 // Monatsjob (scripts/monthly_update.py) direkt nach der Zinsermittlung; ein Test prueft die Uebereinstimmung.
 export const ZINS_NACH_FINANZIERUNG = {
-  stand: "Oktober 2026",
+  stand: "November 2026",
   punkte: [
-    [50, 3.97],
-    [60, 4.02],
-    [70, 4.17],
-    [80, 4.32],
-    [90, 4.42],
-    [100, 4.62],
-    [110, 4.82],
+    [50, 3.86],
+    [60, 3.91],
+    [70, 4.06],
+    [80, 4.21],
+    [90, 4.31],
+    [100, 4.51],
+    [110, 4.71],
   ],
 };
 
@@ -120,8 +120,8 @@ export const PFANDBRIEF = {
 // Szenario-Mitte und Rueckblick der Bundesanleihe. Liegt hier und nicht in
 // alternativAnlagen.js, weil der Monatsjob nur src/data.js committet.
 export const BUNDESANLEIHE_10J = {
-  stand: "September 2026",
-  rendite: 3.61, // % p.a., Umlaufrendite 10-jaehriger Bundeswertpapiere
+  stand: "November 2026",
+  rendite: 3.34, // % p.a., Umlaufrendite 10-jaehriger Bundeswertpapiere
 };
 
 // ── MIETPREISPROGNOSE ────────────────────────────────────────────────────
