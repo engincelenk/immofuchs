@@ -1,3 +1,10 @@
+## 2026-11-02 (1.100.154) [FRONTEND]
+
+### Installations-Balken nur noch auf dem Desktop (Nutzerwunsch)
+
+- Der blaue Balken "App installieren" bzw. "Zum Home-Bildschirm" (InstallPrompt.jsx) erscheint auf Handys und Tablets (iPhone, iPad inkl. iPadOS, Android) nicht mehr: dort kommt man ueber App Store und Google Play an die App. Auf dem Desktop bleibt er unveraendert.
+- Offen: Store-Buttons auf der Landing Page (Store-Links fehlen im Code).
+
 ## 2026-10-27 (1.100.153) [FRONTEND]
 
 ### Fazit in drei Zeilen: Objekt-Detail und Renditerechner nennen die Erkenntnis direkt (Nutzerwunsch)

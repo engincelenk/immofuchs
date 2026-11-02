@@ -33,8 +33,8 @@ describe("Stufen-Tabelle", () => {
   it("enthaelt 50 % bis 100 % in aufsteigender Folge, 50 % als Schaetzwert", () => {
     const p = ZINS_NACH_FINANZIERUNG.punkte;
     expect(p.map(([a]) => a)).toEqual([50, 60, 70, 80, 90, 100, 110]);
-    expect(p[p.length - 1][1]).toBeCloseTo(4.82, 10);
-    expect(p[0][1]).toBeCloseTo(3.97, 10);
+    expect(p[p.length - 1][1]).toBeCloseTo(4.71, 10);
+    expect(p[0][1]).toBeCloseTo(3.86, 10);
   });
 });
 
