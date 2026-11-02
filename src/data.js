@@ -12,7 +12,7 @@
 //       Klassen) - einzige Zinsangabe, kein separater Topzins.
 export const MARKET_RATES = {
   stand: "November 2026",
-  avg: 4.21,
+  avg: 4.19,
 };
 
 // ── ZINS NACH FINANZIERUNGSANTEIL (seit 2026-10-23) ─────────────────────────
@@ -46,13 +46,13 @@ export const ZINS_ABSTAENDE = {
 export const ZINS_NACH_FINANZIERUNG = {
   stand: "November 2026",
   punkte: [
-    [50, 3.86],
-    [60, 3.91],
-    [70, 4.06],
-    [80, 4.21],
-    [90, 4.31],
-    [100, 4.51],
-    [110, 4.71],
+    [50, 3.84],
+    [60, 3.89],
+    [70, 4.04],
+    [80, 4.19],
+    [90, 4.29],
+    [100, 4.49],
+    [110, 4.69],
   ],
 };
 
@@ -108,8 +108,8 @@ export const BL_O = [{ v: "", l: "–" }, ...Object.entries(BL_N).map(([v, l]) =
 // API-Server abgeschaltet) - ein Durchschnitt über alle Laufzeiten, kein
 // laufzeitgenauer Wiederanlagezins.
 export const PFANDBRIEF = {
-  stand: "September 2026",
-  zins: 3.63, // % p.a. — Hypothekenpfandbriefe, Umlaufrendite Ø aller Laufzeiten
+  stand: "Oktober 2026",
+  zins: 3.67, // % p.a. — Hypothekenpfandbriefe, Umlaufrendite Ø aller Laufzeiten
 };
 
 // ── BUNDESANLEIHE 10 JAHRE ──────────────────────────────────────────────
