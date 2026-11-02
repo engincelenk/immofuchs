@@ -4825,6 +4825,8 @@ export const TL = {
     h1c: " Rendite kennen. Richtig entscheiden.",
     ctaFree: "Kostenlos starten",
     heroTrustLang: "In 5 Sprachen",
+    storeIos: "Im App Store laden",
+    storeAndroid: "Bei Google Play laden",
     navKi: "KI-Funktionen",
     kiH2: "Deine KI für Immobilien­entscheidungen",
     kiLead:
@@ -5011,6 +5013,8 @@ export const TL = {
     h1c: " Know the yield. Decide right.",
     ctaFree: "Start for free",
     heroTrustLang: "In 5 languages",
+    storeIos: "Download on the App Store",
+    storeAndroid: "Get it on Google Play",
     navKi: "AI features",
     kiH2: "Your AI for property decisions",
     kiLead:
@@ -5197,6 +5201,8 @@ export const TL = {
     h1c: " Getiriyi bilin. Doğru karar verin.",
     ctaFree: "Ücretsiz başla",
     heroTrustLang: "5 dilde",
+    storeIos: "App Store'dan indir",
+    storeAndroid: "Google Play'den indir",
     navKi: "Yapay zekâ özellikleri",
     kiH2: "Gayrimenkul kararların için yapay zekân",
     kiLead:
@@ -5381,6 +5387,8 @@ export const TL = {
     h1c: " 了解收益。正确决策。",
     ctaFree: "免费开始",
     heroTrustLang: "支持 5 种语言",
+    storeIos: "在 App Store 下载",
+    storeAndroid: "在 Google Play 获取",
     navKi: "AI 功能",
     kiH2: "助你做房产决策的 AI",
     kiLead:
@@ -5554,6 +5562,8 @@ export const TL = {
     h1c: " रिटर्न जानें। सही निर्णय लें।",
     ctaFree: "मुफ़्त शुरू करें",
     heroTrustLang: "5 भाषाओं में",
+    storeIos: "App Store से डाउनलोड करें",
+    storeAndroid: "Google Play से पाएँ",
     navKi: "AI सुविधाएँ",
     kiH2: "प्रॉपर्टी फ़ैसलों के लिए आपका AI",
     kiLead:

@@ -1,9 +1,11 @@
-## 2026-11-02 (1.100.154) [FRONTEND]
+## 2026-11-02 (1.100.155) [FRONTEND]
 
-### Installations-Balken nur noch auf dem Desktop (Nutzerwunsch)
+### Installations-Balken wieder fuer Handys; Store-Buttons und Apple-Banner vorbereitet (noch unsichtbar)
 
-- Der blaue Balken "App installieren" bzw. "Zum Home-Bildschirm" (InstallPrompt.jsx) erscheint auf Handys und Tablets (iPhone, iPad inkl. iPadOS, Android) nicht mehr: dort kommt man ueber App Store und Google Play an die App. Auf dem Desktop bleibt er unveraendert.
-- Offen: Store-Buttons auf der Landing Page (Store-Links fehlen im Code).
+- KORREKTUR zu 1.100.154: Der Balken "App installieren" bzw. "Zum Home-Bildschirm" (InstallPrompt.jsx) erscheint auf Handys und Tablets wieder. Die Abschaltung war falsch, weil die Apps noch nicht in App Store und Google Play sind (Plan app-store-einreichung: Entwurf, nur alter TestFlight-Build); Handy-Nutzer hatten dadurch keinen Installationsweg. Auf dem Desktop bleibt der Balken wie bisher.
+- Vorbereitet: src/storeLinks.js mit APPLE_APP_ID, APP_STORE_URL und PLAY_STORE_URL (alle null). Solange null, bleibt alles unsichtbar. Sind Werte eingetragen, zeigt die Landing Page im Hero zwei Store-Buttons (Texte in 5 Sprachen, TL.storeIos und TL.storeAndroid) und setzt mit der Apple-ID das meta apple-itunes-app (Apple-Smart-App-Banner oben im iPhone-Safari).
+- Noch offen nach der Freigabe in den Stores: Werte in storeLinks.js eintragen, die Buttons durch die offiziellen Badges von Apple und Google ersetzen (Apple-Regeln: Badge nicht veraendern), auf echtem iPhone und Android pruefen, den Installations-Balken auf Handys dann ausblenden. Universal Links (apple-app-site-association) und der Fingerprint in assetlinks.json fehlen ebenfalls noch.
+- Tests: Alle App-Tests gruen (1976).
 
 ## 2026-10-27 (1.100.153) [FRONTEND]
 

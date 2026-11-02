@@ -12,6 +12,7 @@ import { useAnyWizardOpen } from "../components/checkout/wizardPresence.js";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { Ctx } from "../context/AppContext.jsx";
 import { ACCOUNT_T } from "../i18n/account.js";
+import { APPLE_APP_ID, APP_STORE_URL, PLAY_STORE_URL } from "../storeLinks.js";
 import { PricingSection } from "../components/checkout/PricingSection.jsx";
 
 // Lazy statt statischem Import (Befund 2026-08-18: der Landing-Page-Bundle
@@ -365,6 +366,17 @@ let loginFehlerSchonGezeigt = false;
 export function Landing({ onStart, lang, setLang }) {
   const l = TL[lang] || TL.de;
   const at = ACCOUNT_T[lang] || ACCOUNT_T.de;
+
+  // Apples Smart App Banner (Balken oben im iPhone-Safari): nur mit echter Apple-ID.
+  useEffect(() => {
+    if (!APPLE_APP_ID) return undefined;
+    const meta = document.createElement("meta");
+    meta.name = "apple-itunes-app";
+    meta.content = `app-id=${APPLE_APP_ID}`;
+    document.head.appendChild(meta);
+    return () => meta.remove();
+  }, []);
+
   // Login-Standard-Flow (Konzept-Dok Abschnitt 2/1.5): "Anmelden" ist bereits
   // auf der Landingpage sichtbar, statt erst beim Klick in einen Rechner.
   // AccountProvider sitzt seit dieser Aenderung in main.jsx (ausserhalb von
@@ -964,6 +976,20 @@ export function Landing({ onStart, lang, setLang }) {
               {l.heroCtaSecondary}
             </button>
           </div>
+          {(APP_STORE_URL || PLAY_STORE_URL) && (
+            <div className="lp-auf lp-hero-stores" style={{ animationDelay: "150ms" }}>
+              {APP_STORE_URL && (
+                <a href={APP_STORE_URL} rel="noopener">
+                  {l.storeIos}
+                </a>
+              )}
+              {PLAY_STORE_URL && (
+                <a href={PLAY_STORE_URL} rel="noopener">
+                  {l.storeAndroid}
+                </a>
+              )}
+            </div>
+          )}
           <div className="lp-auf lp-hero-trust" style={{ animationDelay: "180ms" }}>
             {[at.pricingTrialBadge, l.heroTrustLang].map((txt) => (
               <span key={txt}>
@@ -1571,6 +1597,8 @@ export function Landing({ onStart, lang, setLang }) {
       .lp-btn-secondary{transition:transform .12s var(--ease-out)}
       .lp-btn-primary:hover{background:var(--ca-dk)}
       .lp-btn-secondary{border:1.5px solid var(--cb);background:var(--cc);color:var(--ct);font-size:16px;font-weight:600}
+      .lp-hero-stores{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 12px;margin-top:14px}
+      .lp-hero-stores a{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid var(--cb);border-radius:12px;background:var(--cc);color:var(--ct);font-size:14px;font-weight:600;text-decoration:none}
       .lp-hero-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px;font-size:14px;color:var(--cl)}
       .lp-hero-trust>span{display:inline-flex;align-items:center;gap:6px}
       @media(max-width:560px){

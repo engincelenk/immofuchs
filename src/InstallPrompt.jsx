@@ -32,16 +32,6 @@ function isStandalone() {
   );
 }
 
-// Handy oder Tablet? Dort kommt man ueber App Store bzw. Google Play an die App,
-// der Balken bleibt dem Desktop vorbehalten. iPadOS meldet sich als "Macintosh",
-// ist aber an den Touchpunkten erkennbar.
-function isMobileDevice() {
-  const ua = navigator.userAgent;
-  return (
-    /iphone|ipad|ipod|android/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)
-  );
-}
-
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null); // Android
   const [showIOS, setShowIOS] = useState(false); // iOS
@@ -54,8 +44,8 @@ export default function InstallPrompt() {
   const [tbarHoehe, setTbarHoehe] = useState(0);
 
   useEffect(() => {
-    // Mobil, schon installiert oder kürzlich geschlossen → nichts tun
-    if (isMobileDevice() || isStandalone() || wasDismissedRecently()) return;
+    // Schon installiert oder kürzlich geschlossen → nichts tun
+    if (isStandalone() || wasDismissedRecently()) return;
 
     // ── Android: beforeinstallprompt ──────────────────────
     const handler = (e) => {
