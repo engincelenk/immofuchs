@@ -48,6 +48,7 @@ import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { zinsHinweis } from "../../utils/zinsStaffel.js";
 import { useZinsPuffer } from "../../utils/zinsPuffer.js";
+import { CF_KNAPP_MON } from "../../utils/bands.js";
 import { FinanzierungsAnteil } from "../ui/FinanzierungsAnteil.jsx";
 import { FazitKarte } from "../ui/FazitKarte.jsx";
 
@@ -1276,7 +1277,9 @@ export default function Haupt() {
                         }
                         tip={
                           R.cf2OhneSt > 0
-                            ? t.cfOGreenTip
+                            ? R.cf2OhneSt < CF_KNAPP_MON && t.cfOGreenTipKnapp
+                              ? t.cfOGreenTipKnapp
+                              : t.cfOGreenTip
                             : R.cf2OhneSt >= -150
                               ? t.cfOYellowTip
                               : t.cfORedTip

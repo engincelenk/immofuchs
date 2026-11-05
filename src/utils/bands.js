@@ -105,3 +105,8 @@ export function scoreKpi(kpi, value) {
   }
   return Math.max(0, Math.min(100, s));
 }
+
+// Ab diesem Cashflow (Euro je Monat, ohne Steuer, Jahr 1) sprechen die Texte nicht mehr von "perfekt", sondern
+// von "knapp": die Ampel selbst springt schon bei 0 auf gruen (cfOhne), aber wenige Euro Plus kippen mit etwas
+// mehr Zins oder Kosten ins Minus (Nutzerbefund 2026-11-05, +9 EUR hiess "Perfekter Ausgangspunkt").
+export const CF_KNAPP_MON = 50;

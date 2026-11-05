@@ -3,6 +3,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import { kaufpreisFuerCashflowNull } from "../../utils/aiTools.js";
 import { fmtE, fmtP } from "../../utils/helpers.js";
 import { useZinsPuffer } from "../../utils/zinsPuffer.js";
+import { CF_KNAPP_MON } from "../../utils/bands.js";
 
 export function SelbsttraegerCheck({ R }) {
   const { t, d } = useApp();
@@ -39,16 +40,21 @@ export function SelbsttraegerCheck({ R }) {
   const vIcon = isJa ? "#1a7a3a" : "#E24B4A";
   const taxPositive = R.cf2MitSt >= 0;
   const reason = isJa
-    ? tpl(t.stWhyJa, { cf: fmtE(R.cf2OhneSt) })
+    ? tpl(R.cf2OhneSt < CF_KNAPP_MON && t.stWhyJaKnapp ? t.stWhyJaKnapp : t.stWhyJa, { cf: fmtE(R.cf2OhneSt) })
     : tpl(t.stWhyNein, { cf: fmtE(Math.abs(R.cf2OhneSt)) });
-  const taxNote = isJa
-    ? tpl(t.stTaxBonus, { cf: fmtE(R.cf2MitSt) })
-    : taxPositive
-      ? tpl(t.stTaxPos, { cf: fmtE(R.cf2MitSt) })
-      : tpl(t.stTaxNeg, { cf: fmtE(Math.abs(R.cf2MitSt)) });
-  const taxBg = isJa ? "var(--ok-bg)" : taxPositive ? "var(--warn-bg)" : "var(--ci)";
-  const taxBorder = isJa ? "var(--ok-bd)" : taxPositive ? "var(--warn-bd)" : "var(--cb)";
-  const taxText = isJa ? "var(--ok-tx)" : taxPositive ? "var(--warn-tx)" : "var(--ch)";
+  // Steuer ueber die ganze Laufzeit eine Last (R.sSt < 0): der Vorteil im Jahr 1 ist dann kein "Steuervorteil", die
+  // spaeteren Jahre liegen niedriger (Jahresentwicklung). Neutral formulieren statt gruen und "Steuervorteil".
+  const steuerLast = (isJa || taxPositive) && R.sSt < 0 && !!t.stTaxLast;
+  const taxNote = steuerLast
+    ? tpl(t.stTaxLast, { cf: fmtE(R.cf2MitSt) })
+    : isJa
+      ? tpl(t.stTaxBonus, { cf: fmtE(R.cf2MitSt) })
+      : taxPositive
+        ? tpl(t.stTaxPos, { cf: fmtE(R.cf2MitSt) })
+        : tpl(t.stTaxNeg, { cf: fmtE(Math.abs(R.cf2MitSt)) });
+  const taxBg = steuerLast ? "var(--ci)" : isJa ? "var(--ok-bg)" : taxPositive ? "var(--warn-bg)" : "var(--ci)";
+  const taxBorder = steuerLast ? "var(--cb)" : isJa ? "var(--ok-bd)" : taxPositive ? "var(--warn-bd)" : "var(--cb)";
+  const taxText = steuerLast ? "var(--ch)" : isJa ? "var(--ok-tx)" : taxPositive ? "var(--warn-tx)" : "var(--ch)";
   const card2Color = alreadyOhne ? "var(--ok-tx)" : beqJ ? "var(--warn-tx)" : "var(--bad-tx)";
 
   return (
@@ -138,7 +144,7 @@ export function SelbsttraegerCheck({ R }) {
         }}
       >
         <span style={{ flexShrink: 0, fontSize: 14, lineHeight: 1.4 }}>
-          {isJa ? "➕" : taxPositive ? "" : "ℹ️"}
+          {steuerLast ? "ℹ️" : isJa ? "➕" : taxPositive ? "" : "ℹ️"}
         </span>
         <div style={{ fontSize: 12, fontWeight: 500, color: taxText, lineHeight: 1.5 }}>
           {taxNote}
@@ -183,6 +189,7 @@ export function SelbsttraegerCheck({ R }) {
           >
             {beqKP != null ? fmtE(beqKP) : "—"}
           </div>
+          {t.stZielFix && <div style={{ fontSize: 10.5, color: "var(--ch)", marginTop: 2 }}>{t.stZielFix}</div>}
           <div
             style={{
               fontSize: 11,

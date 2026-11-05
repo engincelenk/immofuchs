@@ -32,6 +32,12 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
   const [puffer, setPuffer] = useZinsPuffer();
   const mitMiete = hatMiete(d);
   const zeilen = useMemo(() => stufenVergleich(d, punkte, puffer), [d, punkte, puffer]);
+  // Die markierte Zeile ist DEIN Stand und zeigt deshalb immer die Werte ohne Puffer (sonst stehen -44 EUR in der
+  // Tabelle neben +9 EUR im Fazit); der Puffer wirkt auf die uebrigen Zeilen als Stresstest.
+  const zeilenOhnePuffer = useMemo(
+    () => (puffer > 0 ? stufenVergleich(d, punkte, 0) : zeilen),
+    [d, punkte, puffer, zeilen],
+  );
   const tragend = useMemo(() => ersteTragendeStufe(zeilen), [zeilen]);
   const kp = useMemo(() => {
     if (!mitMiete) return null;
@@ -44,6 +50,9 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
     };
   }, [d, mitMiete, aktuellerAnteil, punkte, puffer]);
   const aktiv = aktiveStufe(aktuellerAnteil, punkte);
+  const angezeigt = zeilen.map((z) =>
+    puffer > 0 && aktiv === z.anteil ? (zeilenOhnePuffer.find((o) => o.anteil === z.anteil) ?? z) : z,
+  );
 
   const spalten = mitMiete ? "52px 1fr 1fr 1fr 1.1fr" : "52px 1fr 1fr 1.1fr";
   const kopf = { fontSize: 11, color: "var(--ch)", fontWeight: 600, textAlign: "right" };
@@ -80,6 +89,9 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
         <div style={{ fontSize: 12, color: "var(--cl)", marginBottom: 8, fontWeight: 600 }}>{t.finVglMarkt}</div>
       )}
       {puffer > 0 && <div style={{ fontSize: 12, color: "var(--ch)", marginBottom: 8 }}>{t.finVglPufferSub}</div>}
+      {puffer > 0 && aktiv != null && t.finVglAktuell && (
+        <div style={{ fontSize: 12, color: "var(--ch)", marginBottom: 8 }}>{t.finVglAktuell}</div>
+      )}
 
       <div role="table" aria-label={t.finVglTitel}>
         <div role="row" style={{ display: "grid", gridTemplateColumns: spalten, gap: 4, padding: "0 6px 4px" }}>
@@ -89,7 +101,7 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
           {mitMiete && <span role="columnheader" style={kopf}>{t.finVglCf}</span>}
           <span role="columnheader" style={kopf}>{t.finVglEk}</span>
         </div>
-        {zeilen.map((z) => {
+        {angezeigt.map((z) => {
           const an = aktiv === z.anteil;
           const traegt = tragend?.anteil === z.anteil;
           return (
@@ -132,6 +144,7 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
       {mitMiete && (
         <div style={{ fontSize: 13, marginTop: 8, lineHeight: 1.45, color: "var(--ct)", fontWeight: 600 }}>
           {tragend ? fuelle(t.finVglTraegt, { anteil: tragend.anteil }) : t.finVglNie}
+          {puffer > 0 && t.finKpPuffer ? ` (${fuelle(t.finKpPuffer, { p: komma(puffer.toFixed(1)) })})` : ""}
         </div>
       )}
 
@@ -171,6 +184,7 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
               {fuelle(t.finKpBest, { anteil: kp.bestAnteil, preis: fmtE(kp.best.preis) })}
             </div>
           )}
+          {t.finKpFix && <div style={{ color: "var(--ch)", marginTop: 4, fontSize: 11.5 }}>{t.finKpFix}</div>}
         </div>
       )}
     </div>

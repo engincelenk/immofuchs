@@ -107,3 +107,21 @@ describe("Kaufpreis-Kasten nennt den aktiven Zins-Puffer", () => {
     }
   });
 });
+
+describe("Markierte Zeile zeigt deinen echten Stand", () => {
+  afterEach(() => setZinsPuffer(0));
+  it("mit Puffer bleibt die aktive Zeile ohne Puffer, die anderen rechnen mit Puffer", () => {
+    setZinsPuffer(0.5);
+    const mit = text(html(basis));
+    // Vergleich(aktuellerAnteil=100): 100-%-Zeile = Marktzins ohne Puffer, die 90-%-Zeile mit Puffer.
+    const stufe = (a) => ZINS_NACH_FINANZIERUNG.punkte.find(([x]) => x === a)[1];
+    const komma = (v) => v.toFixed(2).replace(".", ",");
+    expect(mit).toContain(`100 % ${komma(stufe(100))}`);
+    expect(mit).toContain(`90 % ${komma(stufe(90) + 0.5)}`);
+    expect(mit).toContain("Markierte Zeile: dein aktueller Stand ohne Puffer.");
+    expect(mit).toContain("Bei gleichem Finanzierungsanteil, das Eigenkapital passt sich an.");
+  });
+  it("ohne Puffer kein Zusatz", () => {
+    expect(text(html(basis))).not.toContain("Markierte Zeile");
+  });
+});

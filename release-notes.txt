@@ -1,3 +1,16 @@
+## 2026-11-05 (1.100.159) [FRONTEND]
+
+### Rechner-Texte und Zahlen widersprechen sich nicht mehr (Nutzerbefund, Nachrechnung mit dem Rechenkern)
+
+Die Rechnung selbst war korrekt (Rate, Cashflow, Ziel-Kaufpreise liessen sich aus den Screenshots exakt nachrechnen). Verwirrend waren verschiedene Definitionen mit gleichem Namen und missverstaendliche Texte:
+- Stufen-Vergleich: Die markierte Zeile ist DEIN Stand und zeigt immer die Werte ohne Zins-Puffer (vorher -44 EUR in der Tabelle neben +9 EUR im Fazit). Der Puffer wirkt nur auf die uebrigen Zeilen; eine Zeile erklaert das ("Markierte Zeile: dein aktueller Stand ohne Puffer."), der Satz "Mit 70 % traegt sich das Objekt" nennt bei aktivem Puffer den Zins-Aufschlag.
+- Zwei "Kaufpreis fuer Cashflow ab 0" nennen jetzt ihre Annahme: der Kasten im Stufen-Vergleich haelt den Finanzierungsanteil fest (Eigenkapital passt sich an, z. B. 162.000 EUR), der Ziel-Kaufpreis im Selbsttraeger-Check das Eigenkapital ("Bei gleichem Eigenkapital", z. B. 161.500 EUR). Die Rechenwege bleiben unveraendert.
+- Steuer: War die Steuer ueber die ganze Laufzeit eine Last (Summe der Steuerwirkung negativ), steht im Selbsttraeger-Check nicht mehr gruen "Mit Steuervorteil steigt der Ueberschuss", sondern neutral "Mit Steuer im Jahr 1: ... ueberwiegt aber die Steuerlast, spaetere Jahre liegen niedriger (siehe Jahresentwicklung)".
+- Etikett "unter Ist-KP - Puffer" war missverstaendlich (der Zielpreis liegt UEBER dem Kaufpreis): jetzt "Puffer zum Zielpreis".
+- Bei kleinem Plus (unter 50 EUR/Mon., Schwelle CF_KNAPP_MON in bands.js) sagt der Selbsttraeger-Check "Das ist knapp: etwas mehr Zins oder Kosten, und es kippt" statt "Perfekter Ausgangspunkt", die Cashflow-Karte "positiv, aber knapp" statt "Beste Ausgangslage". Die Ampel selbst (gruen ab 0) und der Score (DSCR-Kalibrierung) sind unveraendert - bewusst, dokumentierte Entscheidung.
+- Texte in allen 5 Sprachen (stWhyJaKnapp, stTaxLast, stZielFix, stIstKPPuffer, cfOGreenTipKnapp, finVglAktuell, finKpFix).
+- Tests: SelbsttraegerCheck.test.jsx neu, FinanzierungsAnteil.test.jsx erweitert; alle App-Tests gruen.
+
 ## 2026-11-05 (1.100.158) [FRONTEND]
 
 ### Zins-Puffer erklaert: Kaufpreis und Cashflow weichen nicht mehr unerklaert ab (Nutzerfrage)
