@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Ctx } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
 import { ZINS_NACH_FINANZIERUNG } from "../../data.js";
+import { setZinsPuffer } from "../../utils/zinsPuffer.js";
 import { FinanzierungsAnteil, Vergleich } from "./FinanzierungsAnteil.jsx";
 
 const basis = {
@@ -89,6 +90,20 @@ describe("Stufen-Vergleich (Darstellung)", () => {
       const s = text(html(basis, lang));
       expect(s, lang).not.toContain("undefined");
       expect(s, lang).not.toMatch(/\{\w+\}/);
+    }
+  });
+});
+
+describe("Kaufpreis-Kasten nennt den aktiven Zins-Puffer", () => {
+  afterEach(() => setZinsPuffer(0));
+  it("ohne Puffer ohne Zusatz, mit Puffer in allen Sprachen mit Zusatz", () => {
+    expect(text(html(basis))).not.toContain("bei Zins +");
+    setZinsPuffer(0.5);
+    expect(text(html(basis))).toContain("Kaufpreis für Cashflow ab 0 (bei Zins +0,5)");
+    for (const lang of ["en", "tr", "zh", "hi"]) {
+      expect(T[lang].finKpPuffer, lang).toContain("{p}");
+      expect(T[lang].stPufferHinweis, lang).toContain("{p}");
+      expect(T[lang].zinsPufferHinweis, lang).toBeTruthy();
     }
   });
 });

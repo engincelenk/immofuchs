@@ -1,3 +1,15 @@
+## 2026-11-05 (1.100.158) [FRONTEND]
+
+### Zins-Puffer erklaert: Kaufpreis und Cashflow weichen nicht mehr unerklaert ab (Nutzerfrage)
+
+- Ursache der scheinbar verschiedenen Zahlen: Der Zins-Puffer (+0,3 / +0,5) im Stufen-Vergleich wirkt nur dort (Tabelle, Kaufpreis-Kasten). Selbsttraeger-Check und Zinsfeld rechnen mit dem Marktzins ohne Puffer, etwa +63 EUR statt +9 EUR Cashflow und 172.000 EUR statt 162.000 EUR Kaufpreis. Das ist gewollt (Eingaben bleiben unveraendert), wurde aber nirgends erklaert.
+- Der Puffer liegt jetzt als kleiner gemeinsamer Zustand (utils/zinsPuffer.js), wird nicht gespeichert und aendert keine Eingabe.
+- Kaufpreis-Kasten im Stufen-Vergleich nennt bei aktivem Puffer die Annahme: "Kaufpreis fuer Cashflow ab 0 (bei Zins +0,5)".
+- Selbsttraeger-Check zeigt bei aktivem Puffer eine Zeile, dass der Stufen-Vergleich mit Puffer rechnet und sein Kaufpreis deshalb abweicht.
+- Hinweis unter dem Zinsfeld (Renditerechner und Kreditrechner) bekommt bei aktivem Puffer den festen Zusatz "Zins-Puffer im Stufen-Vergleich aktiv" (ohne Zahl, wie vom Nutzer 2026-10-24 gewuenscht).
+- Texte in allen 5 Sprachen (finKpPuffer, stPufferHinweis, zinsPufferHinweis). Rechenwerte unveraendert, der Puffer setzt sich nicht automatisch zurueck.
+- Tests: zinsPuffer.test.js neu, FinanzierungsAnteil.test.jsx erweitert; alle App-Tests gruen (2011).
+
 ## 2026-11-05 (1.100.157) [WORKER] [FRONTEND] [MIGRATION 0040]
 
 ### Betriebsueberwachung: Betreiber erfaehrt Fehler vor dem Nutzer (Scope: docs/betrieb/monitoring-scope.md)

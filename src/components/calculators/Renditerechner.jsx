@@ -47,6 +47,7 @@ import { AssistantGate } from "../assistant/AssistantGate.jsx";
 import { ASSISTANT_T } from "../../i18n/assistant.js";
 import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { zinsHinweis } from "../../utils/zinsStaffel.js";
+import { useZinsPuffer } from "../../utils/zinsPuffer.js";
 import { FinanzierungsAnteil } from "../ui/FinanzierungsAnteil.jsx";
 import { FazitKarte } from "../ui/FazitKarte.jsx";
 
@@ -149,6 +150,7 @@ function NebenkostenAufschluesselung({ t, R }) {
 
 export default function Haupt() {
   const { d, set, t, tip, setTabExt, lang, mietQuelleRef, zinsAuto } = useApp();
+  const [zinsPuffer] = useZinsPuffer();
   const [view, setView] = useState("input");
   const [secAllOpen, setSecAllOpen] = useState(false);
   const [secAllKey, setSecAllKey] = useState(0);
@@ -431,7 +433,7 @@ export default function Haupt() {
               onChange={(v) => set("zinssatz", v)}
               step="0.05"
               tip={tip("zinssatz")}
-              hint={zinsHinweis(zinsAuto, d.zinssatz, t)}
+              hint={zinsHinweis(zinsAuto, d.zinssatz, t, zinsPuffer)}
             />
             <F
               label={t.tilgung}

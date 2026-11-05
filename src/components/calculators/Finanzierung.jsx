@@ -15,11 +15,13 @@ import { buildAssistantContext } from "../../utils/assistantContext.js";
 import { rate } from "../../utils/bands.js";
 import { RechnerAiKarte } from "../dashboard/RechnerAiKarte.jsx";
 import { zinsHinweis } from "../../utils/zinsStaffel.js";
+import { useZinsPuffer } from "../../utils/zinsPuffer.js";
 import { FinanzierungsAnteil } from "../ui/FinanzierungsAnteil.jsx";
 import { Icon } from "../ui/Icon.jsx";
 
 export default function Kredit() {
   const { d, set, t, tip, lang, aktivesObjekt, zinsAuto } = useApp();
+  const [zinsPuffer] = useZinsPuffer();
   const [view, setView] = useState("input");
   const [sondTP, setSondTP] = useState("5");
 
@@ -100,7 +102,7 @@ export default function Kredit() {
               onChange={(v) => set("zinssatz", v)}
               step="0.05"
               tip={tip("zinssatz")}
-              hint={zinsHinweis(zinsAuto, d.zinssatz, t)}
+              hint={zinsHinweis(zinsAuto, d.zinssatz, t, zinsPuffer)}
             />
             <F
               label={t.tilgung}

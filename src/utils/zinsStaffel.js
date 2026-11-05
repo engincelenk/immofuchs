@@ -117,8 +117,11 @@ export function aktiveStufe(anteil, punkte = ZINS_NACH_FINANZIERUNG.punkte, tole
  * Hinweistext unter dem Zinsfeld. `aktuell` ist der Wert im Feld. Bewusst OHNE wechselnde Zahlen
  * (Nutzerwunsch 2026-10-24): feste Texte t.zinsAutoHinweis / t.zinsEigenHinweis; ohne Text kein Hinweis.
  */
-export function zinsHinweis(info, aktuell, t = {}) {
+export function zinsHinweis(info, aktuell, t = {}, puffer = 0) {
   if (!info) return undefined;
   const eigen = typeof info.eigen === "boolean" ? info.eigen : String(aktuell ?? "") !== info.zins;
-  return (eigen ? t.zinsEigenHinweis : t.zinsAutoHinweis) || undefined;
+  const basis = (eigen ? t.zinsEigenHinweis : t.zinsAutoHinweis) || undefined;
+  // Aktiver Zins-Puffer im Stufen-Vergleich: fester Zusatz ohne Zahl, damit klar ist, warum der Vergleich anders rechnet.
+  if (puffer > 0 && t.zinsPufferHinweis) return basis ? `${basis} · ${t.zinsPufferHinweis}` : t.zinsPufferHinweis;
+  return basis;
 }

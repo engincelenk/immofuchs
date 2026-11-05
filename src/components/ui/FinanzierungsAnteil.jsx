@@ -6,6 +6,7 @@
 // Darunter einklappbar der Stufen-Vergleich (Rate, Cashflow, Eigenkapital je Stufe, mit Zins-Puffer) und der
 // Verhandlungs-Kaufpreis (utils/finanzierungsVergleich.js). Die Rechnung laeuft nur, solange der Vergleich offen ist.
 import { useDeferredValue, useMemo, useState } from "react";
+import { useZinsPuffer } from "../../utils/zinsPuffer.js";
 import { useApp } from "../../context/AppContext.jsx";
 import { aktiveStufe, sichtbareStufen } from "../../utils/zinsStaffel.js";
 import {
@@ -28,7 +29,7 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
   // Tippen im Eigenkapital-Feld wartet nicht auf den Vergleich: er rechnet mit dem zuletzt ruhigen Stand.
   const d = useDeferredValue(dLive);
   const punkte = useMemo(() => sichtbareStufen(d), [d]);
-  const [puffer, setPuffer] = useState(0);
+  const [puffer, setPuffer] = useZinsPuffer();
   const mitMiete = hatMiete(d);
   const zeilen = useMemo(() => stufenVergleich(d, punkte, puffer), [d, punkte, puffer]);
   const tragend = useMemo(() => ersteTragendeStufe(zeilen), [zeilen]);
@@ -146,7 +147,10 @@ export function Vergleich({ aktuellerAnteil, eigenerZins = false }) {
             lineHeight: 1.5,
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>{t.finKpTitel}</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+            {t.finKpTitel}
+            {puffer > 0 && t.finKpPuffer ? ` (${fuelle(t.finKpPuffer, { p: komma(puffer.toFixed(1)) })})` : ""}
+          </div>
           {kp.aktuell ? (
             <div>
               {fuelle(t.finKpText, {

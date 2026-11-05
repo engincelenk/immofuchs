@@ -2,12 +2,14 @@ import { useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { kaufpreisFuerCashflowNull } from "../../utils/aiTools.js";
 import { fmtE, fmtP } from "../../utils/helpers.js";
+import { useZinsPuffer } from "../../utils/zinsPuffer.js";
 
 export function SelbsttraegerCheck({ R }) {
   const { t, d } = useApp();
   // Ziel-Kaufpreise ueber den Rechenkern (aiTools.kaufpreisFuerCashflowNull), derselbe
   // Loeser wie "Tragfaehig" auf der Objektseite. Vorher: gKP + CF x Darlehen / Rate - falsch
   // bei finanzierten Nebenkosten, KfW und immer bei der Variante mit Steuer.
+  const [puffer] = useZinsPuffer();
   const zielOhne = useMemo(() => kaufpreisFuerCashflowNull(d, t, "ohneSteuer"), [d, t]);
   const zielMit = useMemo(() => kaufpreisFuerCashflowNull(d, t, "massgeblich"), [d, t]);
   if (!R || !R.rateJ1 || !R.da) return null;
@@ -142,6 +144,12 @@ export function SelbsttraegerCheck({ R }) {
           {taxNote}
         </div>
       </div>
+
+      {puffer > 0 && t.stPufferHinweis && (
+        <div style={{ fontSize: 12, color: "var(--ch)", lineHeight: 1.5, margin: "0 0 12px" }}>
+          {tpl(t.stPufferHinweis, { p: String(puffer.toFixed(1)).replace(".", ",") })}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
         <div
