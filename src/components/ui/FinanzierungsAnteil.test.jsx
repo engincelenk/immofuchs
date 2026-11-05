@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Ctx } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
+import { ZINS_NACH_FINANZIERUNG } from "../../data.js";
 import { FinanzierungsAnteil, Vergleich } from "./FinanzierungsAnteil.jsx";
 
 const basis = {
@@ -29,7 +30,7 @@ describe("Stufen-Vergleich (Darstellung)", () => {
   it("zeigt alle Stufen von 50 bis 100 %, Cashflow, Kaufpreis-Karte und Schaetzwert-Stern", () => {
     const s = text(html(basis));
     for (const a of [50, 60, 70, 80, 90, 100]) expect(s).toContain(`${a} %`);
-    expect(s).toContain("3,86");
+    expect(s).toContain(ZINS_NACH_FINANZIERUNG.punkte[0][1].toFixed(2).replace(".", ",")); // Zins der 50-%-Stufe, aendert sich monatlich
     expect(s).not.toContain("*");
     expect(s).toContain("Cashflow/Mon.");
     expect(s).toContain("Kaufpreis für Cashflow ab 0");
