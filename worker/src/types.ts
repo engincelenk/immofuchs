@@ -210,6 +210,8 @@ export interface Env {
   EXPOSE_GLOBAL_DAILY_LIMIT?: string;
   // Erlaubt, das Vision-Modell ohne Redeploy zu wechseln (siehe modelRouter.ts).
   EXPOSE_GEMINI_MODEL?: string;
+  // Zweites Gemini-Modell, falls das erste ueberlastet ist (Standard gemini-3.5-flash).
+  EXPOSE_GEMINI_MODEL_2?: string;
   // Workers-AI-Modell, das einspringt, wenn Gemini scheitert.
   EXPOSE_VISION_FALLBACK_MODEL?: string;
 

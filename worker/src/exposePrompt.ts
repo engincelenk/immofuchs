@@ -259,6 +259,11 @@ Regeln:
   (meist das erste Bild mit Bildzaehler wie "1 / 11") und trage seinen
   0-basierten Index in "titelbild_index" ein; "bildbeschreibung" beschreibt in
   einem kurzen Satz, was darauf zu sehen ist
+- TEXTFELDER IN EIGENEN WORTEN: "objektbeschreibung", "lagebeschreibung", "kernfakten" und
+  "bildbeschreibung" fasst du knapp in EIGENEN Worten zusammen (Objektbeschreibung und
+  Lagebeschreibung je hoechstens ca. 600 Zeichen). Uebernimm keine Saetze oder Absaetze
+  wortgetreu aus dem Expose - sonst bricht die Verarbeitung ab. Zahlen, Jahre, Betraege
+  und Namen bleiben exakt, nur die Formulierung ist neu.
 - Ignoriere Werbe-, Makler- und Rechtstext (AGB, Widerrufsbelehrung, Impressum)
   ausser fuer "kontext"-Felder
 - Wenn dasselbe Feld in verschiedenen Screenshots widerspruechliche Werte zeigt

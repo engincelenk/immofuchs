@@ -1,3 +1,13 @@
+## 2026-11-05 (1.100.156) [WORKER]
+
+### Fix: Expose-Upload scheiterte bei Google-Ueberlastung ("Ich konnte das Exposé gerade nicht auswerten")
+
+- Ursache (Prod-Log 20:54): Gemini antwortete mit 503. Der Code fiel sofort auf Workers AI zurueck, dessen Antwort (OpenAI-Form `choices[0].message.content`) der Vision-Pfad nicht las -> `workers_ai_vision_unexpected_response`, Nutzer sah den Fehler.
+- Kette jetzt: Gemini-Hauptmodell mit bis zu 2 Wiederholungen bei 429/5xx (1 s, 3 s) -> zweites Gemini-Modell `gemini-3.5-flash` (ueber EXPOSE_GEMINI_MODEL_2 ohne Deploy wechselbar) -> Workers AI. Dauerhafte Fehler (404/400) werden nicht wiederholt, sondern wechseln sofort.
+- Workers-AI-Vision liest jetzt response, description, choices und Objekt-Antworten; bei Fehlschlag steht die echte Antwortform im Log. Der Fehlertext nennt alle Ebenen (beide Gemini-Modelle und Workers AI) samt Google-Fehlertext.
+- Enthalten (vorher uncommittet): RECITATION-Wiederholung mit "eigene Worte"-Vorgabe, Abbruchgrund im Log, Prompt-Regel fuer Textfelder in eigenen Worten (exposePrompt.ts).
+- Tests: neue modelRouter.vision.test.ts (8 Faelle); Worker gesamt 500 gruen.
+
 ## 2026-11-02 (1.100.155) [FRONTEND]
 
 ### Installations-Balken wieder fuer Handys; Store-Buttons und Apple-Banner vorbereitet (noch unsichtbar)

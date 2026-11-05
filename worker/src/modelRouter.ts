@@ -148,22 +148,88 @@ const DEFAULT_VISION_MODEL = "gemini-3.5-flash-lite";
 // `guided_json` auf das Schema gezwungen werden.
 const DEFAULT_VISION_FALLBACK = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 
-// Erst Gemini, bei jedem Fehler Workers AI. Analog zu callModel beim Chat -
-// ein 429 oder Timeout beim einen Anbieter darf das Feature nicht killen.
+// Kette: Gemini (Hauptmodell) -> Gemini (zweites Modell) -> Workers AI.
+// Befund 2026-11-05 (Prod): Gemini antwortete mit 503 (Ueberlastung), der Code fiel sofort auf
+// Workers AI zurueck, dessen Antwortform nicht gelesen wurde - Nutzer sah "nicht auswerten".
+// Deshalb: vorlaeufige Fehler (429/5xx) werden wiederholt, danach springt ein zweites Gemini-Modell
+// (andere Kapazitaet als das Lite-Modell) ein, erst dann das schwaechere Workers AI.
+const DEFAULT_VISION_MODEL_2 = "gemini-3.5-flash";
+const VISION_RETRY_WARTEN_MS = [1000, 3000];
+
+const RECITATION_ZUSATZ = `
+
+WICHTIG: Formuliere alle Textfelder frei in eigenen Worten, kuerzer als die Vorlage, und zitiere nichts woertlich. Keine Beschreibung laenger als 400 Zeichen.`;
+
+// 429 und 5xx sind vorlaeufig (Last, Kontingent-Spitze); 4xx wie 400/404 sind dauerhaft.
+function istVorlaeufig(err: unknown): boolean {
+  return err instanceof Error && /gemini_vision_request_failed_(429|500|502|503|504)/.test(err.message);
+}
+
+function wartePause(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function geminiVisionMitWiederholung(
+  env: Env,
+  model: string,
+  systemPrompt: string,
+  dateien: InlineDatei[],
+): Promise<string> {
+  let prompt = systemPrompt;
+  let recitationVersucht = false;
+  for (let versuch = 0; ; versuch++) {
+    try {
+      return await callGeminiVision(env, prompt, dateien, model);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      // RECITATION: Antwort enthielte lange Passagen des Quelltexts - einmal mit Vorgabe wiederholen.
+      if (msg.includes("finish=RECITATION") && !recitationVersucht) {
+        recitationVersucht = true;
+        logFallbackAlert(`gemini_vision_recitation_retry:${model}`, err);
+        prompt = systemPrompt + RECITATION_ZUSATZ;
+        continue;
+      }
+      if (istVorlaeufig(err) && versuch < VISION_RETRY_WARTEN_MS.length) {
+        logFallbackAlert(`gemini_vision_retry:${model}`, err);
+        await wartePause(VISION_RETRY_WARTEN_MS[versuch]);
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 export async function callVisionModel(
   env: Env,
   systemPrompt: string,
   schema: object,
   dateien: InlineDatei[],
 ): Promise<string> {
+  const modelle = [
+    env.EXPOSE_GEMINI_MODEL || DEFAULT_VISION_MODEL,
+    env.EXPOSE_GEMINI_MODEL_2 || DEFAULT_VISION_MODEL_2,
+  ].filter((m, i, alle) => alle.indexOf(m) === i);
+
+  const fehler: string[] = [];
+  for (const model of modelle) {
+    try {
+      return await geminiVisionMitWiederholung(env, model, systemPrompt, dateien);
+    } catch (err) {
+      fehler.push(`${model}=${err instanceof Error ? err.message : "unknown_error"}`);
+      logFallbackAlert(`gemini_vision_failed:${model}`, err);
+    }
+  }
+
+  logFallbackAlert("gemini_vision_failed_fallback_workers_ai", new Error(fehler.join(" | ")));
   try {
-    return await callGeminiVision(env, systemPrompt, dateien);
-  } catch (err) {
-    logFallbackAlert("gemini_vision_failed_fallback_workers_ai", err);
-    return withTimeout(
+    return await withTimeout(
       callWorkersAiVision(env, systemPrompt, schema, dateien),
       VISION_TIMEOUT_MS,
     );
+  } catch (fallbackErr) {
+    // Beide Ebenen im Fehlertext, sonst ist der Ausloeser spaeter nicht mehr feststellbar.
+    const sekundaer = fallbackErr instanceof Error ? fallbackErr.message : "unknown_error";
+    throw new Error(`${fehler.join(" | ")} | workers_ai=${sekundaer}`);
   }
 }
 
@@ -200,13 +266,34 @@ async function callWorkersAiVision(
     max_tokens: VISION_MAX_TOKENS,
     temperature: VISION_TEMPERATURE,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any)) as { response?: unknown };
+  } as any)) as unknown;
 
-  if (typeof result?.response === "string") return result.response;
-  // Manche Bildmodelle antworten mit "description" statt "response".
-  const beschreibung = (result as { description?: unknown }).description;
-  if (typeof beschreibung === "string") return beschreibung;
-  throw new Error("workers_ai_vision_unexpected_response");
+  return leseWorkersAiVisionAntwort(result);
+}
+
+// Workers AI liefert je nach Modell `{response}`, `{description}` oder die OpenAI-Form
+// `{choices:[{message:{content}}]}` (Befund 2026-11-05, vorher bei Llama schon 2026-09-06).
+// `response` kann bei guided_json auch schon ein geparstes Objekt sein.
+export function leseWorkersAiVisionAntwort(result: unknown): string {
+  if (typeof result === "string") return result;
+  const obj = (result ?? {}) as {
+    response?: unknown;
+    description?: unknown;
+    choices?: { message?: { content?: unknown }; text?: unknown }[];
+  };
+  const kandidaten: unknown[] = [
+    obj.response,
+    obj.description,
+    obj.choices?.[0]?.message?.content,
+    obj.choices?.[0]?.text,
+  ];
+  for (const k of kandidaten) {
+    if (typeof k === "string" && k.trim().length > 0) return k;
+    if (k && typeof k === "object") return JSON.stringify(k);
+  }
+  throw new Error(
+    `workers_ai_vision_unexpected_response:${JSON.stringify(result)?.slice(0, 120) ?? typeof result}`,
+  );
 }
 
 // PDF -> Text ueber die Markdown-Konvertierung von Workers AI (env.AI.toMarkdown).
@@ -237,11 +324,12 @@ export async function callGeminiVision(
   env: Env,
   systemPrompt: string,
   dateien: InlineDatei[],
+  modelOverride?: string,
 ): Promise<string> {
   if (!env.GEMINI_API_KEY) {
     throw new Error("gemini_api_key_missing");
   }
-  const model = env.EXPOSE_GEMINI_MODEL || DEFAULT_VISION_MODEL;
+  const model = modelOverride || env.EXPOSE_GEMINI_MODEL || DEFAULT_VISION_MODEL;
 
   const parts = dateien.map((f) => ({
     inline_data: { mime_type: f.mimeType, data: f.data },
@@ -280,15 +368,30 @@ export async function callGeminiVision(
   }
 
   if (!res.ok) {
-    throw new Error(`gemini_vision_request_failed_${res.status}`);
+    // Googles Fehlertext mitgeben (503 "high demand" vs. 429 Kontingent vs. 404 Modell weg).
+    const detail = (await res.text().catch(() => "")).slice(0, 160).replace(/\s+/g, " ");
+    throw new Error(`gemini_vision_request_failed_${res.status}:${detail}`);
   }
 
   const json = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    candidates?: { finishReason?: string; content?: { parts?: { text?: string }[] } }[];
+    promptFeedback?: { blockReason?: string };
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number };
   };
   const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
   if (typeof text !== "string") {
-    throw new Error("gemini_vision_unexpected_response");
+    // Grund mitgeben (Befund 2026-10-05: Gemini lieferte beim echten Expose keinen Text, im Log
+    // stand nur "unexpected_response" und der Ausweichpfad lieferte unvollstaendige Felder).
+    const grund = [
+      `finish=${json.candidates?.[0]?.finishReason ?? "none"}`,
+      `block=${json.promptFeedback?.blockReason ?? "none"}`,
+      `kandidaten=${json.candidates?.length ?? 0}`,
+      `parts=${json.candidates?.[0]?.content?.parts?.length ?? 0}`,
+      `promptTokens=${json.usageMetadata?.promptTokenCount ?? "?"}`,
+      `antwortTokens=${json.usageMetadata?.candidatesTokenCount ?? "?"}`,
+      `gedankenTokens=${json.usageMetadata?.thoughtsTokenCount ?? "?"}`,
+    ].join(" ");
+    throw new Error(`gemini_vision_unexpected_response ${grund}`);
   }
   return text;
 }
