@@ -4,6 +4,7 @@
 // POST /users/:id/status ist die erste schreibende Admin-Aktion. Die
 // Bedien-Oberflaeche dafuer (Button im Admin Panel) ist bewusst NICHT Teil
 // dieses Pakets, siehe Paket 6 "Admin Panel".
+import { betriebsUebersicht } from "../betrieb";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import type { Env } from "../types";
@@ -749,6 +750,16 @@ adminRoutes.get("/ki-nutzung", requireAuth, requireAdminRead, async (c) => {
     // Tabelle fehlt (Migration 0038 noch nicht eingespielt) - kein 500, sondern ein klarer Hinweis.
     console.error("ki_auswertung_failed", err instanceof Error ? err.message : "unknown");
     return c.json({ error: "ki_data_unavailable" }, 503);
+  }
+});
+
+// Betriebsueberwachung (Reiter "Betrieb", Quelle betriebs_ereignis, worker/src/betrieb.ts).
+adminRoutes.get("/betrieb", requireAuth, requireAdminRead, async (c) => {
+  try {
+    return c.json(await betriebsUebersicht(c.env));
+  } catch (err) {
+    console.error("betrieb_uebersicht_failed", err instanceof Error ? err.message : "unknown");
+    return c.json({ error: "betrieb_data_unavailable" }, 503);
   }
 });
 

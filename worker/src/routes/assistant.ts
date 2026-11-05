@@ -5,6 +5,7 @@
 // (4.9, S5-2/3/4/5/7). Kein Hono-Routing-Parameter (":id" etc.) nötig, daher
 // als einfache (Context) => Promise<Response>-Funktionen statt eigenem
 // Sub-Router gehalten - index.ts hängt sie direkt ein.
+import { meldeFehlerFuerAnfrage } from "../betrieb";
 import type { Context } from "hono";
 import type { AssistantResponse, Env, ExposeExtractResponse, Tier } from "../types";
 import { validateExposeExtractRequest, validateRequest, MAX_VERLAUF_TEXT_LEN } from "../validator";
@@ -178,6 +179,7 @@ export async function handleAssistant(c: Context<{ Bindings: Env }>): Promise<Re
       "assistant_model_call_failed",
       err instanceof Error ? err.message : "unknown_error",
     );
+    await meldeFehlerFuerAnfrage(env, c.req.raw, { bereich: "finn", code: "modell_ausgefallen", schwere: "K", detail: err instanceof Error ? err.message : undefined });
     await Promise.all([
       globalLimiter.decrement(),
       ipLimiter.decrement(),
@@ -280,6 +282,7 @@ export async function handleExposeExtract(c: Context<{ Bindings: Env }>): Promis
   } catch (err) {
     const grund = err instanceof Error ? err.message : "unknown_error";
     console.error("expose_extract_model_call_failed", grund);
+    await meldeFehlerFuerAnfrage(env, c.req.raw, { bereich: "expose", code: grund.includes("pdf_ohne_text") ? "pdf_ohne_text" : "modell_ausgefallen", schwere: grund.includes("pdf_ohne_text") ? "W" : "K", detail: grund });
     await Promise.all([
       globalLimiter.decrement(),
       ipLimiter.decrement(),
@@ -297,6 +300,7 @@ export async function handleExposeExtract(c: Context<{ Bindings: Env }>): Promis
       "expose_extract_output_invalid",
       err instanceof Error ? err.message : "unknown_error",
     );
+    await meldeFehlerFuerAnfrage(env, c.req.raw, { bereich: "expose", code: "antwort_unlesbar", schwere: "K", detail: err instanceof Error ? err.message : undefined });
     await Promise.all([
       globalLimiter.decrement(),
       ipLimiter.decrement(),
@@ -562,6 +566,7 @@ export async function handleObjektAnalyse(c: Context<{ Bindings: Env }>): Promis
     // feststellbar.
     const grund = err instanceof Error ? err.message : "unknown_error";
     console.error("analyse_model_call_failed", JSON.stringify({ produkt, grund }));
+    await meldeFehlerFuerAnfrage(env, c.req.raw, { bereich: "analyse", code: "modell_ausgefallen", schwere: "K", detail: `${produkt}: ${grund}` });
     return c.json({ error: "modell_nicht_erreichbar" }, 503);
   }
 

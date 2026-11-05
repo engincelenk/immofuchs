@@ -2,6 +2,7 @@
 // Kündigung/Reaktivierung/Refund. Ersetzt den bisherigen Paddle-Weg
 // vollstaendig (Wechsel weg von Paddle als Merchant of Record, siehe
 // docs/plans/2026-08-26-paddle-zu-stripe-migration-spec.md).
+import { meldeFehlerFuerAnfrage } from "../betrieb";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requireCsrfOrigin, type AuthVars } from "../middleware";
@@ -125,6 +126,7 @@ billingRoutes.post("/webhook", async (c) => {
     return c.json({ ok: true });
   } catch (err) {
     console.error("billing_webhook_failed", err instanceof Error ? err.message : "unknown");
+    await meldeFehlerFuerAnfrage(c.env, c.req.raw, { bereich: "zahlung", code: "webhook_verarbeitung_fehlgeschlagen", schwere: "K", detail: err instanceof Error ? err.message : undefined });
     return c.json({ error: "webhook_processing_failed" }, 500);
   }
 });

@@ -5,6 +5,7 @@
 // Die Nutzlast wird hart geprueft - Zahlen muessen endlich sein, Texte sind
 // laengenbegrenzt -, damit ueber dieses Feld kein beliebiger Prompt-Text
 // eingeschleust werden kann.
+import { meldeFehlerFuerAnfrage } from "../betrieb";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requirePro, requireCsrfOrigin, type EntitlementVars } from "../middleware";
@@ -123,6 +124,7 @@ alternativRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c)
   } catch (err) {
     const grund = err instanceof Error ? err.message : "unknown_error";
     console.error("alternativ_model_call_failed", JSON.stringify({ grund }));
+    await meldeFehlerFuerAnfrage(c.env, c.req.raw, { bereich: "alternativ", code: "modell_ausgefallen", schwere: "K", detail: grund });
     return c.json({ error: "modell_nicht_erreichbar" }, 503);
   }
 });

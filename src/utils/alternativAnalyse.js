@@ -1,6 +1,7 @@
 // Client-Aufruf fuer /api/v1/alternativ (Karte "Alternativ-Investment").
 // Gleiche {ok,art}-Fehlerabbildung wie lageAnalyse.js, damit die Karte
 // analyseFehlertext() aus aiAnalyse.js wiederverwenden kann.
+import { meldeClientFehler } from "./meldeFehler.js";
 import { apiFetch } from "./apiBase.js";
 import { getSessionId } from "./assistantSession.js";
 
@@ -19,12 +20,17 @@ export async function rufeAlternativAnalyseAuf(zahlen, lang = "de") {
       if (daten.error === "rate_limit_exceeded" || daten.error === "trial_limit_reached") {
         return { ok: false, art: "rateLimit" };
       }
-      if (res.status === 503) return { ok: false, art: "modellAus" };
+      if (res.status === 503) {
+        meldeClientFehler("alternativ", "modell_aus");
+        return { ok: false, art: "modellAus" };
+      }
+      meldeClientFehler("alternativ", `fehler_${res.status}`);
       return { ok: false, art: "fehler" };
     }
     const { text } = await res.json();
     return { ok: true, text };
   } catch {
+    meldeClientFehler("alternativ", "netz");
     return { ok: false, art: "fehler" };
   }
 }

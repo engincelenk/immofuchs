@@ -12,6 +12,7 @@
 //
 // Beide Wege liefern dieselbe Signatur nach aussen - ein Wechsel ist damit eine
 // Konfigurations-, keine Code-Entscheidung.
+import { meldeFehler } from "./betrieb";
 import type { Env } from "./types";
 import { isStandby } from "./standby";
 
@@ -153,6 +154,8 @@ export async function sendEmail(
         "cloudflare_email_send_failed",
         err instanceof Error ? err.message : "unknown",
       );
+      // Mit Resend als zweitem Weg ist ein Fehler hier nur eine Warnung; ohne ihn ist die Mail verloren.
+      await meldeFehler(env, { bereich: "mail", code: "versand_fehlgeschlagen", schwere: env.RESEND_API_KEY ? "W" : "K", detail: err instanceof Error ? err.message : undefined });
       if (!env.RESEND_API_KEY) throw err;
     }
   }
@@ -177,6 +180,9 @@ export async function sendEmail(
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       console.error("resend_send_failed", res.status, detail.slice(0, 200));
+      // 4xx (ausser Anmelde-/Rechtefehler 401/403) liegt meist an der Empfaengeradresse, nicht am Dienst.
+      const dienstFehler = res.status >= 500 || res.status === 401 || res.status === 403;
+      await meldeFehler(env, { bereich: "mail", code: "versand_fehlgeschlagen", schwere: dienstFehler ? "K" : "W", detail: `resend_${res.status}` });
       throw new Error(`email_send_failed_${res.status}`);
     }
     return;

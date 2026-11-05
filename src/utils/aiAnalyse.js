@@ -7,6 +7,7 @@
 // (RechnerAiKarte.jsx) brauchen exakt denselben Ablauf, nur mit anderen
 // Kennzahlen/Zahlen als Nutzlast. Diese Datei ist die eine Stelle dafuer -
 // wer ein weiteres KI-Produkt baut, schreibt den Fetch nicht ein drittes Mal.
+import { meldeClientFehler } from "./meldeFehler.js";
 import { apiFetch } from "./apiBase.js";
 import { getSessionId } from "./assistantSession.js";
 
@@ -63,13 +64,21 @@ export async function rufeAnalyseAuf({
       // die Antwort aber unbrauchbar war (502). Zwei verschiedene Ursachen mit
       // zwei verschiedenen Konsequenzen fuer den Nutzer: bei 503 hilft nur
       // warten, bei 502 hilft ein erneuter Versuch meist sofort.
-      if (res.status === 503) return { ok: false, art: "modellAus" };
-      if (res.status === 502) return { ok: false, art: "antwortUnbrauchbar" };
+      if (res.status === 503) {
+        meldeClientFehler("analyse", "modell_aus");
+        return { ok: false, art: "modellAus" };
+      }
+      if (res.status === 502) {
+        meldeClientFehler("analyse", "antwort_unbrauchbar");
+        return { ok: false, art: "antwortUnbrauchbar" };
+      }
+      meldeClientFehler("analyse", `fehler_${res.status}`);
       return { ok: false, art: "fehler" };
     }
     const { ergebnis } = await res.json();
     return { ok: true, ergebnis };
   } catch {
+    meldeClientFehler("analyse", "netz");
     return { ok: false, art: "fehler" };
   }
 }

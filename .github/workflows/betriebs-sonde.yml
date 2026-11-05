@@ -1,0 +1,44 @@
+name: Betriebs-Sonde
+
+# Aktive Pruefung alle 10 Minuten (docs/betrieb/monitoring-scope.md, Abschnitt C):
+#   1. Der Worker prueft sich selbst (Datenbank; einmal je Stunde die KI-Anbieter) - Endpunkt /api/v1/internal/sonde,
+#      geschuetzt mit dem gemeinsamen Geheimnis REPORT_TOKEN (GitHub-Secret, wie beim Monatsbericht).
+#   2. Website und Zwilling werden von aussen angefragt.
+# Schlaegt etwas fehl, wird der Lauf rot und GitHub schickt eine Mail. Das ist ein zweiter Kanal neben der Worker-Mail
+# und funktioniert auch, wenn der Worker oder der Mailversand selbst ausgefallen ist.
+# Hinweis: GitHub verwirft geplante Laeufe gelegentlich; der Tagesbericht zaehlt deshalb die Laeufe (erwartet ca. 144).
+# Geplante Laeufe kommen immer von main.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  sonde:
+    name: Sonde
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      # Bewusst OHNE curl --retry: ein 503 (kritischer Befund) soll nicht zwei weitere Pruefungen samt KI-Aufrufen ausloesen.
+      - name: Worker-Sonde (prod)
+        env:
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+        run: |
+          if [ -z "$REPORT_TOKEN" ]; then echo "REPORT_TOKEN fehlt"; exit 1; fi
+          code=$(curl -sS -o antwort.json -w "%{http_code}" --max-time 90 \
+            -X POST -H "Authorization: Bearer $REPORT_TOKEN" https://api.immofuchs.info/api/v1/internal/sonde)
+          echo "HTTP $code"; cat antwort.json; echo
+          [ "$code" = "200" ]
+
+      - name: Website und Zwilling erreichbar
+        run: |
+          fehler=0
+          for url in https://immofuchs.info https://qa.immofuchs.info https://api.immofuchs.info/api/v1/standby-status https://api-qa.immofuchs.info/api/v1/standby-status; do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 --retry 2 --retry-delay 5 "$url" || echo 000)
+            echo "$url -> $code"
+            [ "$code" = "200" ] || fehler=1
+          done
+          exit $fehler

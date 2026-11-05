@@ -1,0 +1,30 @@
+name: Betriebs-Tagesbericht
+
+# Taeglicher Bericht (docs/betrieb/monitoring-scope.md, Abschnitt E): Fehlerstatistik der letzten 24 Stunden mit
+# KI-Einordnung, per Mail an den Betreiber. Kommt auch bei "alles gruen" - Ausbleiben ist selbst ein Signal.
+# Eigener Aufruf statt im 06:00-Cron des Workers, damit das Abfragebudget (Free-Plan: 50 je Aufruf) dort
+# fuer Stripe-Abgleich und Erinnerungs-Mails bleibt. Schlaegt der Aufruf fehl, wird der Lauf rot und GitHub mailt.
+# Geplante Laeufe kommen immer von main.
+
+on:
+  schedule:
+    - cron: "30 5 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  bericht:
+    name: Tagesbericht senden
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Bericht anfordern
+        env:
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+        run: |
+          if [ -z "$REPORT_TOKEN" ]; then echo "REPORT_TOKEN fehlt"; exit 1; fi
+          code=$(curl -sS -o antwort.json -w "%{http_code}" --max-time 90 \
+            -X POST -H "Authorization: Bearer $REPORT_TOKEN" https://api.immofuchs.info/api/v1/internal/tagesbericht)
+          echo "HTTP $code"; cat antwort.json; echo
+          [ "$code" = "200" ]

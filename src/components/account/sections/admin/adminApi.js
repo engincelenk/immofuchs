@@ -41,6 +41,10 @@ export function setStatsSettings(zaehlbeginn) {
   return post("/admin/stats-settings", { zaehlbeginn });
 }
 
+export function fetchBetrieb() {
+  return request("/admin/betrieb");
+}
+
 export function fetchKiNutzung() {
   return request("/admin/ki-nutzung");
 }

@@ -1,4 +1,5 @@
 import type { Env, InlineDatei, Lang } from "./types";
+import { meldeFehler, type SondenPunkt } from "./betrieb";
 
 const MAX_TOKENS = 350; // erhoeht von 220 fuer laengere Antworten (~160 statt 80 Woerter)
 // mit aktiven Stellschrauben-Vorschlaegen, bewusste Produktentscheidung (siehe release-notes.txt)
@@ -43,6 +44,7 @@ export async function callModel(
     // (429) - schwaechere Antwortqualitaet, aber besser als ein harter Fehler.
     // env.AI.run kennt keinen Cancel, daher hier der withTimeout-Wrapper.
     logFallbackAlert("gemini_call_failed_fallback_workers_ai", err);
+    await meldeFehler(env, { bereich: "ki", code: "fallback_workers_ai", schwere: "W", detail: err instanceof Error ? err.message : undefined });
     // Scheitert AUCH der Fallback, muss der urspruengliche Grund mitkommen.
     // Sonst steht am Ende nur "workers_ai_unexpected_response" und der
     // eigentliche Ausloeser - der Gemini-Fehler - ist nicht mehr feststellbar
@@ -217,10 +219,12 @@ export async function callVisionModel(
     } catch (err) {
       fehler.push(`${model}=${err instanceof Error ? err.message : "unknown_error"}`);
       logFallbackAlert(`gemini_vision_failed:${model}`, err);
+      await meldeFehler(env, { bereich: "expose", code: "fallback_gemini_modell", schwere: "W", detail: `${model}: ${err instanceof Error ? err.message : "?"}` });
     }
   }
 
   logFallbackAlert("gemini_vision_failed_fallback_workers_ai", new Error(fehler.join(" | ")));
+  await meldeFehler(env, { bereich: "expose", code: "fallback_workers_ai", schwere: "W", detail: fehler.join(" | ") });
   try {
     return await withTimeout(
       callWorkersAiVision(env, systemPrompt, schema, dateien),
@@ -528,4 +532,53 @@ export async function callLageModel(
     throw new Error("gemini_lage_unexpected_response");
   }
   return text;
+}
+
+// ═══ Sonde (siehe betrieb.ts, fuehreSondeAus) ═══
+// Kleinste moegliche Anfrage je Modell. Es zaehlt nur, ob Google antwortet - nicht der Text.
+
+/** Alle Gemini-Modelle, auf die sich die App verlaesst (Chat, Vision Haupt- und Zweitmodell), ohne Dopplungen. */
+export function sondenModelle(env: Env): string[] {
+  const alle = [
+    env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
+    env.EXPOSE_GEMINI_MODEL || DEFAULT_VISION_MODEL,
+    env.EXPOSE_GEMINI_MODEL_2 || DEFAULT_VISION_MODEL_2,
+  ];
+  return alle.filter((m, i) => alle.indexOf(m) === i);
+}
+
+export async function pruefeGeminiModell(env: Env, model: string): Promise<SondenPunkt> {
+  const name = `gemini:${model}`;
+  if (!env.GEMINI_API_KEY) return { name, ok: false, detail: "gemini_api_key_missing" };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: "Antworte nur mit OK." }] }],
+        generationConfig: { maxOutputTokens: 16, temperature: 0 },
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const detail = (await res.text().catch(() => "")).slice(0, 120).replace(/\s+/g, " ");
+      return { name, ok: false, detail: `http_${res.status} ${detail}` };
+    }
+    return { name, ok: true };
+  } catch (err) {
+    return { name, ok: false, detail: err instanceof Error ? err.message : "unknown" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function pruefeWorkersAi(env: Env): Promise<SondenPunkt> {
+  try {
+    await withTimeout(callWorkersAI(env, "Antworte nur mit OK.", "Test", 8), MODEL_TIMEOUT_MS);
+    return { name: "workers_ai", ok: true };
+  } catch (err) {
+    return { name: "workers_ai", ok: false, detail: err instanceof Error ? err.message : "unknown" };
+  }
 }

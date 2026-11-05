@@ -1,3 +1,4 @@
+import { meldeClientFehler } from "../../utils/meldeFehler.js";
 import { Component } from "react";
 import { ACCOUNT_T } from "../../i18n/account.js";
 
@@ -33,6 +34,7 @@ export class AppErrorBoundary extends Component {
 
   componentDidCatch(error) {
     console.error("app_render_failed", error);
+    meldeClientFehler("absturz", "render");
   }
 
   render() {

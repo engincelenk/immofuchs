@@ -11,6 +11,7 @@
 // Kein Google-Search-Grounding (mehr) - Nutzer-Entscheidung 2026-09-23 nach
 // einem 429 von Google ("Billing/Plan fuer Grounding nicht eingerichtet"),
 // siehe modelRouter.ts callLageModel().
+import { meldeFehlerFuerAnfrage } from "../betrieb";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { requireAuth, requirePro, requireCsrfOrigin, type EntitlementVars } from "../middleware";
@@ -84,6 +85,7 @@ lageRoutes.post("/", requireAuth, requireCsrfOrigin, requirePro, async (c) => {
   } catch (err) {
     const grund = err instanceof Error ? err.message : "unknown_error";
     console.error("lage_model_call_failed", JSON.stringify({ ort, bundesland, grund }));
+    await meldeFehlerFuerAnfrage(c.env, c.req.raw, { bereich: "lage", code: "modell_ausgefallen", schwere: "K", detail: grund });
     return c.json({ error: "modell_nicht_erreichbar" }, 503);
   }
 });

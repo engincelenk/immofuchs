@@ -17,6 +17,7 @@ import { datumDe } from "./datum";
 import { runBackup } from "./backup/job";
 import { isStandby } from "./standby";
 import { pruefeKiKostenAlarm } from "./kiAlarm";
+import { meldeFehler } from "./betrieb";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -34,6 +35,7 @@ export async function handleScheduled(env: Env, cron?: string): Promise<void> {
       await runBackup(env, "cron");
     } catch (err) {
       console.error("backup_cron_failed", err instanceof Error ? err.message : "unknown");
+      await meldeFehler(env, { bereich: "cron", code: "backup_fehlgeschlagen", schwere: "K", detail: err instanceof Error ? err.message : undefined });
     }
     return;
   }
@@ -49,18 +51,23 @@ export async function handleScheduled(env: Env, cron?: string): Promise<void> {
   // KI-Kosten von gestern pruefen und bei Auffaelligkeit mailen (kiAlarm.ts). Wirft nie.
   await pruefeKiKostenAlarm(env);
 
+  // Der Tagesbericht Betrieb laeuft NICHT hier (Abfragebudget des Free-Plans, 50 je Aufruf), sondern ueber den
+  // eigenen Endpunkt /api/v1/internal/tagesbericht, den .github/workflows/betriebs-tagesbericht.yml taeglich ruft.
+
   // Abgleich D1 <-> Stripe VOR den Erinnerungs-Mails, damit diese auf dem
   // korrigierten Stand beruhen. Ein Fehler hier darf die Mails nicht blockieren.
   try {
     await reconcileSubscriptions(env);
   } catch (err) {
     console.error("stripe_reconcile_failed", err instanceof Error ? err.message : "unknown");
+    await meldeFehler(env, { bereich: "cron", code: "stripe_abgleich_fehlgeschlagen", schwere: "K", detail: err instanceof Error ? err.message : undefined });
   }
 
   try {
     await reconcileCustomers(env);
   } catch (err) {
     console.error("stripe_customer_reconcile_failed", err instanceof Error ? err.message : "unknown");
+    await meldeFehler(env, { bereich: "cron", code: "stripe_kunden_abgleich_fehlgeschlagen", schwere: "W", detail: err instanceof Error ? err.message : undefined });
   }
 
   const due = await listSubscriptionsDueForRenewalReminder(env.DB, SEVEN_DAYS_MS);

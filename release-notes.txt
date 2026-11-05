@@ -1,3 +1,18 @@
+## 2026-11-05 (1.100.157) [WORKER] [FRONTEND] [MIGRATION 0040]
+
+### Betriebsueberwachung: Betreiber erfaehrt Fehler vor dem Nutzer (Scope: docs/betrieb/monitoring-scope.md)
+
+- Fehlererfassung (worker/src/betrieb.ts, Migration 0040, neue Tabellen betriebs_ereignis und betriebs_alarm, abwaertskompatibel fuer prod und qa): jede 5xx-Antwort des Workers wird automatisch erfasst (Sammel-Wachposten in index.ts), dazu genaue Meldungen fuer Exposé, Analyse, Finn, Lage, Alternativ, Stripe-Webhook, Mailversand, Cron-Jobs und die KI-Ausweichstufen. Keine personenbezogenen Daten (Mail, Schluessel, IBAN, Zahlenfolgen werden maskiert), Aufbewahrung 30 Tage.
+- Sofortalarm bei kritischen Fehlern per Mail (BACKUP_ALERT_EMAIL bzw. info@) und Push an Admin-Geraete, je Fehlerart hoechstens einmal pro Stunde (atomare Entprellung in D1). Warnungen alarmieren erst als Serie (5 in 15 Minuten; Meldungen aus der App erst ab 50). Scheitern beide Kanaele, wird die Entprellung zurueckgenommen. Flut gleicher Fehler wird je Minute gedrosselt (Schutz der D1-Schreibkontingente).
+- Aktive Sonde: POST /api/v1/internal/sonde (REPORT_TOKEN), von .github/workflows/betriebs-sonde.yml alle 10 Minuten gerufen. Prueft D1; einmal je Stunde alle Gemini-Modelle und Workers AI. Kritischer Befund = HTTP 503, der Lauf wird rot und GitHub mailt (zweiter Kanal, unabhaengig vom Worker). Der Workflow prueft ausserdem Website und qa-Zwilling. Kein curl-Retry, damit ein Stoerfall nicht das Gemini-Kontingent verbraucht.
+- Tagesbericht: POST /api/v1/internal/tagesbericht, taeglich von .github/workflows/betriebs-tagesbericht.yml (05:30 UTC). Kommt auch bei "alles gruen", mit KI-Einordnung (Gemini, nur Zahlen und Codes als Eingabe) und Warnung, wenn die Sonde zu selten lief. Bewusst nicht im 06:00-Cron (Abfragebudget des Free-Plans).
+- App meldet anonym angezeigte Fehler (src/utils/meldeFehler.js, POST /api/v1/public/client-error): Exposé, Analyse, Alternativ, Finn, App-Absturz. Nur feste Funktion und fester Code, 1 KB Body-Grenze, Limit je IP und gesamt, hoechstens eine Meldung je Art und Minute.
+- Admin: neuer Reiter "Betrieb" (Ampel je Bereich, Sonde, letzte Ereignisse).
+- Mail-Fehler: Cloudflare-Fehler mit Resend als Rueckfall ist nur Warnung; Resend 4xx (Empfaengeradresse) ebenfalls.
+- Geprueft durch Sicherheits- und Code-Review (Agenten); Befunde eingearbeitet (Reihenfolge der Begrenzer, Alarmspam von aussen, Webhook-Rauschen, Aufraeumen vor Mailversand, Tagesbericht ausserhalb des Cron-Budgets).
+- Offen/bekannt: Ausweichstufen von Finn, Analyse, Lage, Alternativ laufen unter dem Bereich "ki" (callModel kennt den Aufrufer nicht); Tests nutzen eine D1-Attrappe, kein echtes SQLite. Vor dem Betrieb: GitHub-Secret REPORT_TOKEN muss gesetzt sein (der Worker hat es bereits).
+- Tests: Worker 518 gruen (betrieb.test.ts neu), Frontend meldeFehler.test.js neu.
+
 ## 2026-11-05 (1.100.156) [WORKER]
 
 ### Fix: Expose-Upload scheiterte bei Google-Ueberlastung ("Ich konnte das Exposé gerade nicht auswerten")

@@ -6,7 +6,7 @@
 // (Stabilitaetsregel) - nur ein vorgeschalteter Entitlement-/Consent-Check
 // (siehe routes/assistant.ts). Alle neuen Routen liegen unter /api/v1/...
 // (Ergaenzung 01.08.: API-Versionierung vor dem Capacitor-Frontend-Freeze).
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import type { Env } from "./types";
 import { handleAssistant, handleExposeExtract, handleObjektAnalyse } from "./routes/assistant";
@@ -27,6 +27,8 @@ import { internalRoutes } from "./routes/internalReport";
 import { handleScheduled } from "./scheduled";
 import { isStandby, standbyGuard } from "./standby";
 import { securityHeaders } from "./securityHeaders";
+import { betriebPublicRoutes } from "./routes/betrieb";
+import { bereichFuerPfad, meldeFehler, schonGemeldet, schwereFuerAntwort } from "./betrieb";
 
 export { SessionRateLimiter } from "./sessionRateLimiter";
 
@@ -56,9 +58,32 @@ app.use("/api/*", standbyGuard);
 // Oeffentlich: das Frontend zeigt im Standby einen Hinweis, damit niemand qa fuer prod haelt.
 app.get("/api/v1/standby-status", (c) => c.json({ standby: isStandby(c.env) }));
 
+// Betriebsueberwachung (betrieb.ts): jede Serverfehler-Antwort wird erfasst, unabhaengig davon, welche Route sie
+// ausloest. Handler mit eigener, genauerer Meldung tragen sich in `schonGemeldet` ein, damit nichts doppelt zaehlt.
+function meldeImHintergrund(c: Context<{ Bindings: Env }>, daten: Parameters<typeof meldeFehler>[1]): void {
+  const arbeit = meldeFehler(c.env, daten);
+  try {
+    c.executionCtx.waitUntil(arbeit);
+  } catch {
+    // Kein ExecutionContext (z.B. in Tests): das Versprechen laeuft ohne waitUntil weiter, meldeFehler wirft nie.
+  }
+}
+app.use("/api/*", async (c, next) => {
+  await next();
+  const pfad = new URL(c.req.url).pathname;
+  const bereich = bereichFuerPfad(pfad);
+  if (bereich === "intern" || schonGemeldet.has(c.req.raw)) return;
+  const schwere = schwereFuerAntwort(pfad, c.res.status, c.req.header("Stripe-Signature") !== undefined);
+  if (schwere) meldeImHintergrund(c, { bereich, code: `http_${c.res.status}`, schwere });
+});
+
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 app.onError((err, c) => {
-  console.error("unhandled_worker_error", err instanceof Error ? err.message : "unknown_error");
+  const grund = err instanceof Error ? err.message : "unknown_error";
+  console.error("unhandled_worker_error", grund);
+  const pfad = new URL(c.req.url).pathname;
+  schonGemeldet.add(c.req.raw);
+  meldeImHintergrund(c, { bereich: bereichFuerPfad(pfad), code: "unbehandelter_fehler", schwere: "K", detail: `${err instanceof Error ? err.name : "Error"} ${grund.slice(0, 80)}` });
   return c.json({ error: "internal_error" }, 500);
 });
 
@@ -85,6 +110,7 @@ app.route("/api/v1/lage", lageRoutes);
 app.route("/api/v1/alternativ", alternativRoutes);
 // Ohne Anmeldung: Kuendigungsbutton, Widerrufsfunktion, Kontaktformular
 app.route("/api/v1/public", publicContractRoutes);
+app.route("/api/v1/public", betriebPublicRoutes);
 
 export default {
   fetch: app.fetch,

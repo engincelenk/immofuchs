@@ -1,3 +1,4 @@
+import { meldeClientFehler } from "../utils/meldeFehler.js";
 import { useState, useCallback, useRef } from "react";
 import { bereiteDateienVor } from "../utils/exposeUpload.js";
 import { analysiereExpose } from "../utils/finnAnalyse.js";
@@ -102,6 +103,7 @@ export function useAssistant() {
           // hilft ohne Aenderung an der Nachricht meist nicht. 5xx bleibt der
           // bisherige, ehrliche "kurzer Aussetzer"-Wortlaut.
           setChatFehlerTechnisch(res.status >= 400 && res.status < 500);
+          if (res.status >= 500) meldeClientFehler("finn", `fehler_${res.status}`);
           throw new Error("assistant_failed");
         }
         const { antwort, tier } = await res.json();
@@ -113,6 +115,7 @@ export function useAssistant() {
         // Server-Log" nicht wieder blind macht.
         if (!(err instanceof Error) || err.message !== "assistant_failed") {
           console.error("assistant_request_failed", "network_or_parse_error", err);
+          meldeClientFehler("finn", "netz");
         }
         setStatus("error");
       }
@@ -243,6 +246,7 @@ export function useAssistant() {
         // 2026-08-03.
         console.error("expose_extract_request_failed", res.status, code || "unknown");
         setExposeFehler(code === "extraction_failed" ? "fehlerUnlesbar" : "fehlerDienst");
+        meldeClientFehler("expose", code === "extraction_failed" ? "fehler_unlesbar" : "fehler_dienst");
         setStatus("error");
         return;
       }
@@ -270,6 +274,7 @@ export function useAssistant() {
       if (autoSave) autoSaveExposeObject(ergebnis);
     } catch (err) {
       console.error("expose_extract_request_failed", "network_or_parse_error", err);
+      meldeClientFehler("expose", "netz");
       setExposeFehler("fehlerDienst");
       setStatus("error");
     }
