@@ -1,3 +1,11 @@
+## 2026-11-06 (1.100.160) [FRONTEND]
+
+### "Laden" + "Speichern" legt kein Duplikat mehr an (Nutzermeldung)
+
+- Ursache: Der Knopf "Laden" auf der Objektkarte machte das Objekt nicht zum aktiven Objekt. "Speichern" im Rechner kannte es daher nicht und legte einen neuen Eintrag an (die Wege ueber die Detailansicht und "Objekt anlegen" waren seit 2026-09-06 schon richtig).
+- Jetzt gibt "Laden" id und Name als aktives Objekt mit (utils/objektLaden.js): "Speichern" aktualisiert das bestehende Objekt, die Ruecksprungleiste "Objekt: Name" erscheint ebenfalls.
+- Test: objektLaden.test.js.
+
 ## 2026-11-05 (1.100.159) [FRONTEND]
 
 ### Rechner-Texte und Zahlen widersprechen sich nicht mehr (Nutzerbefund, Nachrechnung mit dem Rechenkern)

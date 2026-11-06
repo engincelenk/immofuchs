@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import { T } from "../../i18n/translations.js";
 import { ACCOUNT_T } from "../../i18n/account.js";
 import { LANG_LOCALE } from "../../utils/helpers.js";
+import { ladeAlsAktivesObjekt } from "../../utils/objektLaden.js";
 import { FinnBubble } from "../assistant/FinnBubble.jsx";
 import { useFinnBubble } from "../../hooks/useFinnBubble.js";
 import { AssistantSheet } from "../assistant/AssistantSheet.jsx";
@@ -1859,7 +1860,7 @@ export function Merkliste() {
                   </button>
                   {loadable && (
                     <button
-                      onClick={() => loadObj(obj, setTabExt)}
+                      onClick={() => ladeAlsAktivesObjekt(obj, loadObj, setTabExt)}
                       style={{
                         flex: 1,
                         height: 44,
