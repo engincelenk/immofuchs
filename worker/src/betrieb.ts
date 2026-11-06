@@ -282,8 +282,9 @@ export interface BerichtDaten {
   warnungen: number;
 }
 
-// Die Sonde laeuft alle 10 Minuten (144/Tag); darunter ist sie zeitweise ausgefallen (GitHub verwirft Laeufe gelegentlich).
-export const SONDE_MINDEST_LAEUFE = 100;
+// Geplant ist alle 10 Minuten (144/Tag), aber GitHub verzoegert oder verwirft geplante Laeufe stark (gemessen 2026-11-06: ca. 1 Lauf je 6 Stunden).
+// Die Sonde ist deshalb nur eine Ergaenzung zum externen Uptime-Dienst. Gewarnt wird erst, wenn sie praktisch gar nicht mehr laeuft.
+export const SONDE_MINDEST_LAEUFE = 2;
 
 export async function sammleBerichtsdaten(env: Env, jetzt: number): Promise<BerichtDaten> {
   const seit = jetzt - TAG_MS;
@@ -315,7 +316,7 @@ export async function sammleBerichtsdaten(env: Env, jetzt: number): Promise<Beri
 }
 
 export function berichtAlsText(d: BerichtDaten): string {
-  const kopf = `Kritisch: ${d.kritisch}, Warnungen: ${d.warnungen}, Sonden-Laeufe: ${d.sondenLaeufe} von ca. 144.`;
+  const kopf = `Kritisch: ${d.kritisch}, Warnungen: ${d.warnungen}, Sonden-Laeufe: ${d.sondenLaeufe} (geplant 144, GitHub liefert oft weniger).`;
   if (d.zeilen.length === 0) return `${kopf}\nKeine Ereignisse in den letzten 24 Stunden.`;
   return `${kopf}\n` + d.zeilen.map((z) => `${z.schwere} ${z.bereich} ${z.code}: ${z.n}x`).join("\n");
 }
@@ -361,7 +362,7 @@ export async function sendeTagesbericht(
     }
     const sondeHinweis =
       d.sondenLaeufe < SONDE_MINDEST_LAEUFE
-        ? `<p style="color:#C62828;"><b>Die Sonde war nur ${d.sondenLaeufe}-mal aktiv (erwartet ca. 144).</b> Pruefen: GitHub Actions, Workflow "Betriebs-Sonde".</p>`
+        ? `<p style="color:#C62828;"><b>Die Sonde lief in 24 Stunden nur ${d.sondenLaeufe}-mal (mindestens ${SONDE_MINDEST_LAEUFE} erwartet; geplant sind 144, GitHub liefert oft weniger).</b> Pruefen: GitHub Actions, Workflow "Betriebs-Sonde".</p>`
         : "";
     const html =
       `<h2 style="margin:0 0 12px;font-size:18px;">Tagesbericht Betrieb</h2>` +

@@ -30,7 +30,8 @@ const BEREICH_LABELS = {
 };
 const SCHWERE_LABELS = { K: "kritisch", W: "Warnung", I: "Info" };
 const SCHWERE_FARBE = { K: "var(--bad-tx)", W: "var(--warn-tx)", I: "var(--ch)" };
-const SONDE_MINDEST_LAEUFE = 100;
+// Wie im Worker (betrieb.ts): GitHub liefert geplante Laeufe oft nur alle paar Stunden, geplant sind 144 je 24 Std.
+const SONDE_MINDEST_LAEUFE = 2;
 
 function ampel(b) {
   if (b.kritisch > 0) return { text: "Fehler", farbe: "var(--bad-tx)" };
@@ -98,12 +99,12 @@ export function AdminBetriebView() {
           label="Sonde"
           wert={`${d.sonde.laeufe24h} / ${d.sonde.erwartet}`}
           farbe={sondeSchwach ? "var(--bad-tx)" : "var(--ok-tx)"}
-          unten={`Letzter Lauf: ${vorMinuten(d.sonde.letzterLauf)}`}
+          unten={`Letzter Lauf: ${vorMinuten(d.sonde.letzterLauf)} · geplant 144, GitHub liefert oft weniger`}
         />
       </div>
       {sondeSchwach && (
         <p style={{ ...errorTextStyle, margin: "10px 0 0" }}>
-          Die Sonde war in den letzten 24 Stunden seltener aktiv als erwartet. Prüfen: GitHub Actions, Workflow Betriebs-Sonde.
+          Die Sonde lief in den letzten 24 Stunden kaum. Prüfen: GitHub Actions, Workflow Betriebs-Sonde.
         </p>
       )}
 

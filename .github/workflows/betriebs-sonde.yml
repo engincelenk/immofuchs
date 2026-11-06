@@ -6,7 +6,8 @@ name: Betriebs-Sonde
 #   2. Website und Zwilling werden von aussen angefragt.
 # Schlaegt etwas fehl, wird der Lauf rot und GitHub schickt eine Mail. Das ist ein zweiter Kanal neben der Worker-Mail
 # und funktioniert auch, wenn der Worker oder der Mailversand selbst ausgefallen ist.
-# Hinweis: GitHub verwirft geplante Laeufe gelegentlich; der Tagesbericht zaehlt deshalb die Laeufe (erwartet ca. 144).
+# Hinweis: GitHub verwirft geplante Laeufe gelegentlich; der Tagesbericht zaehlt die Laeufe und warnt unter 2 je 24 Std. (geplant 144; gemessen kommt oft nur ca. 1 Lauf je 6 Std.).
+# Die verlaessliche Pruefung von aussen ist ein externer Uptime-Dienst.
 # Geplante Laeufe kommen immer von main.
 
 on:

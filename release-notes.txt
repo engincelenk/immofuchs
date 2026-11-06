@@ -1,3 +1,11 @@
+## 2026-11-06 (1.100.161) [WORKER] [FRONTEND]
+
+### Sonden-Warnung ehrlich: GitHub liefert geplante Laeufe nur alle paar Stunden
+
+- Messung: 4 Laeufe in 17 Stunden statt ca. 100 (davon 2 manuell); GitHub verwirft geplante Laeufe. Die Schwelle 100 war nie erreichbar und warnte daher dauerhaft.
+- Schwelle jetzt 2 Laeufe je 24 Std. (Tagesbericht, Admin-Reiter Betrieb); Texte nennen "geplant 144, GitHub liefert oft weniger".
+- Die verlaessliche Aussenpruefung uebernimmt ein externer Uptime-Dienst (vom Betreiber einzurichten).
+
 ## 2026-11-06 (1.100.160) [FRONTEND]
 
 ### "Laden" + "Speichern" legt kein Duplikat mehr an (Nutzermeldung)

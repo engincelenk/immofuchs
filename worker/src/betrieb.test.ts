@@ -219,7 +219,7 @@ describe("Tagesbericht", () => {
 
   it("Betreff nennt kritisch vor Sonde vor Warnung vor gruen", () => {
     expect(berichtBetreff({ ...leer, kritisch: 2, warnungen: 5 })).toContain("2 kritische");
-    expect(berichtBetreff({ ...leer, sondenLaeufe: 10 })).toContain("Sonde");
+    expect(berichtBetreff({ ...leer, sondenLaeufe: 1 })).toContain("Sonde");
     expect(berichtBetreff({ ...leer, warnungen: 3 })).toContain("3 Warnungen");
     expect(berichtBetreff(leer)).toContain("alles gruen");
   });
