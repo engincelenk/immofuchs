@@ -1,18 +1,19 @@
 name: Betriebs-Sonde
 
-# Aktive Pruefung alle 10 Minuten (docs/betrieb/monitoring-scope.md, Abschnitt C):
+# Aktive Pruefung stuendlich (docs/betrieb/monitoring-scope.md, Abschnitt C):
 #   1. Der Worker prueft sich selbst (Datenbank; einmal je Stunde die KI-Anbieter) - Endpunkt /api/v1/internal/sonde,
 #      geschuetzt mit dem gemeinsamen Geheimnis REPORT_TOKEN (GitHub-Secret, wie beim Monatsbericht).
 #   2. Website und Zwilling werden von aussen angefragt.
 # Schlaegt etwas fehl, wird der Lauf rot und GitHub schickt eine Mail. Das ist ein zweiter Kanal neben der Worker-Mail
 # und funktioniert auch, wenn der Worker oder der Mailversand selbst ausgefallen ist.
-# Hinweis: GitHub verwirft geplante Laeufe gelegentlich; der Tagesbericht zaehlt die Laeufe und warnt unter 2 je 24 Std. (geplant 144; gemessen kommt oft nur ca. 1 Lauf je 6 Std.).
+# Hinweis: GitHub verwirft geplante Laeufe gelegentlich; der Tagesbericht zaehlt die Laeufe und warnt unter 2 je 24 Std. (geplant 24; gemessen kam bei */10 nur ca. 1 Lauf je 6 Std.).
 # Die verlaessliche Pruefung von aussen ist ein externer Uptime-Dienst.
-# Geplante Laeufe kommen immer von main.
+# Geplante Laeufe liest GitHub aus dem STANDARD-BRANCH des Repos (derzeit Immofuchs-dev, nicht main). Eine Aenderung
+# des Zeitplans wirkt erst, wenn sie dort ankommt (push.ps1 dev-sync) oder der Standard-Branch auf main gestellt ist.
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions: {}

@@ -16,6 +16,7 @@ import {
   meldeFehler,
   schwereFuerAntwort,
   sendeTagesbericht,
+  sendeTestAlarm,
   umgebungVon,
   type BerichtDaten,
 } from "./betrieb";
@@ -215,7 +216,7 @@ describe("Sonde", () => {
 });
 
 describe("Tagesbericht", () => {
-  const leer: BerichtDaten = { zeilen: [], sondenLaeufe: 144, kritisch: 0, warnungen: 0 };
+  const leer: BerichtDaten = { zeilen: [], sondenLaeufe: 24, kritisch: 0, warnungen: 0 };
 
   it("Betreff nennt kritisch vor Sonde vor Warnung vor gruen", () => {
     expect(berichtBetreff({ ...leer, kritisch: 2, warnungen: 5 })).toContain("2 kritische");
@@ -251,5 +252,25 @@ describe("Client-Meldungen", () => {
     expect(pruefeClientMeldung({ funktion: "expose", code: "a".repeat(41) })).toBeNull();
     expect(pruefeClientMeldung(null)).toBeNull();
     expect(CLIENT_FUNKTIONEN).toContain("absturz");
+  });
+});
+
+describe("Testalarm", () => {
+  it("schickt Mail an die Betreiberadresse, ohne die Entprellung zu beruehren, und meldet den Kanal", async () => {
+    const { env, alarme } = fakeEnv();
+    const r = await sendeTestAlarm(env);
+    expect(r.mail).toBe(true);
+    expect(r.an).toBe("info@immofuchs.info");
+    expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(sendEmail).mock.calls[0][1]).toBe("info@immofuchs.info");
+    expect(vi.mocked(sendEmail).mock.calls[0][2]).toContain("Testalarm");
+    expect(alarme.size).toBe(0);
+  });
+
+  it("meldet mail=false, wenn der Mailversand scheitert, und wirft nicht", async () => {
+    const { env } = fakeEnv();
+    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("mail kaputt"));
+    const r = await sendeTestAlarm(env);
+    expect(r.mail).toBe(false);
   });
 });

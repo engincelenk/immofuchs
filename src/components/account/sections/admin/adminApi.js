@@ -45,6 +45,10 @@ export function fetchBetrieb() {
   return request("/admin/betrieb");
 }
 
+export function sendeTestAlarm() {
+  return post("/admin/betrieb/test-alarm", {});
+}
+
 export function fetchKiNutzung() {
   return request("/admin/ki-nutzung");
 }

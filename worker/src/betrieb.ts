@@ -170,16 +170,7 @@ async function alarmiere(env: Env, fingerprint: string, jetzt: number, a: AlarmT
       .run();
     if ((res.meta?.changes ?? 0) < 1) return; // innerhalb der Stunde schon gemeldet
 
-    const umg = umgebungVon(env);
-    const betreff = `[ImmoFuchs ${umg}] ${a.titel}`;
-    const html =
-      `<h2 style="margin:0 0 12px;font-size:18px;">${esc(a.titel)}</h2>` +
-      `<p style="margin:0 0 12px;">${esc(a.text)}</p>` +
-      `<p style="margin:0;color:#6C6C62;font-size:13px;">Umgebung ${esc(umg)} · ${new Date(jetzt).toISOString()}. ` +
-      `Weitere Meldungen derselben Art kommen fruehestens in einer Stunde. Details: Mein Konto, Admin, Betrieb.</p>`;
-    const an = env.BACKUP_ALERT_EMAIL || betreiberAdresse(env);
-    // Zwei Kanaele, damit der Ausfall eines Kanals (z.B. Mailversand) den Alarm nicht verschluckt.
-    const [mail, push] = await Promise.allSettled([sendEmail(env, an, betreff, html), pushAnAdmins(env, a)]);
+    const [mail, push] = await versendeAlarm(env, a, jetzt);
     if (mail.status === "rejected" && push.status === "rejected") {
       // Nichts ist angekommen: die Entprellung zuruecknehmen, damit der naechste Fehler es erneut versucht.
       await env.DB.prepare("DELETE FROM betriebs_alarm WHERE fingerprint = ?").bind(fingerprint).run();
@@ -187,6 +178,28 @@ async function alarmiere(env: Env, fingerprint: string, jetzt: number, a: AlarmT
   } catch (err) {
     console.error("betrieb_alarm_failed", err instanceof Error ? err.message : "unknown");
   }
+}
+
+/** Schickt einen Alarm ueber beide Kanaele (Mail + Push). Zwei Kanaele, damit der Ausfall eines Kanals den Alarm nicht verschluckt. */
+async function versendeAlarm(env: Env, a: AlarmText, jetzt: number) {
+  const umg = umgebungVon(env);
+  const betreff = `[ImmoFuchs ${umg}] ${a.titel}`;
+  const html =
+    `<h2 style="margin:0 0 12px;font-size:18px;">${esc(a.titel)}</h2>` +
+    `<p style="margin:0 0 12px;">${esc(a.text)}</p>` +
+    `<p style="margin:0;color:#6C6C62;font-size:13px;">Umgebung ${esc(umg)} · ${new Date(jetzt).toISOString()}. ` +
+    `Weitere Meldungen derselben Art kommen fruehestens in einer Stunde. Details: Mein Konto, Admin, Betrieb.</p>`;
+  const an = env.BACKUP_ALERT_EMAIL || betreiberAdresse(env);
+  return Promise.allSettled([sendEmail(env, an, betreff, html), pushAnAdmins(env, a)]);
+}
+
+/** Testalarm aus dem Admin-Reiter Betrieb: gleicher Weg wie ein echter Alarm, ohne Entprellung. Meldet je Kanal, ob er klappte. */
+export async function sendeTestAlarm(env: Env, jetzt: number = Date.now()): Promise<{ mail: boolean; push: boolean; an: string }> {
+  const [mail, push] = await versendeAlarm(env, {
+    titel: "Testalarm: Die Betriebsueberwachung erreicht dich",
+    text: "Das ist ein Test aus dem Admin-Reiter Betrieb. Wenn du diese Mail oder Push-Nachricht siehst, kommen echte Alarme bei dir an. Es ist nichts kaputt.",
+  }, jetzt);
+  return { mail: mail.status === "fulfilled", push: push.status === "fulfilled", an: env.BACKUP_ALERT_EMAIL || betreiberAdresse(env) };
 }
 
 async function pushAnAdmins(env: Env, a: AlarmText): Promise<void> {
@@ -200,7 +213,7 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// ═══ Sonde (aktive Pruefung, von GitHub Actions alle 10 Minuten aufgerufen) ═══
+// ═══ Sonde (aktive Pruefung, von GitHub Actions stuendlich aufgerufen) ═══
 
 export interface SondenPunkt {
   name: string;
@@ -282,7 +295,7 @@ export interface BerichtDaten {
   warnungen: number;
 }
 
-// Geplant ist alle 10 Minuten (144/Tag), aber GitHub verzoegert oder verwirft geplante Laeufe stark (gemessen 2026-11-06: ca. 1 Lauf je 6 Stunden).
+// Geplant ist stuendlich (24/Tag; frueher alle 10 Minuten), aber GitHub verzoegert oder verwirft geplante Laeufe stark (gemessen 2026-11-06: ca. 1 Lauf je 6 Stunden).
 // Die Sonde ist deshalb nur eine Ergaenzung zum externen Uptime-Dienst. Gewarnt wird erst, wenn sie praktisch gar nicht mehr laeuft.
 export const SONDE_MINDEST_LAEUFE = 2;
 
@@ -316,7 +329,7 @@ export async function sammleBerichtsdaten(env: Env, jetzt: number): Promise<Beri
 }
 
 export function berichtAlsText(d: BerichtDaten): string {
-  const kopf = `Kritisch: ${d.kritisch}, Warnungen: ${d.warnungen}, Sonden-Laeufe: ${d.sondenLaeufe} (geplant 144, GitHub liefert oft weniger).`;
+  const kopf = `Kritisch: ${d.kritisch}, Warnungen: ${d.warnungen}, Sonden-Laeufe: ${d.sondenLaeufe} (geplant 24, GitHub liefert oft weniger).`;
   if (d.zeilen.length === 0) return `${kopf}\nKeine Ereignisse in den letzten 24 Stunden.`;
   return `${kopf}\n` + d.zeilen.map((z) => `${z.schwere} ${z.bereich} ${z.code}: ${z.n}x`).join("\n");
 }
@@ -362,7 +375,7 @@ export async function sendeTagesbericht(
     }
     const sondeHinweis =
       d.sondenLaeufe < SONDE_MINDEST_LAEUFE
-        ? `<p style="color:#C62828;"><b>Die Sonde lief in 24 Stunden nur ${d.sondenLaeufe}-mal (mindestens ${SONDE_MINDEST_LAEUFE} erwartet; geplant sind 144, GitHub liefert oft weniger).</b> Pruefen: GitHub Actions, Workflow "Betriebs-Sonde".</p>`
+        ? `<p style="color:#C62828;"><b>Die Sonde lief in 24 Stunden nur ${d.sondenLaeufe}-mal (mindestens ${SONDE_MINDEST_LAEUFE} erwartet; geplant sind 24, GitHub liefert oft weniger).</b> Pruefen: GitHub Actions, Workflow "Betriebs-Sonde".</p>`
         : "";
     const html =
       `<h2 style="margin:0 0 12px;font-size:18px;">Tagesbericht Betrieb</h2>` +
@@ -434,7 +447,7 @@ export async function betriebsUebersicht(env: Env, jetzt: number = Date.now()): 
       client: clientJe.get(b) ?? 0,
     })),
     ereignisse: liste.results ?? [],
-    sonde: { letzterLauf: sonde?.letzter ?? null, laeufe24h: sonde?.n ?? 0, erwartet: 144 },
+    sonde: { letzterLauf: sonde?.letzter ?? null, laeufe24h: sonde?.n ?? 0, erwartet: 24 },
   };
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchBetrieb } from "./adminApi.js";
+import { fetchBetrieb, sendeTestAlarm } from "./adminApi.js";
 import { errorText, errorTextStyle, formatDateTime, mutedTextStyle, tableStyle, tdStyle, thStyle } from "./adminUiStyles.js";
 
 // Reiter "Betrieb" (docs/betrieb/monitoring-scope.md, Abschnitt E). Daten: GET /admin/betrieb
@@ -30,7 +30,7 @@ const BEREICH_LABELS = {
 };
 const SCHWERE_LABELS = { K: "kritisch", W: "Warnung", I: "Info" };
 const SCHWERE_FARBE = { K: "var(--bad-tx)", W: "var(--warn-tx)", I: "var(--ch)" };
-// Wie im Worker (betrieb.ts): GitHub liefert geplante Laeufe oft nur alle paar Stunden, geplant sind 144 je 24 Std.
+// Wie im Worker (betrieb.ts): GitHub liefert geplante Laeufe oft nur alle paar Stunden, geplant sind 24 je 24 Std.
 const SONDE_MINDEST_LAEUFE = 2;
 
 function ampel(b) {
@@ -68,6 +68,26 @@ function TabellenRahmen({ label, children }) {
 export function AdminBetriebView() {
   const [d, setD] = useState(null);
   const [fehler, setFehler] = useState(null);
+  const [testBusy, setTestBusy] = useState(false);
+  const [testMeldung, setTestMeldung] = useState(null);
+
+  async function testAlarm() {
+    setTestBusy(true);
+    setTestMeldung(null);
+    try {
+      const r = await sendeTestAlarm();
+      setTestMeldung({
+        ok: !!r.ok,
+        text: r.ok
+          ? `Testalarm gesendet an ${r.an}${r.mail ? "" : " (Mail fehlgeschlagen)"}. Bitte im Postfach prüfen, auch im Spam-Ordner.`
+          : "Testalarm konnte weder per Mail noch per Push gesendet werden.",
+      });
+    } catch (err) {
+      setTestMeldung({ ok: false, text: errorText(err) });
+    } finally {
+      setTestBusy(false);
+    }
+  }
 
   useEffect(() => {
     let abgebrochen = false;
@@ -99,7 +119,7 @@ export function AdminBetriebView() {
           label="Sonde"
           wert={`${d.sonde.laeufe24h} / ${d.sonde.erwartet}`}
           farbe={sondeSchwach ? "var(--bad-tx)" : "var(--ok-tx)"}
-          unten={`Letzter Lauf: ${vorMinuten(d.sonde.letzterLauf)} · geplant 144, GitHub liefert oft weniger`}
+          unten={`Letzter Lauf: ${vorMinuten(d.sonde.letzterLauf)} · geplant 24, GitHub liefert oft weniger`}
         />
       </div>
       {sondeSchwach && (
@@ -107,6 +127,15 @@ export function AdminBetriebView() {
           Die Sonde lief in den letzten 24 Stunden kaum. Prüfen: GitHub Actions, Workflow Betriebs-Sonde.
         </p>
       )}
+
+      <div style={{ marginTop: 14 }}>
+        <button type="button" onClick={testAlarm} disabled={testBusy} style={{ minHeight: 44, padding: "0 16px", borderRadius: 12, border: "1px solid var(--cb)", background: "var(--cc)", color: "var(--ct)", fontWeight: 700, cursor: testBusy ? "default" : "pointer" }}>
+          {testBusy ? "Wird gesendet …" : "Testalarm senden"}
+        </button>
+        {testMeldung && (
+          <p role="status" style={{ margin: "8px 0 0", fontSize: 13, color: testMeldung.ok ? "var(--ok-tx)" : "var(--bad-tx)" }}>{testMeldung.text}</p>
+        )}
+      </div>
 
       <section style={{ marginTop: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 10px" }}>Bereiche</h3>

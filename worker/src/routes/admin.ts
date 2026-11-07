@@ -4,7 +4,7 @@
 // POST /users/:id/status ist die erste schreibende Admin-Aktion. Die
 // Bedien-Oberflaeche dafuer (Button im Admin Panel) ist bewusst NICHT Teil
 // dieses Pakets, siehe Paket 6 "Admin Panel".
-import { betriebsUebersicht } from "../betrieb";
+import { betriebsUebersicht, sendeTestAlarm } from "../betrieb";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import type { Env } from "../types";
@@ -754,6 +754,20 @@ adminRoutes.get("/ki-nutzung", requireAuth, requireAdminRead, async (c) => {
 });
 
 // Betriebsueberwachung (Reiter "Betrieb", Quelle betriebs_ereignis, worker/src/betrieb.ts).
+// Testalarm: prueft einmal, dass Sofort-Alarme (Mail + Push) bei dir ankommen. Gleicher Weg wie ein echter Alarm.
+adminRoutes.post("/betrieb/test-alarm", requireAuth, requireAdmin, requireCsrfOrigin, async (c) => {
+  const r = await sendeTestAlarm(c.env);
+  await logAdminAction(c.env.DB, {
+    adminUserId: c.var.userId,
+    adminEmail: c.var.user.email,
+    action: "betrieb.test_alarm",
+    targetType: "system",
+    targetId: "betrieb",
+    details: { mail: r.mail, push: r.push },
+  });
+  return c.json({ ok: r.mail || r.push, ...r });
+});
+
 adminRoutes.get("/betrieb", requireAuth, requireAdminRead, async (c) => {
   try {
     return c.json(await betriebsUebersicht(c.env));

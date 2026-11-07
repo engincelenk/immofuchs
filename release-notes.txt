@@ -1,3 +1,11 @@
+## 2026-11-07 (1.100.162) [WORKER] [FRONTEND]
+
+### Sonde stuendlich + Testalarm-Knopf im Admin-Reiter Betrieb
+
+- Ursache der seltenen Sonden-Laeufe: GitHub liest den Zeitplan aus dem Standard-Branch des Repos (derzeit Immofuchs-dev, Laeufe zeigen head_branch Immofuchs-dev) und verzoegert Plaene im 10-Minuten-Takt stark (gemessen ca. 1 Lauf je 4-8 Std.). Die Sonde laeuft daher jetzt stuendlich (Minute 17); die neue Zeitplan-Datei wirkt erst, wenn sie auf Immofuchs-dev liegt (push.ps1 dev-sync).
+- Sollwert in Tagesbericht und Admin-Reiter: geplant 24 statt 144 je 24 Std.
+- Neu: Knopf "Testalarm senden" im Admin-Reiter Betrieb (POST /admin/betrieb/test-alarm, nur Admin, im Admin-Protokoll vermerkt). Schickt einen Alarm auf dem Weg eines echten Alarms (Mail an die Betreiberadresse + Push), ohne Entprellung; zeigt an, ob die Mail rausging.
+
 ## 2026-11-06 (1.100.161) [WORKER] [FRONTEND]
 
 ### Sonden-Warnung ehrlich: GitHub liefert geplante Laeufe nur alle paar Stunden
