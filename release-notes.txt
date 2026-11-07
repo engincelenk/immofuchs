@@ -1,3 +1,11 @@
+## 2026-11-07 (1.100.163) [WORKER]
+
+### Alarm-Mails und Tagesbericht mit Einschaetzung: Ursache, Sofortmassnahme, Vorbeugung
+
+- Neuer fester Katalog worker/src/betriebHinweise.ts (kein KI-Text): zu jeder bekannten Fehlerart (Datenbank, KI-Anbieter, Mailversand, Stripe-Webhook und -Abgleich, Backup, unbehandelte Fehler, 503, App-Fehlermeldungen) steht "Wahrscheinliche Ursache", "Jetzt tun" und "Kuenftig vermeiden".
+- Sofort-Alarm und Haeufungs-Alarm enthalten den Block; der Tagesbericht listet ihn je auffaelliger Fehlerart einmal (hoechstens 5). Unbekannte Fehlerarten bekommen einen allgemeinen Text mit dem Hinweis, den Katalog zu ergaenzen.
+- Tests: jede heute gemeldete Fehlerart hat einen eigenen Eintrag.
+
 ## 2026-11-07 (1.100.162) [WORKER] [FRONTEND]
 
 ### Sonde stuendlich + Testalarm-Knopf im Admin-Reiter Betrieb

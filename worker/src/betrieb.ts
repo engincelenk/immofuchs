@@ -10,6 +10,7 @@ import type { Env } from "./types";
 import { betreiberAdresse, sendEmail } from "./email";
 import { isStandby } from "./standby";
 import { sendPushToUser } from "./push";
+import { hinweisFuer, type Hinweis } from "./betriebHinweise";
 
 export type Schwere = "K" | "W" | "I";
 
@@ -131,6 +132,7 @@ export async function meldeFehler(env: Env, e: Ereignis): Promise<void> {
       await alarmiere(env, `${e.bereich}:${e.code}`, jetzt, {
         titel: `Fehler in ${e.bereich}: ${e.code}`,
         text: `Bereich ${e.bereich}, Code ${e.code}. ${bereinigeDetail(e.detail) ?? ""}`.trim(),
+        hinweis: hinweisFuer(e.bereich, e.code),
       });
       return;
     }
@@ -146,6 +148,7 @@ export async function meldeFehler(env: Env, e: Ereignis): Promise<void> {
       await alarmiere(env, `haeufung:${e.bereich}`, jetzt, {
         titel: `Haeufung in ${e.bereich}`,
         text: `${zeile?.n} Meldungen in 15 Minuten im Bereich ${e.bereich} (zuletzt: ${e.code}). ${bereinigeDetail(e.detail) ?? ""}`.trim(),
+        hinweis: hinweisFuer(e.bereich, e.code),
       });
     }
   } catch (err) {
@@ -156,6 +159,7 @@ export async function meldeFehler(env: Env, e: Ereignis): Promise<void> {
 interface AlarmText {
   titel: string;
   text: string;
+  hinweis?: Hinweis;
 }
 
 /** Entprellt (1 Mail je Fehlerart und Stunde) und schickt Mail + Push. Wirft nie. */
@@ -187,6 +191,7 @@ async function versendeAlarm(env: Env, a: AlarmText, jetzt: number) {
   const html =
     `<h2 style="margin:0 0 12px;font-size:18px;">${esc(a.titel)}</h2>` +
     `<p style="margin:0 0 12px;">${esc(a.text)}</p>` +
+    (a.hinweis ? hinweisHtml(a.hinweis) : "") +
     `<p style="margin:0;color:#6C6C62;font-size:13px;">Umgebung ${esc(umg)} · ${new Date(jetzt).toISOString()}. ` +
     `Weitere Meldungen derselben Art kommen fruehestens in einer Stunde. Details: Mein Konto, Admin, Betrieb.</p>`;
   const an = env.BACKUP_ALERT_EMAIL || betreiberAdresse(env);
@@ -207,6 +212,31 @@ async function pushAnAdmins(env: Env, a: AlarmText): Promise<void> {
   await Promise.allSettled(
     (rows.results ?? []).map((r) => sendPushToUser(env, r.id, { title: "ImmoFuchs Betrieb", body: a.titel })),
   );
+}
+
+/** Einschaetzung als Mail-Block: wahrscheinliche Ursache, sofort tun, kuenftig vermeiden. */
+export function hinweisHtml(h: Hinweis): string {
+  return (
+    `<div style="margin:0 0 14px;padding:10px 12px;border-left:3px solid #6C6C62;background:#F5F5F0;font-size:14px;">` +
+    `<p style="margin:0 0 6px;"><b>Wahrscheinliche Ursache:</b> ${esc(h.ursache)}</p>` +
+    `<p style="margin:0 0 6px;"><b>Jetzt tun:</b> ${esc(h.tun)}</p>` +
+    `<p style="margin:0;"><b>Kuenftig vermeiden:</b> ${esc(h.vermeiden)}</p></div>`
+  );
+}
+
+/** Hinweise zu den auffaelligen (K/W) Zeilen des Tagesberichts, je Fehlerart einmal, hoechstens 5. */
+export function berichtHinweiseHtml(zeilen: BerichtZeile[]): string {
+  const gesehen = new Set<Hinweis>();
+  let html = "";
+  for (const z of zeilen) {
+    if (z.schwere === "I") continue;
+    const h = hinweisFuer(z.bereich, z.code);
+    if (gesehen.has(h)) continue;
+    gesehen.add(h);
+    html += `<p style="margin:12px 0 4px;font-size:13px;"><b>${esc(z.bereich)} ${esc(z.code)}</b> (${z.n}x)</p>` + hinweisHtml(h);
+    if (gesehen.size >= 5) break;
+  }
+  return html ? `<h3 style="margin:16px 0 4px;font-size:15px;">Einschaetzung und Vorbeugung</h3>${html}` : "";
 }
 
 function esc(s: string): string {
@@ -381,7 +411,8 @@ export async function sendeTagesbericht(
       `<h2 style="margin:0 0 12px;font-size:18px;">Tagesbericht Betrieb</h2>` +
       sondeHinweis +
       (ki ? `<p style="margin:0 0 12px;"><b>Einordnung (KI):</b> ${esc(ki)}</p>` : "") +
-      `<pre style="font-family:monospace;font-size:13px;white-space:pre-wrap;margin:0;">${esc(text)}</pre>`;
+      `<pre style="font-family:monospace;font-size:13px;white-space:pre-wrap;margin:0;">${esc(text)}</pre>` +
+      berichtHinweiseHtml(d.zeilen);
     await sendEmail(env, env.BACKUP_ALERT_EMAIL || betreiberAdresse(env), berichtBetreff(d), html);
   } catch (err) {
     console.error("betrieb_tagesbericht_failed", err instanceof Error ? err.message : "unknown");

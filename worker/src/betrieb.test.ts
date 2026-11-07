@@ -274,3 +274,15 @@ describe("Testalarm", () => {
     expect(r.mail).toBe(false);
   });
 });
+
+describe("Alarm-Mail mit Einschaetzung", () => {
+  it("ein kritischer Fehler enthaelt Ursache, Sofortmassnahme und Vorbeugung", async () => {
+    const { env } = fakeEnv();
+    await meldeFehler(env, { bereich: "cron", code: "backup_fehlgeschlagen", schwere: "K" });
+    const html = vi.mocked(sendEmail).mock.calls[0][3] as string;
+    expect(html).toContain("Wahrscheinliche Ursache");
+    expect(html).toContain("Backup");
+    expect(html).toContain("Jetzt tun");
+    expect(html).toContain("Kuenftig vermeiden");
+  });
+});
