@@ -1,3 +1,11 @@
+## 2026-11-11 (1.100.165) [FRONTEND]
+
+### Barrierefreiheit: Startseite mit Hauptbereich (main-Landmark)
+
+- Landing.jsx: Der Inhalt zwischen Kopfzeile und Fussleiste liegt jetzt in einem main-Element. Screenreader-Nutzer koennen damit per Landmark-Navigation direkt zum Hauptinhalt springen. Layout und Design unveraendert.
+- Pruefung mit axe-core (WCAG 2.2 AA plus Best Practices, hell/dunkel, 1280 und 375 px): vorher 1 Befund (region, 75 Elemente), nachher 0. Die Rechner bestehen die bestehende QA-Pruefung (kritisch/ernst, WCAG 2.1).
+- Keine Datenbank-Migration.
+
 ## 2026-11-10 (1.100.164) [WORKER] [FRONTEND]
 
 ### Projekt-Pruefung: vier nachgestellte Fehler behoben, toter Code entfernt

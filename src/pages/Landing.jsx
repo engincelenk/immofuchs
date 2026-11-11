@@ -922,6 +922,9 @@ export function Landing({ onStart, lang, setLang }) {
         </Suspense>
       )}
 
+      {/* Barrierefreiheit 2026-11-11: Hauptinhalt als <main>-Landmark (axe "region").
+          Flex-Spalte wie der Elterncontainer, damit sich das Layout nicht aendert. */}
+      <main id="main" style={{ display: "flex", flexDirection: "column", width: "100%" }}>
       {/* ═══════════ HERO ═══════════ */}
       {/* Neugestaltung 2026-09-28 (Landing Option C, Hero E - Nutzer-Auswahl
           aus fuenf Varianten): zentrierter Text auf weichem Orange-Schimmer,
@@ -1439,6 +1442,7 @@ export function Landing({ onStart, lang, setLang }) {
           </div>
         </div>
       </section>
+      </main>
 
       {/* ═══════════ FOOTER ═══════════ */}
       <footer
