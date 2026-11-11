@@ -707,6 +707,45 @@ describe("handleStripeWebhook — Status-/Plan-Mapping und Mail-Trigger", () => 
     expect(subscriptions.get("sub_row_1")!.latest_invoice_id).toBe("in_1");
   });
 
+  // Befund 2026-11-10: seit API-Version "Basil" gibt es invoice.subscription
+  // nicht mehr, die Subscription steht unter invoice.parent.subscription_details.
+  it("invoice.payment_succeeded im Basil-Format (invoice.parent.subscription_details) speichert die latest_invoice_id", async () => {
+    const { db, subscriptions } = createFakeBillingD1({
+      subscriptions: [
+        {
+          id: "sub_row_1",
+          user_id: "user_1",
+          status: "active",
+          plan: "monthly",
+          stripe_customer_id: "cus_1",
+          stripe_subscription_id: "sub_1",
+          current_period_end: Date.now(),
+          cancel_at_period_end: 0,
+          first_purchase_at: Date.now(),
+          past_due_since: null,
+          latest_invoice_id: "in_alt",
+          updated_at: Date.now(),
+        },
+      ],
+    });
+
+    const event = {
+      id: "evt_7b",
+      type: "invoice.payment_succeeded",
+      data: {
+        object: {
+          id: "in_neu",
+          parent: { type: "subscription_details", subscription_details: { subscription: "sub_1" } },
+        },
+      },
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await handleStripeWebhook({ ...billingEnv, DB: db }, event as any);
+
+    expect(subscriptions.get("sub_row_1")!.latest_invoice_id).toBe("in_neu");
+  });
+
   it("ein unbekannter Event-Typ wird als verarbeitet markiert, ohne Subscriptions oder Mails anzufassen", async () => {
     const { db, subscriptions } = createFakeBillingD1();
     const event = { id: "evt_8", type: "charge.refunded", data: { object: { id: "whatever" } } };

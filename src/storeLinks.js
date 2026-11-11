@@ -8,5 +8,3 @@
 export const APPLE_APP_ID = null;
 export const APP_STORE_URL = null;
 export const PLAY_STORE_URL = null;
-
-export const hatStoreLinks = Boolean(APP_STORE_URL || PLAY_STORE_URL);

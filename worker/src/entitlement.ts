@@ -199,8 +199,9 @@ export interface EntitlementResult {
 }
 
 // Entitlement-Ergebnis 5 Min. TTL signiert im Cookie gecacht (4.9, S3-4) -
-// reduziert D1-Reads/Latenz bei jedem /api/assistant-Aufruf, insbesondere fuer
-// Free-Nutzer, bei denen der Lookup fast immer "kein Eintrag" ergibt. Ein
+// reduziert D1-Reads/Latenz fuer Nutzer MIT Zugang. Seit 2026-11-10 wird nur
+// noch "hat Zugang" gespeichert; wer keinen hat, wird jedes Mal frisch geprueft,
+// damit ein Kauf sofort wirkt. Ein
 // Downgrade/eine Kuendigung wirkt dadurch mit maximal 5 Minuten Verzoegerung -
 // bewusst in Kauf genommen (siehe Spec-Kommentar), schwaecht die serverseitige
 // Durchsetzung selbst nicht, da der Cache signiert und userId-gebunden ist.
@@ -208,10 +209,15 @@ export async function getEntitlement(request: Request, env: Env, userId: string)
   const cached = parseCookieValue(request.headers.get("Cookie"), ENTITLEMENT_COOKIE);
   if (cached) {
     const verified = await verifyEntitlementToken(env, cached, userId);
-    if (verified !== null) return { isPro: verified, setCookie: null };
+    // Nur ein gespeichertes "hat Zugang" gilt. Ein gespeichertes "kein Zugang"
+    // wird immer frisch geprueft (Befund 2026-11-10): sonst blieb jemand nach
+    // dem Kauf bis zu 5 Minuten ausgesperrt, obwohl /me schon Pro meldete.
+    if (verified === true) return { isPro: true, setCookie: null };
   }
 
   const isPro = await isProUncached(env, userId);
+  // "Kein Zugang" wird deshalb auch nicht mehr gespeichert.
+  if (!isPro) return { isPro: false, setCookie: null };
   const exp = Date.now() + ENTITLEMENT_CACHE_TTL_MS;
   const token = await signEntitlement(env, userId, isPro, exp);
   const setCookie = token

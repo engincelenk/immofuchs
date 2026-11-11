@@ -102,35 +102,6 @@ export function cockpitEinschaetzung(
   return { fall, negativ, teuer, betrag, satz, chips, hinweis: teile.join(" · ") };
 }
 
-// Unterzeile aus den zwei Markt-Vergleichskacheln (V1 Kaufpreis, V2 Miete),
-// dieselbe Statuslogik wie die Abweichungsbalken in Schritt 2. `status`
-// "rot" heisst in beiden Kacheln "ungünstig aus Käufersicht", "gruen"/
-// "orange" heisst "günstig" - "neutral" (im Rahmen) zählt für die
-// aber/und-Regel als weder-noch.
-function unterzeileTeil(v, art) {
-  if (!v || v.abw == null || !isFinite(v.abw)) return null;
-  if (v.status === "neutral") return { text: "im Marktrahmen", klasse: "neutral" };
-  const abwText = `${fmt(Math.abs(v.abw), 0)} %`;
-  const text =
-    art === "kaufpreis"
-      ? `${abwText} ${v.abw > 0 ? "über" : "unter"} Markt`
-      : `${abwText} ${v.abw > 0 ? "darüber" : "darunter"}`;
-  return { text, klasse: v.status === "rot" ? "schlecht" : "gut" };
-}
-
-export function cockpitUnterzeile(v1, v2) {
-  const kp = unterzeileTeil(v1, "kaufpreis");
-  const miete = unterzeileTeil(v2, "miete");
-  if (!kp && !miete) return null;
-  const kontraer =
-    kp && miete && kp.klasse !== "neutral" && miete.klasse !== "neutral" && kp.klasse !== miete.klasse;
-  const verbindung = kontraer ? "aber" : "und";
-  const kpSatz = kp ? `Der m²-Preis liegt ${kp.text}` : null;
-  const mieteSatz = miete ? `die Miete ${miete.text}` : null;
-  if (kpSatz && mieteSatz) return `${kpSatz}, ${verbindung} ${mieteSatz}.`;
-  return `${kpSatz || mieteSatz}.`;
-}
-
 // ── 5.2 Differenzen Stellschrauben ────────────────────────────────────────
 // diff = ziel - heute, mit Vorzeichen. Fehlt "heute", gibt es keine Basis
 // für eine Differenz (§5.2: "zeigst du keine Differenz").
@@ -191,36 +162,5 @@ export function cockpitGroessterHebel(d, t, spannen, cashflowHeute) {
     }
   }
   return bestFeld;
-}
-
-// ── Schritt 2: Fliesssatz je Zeile (Kaufpreis/m², Miete/m², Kaufpreisfaktor) ─
-// Gemeinsame Form fuer alle drei: {eigen, markt, abw, status, key}. `art`
-// waehlt nur die Satzvorlage. Im "neutral"-Fall (im Rahmen) enthaelt der Satz
-// keine Zahl - die liefert cockpitMarktZusatzProzent() separat fuer die
-// Subzeile nach.
-const MARKT_SATZ = {
-  kaufpreis: {
-    rahmen: () => "Der Kaufpreis pro m² ist im Rahmen",
-    ueber: (abw) => `Der Kaufpreis pro m² liegt ${abw} % über Markt`,
-    unter: (abw) => `Der Kaufpreis pro m² liegt ${abw} % unter Markt`,
-  },
-  miete: {
-    rahmen: () => "Die Miete ist im Rahmen",
-    ueber: (abw) => `Die Miete liegt ${abw} % über Markt`,
-    unter: (abw) => `Die Miete liegt ${abw} % unter Markt`,
-  },
-  faktor: {
-    rahmen: () => "Der Kaufpreisfaktor ist im Rahmen",
-    ueber: (abw) => `Dadurch ist der Kaufpreisfaktor ${abw} % höher`,
-    unter: (abw) => `Dadurch ist der Kaufpreisfaktor ${abw} % niedriger`,
-  },
-};
-
-export function cockpitMarktSatz(v, art) {
-  if (!v || v.abw == null || !isFinite(v.abw)) return "";
-  const gruppe = MARKT_SATZ[art] || MARKT_SATZ.kaufpreis;
-  if (v.status === "neutral") return gruppe.rahmen();
-  const abwText = fmt(Math.abs(v.abw), 0);
-  return v.abw > 0 ? gruppe.ueber(abwText) : gruppe.unter(abwText);
 }
 

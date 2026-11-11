@@ -58,7 +58,7 @@ internalRoutes.post("/monthly-report", async (c) => {
   return c.json({ ok: true });
 });
 
-// Aktive Sonde (docs/betrieb/monitoring-scope.md, Abschnitt C). GitHub Actions ruft sie alle 10 Minuten auf
+// Aktive Sonde (docs/betrieb/monitoring-scope.md, Abschnitt C). GitHub Actions ruft sie stuendlich auf
 // (.github/workflows/betriebs-sonde.yml). Antwort 503 bei kritischem Befund: dann wird der Workflow rot und
 // GitHub schickt eine Mail - ein zweiter Kanal, der auch dann funktioniert, wenn der Worker selbst tot ist.
 // Die KI-Anbieter werden nur einmal je Stunde angefragt (letzte Tiefenpruefung > 55 Min. her), um das Gratiskontingent zu schonen.

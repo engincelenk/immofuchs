@@ -55,7 +55,7 @@ app.use("*", securityHeaders);
 
 // Standby (qa als Zwilling von prod): schreibende Anfragen ausser Anmelden, Assistent und Admin sperren.
 app.use("/api/*", standbyGuard);
-// Oeffentlich: das Frontend zeigt im Standby einen Hinweis, damit niemand qa fuer prod haelt.
+// Oeffentlich: Sonde (betriebs-sonde.yml) und QA-Tests lesen hier, ob der Worker im Standby laeuft.
 app.get("/api/v1/standby-status", (c) => c.json({ standby: isStandby(c.env) }));
 
 // Betriebsueberwachung (betrieb.ts): jede Serverfehler-Antwort wird erfasst, unabhaengig davon, welche Route sie

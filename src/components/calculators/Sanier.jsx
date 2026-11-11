@@ -1,6 +1,6 @@
 import { verteileErsparnis } from "../../utils/sanierungErsparnis.js";
 import { BAUTEILE, bewerteBauteile, ersparnisErledigt, hatModernisierungen } from "../../utils/bauteile.js";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import {
   BAFA,

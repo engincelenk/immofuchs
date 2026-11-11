@@ -305,11 +305,6 @@ export const BASIS_LABEL = {
 // stresstest) statt calculations/scenarios/assumptions - die Zahlen zeigt
 // hier ausschliesslich die Engine (briefing.js), das Modell liefert nur noch
 // Text dazu (Grundprinzip der Spec, Abschnitt 3).
-export function urteilVon(ergebnis) {
-  const i = ergebnis?.inhalt;
-  return i && typeof i !== "string" ? i.urteil || "" : "";
-}
-
 function briefingListeVon(ergebnis, feld) {
   const arr = ergebnis?.inhalt?.[feld];
   return Array.isArray(arr) ? arr.filter((x) => x?.title && x?.text) : [];
@@ -324,10 +319,6 @@ function briefingTextVon(ergebnis, feld) {
   return typeof v === "string" ? v : "";
 }
 
-export const marktVon = (ergebnis) => briefingTextVon(ergebnis, "markt");
-export const tragfaehigkeitTextVon = (ergebnis) => briefingTextVon(ergebnis, "tragfaehigkeit");
-export const zeitraumTextVon = (ergebnis) => briefingTextVon(ergebnis, "zeitraum");
-export const stresstestTextVon = (ergebnis) => briefingTextVon(ergebnis, "stresstest");
 export const modernisierungTextVon = (ergebnis) => briefingTextVon(ergebnis, "modernisierung");
 
 export function alter(ergebnis, locale = "de-DE") {

@@ -1,3 +1,17 @@
+## 2026-11-10 (1.100.164) [WORKER] [FRONTEND]
+
+### Projekt-Pruefung: vier nachgestellte Fehler behoben, toter Code entfernt
+
+Alle vier Fehler wurden vor der Behebung gegen den echten Worker-Code mit SQLite und allen Migrationen nachgestellt; die neuen Tests (worker/src/integration.sqlite.test.ts) pruefen genau diese Faelle.
+- Konto loeschen (Art. 17): Wer Feedback abgegeben hatte, liess sich nicht loeschen (Fremdschluessel der Tabelle feedback, Antwort 502, ein vorhandenes Abo waere vorher trotzdem gekuendigt worden). deleteUserCompletely loescht die Feedback-Zeilen jetzt mit. Ein Waechter-Test schlaegt an, sobald eine kuenftige Tabelle mit Fremdschluessel auf users in der Loeschliste fehlt.
+- Objekt anlegen: POST /objects gab bei einer bereits vergebenen ID das Objekt des ANDEREN Kontos zurueck. Jetzt 409 object_id_conflict; fuer das eigene Objekt bleibt der Aufruf wiederholbar.
+- Objekt-Import: POST /objects/import umging die 5 Objekte der Testphase und den Missbrauchs-Deckel. Jetzt gilt dieselbe Grenze wie bei der Einzelanlage. Passt nicht alles hinein, antwortet der Server mit 429 (uebernimmt, was passt); die App behaelt dann ihren lokalen Stand.
+- Zugang nach Kauf: Das Zugangs-Cookie speicherte auch "kein Zugang" fuer 5 Minuten; wer danach kaufte, bekam so lange 402, obwohl /me schon Pro meldete. Gespeichert wird nur noch "hat Zugang".
+- Stripe-Rechnungs-ID: invoice.payment_succeeded liest die Subscription jetzt auch im neuen Format (invoice.parent.subscription_details, API-Version Basil); das alte Feld invoice.subscription gibt es dort nicht mehr.
+- Entfernt (nirgends benutzt): Ueberblick.jsx, StandbyBanner.jsx, worker/vitest.e2e.config.ts, getAdminDashboardStats (db.ts), Dot (atoms.jsx), hatStoreLinks, fuenf Lesefunktionen in aiEngine.js, cockpitUnterzeile und cockpitMarktSatz samt Hilfstabellen (objektCockpit.js), der wirkungslose Bild-Zustand in MascotFab.jsx, zwei ungenutzte Importe. Linter: 14 -> 11 Warnungen.
+- Kommentare berichtigt (Sonde stuendlich, Stripe statt Paddle bei der Kontoloeschung, Zweck von /standby-status).
+- Keine Datenbank-Migration.
+
 ## 2026-11-07 (1.100.163) [WORKER]
 
 ### Alarm-Mails und Tagesbericht mit Einschaetzung: Ursache, Sofortmassnahme, Vorbeugung

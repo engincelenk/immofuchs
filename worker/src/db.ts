@@ -2,7 +2,6 @@
 // Stelle, damit Auth-/Payment-/Objekt-Module keine rohen Queries verstreuen
 // (Konvention: kleine, fokussierte Dateien, analog zum bestehenden Worker-Stil).
 import type { Env } from "./types";
-import { PLAN_PREIS_EUR } from "./preise";
 import { isSessionTimedOut } from "./auth/sessionLimits";
 
 export interface UserRow {
@@ -1331,78 +1330,6 @@ export async function listFeedbackForAdmin(
   return { entries: rows.results, total: countRow?.n ?? 0 };
 }
 
-// ═══ Admin Panel — Dashboard (Paket 6, MVP-Pflicht #1) ═══
-// Deckt exakt das "Beispiel" aus dem Konzept-Dok Abschnitt 3 ab (Nutzer
-// gesamt, Aktive Abos, Trial Nutzer, MRR, Kuendigungen Monat) - nicht die
-// volle Kennzahlenliste (neue Registrierungen heute/Woche, ARR, Conversion
-// Rate, Churn Rate, CLV, Systemstatus). Diese brauchen zusaetzliche
-// Zeitreihen-/Kohorten-Logik bzw. externe Statuschecks und sind bewusst
-// spaeteren Etappen vorbehalten.
-export interface AdminDashboardStats {
-  totalUsers: number;
-  activeSubscriptions: number;
-  trialUsers: number;
-  mrr: number;
-  cancellationsThisMonth: number;
-  // Admin-MVP Abschnitt 3 ("zusaetzlich, sofern die Daten bereits verfuegbar
-  // sind"): neue Nutzer im laufenden Monat ist aus users.created_at direkt
-  // ableitbar. "Umsatz aktueller Monat" ist es NICHT - tatsaechliche
-  // Zahlungen liegen bei Paddle, in D1 stehen nur Abo-Zustaende. Eine
-  // Hochrechnung aus Planpreisen waere eine erfundene Zahl und fehlt deshalb.
-  newUsersThisMonth: number;
-}
-
-// Preise seit 2026-08-20 aus src/preise.ts - der frueher hier stehende
-// Kommentar ("zwei Zahlen an zwei Stellen, keine eigene Datei wert") hat sich
-// bei der ersten echten Preisaenderung als falsch erwiesen: es waren fuenf
-// Stellen.
-
-export async function getAdminDashboardStats(db: Env["DB"]): Promise<AdminDashboardStats> {
-  const monthStart = (() => {
-    const now = new Date();
-    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
-  })();
-
-  const [totalUsersRow, planRows, trialRow, cancelRow, newUsersRow] = await Promise.all([
-    db.prepare("SELECT COUNT(*) as n FROM users").first<{ n: number }>(),
-    db
-      .prepare(
-        `SELECT plan, COUNT(*) as n FROM subscriptions WHERE status IN ('active','cancel_scheduled') GROUP BY plan`,
-      )
-      .all<{ plan: string; n: number }>(),
-    db.prepare(`SELECT COUNT(*) as n FROM subscriptions WHERE status = 'trialing'`).first<{ n: number }>(),
-    db
-      .prepare(
-        `SELECT COUNT(*) as n FROM subscriptions WHERE status IN ('cancel_scheduled','canceled') AND updated_at >= ?`,
-      )
-      .bind(monthStart)
-      .first<{ n: number }>(),
-    db
-      .prepare("SELECT COUNT(*) as n FROM users WHERE created_at >= ?")
-      .bind(monthStart)
-      .first<{ n: number }>(),
-  ]);
-
-  let activeSubscriptions = 0;
-  let mrr = 0;
-  for (const row of planRows.results) {
-    activeSubscriptions += row.n;
-    mrr +=
-      row.plan === "monthly"
-        ? row.n * PLAN_PREIS_EUR.monthly
-        : row.n * (PLAN_PREIS_EUR.yearly / 12);
-  }
-
-  return {
-    totalUsers: totalUsersRow?.n ?? 0,
-    activeSubscriptions,
-    trialUsers: trialRow?.n ?? 0,
-    mrr: Math.round(mrr * 100) / 100,
-    cancellationsThisMonth: cancelRow?.n ?? 0,
-    newUsersThisMonth: newUsersRow?.n ?? 0,
-  };
-}
-
 // ═══ Admin Panel — Letzte Aktivitaeten (Admin-MVP Abschnitt 3) ═══
 // Read-Only-Feed aus dem, was D1 wirklich weiss. Bewusst KEINE eigene
 // Ereignistabelle dafuer: die vier Quellen unten tragen ihren Zeitstempel
@@ -1622,9 +1549,10 @@ export async function resetTestUserSubscription(db: Env["DB"], userId: string): 
 
 // ═══ Art. 17 — Konto vollständig löschen ═══
 // Reihenfolge wichtig: erst abhängige Zeilen, dann users selbst (D1/SQLite
-// erzwingt hier keine FK-Kaskade). Paddle-Kündigung passiert VOR diesem
-// Aufruf beim aufrufenden Endpunkt (paddle/checkout.ts), nicht hier - reine
-// D1-Aufräumfunktion.
+// erzwingt hier keine FK-Kaskade). Die Stripe-Kündigung passiert VOR diesem
+// Aufruf (accountDeletion.ts), nicht hier - reine D1-Aufräumfunktion.
+// Jede Tabelle mit FOREIGN KEY auf users(id) MUSS hier stehen, sonst scheitert
+// die ganze Löschung (geprüft in integration.sqlite.test.ts).
 export async function deleteUserCompletely(db: Env["DB"], userId: string): Promise<void> {
   await db.batch([
     db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId),
@@ -1646,6 +1574,9 @@ export async function deleteUserCompletely(db: Env["DB"], userId: string): Promi
     // Admin-Endpunkt zeigte faelschlich die Paddle-Fehlermeldung).
     db.prepare("DELETE FROM push_tokens WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM trial_usage WHERE user_id = ?").bind(userId),
+    // feedback (Migration 0030) hat denselben Fremdschluessel und fehlte hier
+    // (Befund 2026-11-10): wer Feedback abgegeben hatte, liess sich nicht loeschen.
+    db.prepare("DELETE FROM feedback WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM users WHERE id = ?").bind(userId),
   ]);
 }

@@ -67,20 +67,21 @@ function parseNewObjectInput(body: unknown): NewObjectInput | null {
 
 const DEFAULT_SOFT_CAP = 500;
 
+// Obergrenze je Konto: in der Testphase die Kontingentgrenze (Nutzer-Vorgabe
+// 2026-08-25: 5 Objekte fuer die gesamte Phase, siehe TRIAL_MERKLISTE_GESAMT),
+// sonst der Missbrauchs-Deckel. Gilt fuer Einzelanlage UND Import gleich.
+async function objektGrenze(env: Env, userId: string): Promise<number> {
+  const zugang = await ermittleZugang(env, userId);
+  return zugang === "trial" ? TRIAL_MERKLISTE_GESAMT : parseInt(env.OBJECTS_SOFT_CAP || "", 10) || DEFAULT_SOFT_CAP;
+}
+
 objectsRoutes.get("/", requireAuth, requirePro, async (c) => {
   const rows = await listObjectsForUser(c.env.DB, c.var.userId);
   return c.json({ objects: rows.map(serialize) });
 });
 
 objectsRoutes.post("/", requireAuth, requirePro, requireCsrfOrigin, async (c) => {
-  // In der Testphase gilt statt des Missbrauchs-Deckels die Kontingentgrenze
-  // (Nutzer-Vorgabe 2026-08-25): 5 Objekte fuer die gesamte Phase, nicht mehr
-  // je Rechner aufgeteilt - siehe TRIAL_MERKLISTE_GESAMT.
-  const zugang = await ermittleZugang(c.env, c.var.userId);
-  const softCap =
-    zugang === "trial"
-      ? TRIAL_MERKLISTE_GESAMT
-      : parseInt(c.env.OBJECTS_SOFT_CAP || "", 10) || DEFAULT_SOFT_CAP;
+  const softCap = await objektGrenze(c.env, c.var.userId);
   const count = await countObjectsForUser(c.env.DB, c.var.userId);
   if (count >= softCap) {
     return c.json({ error: "object_limit_reached", hint: "ungewoehnlich viele Objekte, bitte Support kontaktieren" }, 429);
@@ -90,6 +91,10 @@ objectsRoutes.post("/", requireAuth, requirePro, requireCsrfOrigin, async (c) =>
   if (!input) return c.json({ error: "invalid_body" }, 400);
   const { created } = await insertObjectIfNew(c.env.DB, c.var.userId, input);
   const row = await getObjectById(c.env.DB, input.id);
+  // Die ID kommt vom Client. Gehoert sie schon einem ANDEREN Konto, wurde nichts
+  // angelegt - dann darf dessen Objekt hier nicht zurueckgegeben werden
+  // (Befund 2026-11-10, gleiche Ownership-Regel wie bei PUT/DELETE).
+  if (row && !isOwnedBy(row, c.var.userId)) return c.json({ error: "object_id_conflict" }, 409);
   return c.json({ created, object: row ? serialize(row) : null }, created ? 201 : 200);
 });
 
@@ -105,12 +110,31 @@ objectsRoutes.post("/import", requireAuth, requirePro, requireCsrfOrigin, async 
     : null;
   if (!list) return c.json({ error: "invalid_body" }, 400);
 
+  // Dieselbe Obergrenze wie bei der Einzelanlage (Befund 2026-11-10: der Import
+  // umging die 5 Objekte der Testphase und den Missbrauchs-Deckel).
+  const grenze = await objektGrenze(c.env, c.var.userId);
+  let bestand = await countObjectsForUser(c.env.DB, c.var.userId);
   let importedCount = 0;
+  let ausgelassen = 0;
   for (const raw of list) {
     const input = parseNewObjectInput(raw);
     if (!input) continue;
+    if (bestand >= grenze) {
+      // Schon vorhandene Objekte (Wiederholung desselben Imports) zaehlen nicht als ausgelassen.
+      if (!(await getObjectById(c.env.DB, input.id))) ausgelassen += 1;
+      continue;
+    }
     const { created } = await insertObjectIfNew(c.env.DB, c.var.userId, input);
-    if (created) importedCount += 1;
+    if (created) {
+      importedCount += 1;
+      bestand += 1;
+    }
+  }
+  // Passt nicht alles hinein, antwortet der Server mit 429 statt 200: der Client
+  // loescht seinen lokalen Stand nur bei 200 (Merkliste.jsx) und behaelt so die
+  // nicht uebernommenen Objekte. Ein spaeterer Import ist dank der IDs gefahrlos.
+  if (ausgelassen > 0) {
+    return c.json({ error: "object_limit_reached", importedCount, totalReceived: list.length }, 429);
   }
   return c.json({ importedCount, totalReceived: list.length });
 });

@@ -222,7 +222,16 @@ async function upsertSubscriptionFromStripe(env: Env, sub: Stripe.Subscription, 
 
 async function storeLatestInvoiceId(env: Env, invoice: Stripe.Invoice): Promise<void> {
   const invoiceId = invoice.id;
-  const subField = (invoice as unknown as { subscription?: string | { id: string } | null }).subscription;
+  // Zwei Formate: bis API-Version "Acacia" steht die Subscription direkt an der
+  // Rechnung (invoice.subscription), seit "Basil" (2025-03-31) unter
+  // invoice.parent.subscription_details.subscription. Das alte Feld gibt es dort
+  // nicht mehr - ohne den zweiten Weg blieb diese Funktion wirkungslos (Befund 2026-11-10).
+  type SubRef = string | { id: string } | null | undefined;
+  const roh = invoice as unknown as {
+    subscription?: SubRef;
+    parent?: { subscription_details?: { subscription?: SubRef } | null } | null;
+  };
+  const subField = roh.subscription ?? roh.parent?.subscription_details?.subscription;
   const subscriptionId = typeof subField === "string" ? subField : subField?.id ?? null;
   if (!invoiceId || !subscriptionId) return;
   await env.DB.prepare(

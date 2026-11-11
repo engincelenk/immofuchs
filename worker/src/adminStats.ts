@@ -1,6 +1,6 @@
 // Kennzahlen fuer das Admin-Dashboard und den Reiter "KI & Kontingente" (2026-10-12).
 //
-// Loest getAdminDashboardStats (db.ts) fuer das Dashboard ab. Drei Neuerungen:
+// Loest die fruehere Funktion getAdminDashboardStats (db.ts, entfernt 2026-11-10) ab. Drei Neuerungen:
 //   1. Test- und Admin-Konten zaehlen standardmaessig NICHT mit (users.is_test_user, users.role).
 //      Vorher zeigte das Dashboard vor dem Start 4 Nutzer, 2 Abos und 11,99 EUR MRR - alles Testkonten.
 //   2. Zaehlbeginn (app_settings.stats_zaehlbeginn, "YYYY-MM-DD"): alles davor zaehlt nicht. Das ist

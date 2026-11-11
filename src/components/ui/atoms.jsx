@@ -3,31 +3,6 @@ import { useApp } from "../../context/AppContext.jsx";
 import { Tip } from "./Tip.jsx";
 import { Icon, iconName } from "./Icon.jsx";
 
-export function Dot({ color }) {
-  const t = useApp()?.t || {};
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        width: 8,
-        height: 8,
-        borderRadius: "50%",
-        background: color,
-        marginLeft: 5,
-        flexShrink: 0,
-        verticalAlign: "middle",
-      }}
-      title={
-        color === "#2FBF71"
-          ? t.mlBadgeGut || "Gut"
-          : color === "#FFB800"
-            ? t.mlBadgeMittel || "Mittelmäßig"
-            : t.mlBadgeKritisch || "Kritisch"
-      }
-    />
-  );
-}
-
 export function F({
   label,
   unit,

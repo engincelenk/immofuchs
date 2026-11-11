@@ -5,7 +5,7 @@
 // abweichenden Wert haben, sind standardmaessig NICHT angehakt - der alte Wert
 // bleibt stehen, bis der Nutzer aktiv uebernimmt.
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { ExposeFieldRow } from "./ExposeFieldRow.jsx";
 import {
