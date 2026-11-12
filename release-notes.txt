@@ -1,3 +1,17 @@
+## 2026-11-12 (1.100.166) [FRONTEND]
+
+### Startseite: dezente Bewegung und Orientierung (sechs Punkte, Nutzer-Freigabe)
+
+- Einblenden: Karten unterhalb des ersten Bildschirms (KI-Funktionen, Schritte, Rechner, Marktdaten, Zinsen) blenden beim Hineinscrollen einmalig ein (6 px, 0,32 s, 70 ms gestaffelt). Der Hero und alles, was beim Laden schon sichtbar ist, steht wie bisher sofort da. Die Preis-Sektion ist unveraendert.
+- Zahlen: Kreise, Bauzins, Wertsteigerung und Mietprognose zaehlen beim Erscheinen in 0,6 s auf ihren Wert. Ohne Bewegung steht immer der Endwert da.
+- So funktioniert's: Linie mit Punkten verbindet die vier Schritte (Handy senkrecht, ab 1000 px waagerecht, im zweispaltigen Bereich dazwischen keine Linie).
+- Rechner-Karten: Bild zoomt beim Ueberfahren leicht, ein Pfeil erscheint unten rechts im Bild (auf Touch-Geraeten dauerhaft). Schrift groesser (Beschreibung 11 -> 13,5 px, Kennung 9 -> 10,5 px, Titel 15 -> 17 px; grosse Karte 13 -> 15 px). Fuenf Spalten deshalb erst ab 1200 px statt 900 px. Hover laeuft jetzt per CSS statt per Maus-Handler und gilt damit auch fuer Tastatur-Fokus.
+- Kopfzeile: Der Navigationseintrag der aktuellen Sektion ist orange unterstrichen (in der Handy-Schublade: fett mit orangem Punkt, HeaderMenu.jsx). Die Trennlinie unter der Kopfzeile erscheint erst nach dem ersten Scrollen.
+- Bauzinsen: Abschnitt als Karte mit dem Zins als grosser Zahl (jetzt in Landesschreibweise, z. B. 4,19 %), der Zinsalarm steht daneben bzw. auf dem Handy darunter. Texte und Werte unveraendert, keine neuen Uebersetzungen.
+- Alles beachtet prefers-reduced-motion (dann keine Bewegung) und funktioniert ohne IntersectionObserver als statische Seite. Design-Tokens unveraendert.
+- Geprueft im Browser bei 390, 900, 1200 und 1280 px (dunkel), Lint ohne Befund, 1819 Frontend-Tests gruen.
+- Keine Datenbank-Migration.
+
 ## 2026-11-11 (1.100.165) [FRONTEND]
 
 ### Barrierefreiheit: Startseite mit Hauptbereich (main-Landmark)

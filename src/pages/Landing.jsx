@@ -129,6 +129,56 @@ function Eyebrow({ children }) {
   );
 }
 
+// ═══ Dezente Bewegung (2026-11-12, Nutzer-Freigabe) ═══
+// Alles hier ist Zugabe: ohne IntersectionObserver oder bei prefers-reduced-motion
+// steht die Seite sofort vollstaendig da.
+const bewegungReduziert = () =>
+  typeof window !== "undefined" &&
+  !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+// Karten, die beim Hineinscrollen einmalig einblenden (siehe Effekt in Landing()).
+const EIN_SELEKTOR =
+  ".lp-ki-karte,.lp-step,.calc-karte,.lp-weg-linie,.lp-zins-alarm";
+const EIN_RAND = "0px 0px -6% 0px";
+// Reihenfolge der Sektionen fuer die Markierung in der Navigation. "marktdaten" hat
+// keinen eigenen Eintrag - dort ist nichts markiert, statt faelschlich "Preise".
+const SEKTIONEN = ["ki", "funktioniert", "rechner", "preise", "marktdaten", "zinsen"];
+
+// Zahl, die beim ersten Erscheinen in 0,6 s auf ihren Wert laeuft. Bis dahin (und ohne
+// Observer) steht der Endwert da - nie eine Null oder Luecke. Der Sprung auf 0 faellt
+// nicht auf: die Karte ist in dem Moment noch ausgeblendet (EIN_SELEKTOR, gleicher Rand).
+function Zaehler({ wert, format }) {
+  const ref = useRef(null);
+  const [anteil, setAnteil] = useState(1);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined" || bewegungReduziert()) return undefined;
+    if (el.getBoundingClientRect().top < window.innerHeight) return undefined;
+    let raf = 0;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        io.disconnect();
+        const start = performance.now();
+        const schritt = (jetzt) => {
+          const t = Math.min(1, Math.max(0, (jetzt - start) / 600));
+          setAnteil(1 - Math.pow(1 - t, 3));
+          if (t < 1) raf = requestAnimationFrame(schritt);
+        };
+        setAnteil(0);
+        raf = requestAnimationFrame(schritt);
+      },
+      { rootMargin: EIN_RAND },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+      setAnteil(1);
+    };
+  }, []);
+  return <span ref={ref}>{format(wert * anteil)}</span>;
+}
+
 function Linie({ size = 24, children }) {
   return (
     <svg
@@ -288,7 +338,11 @@ function MarktdatenSection({ l, lang }) {
   const loc = LANG_LOCALE[lang] || "de-DE";
   const zahl = (v, d) =>
     Number(v).toLocaleString(loc, { minimumFractionDigits: d, maximumFractionDigits: d });
-  const mitVorzeichen = (v, d) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${zahl(Math.abs(v), d)} %`;
+  // Vorzeichen vom Zielwert, damit es waehrend des Hochzaehlens nicht erst bei > 0 auftaucht.
+  const mitVorzeichen = (ziel, d) => (v) =>
+    `${ziel > 0 ? "+" : ziel < 0 ? "−" : ""}${zahl(Math.abs(v), d)} %`;
+  // "{kreise} Kreise" um die Zahl herum teilen, damit nur sie hochzaehlt.
+  const [kreiseVor, kreiseNach = ""] = String(l.md1B || "").split("{kreise}");
   const zinsWert = Number(MARKET_RATES.avg);
   const ersetze = (s, werte) =>
     Object.entries(werte).reduce((t, [k, v]) => t.replace(`{${k}}`, v), s || "");
@@ -298,7 +352,13 @@ function MarktdatenSection({ l, lang }) {
       key: "markt",
       icon: <IconPin />,
       t: l.md1T,
-      b: ersetze(l.md1B, { kreise: zahl(zahlen.kreise, 0) }),
+      b: (
+        <>
+          {kreiseVor}
+          <Zaehler wert={zahlen.kreise} format={(v) => zahl(v, 0)} />
+          {kreiseNach}
+        </>
+      ),
       s: ersetze(l.md1S, { laender: zahlen.laender }),
       e: l.md1E,
     },
@@ -331,15 +391,27 @@ function MarktdatenSection({ l, lang }) {
                   <dl className="lp-md-werte">
                     <div>
                       <dt>{l.md5Zins}</dt>
-                      <dd>{zahl(zinsWert, 2)}&nbsp;%</dd>
+                      <dd>
+                        <Zaehler wert={zinsWert} format={(v) => `${zahl(v, 2)} %`} />
+                      </dd>
                     </div>
                     <div>
                       <dt>{l.md5Wert}</dt>
-                      <dd>{mitVorzeichen(WERTSTEIGERUNG.pA, 1)}</dd>
+                      <dd>
+                        <Zaehler
+                          wert={WERTSTEIGERUNG.pA}
+                          format={mitVorzeichen(WERTSTEIGERUNG.pA, 1)}
+                        />
+                      </dd>
                     </div>
                     <div>
                       <dt>{l.md5Miete}</dt>
-                      <dd>{mitVorzeichen(MIET_P.normal.pA, 1)}</dd>
+                      <dd>
+                        <Zaehler
+                          wert={MIET_P.normal.pA}
+                          format={mitVorzeichen(MIET_P.normal.pA, 1)}
+                        />
+                      </dd>
                     </div>
                   </dl>
                   {/* Bewusst ohne Quellen und Stand je Wert (Nutzerwunsch 2026-10-22): Besucher sollen nicht
@@ -429,6 +501,88 @@ export function Landing({ onStart, lang, setLang }) {
     };
   }, [kontoFertig]);
   const bereit = fristAbgelaufen || (assetsBereit && kontoFertig);
+
+  // Karten unterhalb des ersten Bildschirms blenden beim Hineinscrollen einmalig ein.
+  // Erst nach dem Aufdecken einrichten, sonst stimmt "schon im Bild" nicht. Markiert wird
+  // per data-ein direkt am Element (React verwaltet das Attribut nicht); was beim
+  // Einrichten schon sichtbar ist, bleibt unangetastet stehen.
+  useEffect(() => {
+    if (!bereit || typeof IntersectionObserver === "undefined" || bewegungReduziert())
+      return undefined;
+    const ziele = Array.from(document.querySelectorAll(EIN_SELEKTOR));
+    const offen = new Set();
+    const io = new IntersectionObserver(
+      (eintraege) => {
+        let i = 0;
+        eintraege.forEach((e) => {
+          if (!e.isIntersecting) return;
+          io.unobserve(e.target);
+          offen.delete(e.target);
+          e.target.style.setProperty("--ein-d", `${Math.min(i, 5) * 70}ms`);
+          e.target.dataset.ein = "an";
+          i += 1;
+        });
+        // Per Sprung uebersprungen (Anker, Ende-Taste) und jetzt oberhalb des Bildes: ohne
+        // Bewegung zeigen. Der Observer meldet solche Karten nicht, deshalb hier nachsehen.
+        offen.forEach((el) => {
+          if (el.getBoundingClientRect().bottom >= 0) return;
+          io.unobserve(el);
+          offen.delete(el);
+          delete el.dataset.ein;
+        });
+      },
+      { rootMargin: EIN_RAND },
+    );
+    ziele.forEach((el) => {
+      if (el.getBoundingClientRect().top < window.innerHeight) return;
+      el.dataset.ein = "vor";
+      offen.add(el);
+      io.observe(el);
+    });
+    return () => {
+      io.disconnect();
+      ziele.forEach((el) => {
+        delete el.dataset.ein;
+      });
+    };
+  }, [bereit]);
+
+  // Kopfzeile: Trennlinie erst nach dem ersten Scrollen, und der Navigationseintrag der
+  // Sektion, die gerade unter der Kopfzeile liegt, ist markiert (auch in der Schublade).
+  const [gescrollt, setGescrollt] = useState(false);
+  const [aktiveSektion, setAktiveSektion] = useState(null);
+  useEffect(() => {
+    let raf = 0;
+    const messen = () => {
+      raf = 0;
+      // Offene Schublade haelt <body> auf position:fixed (scrollY = 0): dann nichts aendern.
+      if (document.body.style.position === "fixed") return;
+      setGescrollt(window.scrollY > 4);
+      let aktiv = null;
+      for (const id of SEKTIONEN) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= 140) aktiv = id;
+      }
+      // Die letzte Sektion ist kurz und erreicht die Kopfzeile nie: am Seitenende gilt sie.
+      if (
+        window.scrollY > 4 &&
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
+      )
+        aktiv = SEKTIONEN[SEKTIONEN.length - 1];
+      setAktiveSektion(aktiv === "marktdaten" ? null : aktiv);
+    };
+    const beiScroll = () => {
+      if (!raf) raf = requestAnimationFrame(messen);
+    };
+    window.addEventListener("scroll", beiScroll, { passive: true });
+    window.addEventListener("resize", beiScroll);
+    messen();
+    return () => {
+      window.removeEventListener("scroll", beiScroll);
+      window.removeEventListener("resize", beiScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
   // Der Wizard wird auch von dieser Seite aus gemountet - waehrend er laeuft,
   // bleibt die eigenstaendige Kauf-Bestaetigung zu (er zeigt seine eigene).
   const anyWizardOpen = useAnyWizardOpen();
@@ -563,7 +717,7 @@ export function Landing({ onStart, lang, setLang }) {
     { key: "rechner", label: l.navRechner, onSelect: () => scrollTo("rechner") },
     { key: "preise", label: l.navPreise, onSelect: () => scrollTo("preise") },
     { key: "zinsen", label: l.navZinsen, onSelect: () => scrollTo("zinsen") },
-  ];
+  ].map((n) => ({ ...n, aktiv: n.key === aktiveSektion }));
 
   return (
     <div
@@ -607,7 +761,8 @@ export function Landing({ onStart, lang, setLang }) {
           background: "var(--hdr-bg)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
-          borderBottom: "1px solid var(--cb)",
+          borderBottom: `1px solid ${gescrollt ? "var(--cb)" : "transparent"}`,
+          transition: "border-color .2s",
           paddingTop: "env(safe-area-inset-top)",
         }}
       >
@@ -675,7 +830,13 @@ export function Landing({ onStart, lang, setLang }) {
           {/* Desktop Nav */}
           <nav className="lp-nav" style={{ display: "flex", alignItems: "center", gap: 28 }}>
             {navItems.map((n) => (
-              <button key={n.key} onClick={n.onSelect} style={navLink}>
+              <button
+                key={n.key}
+                onClick={n.onSelect}
+                className="lp-nav-link"
+                aria-current={n.aktiv ? "true" : undefined}
+                style={n.aktiv ? { ...navLink, color: "var(--ct)" } : navLink}
+              >
                 {n.label}
               </button>
             ))}
@@ -1084,14 +1245,19 @@ export function Landing({ onStart, lang, setLang }) {
             <Eyebrow>{l.howTitle}</Eyebrow>
             <h2 className="lp-h2">{l.howShort}</h2>
           </div>
-          <div className="how-steps-grid">
+          <div className="how-steps-grid lp-weg">
+            {/* Verbindungslinie von Schritt 1 nach 4 (2026-11-12): senkrecht auf dem Handy,
+                waagerecht ab 1000 px. Im zweispaltigen Zwischenbereich gibt es keine Linie. */}
+            <span className="lp-weg-linie" aria-hidden="true">
+              <span className="lp-weg-fuell" />
+            </span>
             {[
               { n: 1, icon: <IconUser />, t: l.step1H, d: l.step1P },
               { n: 2, icon: <IconUpload />, t: l.step2H, d: l.step2P },
               { n: 3, icon: <IconBars />, t: l.step3H, d: l.step3P },
               { n: 4, icon: <Stern size={22} />, t: l.step4H, d: l.step4P },
             ].map((s) => (
-              <div key={s.n} className="lp-step lp-karte">
+              <div key={s.n} className="lp-step lp-karte" style={{ "--i": s.n - 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
                   <span className="lp-step-ic">{s.icon}</span>
                   <span className="lp-step-n">
@@ -1130,6 +1296,9 @@ export function Landing({ onStart, lang, setLang }) {
               erzeugen bewusst kein Objekt. */}
           <button
             onClick={() => starteRechner("saved")}
+            // Hover/Antippen seit 2026-11-12 per CSS (.calc-karte) statt per Maus-Handler:
+            // so gilt es auch fuer Tastatur-Fokus, und das Bild kann mitzoomen.
+            className="calc-karte"
             style={{
               display: "block",
               background: "transparent",
@@ -1137,20 +1306,11 @@ export function Landing({ onStart, lang, setLang }) {
               borderRadius: 14,
               textAlign: "left",
               cursor: "pointer",
-              transition: "all .2s",
               padding: 0,
               fontFamily: "inherit",
               width: "100%",
               marginBottom: 16,
               WebkitAppearance: "none",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--ca)";
-              e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,.08)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--cb)";
-              e.currentTarget.style.boxShadow = "";
             }}
           >
             <div
@@ -1185,6 +1345,9 @@ export function Landing({ onStart, lang, setLang }) {
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                   alt=""
                 />
+                <span className="calc-pfeil" aria-hidden="true">
+                  →
+                </span>
               </div>
               <div
                 style={{
@@ -1197,7 +1360,7 @@ export function Landing({ onStart, lang, setLang }) {
                 <div
                   style={{
                     display: "inline-block",
-                    fontSize: 9,
+                    fontSize: 11,
                     fontWeight: 700,
                     letterSpacing: 1.2,
                     textTransform: "uppercase",
@@ -1222,7 +1385,7 @@ export function Landing({ onStart, lang, setLang }) {
                 >
                   {l.fullTitle}
                 </h3>
-                <p style={{ fontSize: 13, color: "var(--ch)", lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: 15, color: "var(--ch)", lineHeight: 1.6, margin: 0 }}>
                   {l.fullDesc}
                 </p>
               </div>
@@ -1311,6 +1474,7 @@ export function Landing({ onStart, lang, setLang }) {
               <button
                 key={i}
                 onClick={() => starteRechner(c.tab)}
+                className="calc-karte calc-karte-klein"
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -1320,23 +1484,13 @@ export function Landing({ onStart, lang, setLang }) {
                   overflow: "hidden",
                   textAlign: "left",
                   cursor: "pointer",
-                  transition: "all .2s",
                   padding: 0,
                   fontFamily: "inherit",
                   width: "100%",
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-3px)";
-                  e.currentTarget.style.borderColor = "var(--ca)";
-                  e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,.08)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "";
-                  e.currentTarget.style.borderColor = "var(--cb)";
-                  e.currentTarget.style.boxShadow = "";
-                }}
               >
                 <div
+                  className="calc-bild"
                   style={{
                     aspectRatio: "1200/520",
                     width: "100%",
@@ -1348,14 +1502,17 @@ export function Landing({ onStart, lang, setLang }) {
                   }}
                 >
                   {c.illus}
+                  <span className="calc-pfeil" aria-hidden="true">
+                    →
+                  </span>
                 </div>
                 <div style={{ padding: "16px 16px", flex: 1 }}>
                   <div
                     style={{
                       display: "inline-block",
-                      fontSize: 9,
+                      fontSize: 10.5,
                       fontWeight: 700,
-                      letterSpacing: 1.2,
+                      letterSpacing: 1,
                       textTransform: "uppercase",
                       color: "var(--ca)",
                       background: "var(--ca-bg)",
@@ -1368,16 +1525,17 @@ export function Landing({ onStart, lang, setLang }) {
                   </div>
                   <h3
                     style={{
-                      fontSize: 15,
+                      fontSize: 17,
                       fontWeight: 700,
                       color: "var(--ct)",
                       margin: "0 0 6px",
                       letterSpacing: -0.2,
+                      overflowWrap: "anywhere",
                     }}
                   >
                     {c.title}
                   </h3>
-                  <p style={{ fontSize: 11, color: "var(--ch)", lineHeight: 1.5, margin: 0 }}>
+                  <p style={{ fontSize: 13.5, color: "var(--ch)", lineHeight: 1.5, margin: 0 }}>
                     {c.desc}
                   </p>
                 </div>
@@ -1419,26 +1577,44 @@ export function Landing({ onStart, lang, setLang }) {
       {/* Die Zinsdaten werden monatlich aktualisiert (Nutzer-Korrektur
           2026-09-28: vorher hiess es "tagesaktuell", dazu ein pulsierender
           Live-Punkt - beides versprach mehr, als die Daten leisten). */}
+      {/* Seit 2026-11-12 als Karte mit dem Zins als grosser Zahl, der Zins-Alarm daneben
+          (vorher Fliesstext mit Streifen links). Texte und Werte unveraendert. */}
       <section
         id="zinsen"
-        style={{ padding: "clamp(36px,4vw,56px) 24px", borderTop: "1px solid var(--cb)" }}
+        style={{ padding: "clamp(36px,4vw,56px) 0", borderTop: "1px solid var(--cb)" }}
       >
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <div style={{ borderLeft: "3px solid var(--ca)", paddingLeft: 20 }}>
-            <div className="lp-eyebrow" style={{ letterSpacing: 1.5 }}>
-              <span aria-hidden="true" className="lp-eyebrow-dot" />
-              {l.ratesTitle} · {l.ratesStand}: {standLesbar(MARKET_RATES.stand, lang)}
+        <div className="lp-container">
+          <div className="lp-zins">
+            <div className="lp-step lp-zins-karte">
+              <div className="lp-eyebrow" style={{ letterSpacing: 1.5, marginBottom: 0 }}>
+                <span aria-hidden="true" className="lp-eyebrow-dot" />
+                {l.ratesTitle}
+              </div>
+              <p>{l.ratesIntro2}</p>
+              <div className="lp-zins-zeile">
+                <div className="lp-zins-zahl">
+                  <Zaehler
+                    wert={Number(MARKET_RATES.avg)}
+                    format={(v) =>
+                      `${v.toLocaleString(LANG_LOCALE[lang] || "de-DE", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}\u00a0%`
+                    }
+                  />
+                </div>
+                <div className="lp-zins-neben">
+                  <span>{l.ratesCompact}</span>
+                  <span>
+                    {l.ratesStand}: {standLesbar(MARKET_RATES.stand, lang)}
+                  </span>
+                </div>
+              </div>
+              <p className="lp-md-quelle">{l.ratesDisclaim}</p>
             </div>
-            <p style={{ margin: "0 0 6px", fontSize: 15, color: "var(--cl)", lineHeight: 1.6 }}>
-              {l.ratesIntro2}{" "}
-              <strong>
-                {l.ratesCompact}: {MARKET_RATES.avg} %
-              </strong>
-            </p>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ch)", lineHeight: 1.5 }}>
-              {l.ratesDisclaim}
-            </p>
-            <ZinsAlarm lang={lang} />
+            <div className="lp-zins-alarm">
+              <ZinsAlarm lang={lang} />
+            </div>
           </div>
         </div>
       </section>
@@ -1669,8 +1845,67 @@ export function Landing({ onStart, lang, setLang }) {
       .lp-md-werte dd{margin:0;font-weight:800;font-size:17px;color:var(--ca-dk);font-variant-numeric:tabular-nums;white-space:nowrap}
       .lp-step p      /* Dark Mode: --ca-dk (#c44d00) erreicht auf dunklen Karten nur ~3:1,
          dort traegt das hellere --ca (~5:1). */
-      html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic,html[data-theme="dark"] .lp-ki-ic,html[data-theme="dark"] .lp-md-beleg,html[data-theme="dark"] .lp-md-werte dd{color:var(--ca)}
-      @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-step-n,.lp-step-ic,.lp-ki-ic,.lp-md-beleg,.lp-md-werte dd){color:var(--ca)}}
+      html[data-theme="dark"] .lp-step-n,html[data-theme="dark"] .lp-step-ic,html[data-theme="dark"] .lp-ki-ic,html[data-theme="dark"] .lp-md-beleg,html[data-theme="dark"] .lp-md-werte dd,html[data-theme="dark"] .lp-zins-zahl{color:var(--ca)}
+      @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) :is(.lp-step-n,.lp-step-ic,.lp-ki-ic,.lp-md-beleg,.lp-md-werte dd,.lp-zins-zahl){color:var(--ca)}}
+      /* ── Dezente Bewegung (2026-11-12) ── */
+      /* Einblenden beim Hineinscrollen: data-ein setzt der Effekt in Landing(). "backwards"
+         statt "both": nach dem Ende gilt wieder der normale Stil (Hover, Antippen). */
+      [data-ein="vor"]{opacity:0}
+      [data-ein="an"]{animation:lp-auf .32s var(--ease-out) var(--ein-d,0ms) backwards}
+      /* Markierter Navigationseintrag */
+      .lp-nav-link{position:relative}
+      .lp-nav-link::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--ca);transform:scaleX(0);transform-origin:left;transition:transform .25s var(--ease-out)}
+      .lp-nav-link[aria-current="true"]::after{transform:scaleX(1)}
+      /* Weg durch die vier Schritte */
+      @keyframes lp-ziehen-y{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+      @keyframes lp-ziehen-x{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+      @keyframes lp-punkt{from{background:var(--cb)}to{background:var(--ca)}}
+      .lp-weg{position:relative;padding-left:30px}
+      .lp-weg-linie{position:absolute;left:5px;top:36px;bottom:36px;width:2px;background:var(--cb)}
+      .lp-weg-fuell{position:absolute;inset:0;background:var(--ca);transform-origin:top left}
+      .lp-weg .lp-step{position:relative}
+      .lp-weg .lp-step::before{content:"";position:absolute;left:-30px;top:30px;width:12px;height:12px;border-radius:50%;background:var(--ca);box-shadow:0 0 0 4px var(--bg)}
+      .lp-weg-linie[data-ein="an"]{animation:none}
+      .lp-weg-linie[data-ein="an"] .lp-weg-fuell{animation:lp-ziehen-y 1.1s var(--ease-out) backwards}
+      @media(min-width:560px){
+        .lp-weg{padding-left:0}
+        .lp-weg-linie,.lp-weg .lp-step::before{display:none}
+      }
+      @media(min-width:1000px){
+        .lp-weg{padding-top:30px}
+        .lp-weg-linie{display:block;left:calc(12.5% - 7.5px);right:calc(12.5% - 7.5px);top:5px;bottom:auto;width:auto;height:2px}
+        .lp-weg .lp-step::before{display:block;left:calc(50% - 6px);top:-30px}
+        .lp-weg-linie[data-ein="an"] .lp-weg-fuell{animation-name:lp-ziehen-x}
+        .lp-weg .lp-step[data-ein="an"]::before{animation:lp-punkt .25s ease-out calc(var(--i,0)*300ms) backwards}
+      }
+      /* Rechner-Karten: Rahmen, Bild-Zoom und Pfeil (vorher Maus-Handler im JSX) */
+      .calc-karte{transition:transform .2s var(--ease-out),border-color .2s,box-shadow .2s}
+      .calc-karte img{transition:transform .5s var(--ease-out)}
+      /* Pfeil als kleiner Kreis unten rechts im Bild: im Textteil ist neben den langen
+         Kennungen ("Vorfaelligkeitsrechner") kein Platz. */
+      .calc-bild,.calc-hero-bild{position:relative}
+      .calc-pfeil{position:absolute;right:10px;bottom:10px;width:30px;height:30px;border-radius:50%;background:var(--cc);border:1px solid var(--cb);color:var(--ca);font-size:16px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;opacity:0;transform:translateX(-4px);transition:opacity .2s,transform .2s var(--ease-out)}
+      .calc-karte:focus-visible .calc-pfeil{opacity:1;transform:none}
+      @media(hover:hover){
+        .calc-karte:hover{border-color:var(--ca)!important;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+        .calc-karte-klein:hover{transform:translateY(-3px)}
+        .calc-karte:hover img{transform:scale(1.035)}
+        .calc-karte:hover .calc-pfeil{opacity:1;transform:none}
+      }
+      /* Touch hat kein Hover: der Pfeil steht dauerhaft da und zeigt, dass die Karte antippbar ist. */
+      @media(hover:none){
+        .calc-pfeil{opacity:1;transform:none}
+        .calc-karte:active{transform:scale(.985)}
+      }
+      /* Zins-Block */
+      .lp-zins{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:16px}
+      @media(min-width:860px){.lp-zins{grid-template-columns:1fr 1fr}}
+      .lp-zins>*{min-width:0}
+      .lp-zins-karte{display:flex;flex-direction:column;gap:12px}
+      .lp-zins-zeile{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
+      .lp-zins-zahl{font-size:clamp(40px,6vw,56px);font-weight:800;letter-spacing:-1.5px;line-height:1;color:var(--ca-dk);font-variant-numeric:tabular-nums;white-space:nowrap}
+      .lp-zins-neben{display:flex;flex-direction:column;gap:2px;font-size:14.5px;line-height:1.45;color:var(--cl)}
+      .lp-zins-alarm>*{margin-top:0!important;height:100%;box-sizing:border-box}
       /* Handy: fester "Kostenlos starten"-Balken unten, nur fuer nicht
          eingeloggte Besucher. Finns Knopf sitzt mit bottom:76px darueber. */
       .lp-sticky-cta{display:none}
@@ -1681,18 +1916,24 @@ export function Landing({ onStart, lang, setLang }) {
       }
       @media(prefers-reduced-motion:reduce){
         .lp-auf,.lp-stern{animation:none}
+        [data-ein="vor"]{opacity:1}
+        [data-ein="an"],.lp-weg-linie[data-ein="an"] .lp-weg-fuell,.lp-weg .lp-step[data-ein="an"]::before{animation:none}
+        .lp-nav-link::after,.calc-karte,.calc-karte img,.calc-pfeil{transition:none}
+        .calc-karte:hover,.calc-karte:active,.calc-karte:hover img{transform:none}
         .lp-karte:hover{transform:none}
         .lp-karte:active,.lp-ki-karte:active,.lp-btn-primary:active,.lp-btn-secondary:active{transform:none}
       }
       .calc-hero-card{grid-template-columns:1fr!important}
       @media(min-width:640px){.calc-hero-card{grid-template-columns:1fr 1fr!important}}
       .calc-hero-card>div:first-child{min-height:200px}
-      @media(max-width:639px){.calc-hero-bild{position:relative}.calc-hero-img{position:absolute;inset:0}}
+      @media(max-width:639px){.calc-hero-img{position:absolute;inset:0}}
       @media(min-width:640px){.calc-hero-card>div:first-child{min-height:0;height:100%}}
       .calc-cards-support{display:grid;grid-template-columns:1fr;gap:12px}
       .calc-cards-support>*{width:100%;min-width:0;box-sizing:border-box}
       @media(min-width:640px){.calc-cards-support{grid-template-columns:repeat(3,1fr)}}
-      @media(min-width:900px){.calc-cards-support{grid-template-columns:repeat(5,1fr)}}
+      /* Fuenf Spalten erst ab 1200 px (vorher 900): mit der groesseren Schrift (2026-11-12)
+         wurden die Titel in schmaleren Spalten abgeschnitten. */
+      @media(min-width:1200px){.calc-cards-support{grid-template-columns:repeat(5,1fr)}}
       .how-steps-grid{display:grid;grid-template-columns:1fr;gap:16px}
       @media(min-width:560px){.how-steps-grid{grid-template-columns:repeat(2,1fr)}}
       @media(min-width:1000px){.how-steps-grid{grid-template-columns:repeat(4,1fr);gap:20px}}

@@ -116,7 +116,7 @@ export function HeaderMenu({
 
         <div style={{ flex: 1, overflowY: "auto", padding: "4px 0 24px" }}>
           {navItems?.map((item) => (
-            <NavRow key={item.key} label={item.label} onClick={item.onSelect} />
+            <NavRow key={item.key} label={item.label} onClick={item.onSelect} aktiv={item.aktiv} />
           ))}
 
           {/* Anmelden nur fuer Besucher ohne Konto - wer angemeldet ist,
@@ -169,7 +169,9 @@ export function HeaderMenu({
 
 // Spuerbarer :active-Zustand per Pointer-Handler statt CSS-Pseudoklasse -
 // Inline-Styles kennen kein :active.
-function NavRow({ label, onClick }) {
+// aktiv (2026-11-12): die Sektion, in der der Besucher gerade steht - oranger Punkt wie bei
+// den Abschnitts-Kennungen der Landingpage, die Schrift bleibt dunkel (Kontrast).
+function NavRow({ label, onClick, aktiv }) {
   const [pressed, setPressed] = useState(false);
   return (
     <button
@@ -178,6 +180,7 @@ function NavRow({ label, onClick }) {
       onPointerUp={() => setPressed(false)}
       onPointerLeave={() => setPressed(false)}
       onPointerCancel={() => setPressed(false)}
+      aria-current={aktiv ? "true" : undefined}
       style={{
         display: "flex",
         alignItems: "center",
@@ -198,7 +201,13 @@ function NavRow({ label, onClick }) {
           sind reine Scroll-Anker ohne Unterkategorie - der Pfeil suggerierte
           faelschlich, dass sich noch etwas oeffnet. Nur echte Untermenues
           sollten hier kuenftig einen Chevron bekommen. */}
-      <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600 }}>{label}</span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: aktiv ? 800 : 600 }}>{label}</span>
+      {aktiv && (
+        <span
+          aria-hidden="true"
+          style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--ca)", flexShrink: 0 }}
+        />
+      )}
     </button>
   );
 }
